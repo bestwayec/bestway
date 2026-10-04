@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { ArticlesModule } from './articles/articles.module';
+import { AssessmentModule } from './assessment/assessment.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -51,6 +52,7 @@ import { VideosModule } from './videos/videos.module';
     GameModule,
     TestsModule,
     MockModule,
+    AssessmentModule,
     VideosModule,
     ArticlesModule,
     TeachersModule,

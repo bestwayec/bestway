@@ -1,5 +1,6 @@
 import {
   MockAttemptMode,
+  AssessmentPolicyMode,
   ExamProgram,
   MockAttemptStatus,
   MockExamType,
@@ -32,6 +33,9 @@ import { PaginationQueryDto } from '../../common/pagination';
 /* ─────────────────────────── Exam ─────────────────────────── */
 
 export class CreateMockExamDto {
+  @IsOptional()
+  @IsEnum(AssessmentPolicyMode)
+  assessmentPolicy?: AssessmentPolicyMode;
   @IsOptional()
   @IsBoolean()
   starterStructure?: boolean;
@@ -84,6 +88,9 @@ export class CreateMockExamDto {
 }
 
 export class UpdateMockExamDto {
+  @IsOptional()
+  @IsEnum(AssessmentPolicyMode)
+  assessmentPolicy?: AssessmentPolicyMode;
   @IsOptional()
   @IsString()
   @MinLength(3)
