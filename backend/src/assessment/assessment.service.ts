@@ -104,7 +104,7 @@ export class AssessmentService {
           const transcript = job.transcripts.find((t) => t.questionId === response.questionId && t.audioHash === response.audioHash);
           return { questionId: response.questionId, partId: part.id, partNumber: response.partNumber, prompt: response.prompt, context: part.context,
             originalResponse: response.originalResponse, wordCount: response.originalResponse.trim().split(/\s+/).filter(Boolean).length,
-            audioUrl: response.audioKey ? `${this.base}/assessment/jobs/${job.id}/audio/${response.questionId}` : null,
+            audioUrl: response.audioKey ? `${this.base}/assessment/jobs/${job.id}/audio/${encodeURIComponent(response.questionId)}` : null,
             transcript: transcript ? { text: transcript.text, confidence: transcript.confidence, segments: transcript.segments, pronunciationEvidence: transcript.pronunciationEvidence } : null };
         })),
         parts: input.parts.map(({ id, max, task, context }) => ({ id, max, task, context })),
