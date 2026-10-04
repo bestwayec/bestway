@@ -68,10 +68,10 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               </>
             ) : (
               <>
-                <p className="text-xs tracking-wide text-fg-subtle uppercase">Estimated Multilevel Result</p>
-                <p className="text-4xl font-bold text-brand tabular-nums">{attempt.overallScore ?? '—'} /75</p>
+                <p className="text-xs tracking-wide text-fg-subtle uppercase">{attempt.specificationVersion ? 'Estimated Multilevel Result' : t('cefrLevel')}</p>
+                {attempt.specificationVersion && <p className="text-4xl font-bold text-brand tabular-nums">{attempt.overallScore ?? '—'} /75</p>}
                 <p className="text-5xl font-bold text-brand">{attempt.cefrLevel ?? "—"}</p>
-                <p className="mt-2 text-xs text-fg-subtle">{attempt.specificationVersion ?? 'Legacy result'} · {attempt.scoreMethod ?? 'Legacy method'} · {attempt.scoreVersion ?? ''}</p>
+                {attempt.specificationVersion && <p className="mt-2 text-xs text-fg-subtle">{attempt.specificationVersion} · {attempt.scoreMethod} · {attempt.scoreVersion}</p>}
               </>
             )}
           </div>

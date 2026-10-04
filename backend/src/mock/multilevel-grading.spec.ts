@@ -13,8 +13,9 @@ function setup(ungraded = false) {
   const prisma = {mockAttempt:{findUnique:vi.fn().mockResolvedValue(attempt),findUniqueOrThrow:vi.fn().mockResolvedValue(attempt),update,updateMany},mockAnswer:{update:vi.fn().mockResolvedValue({})},studentProfile:{findUnique:vi.fn().mockResolvedValue({availablePrograms:['MULTILEVEL']})},$transaction:vi.fn().mockImplementation(async (ops) => Promise.all(ops))};
   const service = new MockGradingService(prisma as never,{} as never,{} as never,{} as never,{} as never,{} as never,{get:()=>undefined} as never);
   // Notification transport is outside scoring; avoid requiring a live account.
-  vi.spyOn(service as never,'notifyResult' as never).mockResolvedValue(undefined as never);
-  vi.spyOn(service as never,'notifyTeacherPending' as never).mockResolvedValue(undefined as never);
+  const notifications = service as unknown as { notifyResult(id: string): Promise<void>; notifyTeacherPending(id: string): Promise<void> };
+  vi.spyOn(notifications,'notifyResult').mockResolvedValue(undefined);
+  vi.spyOn(notifications,'notifyTeacherPending').mockResolvedValue(undefined);
   return {service,prisma,attempt};
 }
 describe('Multilevel submission through the real scoring service', () => {

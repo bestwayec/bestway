@@ -341,6 +341,7 @@ export class MockAuthoringService {
   async createGroup(actor: AuthUser, sectionId: string, dto: CreateGroupDto) {
     const section = await this.sectionOrThrow(sectionId);
     await this.assertCanAuthor(actor, section.examId);
+    await this.assertProgramPartNumber(section.examId, dto.partNumber);
     const count = await this.prisma.mockQuestionGroup.count({ where: { sectionId } });
     const contentHtml = sanitizeMockContent(dto.contentHtml);
     const audioScript = sanitizeMockContent(dto.audioScript);
@@ -377,6 +378,10 @@ export class MockAuthoringService {
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
     await this.assertCanAuthorForGroup(actor, groupId);
+    if (dto.partNumber !== undefined) {
+      const section = await this.sectionOrThrow(group.sectionId);
+      await this.assertProgramPartNumber(section.examId, dto.partNumber);
+    }
     const contentHtml = dto.contentHtml !== undefined
       ? sanitizeMockContent(dto.contentHtml)
       : group.contentHtml;
@@ -406,6 +411,12 @@ export class MockAuthoringService {
       entityId: groupId,
     });
     return updated;
+  }
+
+  private async assertProgramPartNumber(examId: string, partNumber?: number) {
+    if (partNumber === undefined || partNumber <= 4) return;
+    const exam = await this.prisma.mockExam.findUnique({ where: { id: examId }, select: { type: true } });
+    if (exam?.type !== 'multilevel') throw new AppException('VALIDATION_ERROR', 'IELTS listening parts must be 1–4', 400);
   }
 
   async deleteGroup(actor: AuthUser, groupId: string) {

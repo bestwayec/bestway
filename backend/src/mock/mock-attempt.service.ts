@@ -13,6 +13,7 @@ import {
   StartAttemptDto,
 } from './dto/mock.dto';
 import { MockAccessService } from './mock-access.service';
+import { assertSpeakingAudio } from './speaking-audio';
 import { ExamRow, SKILL_ORDER, computeSkillTiming, shapeExam, totalDuration } from './mock-shape';
 import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelBlueprintIssues, taskGuidance } from './multilevel-specification';
 
@@ -61,6 +62,16 @@ export class MockAttemptService {
     }
     // Pullik kirish tekshiruvi
     await this.access.assertCanStart(student, exam);
+    const existing = await this.prisma.mockAttempt.findFirst({
+      where: { studentId: student.id, examId, status: 'in_progress' },
+      include: { answers: true },
+    });
+    if (existing) {
+      // Migration stamps exam definitions, never historical attempts. Resume
+      // the original contract even if its content predates the new blueprint.
+      const resumeExam = { ...exam, specificationVersion: existing.specificationVersion };
+      return this.resumeResponse(existing, shapeExam(resumeExam as unknown as ExamRow, false, this.base), totalDuration(exam as unknown as ExamRow));
+    }
     if (exam.type === 'multilevel') {
       if (exam.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Unsupported Multilevel specification', 400);
       const issues = multilevelBlueprintIssues(exam.sections, exam.profile === 'full_mock');
@@ -70,14 +81,6 @@ export class MockAttemptService {
     const shaped = shapeExam(exam as unknown as ExamRow, false, this.base);
     if (shaped.questionCount === 0) {
       throw new AppException('MOCK_EXAM_EMPTY', "Bu imtihonda hali savollar yo'q", 400);
-    }
-
-    const existing = await this.prisma.mockAttempt.findFirst({
-      where: { studentId: student.id, examId, status: 'in_progress' },
-      include: { answers: true },
-    });
-    if (existing) {
-      return this.resumeResponse(existing, shaped, totalDuration(exam as unknown as ExamRow));
     }
 
     // --- IELTS full-test flow (v2026.1; qarorlar: dynamic audio+2min, practice=lenient, exam=strict) ---
@@ -448,6 +451,11 @@ export class MockAttemptService {
     file: Express.Multer.File | undefined,
   ) {
     if (!file) throw new AppException('NO_FILE', 'Audio fayl yuklanmadi', 400);
+    try { return await this.persistSpeaking(student, attemptId, questionId, file); }
+    catch (error) { this.storage.delete(`mock/${file.filename}`); throw error; }
+  }
+
+  private async persistSpeaking(student: AuthUser, attemptId: string, questionId: string, file: Express.Multer.File) {
     const attempt = await this.ownAttempt(student, attemptId);
     this.assertInProgress(attempt.status);
     if (attempt.specificationVersion !== MULTILEVEL_VERSION) this.assertNotTimedOut(attempt);
@@ -466,6 +474,7 @@ export class MockAttemptService {
     }
     const key = `mock/${file.filename}`;
     if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      assertSpeakingAudio(file);
       return this.mutateVersionedAttempt(student, attemptId, [questionId], async (tx, fresh) => {
         if (fresh.mode === 'timed') {
           const state = fresh.mediaState as Record<string, MediaPhase> | null;

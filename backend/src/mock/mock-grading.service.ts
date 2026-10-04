@@ -741,7 +741,9 @@ export class MockGradingService {
     if (!attempt) return;
     const headline =
       attempt.exam.type === 'multilevel'
-        ? `estimated (unofficial): ${attempt.overallScore ?? '—'}/75 · ${attempt.cefrLevel ?? '—'}`
+        ? attempt.specificationVersion === MULTILEVEL_VERSION
+          ? `estimated (unofficial): ${attempt.overallScore ?? '—'}/75 · ${attempt.cefrLevel ?? '—'}`
+          : `daraja: ${attempt.cefrLevel ?? '—'}`
         : `Overall Band: ${attempt.overallBand ?? '—'}`;
     await this.notifications.notify(
       attempt.studentId,

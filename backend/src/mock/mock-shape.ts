@@ -140,7 +140,7 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
   return {
     id: exam.id,
     type: exam.type,
-    ...(exam.type === 'multilevel' ? { specificationVersion: exam.specificationVersion ?? MULTILEVEL_VERSION, specification: MULTILEVEL_SPECIFICATION } : {}),
+    ...(exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: exam.specificationVersion, specification: MULTILEVEL_SPECIFICATION } : {}),
     profile: (exam as { profile?: string }).profile ?? 'practice',
     title: exam.title,
     description: exam.description,
@@ -153,7 +153,7 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
     questionCount: countQuestions(exam),
     sections: [...exam.sections]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((s) => shapeSection(s, includeAnswers, base, exam.type === 'multilevel')),
+      .map((s) => shapeSection(s, includeAnswers, base, exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION)),
   };
 }
 

@@ -101,21 +101,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     try { return { ...initial.ans, ...JSON.parse(localStorage.getItem(queueKey) ?? '{}') }; } catch { return initial.ans; }
   });
   const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
-  const [activeSection, setActiveSection] = React.useState(() => Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0));
+  const [selectedSection, setActiveSection] = React.useState(0);
+  // The exam query can resolve after mount. Full-test navigation always follows
+  // the server skill, including a resume directly into Reading/Writing/Speaking.
+  const activeSection = isFullTest && attempt.currentSkill
+    ? Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0)
+    : selectedSection;
   const [cheatWarn, setCheatWarn] = React.useState(false);
   const [cheatCount, setCheatCount] = React.useState(0);
-
-  // Full-test: faol bo'lim server'dan (currentSkill) — orqaga qaytish yo'q.
-  // Render-phase adjustment (not an effect) so no cascading render.
-  const skillOrder: MockSkill[] = React.useMemo(() => ["listening", "reading", "writing", "speaking"], []);
-  const [prevSkill, setPrevSkill] = React.useState(attempt.currentSkill);
-  if (prevSkill !== attempt.currentSkill) {
-    setPrevSkill(attempt.currentSkill);
-    if (isFullTest && attempt.currentSkill) {
-      const idx = skillOrder.indexOf(attempt.currentSkill);
-      if (idx >= 0) setActiveSection(idx);
-    }
-  }
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
@@ -184,7 +177,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const doSubmit = React.useCallback(
     async (auto = false) => {
       if (submittingRef.current) return;
-      if (versioned && (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id))) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
+      if (versioned) {
+        try {
+          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
+        } catch { toast.error('Recording recovery could not be checked. Keep this page open and retry.'); return; }
+      }
       if (!auto && !confirm(t("submitConfirm"))) return;
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
@@ -206,13 +203,18 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   React.useEffect(() => {
     if (!deadline) return;
+    let nextRetry = 0;
     const id = setInterval(() => {
       const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
       if (r <= 0) {
-        clearInterval(id);
-        if (versioned && isFullTest && attempt.currentSkill !== 'speaking') void advance.mutateAsync();
-        else void doSubmit(true);
+        if (!versioned) { clearInterval(id); void doSubmit(true); return; }
+        if (Date.now() < nextRetry || submittingRef.current) return;
+        nextRetry = Date.now() + 10000;
+        if (isFullTest && attempt.currentSkill !== 'speaking') {
+          submittingRef.current = true;
+          void advance.mutateAsync().catch(() => toast.error('Section transition failed. Retrying…')).finally(() => { submittingRef.current = false; });
+        } else void doSubmit(true);
       }
     }, 1000);
     return () => clearInterval(id);
@@ -376,7 +378,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           {section.groups.map((g) => (
             <GroupBlock
               key={g.id}
-              group={g}
+              group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
               skill={section.skill}
               strict={strict && section.skill === "listening"}
               timed={strict}
