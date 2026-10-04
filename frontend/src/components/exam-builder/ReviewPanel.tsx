@@ -284,7 +284,7 @@ export function ReviewPanel({
   const [resolvingIssueId, setResolvingIssueId] = React.useState<string | null>(null);
 
   const client = React.useMemo(
-    () => examClientChecks(detail.sections, detail.profile),
+    () => examClientChecks(detail.sections, detail.profile, detail.type),
     [detail],
   );
   const errors = client.filter((c) => c.level === "error");
@@ -459,6 +459,7 @@ function PublishRelease({
       const clientBad = examClientChecks(
         examData?.sections ?? detail.sections,
         examData?.profile ?? detail.profile,
+        examData?.type ?? detail.type,
       ).filter((c) => c.level === "error").length;
       const total = serverBad + clientBad;
       if (total > 0) {

@@ -647,6 +647,8 @@ export interface BroadcastInput {
 /* ── Mock exams (backend/src/mock) ───────────────────────────────────────── */
 
 export type MockExamType = "ielts_academic" | "ielts_general" | "multilevel";
+export interface TaskGuidance { taskKey: string; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
+export interface PartSpecification { key: string; count: number; types: string[]; rawMax?: number; options?: number; wordMin?: number; wordMax?: number }
 export type MockSkill = "listening" | "reading" | "writing" | "speaking";
 export type MockQuestionType =
   | "multiple_choice"
@@ -703,6 +705,7 @@ export interface MockQuestion {
   options: string[] | null;
   points: number;
   wordLimit: number | null;
+  guidance?: TaskGuidance;
   correctAnswers?: string[] | null;
   acceptedVariants?: string[] | null;
 }
@@ -740,6 +743,8 @@ export interface MockSection {
 export interface MockExamStructure {
   id: string;
   type: MockExamType;
+  specificationVersion?: string;
+  specification?: Record<MockSkill, { durationSeconds: number; parts: PartSpecification[] }>;
   /** practice = 1–4 skill, full_mock = strict IELTS blueprint. */
   profile: string;
   title: string;
@@ -803,6 +808,12 @@ export interface MockAttemptSummary {
   sectionBands: Record<string, number> | null;
   overallBand: number | null;
   cefrLevel: string | null;
+  specificationVersion?: string;
+  scoreMethod?: 'ESTIMATED' | 'OFFICIAL_CALIBRATED';
+  scoreVersion?: string;
+  standardScores?: Record<string, { estimatedStandardScore: number; rawCorrect?: number; questionCount?: number; gradingSource?: string }>;
+  overallScore?: number | null;
+  serverTime?: string;
   antiCheatCount: number;
   startedAt: string;
   submittedAt: string | null;
@@ -817,6 +828,7 @@ export interface MockAttemptQuestion {
   options: string[] | null;
   points: number;
   wordLimit: number | null;
+  guidance?: TaskGuidance;
   response: string | null;
   hasAudio: boolean;
   audioUrl: string | null;
@@ -848,6 +860,7 @@ export interface MockAttemptSection {
   score: number | null;
   max: number | null;
   band: number | null;
+  standardScore?: number | null;
   groups: MockAttemptGroup[];
 }
 

@@ -8,7 +8,7 @@ function setup() {
   };
   const prisma = { $transaction: vi.fn(async (callback) => callback(tx)) };
   const audit = { log: vi.fn() };
-  const service = new TestsService(prisma as never, audit as never);
+  const service = new TestsService(prisma as never, audit as never, {} as never);
   return { service, prisma, tx, audit };
 }
 

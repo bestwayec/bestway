@@ -14,6 +14,7 @@ import {
 } from './dto/mock.dto';
 import { MockAccessService } from './mock-access.service';
 import { ExamRow, SKILL_ORDER, computeSkillTiming, shapeExam, totalDuration } from './mock-shape';
+import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelBlueprintIssues, taskGuidance } from './multilevel-specification';
 
 export const MOCK_EXAM_INCLUDE = {
   sections: {
@@ -30,6 +31,7 @@ export const MOCK_EXAM_INCLUDE = {
 const CHEAT_EVENT_CAP = 50;
 
 type SectionDeadlines = Partial<Record<'listening' | 'reading' | 'writing' | 'speaking', string>>;
+interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number }
 
 @Injectable()
 export class MockAttemptService {
@@ -59,6 +61,11 @@ export class MockAttemptService {
     }
     // Pullik kirish tekshiruvi
     await this.access.assertCanStart(student, exam);
+    if (exam.type === 'multilevel') {
+      if (exam.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Unsupported Multilevel specification', 400);
+      const issues = multilevelBlueprintIssues(exam.sections, exam.profile === 'full_mock');
+      if (issues.length) throw new AppException('MOCK_NOT_READY', issues.join('; '), 400);
+    }
 
     const shaped = shapeExam(exam as unknown as ExamRow, false, this.base);
     if (shaped.questionCount === 0) {
@@ -104,9 +111,9 @@ export class MockAttemptService {
       for (const skill of SKILL_ORDER) {
         const section = bySkill.get(skill);
         if (!section) continue;
-        const { deadline } = computeSkillTiming(skill, section, now);
+        const { deadline } = computeSkillTiming(skill, section, now, exam.type);
         if (!deadline) continue; // speaking — deadline yo'q
-        if (skill !== 'speaking') {
+        if (skill !== 'speaking' || exam.type === 'multilevel') {
           map[skill as keyof SectionDeadlines] = deadline.toISOString();
         }
         last = deadline;
@@ -125,6 +132,7 @@ export class MockAttemptService {
         data: {
           examId,
           studentId: student.id,
+          specificationVersion: exam.specificationVersion,
           mode,
           deadlineAt,
           ...(sectionDeadlines ? { sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue } : {}),
@@ -171,13 +179,13 @@ export class MockAttemptService {
     // deadline key and no overall deadline, otherwise the unconditional
     // overall check in assertNotTimedOut would MOCK_TIME_UP every speaking
     // action once writing's clock runs out.
-    const hasSpeaking = bySkill.has('speaking' as never);
+    const hasSpeaking = bySkill.has('speaking' as never) && exam.type !== 'multilevel';
 
     // Zanjirli deadline: har bir bo'lim oldingisi tugagach boshlanadi.
     let cursor = now;
     const sectionDeadlines: SectionDeadlines = {};
-    for (const skill of ['listening', 'reading', 'writing'] as const) {
-      const { seconds } = computeSkillTiming(skill, bySkill.get(skill), cursor);
+    for (const skill of SKILL_ORDER) {
+      const { seconds } = computeSkillTiming(skill, bySkill.get(skill), cursor, exam.type);
       if (seconds == null) continue;
       cursor += seconds * 1000;
       sectionDeadlines[skill] = new Date(cursor).toISOString();
@@ -195,6 +203,7 @@ export class MockAttemptService {
         data: {
           examId,
           studentId: student.id,
+          specificationVersion: exam.specificationVersion,
           mode: 'timed',
           deadlineAt: overallDeadline,
           flowMode: 'full_test',
@@ -244,6 +253,24 @@ export class MockAttemptService {
     if (attempt.flowMode !== 'full_test') {
       throw new AppException('NOT_FULL_TEST', 'Bu urinish full_test rejimida emas', 400);
     }
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      return this.mutateVersionedAttempt(student, attemptId, [], async (tx, fresh) => {
+        if (fresh.currentSkill !== attempt.currentSkill) return { saved: true, currentSkill: fresh.currentSkill, submittedSections: fresh.submittedSections, serverTime: new Date(), sectionDeadlines: fresh.sectionDeadlines, overallDeadlineAt: fresh.overallDeadlineAt };
+        const order = ['listening', 'reading', 'writing', 'speaking'] as const;
+        const idx = order.indexOf(fresh.currentSkill as typeof order[number]);
+        if (idx < 0 || idx === 3) throw new AppException('FLOW_COMPLETE', 'Submit the final section', 400);
+        const submitted = Array.isArray(fresh.submittedSections) ? [...fresh.submittedSections] : [];
+        const deadlines = { ...(fresh.sectionDeadlines as Record<string, string> | null ?? {}) };
+        let cursor = Date.now();
+        const overallLimit = fresh.overallDeadlineAt?.getTime() ?? Infinity;
+        for (const skill of order.slice(idx+1)) {
+          cursor = Math.min(overallLimit, cursor + MULTILEVEL_SPECIFICATION[skill].durationSeconds * 1000);
+          deadlines[skill] = new Date(cursor).toISOString();
+        }
+        const updated = await tx.mockAttempt.update({ where: { id: attemptId }, data: { currentSkill: order[idx+1], submittedSections: [...submitted, fresh.currentSkill] as Prisma.InputJsonValue, sectionDeadlines: deadlines, overallDeadlineAt: new Date(cursor), deadlineAt: new Date(cursor) } });
+        return { saved: true, currentSkill: updated.currentSkill, submittedSections: updated.submittedSections, serverTime: new Date(), sectionDeadlines: updated.sectionDeadlines, overallDeadlineAt: updated.overallDeadlineAt };
+      }, true);
+    }
     const skills = await this.prisma.mockSection.findMany({
       where: { examId: attempt.examId },
       select: { skill: true },
@@ -268,7 +295,7 @@ export class MockAttemptService {
         submittedSections: submitted as unknown as Prisma.InputJsonValue,
         // Entering speaking clears any overall deadline (heals attempts
         // started before overallDeadlineAt=null; speaking is untimed).
-        ...(next === 'speaking' ? { overallDeadlineAt: null, deadlineAt: null } : {}),
+        ...(next === 'speaking' && attempt.specificationVersion !== MULTILEVEL_VERSION ? { overallDeadlineAt: null, deadlineAt: null } : {}),
       },
     });
     return {
@@ -289,16 +316,25 @@ export class MockAttemptService {
   async recordAudioPlay(student: AuthUser | undefined, attemptId: string | undefined, groupId: string) {
     if (!attemptId || !student) return { allowed: true, plays: 0, limited: false };
     const attempt = await this.prisma.mockAttempt.findUnique({ where: { id: attemptId } });
-    if (!attempt || attempt.studentId !== student.id) return { allowed: true, plays: 0, limited: false };
+    if (!attempt || attempt.studentId !== student.id) throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404);
     if (attempt.mode !== 'timed') {
       return { allowed: true, plays: 0, limited: false };
     }
     const group = await this.prisma.mockQuestionGroup.findUnique({
       where: { id: groupId },
-      select: { id: true, audioKey: true, audioPlayLimit: true, section: { select: { skill: true } } },
+      select: { id: true, audioKey: true, audioPlayLimit: true, section: { select: { skill: true, examId: true } } },
     });
     if (!group || group.section.skill !== 'listening' || !group.audioKey) {
       return { allowed: true, plays: 0, limited: false };
+    }
+    if (group.section.examId !== attempt.examId) throw new AppException('QUESTION_NOT_IN_EXAM', 'Audio outside attempt', 403);
+    this.assertInProgress(attempt.status);
+    this.assertNotTimedOut(attempt);
+    if (attempt.flowMode === 'full_test' && attempt.currentSkill !== 'listening') throw new AppException('SECTION_LOCKED', 'Listening section is locked', 403);
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      const phase = (attempt.mediaState as Record<string, MediaPhase> | null)?.[groupId];
+      if (!phase?.plays || Date.now() > new Date(phase.expiresAt).getTime()) throw new AppException('AUDIO_REPLAY_BLOCKED', 'Start the scheduled playback first', 403);
+      return { allowed: true, plays: phase.plays, limited: true };
     }
     const plays = ((attempt.audioPlays as Record<string, number> | null) ?? {}) as Record<string, number>;
     const count = (plays[groupId] ?? 0) + 1;
@@ -344,6 +380,12 @@ export class MockAttemptService {
     this.assertNotTimedOut(attempt);
     await this.assertQuestionInExam(attempt.examId, dto.questionId);
     await this.assertQuestionInCurrentSection(attempt.examId, dto.questionId, attempt);
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      return this.mutateVersionedAttempt(student, attemptId, [dto.questionId], async (tx) => {
+        await tx.mockAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId: dto.questionId } }, update: { response: dto.response }, create: { attemptId, questionId: dto.questionId, response: dto.response } });
+        return { saved: true };
+      });
+    }
     await this.prisma.mockAnswer.upsert({
       where: { attemptId_questionId: { attemptId, questionId: dto.questionId } },
       update: { response: dto.response },
@@ -371,6 +413,7 @@ export class MockAttemptService {
       : valid;
     const validIds = new Set(inSection.map((v) => v.id));
     const items = dto.answers.filter((a) => validIds.has(a.questionId));
+    if (attempt.specificationVersion === MULTILEVEL_VERSION && items.length !== dto.answers.length) throw new AppException('SECTION_LOCKED', 'All answers must belong to the current section', 403);
     if (items.length === 0) {
       throw new AppException(
         attempt.flowMode === 'full_test' ? 'SECTION_LOCKED' : 'QUESTION_NOT_IN_EXAM',
@@ -379,6 +422,12 @@ export class MockAttemptService {
       );
     }
 
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      return this.mutateVersionedAttempt(student, attemptId, items.map((a) => a.questionId), async (tx) => {
+        for (const a of items) await tx.mockAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId: a.questionId } }, update: { response: a.response }, create: { attemptId, questionId: a.questionId, response: a.response } });
+        return { saved: items.length };
+      });
+    }
     await this.prisma.$transaction(
       items.map((a) =>
         this.prisma.mockAnswer.upsert({
@@ -401,7 +450,8 @@ export class MockAttemptService {
     if (!file) throw new AppException('NO_FILE', 'Audio fayl yuklanmadi', 400);
     const attempt = await this.ownAttempt(student, attemptId);
     this.assertInProgress(attempt.status);
-    this.assertNotTimedOut(attempt);
+    if (attempt.specificationVersion !== MULTILEVEL_VERSION) this.assertNotTimedOut(attempt);
+    await this.assertQuestionInCurrentSection(attempt.examId, questionId, attempt);
 
     const q = await this.prisma.mockQuestion.findFirst({
       where: { id: questionId, group: { section: { examId: attempt.examId, skill: 'speaking' } } },
@@ -415,6 +465,25 @@ export class MockAttemptService {
       );
     }
     const key = `mock/${file.filename}`;
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      return this.mutateVersionedAttempt(student, attemptId, [questionId], async (tx, fresh) => {
+        if (fresh.mode === 'timed') {
+          const state = fresh.mediaState as Record<string, MediaPhase> | null;
+          const phase = state?.[questionId];
+          // Upload grace accommodates transient network failure, but cannot
+          // extend recording time or overwrite a finalized take.
+          if (!phase || Date.now() < new Date(phase.prepEndsAt).getTime()) throw new AppException('RECORDING_NOT_STARTED', 'Start the speaking task first', 400);
+          if (Date.now() > Date.parse(phase.expiresAt) + 5 * 60 * 1000) throw new AppException('UPLOAD_WINDOW_EXPIRED', 'The recording upload recovery window has expired', 400);
+        }
+        const saved = await tx.mockAnswer.findUnique({ where: { attemptId_questionId: { attemptId, questionId } } });
+        if (saved?.audioKey && fresh.mode === 'timed') {
+          this.storage.delete(key);
+          return { saved: true, audioUrl: `${this.base}/mock/attempts/${attemptId}/answers/${questionId}/audio` };
+        }
+        await tx.mockAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId } }, update: { audioKey: key }, create: { attemptId, questionId, response: '', audioKey: key } });
+        return { saved: true, audioUrl: `${this.base}/mock/attempts/${attemptId}/answers/${questionId}/audio` };
+      }, true);
+    }
     const existing = await this.prisma.mockAnswer.findUnique({
       where: { attemptId_questionId: { attemptId, questionId } },
     });
@@ -466,6 +535,66 @@ export class MockAttemptService {
       throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404);
     }
     return attempt;
+  }
+
+  private async mutateVersionedAttempt<T>(student: AuthUser, attemptId: string, questionIds: string[], operation: (tx: Prisma.TransactionClient, attempt: MockAttempt) => Promise<T>, uploadGrace = false): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "MockAttempt" WHERE "id" = ${attemptId} FOR UPDATE`;
+      const fresh = await tx.mockAttempt.findUnique({ where: { id: attemptId } });
+      if (!fresh || fresh.studentId !== student.id) throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404);
+      const profile = await tx.studentProfile.findUnique({ where: { userId: student.id } });
+      if (!profile?.availablePrograms.includes('MULTILEVEL')) throw new AppException('PROGRAM_NOT_ENROLLED', 'Not enrolled in Multilevel', 403);
+      this.assertInProgress(fresh.status);
+      if (!uploadGrace) this.assertNotTimedOut(fresh);
+      const qs = await tx.mockQuestion.findMany({ where: { id: { in: questionIds }, group: { section: { examId: fresh.examId } } }, select: { id: true, group: { select: { section: { select: { skill: true } } } } } });
+      if (qs.length !== new Set(questionIds).size || (fresh.flowMode === 'full_test' && qs.some((q) => q.group.section.skill !== fresh.currentSkill))) throw new AppException('SECTION_LOCKED', 'Question outside current section', 403);
+      return operation(tx, fresh);
+    });
+  }
+
+  /** Durable server-issued media phases, reused by web and Tauri clients. */
+  async startMediaPhase(student: AuthUser, attemptId: string, entityId: string, kind: 'listening' | 'speaking', play = false) {
+    const attempt = await this.ownAttempt(student, attemptId);
+    if (attempt.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Multilevel task required', 400);
+    const exam = await this.prisma.mockExam.findUniqueOrThrow({ where: { id: attempt.examId }, include: MOCK_EXAM_INCLUDE });
+    const section = exam.sections.find((s) => s.skill === kind);
+    const groups = section?.groups ?? [];
+    const gi = groups.findIndex((g) => kind === 'listening' ? g.id === entityId : g.questions.some((q) => q.id === entityId));
+    const group = groups[gi];
+    if (!group) throw new AppException('QUESTION_NOT_IN_EXAM', 'Media task not in exam', 400);
+    const qi = group.questions.findIndex((q) => q.id === entityId);
+    const guidance = taskGuidance(kind, gi, qi);
+    const ids = kind === 'speaking' ? [entityId] : group.questions.map((q) => q.id);
+    return this.mutateVersionedAttempt(student, attemptId, ids, async (tx, fresh) => {
+      const now = Date.now();
+      const state = (fresh.mediaState as Record<string, MediaPhase> | null) ?? {};
+      let phase = state[entityId];
+      if (!phase || fresh.mode === 'practice') {
+        if (fresh.mode === 'timed' && kind === 'listening' && gi > 0) {
+          const previous = state[groups[gi-1].id];
+          if (!previous || previous.plays < MULTILEVEL_AUDIO.playLimit || now < new Date(previous.expiresAt).getTime()) throw new AppException('PART_LOCKED', 'Complete the previous listening part first', 403);
+        }
+        if (fresh.mode === 'timed' && kind === 'speaking') {
+          const ordered = groups.flatMap((g) => g.questions);
+          const index = ordered.findIndex((q) => q.id === entityId);
+          if (index > 0) {
+            const previous = state[ordered[index-1].id];
+            if (!previous || now < new Date(previous.expiresAt).getTime()) throw new AppException('PART_LOCKED', 'Complete the previous speaking response first', 403);
+          }
+        }
+        const prep = kind === 'listening' ? MULTILEVEL_AUDIO.previewSeconds : guidance?.prepSeconds ?? 0;
+        const duration = kind === 'listening' ? group.audioDurationSec : guidance?.responseSeconds;
+        if (!duration) throw new AppException('MEDIA_DURATION_REQUIRED', 'Media duration required', 400);
+        phase = { startedAt: new Date(now).toISOString(), prepEndsAt: new Date(now+prep*1000).toISOString(), expiresAt: new Date(now+(prep+duration)*1000).toISOString(), plays: 0 };
+      }
+      if (kind === 'listening' && play) {
+        if (now < new Date(phase.prepEndsAt).getTime() || (phase.plays > 0 && now < new Date(phase.expiresAt).getTime())) throw new AppException('PREVIEW_ACTIVE', 'Wait for the preview/current playback to finish', 403);
+        if (phase.plays >= MULTILEVEL_AUDIO.playLimit) throw new AppException('AUDIO_REPLAY_BLOCKED', 'Audio plays twice in Multilevel', 403);
+        phase = { ...phase, plays: phase.plays+1, expiresAt: new Date(now+group.audioDurationSec!*1000).toISOString() };
+      }
+      await tx.mockAttempt.update({ where: { id: attemptId }, data: { mediaState: { ...state, [entityId]: phase } as unknown as Prisma.InputJsonValue } });
+      return { ...phase, serverTime: new Date().toISOString(), playLimit: MULTILEVEL_AUDIO.playLimit };
+    });
   }
 
   private assertInProgress(status: string): void {

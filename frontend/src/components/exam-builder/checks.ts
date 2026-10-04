@@ -57,7 +57,7 @@ export function groupIssueCount(group: MockGroup, skill: MockSkill): number {
  * Exam-wide client checks. Server readiness (authoritative for structure) is merged in ReviewPanel.
  * Full Mock task rules (writing task 1+2) apply only to full_mock; practice checks existing content only.
  */
-export function examClientChecks(sections: MockSection[], profile = "practice"): Check[] {
+export function examClientChecks(sections: MockSection[], profile = "practice", type = "ielts_academic"): Check[] {
   const checks: Check[] = [];
   if (sections.length === 0) {
     checks.push({
@@ -70,6 +70,7 @@ export function examClientChecks(sections: MockSection[], profile = "practice"):
   }
   const numbers = new Map<number, string>();
   for (const s of sections) {
+    if (type === "multilevel") numbers.clear();
     if (!s.groups || s.groups.length === 0) {
       checks.push({
         level: "error",

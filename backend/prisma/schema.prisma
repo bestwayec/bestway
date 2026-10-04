@@ -42,6 +42,11 @@ enum TestType {
   multilevel
 }
 
+enum ExamProgram {
+  IELTS
+  MULTILEVEL
+}
+
 enum TestSection {
   listening
   reading
@@ -161,6 +166,8 @@ model DesktopAuthCode {
 // StudentProfile kaliti = User.id — API dagi studentId har doim user id degani
 model StudentProfile {
   userId        String   @id
+  availablePrograms ExamProgram[] @default([IELTS])
+  activeProgram ExamProgram? @default(IELTS)
   isApproved    Boolean  @default(false) // "Tasdiqlangan o'quv markaz o'quvchisi"
   groupId       String?
   currentPoints Int      @default(0)
@@ -571,6 +578,7 @@ enum MockAttemptMode {
 /// Bitta mock imtihon (IELTS Academic/General yoki Multilevel).
 model MockExam {
   id                String       @id @default(uuid())
+  specificationVersion String?
   type              MockExamType
   title             String
   description       String?
@@ -757,6 +765,12 @@ model MockQuestion {
 
 model MockAttempt {
   id             String            @id @default(uuid())
+  specificationVersion String?
+  scoreMethod String?
+  scoreVersion String?
+  standardScores Json?
+  overallScore Float?
+  mediaState Json?
   examId         String
   studentId      String
   status         MockAttemptStatus @default(in_progress)

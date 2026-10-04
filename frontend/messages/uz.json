@@ -1,4 +1,22 @@
 {
+  "examTrack": {
+    "title": "Imtihon yo‘nalishim",
+    "manage": "Talabaning imtihon yo‘nalishlari",
+    "loading": "Yo‘nalishlar yuklanmoqda…",
+    "loadError": "Yo‘nalishlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.",
+    "ieltsDescription": "Akademik / Umumiy IELTS",
+    "multilevelDescription": "O‘zbekiston CEFR B1 / B2 / C1",
+    "active": "Faol yo‘nalish",
+    "enrolled": "Ruxsat berilgan",
+    "locked": "Yopiq — ruxsat berilmagan",
+    "select": "Yo‘nalishni tanlash",
+    "remove": "Ruxsatni olib tashlash",
+    "assign": "Ruxsat berish",
+    "practice": "Imtihon mashqlari",
+    "estimated": "Taxminiy Multilevel ballari mashq natijalaridir, UZBMB rasmiy sertifikat ballari emas.",
+    "browse": "To‘liq imtihonlar va bo‘lim mashqlarini ko‘rish",
+    "history": "Yo‘nalish tarixi"
+  },
   "groups": {
     "title": "Guruhlar",
     "create": "Guruh yaratish",

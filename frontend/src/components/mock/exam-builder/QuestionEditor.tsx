@@ -653,7 +653,7 @@ function QuestionPreview({ question }: { question: BuilderQuestion }) {
     );
   }
   if (kind === "essay") {
-    const min = question.type === "essay_task1" ? 150 : 250;
+    const min = question.points === 9 ? (question.type === "essay_task1" ? 150 : 250) : null;
     return (
       <div className="space-y-2">
         <div className="flex items-start gap-2">
@@ -661,7 +661,7 @@ function QuestionPreview({ question }: { question: BuilderQuestion }) {
           <p className="whitespace-pre-line text-sm text-fg">{prompt}</p>
         </div>
         <Textarea value="" placeholder="…" disabled className="min-h-24" aria-label="Student essay preview" />
-        <p className="text-right text-xs tabular-nums text-fg-subtle">0 words · min {min}</p>
+        <p className="text-right text-xs tabular-nums text-fg-subtle">0 words {min != null && `· min ${min}`}</p>
       </div>
     );
   }
@@ -1178,9 +1178,7 @@ export function QuestionFieldSet(props: {
           <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="font-semibold text-fg">Teacher graded</p>
             <p className="mt-0.5 text-xs text-fg-muted">
-              No answer key — you score this 0–9. Recommended minimum:{" "}
-              {question.type === "essay_task1" ? "150" : "250"} words (reminder only, never a hard
-              limit).
+              No answer key — raw score 0–{question.points}. Follow the versioned task instructions for word targets.
             </p>
           </div>
         )}
@@ -1191,7 +1189,7 @@ export function QuestionFieldSet(props: {
               <Mic className="size-4" aria-hidden /> Teacher graded
             </p>
             <p className="mt-0.5 text-xs text-fg-muted">
-              Students record audio. No answer key — you score each response 0–9.
+              Students record audio. No answer key — raw score 0–{question.points}.
             </p>
           </div>
         )}

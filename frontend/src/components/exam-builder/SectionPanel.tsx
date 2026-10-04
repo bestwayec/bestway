@@ -109,7 +109,7 @@ export function SectionPanel({
           title: defaultUnitTitle(section!.skill, section!.groups.length),
           sortOrder: section!.groups.length,
           ...(section!.skill === "listening"
-            ? { partNumber: section!.groups.length + 1, audioPlayLimit: 1 }
+            ? { partNumber: section!.groups.length + 1, audioPlayLimit: detail.type === 'multilevel' ? 2 : 1 }
             : {}),
         },
       },
@@ -126,6 +126,9 @@ export function SectionPanel({
 
   return (
     <div className="space-y-4">
+      {detail.specification && <Card className="space-y-2 p-4"><p className="font-semibold">{detail.specificationVersion}</p>
+        {detail.specification[section.skill].parts.map((part) => <p key={part.key} className="text-sm">{part.key}: {part.count} questions/responses · {part.types.join(', ')}{part.rawMax ? ` · holistic raw maximum ${part.rawMax}` : ''}{part.wordMin ? ` · ${part.wordMin}–${part.wordMax} words` : ''}</p>)}
+      </Card>}
       <Card>
         <CardHeader>
           <CardTitle>

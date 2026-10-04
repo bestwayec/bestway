@@ -19,6 +19,7 @@ import {
 } from "@/hooks/use-telegram";
 import { ApiError } from "@/lib/api-client";
 import { formatPhone, isSafeHref } from "@/lib/utils";
+import { ExamTrackSelector } from './exam-track-selector';
 
 export function ProfileView() {
   const t = useTranslations("profile");
@@ -107,6 +108,8 @@ export function ProfileView() {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <PageHeader title={t("title")} />
+
+      {me.user.role === 'student' && <ExamTrackSelector />}
 
       <Card>
         <CardHeader>

@@ -224,7 +224,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
   }
   const blockers = React.useMemo(
     () =>
-      examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice").filter(
+      examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice", detail?.type).filter(
         (c) => c.level === "error",
       ).length + (provQ.data?.openIssues ?? 0),
     [detail, provQ.data?.openIssues],
@@ -564,7 +564,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "section" && activeSection && activeSection.skill === "listening" && (
+            {effective.kind === "section" && activeSection && activeSection.skill === "listening" && detail.type !== 'multilevel' && (
               <ListeningSectionPanel
                 key={activeSection.id}
                 examId={examId}
@@ -575,7 +575,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "section" && activeSection && activeSection.skill === "reading" && (
+            {effective.kind === "section" && activeSection && activeSection.skill === "reading" && detail.type !== 'multilevel' && (
               <ReadingSectionPanel
                 key={activeSection.id}
                 examId={examId}
@@ -586,7 +586,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "section" && activeSection && activeSection.skill === "writing" && (
+            {effective.kind === "section" && activeSection && activeSection.skill === "writing" && detail.type !== 'multilevel' && (
               <WritingSectionPanel
                 key={activeSection.id}
                 examId={examId}
@@ -597,7 +597,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "section" && activeSection && activeSection.skill === "speaking" && (
+            {effective.kind === "section" && activeSection && activeSection.skill === "speaking" && detail.type !== 'multilevel' && (
               <SpeakingSectionPanel
                 key={activeSection.id}
                 examId={examId}
@@ -608,7 +608,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "section" && activeSection && activeSection.skill !== "listening" && activeSection.skill !== "reading" && activeSection.skill !== "writing" && activeSection.skill !== "speaking" && (
+            {effective.kind === "section" && activeSection && (detail.type === 'multilevel' || (activeSection.skill !== "listening" && activeSection.skill !== "reading" && activeSection.skill !== "writing" && activeSection.skill !== "speaking")) && (
               <SectionPanel
                 key={activeSection.id}
                 examId={examId}
@@ -619,7 +619,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "listening" && (
+            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "listening" && detail.type !== 'multilevel' && (
               <ListeningPartEditor
                 key={activeGroup.g.id}
                 examId={examId}
@@ -631,7 +631,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "reading" && (
+            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "reading" && detail.type !== 'multilevel' && (
               <ReadingPassageEditor
                 key={activeGroup.g.id}
                 examId={examId}
@@ -643,7 +643,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "writing" && (
+            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "writing" && detail.type !== 'multilevel' && (
               <WritingTaskEditor
                 key={activeGroup.g.id}
                 examId={examId}
@@ -655,7 +655,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "speaking" && (
+            {effective.kind === "group" && activeGroup && activeGroup.s.skill === "speaking" && detail.type !== 'multilevel' && (
               <SpeakingTaskEditor
                 key={activeGroup.g.id}
                 examId={examId}
@@ -667,7 +667,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 onDirty={handleDirty}
               />
             )}
-            {effective.kind === "group" && activeGroup && activeGroup.s.skill !== "listening" && activeGroup.s.skill !== "reading" && activeGroup.s.skill !== "writing" && activeGroup.s.skill !== "speaking" && (
+            {effective.kind === "group" && activeGroup && (detail.type === 'multilevel' || (activeGroup.s.skill !== "listening" && activeGroup.s.skill !== "reading" && activeGroup.s.skill !== "writing" && activeGroup.s.skill !== "speaking")) && (
               <GroupEditor
                 key={activeGroup.g.id}
                 examId={examId}

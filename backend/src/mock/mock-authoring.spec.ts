@@ -267,8 +267,8 @@ describe('exam starter structure', () => {
     expect(sections[1].durationMinutes).toBe(60);
     expect(JSON.stringify(sections)).not.toContain('correctAnswers');
   });
-  it('uses one flexible block per Multilevel skill', () => {
-    expect(starterSections('multilevel').map((s) => (s.groups!.create as unknown[]).length)).toEqual([1, 1, 1, 1]);
+  it('uses the versioned Multilevel part structure', () => {
+    expect(starterSections('multilevel').map((s) => (s.groups!.create as unknown[]).length)).toEqual([6, 5, 3, 4]);
   });
   it('keeps blank creation backward compatible and creates the structure in the same nested write', async () => {
     const { service, prisma, actor } = setup();

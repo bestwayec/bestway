@@ -68,8 +68,10 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               </>
             ) : (
               <>
-                <p className="text-xs tracking-wide text-fg-subtle uppercase">{t("cefrLevel")}</p>
+                <p className="text-xs tracking-wide text-fg-subtle uppercase">Estimated Multilevel Result</p>
+                <p className="text-4xl font-bold text-brand tabular-nums">{attempt.overallScore ?? '—'} /75</p>
                 <p className="text-5xl font-bold text-brand">{attempt.cefrLevel ?? "—"}</p>
+                <p className="mt-2 text-xs text-fg-subtle">{attempt.specificationVersion ?? 'Legacy result'} · {attempt.scoreMethod ?? 'Legacy method'} · {attempt.scoreVersion ?? ''}</p>
               </>
             )}
           </div>
@@ -94,7 +96,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             >
               <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}</span>
               <span className="text-sm text-fg-muted tabular-nums">
-                {s.band != null ? (
+                {!isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
                   <span className="font-bold text-brand">{s.band}</span>
                 ) : isIelts ? (
                   t("awaitingGrade")
@@ -345,7 +347,7 @@ function GradeForm({
     () => Object.fromEntries(Object.entries(q.rubricScores ?? {}).map(([k, v]) => [k, String(v)])),
   );
   const saving = grade.isPending && grade.variables?.questionId === q.id;
-  const rubricDefs = RUBRICS[skill] ?? [];
+  const rubricDefs = q.guidance ? [] : RUBRICS[skill] ?? [];
   const rubricsComplete =
     rubricDefs.length > 0 &&
     rubricDefs.every(
@@ -376,7 +378,7 @@ function GradeForm({
         toast.error(`${t("score")}: 0–${q.points}`);
         return;
       }
-    } else if (Object.keys(rubricScores).length !== rubricDefs.length) {
+    } else if (!rubricDefs.length || Object.keys(rubricScores).length !== rubricDefs.length) {
       toast.error(t("scoreOrRubrics"));
       return;
     }

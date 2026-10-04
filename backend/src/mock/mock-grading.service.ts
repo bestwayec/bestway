@@ -31,6 +31,7 @@ import {
   rubricKeysFor,
 } from './mock-scoring';
 import { SettingsService } from '../settings/settings.service';
+import { MULTILEVEL_VERSION, ESTIMATE_VERSION, convertExpertScore, estimateObjective, multilevelLevel, multilevelOverall, taskGuidance } from './multilevel-specification';
 
 interface SectionAgg {
   skill: MockSkill;
@@ -77,9 +78,19 @@ export class MockGradingService {
       throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404);
     }
     if (attempt.status !== 'in_progress') {
+      if (attempt.specificationVersion === MULTILEVEL_VERSION) return this.submissionResult(attempt);
       throw new AppException('MOCK_ATTEMPT_FINISHED', 'Bu urinish allaqachon topshirilgan', 400);
     }
-    const result = await this.gradeAndCompute(attemptId, true, skills);
+    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+      const profile = await this.prisma.studentProfile.findUnique({ where: { userId: student.id }, select: { availablePrograms: true } });
+      if (!profile?.availablePrograms.includes('MULTILEVEL')) throw new AppException('PROGRAM_NOT_ENROLLED', 'Not enrolled in Multilevel', 403);
+      const claimed = await this.prisma.mockAttempt.updateMany({ where: { id: attemptId, studentId: student.id, status: 'in_progress' }, data: { status: 'grading', submittedAt: new Date() } });
+      if (!claimed.count) {
+        const saved = await this.prisma.mockAttempt.findUniqueOrThrow({ where: { id: attemptId } });
+        return this.submissionResult(saved);
+      }
+    }
+    const result = await this.gradeAndCompute(attemptId, true, attempt.specificationVersion === MULTILEVEL_VERSION ? undefined : skills);
     if (result.status === 'completed') {
       await this.notifyResult(attemptId);
     } else {
@@ -215,6 +226,7 @@ export class MockGradingService {
       throw new AppException('NOT_MANUAL_QUESTION', 'Bu savol avtomatik baholanadi', 400);
     }
     const skill = question.group.section.skill;
+    if (attempt.specificationVersion === MULTILEVEL_VERSION && dto.rubricScores) throw new AppException('SCORE_REQUIRED', 'Multilevel uses holistic task raw scores; enter a half-point raw score', 400);
     this.validateRubrics(skill, dto.rubricScores);
 
     // Score berilmasa — 4 ta rubric to'liq bo'lsa o'rtachadan hisoblanadi.
@@ -244,6 +256,8 @@ export class MockGradingService {
         400,
       );
     }
+    if (attempt.specificationVersion === MULTILEVEL_VERSION && (!Number.isFinite(finalScore) || finalScore * 2 !== Math.round(finalScore * 2))) throw new AppException('SCORE_OUT_OF_RANGE', 'Use half-point raw scores', 400);
+    const before = await this.prisma.mockAnswer.findUnique({ where: { attemptId_questionId: { attemptId, questionId: dto.questionId } } });
 
     await this.prisma.mockAnswer.upsert({
       where: { attemptId_questionId: { attemptId, questionId: dto.questionId } },
@@ -272,6 +286,7 @@ export class MockGradingService {
       action: 'mock.answer.grade',
       entity: 'mockAnswer',
       entityId: dto.questionId,
+      oldValue: { score: before?.score ?? null, gradedById: before?.gradedById ?? null, feedback: before?.feedback ?? null },
       newValue: { attemptId, score: finalScore, status: result.status },
     });
     if (result.status === 'completed') await this.notifyResult(attemptId);
@@ -293,6 +308,7 @@ export class MockGradingService {
     const answerByQ = new Map(attempt.answers.map((a) => [a.questionId, a]));
     const examType = attempt.exam.type;
     const isIelts = examType === 'ielts_academic' || examType === 'ielts_general';
+    const isVersionedMultilevel = !isIelts && attempt.specificationVersion === MULTILEVEL_VERSION;
     // Section-only submit: faqat so'ralgan skill'lar (bo'sh massiv = filtr yo'q).
     const wanted = skills && skills.length > 0 ? new Set<string>(skills) : null;
     const examSections = wanted
@@ -318,6 +334,7 @@ export class MockGradingService {
         tasks: [],
       };
       for (const group of section.groups) {
+        const groupScores: number[] = [];
         for (const q of group.questions) {
           agg.max += q.points;
           const ans = answerByQ.get(q.id);
@@ -344,10 +361,19 @@ export class MockGradingService {
             }
           } else if (ans && ans.isGraded) {
             agg.score += ans.score ?? 0;
+            groupScores.push(ans.score ?? 0);
             agg.tasks.push({ type: q.type, score: ans.score ?? 0 });
           } else {
             agg.manualPending = true;
           }
+        }
+        if (isVersionedMultilevel && section.skill === 'speaking') {
+          // A speaking part is one holistic raw score even when several
+          // recordings are assessed. Average prompt ratings, round to .5.
+          agg.score -= groupScores.reduce((sum, score) => sum + score, 0);
+          if (groupScores.length === group.questions.length && groupScores.length) agg.score += roundHalfBand(groupScores.reduce((sum, score) => sum + score, 0) / groupScores.length);
+          agg.max -= group.questions.reduce((sum, q) => sum + q.points, 0);
+          agg.max += group.questions[0]?.points ?? 0;
         }
       }
       aggs.push(agg);
@@ -361,6 +387,8 @@ export class MockGradingService {
     let sectionBands: SectionBands | null = null;
     let overall: number | null = null;
     let cefrLevel: string | null = null;
+    let standardScores: Record<string, unknown> | null = null;
+    let overallScore: number | null = null;
 
     if (isIelts) {
       const bands: SectionBands = {};
@@ -379,6 +407,19 @@ export class MockGradingService {
         overall = computeOverallBand(Object.values(bands), isFullTest ? { fixedDivisor: 4 } : {});
         if (overall !== null) cefrLevel = cefrFromBand(overall);
       }
+    } else if (isVersionedMultilevel) {
+      standardScores = {};
+      const scores: Partial<Record<MockSkill, number>> = {};
+      for (const a of aggs) {
+        if (!a.max || a.manualPending) continue;
+        const result = a.manual
+          ? { rawScore: a.score, rawMax: a.max, estimatedStandardScore: convertExpertScore(a.skill as 'writing' | 'speaking', a.score), scoreMethod: 'ESTIMATED', scoreVersion: ESTIMATE_VERSION, isOfficial: false, gradingSource: 'HUMAN' }
+          : estimateObjective(a.score, a.max);
+        standardScores[a.skill] = result;
+        scores[a.skill] = result.estimatedStandardScore;
+      }
+      overallScore = multilevelOverall(scores);
+      if (overallScore != null) cefrLevel = multilevelLevel(overallScore);
     } else if (!manualPending) {
       const totalScore = aggs.reduce((s, a) => s + a.score, 0);
       const totalMax = aggs.reduce((s, a) => s + a.max, 0);
@@ -395,6 +436,7 @@ export class MockGradingService {
           sectionBands: sectionBands ? (sectionBands as Prisma.InputJsonValue) : Prisma.JsonNull,
           overallBand: overall,
           cefrLevel,
+          ...(isVersionedMultilevel ? { standardScores: standardScores as Prisma.InputJsonValue, overallScore, scoreMethod: 'ESTIMATED', scoreVersion: ESTIMATE_VERSION } : {}),
           ...(markSubmitted ? { submittedAt: new Date() } : {}),
           finishedAt: status === 'completed' ? new Date() : null,
         },
@@ -402,7 +444,8 @@ export class MockGradingService {
     );
 
     await this.prisma.$transaction(updates);
-    return { status, rawScores, sectionBands, overallBand: overall, cefrLevel };
+    return { status, rawScores, sectionBands, overallBand: overall, cefrLevel,
+      ...(isVersionedMultilevel ? { standardScores, overallScore, scoreMethod: 'ESTIMATED', scoreVersion: ESTIMATE_VERSION, specificationVersion: attempt.specificationVersion, isOfficial: false } : {}) };
   }
 
   /** Writing: Task 2 ikki barobar; Speaking: o'rtacha. Natija 0.5 ga yaxlitlanadi. */
@@ -426,6 +469,7 @@ export class MockGradingService {
     const where: Prisma.MockAttemptWhereInput = {
       ...(q.status ? { status: q.status } : {}),
       ...(q.examId ? { examId: q.examId } : {}),
+      ...(q.program ? { exam: { type: q.program === 'MULTILEVEL' ? 'multilevel' : { in: ['ielts_academic', 'ielts_general'] } } } : {}),
       ...(q.studentId ? { studentId: q.studentId } : {}),
     };
     if (viewer.role === 'teacher') {
@@ -453,6 +497,7 @@ export class MockGradingService {
   async myAttempts(student: AuthUser, q: ListAttemptsQueryDto) {
     const where: Prisma.MockAttemptWhereInput = {
       studentId: student.id,
+      ...(q.program ? { exam: { type: q.program === 'MULTILEVEL' ? 'multilevel' : { in: ['ielts_academic', 'ielts_general'] } } } : {}),
       ...(q.status ? { status: q.status } : {}),
       ...(q.examId ? { examId: q.examId } : {}),
     };
@@ -501,15 +546,16 @@ export class MockGradingService {
       score: rawScores[s.skill]?.score ?? null,
       max: rawScores[s.skill]?.max ?? null,
       band: sectionBands[s.skill] ?? null,
-      groups: s.groups.map((g) => ({
+      standardScore: ((attempt.standardScores as Record<string, { estimatedStandardScore?: number }> | null)?.[s.skill]?.estimatedStandardScore) ?? null,
+      groups: s.groups.map((g, gi) => ({
         id: g.id,
         title: g.title,
         instructions: g.instructions,
-        passageText: g.passageText,
+        passageText: attempt.specificationVersion === MULTILEVEL_VERSION && s.skill === 'listening' && !showAnswers ? null : g.passageText,
         contentHtml: g.contentHtml,
         contentLayout: g.contentLayout,
         hasAudio: !!g.audioKey,
-        questions: g.questions.map((qq) => {
+        questions: g.questions.map((qq, qi) => {
           const ans = answerByQ.get(qq.id);
           return {
             id: qq.id,
@@ -519,6 +565,7 @@ export class MockGradingService {
             options: (qq.options as string[] | null) ?? null,
             points: qq.points,
             wordLimit: qq.wordLimit,
+            ...(attempt.specificationVersion === MULTILEVEL_VERSION ? { guidance: taskGuidance(s.skill, gi, qi) } : {}),
             response: ans?.response ?? null,
             hasAudio: !!ans?.audioKey,
             audioUrl: ans?.audioKey
@@ -537,6 +584,7 @@ export class MockGradingService {
 
     return {
       ...this.summary(attempt),
+      serverTime: new Date(),
       annotations: attempt.annotations ?? [],
       sections,
       ...(staff
@@ -594,6 +642,7 @@ export class MockGradingService {
         score: rawScores[skill].score,
         max: rawScores[skill].max,
         band: sectionBands[skill] ?? null,
+        standardScore: ((attempt.standardScores as Record<string, { estimatedStandardScore: number }> | null)?.[skill]?.estimatedStandardScore) ?? null,
       }));
 
     return {
@@ -606,6 +655,8 @@ export class MockGradingService {
       attemptId: attempt.id,
       sections,
       overallBand: attempt.overallBand,
+      overallScore: attempt.overallScore,
+      specificationVersion: attempt.specificationVersion,
       cefrLevel: attempt.cefrLevel,
     };
   }
@@ -640,6 +691,11 @@ export class MockGradingService {
     sectionBands: Prisma.JsonValue;
     overallBand: number | null;
     cefrLevel: string | null;
+    specificationVersion?: string | null;
+    standardScores?: Prisma.JsonValue;
+    overallScore?: number | null;
+    scoreMethod?: string | null;
+    scoreVersion?: string | null;
     antiCheatCount: number;
     startedAt: Date;
     submittedAt: Date | null;
@@ -669,6 +725,7 @@ export class MockGradingService {
       sectionBands: a.sectionBands ?? null,
       overallBand: a.overallBand,
       cefrLevel: a.cefrLevel,
+      ...(a.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: a.specificationVersion, standardScores: a.standardScores, overallScore: a.overallScore, scoreMethod: a.scoreMethod, scoreVersion: a.scoreVersion, isOfficial: false } : {}),
       antiCheatCount: a.antiCheatCount,
       startedAt: a.startedAt,
       submittedAt: a.submittedAt,
@@ -684,7 +741,7 @@ export class MockGradingService {
     if (!attempt) return;
     const headline =
       attempt.exam.type === 'multilevel'
-        ? `daraja: ${attempt.cefrLevel ?? '—'}`
+        ? `estimated (unofficial): ${attempt.overallScore ?? '—'}/75 · ${attempt.cefrLevel ?? '—'}`
         : `Overall Band: ${attempt.overallBand ?? '—'}`;
     await this.notifications.notify(
       attempt.studentId,
@@ -696,6 +753,11 @@ export class MockGradingService {
       'test_result',
       `Farzandingizning "${attempt.exam.title}" mock natijasi: ${headline}.`,
     );
+  }
+
+  private submissionResult(attempt: { status: MockAttemptStatus; rawScores: Prisma.JsonValue; sectionBands: Prisma.JsonValue; overallBand: number | null; cefrLevel: string | null; standardScores: Prisma.JsonValue; overallScore: number | null; specificationVersion: string | null; scoreMethod: string | null; scoreVersion: string | null }) {
+    return { status: attempt.status, rawScores: attempt.rawScores ?? {}, sectionBands: attempt.sectionBands, overallBand: attempt.overallBand, cefrLevel: attempt.cefrLevel,
+      standardScores: attempt.standardScores, overallScore: attempt.overallScore, specificationVersion: attempt.specificationVersion, scoreMethod: attempt.scoreMethod, scoreVersion: attempt.scoreVersion, isOfficial: false };
   }
 
   private async notifyTeacherPending(attemptId: string): Promise<void> {

@@ -1,4 +1,9 @@
 {
+  "examTrack": {
+    "title": "My Exam Track", "manage": "Student Exam Programs", "loading": "Loading exam tracks…", "loadError": "Could not load exam tracks. Please retry.",
+    "ieltsDescription": "Academic / General IELTS", "multilevelDescription": "Uzbekistan CEFR B1 / B2 / C1", "active": "Active track", "enrolled": "Enrolled", "locked": "Locked — not enrolled",
+    "select": "Select track", "remove": "Remove access", "assign": "Assign access", "practice": "Exam practice", "estimated": "Estimated Multilevel scores are practice results, not official UZBMB certificate scores.", "browse": "Browse full mocks and section practice", "history": "Track history"
+  },
   "groups": {
     "title": "Groups",
     "create": "Create group",

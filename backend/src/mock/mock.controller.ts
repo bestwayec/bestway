@@ -148,6 +148,13 @@ export class MockController {
     return this.attempts.saveAnswer(user, attemptId, dto);
   }
 
+  @Roles('student') @Post('attempts/:attemptId/listening/:groupId/prepare')
+  prepareListening(@CurrentUser() user: AuthUser, @Param('attemptId') id: string, @Param('groupId') groupId: string) { return this.attempts.startMediaPhase(user, id, groupId, 'listening'); }
+  @Roles('student') @Post('attempts/:attemptId/listening/:groupId/play')
+  playListening(@CurrentUser() user: AuthUser, @Param('attemptId') id: string, @Param('groupId') groupId: string) { return this.attempts.startMediaPhase(user, id, groupId, 'listening', true); }
+  @Roles('student') @Post('attempts/:attemptId/speaking/:questionId/start')
+  startSpeaking(@CurrentUser() user: AuthUser, @Param('attemptId') id: string, @Param('questionId') qid: string) { return this.attempts.startMediaPhase(user, id, qid, 'speaking'); }
+
   @ApiBearerAuth()
   @Roles('student')
   @Post('attempts/:attemptId/answers')
