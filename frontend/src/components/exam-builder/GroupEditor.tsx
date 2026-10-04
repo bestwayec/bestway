@@ -11,7 +11,7 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
   newQuestion,
-  validatePart,
+  validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
 } from "@/components/mock/exam-builder/types";
@@ -25,6 +25,8 @@ import type { MockExamDetail, MockQuestionType, MockSkill } from "@/lib/types";
 import { ImportPanel } from "./ImportPanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StudentPreview } from "./StudentPreview";
+import { QuestionGroupSettings } from "./QuestionGroupSettings";
+import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
 import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -34,6 +36,9 @@ function toBuilder(group: MockExamDetail["sections"][number]["groups"][number]):
     title: group.title ?? "",
     instructions: group.instructions ?? "",
     passageText: group.passageText ?? "",
+    contentHtml: group.contentHtml ?? "",
+    contentLayout: (group.contentLayout ?? undefined) as BuilderPart["contentLayout"],
+    optionsReusable: group.optionsReusable ?? null,
     partNumber: group.partNumber ?? undefined,
     audioFileName: undefined,
     audioPendingFile: null,
@@ -51,6 +56,7 @@ function toBuilder(group: MockExamDetail["sections"][number]["groups"][number]):
       acceptedVariants: q.acceptedVariants ?? [],
       points: q.points,
       wordLimit: q.wordLimit ?? undefined,
+      answerRule: q.answerRule ?? null,
       savedQuestionId: q.id,
     })),
   };
@@ -118,6 +124,7 @@ export function GroupEditor({
   // Fresh server snapshot per group (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilder(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
     typeof window !== "undefined" && window.localStorage.getItem("examBuilder.questionMode") === "visual"
@@ -155,7 +162,7 @@ export function GroupEditor({
     // Visual mode: run the same save body against the visual copies.
     let p = mode === "visual" ? { ...part, passageText: visualText, questions: visualQuestions } : part;
     if (!p || !g) return false;
-    const errs = validatePart(skill, p);
+    const errs = validateDraftPart(p);
     if (p.passageText.length > 20000) {
       errs.push(tx(t, "passageTooLong", "Passage text must be 20000 characters or fewer."));
     }
@@ -172,13 +179,16 @@ export function GroupEditor({
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
           passageText: p.passageText.trim(),
+          contentHtml: p.contentHtml,
+          contentLayout: p.contentLayout,
+          optionsReusable: p.optionsReusable,
           partNumber: p.partNumber,
           audioDurationSec: p.audioDurationSec,
           audioPlayLimit: p.audioPlayLimit,
         },
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
-          points: q.points, wordLimit: q.wordLimit })),
+          points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -279,7 +289,9 @@ export function GroupEditor({
     title: part.title,
     instructions: part.instructions,
     passageText: visualText,
-    contentHtml: null,
+    contentHtml: part.contentHtml ?? null,
+        contentLayout: part.contentLayout,
+        optionsReusable: part.optionsReusable,
     hasAudio: part.hasAudio || group.hasAudio,
     imageUrl: localImageUrl ?? group.imageUrl,
     questions: visualQuestions.map(toPreviewQuestion),
@@ -588,6 +600,7 @@ export function GroupEditor({
                 acceptedVariants: q.acceptedVariants ?? [],
                 points: q.points ?? 1,
                 wordLimit: q.wordLimit ?? undefined,
+                answerRule: q.answerRule ?? null,
                 savedQuestionId: q.id,
               }));
             if (merged.length === 0) return;
@@ -711,6 +724,7 @@ function toPreviewQuestion(q: BuilderQuestion) {
     options: q.options,
     points: q.points,
     wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
   };
 }
 
@@ -724,7 +738,9 @@ function previewGroup(
     title: part.title,
     instructions: part.instructions,
     passageText: part.passageText,
-    contentHtml: server.contentHtml ?? null,
+    contentHtml: part.contentHtml ?? server.contentHtml ?? null,
+    contentLayout: part.contentLayout,
+    optionsReusable: part.optionsReusable,
     hasAudio: part.hasAudio || server.hasAudio,
     imageUrl: server.imageUrl,
     questions: part.questions.map(toPreviewQuestion),

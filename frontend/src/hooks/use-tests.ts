@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { useStudentProgramScope } from './use-exam-programs';
 import type {
   AttemptDetail,
   AttemptStatus,
@@ -17,17 +18,20 @@ import type {
 } from "@/lib/types";
 
 export function useTests(type?: TestType) {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["tests", type ?? "all"],
-    queryFn: () => api.get<TestListItem[]>("/tests", { type }),
+    queryKey: ["tests", scope.owner, scope.program ?? 'all', type ?? "all"],
+    queryFn: () => api.get<TestListItem[]>("/tests", { type, program: scope.program }),
+    enabled: scope.ready,
   });
 }
 
 export function useTest(id?: string) {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["test", id],
+    queryKey: ["test", scope.owner, scope.program ?? 'all', id],
     queryFn: () => api.get<TestDetail>(`/tests/${id}`),
-    enabled: !!id,
+    enabled: !!id && scope.ready,
   });
 }
 
@@ -66,9 +70,11 @@ export function useFlagCheat(attemptId: string) {
 }
 
 export function useMyAttempts(status?: AttemptStatus) {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["my-attempts", status ?? "all"],
-    queryFn: () => api.get<AttemptSummary[]>("/tests/attempts/mine", { status }),
+    queryKey: ["my-attempts", scope.owner, scope.program, status ?? "all"],
+    queryFn: () => api.get<AttemptSummary[]>("/tests/attempts/mine", { status, program: scope.program }),
+    enabled: scope.student && scope.ready,
   });
 }
 
@@ -116,7 +122,7 @@ export function useUpdateTest(id: string) {
       api.patch<TestDetail>(`/tests/${id}`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tests"] });
-      qc.invalidateQueries({ queryKey: ["test", id] });
+      qc.invalidateQueries({ queryKey: ["test"] });
     },
   });
 }
@@ -126,7 +132,7 @@ export function useAddQuestion(testId: string) {
   return useMutation({
     mutationFn: (input: CreateQuestionInput) => api.post(`/tests/${testId}/questions`, input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test", testId] });
+      qc.invalidateQueries({ queryKey: ["test"] });
       qc.invalidateQueries({ queryKey: ["tests"] });
     },
   });
@@ -148,7 +154,7 @@ export function useImportQuestions(testId: string) {
         input,
       ),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test", testId] });
+      qc.invalidateQueries({ queryKey: ["test"] });
       qc.invalidateQueries({ queryKey: ["tests"] });
     },
   });
@@ -159,7 +165,7 @@ export function useDeleteQuestion(testId: string) {
   return useMutation({
     mutationFn: (questionId: string) => api.delete(`/tests/questions/${questionId}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["test", testId] });
+      qc.invalidateQueries({ queryKey: ["test"] });
       qc.invalidateQueries({ queryKey: ["tests"] });
     },
   });
@@ -170,7 +176,7 @@ export function useUpdateQuestion(testId: string) {
   return useMutation({
     mutationFn: (v: { questionId: string; input: Partial<CreateQuestionInput> }) =>
       api.patch(`/tests/questions/${v.questionId}`, v.input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["test", testId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["test"] }),
   });
 }
 
@@ -192,6 +198,6 @@ export function useUploadQuestionAudio(testId: string) {
       }
       return json.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["test", testId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["test"] }),
   });
 }

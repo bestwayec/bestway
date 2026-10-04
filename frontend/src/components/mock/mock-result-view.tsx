@@ -64,7 +64,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               <>
                 <p className="text-xs tracking-wide text-fg-subtle uppercase">{t("overallBand")}</p>
                 <p className="bg-gradient-to-br from-brand to-accent bg-clip-text text-5xl font-bold text-transparent tabular-nums">
-                  {attempt.overallBand ?? "—"}
+                  {attempt.overallBand?.toFixed(1) ?? "—"}
                 </p>
               </>
             ) : (
@@ -98,7 +98,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}</span>
               <span className="text-sm text-fg-muted tabular-nums">
                 {!isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
-                  <span className="font-bold text-brand">{s.band}</span>
+                  <span className="font-bold text-brand">{isIelts ? s.band.toFixed(1) : s.band}</span>
                 ) : isIelts ? (
                   t("awaitingGrade")
                 ) : s.score != null && s.max != null ? (

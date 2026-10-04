@@ -12,7 +12,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { useTests, useMyAttempts, useStartTest } from "@/hooks/use-tests";
+import { useStudentProgramScope } from "@/hooks/use-exam-programs";
 import { ApiError } from "@/lib/api-client";
+import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
+import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
 import type { AttemptStatus } from "@/lib/types";
 
 const STATUS_TONE: Record<AttemptStatus, "success" | "warning" | "info"> = {
@@ -31,6 +34,7 @@ export function StudentTestsView() {
   const testsQ = useTests();
   const attemptsQ = useMyAttempts();
   const start = useStartTest();
+  const scope = useStudentProgramScope();
   const [startingId, setStartingId] = React.useState<string | null>(null);
 
   function onStart(testId: string) {
@@ -47,6 +51,7 @@ export function StudentTestsView() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title={t("title")} />
+      <ExamTrackSelector />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "available" | "results")} className="mb-4">
         <TabsList>
@@ -56,9 +61,11 @@ export function StudentTestsView() {
       </Tabs>
 
       {tab === "available" ? (
-        testsQ.isError ? (
+        scope.needsProgramSelection ? (
+          <ExamTrackRequired />
+        ) : testsQ.isError ? (
           <ErrorState title={tc("error")} action={<Button variant="outline" size="sm" onClick={() => testsQ.refetch()}>{tc("retry")}</Button>} />
-        ) : testsQ.isLoading ? (
+        ) : testsQ.isPending ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
           </div>
@@ -106,7 +113,9 @@ export function StudentTestsView() {
             ))}
           </div>
         )
-      ) : attemptsQ.isLoading ? (
+      ) : scope.needsProgramSelection ? (
+        <ExamTrackRequired />
+      ) : attemptsQ.isPending ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16" />)}
         </div>
@@ -125,7 +134,7 @@ export function StudentTestsView() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {a.status === "completed" && a.totalScore !== null && (
-                    <span className="text-lg font-bold text-fg tabular-nums">{a.totalScore}</span>
+                    <span className="text-lg font-bold text-fg tabular-nums">{a.totalScore} <span className="text-xs font-normal">{t('practicePoints')}</span></span>
                   )}
                   <Badge variant={STATUS_TONE[a.status]}>{t(`statusLabel.${a.status}`)}</Badge>
                 </div>

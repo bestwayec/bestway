@@ -11,8 +11,9 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/app/page-header";
 import { useCreateMockExam } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
-import type { MockExamType, MockSkill } from "@/lib/types";
+import type { MockExamType, MockSkill, PracticeLevel } from "@/lib/types";
 import { EXAM_TYPES, EXAM_TYPE_LABEL, tx } from "./types";
+import { PracticeLevelField } from "./PracticeLevelField";
 
 const ALL_SKILLS: MockSkill[] = ["listening", "reading", "writing", "speaking"];
 
@@ -48,6 +49,7 @@ export function ExamSetup() {
   const [starterStructure, setStarterStructure] = React.useState(true);
   const [mode, setMode] = React.useState<"single" | "full">("single");
   const [skills, setSkills] = React.useState<MockSkill[]>(["reading"]);
+  const [practiceLevel, setPracticeLevel] = React.useState<PracticeLevel | null>(null);
 
   function toggleSkill(skill: MockSkill) {
     setSkills((prev) =>
@@ -81,6 +83,7 @@ export function ExamSetup() {
         title: title.trim(),
         description: description.trim() || undefined,
         level: level.trim() || undefined,
+        practiceLevel: type === "multilevel" && !full ? practiceLevel : null,
         price: priceNum,
         isFreeForApproved,
       },
@@ -214,6 +217,9 @@ export function ExamSetup() {
                 })}
               </div>
             </fieldset>
+          )}
+          {type === "multilevel" && mode === "single" && (
+            <PracticeLevelField value={practiceLevel} onChange={setPracticeLevel} />
           )}
         </CardContent>
       </Card>

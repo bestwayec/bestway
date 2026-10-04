@@ -304,7 +304,7 @@ export function ReviewPanel({
   const rechecking = readinessQ.isFetching && !readinessQ.isLoading;
 
   async function handleRefresh() {
-    await qc.invalidateQueries({ queryKey: ["mock-exam", examId] });
+    await qc.invalidateQueries({ queryKey: ["mock-exam"] });
     await qc.invalidateQueries({ queryKey: ["mock-import-provenance", examId] });
     await readinessQ.refetch();
   }
@@ -447,7 +447,7 @@ function PublishRelease({
     setStaleBlockers(null);
     setChecking(true);
     try {
-      await qc.invalidateQueries({ queryKey: ["mock-exam", examId] });
+      await qc.invalidateQueries({ queryKey: ["mock-exam"] });
       const fresh = await readinessQ.refetch();
       if (fresh.isError || !fresh.data) {
         setPublishError(tx(t, "readinessCheckFailed", "Could not check exam readiness."));
@@ -455,7 +455,7 @@ function PublishRelease({
       }
       const items = fresh.data?.items ?? [];
       const serverBad = items.filter((i) => !i.ok).length;
-      const examData = qc.getQueryData<MockExamDetail>(["mock-exam", examId]);
+      const examData = qc.getQueryData<MockExamDetail>(["mock-exam"]);
       const clientBad = examClientChecks(
         examData?.sections ?? detail.sections,
         examData?.profile ?? detail.profile,

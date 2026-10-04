@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { useStudentProgramScope } from './use-exam-programs';
 import type {
   CreateMockExamInput,
   CreateMockSectionInput,
@@ -22,18 +23,21 @@ import type {
 
 /* ── Exams ─────────────────────────────────────────────────────────────── */
 
-export function useMockExams(type?: MockExamType) {
+export function useMockExams(type?: MockExamType, practiceLevel?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1') {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["mock-exams", type ?? "all"],
-    queryFn: () => api.get<MockExamListItem[]>("/mock/exams", { type }),
+    queryKey: ["mock-exams", scope.owner, scope.program ?? 'all', type ?? "all", practiceLevel ?? 'all'],
+    queryFn: () => api.get<MockExamListItem[]>("/mock/exams", { type, program: scope.program, practiceLevel }),
+    enabled: scope.ready,
   });
 }
 
 export function useMockExam(id: string) {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["mock-exam", id],
+    queryKey: ["mock-exam", scope.owner, scope.program ?? 'all', id],
     queryFn: () => api.get<MockExamDetail>(`/mock/exams/${id}`),
-    enabled: !!id,
+    enabled: !!id && scope.ready,
   });
 }
 
@@ -50,7 +54,7 @@ export function useUpdateMockExam(id: string) {
   return useMutation({
     mutationFn: (input: UpdateMockExamInput) => api.patch<MockExamDetail>(`/mock/exams/${id}`, input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["mock-exam", id] });
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
       qc.invalidateQueries({ queryKey: ["mock-exams"] });
     },
   });
@@ -107,9 +111,11 @@ export function useStartMock() {
 }
 
 export function useMyMockAttempts(status?: MockAttemptStatus) {
+  const scope = useStudentProgramScope();
   return useQuery({
-    queryKey: ["mock-attempts-mine", status ?? "all"],
-    queryFn: () => api.get<MockAttemptSummary[]>("/mock/attempts/mine", { status }),
+    queryKey: ["mock-attempts-mine", scope.owner, scope.program, status ?? "all"],
+    queryFn: () => api.get<MockAttemptSummary[]>("/mock/attempts/mine", { status, program: scope.program }),
+    enabled: scope.student && scope.ready,
   });
 }
 
@@ -260,7 +266,7 @@ export function useCreateMockSection(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateMockSectionInput) => api.post(`/mock/exams/${examId}/sections`, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -269,7 +275,7 @@ export function useUpdateMockSection(examId: string) {
   return useMutation({
     mutationFn: (v: { sectionId: string; input: Partial<CreateMockSectionInput> }) =>
       api.patch(`/mock/sections/${v.sectionId}`, v.input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -277,7 +283,7 @@ export function useDeleteMockSection(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (sectionId: string) => api.delete(`/mock/sections/${sectionId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -286,7 +292,7 @@ export function useCreateMockGroup(examId: string) {
   return useMutation({
     mutationFn: (v: { sectionId: string; input?: MockGroupInput }) =>
       api.post(`/mock/sections/${v.sectionId}/groups`, v.input ?? {}),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -295,7 +301,7 @@ export function useUpdateMockGroup(examId: string) {
   return useMutation({
     mutationFn: (v: { groupId: string; input: MockGroupInput }) =>
       api.patch(`/mock/groups/${v.groupId}`, v.input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -311,7 +317,7 @@ export function useSaveMockGroupContent(examId: string) {
     }) => {
       // Optimistic concurrency: send the loaded contentVersion so a stale tab
       // fails with a visible conflict instead of silently overwriting.
-      const cached = qc.getQueryData<{ contentVersion?: number }>(["mock-exam", examId]);
+      const cached = qc.getQueryData<{ contentVersion?: number }>(["mock-exam"]);
       const version = cached?.contentVersion;
       return api.put<{
         saved: number;
@@ -329,7 +335,7 @@ export function useSaveMockGroupContent(examId: string) {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["mock-exam", examId] });
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
       qc.invalidateQueries({ queryKey: ["mock-exams"] });
     },
   });
@@ -339,7 +345,7 @@ export function useDeleteMockGroup(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (groupId: string) => api.delete(`/mock/groups/${groupId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -349,7 +355,7 @@ export function useAddMockQuestions(examId: string) {
   return useMutation({
     mutationFn: (v: { groupId: string; questions: MockQuestionInput[] }) =>
       api.post(`/mock/groups/${v.groupId}/questions`, { questions: v.questions }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -376,7 +382,7 @@ export function useImportMockQuestions(examId: string) {
         answers: v.answers,
         points: v.points,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -385,7 +391,7 @@ export function useUpdateMockQuestion(examId: string) {
   return useMutation({
     mutationFn: (v: { questionId: string; input: Partial<MockQuestionInput> }) =>
       api.patch(`/mock/questions/${v.questionId}`, v.input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -393,7 +399,7 @@ export function useDeleteMockQuestion(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (questionId: string) => api.delete(`/mock/questions/${questionId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 
@@ -403,7 +409,7 @@ export function useSetMockGroupMedia(examId: string) {
   return useMutation({
     mutationFn: (v: { groupId: string; form: FormData }) =>
       api.post(`/mock/groups/${v.groupId}/media`, v.form),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam", examId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
 

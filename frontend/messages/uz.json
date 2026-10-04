@@ -148,7 +148,12 @@
     "noHistory": "Bu yo'nalishda urinishlar hali yo'q",
     "practiceLevel": "Mashq darajasi",
     "allLevels": "Barcha darajalar",
-    "switching": "O'zgartirilmoqda..."
+    "switching": "O'zgartirilmoqda...",
+    "requiredTitle": "Imtihon yo'nalishini tanlang",
+    "requiredStaffTitle": "Yo'nalish belgilanmagan",
+    "requiredSelfSelect": "IELTS yoki Multilevel ni tanlang va shu yo'nalish imtihonlari va natijalarini ko'ring.",
+    "requiredStaffAssigned": "Imtihon yo'nalishingiz hali belgilanmagan. Markaz xodimlariga murojaat qiling.",
+    "requiredAction": "Yo'nalishni tanlash"
   },
   "groups": {
     "title": "Guruhlar",

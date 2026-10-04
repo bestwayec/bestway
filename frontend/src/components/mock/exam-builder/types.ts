@@ -1,4 +1,4 @@
-import type { MockExamType, MockQuestionType, MockSkill } from "@/lib/types";
+import type { MockContentLayout, MockExamType, MockQuestionType, MockSkill, ObjectiveAnswerRule } from "@/lib/types";
 
 export function uid(): string {
   return Math.random().toString(36).slice(2);
@@ -14,6 +14,7 @@ export interface BuilderQuestion {
   acceptedVariants: string[];
   points: number;
   wordLimit?: number;
+  answerRule?: ObjectiveAnswerRule | null;
   savedQuestionId?: string;
 }
 
@@ -22,6 +23,9 @@ export interface BuilderPart {
   title: string;
   instructions: string;
   passageText: string;
+  contentHtml?: string;
+  contentLayout?: MockContentLayout;
+  optionsReusable?: boolean | null;
   partNumber?: number;
   audioFileName?: string;
   audioPendingFile?: File | null;
@@ -280,4 +284,22 @@ export function validateOneQuestion(skill: MockSkill, q: BuilderQuestion): strin
     questions: [q],
   };
   return validatePart(skill, part);
+}
+
+/** Saving an incomplete draft is allowed; malformed data still cannot be saved. */
+export function validateDraftPart(part: BuilderPart): string[] {
+  const errors: string[] = [];
+  if (part.passageText.length > 20000) errors.push("Passage text must be 20000 characters or fewer.");
+  if ((part.contentHtml?.length ?? 0) > 100000) errors.push("Gap context is too long.");
+  const numbers = new Set<number>();
+  for (const q of part.questions) {
+    if (!Number.isInteger(q.number) || q.number < 1 || q.number > 200) errors.push("Question number must be between 1 and 200.");
+    if (numbers.has(q.number)) errors.push(`Question ${q.number}: number is repeated.`);
+    numbers.add(q.number);
+    if (q.prompt.length > 5000) errors.push(`Question ${q.number}: prompt is too long.`);
+    if (q.options.length > 26) errors.push(`Question ${q.number}: use at most 26 options.`);
+    if (!Number.isInteger(q.points) || q.points < 1 || q.points > 20) errors.push(`Question ${q.number}: points must be between 1 and 20.`);
+    if (q.wordLimit != null && (!Number.isInteger(q.wordLimit) || q.wordLimit < 1 || q.wordLimit > 50)) errors.push(`Question ${q.number}: word limit must be between 1 and 50.`);
+  }
+  return errors;
 }

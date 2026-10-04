@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { MockSkill } from "@/lib/types";
+import type { MockSkill, ObjectiveAnswerRule } from "@/lib/types";
+import { usedMatchingOptions } from "@/lib/objective-question";
 import { tx } from "./types";
 import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
 import { PreviewQuestionInput } from "./preview-question-renderer";
@@ -19,6 +20,7 @@ export interface PreviewQuestion {
   options: string[] | null;
   points: number;
   wordLimit: number | null;
+  answerRule?: ObjectiveAnswerRule | null;
 }
 
 export interface PreviewGroup {
@@ -27,6 +29,8 @@ export interface PreviewGroup {
   instructions: string | null;
   passageText: string | null;
   contentHtml?: string | null;
+  contentLayout?: string | null;
+  optionsReusable?: boolean | null;
   hasAudio: boolean;
   imageUrl: string | null;
   questions: PreviewQuestion[];
@@ -176,6 +180,7 @@ function PreviewBody({
                   question={q}
                   value={answers[q.id] ?? ""}
                   onChange={(v) => setAnswer(q.id, v)}
+                  unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                 />
               </div>
             ))}

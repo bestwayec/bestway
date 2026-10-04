@@ -80,7 +80,7 @@ export function GapFillBuilder({
         await api.post(`/tests/${testId}/questions`, toQuestionPayload(d, section));
         ok += 1;
       }
-      await qc.invalidateQueries({ queryKey: ["test", testId] });
+      await qc.invalidateQueries({ queryKey: ["test"] });
       await qc.invalidateQueries({ queryKey: ["tests"] });
       toast.success(`${ok} gap-fill questions created (${section})`);
       reset();

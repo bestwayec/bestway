@@ -148,7 +148,12 @@
     "noHistory": "No attempts for this track yet",
     "practiceLevel": "Practice level",
     "allLevels": "All levels",
-    "switching": "Switching..."
+    "switching": "Switching...",
+    "requiredTitle": "Choose your exam track",
+    "requiredStaffTitle": "Exam track not assigned",
+    "requiredSelfSelect": "Select IELTS or Multilevel to see the exams and results for that track.",
+    "requiredStaffAssigned": "Your exam track has not been assigned yet. Please contact the center staff.",
+    "requiredAction": "Select Exam Track"
   },
   "groups": {
     "title": "Groups",

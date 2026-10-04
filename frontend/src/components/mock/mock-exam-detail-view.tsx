@@ -236,7 +236,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                     <div className="text-right">
                       {a.overallBand != null ? (
                         <span className="font-bold text-brand tabular-nums">
-                          {t("overallBand")}: {a.overallBand}
+                          {t("overallBand")}: {a.overallBand.toFixed(1)}
                         </span>
                       ) : a.cefrLevel ? (
                         <span className="font-bold text-brand">{a.cefrLevel}</span>

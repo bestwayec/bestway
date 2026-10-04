@@ -45,6 +45,7 @@ export interface ImportedServerQuestion {
   acceptedVariants?: string[] | null;
   points?: number;
   wordLimit?: number | null;
+  answerRule?: "ONE_WORD" | "ONE_WORD_AND_OR_NUMBER" | null;
 }
 
 /** Parse `1: B` style answer-key lines. */
