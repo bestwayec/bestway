@@ -191,6 +191,7 @@ export class MockAuthoringService {
       viewer,
       exams.map((e) => ({
         id: e.id,
+        type: e.type,
         isDemo: e.isDemo,
         isPublished: e.isPublished,
         price: e.price,
@@ -500,7 +501,7 @@ export class MockAuthoringService {
     if (!key || !this.storage.exists(key)) {
       throw new AppException('FILE_NOT_FOUND', 'Fayl topilmadi', 404);
     }
-    if (!viewer && !group.section.exam.isDemo) {
+    if (!viewer && (group.section.exam.type === 'multilevel' || !group.section.exam.isDemo)) {
       throw new AppException('UNAUTHORIZED', 'Avval tizimga kiring', 401);
     }
     if (viewer && !isStaff(viewer)) {
