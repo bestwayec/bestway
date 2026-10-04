@@ -8,6 +8,7 @@ import { MockAuthoringService } from './mock-authoring.service';
 import { MockCertificateService } from './mock-certificate.service';
 import { MockExamImportService } from './mock-exam-import.service';
 import { MockGradingService } from './mock-grading.service';
+import { AssessmentService } from '../assessment/assessment.service';
 
 /**
  * Real IELTS/Multilevel mock imtihon moduli — mustaqil (src/mock/).
@@ -24,6 +25,8 @@ import { MockGradingService } from './mock-grading.service';
     MockAccessService,
     MockExamImportService,
     StorageService,
+    AssessmentService,
   ],
+  exports: [MockGradingService, StorageService, AssessmentService],
 })
 export class MockModule {}

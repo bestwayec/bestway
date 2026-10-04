@@ -1,4 +1,5 @@
 import { MockSkill } from '@prisma/client';
+import { speakingProfileTiming } from './multilevel-speaking-profile';
 
 export const MULTILEVEL_VERSION = 'UZBMB_MULTILEVEL_EN_2026_V1';
 export const ESTIMATE_VERSION = `${MULTILEVEL_VERSION}_ESTIMATE_V1`;
@@ -90,11 +91,14 @@ export function multilevelOverall(scores: Partial<Record<MockSkill, number>>): n
   if (!skills.every((s) => scores[s] != null)) return null;
   return skills.reduce((sum, skill) => sum + scores[skill]!, 0) / 4;
 }
-export function taskGuidance(skill: MockSkill, partIndex: number, questionIndex: number) {
+export function taskGuidance(skill: MockSkill, partIndex: number, questionIndex: number, speakingProfileVersion?: string | null) {
   const p = MULTILEVEL_SPECIFICATION[skill].parts[partIndex];
   if (!p) return undefined;
   return { taskKey: p.key, wordMin: p.wordMin, wordMax: p.wordMax,
-    prepSeconds: p.prepSeconds?.[questionIndex], responseSeconds: p.responseSeconds?.[questionIndex] };
+    rawMax: p.rawMax,
+    ...(skill === 'speaking' ? { speakingProfileVersion: speakingProfileVersion ?? null, profileLabel: speakingProfileVersion ? 'BestWay product timing profile' : 'Historical Multilevel timing profile' } : {}),
+    prepSeconds: p.prepSeconds?.[questionIndex], responseSeconds: p.responseSeconds?.[questionIndex],
+    ...(skill === 'speaking' ? speakingProfileTiming(speakingProfileVersion, partIndex, questionIndex) : {}) };
 }
 
 export interface BlueprintSection {

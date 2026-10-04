@@ -19,6 +19,7 @@ import {
 import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { AssessmentPanel } from "./assessment-panel";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
@@ -120,6 +121,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </a>
         )}
       </Card>
+
+      {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
 
       {/* Savollar tahlili */}
       <div className="mt-6 space-y-4">

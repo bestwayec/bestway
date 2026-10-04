@@ -234,17 +234,20 @@ function MockExamCard({
 
 function GradingPanel() {
   const t = useTranslations("mock");
+  const ta = useTranslations("assessment");
   const [program, setProgram] = React.useState<'all' | 'IELTS' | 'MULTILEVEL'>('all');
-  const { data, isLoading, isError } = useMockAttempts("grading", program === 'all' ? undefined : program);
+  const [status, setStatus] = React.useState<'grading' | 'completed'>('grading');
+  const { data, isLoading, isError } = useMockAttempts(status, program === 'all' ? undefined : program);
   const attempts = data ?? [];
   return (
     <div className="space-y-2">
       <label className="block text-sm">Exam program <select aria-label="Filter submissions by exam program" value={program} onChange={(event)=>setProgram(event.target.value as typeof program)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">All programs</option><option value="IELTS">IELTS</option><option value="MULTILEVEL">Multilevel</option></select></label>
+      <label className="block text-sm">{ta("queueFilter")} <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="ml-2 rounded border border-border bg-surface p-2"><option value="grading">{ta("pendingReview")}</option><option value="completed">{ta("completedReview")}</option></select></label>
       {isLoading && <Skeleton className="h-16" />}
       {isError && <p role="alert">Could not load submissions.</p>}
       {!isLoading && !isError && attempts.length === 0 && <EmptyState icon={CheckCircle2} title={t("noAttempts")} />}
       {attempts.map((a) => (
-        <Link key={a.id} href={`/mock/attempt/${a.id}`}>
+        <Link key={a.id} href={`/mock/attempt/${a.id}#assessment-feedback`}>
           <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-surface-hover">
             <div className="min-w-0">
               <p className="truncate font-medium text-fg">{a.studentName ?? "—"}</p>

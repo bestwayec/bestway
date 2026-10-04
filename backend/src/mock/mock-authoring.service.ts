@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
 import { ConfigService } from '@nestjs/config';
 import { MockExamType, MockQuestionType, Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
@@ -78,7 +79,8 @@ export class MockAuthoringService {
     const exam = await this.prisma.mockExam.create({
       data: {
         type: dto.type,
-        ...(dto.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION } : {}),
+        assessmentPolicy: dto.assessmentPolicy,
+        ...(dto.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION, speakingProfileVersion: BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } : {}),
         title: dto.title,
         description: dto.description,
         level: dto.level,
@@ -114,6 +116,7 @@ export class MockAuthoringService {
       where: { id },
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.assessmentPolicy !== undefined ? { assessmentPolicy: dto.assessmentPolicy } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.level !== undefined ? { level: dto.level } : {}),
         ...(dto.profile !== undefined ? { profile: dto.profile } : {}),
@@ -919,6 +922,8 @@ export class MockAuthoringService {
         data: {
           type: source.type,
           specificationVersion: source.specificationVersion,
+          speakingProfileVersion: source.type === 'multilevel' ? BESTWAY_MULTILEVEL_SPEAKING_2026_V2 : null,
+          assessmentPolicy: source.assessmentPolicy,
           profile: source.profile,
           title: `${source.title} (copy)`.slice(0, 200),
           description: source.description,

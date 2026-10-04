@@ -293,6 +293,52 @@ export class MockGradingService {
     return { saved: true, status: result.status };
   }
 
+  /** Recompute the legacy attempt projection inside a caller-owned transaction.
+   * AI finalization and teacher review use this path while the attempt row is
+   * locked, so the durable assessment ledger and the student-facing result
+   * cannot diverge. */
+  async recompute(tx: Prisma.TransactionClient, attemptId: string) {
+    const attempt = await tx.mockAttempt.findUnique({ where: { id: attemptId }, include: { exam: { include: MOCK_EXAM_INCLUDE }, answers: true } });
+    if (!attempt) throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404);
+    const isIelts = attempt.exam.type === 'ielts_academic' || attempt.exam.type === 'ielts_general';
+    const isMl = !isIelts && attempt.specificationVersion === MULTILEVEL_VERSION;
+    const bands: SectionBands = {};
+    const rawScores: RawScores = {};
+    const standardScores: Record<string, unknown> = {};
+    let manualPending = false;
+    const bandTables = isIelts ? await this.settings.getBandTables() : undefined;
+    for (const section of attempt.exam.sections) {
+      const sectionAnswers = section.groups.flatMap(group => group.questions.map(question => ({ question, answer: attempt.answers.find(a => a.questionId === question.id), group })));
+      const manual = !AUTO_SKILLS.includes(section.skill);
+      const graded = sectionAnswers.filter(item => item.answer?.isGraded);
+      if (manual && graded.length !== sectionAnswers.length) manualPending = true;
+      let score = manual ? graded.reduce((sum, item) => sum + (item.answer?.score ?? 0), 0) : sectionAnswers.reduce((sum, item) => sum + (item.answer?.score ?? 0), 0);
+      let max = sectionAnswers.reduce((sum, item) => sum + item.question.points, 0);
+      if (isMl && section.skill === 'speaking') {
+        const partScores = section.groups.map(group => {
+          const values = group.questions.map(question => attempt.answers.find(a => a.questionId === question.id)?.score).filter((value): value is number => typeof value === 'number');
+          return values.length === group.questions.length && values.length ? roundHalfBand(values.reduce((a, b) => a + b, 0) / values.length) : null;
+        });
+        score = partScores.every((value): value is number => value !== null) ? partScores.reduce((a, b) => a + b, 0) : 0;
+        max = section.groups.reduce((sum, group) => sum + (group.questions[0]?.points ?? 0), 0);
+      }
+      rawScores[section.skill] = { score, max };
+      if (isIelts && !manual && max > 0) bands[section.skill] = bandFromRaw(section.skill, attempt.exam.type, score, max, bandTables, sectionAnswers.some(item => Boolean(item.answer?.response?.trim())));
+      if (isIelts && manual && !manualPending && graded.length) bands[section.skill] = this.manualSectionBand(section.skill, graded.map(item => ({ type: item.question.type, score: item.answer?.score ?? 0 })));
+      if (isMl && max > 0 && !manualPending) {
+        const converted = manual ? convertExpertScore(section.skill as 'writing' | 'speaking', score) : estimateObjective(score, max).estimatedStandardScore;
+        standardScores[section.skill] = { rawScore: score, rawMax: max, estimatedStandardScore: converted, scoreMethod: 'ESTIMATED', scoreVersion: ESTIMATE_VERSION, isOfficial: false };
+      }
+    }
+    const overallBand = isIelts && !manualPending ? computeOverallBand(Object.values(bands), (attempt as { flowMode?: string | null }).flowMode === 'full_test' ? { fixedDivisor: 4 } : {}) : null;
+    const overallScore = isMl && !manualPending ? multilevelOverall(Object.fromEntries(Object.entries(standardScores).map(([key, value]) => [key, (value as { estimatedStandardScore: number }).estimatedStandardScore])) as Partial<Record<MockSkill, number>>) : null;
+    const cefrLevel = isIelts ? (overallBand === null ? null : cefrFromBand(overallBand)) : isMl ? (overallScore === null ? null : multilevelLevel(overallScore)) : null;
+    const status: MockAttemptStatus = manualPending ? 'grading' : 'completed';
+    await tx.mockAttempt.update({ where: { id: attemptId }, data: { status, rawScores: rawScores as Prisma.InputJsonValue, sectionBands: isIelts ? bands as Prisma.InputJsonValue : Prisma.JsonNull, overallBand, cefrLevel,
+      ...(isMl ? { standardScores: standardScores as Prisma.InputJsonValue, overallScore, scoreMethod: 'ESTIMATED', scoreVersion: ESTIMATE_VERSION } : {}), finishedAt: status === 'completed' ? new Date() : null } });
+    return { status, rawScores, sectionBands: isIelts ? bands : null, overallBand, overallScore, cefrLevel };
+  }
+
   /**
    * Auto savollarni baholaydi, bo'lim bo'yicha xom ball va IELTS band /
    * Multilevel CEFR ni hisoblab saqlaydi. Manual savol qolgan bo'lsa — "grading".

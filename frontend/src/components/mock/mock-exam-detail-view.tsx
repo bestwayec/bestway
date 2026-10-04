@@ -221,7 +221,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
             {attempts
               .filter((a) => a.status !== "in_progress")
               .map((a) => (
-                <Link key={a.id} href={`/mock/attempt/${a.id}`}>
+                <Link key={a.id} href={`/mock/attempt/${a.id}#assessment-feedback`}>
                   <Card className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-surface-hover">
                     <div className="flex items-center gap-3">
                       <Badge

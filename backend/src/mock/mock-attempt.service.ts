@@ -16,6 +16,7 @@ import { MockAccessService } from './mock-access.service';
 import { assertSpeakingAudio } from './speaking-audio';
 import { ExamRow, SKILL_ORDER, computeSkillTiming, shapeExam, totalDuration } from './mock-shape';
 import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelBlueprintIssues, taskGuidance } from './multilevel-specification';
+import { BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
 
 export const MOCK_EXAM_INCLUDE = {
   sections: {
@@ -69,13 +70,14 @@ export class MockAttemptService {
     if (existing) {
       // Migration stamps exam definitions, never historical attempts. Resume
       // the original contract even if its content predates the new blueprint.
-      const resumeExam = { ...exam, specificationVersion: existing.specificationVersion };
+      const resumeExam = { ...exam, specificationVersion: existing.specificationVersion, speakingProfileVersion: existing.speakingProfileVersion ?? null };
       return this.resumeResponse(existing, shapeExam(resumeExam as unknown as ExamRow, false, this.base), totalDuration(exam as unknown as ExamRow));
     }
     if (exam.type === 'multilevel') {
       if (exam.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Unsupported Multilevel specification', 400);
       const issues = multilevelBlueprintIssues(exam.sections, exam.profile === 'full_mock');
       if (issues.length) throw new AppException('MOCK_NOT_READY', issues.join('; '), 400);
+      exam.speakingProfileVersion ??= BESTWAY_MULTILEVEL_SPEAKING_2026_V2;
     }
 
     const shaped = shapeExam(exam as unknown as ExamRow, false, this.base);
@@ -136,6 +138,7 @@ export class MockAttemptService {
           examId,
           studentId: student.id,
           specificationVersion: exam.specificationVersion,
+          speakingProfileVersion: exam.speakingProfileVersion ?? null,
           mode,
           deadlineAt,
           ...(sectionDeadlines ? { sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue } : {}),
@@ -207,6 +210,7 @@ export class MockAttemptService {
           examId,
           studentId: student.id,
           specificationVersion: exam.specificationVersion,
+          speakingProfileVersion: exam.speakingProfileVersion ?? null,
           mode: 'timed',
           deadlineAt: overallDeadline,
           flowMode: 'full_test',
@@ -572,7 +576,7 @@ export class MockAttemptService {
     const group = groups[gi];
     if (!group) throw new AppException('QUESTION_NOT_IN_EXAM', 'Media task not in exam', 400);
     const qi = group.questions.findIndex((q) => q.id === entityId);
-    const guidance = taskGuidance(kind, gi, qi);
+    const guidance = taskGuidance(kind, gi, qi, attempt.speakingProfileVersion);
     const ids = kind === 'speaking' ? [entityId] : group.questions.map((q) => q.id);
     return this.mutateVersionedAttempt(student, attemptId, ids, async (tx, fresh) => {
       const now = Date.now();
@@ -589,6 +593,14 @@ export class MockAttemptService {
           if (index > 0) {
             const previous = state[ordered[index-1].id];
             if (!previous || now < new Date(previous.expiresAt).getTime()) throw new AppException('PART_LOCKED', 'Complete the previous speaking response first', 403);
+          }
+        }
+        if (kind === 'speaking' && fresh.speakingProfileVersion === BESTWAY_MULTILEVEL_SPEAKING_2026_V2) {
+          const ordered = groups.flatMap((g) => g.questions);
+          const index = ordered.findIndex((q) => q.id === entityId);
+          if (index > 0) {
+            const prior = await tx.mockAnswer.findUnique({ where: { attemptId_questionId: { attemptId, questionId: ordered[index - 1].id } } });
+            if (!prior?.audioKey) throw new AppException('PREVIOUS_UPLOAD_PENDING', 'Wait for the previous recording upload acknowledgement', 409);
           }
         }
         const prep = kind === 'listening' ? MULTILEVEL_AUDIO.previewSeconds : guidance?.prepSeconds ?? 0;

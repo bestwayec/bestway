@@ -23,6 +23,7 @@
     "test:smoke": "node scripts/smoke-test.mjs",
     "test:timing": "ts-node --transpile-only scripts/verify-timing.ts",
     "test:fulltest-speaking": "ts-node --transpile-only scripts/verify-fulltest-speaking.ts",
+    "test:assessment-smoke": "node -r ts-node/register scripts/assessment-provider-smoke.cjs",
     "tg:link": "node scripts/telegram-link.mjs",
     "db:backup": "bash scripts/backup.sh",
     "db:clean-demos": "ts-node --transpile-only prisma/clean-demos.ts",

@@ -52,6 +52,7 @@ import { MockAuthoringService } from './mock-authoring.service';
 import { MockCertificateService } from './mock-certificate.service';
 import { MockGradingService } from './mock-grading.service';
 import { mockMediaMulterOptions, speakingAudioMulterOptions } from './mock-storage';
+import { AssessmentService } from '../assessment/assessment.service';
 
 // Diqqat: aniq marshrutlar (attempts/mine, groups/..., sections/..., purchases) ':id' dan OLDIN.
 @ApiTags('mock')
@@ -74,6 +75,7 @@ export class MockController {
     private readonly grading: MockGradingService,
     private readonly certificates: MockCertificateService,
     private readonly access: MockAccessService,
+    private readonly assessment: AssessmentService,
   ) {}
 
   // ───────────── Exams ro'yxati / yaratish ─────────────
@@ -226,7 +228,10 @@ export class MockController {
     @Param('attemptId') attemptId: string,
     @Body() dto?: SubmitMockAttemptDto,
   ) {
-    return this.grading.submit(user, attemptId, dto?.skills);
+    return this.grading.submit(user, attemptId, dto?.skills).then(async (result) => {
+      await this.assessment.enqueue(attemptId, dto?.skills);
+      return result;
+    });
   }
 
   /** Xodim: qotib qolgan urinishni majburan yakunlash */
@@ -234,7 +239,10 @@ export class MockController {
   @Roles('teacher', 'admin', 'super_admin')
   @Post('attempts/:attemptId/force-submit')
   forceSubmit(@CurrentUser() user: AuthUser, @Param('attemptId') attemptId: string) {
-    return this.grading.forceSubmit(user, attemptId);
+    return this.grading.forceSubmit(user, attemptId).then(async (result) => {
+      await this.assessment.enqueue(attemptId);
+      return result;
+    });
   }
 
   /** Xodim: deadline uzaytirish (+minutes barcha muddatlarga) */

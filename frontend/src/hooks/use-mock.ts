@@ -211,6 +211,8 @@ export function useGradeMock(attemptId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
+      qc.invalidateQueries({ queryKey: ["attempt-assessments", attemptId] });
+      qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
     },
   });
 }

@@ -23,6 +23,6 @@ export function ExamTrackDashboard() {
       {exams.data?.filter((e) => matches(e.type) && e.skills.includes(skill) && e.access === 'granted').map((e) => <Link className="block text-sm text-brand" key={e.id} href={`/mock/${e.id}`}>{e.title}</Link>)}
     </div>)}</div><Link className="text-brand" href="/mock">{t('browse')}</Link>
     <h3 className="font-medium">{t('history')}</h3>{history.isError && <p role="alert">{t('loadError')}</p>}
-    {history.data?.filter((a) => matches(a.examType)).map((a) => <Link className="block text-sm" key={a.id} href={`/mock/attempt/${a.id}`}>{a.examTitle} · {tm(`status.${a.status}`)} · {program === 'MULTILEVEL' ? a.overallScore ?? '—' : a.overallBand ?? '—'} {a.cefrLevel ?? ''}</Link>)}
+    {history.data?.filter((a) => matches(a.examType)).map((a) => <Link className="block text-sm" key={a.id} href={`/mock/attempt/${a.id}${a.status !== 'in_progress' ? '#assessment-feedback' : ''}`}>{a.examTitle} · {tm(`status.${a.status}`)} · {program === 'MULTILEVEL' ? a.overallScore ?? '—' : a.overallBand ?? '—'} {a.cefrLevel ?? ''}</Link>)}
   </Card>;
 }

@@ -98,16 +98,16 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  studentProfile StudentProfile?
-  parentLinks    ParentStudent[]     @relation("ParentLinks")
-  teachingGroups Group[]             @relation("GroupTeacher")
-  refreshTokens  RefreshToken[]
+  studentProfile   StudentProfile?
+  parentLinks      ParentStudent[]     @relation("ParentLinks")
+  teachingGroups   Group[]             @relation("GroupTeacher")
+  refreshTokens    RefreshToken[]
   desktopAuthCodes DesktopAuthCode[]
-  notifications  Notification[]
-  articles       Article[]
-  videoPurchases VideoPurchase[]
-  mockPurchases  MockPurchase[]
-  telegramTokens TelegramLinkToken[]
+  notifications    Notification[]
+  articles         Article[]
+  videoPurchases   VideoPurchase[]
+  mockPurchases    MockPurchase[]
+  telegramTokens   TelegramLinkToken[]
 
   @@index([role])
 }
@@ -165,14 +165,14 @@ model DesktopAuthCode {
 
 // StudentProfile kaliti = User.id — API dagi studentId har doim user id degani
 model StudentProfile {
-  userId        String   @id
+  userId            String        @id
   availablePrograms ExamProgram[] @default([IELTS])
-  activeProgram ExamProgram? @default(IELTS)
-  isApproved    Boolean  @default(false) // "Tasdiqlangan o'quv markaz o'quvchisi"
-  groupId       String?
-  currentPoints Int      @default(0)
-  linkCode      String   @unique // ota-ona farzandini shu kod bilan bog'laydi
-  createdAt     DateTime @default(now())
+  activeProgram     ExamProgram?  @default(IELTS)
+  isApproved        Boolean       @default(false) // "Tasdiqlangan o'quv markaz o'quvchisi"
+  groupId           String?
+  currentPoints     Int           @default(0)
+  linkCode          String        @unique // ota-ona farzandini shu kod bilan bog'laydi
+  createdAt         DateTime      @default(now())
 
   // --- Oylik o'yin tizimi ---
   /// currentPoints qaysi oyga tegishli ("YYYY-MM"). Oy o'zgarsa ball qayta boshlanadi.
@@ -181,15 +181,16 @@ model StudentProfile {
   gameQualified Boolean   @default(false)
   qualifiedAt   DateTime?
 
-  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group         Group?                 @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  parents       ParentStudent[]
-  attendance    Attendance[]
-  payments      Payment[]
-  pointsLog     PointsLog[]
-  attempts      TestAttempt[]
-  pointsArchive MonthlyPointsArchive[]
-  mockAttempts  MockAttempt[]
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group          Group?                 @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  parents        ParentStudent[]
+  attendance     Attendance[]
+  payments       Payment[]
+  pointsLog      PointsLog[]
+  attempts       TestAttempt[]
+  pointsArchive  MonthlyPointsArchive[]
+  mockAttempts   MockAttempt[]
+  assessmentJobs AssessmentJob[]
 
   @@index([groupId])
 }
@@ -577,24 +578,26 @@ enum MockAttemptMode {
 
 /// Bitta mock imtihon (IELTS Academic/General yoki Multilevel).
 model MockExam {
-  id                String       @id @default(uuid())
-  specificationVersion String?
-  type              MockExamType
-  title             String
-  description       String?
-  level             String? // masalan "Academic", "B1-C1"
-  isPublished       Boolean      @default(false)
-  isDemo            Boolean      @default(false) // mehmonlar/ota-ona ko'radigan demo
+  id                     String                @id @default(uuid())
+  assessmentPolicy       AssessmentPolicyMode?
+  speakingProfileVersion String?
+  specificationVersion   String?
+  type                   MockExamType
+  title                  String
+  description            String?
+  level                  String? // masalan "Academic", "B1-C1"
+  isPublished            Boolean               @default(false)
+  isDemo                 Boolean               @default(false) // mehmonlar/ota-ona ko'radigan demo
   // --- Pullik kirish (video modeli kabi; oddiy userlar sotib olib ishlatadi) ---
-  price             Int          @default(0) // so'mda; 0 = bepul
-  isFreeForApproved Boolean      @default(true) // tasdiqlangan markaz o'quvchisiga bepulmi
-  createdById       String? // yaratgan admin/teacher (User.id)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  price                  Int                   @default(0) // so'mda; 0 = bepul
+  isFreeForApproved      Boolean               @default(true) // tasdiqlangan markaz o'quvchisiga bepulmi
+  createdById            String? // yaratgan admin/teacher (User.id)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
   // --- AI JSON import (additive; legacy imtihonlarda default qiymatlar) ---
-  profile         String  @default("practice") // practice | full_mock
-  blueprintRef    String? // full_mock tasdiqlangan blueprint havolasi (ixtiyoriy)
-  contentVersion  Int     @default(1) // optimistic concurrency (teacher save bilan)
+  profile                String                @default("practice") // practice | full_mock
+  blueprintRef           String? // full_mock tasdiqlangan blueprint havolasi (ixtiyoriy)
+  contentVersion         Int                   @default(1) // optimistic concurrency (teacher save bilan)
 
   sections  MockSection[]
   attempts  MockAttempt[]
@@ -620,7 +623,7 @@ model MockExamImport {
   examId             String
   createdAt          DateTime @default(now())
 
-  exam       MockExam              @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam       MockExam                @relation(fields: [examId], references: [id], onDelete: Cascade)
   sourceMaps MockImportSourceMap[]
   issues     MockImportReviewIssue[]
 
@@ -664,18 +667,18 @@ model MockImportReviewIssue {
 
 /// Import media binding uchun staged upload — egasi tekshiriladi, muddati o'tgach o'chadi.
 model MockStagedMedia {
-  id            String    @id @default(uuid())
-  ownerId       String // yuklagan staff (User.id)
-  storageKey    String    @unique // mock/ ichidagi opaque kalit
-  fileName      String // asl basename (ko'rsatish uchun)
-  mimeType      String?
-  sizeBytes     Int
-  checksum      String // sha256 (file content)
-  kind          String // audio | image
-  expiresAt     DateTime
-  claimedAt     DateTime?
+  id              String    @id @default(uuid())
+  ownerId         String // yuklagan staff (User.id)
+  storageKey      String    @unique // mock/ ichidagi opaque kalit
+  fileName        String // asl basename (ko'rsatish uchun)
+  mimeType        String?
+  sizeBytes       Int
+  checksum        String // sha256 (file content)
+  kind            String // audio | image
+  expiresAt       DateTime
+  claimedAt       DateTime?
   claimedImportId String?
-  createdAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
 
   @@index([ownerId])
   @@index([expiresAt])
@@ -720,22 +723,22 @@ model MockSection {
 /// Savollar bloki: umumiy ko'rsatma + matn/audio/rasm bilan birlashtirilgan
 /// savollar to'plami. Masalan "Questions 1-5: Complete the notes below".
 model MockQuestionGroup {
-  id           String   @id @default(uuid())
-  sectionId    String
-  sortOrder    Int      @default(0)
-  title        String?
-  instructions String? // "Complete the notes. Write ONE WORD ONLY."
-  passageText  String? // Reading matni / Listening transkripti
-  contentHtml  String? // Sanitized rich document; gaps are <span data-gap="N"></span>
-  audioScript  String? // Staff-only sanitized transcript/review material
-  contentLayout String? // document | table | notes | summary | sentences
-  audioKey     String? // Listening audio (storage kaliti)
-  imageKey     String? // Map/diagram labelling uchun rasm
+  id               String   @id @default(uuid())
+  sectionId        String
+  sortOrder        Int      @default(0)
+  title            String?
+  instructions     String? // "Complete the notes. Write ONE WORD ONLY."
+  passageText      String? // Reading matni / Listening transkripti
+  contentHtml      String? // Sanitized rich document; gaps are <span data-gap="N"></span>
+  audioScript      String? // Staff-only sanitized transcript/review material
+  contentLayout    String? // document | table | notes | summary | sentences
+  audioKey         String? // Listening audio (storage kaliti)
+  imageKey         String? // Map/diagram labelling uchun rasm
   // --- IELTS full-test (v2026.1): Listening 4 part, dynamic audio muddati ---
   partNumber       Int? // Listening uchun 1..4 (Reading/Writing da null)
-  audioPlayLimit   Int  @default(1) // exam rejimda 1, practice da cheksiz (service tekshiradi)
+  audioPlayLimit   Int      @default(1) // exam rejimda 1, practice da cheksiz (service tekshiradi)
   audioDurationSec Int? // audio davomiyligi (sekund); deadline = duration + 120s review
-  createdAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   section   MockSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   questions MockQuestion[]
@@ -744,18 +747,18 @@ model MockQuestionGroup {
 }
 
 model MockQuestion {
-  id             String           @id @default(uuid())
-  groupId        String
-  number         Int // imtihondagi savol raqami (1..40)
-  sortOrder      Int              @default(0)
-  type           MockQuestionType
-  prompt         String
-  options        Json? // multiple_choice/matching uchun: string[]
-  correctAnswers Json? // string[] — qabul qilinadigan to'g'ri javoblar (auto-baholash)
-  points         Int              @default(1)
-  wordLimit      Int? // "NO MORE THAN X WORDS" cheklovi (ixtiyoriy)
+  id               String           @id @default(uuid())
+  groupId          String
+  number           Int // imtihondagi savol raqami (1..40)
+  sortOrder        Int              @default(0)
+  type             MockQuestionType
+  prompt           String
+  options          Json? // multiple_choice/matching uchun: string[]
+  correctAnswers   Json? // string[] — qabul qilinadigan to'g'ri javoblar (auto-baholash)
+  points           Int              @default(1)
+  wordLimit        Int? // "NO MORE THAN X WORDS" cheklovi (ixtiyoriy)
   acceptedVariants Json? // British/American imlo variantlari: string[] (masalan ["colour","color"])
-  createdAt      DateTime         @default(now())
+  createdAt        DateTime         @default(now())
 
   group   MockQuestionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   answers MockAnswer[]
@@ -764,39 +767,41 @@ model MockQuestion {
 }
 
 model MockAttempt {
-  id             String            @id @default(uuid())
-  specificationVersion String?
-  scoreMethod String?
-  scoreVersion String?
-  standardScores Json?
-  overallScore Float?
-  mediaState Json?
-  examId         String
-  studentId      String
-  status         MockAttemptStatus @default(in_progress)
-  startedAt      DateTime          @default(now())
-  submittedAt    DateTime?
-  finishedAt     DateTime?
-  rawScores      Json? // {"listening":{"score":32,"max":40},...}
-  sectionBands   Json? // {"listening":7,"reading":6.5,...}
-  overallBand    Float? // IELTS umumiy band (0-9)
-  cefrLevel      String? // Multilevel uchun CEFR (A1..C1)
-  antiCheatCount Int               @default(0)
-  mode           MockAttemptMode   @default(practice) // practice=vaqtsiz, timed=vaqtli
-  deadlineAt     DateTime? // timed rejimda tugash vaqti (startedAt + davomiylik)
-  annotations    Json? // o'quvchining highlight/eslatmalari (frontend uchun saqlanadi)
+  id                     String            @id @default(uuid())
+  speakingProfileVersion String?
+  specificationVersion   String?
+  scoreMethod            String?
+  scoreVersion           String?
+  standardScores         Json?
+  overallScore           Float?
+  mediaState             Json?
+  examId                 String
+  studentId              String
+  status                 MockAttemptStatus @default(in_progress)
+  startedAt              DateTime          @default(now())
+  submittedAt            DateTime?
+  finishedAt             DateTime?
+  rawScores              Json? // {"listening":{"score":32,"max":40},...}
+  sectionBands           Json? // {"listening":7,"reading":6.5,...}
+  overallBand            Float? // IELTS umumiy band (0-9)
+  cefrLevel              String? // Multilevel uchun CEFR (A1..C1)
+  antiCheatCount         Int               @default(0)
+  mode                   MockAttemptMode   @default(practice) // practice=vaqtsiz, timed=vaqtli
+  deadlineAt             DateTime? // timed rejimda tugash vaqti (startedAt + davomiylik)
+  annotations            Json? // o'quvchining highlight/eslatmalari (frontend uchun saqlanadi)
   // --- IELTS full-test flow (v2026.1): L→R→W ketma-ket, server-soat ---
-  flowMode           String? // "full_test" | "single_skill" (null = single_skill, eski yozuvlar)
-  currentSkill       MockSkill? // full_test da joriy bo'lim (listening→reading→writing)
-  sectionDeadlines   Json? // {"listening": ISO, "reading": ISO, "writing": ISO}
-  overallDeadlineAt  DateTime? // full_test umumiy deadline (oxirgi bo'lim tugashi)
-  audioPlays         Json? // {"groupId": count} — Listening once-only nazorati
-  submittedSections  Json? // ["listening", ...] — yakunlangan bo'limlar
+  flowMode               String? // "full_test" | "single_skill" (null = single_skill, eski yozuvlar)
+  currentSkill           MockSkill? // full_test da joriy bo'lim (listening→reading→writing)
+  sectionDeadlines       Json? // {"listening": ISO, "reading": ISO, "writing": ISO}
+  overallDeadlineAt      DateTime? // full_test umumiy deadline (oxirgi bo'lim tugashi)
+  audioPlays             Json? // {"groupId": count} — Listening once-only nazorati
+  submittedSections      Json? // ["listening", ...] — yakunlangan bo'limlar
 
-  exam        MockExam         @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student     StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)
-  answers     MockAnswer[]
-  cheatEvents MockCheatEvent[]
+  exam           MockExam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student        StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  answers        MockAnswer[]
+  cheatEvents    MockCheatEvent[]
+  assessmentJobs AssessmentJob[]
 
   @@index([studentId])
   @@index([status])
@@ -804,18 +809,18 @@ model MockAttempt {
 }
 
 model MockAnswer {
-  id         String   @id @default(uuid())
-  attemptId  String
-  questionId String
-  response   String   @default("") // o'quvchi javobi (matn)
-  audioKey   String? // Speaking javobi — yuklangan audio (storage kaliti)
-  isCorrect  Boolean? // auto-baholangan savollar uchun
-  score      Float?
-  isGraded   Boolean  @default(false)
-  gradedById String? // writing/speaking ni baholagan o'qituvchi (User.id)
-  feedback   String?
+  id           String   @id @default(uuid())
+  attemptId    String
+  questionId   String
+  response     String   @default("") // o'quvchi javobi (matn)
+  audioKey     String? // Speaking javobi — yuklangan audio (storage kaliti)
+  isCorrect    Boolean? // auto-baholangan savollar uchun
+  score        Float?
+  isGraded     Boolean  @default(false)
+  gradedById   String? // writing/speaking ni baholagan o'qituvchi (User.id)
+  feedback     String?
   rubricScores Json? // 4 mezon: writing {TA,CC,LR,GRA} / speaking {fluency,lexical,grammar,pronun} 0..9
-  updatedAt  DateTime @updatedAt
+  updatedAt    DateTime @updatedAt
 
   attempt  MockAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question MockQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -833,4 +838,126 @@ model MockCheatEvent {
   attempt MockAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@index([attemptId])
+}
+
+// Shared IELTS / Multilevel assessment ledger. Student responses and AI rater
+// outputs are immutable snapshots; a teacher changes the selected final result.
+enum AssessmentPolicyMode {
+  PRACTICE_AUTO_AI
+  FULL_MOCK_AI_WITH_REVIEW
+  MANUAL_ONLY
+}
+
+enum AssessmentJobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  RETRY
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum AssessmentScoreSource {
+  AI
+  TEACHER
+  ADJUDICATED
+}
+
+enum AssessmentCallStatus {
+  STARTED
+  SUCCEEDED
+  FAILED
+}
+
+model AssessmentJob {
+  id                   String                 @id @default(uuid())
+  attemptId            String
+  studentId            String
+  program              String
+  skill                MockSkill
+  inputHash            String
+  inputSnapshot        Json
+  generation           Int                    @default(0)
+  rubricVersion        String
+  promptVersion        String
+  policyMode           AssessmentPolicyMode
+  status               AssessmentJobStatus    @default(PENDING)
+  version              Int                    @default(1)
+  attemptCount         Int                    @default(0)
+  leaseToken           String?
+  leaseExpiresAt       DateTime?
+  retryAt              DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  failureCode          String?
+  selectedEvaluationId String?
+  aiScore              Float?
+  teacherScore         Float?
+  finalScore           Float?
+  finalScoreSource     AssessmentScoreSource?
+  confidence           Float?
+  finalResult          Json?
+  approvedFeedback     Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  attempt     MockAttempt            @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student     StudentProfile         @relation(fields: [studentId], references: [userId], onDelete: Cascade)
+  evaluations AssessmentEvaluation[]
+  transcripts SpeechTranscript[]
+
+  @@unique([attemptId, skill, inputHash, generation])
+  @@index([status, retryAt, createdAt])
+  @@index([attemptId, skill, createdAt])
+  @@index([studentId, createdAt])
+}
+
+model AssessmentEvaluation {
+  id            String               @id @default(uuid())
+  jobId         String
+  role          String
+  attemptNumber Int
+  inputHash     String
+  status        AssessmentCallStatus @default(STARTED)
+  provider      String
+  model         String
+  result        Json?
+  confidence    Float?
+  inputTokens   Int?
+  outputTokens  Int?
+  latencyMs     Int?
+  failureCode   String?
+  uncertain     Boolean              @default(false)
+  startedAt     DateTime             @default(now())
+  completedAt   DateTime?
+
+  job AssessmentJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, role, attemptNumber])
+  @@index([jobId, status])
+}
+
+model SpeechTranscript {
+  id                    String               @id @default(uuid())
+  jobId                 String
+  questionId            String
+  audioHash             String
+  status                AssessmentCallStatus @default(STARTED)
+  attemptNumber         Int                  @default(1)
+  text                  String?
+  segments              Json?
+  confidence            Float?
+  provider              String
+  model                 String
+  durationMs            Int?
+  pronunciationEvidence String               @default("UNAVAILABLE")
+  failureCode           String?
+  uncertain             Boolean              @default(false)
+  startedAt             DateTime             @default(now())
+  completedAt           DateTime?
+
+  job AssessmentJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, questionId, attemptNumber])
+  @@index([audioHash, status])
 }
