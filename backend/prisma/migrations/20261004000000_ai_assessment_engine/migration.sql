@@ -134,4 +134,3 @@ ALTER TABLE "AssessmentEvaluation" ADD CONSTRAINT "AssessmentEvaluation_jobId_fk
 
 -- AddForeignKey
 ALTER TABLE "SpeechTranscript" ADD CONSTRAINT "SpeechTranscript_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "AssessmentJob"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

@@ -15,7 +15,7 @@ import { AssessmentInput, AssessmentPolicy, AssessmentResult } from './contracts
 import { assessmentBlueprintFailure, audioChecksum, buildAssessmentInput } from './assessment-snapshot';
 import { mayFinalizeAutomatically, scoreAssessment, teacherResult } from './assessment-scoring';
 import { ReviewAssessmentDto } from './assessment.dto';
-import { validateAssessmentResult } from './result-validation';
+import { combineAssessmentResults, validateAssessmentResult } from './result-validation';
 
 export const ASSESSMENT_EXAM_INCLUDE = { sections: { orderBy: { sortOrder: 'asc' as const }, include: { groups: { orderBy: { sortOrder: 'asc' as const }, include: { questions: { orderBy: { sortOrder: 'asc' as const } } } } } } } satisfies Prisma.MockExamInclude;
 type Recompute = (tx: Prisma.TransactionClient, attemptId: string) => Promise<unknown>;
@@ -163,7 +163,16 @@ export class AssessmentService {
         let result: AssessmentResult;
         if (dto.action === 'ACCEPT') {
           if (!base || job.aiScore === null || !['SUCCEEDED', 'NEEDS_REVIEW'].includes(job.status)) throw new AppException('ASSESSMENT_NO_COMPLETE_AI_RESULT', 'A complete AI result is required', 400);
-          result = evaluated?.result as unknown as AssessmentResult;
+          if (!evaluated?.result) throw new AppException('ASSESSMENT_NO_COMPLETE_AI_RESULT', 'A complete AI result is required', 400);
+          // The selected adjudicator is one independent rater. Accept the same
+          // combined rubric the worker scored, even after a prior teacher override.
+          if (evaluated.role === 'ADJUDICATOR') {
+            const primary = job.evaluations.find((evaluation) => evaluation.role === 'PRIMARY');
+            if (!primary?.result) throw new AppException('ASSESSMENT_NO_COMPLETE_AI_RESULT', 'Both independent results are required', 400);
+            result = combineAssessmentResults(primary.result as unknown as AssessmentResult, evaluated.result as unknown as AssessmentResult, input);
+          } else {
+            result = validateAssessmentResult(evaluated.result, input);
+          }
         } else {
           result = teacherResult(input, base ?? emptyResult(input), dto.parts ?? []);
         }
@@ -189,7 +198,9 @@ export class AssessmentService {
       const expired = await tx.assessmentJob.findMany({ where: { status: 'PROCESSING', leaseExpiresAt: { lt: now } }, include: { evaluations: true, transcripts: true }, take: 20 });
       for (const job of expired) {
         const uncertain = [...job.evaluations, ...job.transcripts].some((c) => c.status === 'STARTED' || c.uncertain);
-        await tx.assessmentJob.updateMany({ where: { id: job.id, status: 'PROCESSING', leaseExpiresAt: { lt: now } }, data: { status: uncertain ? 'NEEDS_REVIEW' : 'RETRY', failureCode: uncertain ? 'PROVIDER_OUTCOME_UNCERTAIN' : 'WORKER_RESTARTED', leaseToken: null, leaseExpiresAt: null, retryAt: now, version: { increment: 1 } } });
+        const exhausted = job.attemptCount >= this.maxAttempts;
+        const retry = !uncertain && !exhausted;
+        await tx.assessmentJob.updateMany({ where: { id: job.id, status: 'PROCESSING', leaseExpiresAt: { lt: now } }, data: { status: retry ? 'RETRY' : 'NEEDS_REVIEW', failureCode: uncertain ? 'PROVIDER_OUTCOME_UNCERTAIN' : exhausted ? 'ASSESSMENT_ATTEMPTS_EXHAUSTED' : 'WORKER_RESTARTED', leaseToken: null, leaseExpiresAt: null, retryAt: retry ? now : null, ...(retry ? {} : { completedAt: now }), version: { increment: 1 } } });
       }
       const ids = await tx.$queryRaw<Array<{ id: string }>>`SELECT "id" FROM "AssessmentJob" WHERE "status" IN ('PENDING', 'RETRY') AND ("retryAt" IS NULL OR "retryAt" <= ${now}) ORDER BY "createdAt" ASC FOR UPDATE SKIP LOCKED LIMIT 1`;
       if (!ids.length) return null;

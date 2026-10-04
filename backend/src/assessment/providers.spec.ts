@@ -8,8 +8,16 @@ import { providerUrl } from './provider-http';
 
 const files = vi.hoisted(() => ({ stat: vi.fn(), readFile: vi.fn() }));
 vi.mock('fs/promises', () => files);
-const config = () => new ConfigService({ DEEPSEEK_API_KEY: 'test-private-key', DEEPSEEK_MODEL: 'configured-primary', DEEPSEEK_ADJUDICATOR_MODEL: 'configured-second',
-  STT_PROVIDER: 'deepgram', STT_API_KEY: 'test-stt-key', STT_MODEL: 'configured-stt' });
+function config() {
+  const values: Record<string, any> = { DEEPSEEK_API_KEY: 'test-private-key', DEEPSEEK_MODEL: 'configured-primary', DEEPSEEK_ADJUDICATOR_MODEL: 'configured-second',
+    STT_PROVIDER: 'deepgram', STT_API_KEY: 'test-stt-key', STT_MODEL: 'configured-stt' };
+  const isolated = new ConfigService(values);
+  // ConfigService.set also changes process.env, which otherwise leaks missing-key
+  // cases into later tests. Keep test settings local and never inherit live keys.
+  vi.spyOn(isolated, 'get').mockImplementation((key) => values[key as string]);
+  vi.spyOn(isolated, 'set').mockImplementation((key, value) => { values[key as string] = value; });
+  return isolated;
+}
 function input(program: AssessmentInput['program'] = 'MULTILEVEL', skill: AssessmentInput['skill'] = 'writing'): AssessmentInput {
   return { program, skill, specificationVersion: null, speakingProfileVersion: null, rubricVersion: 'test-rubric', promptVersion: 'test-prompt', pronunciationEvidence: 'UNAVAILABLE',
     parts: [{ id: program === 'MULTILEVEL' ? (skill === 'speaking' ? '3' : '1.1') : skill === 'speaking' ? 'speaking' : 'task1', max: program === 'MULTILEVEL' ? (skill === 'speaking' ? 6 : 5) : 9,
@@ -163,8 +171,20 @@ describe('separate speech to text adapter', () => {
     const r=sttResult();r.results.channels[0].alternatives[0].transcript=''; request.mockResolvedValue(response(r));
     await expect(new DeepgramSpeechToTextProvider(config()).transcribe(audio)).rejects.toMatchObject({code:'STT_EMPTY_TRANSCRIPT'});
   });
-  it.each([-1,1.5,NaN])('rejects invalid confidence%s', confidence => {
-    const r=sttResult();r.results.channels[0].alternatives[0].confidence=confidence;request.mockResolvedValue(response(r));
+  it('aborts STT timeout without retrying an uncertain paid request', async () => {
+    vi.useFakeTimers(); const c=config(); c.set('ASSESSMENT_STT_TIMEOUT_MS',1000);
+    request.mockImplementation((_url,options) => new Promise((_resolve,reject) => options.signal.addEventListener('abort',()=>reject(new Error('private audio or key')))));
+    const assertion=expect(new DeepgramSpeechToTextProvider(c).transcribe(audio)).rejects.toMatchObject({code:'PROVIDER_TIMEOUT',uncertain:true});
+    await vi.advanceTimersByTimeAsync(1001); await assertion;
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it.each(['{bad', '{}', '{"results":{"channels":[]}}'])('rejects malformed STT response %s without fabricated words', async body => {
+    request.mockResolvedValue(new Response(body));
+    await expect(new DeepgramSpeechToTextProvider(config()).transcribe(audio)).rejects.toBeInstanceOf(Error);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+  it.each([-1,1.5,'NaN'])('rejects invalid confidence%s', confidence => {
+    const r=sttResult();Object.assign(r.results.channels[0].alternatives[0],{confidence});request.mockResolvedValue(response(r));
     return expect(new DeepgramSpeechToTextProvider(config()).transcribe(audio)).rejects.toMatchObject({code:'STT_RESPONSE_INVALID'});
   });
   it('rejects backwards timestamps', async () => {
