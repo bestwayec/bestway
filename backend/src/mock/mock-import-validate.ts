@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { countWords } from './mock-answer';
 import { gapNumbersFromHtml, sanitizeMockContent } from './mock-content';
 import { buildCorrectAnswers } from './mock-parse';
+import { multilevelBlueprintIssues } from './multilevel-specification';
+import { MockSkill } from '@prisma/client';
 
 export type ImportBlock = 'import' | 'publish';
 export interface ImportIssue {
@@ -171,7 +173,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
 
   const exam = pkg['exam'] as Record<string, unknown> | undefined;
   let counts: ImportCounts = { sections: 0, skills: 0, groups: 0, questions: 0, media: 0 };
-  const numbers = new Map<number, string>();
+  const numbers = new Map<string | number, string>();
   const groupKeys = new Set<string>();
   const questionKeys = new Set<string>();
   const sectionKeys = new Set<string>();
@@ -247,8 +249,8 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
           if (g['partNumber'] !== undefined && (typeof skill !== 'string' || skill !== 'listening')) {
             add('PART_NUMBER', `${gb}/partNumber`, 'partNumber is only allowed for listening groups', ['import']);
           }
-          if (g['partNumber'] !== undefined && (!Number.isInteger(g['partNumber']) || (g['partNumber'] as number) < 1 || (g['partNumber'] as number) > 4)) {
-            add('PART_NUMBER', `${gb}/partNumber`, 'partNumber must be 1-4', ['import']);
+          if (g['partNumber'] !== undefined && (!Number.isInteger(g['partNumber']) || (g['partNumber'] as number) < 1 || (g['partNumber'] as number) > (exam['type'] === 'multilevel' ? 6 : 4))) {
+            add('PART_NUMBER', `${gb}/partNumber`, 'partNumber outside program range', ['import']);
           }
           if (g['audioPlayLimit'] !== undefined && (!Number.isInteger(g['audioPlayLimit']) || (g['audioPlayLimit'] as number) < 1 || (g['audioPlayLimit'] as number) > 10)) {
             add('PLAY_LIMIT', `${gb}/audioPlayLimit`, 'audioPlayLimit must be 1-10', ['import']);
@@ -294,8 +296,9 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
             else if (!Number.isInteger(num) || (num as number) < 1 || (num as number) > 200) add('NUMBER_RANGE', `${qb}/number`, 'question.number must be 1-200', ['import']);
             else {
               qNums.push(num as number);
-              if (numbers.has(num as number)) add('NUMBER_COLLISION', `${qb}/number`, `question number ${num} collides with ${numbers.get(num as number)}`, ['import']);
-              else numbers.set(num as number, qb);
+              const numberKey = exam['type'] === 'multilevel' ? `${skill}:${num}` : num as number;
+              if (numbers.has(numberKey)) add('NUMBER_COLLISION', `${qb}/number`, `question number ${num} collides with ${numbers.get(numberKey)}`, ['import']);
+              else numbers.set(numberKey, qb);
             }
             const qt = q['type'];
             if (typeof qt !== 'string' || !Q_TYPES.includes(qt)) { add('ENUM_INVALID', `${qb}/type`, 'question.type is invalid', ['import']); return; }
@@ -549,7 +552,16 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
     } else {
       const examType = (exam as Record<string, unknown>)['type'];
       if (examType === 'multilevel') {
-        add('PROFILE_BLUEPRINT', '/profile', 'Multilevel full_mock blueprint is not defined yet', ['publish']);
+        const sections = Array.isArray(exam['sections']) ? exam['sections'].filter(isRecord).filter((s) => ['listening','reading','writing','speaking'].includes(String(s.skill))).map((s) => ({
+          skill: s.skill as MockSkill,
+          groups: (Array.isArray(s.groups) ? s.groups.filter(isRecord) : []).map((g, index) => ({
+            sortOrder: index, partNumber: typeof g.partNumber === 'number' ? g.partNumber : null,
+            passageText: typeof g.passageText === 'string' ? g.passageText : null,
+            audioKey: typeof g.audioRef === 'string' ? g.audioRef : null, imageKey: typeof g.imageRef === 'string' ? g.imageRef : null,
+            questions: (Array.isArray(g.questions) ? g.questions.filter(isRecord) : []).map((q) => ({ type: String(q.type), points: Number(q.points), options: q.options, wordLimit: typeof q.wordLimit === 'number' ? q.wordLimit : null })),
+          })),
+        })) : [];
+        multilevelBlueprintIssues(sections, true).forEach((issue) => add('PROFILE_BLUEPRINT', '/exam/sections', issue, ['publish']));
       } else {
         // IELTS blueprint: listening 4 parts / 40 Q, reading 3 groups / 40 Q, writing task1+task2.
         const sections = ((exam as Record<string, unknown>)['sections'] as unknown[]) ?? [];

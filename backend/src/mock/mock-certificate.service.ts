@@ -17,7 +17,9 @@ export interface MockCertificateData {
   isIelts: boolean;
   finishedAt: Date;
   attemptId: string;
-  sections: Array<{ skill: string; score: number; max: number; band: number | null }>;
+  sections: Array<{ skill: string; score: number; max: number; band: number | null; standardScore?: number | null }>;
+  overallScore?: number | null;
+  specificationVersion?: string | null;
   overallBand: number | null;
   cefrLevel: string | null;
 }
@@ -49,7 +51,7 @@ export class MockCertificateService {
       .font('Helvetica')
       .fontSize(13)
       .fillColor('#444')
-      .text('MOCK EXAM RESULT', { align: 'center', characterSpacing: 2 });
+      .text(data.specificationVersion ? 'ESTIMATED MULTILEVEL RESULT' : 'MOCK EXAM RESULT', { align: 'center', characterSpacing: 2 });
 
     doc.moveDown(1.6);
     doc.font('Helvetica').fontSize(11).fillColor('#666').text('This is to certify that', { align: 'center' });
@@ -76,6 +78,7 @@ export class MockCertificateService {
     doc.text('Section', tableX, y);
     doc.text('Score', colScore, y);
     if (data.isIelts) doc.text('Band', colBand, y);
+    else if (data.specificationVersion) doc.text('Estimate /75', colBand, y);
     y += 6;
     doc.moveTo(tableX, y + 10).lineTo(colBand + 60, y + 10).lineWidth(0.5).stroke('#999');
     y += 18;
@@ -85,6 +88,7 @@ export class MockCertificateService {
       doc.text(SKILL_LABELS[s.skill] ?? s.skill, tableX, y);
       doc.text(`${s.score} / ${s.max}`, colScore, y);
       if (data.isIelts) doc.text(s.band !== null ? s.band.toFixed(1) : '—', colBand, y);
+      else if (data.specificationVersion) doc.text(String(s.standardScore ?? 'Pending'), colBand, y);
       y += 20;
     }
     y += 8;
@@ -97,7 +101,7 @@ export class MockCertificateService {
       doc.moveDown(0.2);
       doc.font('Helvetica-Bold').fontSize(40).fillColor(accent).text(data.overallBand.toFixed(1), { align: 'center' });
     } else if (data.cefrLevel) {
-      doc.font('Helvetica').fontSize(12).fillColor('#666').text('CEFR Level', { align: 'center' });
+      doc.font('Helvetica').fontSize(12).fillColor('#666').text(data.specificationVersion ? `Estimated score: ${data.overallScore ?? 'Pending'} /75` : 'CEFR Level', { align: 'center' });
       doc.moveDown(0.2);
       doc.font('Helvetica-Bold').fontSize(40).fillColor(accent).text(data.cefrLevel, { align: 'center' });
     }

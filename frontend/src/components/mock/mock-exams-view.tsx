@@ -234,23 +234,15 @@ function MockExamCard({
 
 function GradingPanel() {
   const t = useTranslations("mock");
-  const { data, isLoading } = useMockAttempts("grading");
+  const [program, setProgram] = React.useState<'all' | 'IELTS' | 'MULTILEVEL'>('all');
+  const { data, isLoading, isError } = useMockAttempts("grading", program === 'all' ? undefined : program);
   const attempts = data ?? [];
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-16" />
-        ))}
-      </div>
-    );
-  }
-  if (attempts.length === 0) {
-    return <EmptyState icon={CheckCircle2} title={t("noAttempts")} />;
-  }
   return (
     <div className="space-y-2">
+      <label className="block text-sm">Exam program <select aria-label="Filter submissions by exam program" value={program} onChange={(event)=>setProgram(event.target.value as typeof program)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">All programs</option><option value="IELTS">IELTS</option><option value="MULTILEVEL">Multilevel</option></select></label>
+      {isLoading && <Skeleton className="h-16" />}
+      {isError && <p role="alert">Could not load submissions.</p>}
+      {!isLoading && !isError && attempts.length === 0 && <EmptyState icon={CheckCircle2} title={t("noAttempts")} />}
       {attempts.map((a) => (
         <Link key={a.id} href={`/mock/attempt/${a.id}`}>
           <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-surface-hover">

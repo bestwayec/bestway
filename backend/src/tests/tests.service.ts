@@ -7,6 +7,7 @@ import { AppException } from '../common/app.exception';
 import { Paginated } from '../common/pagination';
 import { AuthUser } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExamProgramService } from '../common/exam-program.service';
 import { DemoSubmitDto, CreateQuestionDto, CreateTestDto, ImportQuestionsDto, QueryTestsDto, SubmitAnswerDto, FlagCheatDto, SaveMarksDto, UpdateQuestionDto, UpdateTestDto } from './dto/tests.dto';
 import { deleteTestAudio, streamTestAudio, testAudioExists } from './tests-storage';
 import { parseTestImport } from './test-import-parser';
@@ -19,6 +20,7 @@ export class TestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly programs: ExamProgramService,
   ) {}
 
   // ---------------- Savollar bazasi CRUD (admin) ----------------
@@ -473,6 +475,7 @@ export class TestsService {
       include: { questions: true },
     });
     if (!test || !test.isActive) throw new AppException('TEST_NOT_FOUND', 'Test topilmadi', 404);
+    await this.programs.assertAccess(student.id, test.type);
 
     // Resume: tugallanmagan urinish bor bo'lsa, o'sha savollar bilan davom ettiramiz
     const existing = await this.prisma.testAttempt.findFirst({

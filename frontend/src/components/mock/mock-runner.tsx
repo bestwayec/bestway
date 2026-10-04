@@ -27,6 +27,9 @@ import type {
 import { cn } from "@/lib/utils";
 import { ListeningAudio } from "@/components/mock/listening-engine";
 import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
+import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
+import { api } from '@/lib/api-client';
+import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 
 const SINGLE_CHOICE = new Set<MockQuestionType>([
   "multiple_choice",
@@ -66,6 +69,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const tc = useTranslations("common");
   const examQ = useMockExam(attempt.examId);
   const exam = examQ.data;
+  const versioned = !!attempt.specificationVersion;
+  const queueKey = `multilevel.answers.${attempt.id}`;
 
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
@@ -91,39 +96,54 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     return { ans, audio };
   }, [attempt]);
 
-  const [answers, setAnswers] = React.useState<Record<string, string>>(initial.ans);
-  const [audioSet] = React.useState<Set<string>>(initial.audio);
-  const [activeSection, setActiveSection] = React.useState(0);
+  const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
+    if (!versioned) return initial.ans;
+    try { return { ...initial.ans, ...JSON.parse(localStorage.getItem(queueKey) ?? '{}') }; } catch { return initial.ans; }
+  });
+  const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
+  const [selectedSection, setActiveSection] = React.useState(0);
+  // The exam query can resolve after mount. Full-test navigation always follows
+  // the server skill, including a resume directly into Reading/Writing/Speaking.
+  const activeSection = isFullTest && attempt.currentSkill
+    ? Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0)
+    : selectedSection;
   const [cheatWarn, setCheatWarn] = React.useState(false);
   const [cheatCount, setCheatCount] = React.useState(0);
-
-  // Full-test: faol bo'lim server'dan (currentSkill) — orqaga qaytish yo'q.
-  // Render-phase adjustment (not an effect) so no cascading render.
-  const skillOrder: MockSkill[] = React.useMemo(() => ["listening", "reading", "writing", "speaking"], []);
-  const [prevSkill, setPrevSkill] = React.useState(attempt.currentSkill);
-  if (prevSkill !== attempt.currentSkill) {
-    setPrevSkill(attempt.currentSkill);
-    if (isFullTest && attempt.currentSkill) {
-      const idx = skillOrder.indexOf(attempt.currentSkill);
-      if (idx >= 0) setActiveSection(idx);
-    }
-  }
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
-  const dirty = React.useRef<Set<string>>(new Set());
+  const dirty = React.useRef<Set<string>>(new Set(versioned ? Object.keys(answers).filter((id) => answers[id] !== initial.ans[id]) : []));
+  const submittingRef = React.useRef(false);
+  const saveInFlight = React.useRef<Promise<unknown> | null>(null);
+  React.useEffect(() => {
+    const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string}>).detail; if (detail?.attemptId === attempt.id) setAudioSet((previous) => new Set([...previous,detail.questionId])); };
+    window.addEventListener('multilevel:recording-uploaded', saved);
+    return () => window.removeEventListener('multilevel:recording-uploaded', saved);
+  }, [attempt.id]);
 
   const flush = React.useCallback(() => {
-    const ids = [...dirty.current];
+    if (versioned && (saveInFlight.current || submittingRef.current)) return;
+    const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === id)));
     if (!ids.length) return;
-    dirty.current.clear();
+    if (!versioned) dirty.current.clear();
+    const snapshot = { ...answersRef.current };
+    if (versioned) {
+      saveInFlight.current = bulk.mutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then(() => {
+        ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
+        if (!dirty.current.size) localStorage.removeItem(queueKey);
+      }).catch(() => { toast.error(tc('saveFailed')); }).finally(() => { saveInFlight.current = null; });
+      return;
+    }
     bulk.mutate(
       ids.map((id) => ({ questionId: id, response: answersRef.current[id] ?? "" })),
-      { onError: () => toast.error(tc("saveFailed")) },
+      { onSuccess: () => {
+        ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
+        if (versioned && !dirty.current.size) localStorage.removeItem(queueKey);
+      }, onError: () => { ids.forEach((id) => dirty.current.add(id)); toast.error(tc("saveFailed")); } },
     );
-  }, [bulk, tc]);
+  }, [bulk, tc, versioned, queueKey, isFullTest, attempt.sections, attempt.currentSkill]);
 
   // Debounce autosave
   React.useEffect(() => {
@@ -133,28 +153,44 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   function setAnswer(qid: string, val: string) {
     dirty.current.add(qid);
-    setAnswers((a) => ({ ...a, [qid]: val }));
+    const next = { ...answersRef.current, [qid]: val };
+    answersRef.current = next;
+    if (versioned) { try { localStorage.setItem(queueKey, JSON.stringify(next)); } catch { toast.error(tc('saveFailed')); } }
+    setAnswers(next);
   }
+  React.useEffect(() => {
+    if (!versioned) return;
+    window.addEventListener('online', flush);
+    const id = window.setInterval(flush, 10000);
+    return () => { window.removeEventListener('online', flush); window.clearInterval(id); };
+  }, [flush, versioned]);
 
   // Timer (faqat vaqtli rejim; full-test da umumiy deadline)
-  const deadlineTs = attempt.overallDeadlineAt ?? attempt.deadlineAt;
+  const deadlineTs = versioned && isFullTest && attempt.currentSkill ? attempt.sectionDeadlines?.[attempt.currentSkill] : attempt.overallDeadlineAt ?? attempt.deadlineAt;
   const deadline = deadlineTs ? new Date(deadlineTs).getTime() : null;
+  const [serverOffset] = React.useState(() => attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
   const [remaining, setRemaining] = React.useState<number | null>(
-    () => (deadline ? deadline - Date.now() : null),
+    () => (deadline ? deadline - Date.now() - serverOffset : null),
   );
-  const submittingRef = React.useRef(false);
+
 
   const doSubmit = React.useCallback(
     async (auto = false) => {
       if (submittingRef.current) return;
+      if (versioned) {
+        try {
+          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
+        } catch { toast.error('Recording recovery could not be checked. Keep this page open and retry.'); return; }
+      }
       if (!auto && !confirm(t("submitConfirm"))) return;
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
+        if (versioned) await saveInFlight.current;
         const all = Object.entries(answersRef.current)
-          .filter(([, v]) => v !== "")
+          .filter(([qid, v]) => versioned ? (!isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === qid))) : v !== '')
           .map(([questionId, response]) => ({ questionId, response }));
-        if (all.length) await bulk.mutateAsync(all);
+        if (all.length && (!versioned || !auto)) await bulk.mutateAsync(all);
         await submit.mutateAsync();
         toast.success(t("submitted"));
       } catch (e) {
@@ -162,32 +198,45 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error(e instanceof Error ? e.message : tc("unknownError"));
       }
     },
-    [bulk, submit, t, tc],
+    [bulk, submit, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
   );
 
   React.useEffect(() => {
     if (!deadline) return;
+    let nextRetry = 0;
     const id = setInterval(() => {
-      const r = deadline - Date.now();
+      const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
       if (r <= 0) {
-        clearInterval(id);
-        void doSubmit(true);
+        if (!versioned) { clearInterval(id); void doSubmit(true); return; }
+        if (Date.now() < nextRetry || submittingRef.current) return;
+        nextRetry = Date.now() + 10000;
+        if (isFullTest && attempt.currentSkill !== 'speaking') {
+          submittingRef.current = true;
+          void advance.mutateAsync().catch(() => toast.error('Section transition failed. Retrying…')).finally(() => { submittingRef.current = false; });
+        } else void doSubmit(true);
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [deadline, doSubmit]);
+  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, advance]);
 
   // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
   const goNextSection = React.useCallback(async () => {
-    flush();
+    if (versioned && submittingRef.current) return;
+    if (versioned) submittingRef.current = true;
     try {
+      if (versioned) {
+        await saveInFlight.current;
+        const ids = attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.flatMap((g) => g.questions.map((q) => q.id)) ?? [];
+        await bulk.mutateAsync(ids.map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
+        ids.forEach((id) => dirty.current.delete(id));
+      } else flush();
       await advance.mutateAsync();
       toast.success("Next section");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : tc("unknownError"));
-    }
-  }, [advance, flush, tc]);
+    } finally { if (versioned) submittingRef.current = false; }
+  }, [advance, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulk]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -329,9 +378,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           {section.groups.map((g) => (
             <GroupBlock
               key={g.id}
-              group={g}
+              group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
               skill={section.skill}
               strict={strict && section.skill === "listening"}
+              timed={strict}
               attemptId={attempt.id}
               answers={answers}
               audioSet={audioSet}
@@ -371,6 +421,7 @@ function GroupBlock({
   group,
   skill,
   strict,
+  timed,
   attemptId,
   answers,
   audioSet,
@@ -380,6 +431,7 @@ function GroupBlock({
   group: MockSection["groups"][number];
   skill: MockSkill;
   strict: boolean;
+  timed: boolean;
   attemptId: string;
   answers: Record<string, string>;
   audioSet: Set<string>;
@@ -393,7 +445,11 @@ function GroupBlock({
     <Card className="p-4 sm:p-5">
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {group.hasAudio && skill === "listening" ? (
-        <ListeningAudio
+        group.questions[0]?.guidance && strict ? <MultilevelListening
+          prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
+          play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
+          load={async () => { const res = await fetch(audioSrc); if (!res.ok) throw new Error('Audio loading failed'); return res.blob(); }}
+        /> : <ListeningAudio
           src={audioSrc}
           strict={strict}
           onReviewComplete={strict ? onReviewComplete : undefined}
@@ -465,6 +521,7 @@ function GroupBlock({
                 attemptId={attemptId}
                 value={answers[q.id] ?? ""}
                 hasAudio={audioSet.has(q.id)}
+                timed={timed}
                 onChange={(v) => onAnswer(q.id, v)}
               />
             ))}
@@ -480,12 +537,14 @@ function QuestionInput({
   attemptId,
   value,
   hasAudio,
+  timed,
   onChange,
 }: {
   question: MockQuestion;
   attemptId: string;
   value: string;
   hasAudio: boolean;
+  timed: boolean;
   onChange: (v: string) => void;
 }) {
   const t = useTranslations("mock");
@@ -503,7 +562,10 @@ function QuestionInput({
     return (
       <div className="space-y-2">
         {header}
-        <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} />
+        {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio}
+          startPhase={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/speaking/${q.id}/start`)}
+          upload={async (blob) => { const form = new FormData(); form.append('audio', blob, blob.type.includes('mp4') ? 'speaking.m4a' : 'speaking.webm'); return api.post(`/mock/attempts/${attemptId}/speaking/${q.id}`, form); }}
+        /> : <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} />}
       </div>
     );
   }
@@ -511,7 +573,7 @@ function QuestionInput({
   if (ESSAY.has(q.type)) {
     const words = value.trim() ? value.trim().split(/\s+/).length : 0;
     // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
-    const minWords = q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0);
+    const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
     const underMin = minWords > 0 && words > 0 && words < minWords;
     return (
       <div className="space-y-2">
@@ -528,7 +590,7 @@ function QuestionInput({
         />
         <p className={cn("text-right text-xs tabular-nums", underMin ? "text-warning" : "text-fg-subtle")}>
           {words} {t("words")}
-          {minWords > 0 ? ` · min ${minWords}` : ""}
+          {q.guidance?.wordMax ? ` · guidance ${minWords === q.guidance.wordMax ? `about ${minWords}` : `${minWords}–${q.guidance.wordMax}`} words` : minWords > 0 ? ` · min ${minWords}` : ''}
           {underMin ? ` — minimum ${minWords} words required` : ""}
         </p>
       </div>

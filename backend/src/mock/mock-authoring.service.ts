@@ -27,6 +27,7 @@ import { audioContentType } from './mock-storage';
 import { AUTO_SKILLS } from './mock-scoring';
 import { ExamRow, shapeExam, shapeExamMeta, totalDuration } from './mock-shape';
 import { starterSections } from './mock-starter';
+import { MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
 
 /** Variantlar (options) majburiy bo'lgan savol turlari */
 const OPTION_TYPES = new Set<MockQuestionType>([
@@ -77,6 +78,7 @@ export class MockAuthoringService {
     const exam = await this.prisma.mockExam.create({
       data: {
         type: dto.type,
+        ...(dto.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION } : {}),
         title: dto.title,
         description: dto.description,
         level: dto.level,
@@ -189,6 +191,7 @@ export class MockAuthoringService {
       viewer,
       exams.map((e) => ({
         id: e.id,
+        type: e.type,
         isDemo: e.isDemo,
         isPublished: e.isPublished,
         price: e.price,
@@ -216,6 +219,7 @@ export class MockAuthoringService {
       return {
         id: e.id,
         type: e.type,
+        profile: e.profile,
         title: e.title,
         description: e.description,
         level: e.level,
@@ -338,6 +342,7 @@ export class MockAuthoringService {
   async createGroup(actor: AuthUser, sectionId: string, dto: CreateGroupDto) {
     const section = await this.sectionOrThrow(sectionId);
     await this.assertCanAuthor(actor, section.examId);
+    await this.assertProgramPartNumber(section.examId, dto.partNumber);
     const count = await this.prisma.mockQuestionGroup.count({ where: { sectionId } });
     const contentHtml = sanitizeMockContent(dto.contentHtml);
     const audioScript = sanitizeMockContent(dto.audioScript);
@@ -374,6 +379,10 @@ export class MockAuthoringService {
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
     await this.assertCanAuthorForGroup(actor, groupId);
+    if (dto.partNumber !== undefined) {
+      const section = await this.sectionOrThrow(group.sectionId);
+      await this.assertProgramPartNumber(section.examId, dto.partNumber);
+    }
     const contentHtml = dto.contentHtml !== undefined
       ? sanitizeMockContent(dto.contentHtml)
       : group.contentHtml;
@@ -403,6 +412,12 @@ export class MockAuthoringService {
       entityId: groupId,
     });
     return updated;
+  }
+
+  private async assertProgramPartNumber(examId: string, partNumber?: number) {
+    if (partNumber === undefined || partNumber <= 4) return;
+    const exam = await this.prisma.mockExam.findUnique({ where: { id: examId }, select: { type: true } });
+    if (exam?.type !== 'multilevel') throw new AppException('VALIDATION_ERROR', 'IELTS listening parts must be 1–4', 400);
   }
 
   async deleteGroup(actor: AuthUser, groupId: string) {
@@ -471,7 +486,7 @@ export class MockAuthoringService {
         section: {
           include: {
             exam: {
-              select: { id: true, isDemo: true, isPublished: true, price: true, isFreeForApproved: true },
+              select: { id: true, type: true, isDemo: true, isPublished: true, price: true, isFreeForApproved: true },
             },
           },
         },
@@ -479,10 +494,14 @@ export class MockAuthoringService {
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
     const key = kind === 'audio' ? group.audioKey : group.imageKey;
+    if (kind === 'audio' && group.section.exam.type === 'multilevel' && viewer?.role === 'student') {
+      const timed = await this.prisma.mockAttempt.findFirst({ where: { studentId: viewer.id, examId: group.section.exam.id, mode: 'timed', status: 'in_progress' } });
+      if (timed && req.query.attemptId !== timed.id) throw new AppException('AUDIO_REPLAY_BLOCKED', 'Timed playback requires its active attempt', 403);
+    }
     if (!key || !this.storage.exists(key)) {
       throw new AppException('FILE_NOT_FOUND', 'Fayl topilmadi', 404);
     }
-    if (!viewer && !group.section.exam.isDemo) {
+    if (!viewer && (group.section.exam.type === 'multilevel' || !group.section.exam.isDemo)) {
       throw new AppException('UNAUTHORIZED', 'Avval tizimga kiring', 401);
     }
     if (viewer && !isStaff(viewer)) {
@@ -561,7 +580,7 @@ export class MockAuthoringService {
     const existingNums = new Set<number>();
     if (sectionRow) {
       const allQs = await this.prisma.mockQuestion.findMany({
-        where: { group: { section: { examId: sectionRow.examId } } },
+        where: { group: { section: { examId: sectionRow.examId, ...(group.section.exam.type === 'multilevel' ? { skill: group.section.skill } : {}) } } },
         select: { number: true },
       });
       for (const q of allQs) existingNums.add(q.number);
@@ -674,7 +693,7 @@ export class MockAuthoringService {
         throw new AppException('VALIDATION_ERROR', 'Blok ichida savol raqamlari takrorlanmasligi kerak', 400);
       }
       const others = await tx.mockQuestion.findMany({
-        where: { group: { section: { examId: exam.id } }, groupId: { not: groupId }, number: { in: numbers } },
+        where: { group: { section: { examId: exam.id, ...(exam.type === 'multilevel' ? { skill: group.section.skill } : {}) } }, groupId: { not: groupId }, number: { in: numbers } },
         select: { number: true },
       });
       if (others.length) {
@@ -761,7 +780,7 @@ export class MockAuthoringService {
     // Exam-wide duplicates
     const secRow = await this.prisma.mockSection.findUnique({ where: { id: group.sectionId }, select: { examId: true } });
     if (secRow) {
-      const existing = await this.prisma.mockQuestion.findMany({ where: { group: { section: { examId: secRow.examId } } }, select: { number: true } });
+      const existing = await this.prisma.mockQuestion.findMany({ where: { group: { section: { examId: secRow.examId, ...(group.section.exam.type === 'multilevel' ? { skill: group.section.skill } : {}) } } }, select: { number: true } });
       const used = new Set(existing.map((x) => x.number));
       const coll = batchNums.filter((n) => used.has(n));
       if (coll.length) throw new AppException('VALIDATION_ERROR', `Already used in this exam: ${[...new Set(coll)].join(', ')}`, 400);
@@ -899,6 +918,8 @@ export class MockAuthoringService {
       const exam = await tx.mockExam.create({
         data: {
           type: source.type,
+          specificationVersion: source.specificationVersion,
+          profile: source.profile,
           title: `${source.title} (copy)`.slice(0, 200),
           description: source.description,
           level: source.level,
@@ -1003,7 +1024,7 @@ export class MockAuthoringService {
           : 'needs at least one section with a group and a question',
     });
 
-    const requiredSkills = isFullMock ? (['listening', 'reading', 'writing'] as const) : [];
+    const requiredSkills = isFullMock ? (exam.type === 'multilevel' ? (['listening', 'reading', 'writing', 'speaking'] as const) : (['listening', 'reading', 'writing'] as const)) : [];
     for (const skill of requiredSkills) {
       const section = bySkill.get(skill);
       items.push({
@@ -1021,7 +1042,7 @@ export class MockAuthoringService {
           audioKey: string | null;
           questions: unknown[];
         }>;
-        if (isFullMock) {
+        if (isFullMock && exam.type !== 'multilevel') {
           const parts = new Set(groups.map((g) => g.partNumber).filter((p) => p != null));
           items.push({
             key: 'listening_parts',
@@ -1046,7 +1067,7 @@ export class MockAuthoringService {
       }
       if (skill === 'writing') {
         const questions = (section.groups as Array<{ questions: Array<{ type: string; prompt: string }> }>).flatMap((g) => g.questions);
-        if (isFullMock) {
+        if (isFullMock && exam.type !== 'multilevel') {
           const types = new Set(questions.map((q) => q.type));
           items.push({
             key: 'writing_tasks',
@@ -1079,7 +1100,11 @@ export class MockAuthoringService {
     let missingKeys = 0;
     let manualBadPoints = 0;
     const ielts = exam.type === 'ielts_academic' || exam.type === 'ielts_general';
-    const seenNumbers = new Map<number, number>();
+    if (!ielts) {
+      const problems = multilevelBlueprintIssues(exam.sections, isFullMock);
+      items.push({ key: 'multilevel_blueprint', ok: problems.length === 0, detail: problems.join('; ') || MULTILEVEL_VERSION });
+    }
+    const seenNumbers = new Map<string | number, number>();
     let duplicateCount = 0;
     for (const s of exam.sections) {
       const auto = AUTO_SKILLS.includes(s.skill);
@@ -1089,9 +1114,10 @@ export class MockAuthoringService {
           const nonEmpty = keys.filter((a) => a.trim() !== '');
           if (auto && nonEmpty.length === 0) missingKeys++;
           if (ielts && !auto && q.points !== IELTS_MANUAL_POINTS) manualBadPoints++;
-          const c = seenNumbers.get(q.number) ?? 0;
+          const numberKey = ielts ? q.number : `${s.skill}:${q.number}`;
+          const c = seenNumbers.get(numberKey) ?? 0;
           if (c === 1) duplicateCount++;
-          seenNumbers.set(q.number, c + 1);
+          seenNumbers.set(numberKey, c + 1);
         }
       }
     }
@@ -1198,19 +1224,20 @@ export class MockAuthoringService {
    * Admin/super_admin — barcha imtihonlar. Eski (createdById=null) imtihonlar teacher uchun yopiq.
    */
   private async assertCanAuthor(actor: AuthUser, examId: string): Promise<void> {
-    if (actor.role !== 'teacher') return;
     const exam = await this.examOrThrow(examId);
-    if (exam.createdById !== actor.id) {
+    if (actor.role === 'teacher' && exam.createdById !== actor.id) {
       throw new AppException(
         'MOCK_NOT_OWNER',
         'Bu imtihonni faqat yaratgan o‘qituvchi (yoki admin) tahrirlay oladi',
         403,
       );
     }
+    if (exam.type === 'multilevel' && await this.prisma.mockAttempt.count({ where: { examId } }) > 0) {
+      throw new AppException('EXAM_VERSION_IN_USE', 'Clone this Multilevel exam before editing content used by attempts', 409);
+    }
   }
 
   private async assertCanAuthorForGroup(actor: AuthUser, groupId: string): Promise<void> {
-    if (actor.role !== 'teacher') return;
     const group = await this.prisma.mockQuestionGroup.findUnique({
       where: { id: groupId },
       select: { section: { select: { examId: true } } },
@@ -1220,7 +1247,6 @@ export class MockAuthoringService {
   }
 
   private async assertCanAuthorForQuestion(actor: AuthUser, questionId: string): Promise<void> {
-    if (actor.role !== 'teacher') return;
     const question = await this.prisma.mockQuestion.findUnique({
       where: { id: questionId },
       select: { group: { select: { section: { select: { examId: true } } } } },

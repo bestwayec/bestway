@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
+import { ExamTrackDashboard } from '@/components/mock/exam-track-dashboard';
 import { AlertCircle, BookOpen, Check, Copy, Star, Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -52,6 +54,9 @@ export function StudentDashboard() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("greeting", { name: firstName })} />
+
+      <ExamTrackSelector />
+      <ExamTrackDashboard />
 
       {!profile.isApproved && (
         <div className="mb-4 flex items-start gap-3 rounded-[12px] border border-warning-border bg-warning-bg/50 px-4 py-3 text-sm">

@@ -113,10 +113,10 @@ export function useMyMockAttempts(status?: MockAttemptStatus) {
   });
 }
 
-export function useMockAttempts(status?: MockAttemptStatus) {
+export function useMockAttempts(status?: MockAttemptStatus, program?: 'IELTS' | 'MULTILEVEL') {
   return useQuery({
-    queryKey: ["mock-attempts", status ?? "all"],
-    queryFn: () => api.get<MockAttemptSummary[]>("/mock/attempts", { status }),
+    queryKey: ["mock-attempts", status ?? "all", program ?? 'all'],
+    queryFn: () => api.get<MockAttemptSummary[]>("/mock/attempts", { status, program }),
   });
 }
 

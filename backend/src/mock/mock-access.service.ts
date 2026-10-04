@@ -6,12 +6,14 @@ import { Paginated } from '../common/pagination';
 import { AuthUser } from '../common/types';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExamProgramService } from '../common/exam-program.service';
 import { ListPurchasesQueryDto } from './dto/mock.dto';
 
 export type MockAccess = 'granted' | 'pending' | 'locked';
 
 interface ExamAccessInfo {
   id: string;
+  type?: string;
   isDemo: boolean;
   isPublished: boolean;
   price: number;
@@ -32,11 +34,14 @@ export class MockAccessService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
+    private readonly programs: ExamProgramService,
   ) {}
 
   /** Bitta imtihon uchun kirish holati */
   async accessFor(user: AuthUser | undefined, exam: ExamAccessInfo): Promise<MockAccess> {
     if (isStaff(user)) return 'granted';
+    if (user?.role === 'student' && !await this.programs.canAccess(user.id, exam.type ?? 'ielts')) return 'locked';
+    if (exam.type === 'multilevel' && user?.role !== 'student') return 'locked';
     if (exam.isDemo || exam.price === 0) return 'granted';
     if (!user || user.role !== 'student') return 'locked';
     if (user.studentProfile?.isApproved && exam.isFreeForApproved) return 'granted';
@@ -59,6 +64,7 @@ export class MockAccessService {
       return map;
     }
     const approved = user?.role === 'student' && !!user.studentProfile?.isApproved;
+    const enrolled = user?.role === 'student' ? (await this.programs.state(user.id)).availablePrograms : null;
     let statusByExam = new Map<string, string>();
     if (user?.role === 'student' && exams.length) {
       const purchases = await this.prisma.mockPurchase.findMany({
@@ -69,7 +75,9 @@ export class MockAccessService {
     }
     for (const e of exams) {
       let acc: MockAccess;
-      if (e.isDemo || e.price === 0) acc = 'granted';
+      if (enrolled && !enrolled.includes(e.type === 'multilevel' ? 'MULTILEVEL' : 'IELTS')) acc = 'locked';
+      else if (e.type === 'multilevel' && !enrolled) acc = 'locked';
+      else if (e.isDemo || e.price === 0) acc = 'granted';
       else if (!user || user.role !== 'student') acc = 'locked';
       else if (approved && e.isFreeForApproved) acc = 'granted';
       else {
@@ -83,6 +91,7 @@ export class MockAccessService {
 
   /** start() dan oldin: kirish huquqi bo'lmasa 402 */
   async assertCanStart(student: AuthUser, exam: ExamAccessInfo): Promise<void> {
+    await this.programs.assertAccess(student.id, exam.type ?? 'ielts');
     const a = await this.accessFor(student, exam);
     if (a === 'granted') return;
     if (a === 'pending') {

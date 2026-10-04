@@ -1,5 +1,6 @@
 import {
   MockAttemptMode,
+  ExamProgram,
   MockAttemptStatus,
   MockExamType,
   MockQuestionType,
@@ -230,7 +231,7 @@ export class CreateGroupDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(4)
+  @Max(6)
   partNumber?: number;
 
   /** Audio davomiyligi (sekund) — full-test deadline = duration + 120s review */
@@ -292,7 +293,7 @@ export class UpdateGroupDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(4)
+  @Max(6)
   partNumber?: number;
 
   /** Audio davomiyligi (sekund) */
@@ -548,6 +549,9 @@ export class GradeMockAnswerDto {
 }
 
 export class ListAttemptsQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsEnum(ExamProgram)
+  program?: ExamProgram;
   @IsOptional()
   @IsEnum(MockAttemptStatus)
   status?: MockAttemptStatus;

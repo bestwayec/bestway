@@ -1,4 +1,5 @@
 import { MockExamType, MockQuestionType, MockSkill } from '@prisma/client';
+import { MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, taskGuidance } from './multilevel-specification';
 
 /**
  * Exam tuzilmasini javobga o'girish — sof funksiyalar.
@@ -47,6 +48,7 @@ export interface SectionRow {
 
 export interface ExamRow {
   id: string;
+  specificationVersion?: string | null;
   type: MockExamType;
   title: string;
   description: string | null;
@@ -105,7 +107,7 @@ export function shapeGroup(g: GroupRow, includeAnswers: boolean, base: string) {
   };
 }
 
-export function shapeSection(s: SectionRow, includeAnswers: boolean, base: string) {
+export function shapeSection(s: SectionRow, includeAnswers: boolean, base: string, multilevel = false) {
   return {
     id: s.id,
     skill: s.skill,
@@ -115,7 +117,15 @@ export function shapeSection(s: SectionRow, includeAnswers: boolean, base: strin
     instructions: s.instructions,
     groups: [...s.groups]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((g) => shapeGroup(g, includeAnswers, base)),
+      .map((g, index) => {
+        const shaped = shapeGroup(g, includeAnswers, base);
+        if (!multilevel) return shaped;
+        return { ...shaped,
+          passageText: s.skill === 'listening' && !includeAnswers ? null : shaped.passageText,
+          audioPlayLimit: s.skill === 'listening' ? MULTILEVEL_AUDIO.playLimit : shaped.audioPlayLimit,
+          questions: shaped.questions.map((q, qi) => ({ ...q, guidance: taskGuidance(s.skill, index, qi) })),
+        };
+      }),
   };
 }
 
@@ -130,6 +140,7 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
   return {
     id: exam.id,
     type: exam.type,
+    ...(exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: exam.specificationVersion, specification: MULTILEVEL_SPECIFICATION } : {}),
     profile: (exam as { profile?: string }).profile ?? 'practice',
     title: exam.title,
     description: exam.description,
@@ -142,7 +153,7 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
     questionCount: countQuestions(exam),
     sections: [...exam.sections]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((s) => shapeSection(s, includeAnswers, base)),
+      .map((s) => shapeSection(s, includeAnswers, base, exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION)),
   };
 }
 
@@ -167,7 +178,8 @@ export interface DurationSectionInput {
  * `durationMinutes` bo'lmasa `computeSkillTiming` dagi kabi 60min default
  * qo'llanadi. Bu funksiyani o'zgartirsangiz `computeSkillTiming` ni ham
  * tekshiring (va aksincha). */
-export function totalDuration(exam: { sections: DurationSectionInput[] }): number | null {
+export function totalDuration(exam: { type?: MockExamType; sections: DurationSectionInput[] }): number | null {
+  if (exam.type === 'multilevel') return exam.sections.reduce((sum, sec) => sum + MULTILEVEL_SPECIFICATION[sec.skill].durationSeconds / 60, 0) || null;
   let sum = 0;
   for (const sec of exam.sections) {
     if (sec.skill === 'listening') {
@@ -218,7 +230,13 @@ export function computeSkillTiming(
   skill: TimedSkill,
   section: SkillTimingInput | undefined,
   fromTs: number,
+  examType?: MockExamType,
 ): { seconds: number | null; deadline: Date | null } {
+  if (examType === 'multilevel') {
+    if (!section) return { seconds: null, deadline: null };
+    const seconds = MULTILEVEL_SPECIFICATION[skill].durationSeconds;
+    return { seconds, deadline: new Date(fromTs + seconds * 1000) };
+  }
   if (skill === 'speaking') return { seconds: null, deadline: null };
   if (skill === 'listening') {
     const audioSec = (section?.groups ?? []).reduce((sum, g) => sum + (g.audioDurationSec ?? 0), 0);

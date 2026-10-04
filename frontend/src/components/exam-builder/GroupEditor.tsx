@@ -254,11 +254,12 @@ export function GroupEditor({
     const p = part;
     if (!p) return;
     const maxLocal = p.questions.reduce((m, q) => Math.max(m, q.number), 0);
-    const maxExam = nextQuestionNumber(detail.sections) - 1;
+    const maxExam = nextQuestionNumber(detail.type === 'multilevel' ? detail.sections.filter((s) => s.id === sectionId) : detail.sections) - 1;
     const number = Math.max(maxLocal, maxExam) + 1;
-    const type = defaultTypeFor(skill, p.questions);
+    const specPart = detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0];
+    const type = (specPart?.types[0] as MockQuestionType | undefined) ?? defaultTypeFor(skill, p.questions);
     const auto = type !== "essay_task1" && type !== "essay_task2" && type !== "speaking_task";
-    update((prev) => ({ ...prev, questions: [...prev.questions, newQuestion(number, type, auto)] }));
+    update((prev) => ({ ...prev, questions: [...prev.questions, { ...newQuestion(number, type, auto), points: specPart?.rawMax ?? (auto ? 1 : 9), ...(['short_answer','note_completion','sentence_completion','summary_completion'].includes(type) && specPart ? { wordLimit: 1 } : {}) }] }));
   }
 
   function handleDeleteGroup() {
@@ -267,7 +268,8 @@ export function GroupEditor({
 
   const serverAudio = `/api/backend/mock/groups/${group.id}/audio`;
   const serverImage = `/api/backend/mock/groups/${group.id}/image`;
-  const allowedTypes = TYPES_BY_SKILL[skill];
+  const specificationPart = detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0];
+  const allowedTypes = (specificationPart?.types as MockQuestionType[] | undefined) ?? TYPES_BY_SKILL[skill];
   // Unsaved visual draft for student preview (Task 9): same question mapping as
   // previewGroup, but passage/questions come from visual state. Constant id keeps
   // PreviewBody key stable (answers reset only on toggle). Explicit srcs point at
@@ -325,7 +327,7 @@ export function GroupEditor({
                   id="ge-partno"
                   type="number"
                   min={1}
-                  max={4}
+                  max={detail.type === 'multilevel' ? 6 : 4}
                   value={part.partNumber ?? ""}
                   onChange={(e) =>
                     update((p) => ({
@@ -387,6 +389,7 @@ export function GroupEditor({
               />
             </Field>
           )}
+          {detail.type === 'multilevel' && skill === 'writing' && <p className="text-sm text-fg-muted">Use the same source stimulus in task material for the informal and formal email tasks.</p>}
           {mode === "visual" && (skill === "writing" || skill === "speaking") && (
             <p className="text-xs text-fg-muted">
               {tx(
@@ -662,7 +665,7 @@ export function GroupEditor({
               onChange={(next) =>
                 update((p) => ({
                   ...p,
-                  questions: p.questions.map((x) => (x.clientId === q.clientId ? next : x)),
+                  questions: p.questions.map((x) => (x.clientId === q.clientId ? { ...next, ...(specificationPart ? { points: specificationPart.rawMax ?? 1 } : {}) } : x)),
                 }))
               }
               onRemove={() =>
