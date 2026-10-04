@@ -7,6 +7,7 @@ import { AppException } from '../common/app.exception';
 import { AuthUser } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { sanitizeMockContent } from './mock-content';
+import { canonicalDecision } from './question-engine';
 import { canonicalChecksum, validateImportPackage, type ImportReport } from './mock-import-validate';
 
 type Pkg = Record<string, any>;
@@ -200,6 +201,7 @@ export class MockExamImportService {
             title: (p.exam.title as string).slice(0, 200),
             description: p.exam.description ?? null,
             level: p.exam.level ?? null,
+            practiceLevel: p.exam.practiceLevel ?? null,
             isDemo: p.exam.isDemo ?? false,
             isPublished: false, // JSON hech qachon avtomatik publish qilmaydi
             price: p.exam.price ?? 0,
@@ -278,6 +280,7 @@ export class MockExamImportService {
                 contentHtml: sanitizeMockContent(g.contentHtml),
                 audioScript: sanitizeMockContent(g.audioScript),
                 contentLayout: g.contentLayout ?? null,
+                optionsReusable: g.optionsReusable ?? null,
                 partNumber: s.skill === 'listening' ? (g.partNumber ?? null) : null,
                 audioPlayLimit: g.audioPlayLimit ?? 1,
                 audioDurationSec: null, // server o'lchovi keyin; staged metadata da duration yo'q
@@ -296,10 +299,11 @@ export class MockExamImportService {
                   type: q.type,
                   prompt: (q.prompt as string).trim(),
                   options: (q.options ?? []) as Prisma.InputJsonValue,
-                  correctAnswers: (q.correctAnswers ?? []) as Prisma.InputJsonValue,
+                  correctAnswers: (q.type === 'true_false_notgiven' || q.type === 'yes_no_notgiven' ? (q.correctAnswers ?? []).map(canonicalDecision) : q.correctAnswers ?? []) as Prisma.InputJsonValue,
                   acceptedVariants: (q.acceptedVariants ?? []) as Prisma.InputJsonValue,
                   points: q.points ?? 1,
                   wordLimit: q.wordLimit ?? null,
+                  answerRule: q.answerRule ?? null,
                 },
               });
               sourceMaps.push({ kind: 'question', sourceKey: q.key, entityId: created.id });

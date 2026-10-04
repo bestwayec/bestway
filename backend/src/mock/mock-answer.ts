@@ -1,4 +1,5 @@
 import { MockQuestionType } from '@prisma/client';
+import { AnswerRule, canonicalDecision, choiceIndex, respectsAnswerRule, strictAnswerText } from './question-engine';
 
 /**
  * Javob kaliti bo'yicha avtomatik baholash — sof funksiyalar.
@@ -104,6 +105,8 @@ export interface AnswerCheckOptions {
   wordLimit?: number | null;
   /** Savol muallifi kiritgan qo'shimcha to'g'ri shakllar (Br/Am). */
   acceptedVariants?: string[] | null;
+  answerRule?: AnswerRule | string | null;
+  options?: string[] | null;
 }
 
 /**
@@ -119,6 +122,40 @@ export function isAnswerCorrect(
   opts: AnswerCheckOptions = {},
 ): boolean {
   if (!response || !response.trim() || correctAnswers.length === 0) return false;
+
+  if (opts.answerRule === 'ONE_WORD' || opts.answerRule === 'ONE_WORD_AND_OR_NUMBER') {
+    if (!respectsAnswerRule(response, opts.answerRule)) return false;
+    const value = strictAnswerText(response);
+    return [...correctAnswers, ...(opts.acceptedVariants ?? [])].some((key) => strictAnswerText(key) === value);
+  }
+
+  if (type === 'true_false_notgiven' || type === 'yes_no_notgiven') {
+    const value = canonicalDecision(response);
+    return correctAnswers.some((key) => canonicalDecision(key) === value);
+  }
+
+  if (opts.options?.length && ['multiple_choice', 'matching', 'matching_headings', 'map_labelling'].includes(type)) {
+    const chosen = choiceIndex(response, opts.options);
+    const expected = correctAnswers.map((key) => choiceIndex(key, opts.options!));
+    // The option bank adds letter/option-text cross-format matching. When both the
+    // response and every stored key resolve to the bank, the index decides the result.
+    if (chosen !== null && expected.every((index) => index !== null)) return expected.includes(chosen);
+    // A stored key that does not resolve to the bank is malformed authoring (already
+    // flagged for publication). It must not turn a legitimate text answer into a
+    // wrong score: fall through to the legacy normalization below.
+  }
+
+  if (type === 'multi_select' && opts.options?.length) {
+    const parts = response.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
+    const selectedParts = parts.length === 1 && /^[a-z](?:\s+[a-z])+$/i.test(parts[0]) ? parts[0].split(/\s+/) : parts;
+    const chosen = selectedParts.map((part) => choiceIndex(part, opts.options!));
+    const expectedIndexes = correctAnswers.map((key) => choiceIndex(key, opts.options!));
+    if (!chosen.includes(null) && !expectedIndexes.includes(null)) {
+      const expected = new Set(expectedIndexes);
+      return new Set(chosen).size === expected.size && chosen.every((index) => expected.has(index));
+    }
+    // Either side did not resolve to the shared bank — keep the legacy set comparison.
+  }
 
   // Strict word-count (spec §3): "NO MORE THAN TWO WORDS" + 3 so'z → 0.
   if (opts.wordLimit != null && opts.wordLimit > 0) {

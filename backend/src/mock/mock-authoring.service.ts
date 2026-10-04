@@ -5,6 +5,8 @@ import { MockExamType, MockQuestionType, Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import { AuditService } from '../audit/audit.service';
 import { AppException } from '../common/app.exception';
+import { ExamProgramService } from '../common/exam-program.service';
+import { studentExamTitle } from './student-exam-title';
 import { AuthUser } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../videos/storage.service';
@@ -22,13 +24,14 @@ import {
   UpdateSectionDto,
 } from './dto/mock.dto';
 import { MockAccessService } from './mock-access.service';
-import { assertGappedDocumentQuestions, sanitizeMockContent } from './mock-content';
+import { assertDraftGapNumbers, assertGappedDocumentQuestions, gapNumbersFromHtml, sanitizeMockContent } from './mock-content';
 import { buildCorrectAnswers, parseQuestions } from './mock-parse';
 import { audioContentType } from './mock-storage';
 import { AUTO_SKILLS } from './mock-scoring';
 import { ExamRow, shapeExam, shapeExamMeta, totalDuration } from './mock-shape';
 import { starterSections } from './mock-starter';
 import { MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
+import { objectiveGroupIssues, objectiveQuestionIssues } from './question-engine';
 
 /** Variantlar (options) majburiy bo'lgan savol turlari */
 const OPTION_TYPES = new Set<MockQuestionType>([
@@ -69,6 +72,7 @@ export class MockAuthoringService {
     private readonly storage: StorageService,
     private readonly accessSvc: MockAccessService,
     config: ConfigService,
+    private readonly programs: ExamProgramService = new ExamProgramService(prisma),
   ) {
     this.base = `${config.get<string>('PUBLIC_URL') ?? 'http://localhost:3001'}/v1`;
   }
@@ -76,6 +80,8 @@ export class MockAuthoringService {
   // ─────────────────────────── Exam ───────────────────────────
 
   async createExam(actor: AuthUser, dto: CreateMockExamDto) {
+    const profile = dto.profile ?? 'practice';
+    this.assertPracticeLevel(dto.type, profile, dto.practiceLevel);
     const exam = await this.prisma.mockExam.create({
       data: {
         type: dto.type,
@@ -84,11 +90,12 @@ export class MockAuthoringService {
         title: dto.title,
         description: dto.description,
         level: dto.level,
+        practiceLevel: dto.practiceLevel,
         isDemo: dto.isDemo ?? false,
         price: dto.price ?? 0,
         isFreeForApproved: dto.isFreeForApproved ?? true,
         createdById: actor.id,
-        profile: dto.profile ?? 'practice',
+        profile,
         ...(dto.starterStructure ? { sections: { create: starterSections(dto.type, dto.skills) } } : {}),
       },
     });
@@ -103,8 +110,9 @@ export class MockAuthoringService {
   }
 
   async updateExam(actor: AuthUser, id: string, dto: UpdateMockExamDto) {
-    await this.examOrThrow(id);
+    const existing = await this.examOrThrow(id);
     await this.assertCanAuthor(actor, id);
+    this.assertPracticeLevel(existing.type, dto.profile ?? existing.profile, dto.practiceLevel !== undefined ? dto.practiceLevel : existing.practiceLevel);
     if (dto.isPublished === true) {
       const ready = await this.readiness(actor, id);
       if (!ready.ready) {
@@ -119,6 +127,7 @@ export class MockAuthoringService {
         ...(dto.assessmentPolicy !== undefined ? { assessmentPolicy: dto.assessmentPolicy } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.level !== undefined ? { level: dto.level } : {}),
+        ...(dto.practiceLevel !== undefined ? { practiceLevel: dto.practiceLevel } : {}),
         ...(dto.profile !== undefined ? { profile: dto.profile } : {}),
         ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
         ...(dto.isDemo !== undefined ? { isDemo: dto.isDemo } : {}),
@@ -169,10 +178,17 @@ export class MockAuthoringService {
     };
     if (!staff) {
       if (viewer?.role === 'student') {
+        const active = await this.programs.active(viewer.id, q.program);
+        where.AND = [{ type: active === 'MULTILEVEL' ? 'multilevel' : active === 'IELTS' ? { in: ['ielts_academic', 'ielts_general'] } : { in: [] } }];
         where.OR = [{ isPublished: true }, { isDemo: true }];
       } else {
         where.isDemo = true; // mehmon / ota-ona
       }
+    }
+    if (q.practiceLevel) {
+      where.practiceLevel = q.practiceLevel;
+      where.profile = 'practice';
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : []), { type: 'multilevel' }];
     }
     const exams = await this.prisma.mockExam.findMany({
       where,
@@ -223,9 +239,10 @@ export class MockAuthoringService {
         id: e.id,
         type: e.type,
         profile: e.profile,
-        title: e.title,
+        title: staff ? e.title : studentExamTitle(e.title),
         description: e.description,
         level: e.level,
+        practiceLevel: e.practiceLevel,
         isDemo: e.isDemo,
         isPublished: e.isPublished,
         canEdit:
@@ -254,6 +271,7 @@ export class MockAuthoringService {
     if (!staff && access !== 'granted') {
       return {
         ...shapeExamMeta(row),
+        title: studentExamTitle(exam.title),
         price: exam.price,
         isFreeForApproved: exam.isFreeForApproved,
         access,
@@ -349,7 +367,7 @@ export class MockAuthoringService {
     const count = await this.prisma.mockQuestionGroup.count({ where: { sectionId } });
     const contentHtml = sanitizeMockContent(dto.contentHtml);
     const audioScript = sanitizeMockContent(dto.audioScript);
-    assertGappedDocumentQuestions(contentHtml, []);
+    assertDraftGapNumbers(contentHtml);
     const group = await this.prisma.mockQuestionGroup.create({
       data: {
         sectionId,
@@ -360,6 +378,7 @@ export class MockAuthoringService {
         contentHtml,
         audioScript,
         contentLayout: dto.contentLayout,
+        optionsReusable: dto.optionsReusable,
         partNumber: dto.partNumber,
         audioDurationSec: dto.audioDurationSec,
         audioPlayLimit: dto.audioPlayLimit ?? 1,
@@ -392,7 +411,7 @@ export class MockAuthoringService {
     const audioScript = dto.audioScript !== undefined
       ? sanitizeMockContent(dto.audioScript)
       : group.audioScript;
-    assertGappedDocumentQuestions(contentHtml, group.questions.map((q) => q.number));
+    assertDraftGapNumbers(contentHtml);
     const updated = await this.prisma.mockQuestionGroup.update({
       where: { id: groupId },
       data: {
@@ -403,6 +422,7 @@ export class MockAuthoringService {
         ...(dto.contentHtml !== undefined ? { contentHtml } : {}),
         ...(dto.audioScript !== undefined ? { audioScript } : {}),
         ...(dto.contentLayout !== undefined ? { contentLayout: dto.contentLayout } : {}),
+        ...(dto.optionsReusable !== undefined ? { optionsReusable: dto.optionsReusable } : {}),
         ...(dto.partNumber !== undefined ? { partNumber: dto.partNumber } : {}),
         ...(dto.audioDurationSec !== undefined ? { audioDurationSec: dto.audioDurationSec } : {}),
         ...(dto.audioPlayLimit !== undefined ? { audioPlayLimit: dto.audioPlayLimit } : {}),
@@ -708,14 +728,12 @@ export class MockAuthoringService {
       }
       const isAuto = AUTO_SKILLS.includes(group.section.skill);
       const rows = dto.questions.map((q, index) => {
-        if (!q.prompt.trim()) {
-          throw new AppException('VALIDATION_ERROR', `${index + 1}-savol matni kiritilishi kerak`, 400);
-        }
-        this.validateQuestion(q, isAuto, index);
+        this.validateQuestion(q, isAuto, index, false);
         return {
           number: q.number, sortOrder: index, type: q.type, prompt: q.prompt.trim(),
           options: q.options ?? [], correctAnswers: q.correctAnswers ?? [],
           acceptedVariants: q.acceptedVariants ?? [], wordLimit: q.wordLimit ?? null,
+          answerRule: q.answerRule ?? null,
           points: this.resolvePoints(exam.type, isAuto, q.points, `Question ${index + 1}: `),
         };
       });
@@ -725,7 +743,7 @@ export class MockAuthoringService {
       const audioScript = dto.audioScript !== undefined
         ? sanitizeMockContent(dto.audioScript)
         : group.audioScript;
-      assertGappedDocumentQuestions(contentHtml, rows.map((q) => q.number));
+      assertDraftGapNumbers(contentHtml);
       const { questions: _questions, deletedQuestionIds: _deleted, expectedContentVersion: _v, ...material } = dto;
       await tx.mockQuestionGroup.update({
         where: { id: groupId },
@@ -801,6 +819,7 @@ export class MockAuthoringService {
         acceptedVariants: q.acceptedVariants ? (q.acceptedVariants as Prisma.InputJsonValue) : undefined,
         points: this.resolvePoints(group.section.exam.type, isAuto, q.points, `#${i + 1}-savol: `),
         wordLimit: q.wordLimit,
+        answerRule: q.answerRule,
       })),
     });
     await this.audit.log({
@@ -839,6 +858,7 @@ export class MockAuthoringService {
         dto.correctAnswers ?? (question.correctAnswers as string[] | null) ?? undefined,
       points: dto.points,
       wordLimit: dto.wordLimit,
+      answerRule: dto.answerRule !== undefined ? dto.answerRule : question.answerRule,
     };
     this.validateQuestion(merged, isAuto, 0);
 
@@ -868,6 +888,7 @@ export class MockAuthoringService {
             }
           : {}),
         ...(dto.wordLimit !== undefined ? { wordLimit: dto.wordLimit } : {}),
+        ...(dto.answerRule !== undefined ? { answerRule: dto.answerRule } : {}),
       },
     });
     await this.audit.log({
@@ -928,6 +949,7 @@ export class MockAuthoringService {
           title: `${source.title} (copy)`.slice(0, 200),
           description: source.description,
           level: source.level,
+          practiceLevel: source.practiceLevel,
           isPublished: false,
           isDemo: false,
           price: source.price,
@@ -957,6 +979,7 @@ export class MockAuthoringService {
               contentHtml: g.contentHtml,
               audioScript: g.audioScript,
               contentLayout: g.contentLayout,
+              optionsReusable: g.optionsReusable,
               partNumber: g.partNumber,
               audioDurationSec: g.audioDurationSec,
               audioPlayLimit: g.audioPlayLimit,
@@ -975,6 +998,7 @@ export class MockAuthoringService {
                 acceptedVariants: q.acceptedVariants ?? Prisma.JsonNull,
                 points: q.points,
                 wordLimit: q.wordLimit,
+                answerRule: q.answerRule,
               })),
             });
           }
@@ -1062,8 +1086,8 @@ export class MockAuthoringService {
         });
       }
       if (skill === 'reading') {
-        const groups = section.groups as Array<{ passageText: string | null; questions: unknown[] }>;
-        const missingPassage = groups.filter((g) => g.questions.length > 0 && !g.passageText?.trim()).length;
+        const groups = section.groups as Array<{ passageText: string | null; contentHtml?: string | null; questions: unknown[] }>;
+        const missingPassage = groups.filter((g) => g.questions.length > 0 && !g.passageText?.trim() && !g.contentHtml?.trim()).length;
         items.push({
           key: 'reading_passage',
           ok: missingPassage === 0,
@@ -1105,15 +1129,27 @@ export class MockAuthoringService {
     let missingKeys = 0;
     let manualBadPoints = 0;
     const ielts = exam.type === 'ielts_academic' || exam.type === 'ielts_general';
-    if (!ielts) {
+    if (!ielts && isFullMock) {
       const problems = multilevelBlueprintIssues(exam.sections, isFullMock);
       items.push({ key: 'multilevel_blueprint', ok: problems.length === 0, detail: problems.join('; ') || MULTILEVEL_VERSION });
     }
     const seenNumbers = new Map<string | number, number>();
     let duplicateCount = 0;
+    const unavailableMedia: string[] = [];
     for (const s of exam.sections) {
       const auto = AUTO_SKILLS.includes(s.skill);
       for (const g of s.groups) {
+        for (const key of [g.audioKey, g.imageKey]) {
+          if (!key) continue;
+          try { if (!this.storage.exists(key)) unavailableMedia.push(g.id ?? s.skill); }
+          catch { unavailableMedia.push(g.id ?? s.skill); }
+        }
+        const questionIssues = objectiveGroupIssues(g, auto);
+        try {
+          if (gapNumbersFromHtml(g.contentHtml).length) assertGappedDocumentQuestions(g.contentHtml, g.questions.map((q) => q.number));
+        }
+        catch (error) { questionIssues.push(error instanceof Error ? error.message : 'Gap/question mapping is invalid'); }
+        items.push({ key: `question_group:${g.id ?? s.skill}`, ok: questionIssues.length === 0, detail: questionIssues.join('; ') || 'question format and mappings valid' });
         for (const q of g.questions) {
           const keys = (q.correctAnswers as string[] | null) ?? [];
           const nonEmpty = keys.filter((a) => a.trim() !== '');
@@ -1127,6 +1163,7 @@ export class MockAuthoringService {
       }
     }
     items.push({ key: 'answer_keys', ok: missingKeys === 0, detail: `${missingKeys} auto Q without key` });
+    items.push({ key: 'media_assets', ok: unavailableMedia.length === 0, detail: unavailableMedia.length ? `${unavailableMedia.length} media asset(s) unavailable or invalid` : 'all referenced media available' });
     items.push({
       key: 'manual_points',
       ok: !ielts || manualBadPoints === 0,
@@ -1169,17 +1206,18 @@ export class MockAuthoringService {
   // ─────────────────────────── Helpers ───────────────────────────
 
   private validateQuestion(
-    q: { type: MockQuestionType; options?: string[]; correctAnswers?: string[]; wordLimit?: number; points?: number },
+    q: { type: MockQuestionType; prompt?: string; options?: string[]; correctAnswers?: string[]; acceptedVariants?: string[]; wordLimit?: number | null; answerRule?: string | null; points?: number },
     isAuto: boolean,
     index: number,
+    complete = true,
   ): void {
     const at = `#${index + 1}-savol: `;
     const opts = (q.options ?? []).filter((o) => o.trim() !== '');
     const keys = (q.correctAnswers ?? []).filter((a) => a.trim() !== '');
-    if (OPTION_TYPES.has(q.type) && opts.length < 2) {
+    if (complete && OPTION_TYPES.has(q.type) && opts.length < 2) {
       throw new AppException('OPTIONS_REQUIRED', `${at}variantlar kamida 2 ta bo'lsin`, 400);
     }
-    if (isAuto && keys.length === 0) {
+    if (complete && isAuto && keys.length === 0) {
       throw new AppException(
         'CORRECT_ANSWER_REQUIRED',
         `${at}Listening/Reading savoli uchun to'g'ri javob majburiy`,
@@ -1192,6 +1230,8 @@ export class MockAuthoringService {
     if (q.points != null && (!Number.isInteger(q.points) || q.points < 1 || q.points > 20)) {
       throw new AppException('VALIDATION_ERROR', `${at}points 1-20 bo'lsin`, 400);
     }
+    const issues = objectiveQuestionIssues(q, isAuto, complete);
+    if (issues.length) throw new AppException('VALIDATION_ERROR', `${at}${issues.join('; ')}`, 400);
   }
 
   private resolvePoints(
@@ -1212,6 +1252,12 @@ export class MockAuthoringService {
       return IELTS_MANUAL_POINTS;
     }
     return points ?? 1;
+  }
+
+  private assertPracticeLevel(type: MockExamType, profile: string, practiceLevel: string | null | undefined): void {
+    if (practiceLevel != null && (type !== 'multilevel' || profile !== 'practice')) {
+      throw new AppException('VALIDATION_ERROR', 'Practice level is only available for Multilevel practice exams', 400);
+    }
   }
 
   private defaultSectionOrder(skill: string): number {

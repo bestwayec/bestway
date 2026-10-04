@@ -5,7 +5,7 @@ import { CurrentUser, Roles } from '../common/decorators';
 import { AppException } from '../common/app.exception';
 import { AuthUser } from '../common/types';
 import { parseBandTable } from '../mock/mock-scoring';
-import { UpdateIeltsBandsDto, UpdateSettingsDto } from './dto/settings.dto';
+import { UpdateExamProgramPolicyDto, UpdateIeltsBandsDto, UpdateSettingsDto } from './dto/settings.dto';
 import { SETTING_KEYS, SettingsService } from './settings.service';
 
 @ApiTags('settings')
@@ -16,6 +16,22 @@ export class SettingsController {
     private readonly settings: SettingsService,
     private readonly audit: AuditService,
   ) {}
+
+  @Get('exam-program-policy')
+  @Roles('super_admin', 'admin', 'teacher')
+  async getProgramPolicy() {
+    return { accessPolicy: await this.settings.getJson('examProgramAccessPolicy', 'SELF_SELECT') };
+  }
+
+  @Put('exam-program-policy')
+  @Roles('super_admin')
+  async updateProgramPolicy(@CurrentUser() user: AuthUser, @Body() dto: UpdateExamProgramPolicyDto) {
+    const old = await this.getProgramPolicy();
+    await this.settings.setJson('examProgramAccessPolicy', dto.accessPolicy);
+    const fresh = await this.getProgramPolicy();
+    await this.audit.log({ userId: user.id, action: 'settings.exam-program-policy.update', entity: 'setting', oldValue: old, newValue: fresh });
+    return fresh;
+  }
 
   /** Tizim sozlamalari (ball limitlari) */
   @Get()

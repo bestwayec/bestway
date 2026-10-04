@@ -7,6 +7,12 @@ export const MOCK_CONTENT_LAYOUTS = [
   'notes',
   'summary',
   'sentences',
+  'headings',
+  'speakers',
+  'short_texts',
+  'paragraphs',
+  'map',
+  'multi_extract',
 ] as const;
 
 const ALLOWED_TAGS = [
@@ -44,6 +50,14 @@ export function sanitizeMockContent(value: string | null | undefined): string | 
 export function gapNumbersFromHtml(contentHtml: string | null | undefined): number[] {
   if (!contentHtml) return [];
   return [...contentHtml.matchAll(/<span\s+data-gap="(\d{1,3})"\s*>\s*<\/span>/g)].map((m) => Number(m[1]));
+}
+
+/** Incomplete drafts may have gaps without question rows, but never ambiguous markers. */
+export function assertDraftGapNumbers(contentHtml: string | null | undefined): void {
+  const gaps = gapNumbersFromHtml(contentHtml);
+  if (new Set(gaps).size !== gaps.length) {
+    throw new AppException('GAP_TOKEN_DUPLICATE', 'Kontentdagi gap raqami takrorlangan', 400);
+  }
 }
 
 /** A gapped document and its question rows must be an exact one-to-one set. */

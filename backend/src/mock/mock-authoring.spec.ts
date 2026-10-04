@@ -49,11 +49,19 @@ describe('atomic block authoring', () => {
 
   it('validates the entire batch before changing material or deleting questions', async () => {
     const { service, tx, actor, dto } = setup();
-    dto.questions.push({ number: 2, type: 'short_answer', prompt: 'Missing answer' });
-    await expect(service.saveGroupContent(actor, 'group', dto)).rejects.toMatchObject({ code: 'CORRECT_ANSWER_REQUIRED' });
+    dto.questions.push({ number: 2, type: 'short_answer', prompt: 'Malformed limit', wordLimit: 0 });
+    await expect(service.saveGroupContent(actor, 'group', dto)).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
     expect(tx.mockQuestionGroup.update).not.toHaveBeenCalled();
     expect(tx.mockQuestion.deleteMany).not.toHaveBeenCalled();
     expect(tx.mockQuestion.update).not.toHaveBeenCalled();
+  });
+
+  it('saves incomplete draft questions while retaining structural validation', async () => {
+    const { service, tx, actor, dto } = setup();
+    dto.questions[0] = { id: 'existing', number: 1, type: 'multiple_choice', prompt: '', options: [], correctAnswers: [] };
+    await service.saveGroupContent(actor, 'group', dto);
+    expect(tx.mockQuestion.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ prompt: '', options: [], correctAnswers: [] }) }));
+    expect(await validate(plainToInstance(SaveGroupContentDto, dto))).toEqual([]);
   });
 
   it('rejects question IDs belonging to another block', async () => {
@@ -194,7 +202,7 @@ describe('profile-aware readiness (single-skill publish)', () => {
       mockImportReviewIssue: { count: vi.fn().mockResolvedValue(0) },
     };
     const audit = { log: vi.fn() };
-    const service = new MockAuthoringService(prisma as never, audit as never, {} as never, {} as never, { get: () => undefined } as never);
+    const service = new MockAuthoringService(prisma as never, audit as never, { exists: () => true } as never, {} as never, { get: () => undefined } as never);
     return service;
   }
   const base = { id: 'exam', type: 'ielts_academic' };

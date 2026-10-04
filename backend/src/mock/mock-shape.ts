@@ -1,4 +1,6 @@
 import { MockExamType, MockQuestionType, MockSkill } from '@prisma/client';
+import { studentExamTitle } from './student-exam-title';
+import { canonicalDecision } from './question-engine';
 import { MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, taskGuidance } from './multilevel-specification';
 import { MULTILEVEL_SPEAKING_V2, BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
 
@@ -18,6 +20,7 @@ export interface QuestionRow {
   acceptedVariants: unknown;
   points: number;
   wordLimit: number | null;
+  answerRule?: string | null;
 }
 
 export interface GroupRow {
@@ -29,6 +32,7 @@ export interface GroupRow {
   contentHtml: string | null;
   audioScript: string | null;
   contentLayout: string | null;
+  optionsReusable?: boolean | null;
   audioKey: string | null;
   imageKey: string | null;
   partNumber: number | null;
@@ -56,6 +60,7 @@ export interface ExamRow {
   title: string;
   description: string | null;
   level: string | null;
+  practiceLevel?: string | null;
   isPublished: boolean;
   isDemo: boolean;
   createdAt: Date;
@@ -70,15 +75,20 @@ function asStringArray(v: unknown): string[] | null {
 }
 
 export function shapeQuestion(q: QuestionRow, includeAnswers: boolean) {
+  const rawOptions = asStringArray(q.options);
+  const options = q.type === 'true_false_notgiven' || q.type === 'yes_no_notgiven'
+    ? rawOptions?.map((option) => canonicalDecision(option) === 'NOT_GIVEN' ? 'NOT GIVEN' : canonicalDecision(option)) ?? null
+    : rawOptions;
   return {
     id: q.id,
     number: q.number,
     sortOrder: q.sortOrder,
     type: q.type,
     prompt: q.prompt,
-    options: asStringArray(q.options),
+    options,
     points: q.points,
     wordLimit: q.wordLimit,
+    answerRule: q.answerRule ?? null,
     ...(includeAnswers
       ? {
           correctAnswers: asStringArray(q.correctAnswers),
@@ -97,6 +107,7 @@ export function shapeGroup(g: GroupRow, includeAnswers: boolean, base: string) {
     passageText: g.passageText,
     contentHtml: g.contentHtml,
     contentLayout: g.contentLayout,
+    optionsReusable: g.optionsReusable ?? null,
     hasAudio: !!g.audioKey,
     audioUrl: g.audioKey ? `${base}/mock/groups/${g.id}/audio` : null,
     imageUrl: g.imageKey ? `${base}/mock/groups/${g.id}/image` : null,
@@ -148,9 +159,10 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
     ...(exam.speakingProfileVersion === BESTWAY_MULTILEVEL_SPEAKING_2026_V2 ? { speakingProfile: MULTILEVEL_SPEAKING_V2 } : {}),
     ...(exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: exam.specificationVersion, specification: MULTILEVEL_SPECIFICATION } : {}),
     profile: (exam as { profile?: string }).profile ?? 'practice',
-    title: exam.title,
+    title: includeAnswers ? exam.title : studentExamTitle(exam.title),
     description: exam.description,
     level: exam.level,
+    practiceLevel: exam.practiceLevel ?? null,
     isPublished: exam.isPublished,
     isDemo: exam.isDemo,
     createdAt: exam.createdAt,
@@ -259,9 +271,10 @@ export function shapeExamMeta(exam: ExamRow) {
   return {
     id: exam.id,
     type: exam.type,
-    title: exam.title,
+    title: studentExamTitle(exam.title),
     description: exam.description,
     level: exam.level,
+    practiceLevel: exam.practiceLevel ?? null,
     isPublished: exam.isPublished,
     isDemo: exam.isDemo,
     createdAt: exam.createdAt,

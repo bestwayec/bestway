@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { countWords } from './mock-answer';
-import { gapNumbersFromHtml, sanitizeMockContent } from './mock-content';
+import { gapNumbersFromHtml, MOCK_CONTENT_LAYOUTS, sanitizeMockContent } from './mock-content';
+import { ANSWER_RULES, canonicalDecision, objectiveGroupIssues, objectiveQuestionIssues } from './question-engine';
 import { buildCorrectAnswers } from './mock-parse';
 import { multilevelBlueprintIssues } from './multilevel-specification';
 import { MockSkill } from '@prisma/client';
@@ -32,9 +33,9 @@ const PROFILES = ['practice', 'full_mock'];
 const EXAM_TYPES = ['ielts_academic', 'ielts_general', 'multilevel'];
 const Q_TYPES = ['multiple_choice','multi_select','true_false_notgiven','yes_no_notgiven','matching','matching_headings','sentence_completion','note_completion','summary_completion','table_completion','short_answer','map_labelling','essay_task1','essay_task2','speaking_task'];
 const AUTO_TYPES = ['multiple_choice','multi_select','true_false_notgiven','yes_no_notgiven','matching','matching_headings','sentence_completion','note_completion','summary_completion','table_completion','short_answer','map_labelling'];
-const TEXT_TYPES = ['sentence_completion','note_completion','summary_completion','table_completion','short_answer','map_labelling'];
+const TEXT_TYPES = ['sentence_completion','note_completion','summary_completion','table_completion','short_answer'];
 const CHOICE_SINGLE = ['multiple_choice','matching','matching_headings'];
-const LAYOUTS = ['document','table','notes','summary','sentences'];
+const LAYOUTS: readonly string[] = MOCK_CONTENT_LAYOUTS;
 const ISSUE_CODES = ['MISSING_ANSWER','AMBIGUOUS_TEXT','MISSING_MEDIA','UNSUPPORTED_LAYOUT','NUMBERING_REVIEW','OTHER'];
 const MAX_ISSUES = 500;
 
@@ -185,7 +186,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
     add('EXAM', '/exam', 'exam object is required', ['import']);
   } else {
     for (const k of Object.keys(exam)) {
-      if (!['type','title','description','level','isDemo','price','isFreeForApproved','sections'].includes(k)) {
+      if (!['type','title','description','level','practiceLevel','isDemo','price','isFreeForApproved','sections'].includes(k)) {
         add('UNKNOWN_FIELD', `/exam/${k}`, `Unknown exam field "${k}"`, ['import']);
       }
     }
@@ -194,6 +195,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
     if (typeof exam['title'] !== 'string' || exam['title'].trim().length < 3) add('EXAM_TITLE', '/exam/title', 'exam.title must be at least 3 non-blank chars', ['import']);
     if (typeof exam['description'] !== 'string') add('EXAM_DESC', '/exam/description', 'exam.description must be a string', ['import']);
     if (typeof exam['level'] !== 'string') add('EXAM_LEVEL', '/exam/level', 'exam.level must be a string', ['import']);
+    if (exam.practiceLevel != null && !['A1','A2','B1','B2','C1'].includes(String(exam.practiceLevel))) add('ENUM_INVALID', '/exam/practiceLevel', 'practiceLevel must be A1, A2, B1, B2 or C1', ['import']);
     if (typeof exam['isDemo'] !== 'boolean') add('EXAM_DEMO', '/exam/isDemo', 'exam.isDemo must be boolean', ['import']);
     if (!Number.isInteger(exam['price']) || (exam['price'] as number) < 0) add('EXAM_PRICE', '/exam/price', 'exam.price must be a non-negative integer', ['import']);
     if (typeof exam['isFreeForApproved'] !== 'boolean') add('EXAM_FREE', '/exam/isFreeForApproved', 'exam.isFreeForApproved must be boolean', ['import']);
@@ -232,7 +234,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
           const gb = `${base}/groups/${gi}`;
           if (!isRecord(g)) { add('GROUP', gb, 'group must be an object', ['import']); return; }
           for (const k of Object.keys(g)) {
-            if (!['key','title','instructions','passageText','contentHtml','contentLayout','audioScript','partNumber','audioPlayLimit','audioRef','imageRef','questions'].includes(k)) {
+            if (!['key','title','instructions','passageText','contentHtml','contentLayout','optionsReusable','audioScript','partNumber','audioPlayLimit','audioRef','imageRef','questions'].includes(k)) {
               add('UNKNOWN_FIELD', `${gb}/${k}`, `Unknown group field "${k}"`, ['import']);
             }
           }
@@ -246,6 +248,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
           if (typeof g['contentHtml'] !== 'string') add('GROUP_HTML', `${gb}/contentHtml`, 'group.contentHtml must be a string', ['import']);
           if (typeof g['audioScript'] !== 'string') add('GROUP_SCRIPT', `${gb}/audioScript`, 'group.audioScript must be a string', ['import']);
           if (typeof g['contentLayout'] !== 'string' || !LAYOUTS.includes(g['contentLayout'] as string)) add('ENUM_INVALID', `${gb}/contentLayout`, 'group.contentLayout is invalid', ['import']);
+          if (g.optionsReusable != null && typeof g.optionsReusable !== 'boolean') add('OPTION_REUSE', `${gb}/optionsReusable`, 'optionsReusable must be boolean or null', ['import']);
           if (g['partNumber'] !== undefined && (typeof skill !== 'string' || skill !== 'listening')) {
             add('PART_NUMBER', `${gb}/partNumber`, 'partNumber is only allowed for listening groups', ['import']);
           }
@@ -283,7 +286,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
             const qb = `${gb}/questions/${qi}`;
             if (!isRecord(q)) { add('QUESTION', qb, 'question must be an object', ['import']); return; }
             for (const k of Object.keys(q)) {
-              if (!['key','number','type','prompt','options','correctAnswers','acceptedVariants','points','wordLimit','sourceRef'].includes(k)) {
+              if (!['key','number','type','prompt','options','correctAnswers','acceptedVariants','points','wordLimit','answerRule','sourceRef'].includes(k)) {
                 add('UNKNOWN_FIELD', `${qb}/${k}`, `Unknown question field "${k}"`, ['import']);
               }
             }
@@ -331,11 +334,11 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
                 add('COUNT_LIMIT', `${qb}/options`, 'options limited to 26', ['import']);
               }
               if (qt === 'true_false_notgiven') {
-                const ok = options.length === 3 && (options as string[])[0] === 'TRUE' && (options as string[])[1] === 'FALSE' && (options as string[])[2] === 'NOT GIVEN';
+                const ok = options.length === 3 && (options as string[]).map(canonicalDecision).join(',') === 'TRUE,FALSE,NOT_GIVEN';
                 if (!ok) add('TFNG_OPTIONS', `${qb}/options`, 'TFNG options must be exactly ["TRUE","FALSE","NOT GIVEN"]', ['import']);
               }
               if (qt === 'yes_no_notgiven') {
-                const ok = options.length === 3 && (options as string[])[0] === 'YES' && (options as string[])[1] === 'NO' && (options as string[])[2] === 'NOT GIVEN';
+                const ok = options.length === 3 && (options as string[]).map(canonicalDecision).join(',') === 'YES,NO,NOT_GIVEN';
                 if (!ok) add('YNNG_OPTIONS', `${qb}/options`, 'YNNG options must be exactly ["YES","NO","NOT GIVEN"]', ['import']);
               }
               if (TEXT_TYPES.includes(qt as string) && options.length !== 0) {
@@ -380,14 +383,14 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
               }
               if (qt === 'true_false_notgiven') {
                 for (const c of correct) {
-                  if (!['TRUE','FALSE','NOT GIVEN'].includes(c as string)) {
+                  if (typeof c !== 'string' || !['TRUE','FALSE','NOT_GIVEN'].includes(canonicalDecision(c))) {
                     add('CORRECT_VALUE', `${qb}/correctAnswers`, 'TFNG key must be TRUE, FALSE or NOT GIVEN', ['import']);
                   }
                 }
               }
               if (qt === 'yes_no_notgiven') {
                 for (const c of correct) {
-                  if (!['YES','NO','NOT GIVEN'].includes(c as string)) {
+                  if (typeof c !== 'string' || !['YES','NO','NOT_GIVEN'].includes(canonicalDecision(c))) {
                     add('CORRECT_VALUE', `${qb}/correctAnswers`, 'YNNG key must be YES, NO or NOT GIVEN', ['import']);
                   }
                 }
@@ -421,7 +424,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
               }
             }
             const wl = q['wordLimit'];
-            const needsWl = TEXT_TYPES.includes(qt as string);
+            const needsWl = TEXT_TYPES.includes(qt as string) || (qt === 'map_labelling' && Array.isArray(options) && options.length === 0);
             if (wl !== undefined) {
               if (!needsWl) add('WORD_LIMIT', `${qb}/wordLimit`, 'wordLimit is only allowed for text completion answers', ['import']);
               else if (!Number.isInteger(wl) || (wl as number) < 1 || (wl as number) > 50) {
@@ -429,19 +432,23 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
               } else {
                 // Reuse grading word-count: every stored answer must respect the limit.
                 for (const a of [...(Array.isArray(correct) ? correct : []), ...(Array.isArray(variants) ? variants : [])]) {
-                  if (typeof a === 'string' && countWords(a) > (wl as number)) {
+                  if (q.answerRule == null && typeof a === 'string' && countWords(a) > (wl as number)) {
                     add('WORD_LIMIT', `${qb}/correctAnswers`, `answer "${a}" exceeds wordLimit ${wl}`, ['import']);
                   }
                 }
               }
             }
+            if (q.answerRule != null && !(ANSWER_RULES as readonly unknown[]).includes(q.answerRule)) add('ANSWER_RULE', `${qb}/answerRule`, 'answerRule is invalid', ['import']);
+            objectiveQuestionIssues(q as unknown as Parameters<typeof objectiveQuestionIssues>[0], skill === 'reading' || skill === 'listening').forEach((issue) => add('QUESTION_ENGINE', qb, issue, ['import']));
             if (typeof q['sourceRef'] !== 'string' || !q['sourceRef'].trim()) {
               add('SOURCE_REF', `${qb}/sourceRef`, 'question.sourceRef must be non-blank', ['import']);
             }
           });
           counts.questions += questions.length;
+          const groupIssues = objectiveGroupIssues({ contentLayout: g.contentLayout as string, optionsReusable: g.optionsReusable as boolean | null, imageKey: g.imageRef as string | undefined, questions: questions.filter(isRecord) as unknown as Parameters<typeof objectiveGroupIssues>[0]['questions'] }, skill === 'reading' || skill === 'listening');
+          groupIssues.forEach((issue) => add('QUESTION_ENGINE', gb, issue, issue.includes('require an image') ? ['publish'] : ['import']));
           // Gap mapping: reuse sanitizer + token extraction semantics.
-          if (isRich) {
+          if (isRich && (gapNumbersFromHtml(sanitizeMockContent(html)).length > 0 || ['document','table','notes','summary','sentences'].includes(String(g.contentLayout)))) {
             const clean = sanitizeMockContent(html) ?? '';
             const gaps = gapNumbersFromHtml(clean);
             const gapSet = new Set(gaps);

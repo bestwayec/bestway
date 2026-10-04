@@ -7,7 +7,9 @@ import {
   MockQuestionType,
   MockSkill,
   PurchaseStatus,
+  PracticeLevel,
 } from '@prisma/client';
+import { OmitType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -29,10 +31,15 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination';
+import { MOCK_CONTENT_LAYOUTS } from '../mock-content';
+import { ANSWER_RULES } from '../question-engine';
 
 /* ─────────────────────────── Exam ─────────────────────────── */
 
 export class CreateMockExamDto {
+  @IsOptional()
+  @IsEnum(PracticeLevel)
+  practiceLevel?: PracticeLevel;
   @IsOptional()
   @IsEnum(AssessmentPolicyMode)
   assessmentPolicy?: AssessmentPolicyMode;
@@ -89,6 +96,9 @@ export class CreateMockExamDto {
 
 export class UpdateMockExamDto {
   @IsOptional()
+  @IsEnum(PracticeLevel)
+  practiceLevel?: PracticeLevel | null;
+  @IsOptional()
   @IsEnum(AssessmentPolicyMode)
   assessmentPolicy?: AssessmentPolicyMode;
   @IsOptional()
@@ -131,6 +141,13 @@ export class UpdateMockExamDto {
 }
 
 export class ListExamsQueryDto {
+  @IsOptional()
+  @IsEnum(ExamProgram)
+  program?: ExamProgram;
+
+  @IsOptional()
+  @IsEnum(PracticeLevel)
+  practiceLevel?: PracticeLevel;
   @IsOptional()
   @IsEnum(MockExamType)
   type?: MockExamType;
@@ -195,6 +212,9 @@ export class UpdateSectionDto {
 
 export class CreateGroupDto {
   @IsOptional()
+  @IsBoolean()
+  optionsReusable?: boolean | null;
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -230,7 +250,7 @@ export class CreateGroupDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['document', 'table', 'notes', 'summary', 'sentences'])
+  @IsIn(MOCK_CONTENT_LAYOUTS)
   contentLayout?: string;
 
   /** Listening part raqami (1..4) — full-test L→R→W tartibi uchun */
@@ -259,6 +279,9 @@ export class CreateGroupDto {
 }
 
 export class UpdateGroupDto {
+  @IsOptional()
+  @IsBoolean()
+  optionsReusable?: boolean | null;
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -292,7 +315,7 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['document', 'table', 'notes', 'summary', 'sentences'])
+  @IsIn(MOCK_CONTENT_LAYOUTS)
   contentLayout?: string;
 
   /** Listening part raqami (1..4) */
@@ -323,6 +346,9 @@ export class UpdateGroupDto {
 /* ─────────────────────────── Question ─────────────────────────── */
 
 export class QuestionInputDto {
+  @IsOptional()
+  @IsIn(ANSWER_RULES)
+  answerRule?: 'ONE_WORD' | 'ONE_WORD_AND_OR_NUMBER' | null;
   /** Imtihondagi savol raqami (1..40) */
   @Type(() => Number)
   @IsInt()
@@ -390,7 +416,12 @@ export class AddQuestionsDto {
   questions: QuestionInputDto[];
 }
 
-export class SaveGroupQuestionDto extends QuestionInputDto {
+export class SaveGroupQuestionDto extends OmitType(QuestionInputDto, ['prompt'] as const) {
+  /** Incomplete drafts may retain a blank prompt; publication validates it. */
+  @IsString()
+  @MaxLength(5000)
+  prompt: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(100)
@@ -422,6 +453,9 @@ export class SaveGroupContentDto extends UpdateGroupDto {
 }
 
 export class UpdateQuestionDto {
+  @IsOptional()
+  @IsIn(ANSWER_RULES)
+  answerRule?: 'ONE_WORD' | 'ONE_WORD_AND_OR_NUMBER' | null;
   @IsOptional()
   @Type(() => Number)
   @IsInt()

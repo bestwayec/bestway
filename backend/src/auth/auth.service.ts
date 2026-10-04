@@ -330,6 +330,8 @@ export class AuthService {
           groupName: p.group?.name ?? null,
           currentPoints: p.currentPoints,
           linkCode: p.linkCode,
+          availablePrograms: p.availablePrograms,
+          activeProgram: p.activeProgram,
         };
       }
     } else if (user.role === 'parent') {

@@ -1,4 +1,5 @@
 import { MockQuestionType } from '@prisma/client';
+import { canonicalDecision } from './question-engine';
 
 /**
  * Yopishtirilgan (paste qilingan) savol matnini tuzilgan savollarga ajratadi.
@@ -91,6 +92,7 @@ const TFNG_MAP: Record<string, string> = {
   t: 'TRUE', true: 'TRUE',
   f: 'FALSE', false: 'FALSE',
   ng: 'NOT GIVEN', 'n/g': 'NOT GIVEN', 'notgiven': 'NOT GIVEN', 'not given': 'NOT GIVEN',
+  no_information: 'NOT_GIVEN', 'no information': 'NOT_GIVEN', not_given: 'NOT_GIVEN',
   y: 'YES', yes: 'YES', n: 'NO', no: 'NO',
 };
 
@@ -116,11 +118,11 @@ export function buildCorrectAnswers(
 
     // TFNG/YNNG qisqartmalari
     if (type === 'true_false_notgiven' || type === 'yes_no_notgiven') {
-      if (TFNG_MAP[low]) out.add(TFNG_MAP[low]);
+      if (TFNG_MAP[low]) out.add(canonicalDecision(TFNG_MAP[low]));
     }
 
     // MCQ / Matching: harf → variant matni
-    if ((type === 'multiple_choice' || type === 'multi_select' || type === 'matching' || type === 'matching_headings') && options && /^[a-h]$/i.test(part)) {
+    if ((type === 'multiple_choice' || type === 'multi_select' || type === 'matching' || type === 'matching_headings' || type === 'map_labelling') && options && /^[a-z]$/i.test(part)) {
       const idx = part.toUpperCase().charCodeAt(0) - 65;
       if (options[idx]) out.add(options[idx]);
     }

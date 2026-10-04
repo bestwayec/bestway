@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AttemptStatus, Prisma, StudentProfile, TestAttempt, TestType } from '@prisma/client';
 import { AccessService } from '../common/access.service';
+import { ExamProgramService } from '../common/exam-program.service';
 import { AppException } from '../common/app.exception';
 import { Paginated } from '../common/pagination';
 import { AuthUser } from '../common/types';
@@ -20,6 +21,7 @@ export class GradingService {
     private readonly prisma: PrismaService,
     private readonly access: AccessService,
     private readonly notifications: NotificationsService,
+    private readonly programs: ExamProgramService = new ExamProgramService(prisma),
   ) {}
 
   private normalize(s: string): string {
@@ -223,8 +225,10 @@ export class GradingService {
 
   /** O'quvchining o'z natijalari tarixi */
   async myAttempts(student: AuthUser, q: QueryAttemptsDto) {
+    const active = await this.programs.active(student.id, q.program);
     const where: Prisma.TestAttemptWhereInput = {
       studentId: student.id,
+      test: { type: active === 'MULTILEVEL' ? 'multilevel' : active === 'IELTS' ? 'ielts' : { in: [] } },
       ...(q.status ? { status: q.status } : {}),
       ...(q.testId ? { testId: q.testId } : {}),
     };

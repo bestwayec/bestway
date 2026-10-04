@@ -27,6 +27,7 @@
         "title": { "type": "string", "minLength": 3, "maxLength": 200 },
         "description": { "type": "string", "maxLength": 2000 },
         "level": { "type": "string", "maxLength": 50 },
+        "practiceLevel": { "enum": [null, "A1", "A2", "B1", "B2", "C1"] },
         "isDemo": { "type": "boolean" },
         "price": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
         "isFreeForApproved": { "type": "boolean" },
@@ -61,9 +62,10 @@
         "instructions": { "type": "string", "maxLength": 2000 },
         "passageText": { "type": "string", "maxLength": 20000 },
         "contentHtml": { "type": "string", "maxLength": 100000 },
-        "contentLayout": { "enum": ["document", "table", "notes", "summary", "sentences"] },
+        "contentLayout": { "enum": ["document", "table", "notes", "summary", "sentences", "headings", "speakers", "short_texts", "paragraphs", "map", "multi_extract"] },
+        "optionsReusable": { "type": ["boolean", "null"] },
         "audioScript": { "type": "string", "maxLength": 100000 },
-        "partNumber": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "partNumber": { "type": "integer", "minimum": 1, "maximum": 6 },
         "audioPlayLimit": { "type": "integer", "minimum": 1, "maximum": 10 },
         "audioRef": { "$ref": "#/definitions/key" },
         "imageRef": { "$ref": "#/definitions/key" },
@@ -83,6 +85,7 @@
         "acceptedVariants": { "$ref": "#/definitions/answers" },
         "points": { "type": "integer", "minimum": 1, "maximum": 20 },
         "wordLimit": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "answerRule": { "enum": [null, "ONE_WORD", "ONE_WORD_AND_OR_NUMBER"] },
         "sourceRef": { "type": "string", "minLength": 1, "maxLength": 500 }
       },
       "allOf": [
@@ -105,16 +108,16 @@
         },
         {
           "if": { "properties": { "type": { "const": "true_false_notgiven" } } },
-          "then": { "properties": { "options": { "const": ["TRUE", "FALSE", "NOT GIVEN"] }, "correctAnswers": { "maxItems": 1, "items": { "enum": ["TRUE", "FALSE", "NOT GIVEN"] } }, "acceptedVariants": { "maxItems": 0 } } }
+          "then": { "properties": { "options": { "enum": [["TRUE", "FALSE", "NOT GIVEN"], ["TRUE", "FALSE", "NOT_GIVEN"], ["TRUE", "FALSE", "NO_INFORMATION"]] }, "correctAnswers": { "maxItems": 1, "items": { "enum": ["TRUE", "FALSE", "NOT GIVEN", "NOT_GIVEN", "NO_INFORMATION"] } }, "acceptedVariants": { "maxItems": 0 } } }
         },
         {
           "if": { "properties": { "type": { "const": "yes_no_notgiven" } } },
-          "then": { "properties": { "options": { "const": ["YES", "NO", "NOT GIVEN"] }, "correctAnswers": { "maxItems": 1, "items": { "enum": ["YES", "NO", "NOT GIVEN"] } }, "acceptedVariants": { "maxItems": 0 } } }
+          "then": { "properties": { "options": { "enum": [["YES", "NO", "NOT GIVEN"], ["YES", "NO", "NOT_GIVEN"], ["YES", "NO", "NO_INFORMATION"]] }, "correctAnswers": { "maxItems": 1, "items": { "enum": ["YES", "NO", "NOT GIVEN", "NOT_GIVEN", "NO_INFORMATION"] } }, "acceptedVariants": { "maxItems": 0 } } }
         },
         {
-          "if": { "properties": { "type": { "enum": ["sentence_completion", "note_completion", "summary_completion", "table_completion", "short_answer", "map_labelling"] } } },
+          "if": { "properties": { "type": { "enum": ["sentence_completion", "note_completion", "summary_completion", "table_completion", "short_answer"] } } },
           "then": { "properties": { "options": { "maxItems": 0 } } },
-          "else": { "not": { "required": ["wordLimit"] } }
+          "else": { "if": { "properties": { "type": { "not": { "const": "map_labelling" } } } }, "then": { "not": { "required": ["wordLimit"] } } }
         }
       ]
     },
