@@ -9,6 +9,8 @@ import {
 } from '@prisma/client';
 import { Request, Response } from 'express';
 import { AccessService } from '../common/access.service';
+import { ExamProgramService } from '../common/exam-program.service';
+import { studentExamTitle } from './student-exam-title';
 import { AppException } from '../common/app.exception';
 import { Paginated } from '../common/pagination';
 import { AuthUser } from '../common/types';
@@ -19,6 +21,7 @@ import { StorageService } from '../videos/storage.service';
 import { GradeMockAnswerDto, ListAttemptsQueryDto } from './dto/mock.dto';
 import { MOCK_EXAM_INCLUDE } from './mock-attempt.service';
 import { isAnswerCorrect } from './mock-answer';
+import { duplicateMatchingResponses } from './question-engine';
 import { audioContentType, streamFileRange } from './mock-storage';
 import {
   AUTO_SKILLS,
@@ -63,6 +66,7 @@ export class MockGradingService {
     private readonly audit: AuditService,
     private readonly settings: SettingsService,
     config: ConfigService,
+    private readonly programs: ExamProgramService = new ExamProgramService(prisma),
   ) {
     this.base = `${config.get<string>('PUBLIC_URL') ?? 'http://localhost:3001'}/v1`;
   }
@@ -381,6 +385,9 @@ export class MockGradingService {
       };
       for (const group of section.groups) {
         const groupScores: number[] = [];
+        const duplicateSelections = group.optionsReusable === false
+          ? duplicateMatchingResponses(group.questions, new Map(group.questions.map((q) => [q.id, answerByQ.get(q.id)?.response ?? ''])))
+          : new Set<string>();
         for (const q of group.questions) {
           agg.max += q.points;
           const ans = answerByQ.get(q.id);
@@ -393,7 +400,7 @@ export class MockGradingService {
             const wordLimit = (q as { wordLimit?: number | null }).wordLimit ?? null;
             const acceptedVariants = (q as { acceptedVariants?: string[] | null }).acceptedVariants ?? null;
             const correct = ans
-              ? isAnswerCorrect(q.type, ans.response, key, { wordLimit, acceptedVariants })
+              ? !duplicateSelections.has(q.id) && isAnswerCorrect(q.type, ans.response, key, { wordLimit, acceptedVariants, answerRule: q.answerRule, options: (q.options as string[] | null) ?? null })
               : false;
             const s = correct ? q.points : 0;
             agg.score += s;
@@ -541,9 +548,10 @@ export class MockGradingService {
   }
 
   async myAttempts(student: AuthUser, q: ListAttemptsQueryDto) {
+    const active = await this.programs.active(student.id, q.program);
     const where: Prisma.MockAttemptWhereInput = {
       studentId: student.id,
-      ...(q.program ? { exam: { type: q.program === 'MULTILEVEL' ? 'multilevel' : { in: ['ielts_academic', 'ielts_general'] } } } : {}),
+      exam: { type: active === 'MULTILEVEL' ? 'multilevel' : active === 'IELTS' ? { in: ['ielts_academic', 'ielts_general'] } : { in: [] } },
       ...(q.status ? { status: q.status } : {}),
       ...(q.examId ? { examId: q.examId } : {}),
     };
@@ -558,7 +566,7 @@ export class MockGradingService {
       }),
     ]);
     return new Paginated(
-      rows.map((a) => this.summary(a)),
+      rows.map((a) => this.summary(a, true)),
       { page: q.page, limit: q.limit, total },
     );
   }
@@ -600,6 +608,7 @@ export class MockGradingService {
         passageText: attempt.specificationVersion === MULTILEVEL_VERSION && s.skill === 'listening' && !showAnswers ? null : g.passageText,
         contentHtml: g.contentHtml,
         contentLayout: g.contentLayout,
+        optionsReusable: g.optionsReusable,
         hasAudio: !!g.audioKey,
         questions: g.questions.map((qq, qi) => {
           const ans = answerByQ.get(qq.id);
@@ -611,6 +620,7 @@ export class MockGradingService {
             options: (qq.options as string[] | null) ?? null,
             points: qq.points,
             wordLimit: qq.wordLimit,
+            answerRule: qq.answerRule,
             ...(attempt.specificationVersion === MULTILEVEL_VERSION ? { guidance: taskGuidance(s.skill, gi, qi) } : {}),
             response: ans?.response ?? null,
             hasAudio: !!ans?.audioKey,
@@ -629,7 +639,7 @@ export class MockGradingService {
     }));
 
     return {
-      ...this.summary(attempt),
+      ...this.summary(attempt, !staff),
       serverTime: new Date(),
       annotations: attempt.annotations ?? [],
       sections,
@@ -693,7 +703,7 @@ export class MockGradingService {
 
     return {
       studentName: attempt.student.user.name,
-      examTitle: attempt.exam.title,
+      examTitle: viewer.role === 'student' ? studentExamTitle(attempt.exam.title) : attempt.exam.title,
       examType: attempt.exam.type,
       level: attempt.exam.level,
       isIelts: attempt.exam.type !== 'multilevel',
@@ -752,11 +762,11 @@ export class MockGradingService {
     overallDeadlineAt?: Date | null;
     exam?: { title: string; type: string } | null;
     student?: { user: { name: string } } | null;
-  }) {
+  }, sanitizeTitle = false) {
     return {
       id: a.id,
       examId: a.examId,
-      examTitle: a.exam?.title,
+      examTitle: a.exam?.title == null ? a.exam?.title : sanitizeTitle ? studentExamTitle(a.exam.title) : a.exam.title,
       examType: a.exam?.type,
       studentId: a.studentId,
       studentName: a.student?.user.name,
@@ -794,12 +804,12 @@ export class MockGradingService {
     await this.notifications.notify(
       attempt.studentId,
       'test_result',
-      `Mock imtihon natijangiz tayyor: "${attempt.exam.title}" — ${headline}.`,
+      `Mock imtihon natijangiz tayyor: "${studentExamTitle(attempt.exam.title)}" — ${headline}.`,
     );
     await this.notifications.notifyParents(
       attempt.studentId,
       'test_result',
-      `Farzandingizning "${attempt.exam.title}" mock natijasi: ${headline}.`,
+      `Farzandingizning "${studentExamTitle(attempt.exam.title)}" mock natijasi: ${headline}.`,
     );
   }
 

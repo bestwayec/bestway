@@ -30,27 +30,15 @@ import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-conte
 import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
+import { ObjectiveQuestionInput } from './objective-question-input';
+import { usedMatchingOptions } from '@/lib/objective-question';
 
-const SINGLE_CHOICE = new Set<MockQuestionType>([
-  "multiple_choice",
-  "true_false_notgiven",
-  "yes_no_notgiven",
-  "matching",
-  "matching_headings",
-]);
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
 const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
 
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
-
-function optionsFor(q: MockQuestion): string[] {
-  if (q.options && q.options.length) return q.options;
-  if (q.type === "true_false_notgiven") return ["TRUE", "FALSE", "NOT GIVEN"];
-  if (q.type === "yes_no_notgiven") return ["YES", "NO", "NOT GIVEN"];
-  return [];
-}
 
 function countAnswered(exam: MockExamDetail, answers: Record<string, string>, audio: Set<string>): number {
   let n = 0;
@@ -522,6 +510,7 @@ function GroupBlock({
                 value={answers[q.id] ?? ""}
                 hasAudio={audioSet.has(q.id)}
                 timed={timed}
+                unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                 onChange={(v) => onAnswer(q.id, v)}
               />
             ))}
@@ -539,6 +528,7 @@ function QuestionInput({
   hasAudio,
   timed,
   onChange,
+  unavailableOptions,
 }: {
   question: MockQuestion;
   attemptId: string;
@@ -546,6 +536,7 @@ function QuestionInput({
   hasAudio: boolean;
   timed: boolean;
   onChange: (v: string) => void;
+  unavailableOptions?: string[];
 }) {
   const t = useTranslations("mock");
 
@@ -597,79 +588,7 @@ function QuestionInput({
     );
   }
 
-  if (SINGLE_CHOICE.has(q.type)) {
-    const opts = optionsFor(q);
-    return (
-      <div className="space-y-2">
-        {header}
-        <div className="flex flex-wrap gap-2">
-          {opts.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(opt)}
-              aria-pressed={value === opt}
-              className={cn(
-                "rounded-[8px] border px-3 py-1.5 text-sm transition-colors",
-                value === opt
-                  ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg"
-                  : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
-              )}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (q.type === "multi_select") {
-    const opts = optionsFor(q);
-    const selected = value ? value.split(",").map((v) => v.trim()) : [];
-    function toggle(opt: string) {
-      const next = selected.includes(opt)
-        ? selected.filter((v) => v !== opt)
-        : [...selected, opt];
-      onChange(next.join(","));
-    }
-    return (
-      <div className="space-y-2">
-        {header}
-        <div className="flex flex-wrap gap-2">
-          {opts.map((opt) => (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              aria-pressed={selected.includes(opt)}
-              className={cn(
-                "rounded-[8px] border px-3 py-1.5 text-sm transition-colors",
-                selected.includes(opt)
-                  ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg"
-                  : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
-              )}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // TEXT_INPUT (default)
-  return (
-    <div className="flex items-center gap-2">
-      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
-        {q.number}
-      </span>
-      <div className="min-w-0 flex-1">
-        {q.prompt && <p className="mb-1 whitespace-pre-line text-sm text-fg">{q.prompt}</p>}
-        <Input value={value} onChange={(e) => onChange(e.target.value)} />
-      </div>
-    </div>
-  );
+  return <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />;
 }
 
 function SpeakingRecorder({

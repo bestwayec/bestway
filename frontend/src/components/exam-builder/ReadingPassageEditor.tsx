@@ -26,7 +26,7 @@ import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
   QTYPE_LABEL,
   newQuestion,
-  validatePart,
+  validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
 } from "@/components/mock/exam-builder/types";
@@ -41,6 +41,8 @@ import { questionIssues } from "./checks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ImportPanel, type ImportedServerQuestion } from "./ImportPanel";
 import { StudentPreview } from "./StudentPreview";
+import { QuestionGroupSettings } from "./QuestionGroupSettings";
+import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
 import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -66,6 +68,9 @@ function toBuilderPart(group: MockGroup): BuilderPart {
     title: group.title ?? "",
     instructions: group.instructions ?? "",
     passageText: group.passageText ?? "",
+    contentHtml: group.contentHtml ?? "",
+    contentLayout: (group.contentLayout ?? undefined) as BuilderPart["contentLayout"],
+    optionsReusable: group.optionsReusable ?? null,
     partNumber: undefined,
     audioFileName: undefined,
     audioPendingFile: null,
@@ -83,6 +88,7 @@ function toBuilderPart(group: MockGroup): BuilderPart {
       acceptedVariants: q.acceptedVariants ?? [],
       points: q.points,
       wordLimit: q.wordLimit ?? undefined,
+      answerRule: q.answerRule ?? null,
       savedQuestionId: q.id,
     })),
   };
@@ -98,6 +104,7 @@ function asCheckable(q: BuilderQuestion) {
     options: q.options,
     points: q.points,
     wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
     correctAnswers: q.correctAnswers,
   };
 }
@@ -205,6 +212,7 @@ function mergeImported(group: MockGroup, list: ImportedServerQuestion[]): Builde
       acceptedVariants: q.acceptedVariants ?? [],
       points: q.points ?? 1,
       wordLimit: q.wordLimit ?? undefined,
+      answerRule: q.answerRule ?? null,
       savedQuestionId: q.id,
     }));
 }
@@ -261,6 +269,7 @@ export function ReadingPassageEditor({
   // Fresh server snapshot per passage (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
     typeof window !== "undefined" && window.localStorage.getItem("examBuilder.questionMode") === "visual"
@@ -296,7 +305,7 @@ export function ReadingPassageEditor({
     if (!part || !g) return false;
     // Visual mode: run the same save body against the visual copies.
     let p = mode === "visual" ? { ...part, passageText: visualText, questions: visualQuestions } : part;
-    const errs = [...validatePart("reading", p), ...duplicateErrors(detail, g.id, p.questions)];
+    const errs = [...validateDraftPart(p), ...duplicateErrors(detail, g.id, p.questions)];
     if (p.passageText.length > 20000) {
       errs.push(tx(t, "passageTooLong", "Passage text must be 20000 characters or fewer."));
     }
@@ -318,11 +327,14 @@ export function ReadingPassageEditor({
         input: {
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
+          contentHtml: p.contentHtml,
+          contentLayout: p.contentLayout,
+          optionsReusable: p.optionsReusable,
           passageText: p.passageText.trim(),
         },
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
-          points: q.points, wordLimit: q.wordLimit })),
+          points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -445,7 +457,9 @@ export function ReadingPassageEditor({
         title: part.title,
         instructions: part.instructions,
         passageText: visualText,
-        contentHtml: null,
+        contentHtml: part.contentHtml ?? null,
+        contentLayout: part.contentLayout,
+        optionsReusable: part.optionsReusable,
         hasAudio: false,
         imageUrl: localImageUrl ?? group.imageUrl,
         questions: visualQuestions.map(toPreviewQuestion),
@@ -1019,6 +1033,7 @@ function toPreviewQuestion(q: BuilderQuestion) {
     options: q.options,
     points: q.points,
     wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
   };
 }
 
@@ -1032,7 +1047,9 @@ function previewGroup(
     title: part.title,
     instructions: part.instructions,
     passageText: part.passageText,
-    contentHtml: server.contentHtml ?? null,
+    contentHtml: part.contentHtml ?? server.contentHtml ?? null,
+    contentLayout: part.contentLayout,
+    optionsReusable: part.optionsReusable,
     hasAudio: false,
     imageUrl: server.imageUrl,
     questions: part.questions.map(toPreviewQuestion),

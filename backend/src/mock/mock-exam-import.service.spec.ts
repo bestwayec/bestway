@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { MockExamImportService, resolveIssueSource } from './mock-exam-import.service';
 import { canonicalChecksum } from './mock-import-validate';
+import { Prisma } from '@prisma/client';
 
 function sample() {
   const p = path.join(__dirname, '..', '..', '..', 'docs', 'ai-test-import', 'example-reading.json');
@@ -12,7 +13,7 @@ function sample() {
 
 function setup() {
   const tx: Record<string, any> = {
-    mockExam: { create: vi.fn(async ({ data }: any) => ({ id: 'exam-1', ...data })) },
+    mockExam: { create: vi.fn(async ({ data }: any) => ({ id: 'exam-1', ...data })), updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     mockSection: { create: vi.fn(async ({ data }: any) => ({ id: `sec-${data.skill}`, ...data })) },
     mockQuestionGroup: { create: vi.fn(async ({ data }: any) => ({ id: `grp-${data.sortOrder}`, ...data })) },
     mockQuestion: { create: vi.fn(async ({ data }: any) => ({ id: `q-${data.number}`, ...data })), createMany: vi.fn() },
@@ -83,7 +84,6 @@ describe('mock exam JSON import (RED)', () => {
         }],
       }],
     }));
-    tx.mockExam.update = vi.fn(async () => ({}));
 
     const result = await service.commitImport(
       actor,
@@ -100,11 +100,36 @@ describe('mock exam JSON import (RED)', () => {
     expect(tx.mockQuestionGroup.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ sectionId: 'existing-reading', sortOrder: 3 }) }),
     );
-    expect(tx.mockExam.update).toHaveBeenCalledWith({
-      where: { id: targetExamId },
+    expect(tx.mockExam.updateMany).toHaveBeenCalledWith({
+      where: { id: targetExamId, isPublished: false, attempts: { none: {} }, contentVersion: 4 },
       data: { contentVersion: { increment: 1 } },
     });
+    expect(tx.mockExam.updateMany.mock.invocationCallOrder[0]).toBeLessThan(tx.mockQuestionGroup.create.mock.invocationCallOrder[0]);
     expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'mock.exam.import.append' }));
+  });
+
+  it('rejects append if publication wins the exam lock before any content is written', async () => {
+    const { service, tx, actor, audit } = setup();
+    const pkg = sample();
+    tx.mockExam.findUnique = vi.fn().mockResolvedValue({
+      id: 'target-exam', type: pkg.exam.type, createdById: 'teacher-1', isPublished: false,
+      contentVersion: 3, _count: { attempts: 0 }, sections: [],
+    });
+    tx.mockExam.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(service.commitImport(actor, pkg, {}, canonicalChecksum(pkg), undefined, 'target-exam')).rejects.toMatchObject({ code: 'MOCK_CONTENT_CONFLICT', status: 409 });
+    expect(tx.mockSection.create).not.toHaveBeenCalled();
+    expect(tx.mockQuestionGroup.create).not.toHaveBeenCalled();
+    expect(tx.mockQuestion.create).not.toHaveBeenCalled();
+    expect(tx.mockExamImport.create).not.toHaveBeenCalled();
+    expect(audit.log).not.toHaveBeenCalled();
+  });
+
+  it('uses Serializable isolation and exposes retryable database conflicts as 409', async () => {
+    const { service, prisma, actor } = setup();
+    const pkg = sample();
+    prisma.$transaction.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError('Concurrent publication', { code: 'P2034', clientVersion: '5.22.0' }));
+    await expect(service.commitImport(actor, pkg, {}, canonicalChecksum(pkg))).rejects.toMatchObject({ code: 'MOCK_CONTENT_CONFLICT', status: 409 });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable', timeout: 15000 });
   });
 
   it('rejects question-number collisions when appending to an existing skill', async () => {

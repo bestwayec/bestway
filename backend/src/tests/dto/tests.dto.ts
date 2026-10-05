@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -18,6 +19,9 @@ import {
 import { PaginationQueryDto } from '../../common/pagination';
 
 export class QueryTestsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(['IELTS', 'MULTILEVEL'])
+  program?: 'IELTS' | 'MULTILEVEL';
   @IsOptional()
   @IsEnum(TestType)
   type?: TestType;
@@ -253,6 +257,9 @@ export class GradeAnswerDto {
 }
 
 export class QueryAttemptsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(['IELTS', 'MULTILEVEL'])
+  program?: 'IELTS' | 'MULTILEVEL';
   @IsOptional()
   @IsEnum(AttemptStatus)
   status?: AttemptStatus;

@@ -24,7 +24,7 @@ import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
   QTYPE_LABEL,
   newQuestion,
-  validatePart,
+  validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
 } from "@/components/mock/exam-builder/types";
@@ -40,6 +40,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ImportPanel, type ImportedServerQuestion } from "./ImportPanel";
 import { ListeningAudioCard } from "./ListeningAudioCard";
 import { StudentPreview } from "./StudentPreview";
+import { QuestionGroupSettings } from "./QuestionGroupSettings";
+import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas, visualScratchKey } from "./visual-editor/VisualQuestionCanvas";
 import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -51,6 +53,9 @@ function toBuilderPart(group: MockGroup): BuilderPart {
     title: group.title ?? "",
     instructions: group.instructions ?? "",
     passageText: group.passageText ?? "",
+    contentHtml: group.contentHtml ?? "",
+    contentLayout: (group.contentLayout ?? undefined) as BuilderPart["contentLayout"],
+    optionsReusable: group.optionsReusable ?? null,
     partNumber: group.partNumber ?? undefined,
     audioFileName: undefined,
     audioPendingFile: null,
@@ -68,6 +73,7 @@ function toBuilderPart(group: MockGroup): BuilderPart {
       acceptedVariants: q.acceptedVariants ?? [],
       points: q.points,
       wordLimit: q.wordLimit ?? undefined,
+        answerRule: q.answerRule ?? null,
       savedQuestionId: q.id,
     })),
   };
@@ -140,6 +146,7 @@ export function ListeningPartEditor({
   // Fresh server snapshot per part (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
     typeof window !== "undefined" && window.localStorage.getItem("examBuilder.questionMode") === "visual"
@@ -176,7 +183,7 @@ export function ListeningPartEditor({
     if (!part || !g) return false;
     // Visual mode: run the same save body against the visual copies.
     let p = mode === "visual" ? { ...part, passageText: visualText, questions: visualQuestions } : part;
-    const errs = [...validatePart("listening", p), ...duplicateErrors(detail, g.id, p.questions)];
+    const errs = [...validateDraftPart(p), ...duplicateErrors(detail, g.id, p.questions)];
     if (p.passageText.length > 20000) {
       errs.push(tx(t, "passageTooLong", "Passage text must be 20000 characters or fewer."));
     }
@@ -197,6 +204,7 @@ export function ListeningPartEditor({
                 options: q.options,
                 points: q.points,
                 wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
                 correctAnswers: q.correctAnswers,
               },
               "listening",
@@ -220,13 +228,17 @@ export function ListeningPartEditor({
         input: {
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
+          passageText: p.passageText.trim(),
+          contentHtml: p.contentHtml,
+          contentLayout: p.contentLayout,
+          optionsReusable: p.optionsReusable,
           partNumber: p.partNumber,
           audioDurationSec: p.audioDurationSec,
           audioPlayLimit: p.audioPlayLimit,
         },
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
-          points: q.points, wordLimit: q.wordLimit })),
+          points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -309,6 +321,7 @@ export function ListeningPartEditor({
           options: q.options,
           points: q.points,
           wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
           correctAnswers: q.correctAnswers,
         },
         "listening",
@@ -386,6 +399,7 @@ export function ListeningPartEditor({
         acceptedVariants: q.acceptedVariants ?? [],
         points: q.points ?? 1,
         wordLimit: q.wordLimit ?? undefined,
+      answerRule: q.answerRule ?? null,
         savedQuestionId: q.id,
       }));
     if (merged.length === 0) return;
@@ -403,8 +417,10 @@ export function ListeningPartEditor({
         id: "visual-paste-draft",
         title: part.title,
         instructions: part.instructions,
-        passageText: "",
-        contentHtml: null,
+        passageText: visualText,
+        contentHtml: part.contentHtml ?? null,
+        contentLayout: part.contentLayout,
+        optionsReusable: part.optionsReusable,
         // Only stored audio is playable in preview — matches previewGroup ruling.
         hasAudio: group.hasAudio,
         imageUrl: localImageUrl ?? group.imageUrl,
@@ -726,6 +742,7 @@ export function ListeningPartEditor({
                   options: q.options,
                   points: q.points,
                   wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
                   correctAnswers: q.correctAnswers,
                 },
                 "listening",
@@ -875,6 +892,7 @@ function toPreviewQuestion(q: BuilderQuestion) {
     options: q.options,
     points: q.points,
     wordLimit: q.wordLimit ?? null,
+    answerRule: q.answerRule ?? null,
   };
 }
 
@@ -888,7 +906,9 @@ function previewGroup(
     title: part.title,
     instructions: part.instructions,
     passageText: "",
-    contentHtml: server.contentHtml ?? null,
+    contentHtml: part.contentHtml ?? server.contentHtml ?? null,
+    contentLayout: part.contentLayout,
+    optionsReusable: part.optionsReusable,
     // Only stored audio is playable in preview — a pending selection uploads on save.
     hasAudio: server.hasAudio,
     imageUrl: server.imageUrl,

@@ -7,6 +7,7 @@ import { AppException } from '../common/app.exception';
 import { AuthUser } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { sanitizeMockContent } from './mock-content';
+import { canonicalDecision } from './question-engine';
 import { canonicalChecksum, validateImportPackage, type ImportReport } from './mock-import-validate';
 
 type Pkg = Record<string, any>;
@@ -192,6 +193,13 @@ export class MockExamImportService {
               409,
             );
           }
+          // Lock the exam row before appending content so publication cannot race
+          // the draft check, and every open editor observes a new content version.
+          const locked = await tx.mockExam.updateMany({
+            where: { id: target.id, isPublished: false, attempts: { none: {} }, contentVersion: target.contentVersion },
+            data: { contentVersion: { increment: 1 } },
+          });
+          if (locked.count !== 1) throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam changed. Reload before appending the import', 409);
         }
         const exam = target ?? await (tx as any).mockExam.create({
           data: {
@@ -200,6 +208,7 @@ export class MockExamImportService {
             title: (p.exam.title as string).slice(0, 200),
             description: p.exam.description ?? null,
             level: p.exam.level ?? null,
+            practiceLevel: p.exam.practiceLevel ?? null,
             isDemo: p.exam.isDemo ?? false,
             isPublished: false, // JSON hech qachon avtomatik publish qilmaydi
             price: p.exam.price ?? 0,
@@ -278,6 +287,7 @@ export class MockExamImportService {
                 contentHtml: sanitizeMockContent(g.contentHtml),
                 audioScript: sanitizeMockContent(g.audioScript),
                 contentLayout: g.contentLayout ?? null,
+                optionsReusable: g.optionsReusable ?? null,
                 partNumber: s.skill === 'listening' ? (g.partNumber ?? null) : null,
                 audioPlayLimit: g.audioPlayLimit ?? 1,
                 audioDurationSec: null, // server o'lchovi keyin; staged metadata da duration yo'q
@@ -296,21 +306,16 @@ export class MockExamImportService {
                   type: q.type,
                   prompt: (q.prompt as string).trim(),
                   options: (q.options ?? []) as Prisma.InputJsonValue,
-                  correctAnswers: (q.correctAnswers ?? []) as Prisma.InputJsonValue,
+                  correctAnswers: (q.type === 'true_false_notgiven' || q.type === 'yes_no_notgiven' ? (q.correctAnswers ?? []).map(canonicalDecision) : q.correctAnswers ?? []) as Prisma.InputJsonValue,
                   acceptedVariants: (q.acceptedVariants ?? []) as Prisma.InputJsonValue,
                   points: q.points ?? 1,
                   wordLimit: q.wordLimit ?? null,
+                  answerRule: q.answerRule ?? null,
                 },
               });
               sourceMaps.push({ kind: 'question', sourceKey: q.key, entityId: created.id });
             }
           }
-        }
-        if (target) {
-          await (tx as any).mockExam.update({
-            where: { id: exam.id },
-            data: { contentVersion: { increment: 1 } },
-          });
         }
         const importRow = await (tx as any).mockExamImport.create({
           data: {
@@ -355,7 +360,7 @@ export class MockExamImportService {
           });
         }
         return { examId: exam.id, importId: importRow.id, addedToExisting: !!target };
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
       await this.audit.log({
         userId: actor.id,
         action: result.addedToExisting ? 'mock.exam.import.append' : 'mock.exam.import',
@@ -372,6 +377,9 @@ export class MockExamImportService {
         editorUrl: `/exam-builder/${result.examId}`,
       };
     } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Another editor changed this exam. Reload before importing', 409);
+      }
       // Concurrent retry: unique buzilishi → replay yoki 409 (preflight poygasi).
       if (typeof e === 'object' && e !== null && (e as any).code === 'P2002') {
         const raced = await this.prisma.mockExamImport.findUnique({

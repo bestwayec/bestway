@@ -32,6 +32,9 @@ import {
   usePurchaseMock,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
+import { useStudentProgramScope } from '@/hooks/use-exam-programs';
+import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
+import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
 import type { MockExamListItem, MockSkill } from "@/lib/types";
 import { formatMoney, formatPhone } from "@/lib/utils";
 
@@ -52,9 +55,12 @@ export function MockExamsView() {
   const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
   const isOffice = role === "admin" || role === "super_admin";
   const isStudent = role === "student";
+  const scope = useStudentProgramScope();
+  const tt = useTranslations('examTrack');
+  const [practiceLevel, setPracticeLevel] = React.useState<'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'all'>('all');
 
   const [tab, setTab] = React.useState<Tab>("exams");
-  const examsQ = useMockExams();
+  const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
   const purchase = usePurchaseMock();
 
   function onBuy(id: string) {
@@ -81,6 +87,8 @@ export function MockExamsView() {
         }
       />
 
+      {isStudent && <ExamTrackSelector />}
+      {isStudent && scope.program === 'MULTILEVEL' && <label className="mb-4 block text-sm">{tt('practiceLevel')} <select aria-label={tt('practiceLevel')} value={practiceLevel} onChange={(e) => setPracticeLevel(e.target.value as typeof practiceLevel)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">{tt('allLevels')}</option>{(['A1','A2','B1','B2','C1'] as const).map((level) => <option key={level} value={level}>{level}</option>)}</select></label>}
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
@@ -95,6 +103,8 @@ export function MockExamsView() {
         <GradingPanel />
       ) : tab === "purchases" && isOffice ? (
         <PurchasesPanel />
+      ) : isStudent && scope.needsProgramSelection ? (
+        <ExamTrackRequired />
       ) : examsQ.isError ? (
         <ErrorState
           title={tc("error")}
@@ -104,7 +114,7 @@ export function MockExamsView() {
             </Button>
           }
         />
-      ) : examsQ.isLoading ? (
+      ) : examsQ.isPending ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-52" />
@@ -164,7 +174,7 @@ function MockExamCard({
             {exam.isPublished ? t("published") : t("draft")}
           </Badge>
         )}
-        {exam.level && <span className="text-xs text-fg-subtle">{exam.level}</span>}
+        {exam.type === 'multilevel' && exam.profile === 'practice' ? exam.practiceLevel && <span className="text-xs text-fg-subtle">{exam.practiceLevel} practice</span> : exam.level && <span className="text-xs text-fg-subtle">{exam.level}</span>}
       </div>
 
       <h3 className="mt-3 line-clamp-2 font-semibold text-fg">{exam.title}</h3>

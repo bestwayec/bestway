@@ -4,7 +4,7 @@ import { MockAttemptService } from './mock-attempt.service';
 
 function setup(profile: string) {
   const exam = {
-    id: 'exam-1', profile, isPublished: true, isDemo: false, price: 0,
+    id: 'exam-1', profile, contentVersion: 1, isPublished: true, isDemo: false, price: 0,
     type: 'ielts_academic', title: 'T', description: null, level: null,
     isDemo2: undefined, createdAt: new Date(), updatedAt: new Date(),
     sections: [{
@@ -30,7 +30,10 @@ function setup(profile: string) {
         overallDeadlineAt: null, sectionDeadlines: null, currentSkill: null, ...data,
       })),
     },
+    $queryRaw: vi.fn().mockResolvedValue([{ contentVersion: 1, isPublished: true, isDemo: false }]),
+    $transaction: vi.fn(),
   };
+  prisma.$transaction.mockImplementation(async (run: (tx: typeof prisma) => Promise<unknown>) => run(prisma));
   const access = { assertCanStart: vi.fn() };
   const service = new MockAttemptService(prisma as never, access as never, {} as never, { get: () => undefined } as never);
   const student = { id: 'student-1', role: 'student', studentProfile: { isApproved: true } } as never;

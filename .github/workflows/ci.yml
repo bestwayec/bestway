@@ -61,6 +61,8 @@ jobs:
         run: node scripts/ci-seed-demo-test.mjs
       - name: Build
         run: npm run build
+      - name: Unit regressions
+        run: npm test
       - name: Smoke test (built app)
         run: |
           npm run start:prod &
@@ -100,5 +102,7 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Unit regressions
+        run: npm test
       - name: Build
         run: npm run build

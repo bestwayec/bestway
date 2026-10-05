@@ -15,6 +15,10 @@
  */
 import 'dotenv/config';
 
+// Match the API's business timezone, including dates after Tashkent midnight
+// while the CI host is still on the previous UTC day.
+process.env.TZ = process.env.TZ || 'Asia/Tashkent';
+
 const BASE = process.env.SMOKE_BASE_URL ?? 'http://localhost:3001/v1';
 // Super admin .env dan olinadi (demo seed ham o'sha qiymatlardan foydalanadi)
 const SUPER_PHONE = process.env.SEED_SUPER_ADMIN_PHONE ?? '+998900000001';
@@ -47,8 +51,8 @@ async function login(phone, password) {
   return r.json.data;
 }
 
-const today = new Date().toISOString().slice(0, 10);
 const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 const MONTH = now.getMonth() + 1;
 const YEAR = now.getFullYear();
 

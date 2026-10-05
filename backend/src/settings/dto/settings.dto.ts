@@ -1,4 +1,9 @@
-import { IsArray, IsOptional, IsInt, Max, Min } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsInt, Max, Min } from 'class-validator';
+
+export class UpdateExamProgramPolicyDto {
+  @IsIn(['SELF_SELECT', 'STAFF_ASSIGNED'])
+  accessPolicy: 'SELF_SELECT' | 'STAFF_ASSIGNED';
+}
 
 export class UpdateSettingsDto {
   /** O'qituvchi bir amalda qo'sha/ayira oladigan maksimal ball */

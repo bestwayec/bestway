@@ -55,6 +55,8 @@ export interface PublicUser {
 }
 
 export interface StudentSelfProfile {
+  availablePrograms?: ('IELTS' | 'MULTILEVEL')[];
+  activeProgram?: 'IELTS' | 'MULTILEVEL' | null;
   isApproved: boolean;
   groupId: string | null;
   groupName: string | null;
@@ -647,6 +649,9 @@ export interface BroadcastInput {
 /* ── Mock exams (backend/src/mock) ───────────────────────────────────────── */
 
 export type MockExamType = "ielts_academic" | "ielts_general" | "multilevel";
+export type PracticeLevel = "A1" | "A2" | "B1" | "B2" | "C1";
+export type ObjectiveAnswerRule = "ONE_WORD" | "ONE_WORD_AND_OR_NUMBER";
+export type MockContentLayout = "document" | "table" | "notes" | "summary" | "sentences" | "headings" | "speakers" | "short_texts" | "paragraphs" | "map" | "multi_extract";
 export interface TaskGuidance { taskKey: string; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
 export interface PartSpecification { key: string; count: number; types: string[]; rawMax?: number; options?: number; wordMin?: number; wordMax?: number }
 export type MockSkill = "listening" | "reading" | "writing" | "speaking";
@@ -681,9 +686,11 @@ export interface MockExamImportRef {
 export interface MockExamListItem {
   id: string;
   type: MockExamType;
+  profile?: string;
   title: string;
   description: string | null;
   level: string | null;
+  practiceLevel?: PracticeLevel | null;
   isDemo: boolean;
   isPublished: boolean;
   canEdit: boolean;
@@ -705,6 +712,7 @@ export interface MockQuestion {
   options: string[] | null;
   points: number;
   wordLimit: number | null;
+  answerRule?: ObjectiveAnswerRule | null;
   guidance?: TaskGuidance;
   correctAnswers?: string[] | null;
   acceptedVariants?: string[] | null;
@@ -718,6 +726,7 @@ export interface MockGroup {
   passageText: string | null;
   contentHtml: string | null;
   contentLayout: string | null;
+  optionsReusable?: boolean | null;
   /** Staff authoring responses only; omitted from student-shaped exams. */
   audioScript?: string | null;
   hasAudio: boolean;
@@ -750,6 +759,7 @@ export interface MockExamStructure {
   title: string;
   description: string | null;
   level: string | null;
+  practiceLevel?: PracticeLevel | null;
   isPublished: boolean;
   isDemo: boolean;
   createdAt: string;
@@ -828,6 +838,7 @@ export interface MockAttemptQuestion {
   options: string[] | null;
   points: number;
   wordLimit: number | null;
+  answerRule?: ObjectiveAnswerRule | null;
   guidance?: TaskGuidance;
   response: string | null;
   hasAudio: boolean;
@@ -893,6 +904,7 @@ export interface CreateMockExamInput {
   title: string;
   description?: string;
   level?: string;
+  practiceLevel?: PracticeLevel | null;
   isDemo?: boolean;
   price?: number;
   isFreeForApproved?: boolean;
@@ -902,6 +914,7 @@ export interface UpdateMockExamInput {
   title?: string;
   description?: string;
   level?: string;
+  practiceLevel?: PracticeLevel | null;
   isPublished?: boolean;
   isDemo?: boolean;
   price?: number;
@@ -923,7 +936,8 @@ export interface MockGroupInput {
   passageText?: string;
   contentHtml?: string;
   audioScript?: string;
-  contentLayout?: "document" | "table" | "notes" | "summary" | "sentences";
+  contentLayout?: MockContentLayout;
+  optionsReusable?: boolean | null;
   partNumber?: number;
   audioDurationSec?: number;
   audioPlayLimit?: number;
@@ -939,6 +953,7 @@ export interface MockQuestionInput {
   acceptedVariants?: string[];
   points?: number;
   wordLimit?: number;
+  answerRule?: ObjectiveAnswerRule | null;
 }
 
 /* ── AI JSON import (POST /mock/exam-imports/*) ─────────────────────────── */

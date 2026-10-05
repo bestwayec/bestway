@@ -254,6 +254,10 @@ export class TestsService {
       ...(isStaff ? {} : { isActive: true }),
       ...(!viewer || viewer.role === 'parent' ? { isDemo: true } : {}),
     };
+    if (viewer?.role === 'student') {
+      const active = await this.programs.active(viewer.id, q.program);
+      where.AND = [{ type: active === 'MULTILEVEL' ? 'multilevel' : active === 'IELTS' ? 'ielts' : { in: [] } }];
+    }
     const [total, tests] = await Promise.all([
       this.prisma.test.count({ where }),
       this.prisma.test.findMany({

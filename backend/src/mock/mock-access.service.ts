@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExamProgramService } from '../common/exam-program.service';
 import { ListPurchasesQueryDto } from './dto/mock.dto';
+import { studentExamTitle } from './student-exam-title';
 
 export type MockAccess = 'granted' | 'pending' | 'locked';
 
@@ -186,7 +187,7 @@ export class MockAccessService {
     await this.notifications.notify(
       userId,
       'announcement',
-      `"${purchase.exam.title}" mock imtihoni xarid so'rovingiz rad etildi. Tafsilotlar uchun admin bilan bog'laning.`,
+      `"${studentExamTitle(purchase.exam.title)}" mock imtihoni xarid so'rovingiz rad etildi. Tafsilotlar uchun admin bilan bog'laning.`,
     );
     return { rejected: true };
   }
@@ -216,7 +217,7 @@ export class MockAccessService {
     await this.notifications.notify(
       userId,
       'announcement',
-      `"${exam.title}" mock imtihoni siz uchun ochildi. Omad!`,
+      `"${studentExamTitle(exam.title)}" mock imtihoni siz uchun ochildi. Omad!`,
     );
     return { confirmed: true };
   }

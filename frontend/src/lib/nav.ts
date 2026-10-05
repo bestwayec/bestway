@@ -15,6 +15,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./types";
@@ -49,6 +50,8 @@ const NAV: NavItem[] = [
   { href: "/gallery", key: "gallery", icon: Images, roles: OFFICE },
   { href: "/leaderboard", key: "leaderboard", icon: Trophy, roles: ["student", "teacher"], mobile: true },
   { href: "/children", key: "children", icon: GraduationCap, roles: ["parent"], mobile: true },
+  // Student exam track selector — placed before profile/settings conceptually
+  { href: "/exam-track", key: "examTrack", icon: Target, roles: ["student"] },
   // Eslatma: notifications ataylab primary emas — AppTopbar'dagi qo'ng'iroqcha
   // (NotificationsBell) barcha viewport'larda mavjud, slotni keraksiz egallamasin.
   { href: "/notifications", key: "notifications", icon: Bell, roles: ALL },

@@ -47,6 +47,15 @@ enum ExamProgram {
   MULTILEVEL
 }
 
+/// Learning-content level, independent of the full Multilevel result scale.
+enum PracticeLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+}
+
 enum TestSection {
   listening
   reading
@@ -586,6 +595,7 @@ model MockExam {
   title                  String
   description            String?
   level                  String? // masalan "Academic", "B1-C1"
+  practiceLevel          PracticeLevel?
   isPublished            Boolean               @default(false)
   isDemo                 Boolean               @default(false) // mehmonlar/ota-ona ko'radigan demo
   // --- Pullik kirish (video modeli kabi; oddiy userlar sotib olib ishlatadi) ---
@@ -732,6 +742,7 @@ model MockQuestionGroup {
   contentHtml      String? // Sanitized rich document; gaps are <span data-gap="N"></span>
   audioScript      String? // Staff-only sanitized transcript/review material
   contentLayout    String? // document | table | notes | summary | sentences
+  optionsReusable  Boolean? // null keeps legacy clients; false requires one-use matching
   audioKey         String? // Listening audio (storage kaliti)
   imageKey         String? // Map/diagram labelling uchun rasm
   // --- IELTS full-test (v2026.1): Listening 4 part, dynamic audio muddati ---
@@ -757,6 +768,7 @@ model MockQuestion {
   correctAnswers   Json? // string[] — qabul qilinadigan to'g'ri javoblar (auto-baholash)
   points           Int              @default(1)
   wordLimit        Int? // "NO MORE THAN X WORDS" cheklovi (ixtiyoriy)
+  answerRule       String? // ONE_WORD | ONE_WORD_AND_OR_NUMBER; null keeps legacy IELTS normalization
   acceptedVariants Json? // British/American imlo variantlari: string[] (masalan ["colour","color"])
   createdAt        DateTime         @default(now())
 
