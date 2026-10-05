@@ -1,6 +1,10 @@
+// eslint-disable @typescript-eslint/no-require-imports
+"use client";
+
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 /**
  * Best Way markaz logotipi — 2 variant:
@@ -117,6 +121,7 @@ export function Brand({
   animated?: boolean;
   variant?: "image" | "mark";
 }) {
+  const t = useTranslations("brand");
   const s = SIZE[size];
   if (variant === "image") {
     return (
@@ -131,9 +136,9 @@ export function Brand({
         {showText && (
           <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
             <span className="bg-gradient-to-br from-brand to-accent bg-clip-text text-transparent">
-              Best
+              {t("best")}
             </span>
-            <span className="text-fg">Way</span>
+            <span className="text-fg">{t("way")}</span>
           </span>
         )}
       </span>
@@ -145,9 +150,9 @@ export function Brand({
       {showText && (
         <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
           <span className="bg-gradient-to-br from-brand to-accent bg-clip-text text-transparent">
-            Best
+            {t("best")}
           </span>
-          <span className="text-fg">Way</span>
+          <span className="text-fg">{t("way")}</span>
         </span>
       )}
     </span>

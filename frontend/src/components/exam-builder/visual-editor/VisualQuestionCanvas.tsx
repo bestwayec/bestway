@@ -3,7 +3,6 @@ import * as React from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Dropcursor from "@tiptap/extension-dropcursor";
 import { QuestionNode } from "./question-node-extension";
 import { serializeVisualDocument } from "./serialize";
 import { QuestionSettingsDrawer, excerptFor } from "./QuestionSettingsDrawer";
@@ -180,12 +179,12 @@ export function VisualQuestionCanvas(props: {
         horizontalRule: false,
         bulletList: false,
         orderedList: false,
+        dropcursor: { color: "var(--brand, #89F336)", width: 2 },
       }),
       Placeholder.configure({
         placeholder:
           "Paste question text here, then use the toolbar to add answer inputs where they belong.",
       }),
-      Dropcursor.configure({ color: "var(--brand, #89F336)", width: 2 }),
       QuestionNode,
     ],
     content: seededContent,
