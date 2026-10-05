@@ -19,12 +19,17 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StudentPreview } from "./StudentPreview";
 import { nextQuestionNumber, tx, type Selection } from "./types";
 
-type TaskKind = "task1" | "task2";
+type TaskKind = "task1" | "task2" | "informalLetter" | "formalLetter" | "publication";
 
 function resolveTaskKind(
   group: NonNullable<MockExamDetail["sections"][number]["groups"][number] | undefined>,
   sectionGroups: MockExamDetail["sections"][number]["groups"],
+  multilevel: boolean,
 ): TaskKind {
+  if (multilevel) {
+    const index = [...sectionGroups].sort((a, b) => a.sortOrder - b.sortOrder).findIndex((candidate) => candidate.id === group?.id);
+    return (["informalLetter", "formalLetter", "publication"] as const)[index] ?? "informalLetter";
+  }
   if (group?.questions.some((q) => q.type === "essay_task1")) return "task1";
   if (group?.questions.some((q) => q.type === "essay_task2")) return "task2";
   const title = group?.title?.toLowerCase() ?? "";
@@ -38,7 +43,7 @@ function resolveTaskKind(
 
 const TASK_META: Record<
   TaskKind,
-  { label: string; type: MockQuestionType; recommended: number; time: string; placeholder: string }
+  { label: string; type: MockQuestionType; recommended: number; time: string; placeholder: string; rawMax?: number; stimulusRef?: string }
 > = {
   task1: {
     label: "Task 1",
@@ -53,6 +58,18 @@ const TASK_META: Record<
     recommended: 250,
     time: "You should spend about 40 minutes on this task.",
     placeholder: "e.g. Some people think… Discuss both views and give your own opinion.",
+  },
+  informalLetter: {
+    label: "Task 1.1 — Informal Letter", type: "essay_task1", recommended: 50,
+    time: "Write about 50 words.", placeholder: "Write an informal letter to a friend about the shared situation.", rawMax: 5, stimulusRef: "writing-task-1",
+  },
+  formalLetter: {
+    label: "Task 1.2 — Formal Letter", type: "essay_task1", recommended: 120,
+    time: "Write 120–150 words.", placeholder: "Write a formal letter about the same situation.", rawMax: 5, stimulusRef: "writing-task-1",
+  },
+  publication: {
+    label: "Task 2 — Publication", type: "essay_task2", recommended: 180,
+    time: "Write 180–200 words.", placeholder: "Write a publication, forum, or blog response.", rawMax: 6,
   },
 };
 
@@ -101,7 +118,7 @@ export function WritingTaskEditor({
   const delGroup = useDeleteMockGroup(examId);
 
   const kind: TaskKind = React.useMemo(
-    () => (group && section ? resolveTaskKind(group, section.groups) : "task1"),
+    () => (group && section ? resolveTaskKind(group, section.groups, detail.type === "multilevel") : "task1"),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on groupId/sectionId to avoid recompute on object identity
     [groupId, sectionId],
   );
@@ -188,8 +205,9 @@ export function WritingTaskEditor({
           title: title.trim() || meta.label,
           instructions: instructions.trim(),
           passageText: passageText.trim(),
+          ...(meta.rawMax ? { maxScore: meta.rawMax, stimulusRef: meta.stimulusRef } : {}),
         },
-        questions: questions.map((q) => ({ id: q.savedId, number: q.number, type: meta.type as MockQuestionType, prompt: q.prompt, points: 9 })),
+        questions: questions.map((q) => ({ id: q.savedId, number: q.number, type: meta.type as MockQuestionType, prompt: q.prompt, points: meta.rawMax ?? 9 })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !questions.some((local) => local.savedId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);

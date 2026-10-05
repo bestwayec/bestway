@@ -745,6 +745,10 @@ model MockQuestionGroup {
   optionsReusable  Boolean? // null keeps legacy clients; false requires one-use matching
   audioKey         String? // Listening audio (storage kaliti)
   imageKey         String? // Map/diagram labelling uchun rasm
+  // Versioned Multilevel keeps assessment caps and shared task stimuli at the
+  // semantic part/task level. Legacy IELTS continues to use question.points.
+  maxScore         Int?
+  stimulusRef      String?
   // --- IELTS full-test (v2026.1): Listening 4 part, dynamic audio muddati ---
   partNumber       Int? // Listening uchun 1..4 (Reading/Writing da null)
   audioPlayLimit   Int      @default(1) // exam rejimda 1, practice da cheksiz (service tekshiradi)

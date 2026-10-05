@@ -11,6 +11,8 @@ export function multilevelFixture(): BlueprintSection[] {
       audioKey: skill === 'listening' ? `test-only/community-${pi}.wav` : null,
       audioDurationSec: skill === 'listening' ? 60 : null,
       imageKey: skill === 'speaking' && pi === 1 ? 'test-only/community-pictures.png' : null,
+      maxScore: p.rawMax ?? null,
+      stimulusRef: skill === 'writing' && pi < 2 ? 'community-library-task-1' : null,
       questions: Array.from({ length: p.count }, (_, qi) => {
         const type = skill === 'reading' && pi === 3 ? qi < 4 ? 'multiple_choice' : 'true_false_notgiven'
           : skill === 'reading' && pi === 4 ? qi < 4 ? 'summary_completion' : 'multiple_choice'

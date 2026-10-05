@@ -94,7 +94,10 @@ export function multilevelOverall(scores: Partial<Record<MockSkill, number>>): n
 export function taskGuidance(skill: MockSkill, partIndex: number, questionIndex: number, speakingProfileVersion?: string | null) {
   const p = MULTILEVEL_SPECIFICATION[skill].parts[partIndex];
   if (!p) return undefined;
-  return { taskKey: p.key, wordMin: p.wordMin, wordMax: p.wordMax,
+  const displayLabel = skill === 'writing'
+    ? ({ informal_email: 'Task 1.1 — Informal Letter', formal_email: 'Task 1.2 — Formal Letter', publication: 'Task 2 — Publication' } as Record<string, string>)[p.key]
+    : `Part ${p.key}`;
+  return { taskKey: p.key, displayLabel, wordMin: p.wordMin, wordMax: p.wordMax,
     rawMax: p.rawMax,
     ...(skill === 'speaking' ? { speakingProfileVersion: speakingProfileVersion ?? null, profileLabel: speakingProfileVersion ? 'BestWay product timing profile' : 'Historical Multilevel timing profile' } : {}),
     prepSeconds: p.prepSeconds?.[questionIndex], responseSeconds: p.responseSeconds?.[questionIndex],
@@ -104,6 +107,7 @@ export function taskGuidance(skill: MockSkill, partIndex: number, questionIndex:
 export interface BlueprintSection {
   skill: MockSkill;
   groups: Array<{ sortOrder: number; partNumber?: number | null; passageText?: string | null; audioKey?: string | null; audioDurationSec?: number | null; imageKey?: string | null;
+    maxScore?: number | null; stimulusRef?: string | null;
     questions: Array<{ type: string; points: number; options?: unknown; wordLimit?: number | null }> }>;
 }
 /** Shared publication/start validation. No synthetic production success. */
@@ -114,7 +118,10 @@ export function multilevelBlueprintIssues(sections: BlueprintSection[], full: bo
     const spec = MULTILEVEL_SPECIFICATION[section.skill];
     const groups = [...section.groups].sort((a,b) => a.sortOrder - b.sortOrder);
     if (groups.length !== spec.parts.length) issues.push(`${section.skill}: requires ${spec.parts.length} parts`);
-    if (section.skill === 'writing' && (!groups[0]?.passageText?.trim() || groups[0]?.passageText?.trim() !== groups[1]?.passageText?.trim())) issues.push('writing: informal and formal emails must share the same source stimulus');
+    // The source is a durable authoring relationship, not string equality. Two
+    // tasks may phrase their prompts differently while referring to one source
+    // situation. Legacy drafts receive this field through draft reconciliation.
+    if (section.skill === 'writing' && (!groups[0]?.stimulusRef?.trim() || groups[0]?.stimulusRef !== groups[1]?.stimulusRef)) issues.push('writing: informal and formal emails must share the same source stimulus');
     groups.forEach((group, index) => {
       const p = spec.parts[index];
       if (!p) return;
@@ -123,12 +130,17 @@ export function multilevelBlueprintIssues(sections: BlueprintSection[], full: bo
       if (section.skill === 'listening' && (!group.audioKey || group.partNumber !== index + 1)) issues.push(`${at}: audio and matching part number required`);
       if (section.skill === 'listening' && (!group.audioDurationSec || !Number.isFinite(group.audioDurationSec) || group.audioDurationSec <= 0)) issues.push(`${at}: positive audio duration required`);
       if (section.skill === 'speaking' && p.key === '1.2' && !group.imageKey) issues.push(`${at}: two-picture asset required`);
+      if ((section.skill === 'writing' || section.skill === 'speaking') && group.maxScore !== p.rawMax) {
+        issues.push(`${at}: points must be ${p.rawMax}`);
+      }
       group.questions.forEach((q, qi) => {
         let types = p.types;
         if (section.skill === 'reading' && p.key === '4') types = qi < 4 ? ['multiple_choice'] : ['true_false_notgiven'];
         if (section.skill === 'reading' && p.key === '5') types = qi < 4 ? ['short_answer','summary_completion'] : ['multiple_choice'];
         if (!types.includes(q.type)) issues.push(`${at} question ${qi+1}: invalid type`);
-        if (q.points !== (p.rawMax ?? 1)) issues.push(`${at}: points must be ${p.rawMax ?? 1}`);
+        // Writing tasks and Speaking parts are holistically scored once at the
+        // group level. Objective sections remain question-oriented.
+        if (section.skill !== 'writing' && section.skill !== 'speaking' && q.points !== (p.rawMax ?? 1)) issues.push(`${at}: points must be ${p.rawMax ?? 1}`);
         const optionCount = p.options ?? (section.skill === 'reading' && q.type === 'multiple_choice' ? 4 : undefined);
         if (optionCount && (!Array.isArray(q.options) || q.options.length !== optionCount)) issues.push(`${at}: requires ${optionCount} options`);
         if (['short_answer','note_completion','sentence_completion','summary_completion'].includes(q.type) && q.wordLimit !== 1) issues.push(`${at}: one-word/number answer required`);

@@ -20,6 +20,14 @@ describe('versioned Multilevel specification', () => {
       expect.stringContaining('positive audio duration'), expect.stringContaining('invalid type'), expect.stringContaining('two-picture'),
     ]));
   });
+  it('uses one semantic cap for every writing task and speaking part', () => {
+    const fixture = multilevelFixture();
+    fixture[2].groups.forEach((group) => group.questions.forEach((question) => { question.points = 9; }));
+    fixture[3].groups.forEach((group) => group.questions.forEach((question) => { question.points = 9; }));
+    expect(multilevelBlueprintIssues(fixture, true)).toEqual([]);
+    expect(taskGuidance('writing', 0, 0)?.displayLabel).toBe('Task 1.1 — Informal Letter');
+    expect(taskGuidance('writing', 1, 0)?.displayLabel).toBe('Task 1.2 — Formal Letter');
+  });
   it.each(['writing','speaking'] as const)('converts every %s half-point, rejecting invalid scores', (skill) => {
     const table = skill === 'writing' ? WRITING_CONVERSION : SPEAKING_CONVERSION;
     table.forEach((score,i) => expect(convertExpertScore(skill,i/2)).toBe(score));

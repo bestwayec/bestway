@@ -35,6 +35,8 @@ export interface GroupRow {
   optionsReusable?: boolean | null;
   audioKey: string | null;
   imageKey: string | null;
+  maxScore?: number | null;
+  stimulusRef?: string | null;
   partNumber: number | null;
   audioDurationSec: number | null;
   audioPlayLimit: number;
@@ -111,6 +113,7 @@ export function shapeGroup(g: GroupRow, includeAnswers: boolean, base: string) {
     hasAudio: !!g.audioKey,
     audioUrl: g.audioKey ? `${base}/mock/groups/${g.id}/audio` : null,
     imageUrl: g.imageKey ? `${base}/mock/groups/${g.id}/image` : null,
+    ...(includeAnswers ? { maxScore: g.maxScore ?? null, stimulusRef: g.stimulusRef ?? null } : {}),
     partNumber: g.partNumber,
     audioDurationSec: g.audioDurationSec,
     audioPlayLimit: g.audioPlayLimit,

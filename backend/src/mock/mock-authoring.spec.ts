@@ -6,6 +6,8 @@ import { MockAuthoringService } from './mock-authoring.service';
 import { CreateMockExamDto, SaveGroupContentDto } from './dto/mock.dto';
 import { starterSections } from './mock-starter';
 import { Prisma } from '@prisma/client';
+import { multilevelFixture } from './multilevel.fixture';
+import { MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
 
 function setup() {
   const group = {
@@ -112,6 +114,34 @@ describe('atomic block authoring', () => {
     invalid.questions = Array(201).fill({ number: 1, type: 'short_answer', prompt: 'Question' });
     expect((await validate(invalid)).length).toBeGreaterThan(0);
     expect((await validate(plainToInstance(CreateMockExamDto, { type: 'ielts_academic', title: 'Example', starterStructure: 'yes' }))).length).toBeGreaterThan(0);
+  });
+});
+
+describe('current Multilevel draft reconciliation', () => {
+  it('repairs legacy task/part metadata without touching child-response points', async () => {
+    const { service } = setup();
+    const fixture = multilevelFixture();
+    const rows = fixture.filter((section) => section.skill === 'writing' || section.skill === 'speaking').map((section, si) => ({
+      skill: section.skill,
+      groups: section.groups.map((group, gi) => {
+        const legacy = { ...group, id: `${si}-${gi}`, maxScore: null, stimulusRef: null };
+        legacy.questions.forEach((question) => { question.points = 9; });
+        return legacy;
+      }),
+    }));
+    const byId = new Map(rows.flatMap((section) => section.groups.map((group) => [group.id, group])));
+    const tx = {
+      mockSection: { findMany: vi.fn().mockResolvedValue(rows) },
+      mockQuestionGroup: { update: vi.fn(async ({ where, data }) => Object.assign(byId.get(where.id)!, data)) },
+    };
+    const changed = await (service as any).reconcileCurrentMultilevelDraft(tx, {
+      id: 'draft', type: 'multilevel', specificationVersion: MULTILEVEL_VERSION, isPublished: false,
+    });
+    fixture[2].groups = rows[0].groups as never;
+    fixture[3].groups = rows[1].groups as never;
+    expect(changed).toBe(7);
+    expect(multilevelBlueprintIssues(fixture, true)).toEqual([]);
+    expect(fixture[3].groups[0].questions.map((q) => q.points)).toEqual([9, 9, 9]);
   });
 });
 

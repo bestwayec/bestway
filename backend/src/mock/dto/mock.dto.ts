@@ -211,6 +211,19 @@ export class UpdateSectionDto {
 /* ─────────────────────────── Group (passage/audio blok) ─────────────────────────── */
 
 export class CreateGroupDto {
+  /** Versioned Multilevel task/part cap; IELTS continues to use question.points. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  maxScore?: number;
+
+  /** Stable shared source identifier for related Multilevel tasks. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  stimulusRef?: string;
   @IsOptional()
   @IsBoolean()
   optionsReusable?: boolean | null;
@@ -279,6 +292,17 @@ export class CreateGroupDto {
 }
 
 export class UpdateGroupDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  maxScore?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  stimulusRef?: string;
   @IsOptional()
   @IsBoolean()
   optionsReusable?: boolean | null;
