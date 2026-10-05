@@ -31,6 +31,7 @@ import {
 import type { MockAttemptMode, MockSkill } from "@/lib/types";
 import { displayTotalMinutes } from "@/lib/mock-timing";
 import { formatMoney } from "@/lib/utils";
+import { MultilevelReadiness, studentStartMessage } from "./multilevel-student-ui";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -53,11 +54,15 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const inProgress = attempts.find((a) => a.status === "in_progress");
 
   function onStart(mode: MockAttemptMode) {
+    if (exam?.ready === false) {
+      toast.error("Exam is not ready yet.");
+      return;
+    }
     start.mutate(
       { examId, mode },
       {
         onSuccess: (res) => router.push(`/mock/attempt/${res.attemptId}`),
-        onError: (e) => toast.error(e.message || tc("unknownError")),
+        onError: (e) => toast.error(exam?.type === "multilevel" ? studentStartMessage(e) : (e instanceof Error ? e.message : tc("unknownError"))),
       },
     );
   }
@@ -96,6 +101,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const locked = exam.access === "locked";
   const pending = exam.access === "pending";
   const unavailable = exam.ready === false;
+  const multilevel = exam.type === "multilevel";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -112,6 +118,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
           <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
           {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
           {exam.level && <span className="text-sm text-fg-subtle">{exam.level}</span>}
+          {multilevel && <MultilevelReadiness ready={exam.ready} />}
         </div>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-fg">{exam.title}</h1>
         {exam.description && <p className="mt-2 text-fg-muted">{exam.description}</p>}
@@ -129,6 +136,8 @@ export function MockExamDetailView({ examId }: { examId: string }) {
           )}
         </div>
 
+        {multilevel && <p className="mt-4 text-sm font-medium text-fg-muted">Listening · Reading · Writing · Speaking</p>}
+
         {/* Bo'limlar */}
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {exam.sections.map((sec) => {
@@ -145,10 +154,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-fg">{t(`skills.${sec.skill}`)}</p>
                   <p className="text-xs text-fg-muted">
-                    {qCount} {t("questions")}
-                    {sec.skill !== "listening" && sec.durationMinutes
-                      ? ` · ${sec.durationMinutes} ${t("minutes")}`
-                      : ""}
+                    {multilevel && sec.skill === "writing" ? "3 tasks · 60 min · /16" : multilevel && sec.skill === "speaking" ? "4 parts · 11 min · /21" : `${qCount} ${t("questions")}${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds) ? ` · ${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds)} ${t("minutes")}` : ""}`}
                   </p>
                 </div>
               </div>
@@ -158,8 +164,20 @@ export function MockExamDetailView({ examId }: { examId: string }) {
 
         {/* Boshlash / sotib olish */}
         <div className="mt-6 border-t border-border pt-5">
-          {unavailable ? (
-            <Badge variant="warning" className="w-full justify-center py-2">This exam is temporarily unavailable.</Badge>
+          {inProgress ? (
+            <Button
+              className="w-full"
+              loading={start.isPending}
+              onClick={() => router.push(`/mock/attempt/${inProgress.id}`)}
+            >
+              <RefreshCw />
+              {t("resume")}
+            </Button>
+          ) : unavailable ? (
+            <div className="space-y-2">
+              <p className="text-sm text-fg-muted">This exam is still being prepared.</p>
+              <Button className="w-full" disabled><Play className="fill-current" />Start Exam</Button>
+            </div>
           ) : locked ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm text-fg-muted">
@@ -179,15 +197,6 @@ export function MockExamDetailView({ examId }: { examId: string }) {
             <Badge variant="warning" className="w-full justify-center py-2">
               <Clock /> {t("pending")}
             </Badge>
-          ) : inProgress ? (
-            <Button
-              className="w-full"
-              loading={start.isPending}
-              onClick={() => router.push(`/mock/attempt/${inProgress.id}`)}
-            >
-              <RefreshCw />
-              {t("resume")}
-            </Button>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -255,4 +264,9 @@ export function MockExamDetailView({ examId }: { examId: string }) {
       </div>
     </div>
   );
+}
+
+function sectionMinutes(savedMinutes: number | null, specificationSeconds: number | undefined): number | null {
+  if (specificationSeconds != null) return Math.round(specificationSeconds / 60);
+  return savedMinutes;
 }

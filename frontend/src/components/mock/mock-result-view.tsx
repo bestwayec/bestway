@@ -20,6 +20,7 @@ import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
+import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
@@ -122,6 +123,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         )}
       </Card>
 
+      {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
+
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
 
       {/* Savollar tahlili */}
@@ -151,6 +154,35 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       </div>
     </div>
   );
+}
+
+export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDetail }) {
+  const t = useTranslations("mock");
+  const manualSections = attempt.sections.filter((section) => section.skill === "writing" || section.skill === "speaking");
+  return <section aria-labelledby="multilevel-score-breakdown" className="mt-6 space-y-4">
+    <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
+    {manualSections.map((section) => <Card key={section.id} className="p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold text-fg">{t(`skills.${section.skill}`)}</h3>
+        {section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
+      </div>
+      <div className="mt-3 space-y-2">
+        {section.groups.map((group, index) => {
+          const question = group.questions[0];
+          if (!question) return null;
+          const max = scoreMaximum(question.guidance) ?? question.points;
+          return <div key={group.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-bg-subtle px-3 py-2 text-sm">
+            <span className="font-medium text-fg">{multilevelTaskName(question.guidance, `${section.skill === "writing" ? "Task" : "Part"} ${index + 1}`)}</span>
+            <span className="tabular-nums text-fg-muted">{question.score ?? "—"} / {max}</span>
+          </div>;
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
+        <span>Raw <strong className="text-fg tabular-nums">{section.score ?? "—"} / {section.max ?? "—"}</strong></span>
+        <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>
+      </div>
+    </Card>)}
+  </section>;
 }
 
 /** Xodim urinish boshqaruvi: force-submit / extend / reopen / delete */

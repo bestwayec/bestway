@@ -4,6 +4,10 @@ import { recordingKey, recoverRecording, retainRecording, releaseRecording, mark
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
+function recorderStatus(status: string, recorded: boolean) {
+  if (recorded) return 'Uploaded';
+  return ({ idle: 'Microphone required', checking: 'Preparing', starting: 'Preparing', ready: 'Ready', preparing: 'Preparing', recording: 'Recording', finalizing: 'Preparing upload', uploading: 'Uploading', saved: 'Complete', retry: 'Retry required' } as Record<string, string>)[status] ?? 'Preparing';
+}
 
 /** Server grants each play; only volume is adjustable during timed playback. */
 export function MultilevelListening({ prepare, play, load }: {
@@ -27,7 +31,7 @@ export function MultilevelListening({ prepare, play, load }: {
   async function start() {
     setBusy(true); setError(null);
     try { const next = await prepare(); offset.current = Date.parse(next.serverTime)-Date.now(); setPhase(next); setPlaying(next.plays > 0 && seconds(next.expiresAt, offset.current) > 0); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Unable to prepare audio'); }
+    catch { setError('Audio could not be prepared. Please try again.'); }
     finally { setBusy(false); }
   }
   async function playAudio() {
@@ -38,7 +42,7 @@ export function MultilevelListening({ prepare, play, load }: {
       const el = audio.current;
       if (!el) throw new Error('Audio element unavailable');
       el.src = blobUrl.current; el.currentTime = 0; await el.play(); setPlaying(true);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Audio failed to load or play. Contact your supervisor.'); }
+    } catch { setError('Audio could not be loaded or played. Please try again.'); }
     finally { setBusy(false); }
   }
   return <div className="my-3 space-y-2 rounded-lg border border-current/20 p-3">
@@ -90,14 +94,14 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     if (uploading.current) return;
     uploading.current = true; stage('uploading'); setError(null);
     try { await uploadRef.current(blob); await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId } })); }
-    catch (e) { stage('retry'); setError(e instanceof Error ? e.message : 'Upload failed. Your recording is retained; retry upload.'); }
+    catch { stage('retry'); setError('Audio upload failed. Your recording has been preserved.'); }
     finally { uploading.current = false; }
   }
   const sendRef = useRef(send); sendRef.current = send;
   useEffect(() => {
     let alive = true;
     aliveRef.current = true;
-    void recoverRecording(key).then((blob) => { if (alive && blob) { retainedRef.current = blob; setPending(blob); setStatus('retry'); } }).catch(() => { if (alive) setError('Local recording recovery is unavailable.'); });
+    void recoverRecording(key).then((blob) => { if (alive && blob) { retainedRef.current = blob; setPending(blob); setStatus('retry'); } }).catch(() => { if (alive) setError('Saved recording recovery is unavailable. Keep this page open and retry the upload.'); });
     const retry = () => { if (retainedRef.current) void sendRef.current(retainedRef.current); };
     window.addEventListener('online', retry);
     return () => { alive = false; aliveRef.current = false; window.removeEventListener('online', retry); if (recorder.current?.state === 'recording') { stage('finalizing'); recorder.current.stop(); } else markActiveRecording(key, false); closeMicrophone(); };
@@ -158,16 +162,20 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try { const next = await startPhase(); offset.current = Date.parse(next.serverTime)-Date.now(); setPhase(next);
       if (timed && seconds(next.expiresAt, offset.current) <= 0) throw new Error('This speaking response has expired.');
       if (timed) stage('preparing'); else beginRecording();
-    } catch (e) { closeMicrophone(); stage('idle'); setError(e instanceof Error ? e.message : 'Could not start speaking task'); }
+    } catch { closeMicrophone(); stage('idle'); setError('Speaking response could not be started. Please try again.'); }
   }
-  return <div className="my-3 space-y-2 rounded-lg border border-current/20 p-3">
-    <p role="status">{recorded ? 'Recording uploaded' : status} {phase && `${left}s remaining`}</p>
+  return <div className="my-3 space-y-3 rounded-[10px] border border-current/20 bg-bg-subtle p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p role="status" className="font-semibold text-fg">{recorderStatus(status, recorded)}</p>
+      {phase && <p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={`${left} seconds remaining`}>{left}s</p>}
+    </div>
+    {status === 'recording' && <p className="flex items-center gap-2 text-sm font-medium text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />Recording in progress</p>}
     {!pending && !(timed && recorded) && <>
-      <button type="button" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}>Test microphone</button>
-      {status === 'ready' && <><meter aria-label="Microphone input level" min="0" max="1" value={level} /><p>Speak and check that the meter responds.</p><button type="button" onClick={() => void start()}>Start response</button></>}
-      {status === 'recording' && !timed && <button type="button" onClick={() => recorder.current?.stop()}>Stop recording</button>}
+      <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}>Test microphone</button>
+      {status === 'ready' && <><meter className="block w-full" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">Speak and check that the meter responds.</p><button className="rounded-[8px] bg-brand px-3 py-2 text-sm font-semibold text-white" type="button" onClick={() => void start()}>Start response</button></>}
+      {status === 'recording' && !timed && <button className="rounded-[8px] bg-danger px-3 py-2 text-sm font-semibold text-white" type="button" onClick={() => recorder.current?.stop()}>Stop recording</button>}
     </>}
-    {pending && <button type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>Retry upload of saved recording</button>}
-    {error && <p role="alert">{error}</p>}
+    {pending && <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>Retry upload of saved recording</button>}
+    {error && <p role="alert" className="text-sm text-danger">{error}</p>}
   </div>;
 }

@@ -12,6 +12,7 @@ import {
   PenLine,
   Play,
   Plus,
+  RefreshCw,
   ShoppingCart,
   BookOpenText,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
   useConfirmMockPurchase,
   useMockAttempts,
   useMockExams,
+  useMyMockAttempts,
   useMockPurchases,
   usePurchaseMock,
 } from "@/hooks/use-mock";
@@ -35,8 +37,9 @@ import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from '@/hooks/use-exam-programs';
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
 import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
-import type { MockExamListItem, MockSkill } from "@/lib/types";
+import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
 import { formatMoney, formatPhone } from "@/lib/utils";
+import { MultilevelReadiness } from "./multilevel-student-ui";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -61,6 +64,7 @@ export function MockExamsView() {
 
   const [tab, setTab] = React.useState<Tab>("exams");
   const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
+  const attemptsQ = useMyMockAttempts();
   const purchase = usePurchaseMock();
 
   function onBuy(id: string) {
@@ -130,6 +134,7 @@ export function MockExamsView() {
               exam={e}
               isStaff={isStaff}
               isStudent={isStudent}
+              attempts={attemptsQ.data ?? []}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
             />
@@ -148,28 +153,33 @@ export function MockExamsView() {
   );
 }
 
-function MockExamCard({
+export function MockExamCard({
   exam,
   isStaff,
   isStudent,
+  attempts,
   buying,
   onBuy,
 }: {
   exam: MockExamListItem;
   isStaff: boolean;
   isStudent: boolean;
+  attempts: MockAttemptSummary[];
   buying: boolean;
   onBuy: () => void;
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
+  const multilevel = exam.type === "multilevel";
+  const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
+  const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
 
   return (
     <Card className="flex h-full flex-col p-5">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
         {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
-        {exam.type === "multilevel" && exam.ready === false && <Badge variant="warning">Unavailable</Badge>}
+        {multilevel && <MultilevelReadiness ready={exam.ready} />}
         {isStaff && (
           <Badge variant={exam.isPublished ? "success" : "warning"}>
             {exam.isPublished ? t("published") : t("draft")}
@@ -183,6 +193,7 @@ function MockExamCard({
         <p className="mt-1 line-clamp-2 text-sm text-fg-muted">{exam.description}</p>
       )}
 
+      {multilevel && <p className="mt-3 text-sm font-medium text-fg-muted">Listening · Reading · Writing · Speaking</p>}
       <div className="mt-3 flex flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-fg-muted">
         <span className="flex items-center gap-1.5">
           {exam.skills.map((s) => {
@@ -205,6 +216,7 @@ function MockExamCard({
             {formatMoney(exam.price)} {tc("sum")}
           </span>
         )}
+        {isStudent && <span>{examAttempts.length} {examAttempts.length === 1 ? "attempt" : "attempts"}</span>}
       </div>
 
       <div className="mt-4">
@@ -216,7 +228,20 @@ function MockExamCard({
             <ClipboardCheck className="size-4" />
             {t("manage")}
           </Link>
-        ) : exam.access === "granted" && exam.ready !== false ? (
+        ) : multilevel && exam.ready === false ? (
+          <Button className="w-full" disabled>
+            <Play className="fill-current" />
+            Start Exam
+          </Button>
+        ) : inProgress ? (
+          <Link
+            href={`/mock/attempt/${inProgress.id}`}
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+          >
+            <RefreshCw className="size-4" />
+            {t("resume")}
+          </Link>
+        ) : exam.access === "granted" ? (
           <Link
             href={`/mock/${exam.id}`}
             className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
