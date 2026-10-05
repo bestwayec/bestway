@@ -612,7 +612,11 @@
     "expandSidebar": "Yon panelni ochish",
     "more": "Yana"
   },
-  "roles": {
+  "brand": {
+      "best": "Best",
+      "way": "Way"
+    },
+"roles": {
     "super_admin": "Super admin",
     "admin": "Administrator",
     "teacher": "O'qituvchi",
@@ -949,7 +953,7 @@
     "instructions": "Yo'riqnoma",
     "blockTitle": "Blok sarlavhasi",
     "addQuestion": "Savol qo'shish",
-    "questionNumber": "{n}-savol",
+    "questionNumber": "Savol",
     "questionType": "Savol turi",
     "prompt": "Savol matni",
     "options": "Javob variantlari",

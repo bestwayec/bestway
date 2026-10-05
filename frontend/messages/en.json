@@ -612,6 +612,10 @@
     "expandSidebar": "Expand sidebar",
     "more": "More"
   },
+  "brand": {
+    "best": "Best",
+    "way": "Way"
+  },
   "roles": {
     "super_admin": "Super admin",
     "admin": "Administrator",
@@ -949,7 +953,7 @@
     "instructions": "Instructions",
     "blockTitle": "Block title",
     "addQuestion": "Add question",
-    "questionNumber": "Question {n}",
+    "questionNumber": "Question",
     "questionType": "Question type",
     "prompt": "Question text",
     "options": "Answer options",
