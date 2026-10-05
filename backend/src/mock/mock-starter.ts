@@ -25,11 +25,21 @@ export function starterSections(
       ...(!ielts ? { durationMinutes: MULTILEVEL_SPECIFICATION[skill].durationSeconds / 60 } : {}),
       groups: {
         create: Array.from({ length: count }, (_, index) => ({
-          title: ielts ? `${unit} ${index + 1}` : `${unit} ${MULTILEVEL_SPECIFICATION[skill].parts[index].key}`,
+          title: ielts ? `${unit} ${index + 1}` : multilevelPartTitle(skill, index),
           sortOrder: index,
+          ...(!ielts && MULTILEVEL_SPECIFICATION[skill].parts[index].rawMax
+            ? { maxScore: MULTILEVEL_SPECIFICATION[skill].parts[index].rawMax }
+            : {}),
+          ...(!ielts && skill === 'writing' && index < 2 ? { stimulusRef: 'writing-task-1' } : {}),
           ...(skill === 'listening' ? { partNumber: index + 1, audioPlayLimit: ielts ? 1 : MULTILEVEL_AUDIO.playLimit } : {}),
         })),
       },
     };
   });
+}
+
+function multilevelPartTitle(skill: MockSkill, index: number): string {
+  const key = MULTILEVEL_SPECIFICATION[skill].parts[index].key;
+  if (skill === 'writing') return ({ informal_email: 'Task 1.1 — Informal Letter', formal_email: 'Task 1.2 — Formal Letter', publication: 'Task 2 — Publication' } as Record<string, string>)[key];
+  return `Part ${key}`;
 }

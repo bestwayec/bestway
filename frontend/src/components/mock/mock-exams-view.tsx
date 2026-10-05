@@ -169,6 +169,7 @@ function MockExamCard({
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
         {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
+        {exam.type === "multilevel" && exam.ready === false && <Badge variant="warning">Unavailable</Badge>}
         {isStaff && (
           <Badge variant={exam.isPublished ? "success" : "warning"}>
             {exam.isPublished ? t("published") : t("draft")}
@@ -215,7 +216,7 @@ function MockExamCard({
             <ClipboardCheck className="size-4" />
             {t("manage")}
           </Link>
-        ) : exam.access === "granted" ? (
+        ) : exam.access === "granted" && exam.ready !== false ? (
           <Link
             href={`/mock/${exam.id}`}
             className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, Mic, Save, Trash2 } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Mic, Plus, Save, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
   useDeleteMockGroup,
+  useSetMockGroupMedia,
   useSaveMockGroupContent,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
@@ -69,6 +70,10 @@ export function SpeakingTaskEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on groupIdsKey string to avoid recompute on section object identity
   }, [groupIdsKey, groupId]);
   const partLabel = group?.title?.trim() || `Part ${partIndex + 1}`;
+  const multilevel = detail.type === "multilevel";
+  const requiredResponses = multilevel ? ([3, 3, 1, 1][partIndex] ?? 1) : 1;
+  const partMax = multilevel ? ([5, 5, 5, 6][partIndex] ?? 5) : 9;
+  const canonicalLabel = multilevel ? `Part ${(["1.1", "1.2", "2", "3"][partIndex] ?? partIndex + 1)}` : partLabel;
 
   const initial = React.useMemo(() => {
     if (!group) return null;
@@ -80,7 +85,7 @@ export function SpeakingTaskEditor({
             number: q.number,
             prompt: q.prompt ?? "",
           }))
-        : [{ clientKey: "new-speaking", number: nextQuestionNumber(detail.sections), prompt: "" }];
+        : Array.from({ length: requiredResponses }, (_, index) => ({ clientKey: `new-speaking-${index}`, number: nextQuestionNumber(detail.sections) + index, prompt: "" }));
     return {
       title: group.title ?? "",
       instructions: group.instructions ?? "",
@@ -98,6 +103,9 @@ export function SpeakingTaskEditor({
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [errors, setErrors] = React.useState<string[]>([]);
   const [saving, setSaving] = React.useState(false);
+  const [imageFile, setImageFile] = React.useState<File | null>(null);
+  const imageRef = React.useRef<HTMLInputElement | null>(null);
+  const setMedia = useSetMockGroupMedia(examId);
   const [baseline, setBaseline] = React.useState(initial);
 
   const dirty = React.useMemo(() => {
@@ -114,7 +122,7 @@ export function SpeakingTaskEditor({
   const save = React.useCallback(async () => {
     if (!group || !section) return false;
     const errs: string[] = [];
-    if (questions.length === 0) errs.push("Add at least one speaking prompt");
+    if (questions.length !== requiredResponses) errs.push(multilevel ? `${canonicalLabel} requires exactly ${requiredResponses} responses.` : "Add at least one speaking prompt");
     if (questions.some((q) => !q.prompt.trim())) errs.push("Speaking prompt is required");
     const unique = [...new Set(errs)];
     setErrors(unique);
@@ -127,14 +135,21 @@ export function SpeakingTaskEditor({
       const saved = await saveContent.mutateAsync({
         groupId: group.id,
         input: {
-          title: title.trim() || partLabel,
+          title: title.trim() || canonicalLabel,
           instructions: instructions.trim(),
           passageText: context.trim(),
+          ...(multilevel ? { maxScore: partMax } : {}),
         },
-        questions: questions.map((q) => ({ id: q.savedId, number: q.number, type: "speaking_task" as MockQuestionType, prompt: q.prompt, points: 9 })),
+        questions: questions.map((q) => ({ id: q.savedId, number: q.number, type: "speaking_task" as MockQuestionType, prompt: q.prompt, points: partMax })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !questions.some((local) => local.savedId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
+      if (multilevel && partIndex === 1 && imageFile) {
+        const form = new FormData();
+        form.append("image", imageFile);
+        await setMedia.mutateAsync({ groupId: group.id, form });
+        setImageFile(null);
+      }
       const savedQuestions = questions.map((q, index) => ({ ...q, savedId: saved.questions[index].id }));
       setQuestions(savedQuestions);
       toast.success(tc("saved"));
@@ -149,7 +164,7 @@ export function SpeakingTaskEditor({
     } finally {
       setSaving(false);
     }
-  }, [group, section, questions, title, instructions, context, partLabel, saveContent, t, tc]);
+  }, [group, section, questions, title, instructions, context, partLabel, canonicalLabel, multilevel, partIndex, partMax, requiredResponses, imageFile, saveContent, setMedia, t, tc]);
 
   React.useEffect(() => {
     registerSave(() => save());
@@ -235,6 +250,11 @@ export function SpeakingTaskEditor({
               />
             </Field>
           ))}
+          {multilevel && questions.length < requiredResponses && (
+            <Button size="sm" variant="outline" onClick={() => setQuestions((prev) => [...prev, { clientKey: `new-speaking-${prev.length}`, number: nextQuestionNumber(detail.sections) + prev.length, prompt: "" }])}>
+              <Plus className="size-4" aria-hidden /> Add response
+            </Button>
+          )}
 
           <Field
             label="Extra context (optional)"
@@ -249,6 +269,12 @@ export function SpeakingTaskEditor({
               placeholder="e.g. You should say: where it is · who you go with · why you like it"
             />
           </Field>
+          {multilevel && partIndex === 1 && (
+            <Field label="Two-picture asset" hint="Upload one paired image asset containing the two related pictures." htmlFor="sp-two-picture">
+              <input ref={imageRef} id="sp-two-picture" type="file" accept="image/*" className="sr-only" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} />
+              <Button type="button" size="sm" variant="outline" onClick={() => imageRef.current?.click()}><ImagePlus className="size-4" />{imageFile ? imageFile.name : group.imageUrl ? "Replace paired images" : "Upload paired images"}</Button>
+            </Field>
+          )}
 
           <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="flex items-center gap-1.5 font-semibold text-fg">

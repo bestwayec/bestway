@@ -252,11 +252,15 @@ export class MockGradingService {
         );
       }
     }
-    // Server-side clamp (ilgari faqat frontend cheklagan): 0..points.
-    if (finalScore < 0 || finalScore > question.points) {
+    // Versioned Multilevel uses one holistic cap per writing task/speaking
+    // part. IELTS and historical exams retain question-level point caps.
+    const maxScore = attempt.specificationVersion === MULTILEVEL_VERSION
+      ? question.group.maxScore ?? question.points
+      : question.points;
+    if (finalScore < 0 || finalScore > maxScore) {
       throw new AppException(
         'SCORE_OUT_OF_RANGE',
-        `Ball 0 dan ${question.points} gacha bo'lishi kerak`,
+        `Ball 0 dan ${maxScore} gacha bo'lishi kerak`,
         400,
       );
     }
@@ -317,14 +321,16 @@ export class MockGradingService {
       const graded = sectionAnswers.filter(item => item.answer?.isGraded);
       if (manual && graded.length !== sectionAnswers.length) manualPending = true;
       let score = manual ? graded.reduce((sum, item) => sum + (item.answer?.score ?? 0), 0) : sectionAnswers.reduce((sum, item) => sum + (item.answer?.score ?? 0), 0);
-      let max = sectionAnswers.reduce((sum, item) => sum + item.question.points, 0);
+      let max = isMl && (section.skill === 'writing' || section.skill === 'speaking')
+        ? section.groups.reduce((sum, group) => sum + (group.maxScore ?? group.questions[0]?.points ?? 0), 0)
+        : sectionAnswers.reduce((sum, item) => sum + item.question.points, 0);
       if (isMl && section.skill === 'speaking') {
         const partScores = section.groups.map(group => {
           const values = group.questions.map(question => attempt.answers.find(a => a.questionId === question.id)?.score).filter((value): value is number => typeof value === 'number');
           return values.length === group.questions.length && values.length ? roundHalfBand(values.reduce((a, b) => a + b, 0) / values.length) : null;
         });
         score = partScores.every((value): value is number => value !== null) ? partScores.reduce((a, b) => a + b, 0) : 0;
-        max = section.groups.reduce((sum, group) => sum + (group.questions[0]?.points ?? 0), 0);
+        max = section.groups.reduce((sum, group) => sum + (group.maxScore ?? group.questions[0]?.points ?? 0), 0);
       }
       rawScores[section.skill] = { score, max };
       if (isIelts && !manual && max > 0) bands[section.skill] = bandFromRaw(section.skill, attempt.exam.type, score, max, bandTables, sectionAnswers.some(item => Boolean(item.answer?.response?.trim())));

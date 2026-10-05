@@ -495,6 +495,14 @@ export class MockController {
     return this.authoring.readiness(user, id);
   }
 
+  /** Explicit, draft-only compatibility repair for the current Multilevel version. */
+  @ApiBearerAuth()
+  @Roles('teacher', 'admin', 'super_admin')
+  @Post('exams/:id/repair-multilevel')
+  repairMultilevel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.authoring.repairMultilevelDraft(user, id);
+  }
+
   /** Student-preview — o'quvchi ko'radigan holat (kalitsiz) */
   @ApiBearerAuth()
   @Roles('teacher', 'admin', 'super_admin')

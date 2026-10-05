@@ -95,6 +95,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
 
   const locked = exam.access === "locked";
   const pending = exam.access === "pending";
+  const unavailable = exam.ready === false;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -157,7 +158,9 @@ export function MockExamDetailView({ examId }: { examId: string }) {
 
         {/* Boshlash / sotib olish */}
         <div className="mt-6 border-t border-border pt-5">
-          {locked ? (
+          {unavailable ? (
+            <Badge variant="warning" className="w-full justify-center py-2">This exam is temporarily unavailable.</Badge>
+          ) : locked ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm text-fg-muted">
                 <Lock className="size-4" />

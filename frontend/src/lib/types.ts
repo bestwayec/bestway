@@ -652,7 +652,7 @@ export type MockExamType = "ielts_academic" | "ielts_general" | "multilevel";
 export type PracticeLevel = "A1" | "A2" | "B1" | "B2" | "C1";
 export type ObjectiveAnswerRule = "ONE_WORD" | "ONE_WORD_AND_OR_NUMBER";
 export type MockContentLayout = "document" | "table" | "notes" | "summary" | "sentences" | "headings" | "speakers" | "short_texts" | "paragraphs" | "map" | "multi_extract";
-export interface TaskGuidance { taskKey: string; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
+export interface TaskGuidance { taskKey: string; displayLabel?: string; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
 export interface PartSpecification { key: string; count: number; types: string[]; rawMax?: number; options?: number; wordMin?: number; wordMax?: number }
 export type MockSkill = "listening" | "reading" | "writing" | "speaking";
 export type MockQuestionType =
@@ -693,6 +693,8 @@ export interface MockExamListItem {
   practiceLevel?: PracticeLevel | null;
   isDemo: boolean;
   isPublished: boolean;
+  /** Server-authoritative start readiness. */
+  ready?: boolean;
   canEdit: boolean;
   skills: MockSkill[];
   questionCount: number;
@@ -732,6 +734,10 @@ export interface MockGroup {
   hasAudio: boolean;
   audioUrl: string | null;
   imageUrl: string | null;
+  /** Staff-only semantic Multilevel task/part cap. */
+  maxScore?: number | null;
+  /** Staff-only shared Multilevel source relationship. */
+  stimulusRef?: string | null;
   partNumber: number | null;
   audioDurationSec: number | null;
   audioPlayLimit: number;
@@ -772,6 +778,8 @@ export interface MockExamStructure {
 
 /** GET /mock/exams/:id */
 export interface MockExamDetail extends MockExamStructure {
+  /** Server-authoritative start readiness. */
+  ready?: boolean;
   price: number;
   isFreeForApproved: boolean;
   access: MockAccess;
@@ -930,6 +938,8 @@ export interface CreateMockSectionInput {
 }
 
 export interface MockGroupInput {
+  maxScore?: number;
+  stimulusRef?: string;
   sortOrder?: number;
   title?: string;
   instructions?: string;

@@ -30,7 +30,7 @@ import { audioContentType } from './mock-storage';
 import { AUTO_SKILLS } from './mock-scoring';
 import { ExamRow, shapeExam, shapeExamMeta, totalDuration } from './mock-shape';
 import { starterSections } from './mock-starter';
-import { MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
+import { MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
 import { objectiveGroupIssues, objectiveQuestionIssues } from './question-engine';
 
 /** Variantlar (options) majburiy bo'lgan savol turlari */
@@ -219,7 +219,12 @@ export class MockAuthoringService {
             skill: true,
             durationMinutes: true,
             groups: {
-              select: { audioDurationSec: true, _count: { select: { questions: true } } },
+              select: {
+                sortOrder: true, partNumber: true, passageText: true, audioKey: true, audioDurationSec: true, imageKey: true,
+                maxScore: true, stimulusRef: true,
+                questions: { select: { type: true, points: true, options: true, wordLimit: true } },
+                _count: { select: { questions: true } },
+              },
             },
           },
         },
@@ -264,6 +269,7 @@ export class MockAuthoringService {
         practiceLevel: e.practiceLevel,
         isDemo: e.isDemo,
         isPublished: e.isPublished,
+        ready: this.isReadyForStart(e),
         canEdit:
           viewer?.role === 'admin' ||
           viewer?.role === 'super_admin' ||
@@ -290,6 +296,7 @@ export class MockAuthoringService {
     if (!staff && access !== 'granted') {
       return {
         ...shapeExamMeta(row),
+        ready: this.isReadyForStart(exam),
         title: studentExamTitle(exam.title),
         price: exam.price,
         isFreeForApproved: exam.isFreeForApproved,
@@ -298,6 +305,7 @@ export class MockAuthoringService {
     }
     return {
       ...shapeExam(row, staff, this.base),
+      ready: this.isReadyForStart(exam),
       price: exam.price,
       isFreeForApproved: exam.isFreeForApproved,
       access,
@@ -394,6 +402,8 @@ export class MockAuthoringService {
         title: dto.title,
         instructions: dto.instructions,
         passageText: dto.passageText,
+        maxScore: dto.maxScore,
+        stimulusRef: dto.stimulusRef,
         contentHtml,
         audioScript,
         contentLayout: dto.contentLayout,
@@ -438,6 +448,8 @@ export class MockAuthoringService {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
         ...(dto.instructions !== undefined ? { instructions: dto.instructions } : {}),
         ...(dto.passageText !== undefined ? { passageText: dto.passageText } : {}),
+        ...(dto.maxScore !== undefined ? { maxScore: dto.maxScore } : {}),
+        ...(dto.stimulusRef !== undefined ? { stimulusRef: dto.stimulusRef } : {}),
         ...(dto.contentHtml !== undefined ? { contentHtml } : {}),
         ...(dto.audioScript !== undefined ? { audioScript } : {}),
         ...(dto.contentLayout !== undefined ? { contentLayout: dto.contentLayout } : {}),
@@ -784,6 +796,7 @@ export class MockAuthoringService {
           ? await tx.mockQuestion.update({ where: { id }, data })
           : await tx.mockQuestion.create({ data: { ...data, groupId } }));
       }
+      await this.reconcileCurrentMultilevelDraft(tx, exam);
       const freshGroup = await tx.mockQuestionGroup.findUnique({
         where: { id: groupId },
         include: { questions: { orderBy: [{ sortOrder: 'asc' }, { number: 'asc' }] } },
@@ -805,6 +818,65 @@ export class MockAuthoringService {
     });
     await this.audit.log({ userId: actor.id, action: 'mock.group.content.save', entity: 'mockQuestionGroup', entityId: groupId, newValue: { count: result.saved } });
     return result;
+  }
+
+  /** Keep student catalogue readiness byte-for-byte aligned with start(). */
+  private isReadyForStart(exam: { type: MockExamType; specificationVersion?: string | null; profile?: string; sections: unknown[] }): boolean {
+    if (exam.type !== 'multilevel') return true;
+    return exam.specificationVersion === MULTILEVEL_VERSION &&
+      multilevelBlueprintIssues(exam.sections as never, exam.profile === 'full_mock').length === 0;
+  }
+
+  /**
+   * Safe compatibility repair for drafts authored before task/part semantics
+   * were persisted. Published exams and attempts retain their old contracts.
+   */
+  async repairMultilevelDraft(actor: AuthUser, id: string) {
+    await this.assertCanAuthor(actor, id);
+    const repaired = await this.prisma.$transaction(async (tx) => {
+      const exam = await tx.mockExam.findUnique({ where: { id } });
+      if (!exam) throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+      if (exam.type !== 'multilevel' || exam.specificationVersion !== MULTILEVEL_VERSION) {
+        throw new AppException('VALIDATION_ERROR', 'Only current-version Multilevel drafts can be repaired', 400);
+      }
+      if (exam.isPublished || await tx.mockAttempt.count({ where: { examId: id } })) {
+        throw new AppException('MOCK_CONTENT_LOCKED', 'Published or attempted exams cannot be repaired; clone the exam instead', 409);
+      }
+      const changed = await this.reconcileCurrentMultilevelDraft(tx, exam);
+      if (changed) await tx.mockExam.update({ where: { id }, data: { contentVersion: { increment: 1 } } });
+      return changed;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    await this.audit.log({ userId: actor.id, action: 'mock.exam.multilevel.repair', entity: 'mockExam', entityId: id, newValue: { repaired } });
+    return { repaired };
+  }
+
+  private async reconcileCurrentMultilevelDraft(
+    tx: Prisma.TransactionClient,
+    exam: { id: string; type: MockExamType; specificationVersion?: string | null; isPublished: boolean },
+  ): Promise<number> {
+    if (exam.type !== 'multilevel' || exam.specificationVersion !== MULTILEVEL_VERSION || exam.isPublished) return 0;
+    const sections = await tx.mockSection.findMany({
+      where: { examId: exam.id, skill: { in: ['writing', 'speaking'] } },
+      include: { groups: { orderBy: { sortOrder: 'asc' } } },
+    });
+    const writes: Prisma.PrismaPromise<unknown>[] = [];
+    for (const section of sections) {
+      const spec = MULTILEVEL_SPECIFICATION[section.skill];
+      const groups = [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder);
+      const sharedStimulus = section.skill === 'writing'
+        ? groups[0]?.stimulusRef || groups[1]?.stimulusRef || `multilevel:${exam.id}:writing-task-1`
+        : null;
+      groups.forEach((group, index) => {
+        const expected = spec.parts[index];
+        if (!expected?.rawMax) return;
+        const data: Prisma.MockQuestionGroupUpdateInput = {};
+        if (group.maxScore !== expected.rawMax) data.maxScore = expected.rawMax;
+        if (section.skill === 'writing' && index < 2 && group.stimulusRef !== sharedStimulus) data.stimulusRef = sharedStimulus;
+        if (Object.keys(data).length) writes.push(tx.mockQuestionGroup.update({ where: { id: group.id }, data }));
+      });
+    }
+    await Promise.all(writes);
+    return writes.length;
   }
 
   async addQuestions(actor: AuthUser, groupId: string, dto: AddQuestionsDto) {
