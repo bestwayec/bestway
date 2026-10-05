@@ -57,7 +57,7 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
     "@types/bcryptjs": "^2.4.6",
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.6",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.2",
     "@types/pdfkit": "^0.13.8",
