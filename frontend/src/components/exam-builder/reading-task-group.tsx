@@ -3,7 +3,8 @@
 import { QTYPE_LABEL } from "@/components/mock/exam-builder/types";
 import { GappedContent } from "@/components/mock/gapped-content";
 import { Input } from "@/components/ui/input";
-import type { PreviewTaskBlock } from "./reading-preview-model";
+import { answerRuleHint } from "@/lib/objective-question";
+import { unavailablePreviewOptions, type PreviewTaskBlock } from "./reading-preview-model";
 import { PreviewQuestionInput } from "./preview-question-renderer";
 
 /**
@@ -55,6 +56,7 @@ export function ReadingTaskGroup({
                     value={answers[question.id] ?? ""}
                     onChange={(event) => onAnswer(question.id, event.target.value)}
                     aria-label={`Answer for question ${number}`}
+                    title={answerRuleHint(question) ?? undefined}
                     className="inline-flex h-8 min-w-24 w-32 text-sm sm:w-40"
                   />
                 </span>
@@ -80,6 +82,7 @@ export function ReadingTaskGroup({
                 question={q}
                 value={answers[q.id] ?? ""}
                 onChange={(v) => onAnswer(q.id, v)}
+                unavailableOptions={unavailablePreviewOptions(block, answers, q.id)}
               />
             </div>
           ))}

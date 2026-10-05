@@ -25,7 +25,6 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
   QTYPE_LABEL,
-  newQuestion,
   validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
@@ -42,7 +41,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ImportPanel, type ImportedServerQuestion } from "./ImportPanel";
 import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
-import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
+import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
 import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -269,6 +268,7 @@ export function ReadingPassageEditor({
   // Fresh server snapshot per passage (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
@@ -324,6 +324,7 @@ export function ReadingPassageEditor({
     try {
       const saved = await saveContent.mutateAsync({
         groupId: g.id,
+        expectedContentVersion: draftVersion.current,
         input: {
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
@@ -338,6 +339,7 @@ export function ReadingPassageEditor({
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
+      draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
       setPart(p);
@@ -345,7 +347,8 @@ export function ReadingPassageEditor({
       if (imageFile) {
         const form = new FormData();
         form.append("image", imageFile);
-        await setMedia.mutateAsync({ groupId: g.id, form });
+        const media = await setMedia.mutateAsync({ groupId: g.id, form });
+        draftVersion.current = media.version;
       }
       toast.success(tc("saved"));
       setErrors([]);
@@ -421,7 +424,7 @@ export function ReadingPassageEditor({
   }
 
   function addQuestion(type: MockQuestionType) {
-    const q = newQuestion(nextNumber, type, true);
+    const q = newPresetQuestion(part!, nextNumber, type, formatPreset?.type === type ? formatPreset : undefined);
     update((prev) => ({ ...prev, questions: [...prev.questions, q] }));
     setExpandedId(q.clientId);
     setShowTypeChooser(false);
@@ -708,6 +711,12 @@ export function ReadingPassageEditor({
               )}
             </div>
           </div>
+
+          {mode === "form" && <QuestionGroupSettings part={part} skill="reading" allowedTypes={READING_TYPES}
+            selectedPreset={formatPreset} onPreset={setFormatPreset} onChange={setPart} />}
+          {mode === "form" && formatPreset && <Button size="sm" variant="outline" onClick={() => addQuestion(formatPreset.type)}>
+            <Plus className="size-4" aria-hidden />Add {formatPreset.label} question
+          </Button>}
 
           {mode === "visual" && (
             <div className="space-y-3">

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { MockQuestionType, MockSkill } from "@/lib/types";
+import type { MockQuestionType, MockSkill, ObjectiveAnswerRule } from "@/lib/types";
 import { GROUPED_TYPES, QTYPE_LABEL, isAutoType, type BuilderQuestion } from "./types";
 
 /* ── Schema-driven question authoring ─────────────────────────────────────
@@ -282,11 +282,14 @@ function describeTypeLoss(current: BuilderQuestion, next: MockQuestionType): str
       `Changing from ${QTYPE_LABEL[current.type]} to ${QTYPE_LABEL[next]} will remove its word limit (≤${current.wordLimit}).`,
     );
   }
+  if (current.answerRule != null && !WORD_LIMIT_SET.has(next)) {
+    out.push(`Changing to ${QTYPE_LABEL[next]} will remove its answer rule.`);
+  }
   return out;
 }
 
 /** Cleaned question for a confirmed type switch (generic fields preserved). */
-function buildSwitchedQuestion(current: BuilderQuestion, next: MockQuestionType): BuilderQuestion {
+export function buildSwitchedQuestion(current: BuilderQuestion, next: MockQuestionType): BuilderQuestion {
   const wasAuto = isAutoType(current.type);
   const willAuto = isAutoType(next);
   const nextNeedsOptions = OPTION_TYPE_SET.has(next);
@@ -324,6 +327,7 @@ function buildSwitchedQuestion(current: BuilderQuestion, next: MockQuestionType)
     correctAnswers,
     acceptedVariants: VARIANTS_SET.has(next) ? current.acceptedVariants : [],
     wordLimit: WORD_LIMIT_SET.has(next) ? current.wordLimit : undefined,
+    answerRule: WORD_LIMIT_SET.has(next) ? current.answerRule : null,
     points: wasAuto === willAuto ? current.points : willAuto ? 1 : 9,
   };
 }
@@ -710,6 +714,7 @@ export function QuestionFieldSet(props: {
     prompt: `qe-${question.clientId}-prompt`,
     points: `qe-${question.clientId}-points`,
     wordLimit: `qe-${question.clientId}-wordlimit`,
+    answerRule: `qe-${question.clientId}-answerrule`,
   };
 
   function focusOption(index: number): void {
@@ -1127,14 +1132,33 @@ export function QuestionFieldSet(props: {
                 addLabel="Add variant"
               />
             </Field>
-            <Field label="Word limit" error={WORD_LIMIT_SET.has(question.type) ? errors.wordLimit : undefined}>
+            <Field
+              label="Answer rule"
+              htmlFor={ids.answerRule}
+              hint="An explicit answer rule takes precedence over the word limit. Choose the word limit to keep existing behavior."
+            >
+              <select
+                id={ids.answerRule}
+                value={question.answerRule ?? "word_limit"}
+                onChange={(event) => onChange({
+                  ...question,
+                  answerRule: event.target.value === "word_limit" ? null : event.target.value as ObjectiveAnswerRule,
+                })}
+                className="h-10 w-full rounded-[6px] border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                <option value="word_limit">Use word limit</option>
+                <option value="ONE_WORD">ONE WORD</option>
+                <option value="ONE_WORD_AND_OR_NUMBER">ONE WORD AND/OR A NUMBER</option>
+              </select>
+            </Field>
+            {!question.answerRule && <Field label="Word limit" error={WORD_LIMIT_SET.has(question.type) ? errors.wordLimit : undefined}>
               <WordLimitControl
                 value={question.wordLimit}
                 onChange={(next) => onChange({ ...question, wordLimit: next })}
                 inputId={ids.wordLimit}
                 error={errors.wordLimit}
               />
-            </Field>
+            </Field>}
             <p className="text-xs text-fg-muted">Student types an answer here.</p>
           </div>
         )}

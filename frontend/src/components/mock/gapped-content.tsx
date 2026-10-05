@@ -16,9 +16,9 @@ export interface GappedQuestionRef {
   prompt: string;
 }
 
-export interface GappedSlot {
+export interface GappedSlot<Question extends GappedQuestionRef = GappedQuestionRef> {
   number: number;
-  question: GappedQuestionRef | null;
+  question: Question | null;
 }
 
 export function hasGappedDocument(contentHtml: string | null | undefined): contentHtml is string {
@@ -51,15 +51,15 @@ export function sanitizeGappedContent(value: string): string {
  * same sanitized document can host student inputs, preview inputs or builder
  * markers without duplicating document parsing.
  */
-export function GappedContent({
+export function GappedContent<Question extends GappedQuestionRef>({
   contentHtml,
   questions,
   renderGap,
   className,
 }: {
   contentHtml: string;
-  questions: GappedQuestionRef[];
-  renderGap: (slot: GappedSlot) => React.ReactNode;
+  questions: Question[];
+  renderGap: (slot: GappedSlot<Question>) => React.ReactNode;
   className?: string;
 }) {
   const byNumber = React.useMemo(

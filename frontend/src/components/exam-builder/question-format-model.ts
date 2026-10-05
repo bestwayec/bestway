@@ -1,11 +1,12 @@
-import type { BuilderPart, BuilderQuestion } from "@/components/mock/exam-builder/types";
-import type { MockContentLayout, MockQuestionType } from "@/lib/types";
+import { newQuestion, type BuilderPart, type BuilderQuestion } from "@/components/mock/exam-builder/types";
+import type { MockContentLayout, MockQuestionType, ObjectiveAnswerRule } from "@/lib/types";
 import { sanitizeGappedContent } from "@/components/mock/gapped-content";
 
-export interface QuestionFormatPreset { key: string; label: string; type: MockQuestionType; layout: MockContentLayout; reusable?: boolean; oneWord?: boolean }
+export interface QuestionFormatPreset { key: string; label: string; type: MockQuestionType; layout: MockContentLayout; reusable?: boolean; oneWord?: boolean; answerRule?: ObjectiveAnswerRule }
 export const QUESTION_FORMAT_PRESETS: QuestionFormatPreset[] = [
   { key: "mcq", label: "Multiple choice", type: "multiple_choice", layout: "document" },
   { key: "gap", label: "One word gap fill", type: "short_answer", layout: "document", oneWord: true },
+  { key: "gap_number", label: "One word and/or number gap fill", type: "short_answer", layout: "document", answerRule: "ONE_WORD_AND_OR_NUMBER" },
   { key: "tfng", label: "True / False / Not Given", type: "true_false_notgiven", layout: "document" },
   { key: "headings", label: "Heading match", type: "matching_headings", layout: "headings", reusable: false },
   { key: "short_texts", label: "Short text matching", type: "matching", layout: "short_texts", reusable: false },
@@ -20,7 +21,7 @@ export const QUESTION_FORMAT_PRESETS: QuestionFormatPreset[] = [
 ];
 
 export function presetForPart(part: BuilderPart): QuestionFormatPreset | undefined {
-  return QUESTION_FORMAT_PRESETS.find((p) => p.layout === (part.contentLayout ?? "document") && p.type === part.questions[0]?.type && !!p.oneWord === (part.questions[0]?.answerRule === "ONE_WORD"));
+  return QUESTION_FORMAT_PRESETS.find((p) => p.layout === (part.contentLayout ?? "document") && p.type === part.questions[0]?.type && (p.answerRule ?? (p.oneWord ? "ONE_WORD" : null)) === (part.questions[0]?.answerRule ?? null));
 }
 
 /** A preset configures new questions. Existing authored questions are never converted. */
@@ -30,6 +31,21 @@ export function applyFormatPreset(part: BuilderPart, preset: QuestionFormatPrese
 
 export function applySharedOptionBank(questions: BuilderQuestion[], bank: string[]): BuilderQuestion[] {
   return questions.map((q) => ["matching", "matching_headings", "map_labelling"].includes(q.type) ? { ...q, options: [...bank] } : q);
+}
+
+/** Presets affect only newly added rows, leaving authored questions untouched. */
+export function newPresetQuestion(part: BuilderPart, number: number, fallbackType: MockQuestionType, preset?: QuestionFormatPreset, isAuto = true): BuilderQuestion {
+  const question = newQuestion(number, preset?.type ?? fallbackType, isAuto);
+  const answerRule = preset?.answerRule ?? (preset?.oneWord ? "ONE_WORD" : undefined);
+  if (answerRule) {
+    question.answerRule = answerRule;
+    if (answerRule === "ONE_WORD") question.wordLimit = 1;
+  }
+  if (["matching", "matching_headings", "map_labelling"].includes(question.type)) {
+    const bank = part.questions.find((q) => ["matching", "matching_headings", "map_labelling"].includes(q.type))?.options;
+    if (bank) question.options = [...bank];
+  }
+  return question;
 }
 
 function escapeText(text: string): string {

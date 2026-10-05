@@ -23,7 +23,6 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
   QTYPE_LABEL,
-  newQuestion,
   validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
@@ -41,7 +40,7 @@ import { ImportPanel, type ImportedServerQuestion } from "./ImportPanel";
 import { ListeningAudioCard } from "./ListeningAudioCard";
 import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
-import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
+import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas, visualScratchKey } from "./visual-editor/VisualQuestionCanvas";
 import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -146,6 +145,7 @@ export function ListeningPartEditor({
   // Fresh server snapshot per part (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
@@ -225,6 +225,7 @@ export function ListeningPartEditor({
     try {
       const saved = await saveContent.mutateAsync({
         groupId: g.id,
+        expectedContentVersion: draftVersion.current,
         input: {
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
@@ -242,6 +243,7 @@ export function ListeningPartEditor({
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
+      draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
       setPart(p);
@@ -251,7 +253,8 @@ export function ListeningPartEditor({
         if (p.audioPendingFile) form.append("audio", p.audioPendingFile);
         if (imageFile) form.append("image", imageFile);
         try {
-          await setMedia.mutateAsync({ groupId: g.id, form });
+          const media = await setMedia.mutateAsync({ groupId: g.id, form });
+          draftVersion.current = media.version;
         } catch (e) {
           // Text edits above already persisted; keep the local file selection
           // intact so the admin can retry without losing anything.
@@ -362,7 +365,7 @@ export function ListeningPartEditor({
 
   function addQuestion() {
     const number = nextNumber;
-    const q = newQuestion(number, "multiple_choice", true);
+    const q = newPresetQuestion(part!, number, "multiple_choice", formatPreset);
     update((prev) => ({ ...prev, questions: [...prev.questions, q] }));
     setExpanded((prev) => new Set(prev).add(q.clientId));
   }
@@ -638,6 +641,9 @@ export function ListeningPartEditor({
             )}
           </div>
         </div>
+
+        {mode === "form" && <QuestionGroupSettings part={part} skill="listening" allowedTypes={TYPES_BY_SKILL.listening}
+          selectedPreset={formatPreset} onPreset={setFormatPreset} onChange={setPart} />}
 
         {showPreview && (
           <div className="mt-3">
