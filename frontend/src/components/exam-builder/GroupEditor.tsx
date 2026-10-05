@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { QuestionEditor } from "@/components/mock/exam-builder/QuestionEditor";
 import {
-  newQuestion,
   validateDraftPart,
   type BuilderPart,
   type BuilderQuestion,
@@ -26,7 +25,7 @@ import { ImportPanel } from "./ImportPanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
-import { presetForPart, type QuestionFormatPreset } from "./question-format-model";
+import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
 import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -124,6 +123,7 @@ export function GroupEditor({
   // Fresh server snapshot per group (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilder(group) : null));
   const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
   const [mode, setMode] = React.useState<"form" | "visual">(() =>
@@ -175,6 +175,7 @@ export function GroupEditor({
     try {
       const saved = await saveContent.mutateAsync({
         groupId: g.id,
+        expectedContentVersion: draftVersion.current,
         input: {
           title: p.title.trim() || undefined,
           instructions: p.instructions.trim(),
@@ -192,6 +193,7 @@ export function GroupEditor({
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
+      draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
       setPart(p);
@@ -200,7 +202,8 @@ export function GroupEditor({
         const form = new FormData();
         if (p.audioPendingFile) form.append("audio", p.audioPendingFile);
         if (imageFile) form.append("image", imageFile);
-        await setMedia.mutateAsync({ groupId: g.id, form });
+        const media = await setMedia.mutateAsync({ groupId: g.id, form });
+        draftVersion.current = media.version;
       }
       toast.success(tc("saved"));
       setErrors([]);
@@ -229,7 +232,7 @@ export function GroupEditor({
     } finally {
       setSaving(false);
     }
-  }, [part, group, skill, imageFile, mode, visualText, visualQuestions, saveContent, setMedia, localAudioUrl, localImageUrl, t, tc]);
+  }, [part, group, imageFile, mode, visualText, visualQuestions, saveContent, setMedia, localAudioUrl, localImageUrl, t, tc]);
 
   React.useEffect(() => {
     registerSave(() => save());
@@ -266,10 +269,11 @@ export function GroupEditor({
     const maxLocal = p.questions.reduce((m, q) => Math.max(m, q.number), 0);
     const maxExam = nextQuestionNumber(detail.type === 'multilevel' ? detail.sections.filter((s) => s.id === sectionId) : detail.sections) - 1;
     const number = Math.max(maxLocal, maxExam) + 1;
-    const specPart = detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0];
-    const type = (specPart?.types[0] as MockQuestionType | undefined) ?? defaultTypeFor(skill, p.questions);
+    const specPart = detail.profile === 'full_mock' ? detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0] : undefined;
+    const preset = formatPreset && (!specPart || specPart.types.includes(formatPreset.type)) ? formatPreset : undefined;
+    const type = preset?.type ?? (specPart?.types[0] as MockQuestionType | undefined) ?? defaultTypeFor(skill, p.questions);
     const auto = type !== "essay_task1" && type !== "essay_task2" && type !== "speaking_task";
-    update((prev) => ({ ...prev, questions: [...prev.questions, { ...newQuestion(number, type, auto), points: specPart?.rawMax ?? (auto ? 1 : 9), ...(['short_answer','note_completion','sentence_completion','summary_completion'].includes(type) && specPart ? { wordLimit: 1 } : {}) }] }));
+    update((prev) => ({ ...prev, questions: [...prev.questions, { ...newPresetQuestion(prev, number, type, preset, auto), points: specPart?.rawMax ?? (auto ? 1 : 9), ...(['short_answer','note_completion','sentence_completion','summary_completion'].includes(type) && specPart ? { wordLimit: 1 } : {}) }] }));
   }
 
   function handleDeleteGroup() {
@@ -278,7 +282,7 @@ export function GroupEditor({
 
   const serverAudio = `/api/backend/mock/groups/${group.id}/audio`;
   const serverImage = `/api/backend/mock/groups/${group.id}/image`;
-  const specificationPart = detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0];
+  const specificationPart = detail.profile === 'full_mock' ? detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0] : undefined;
   const allowedTypes = (specificationPart?.types as MockQuestionType[] | undefined) ?? TYPES_BY_SKILL[skill];
   // Unsaved visual draft for student preview (Task 9): same question mapping as
   // previewGroup, but passage/questions come from visual state. Constant id keeps
@@ -529,6 +533,9 @@ export function GroupEditor({
           </div>
         </CardContent>
       </Card>
+
+      {(skill === "reading" || skill === "listening") && mode === "form" && <QuestionGroupSettings part={part} skill={skill} allowedTypes={allowedTypes}
+        selectedPreset={formatPreset} onPreset={setFormatPreset} onChange={setPart} />}
 
       {/* Questions */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">

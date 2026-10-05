@@ -308,17 +308,19 @@ export function useUpdateMockGroup(examId: string) {
 /** One transaction and one cache refresh for all material and question edits. */
 export function useSaveMockGroupContent(examId: string) {
   const qc = useQueryClient();
+  const scope = useStudentProgramScope();
   return useMutation({
     mutationFn: (v: {
       groupId: string;
       input: MockGroupInput;
       questions: (MockQuestionInput & { id?: string })[];
       deletedQuestionIds: string[];
+      expectedContentVersion?: number;
     }) => {
       // Optimistic concurrency: send the loaded contentVersion so a stale tab
       // fails with a visible conflict instead of silently overwriting.
-      const cached = qc.getQueryData<{ contentVersion?: number }>(["mock-exam"]);
-      const version = cached?.contentVersion;
+      const cached = qc.getQueryData<{ contentVersion?: number }>(["mock-exam", scope.owner, scope.program ?? 'all', examId]);
+      const version = v.expectedContentVersion ?? cached?.contentVersion;
       return api.put<{
         saved: number;
         questions: { id: string; number: number }[];
@@ -408,7 +410,7 @@ export function useSetMockGroupMedia(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { groupId: string; form: FormData }) =>
-      api.post(`/mock/groups/${v.groupId}/media`, v.form),
+      api.post<{ id: string; hasAudio: boolean; audioUrl: string | null; imageUrl: string | null; version: number }>(`/mock/groups/${v.groupId}/media`, v.form),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exam"] }),
   });
 }
