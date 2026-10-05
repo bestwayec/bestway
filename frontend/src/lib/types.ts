@@ -652,7 +652,7 @@ export type MockExamType = "ielts_academic" | "ielts_general" | "multilevel";
 export type PracticeLevel = "A1" | "A2" | "B1" | "B2" | "C1";
 export type ObjectiveAnswerRule = "ONE_WORD" | "ONE_WORD_AND_OR_NUMBER";
 export type MockContentLayout = "document" | "table" | "notes" | "summary" | "sentences" | "headings" | "speakers" | "short_texts" | "paragraphs" | "map" | "multi_extract";
-export interface TaskGuidance { taskKey: string; displayLabel?: string; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
+export interface TaskGuidance { taskKey: string; displayLabel?: string; rawMax?: number; wordMin?: number; wordMax?: number; prepSeconds?: number; responseSeconds?: number }
 export interface PartSpecification { key: string; count: number; types: string[]; rawMax?: number; options?: number; wordMin?: number; wordMax?: number }
 export type MockSkill = "listening" | "reading" | "writing" | "speaking";
 export type MockQuestionType =

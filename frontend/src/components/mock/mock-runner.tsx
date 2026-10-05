@@ -32,6 +32,7 @@ import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
 import { usedMatchingOptions } from '@/lib/objective-question';
+import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage } from './multilevel-student-ui';
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -58,7 +59,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const examQ = useMockExam(attempt.examId);
   const exam = examQ.data;
   const versioned = !!attempt.specificationVersion;
-  const queueKey = `multilevel.answers.${attempt.id}`;
 
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
@@ -84,12 +84,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     return { ans, audio };
   }, [attempt]);
 
-  const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
-    if (!versioned) return initial.ans;
-    try { return { ...initial.ans, ...JSON.parse(localStorage.getItem(queueKey) ?? '{}') }; } catch { return initial.ans; }
-  });
+  // Server answers are the authoritative resume state. Edits stay in memory only
+  // until autosave persists them, so a reload cannot manufacture a second attempt.
+  const [answers, setAnswers] = React.useState<Record<string, string>>(() => initial.ans);
   const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
   const [selectedSection, setActiveSection] = React.useState(0);
+  const [activeTaskBySkill, setActiveTaskBySkill] = React.useState<Partial<Record<"writing" | "speaking", number>>>({});
   // The exam query can resolve after mount. Full-test navigation always follows
   // the server skill, including a resume directly into Reading/Writing/Speaking.
   const activeSection = isFullTest && attempt.currentSkill
@@ -102,9 +102,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   React.useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
-  const dirty = React.useRef<Set<string>>(new Set(versioned ? Object.keys(answers).filter((id) => answers[id] !== initial.ans[id]) : []));
+  const dirty = React.useRef<Set<string>>(new Set());
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
+  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
   React.useEffect(() => {
     const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string}>).detail; if (detail?.attemptId === attempt.id) setAudioSet((previous) => new Set([...previous,detail.questionId])); };
     window.addEventListener('multilevel:recording-uploaded', saved);
@@ -118,20 +119,20 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     if (!versioned) dirty.current.clear();
     const snapshot = { ...answersRef.current };
     if (versioned) {
+      setSaveState("saving");
       saveInFlight.current = bulk.mutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then(() => {
         ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-        if (!dirty.current.size) localStorage.removeItem(queueKey);
-      }).catch(() => { toast.error(tc('saveFailed')); }).finally(() => { saveInFlight.current = null; });
+        if (!dirty.current.size) setSaveState("saved");
+      }).catch(() => { setSaveState("error"); toast.error("Your response could not be saved. Try again."); }).finally(() => { saveInFlight.current = null; });
       return;
     }
     bulk.mutate(
       ids.map((id) => ({ questionId: id, response: answersRef.current[id] ?? "" })),
       { onSuccess: () => {
         ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-        if (versioned && !dirty.current.size) localStorage.removeItem(queueKey);
       }, onError: () => { ids.forEach((id) => dirty.current.add(id)); toast.error(tc("saveFailed")); } },
     );
-  }, [bulk, tc, versioned, queueKey, isFullTest, attempt.sections, attempt.currentSkill]);
+  }, [bulk, tc, versioned, isFullTest, attempt.sections, attempt.currentSkill]);
 
   // Debounce autosave
   React.useEffect(() => {
@@ -143,7 +144,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     dirty.current.add(qid);
     const next = { ...answersRef.current, [qid]: val };
     answersRef.current = next;
-    if (versioned) { try { localStorage.setItem(queueKey, JSON.stringify(next)); } catch { toast.error(tc('saveFailed')); } }
+    if (versioned) setSaveState("saving");
     setAnswers(next);
   }
   React.useEffect(() => {
@@ -183,7 +184,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.success(t("submitted"));
       } catch (e) {
         submittingRef.current = false;
-        toast.error(e instanceof Error ? e.message : tc("unknownError"));
+        toast.error(versioned ? "Your exam could not be submitted. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
     [bulk, submit, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
@@ -222,7 +223,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       await advance.mutateAsync();
       toast.success("Next section");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : tc("unknownError"));
+      toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { if (versioned) submittingRef.current = false; }
   }, [advance, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulk]);
 
@@ -281,6 +282,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const total = exam.questionCount;
   const answered = countAnswered(exam, answers, audioSet);
   const section: MockSection | undefined = exam.sections[activeSection];
+  const guidedMultilevel = versioned && exam.type === "multilevel" && (section?.skill === "writing" || section?.skill === "speaking");
+  const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
   return (
     <div
@@ -321,6 +324,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             {cheatCount > 1 ? ` (${cheatCount})` : ""} — timer continues.
           </p>
         )}
+        {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
+          <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
+          {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
+        </div>}
       </div>
 
       {/* Bo'lim tablari (full-test da faqat status — bosib bo'lmaydi) */}
@@ -358,12 +365,25 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
       )}
 
+      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} /></div>}
+
       {section && (
         <div className="space-y-4">
           {section.instructions && (
             <p className="text-sm text-fg-muted">{section.instructions}</p>
           )}
-          {section.groups.map((g) => (
+          {guidedMultilevel && (section.skill === "writing" || section.skill === "speaking") ? <GuidedMultilevelGroups
+            skill={section.skill}
+            groups={section.groups}
+            activeTask={Math.min(activeTask, Math.max(0, section.groups.length - 1))}
+            setActiveTask={(index) => setActiveTaskBySkill((current) => ({ ...current, [section.skill]: index }))}
+            strict={strict}
+            timed={strict}
+            attemptId={attempt.id}
+            answers={answers}
+            audioSet={audioSet}
+            onAnswer={setAnswer}
+          /> : section.groups.map((g) => (
             <GroupBlock
               key={g.id}
               group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
@@ -405,6 +425,59 @@ function Timer({ ms, label }: { ms: number; label: string }) {
   );
 }
 
+export function GuidedMultilevelGroups({
+  skill,
+  groups,
+  activeTask,
+  setActiveTask,
+  strict,
+  timed,
+  attemptId,
+  answers,
+  audioSet,
+  onAnswer,
+}: {
+  skill: "writing" | "speaking";
+  groups: MockSection["groups"];
+  activeTask: number;
+  setActiveTask: (index: number) => void;
+  strict: boolean;
+  timed: boolean;
+  attemptId: string;
+  answers: Record<string, string>;
+  audioSet: Set<string>;
+  onAnswer: (qid: string, value: string) => void;
+}) {
+  const group = groups[activeTask];
+  if (!group) return null;
+  const labels = groups.map((candidate, index) => {
+    const key = multilevelTaskLabels(candidate.questions)[0] ?? String(index + 1);
+    if (skill !== "writing") return key;
+    return ({ informal_email: "1.1", formal_email: "1.2", publication: "2" } as Record<string, string>)[key] ?? key;
+  });
+  const sharedWritingStimulus = skill === "writing"
+    ? groups.slice(0, 2).map((candidate) => candidate.passageText || candidate.instructions).find((value) => !!value?.trim()) ?? undefined
+    : undefined;
+  return <div className="space-y-4">
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} />
+    <GroupBlock
+      group={group}
+      skill={skill}
+      strict={strict}
+      timed={timed}
+      attemptId={attemptId}
+      answers={answers}
+      audioSet={audioSet}
+      onAnswer={onAnswer}
+      sharedWritingStimulus={sharedWritingStimulus}
+    />
+    <div className="flex items-center justify-between gap-3">
+      <Button type="button" variant="outline" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
+      <Button type="button" variant="outline" disabled={activeTask === groups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
+    </div>
+  </div>;
+}
+
 function GroupBlock({
   group,
   skill,
@@ -415,6 +488,7 @@ function GroupBlock({
   audioSet,
   onAnswer,
   onReviewComplete,
+  sharedWritingStimulus,
 }: {
   group: MockSection["groups"][number];
   skill: MockSkill;
@@ -425,8 +499,9 @@ function GroupBlock({
   audioSet: Set<string>;
   onAnswer: (qid: string, val: string) => void;
   onReviewComplete?: () => void;
+  sharedWritingStimulus?: string;
 }) {
-  const hasPassage = !!group.passageText;
+  const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
   const audioSrc = media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`);
   return (
@@ -466,6 +541,22 @@ function GroupBlock({
       )}
       {group.instructions && (
         <p className="mt-3 text-sm font-medium text-fg-muted">{group.instructions}</p>
+      )}
+      {skill === "speaking" && group.questions[0]?.guidance && (
+        <section className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-brand/20 bg-brand-subtle p-3">
+          <div>
+            <p className="font-semibold text-fg">{multilevelTaskName(group.questions[0].guidance, "Speaking part")}</p>
+            <p className="text-xs text-fg-muted">{group.questions.length} {group.questions.length === 1 ? "response" : "responses"}</p>
+            {group.questions.length > 1 && <p className="mt-1 text-xs text-fg-muted">Response timing: {group.questions.map((question) => question.guidance?.responseSeconds ? `${question.guidance.responseSeconds}s` : null).filter(Boolean).join(" · ")}</p>}
+          </div>
+          <MultilevelTaskMeta question={group.questions[0]} />
+        </section>
+      )}
+      {skill === "writing" && sharedWritingStimulus && (
+        <section className="mt-3 rounded-[10px] border border-brand/20 bg-brand-subtle p-4" aria-label="Shared situation">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtle-fg">Shared situation</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-fg">{sharedWritingStimulus}</p>
+        </section>
       )}
 
       <div className={cn("mt-3", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6")}>
@@ -512,6 +603,7 @@ function GroupBlock({
                 timed={timed}
                 unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                 onChange={(v) => onAnswer(q.id, v)}
+                multilevelSkill={skill}
               />
             ))}
           </div>
@@ -529,6 +621,7 @@ function QuestionInput({
   timed,
   onChange,
   unavailableOptions,
+  multilevelSkill,
 }: {
   question: MockQuestion;
   attemptId: string;
@@ -537,6 +630,7 @@ function QuestionInput({
   timed: boolean;
   onChange: (v: string) => void;
   unavailableOptions?: string[];
+  multilevelSkill?: MockSkill;
 }) {
   const t = useTranslations("mock");
 
@@ -568,7 +662,13 @@ function QuestionInput({
     const underMin = minWords > 0 && words > 0 && words < minWords;
     return (
       <div className="space-y-2">
-        {header}
+        {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>
+            <MultilevelTaskMeta question={q} />
+          </div>
+          <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
+        </div> : header}
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -581,8 +681,8 @@ function QuestionInput({
         />
         <p className={cn("text-right text-xs tabular-nums", underMin ? "text-warning" : "text-fg-subtle")}>
           {words} {t("words")}
-          {q.guidance?.wordMax ? ` · guidance ${minWords === q.guidance.wordMax ? `about ${minWords}` : `${minWords}–${q.guidance.wordMax}`} words` : minWords > 0 ? ` · min ${minWords}` : ''}
-          {underMin ? ` — minimum ${minWords} words required` : ""}
+          {q.guidance?.wordMax ? ` / ${minWords === q.guidance.wordMax ? `~${minWords}` : `${minWords}–${q.guidance.wordMax}`} target` : minWords > 0 ? ` · min ${minWords}` : ''}
+          {underMin ? ` — keep writing to reach the target` : ""}
         </p>
       </div>
     );
