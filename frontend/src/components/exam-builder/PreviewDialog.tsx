@@ -14,8 +14,9 @@ import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { useMockPreview } from "@/hooks/use-mock";
 import type { MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { StudentPreview, type PreviewGroup } from "./StudentPreview";
+import { StudentPreview } from "./StudentPreview";
 import { ReadingPreviewShell } from "./reading-preview-shell";
+import { toPreviewGroup, type PreviewGroupSource } from "./preview-group";
 import { tx } from "./types";
 
 interface PreviewSection {
@@ -23,45 +24,7 @@ interface PreviewSection {
   skill: MockSkill;
   title?: string | null;
   instructions?: string | null;
-  groups?: Array<{
-    id: string;
-    title?: string | null;
-    instructions?: string | null;
-    passageText?: string | null;
-    contentHtml?: string | null;
-    hasAudio?: boolean;
-    imageUrl?: string | null;
-    questions?: Array<{
-      id: string;
-      number: number;
-      type: string;
-      prompt: string;
-      options?: string[] | null;
-      points?: number;
-      wordLimit?: number | null;
-    }>;
-  }>;
-}
-
-function toPreviewGroup(g: NonNullable<PreviewSection["groups"]>[number]): PreviewGroup {
-  return {
-    id: g.id,
-    title: g.title ?? null,
-    instructions: g.instructions ?? null,
-    passageText: g.passageText ?? null,
-    contentHtml: g.contentHtml ?? null,
-    hasAudio: !!g.hasAudio,
-    imageUrl: g.imageUrl ?? null,
-    questions: (g.questions ?? []).map((x) => ({
-      id: x.id,
-      number: x.number,
-      type: x.type,
-      prompt: x.prompt,
-      options: x.options ?? null,
-      points: x.points ?? 1,
-      wordLimit: x.wordLimit ?? null,
-    })),
-  };
+  groups?: PreviewGroupSource[];
 }
 
 /** Whole-exam student preview (sanitized, no keys) — no publish needed to look.

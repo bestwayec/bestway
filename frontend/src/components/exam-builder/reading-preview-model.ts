@@ -1,4 +1,5 @@
 import { sanitizeGappedContent } from "@/components/mock/gapped-content";
+import { usedMatchingOptions } from "@/lib/objective-question";
 import type { PreviewGroup, PreviewQuestion } from "./StudentPreview";
 import { clusterReadingPassages } from "./reading-passage-clusters";
 
@@ -50,6 +51,8 @@ export interface PreviewTaskBlock {
   questions: PreviewQuestion[];
   /** Gap-fill task documents rendered in the right panel, in order. */
   docs: PreviewBlockDoc[];
+  /** Original banks remain separate when consecutive tasks are displayed together. */
+  matchingGroups: Array<Pick<PreviewGroup, "id" | "questions" | "optionsReusable">>;
   min: number;
   max: number;
   heading: string;
@@ -143,6 +146,7 @@ interface RunAcc {
   gapped: boolean;
   questions: PreviewQuestion[];
   docs: PreviewBlockDoc[];
+  matchingGroups: PreviewTaskBlock["matchingGroups"];
   min: number;
   max: number;
 }
@@ -154,10 +158,27 @@ function toBlock(run: RunAcc): PreviewTaskBlock {
     instructions: run.instructions,
     questions: run.gapped ? [] : run.questions,
     docs: run.docs,
+    matchingGroups: run.matchingGroups,
     min: run.min,
     max: run.max,
     heading: taskBlockHeading(run.min, run.max),
   };
+}
+
+/** Resolve reuse against the persisted group, including siblings in other task blocks. */
+export function unavailablePreviewOptions(
+  block: PreviewTaskBlock,
+  answers: Record<string, string>,
+  questionId: string,
+): string[] {
+  const group = block.matchingGroups.find((g) => g.questions.some((q) => q.id === questionId));
+  return group?.optionsReusable === false ? usedMatchingOptions(group.questions, answers, questionId) : [];
+}
+
+function includeMatchingGroup(run: RunAcc, group: PreviewGroup): void {
+  if (!run.matchingGroups.some((g) => g.id === group.id)) {
+    run.matchingGroups.push({ id: group.id, optionsReusable: group.optionsReusable, questions: group.questions });
+  }
 }
 
 function docFor(run: RunAcc, g: PreviewGroup): PreviewBlockDoc {
@@ -193,6 +214,7 @@ function buildBlocks(groups: PreviewGroup[]): {
           instructions,
           questions: [],
           docs: [{ groupId: g.id, contentHtml: g.contentHtml, questions: [] }],
+          matchingGroups: [],
           min,
           max,
           heading: taskBlockHeading(min, max),
@@ -209,6 +231,7 @@ function buildBlocks(groups: PreviewGroup[]): {
         current.gapped === gapped &&
         normText(current.instructions) === normText(instructions);
       if (current !== null && same) {
+        includeMatchingGroup(current, g);
         if (gapped) docFor(current, g).questions.push(q);
         else current.questions.push(q);
         current.min = Math.min(current.min, q.number);
@@ -222,10 +245,12 @@ function buildBlocks(groups: PreviewGroup[]): {
           gapped,
           questions: [],
           docs: [],
+          matchingGroups: [],
           min: q.number,
           max: q.number,
         };
         run = started;
+        includeMatchingGroup(started, g);
         if (gapped) docFor(started, g).questions.push(q);
         else started.questions.push(q);
       }

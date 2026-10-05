@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { MockSkill, ObjectiveAnswerRule } from "@/lib/types";
-import { usedMatchingOptions } from "@/lib/objective-question";
+import { answerRuleHint, usedMatchingOptions } from "@/lib/objective-question";
 import { tx } from "./types";
 import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
 import { PreviewQuestionInput } from "./preview-question-renderer";
@@ -158,6 +158,7 @@ function PreviewBody({
                         value={answers[question.id] ?? ""}
                         onChange={(event) => setAnswer(question.id, event.target.value)}
                         aria-label={`Answer for question ${number}`}
+                        title={answerRuleHint(question) ?? undefined}
                         className="inline-flex h-8 min-w-24 w-32 sm:w-40"
                       />
                     </span>
