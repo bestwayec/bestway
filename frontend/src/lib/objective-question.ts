@@ -25,10 +25,26 @@ export function isObjectiveChoice(q: ObjectiveQuestion): boolean {
   return SINGLE_CHOICE.has(q.type) || q.type === "multi_select" || (q.type === "map_labelling" && !!q.options?.length);
 }
 
-/** Keep the established IELTS comma-delimited multi-select wire format. */
-export function toggleObjectiveOption(value: string, option: string): string {
-  const selected = value.split(",").map((v) => v.trim()).filter(Boolean);
-  return (selected.includes(option) ? selected.filter((v) => v !== option) : [...selected, option]).join(",");
+/** Read legacy responses, while JSON arrays preserve punctuation in new answers. */
+export function selectedObjectiveOptions(value: string, options: string[] = []): string[] {
+  let selected: string[];
+  if (value.trim().startsWith('[')) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      selected = Array.isArray(parsed) && parsed.every((item) => typeof item === 'string') ? parsed : [];
+    } catch { selected = []; }
+  } else if (options.includes(value)) selected = [value];
+  else {
+    selected = value.split(/[,;]+/).map((v) => v.trim()).filter(Boolean);
+    if (selected.length === 1 && /^[a-z](?:\s+[a-z])+$/i.test(selected[0])) selected = selected[0].split(/\s+/);
+  }
+  return selected.map((item) => options.includes(item) ? item : /^[a-z]$/i.test(item) ? options[item.toUpperCase().charCodeAt(0) - 65] ?? item : item);
+}
+
+export function toggleObjectiveOption(value: string, option: string, options: string[] = []): string {
+  const selected = selectedObjectiveOptions(value, options);
+  const next = selected.includes(option) ? selected.filter((v) => v !== option) : [...selected, option];
+  return next.length ? JSON.stringify(next) : '';
 }
 
 export function answerRuleHint(q: Pick<ObjectiveQuestion, "answerRule" | "wordLimit">): string | null {

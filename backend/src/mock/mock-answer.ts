@@ -146,7 +146,18 @@ export function isAnswerCorrect(
   }
 
   if (type === 'multi_select' && opts.options?.length) {
-    const parts = response.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
+    let parts: string[];
+    if (response.trim().startsWith('[')) {
+      try {
+        const parsed: unknown = JSON.parse(response);
+        if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) return false;
+        parts = parsed;
+      } catch { return false; }
+    } else if (choiceIndex(response, opts.options) !== null) {
+      parts = [response];
+    } else {
+      parts = response.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
+    }
     const selectedParts = parts.length === 1 && /^[a-z](?:\s+[a-z])+$/i.test(parts[0]) ? parts[0].split(/\s+/) : parts;
     const chosen = selectedParts.map((part) => choiceIndex(part, opts.options!));
     const expectedIndexes = correctAnswers.map((key) => choiceIndex(key, opts.options!));

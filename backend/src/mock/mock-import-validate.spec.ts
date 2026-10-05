@@ -109,3 +109,76 @@ describe('mock JSON import contract (RED)', () => {
     expect(isAnswerCorrect('short_answer', 'colour', ['colour'], { acceptedVariants: ['color'] })).toBe(true);
   });
 });
+
+describe('full-mock import publication blueprint', () => {
+  function completePackage(type = 'ielts_academic') {
+    const pkg = sample();
+    pkg.profile = 'full_mock';
+    pkg.exam.type = type;
+    let number = 0;
+    const questions = (count: number, manualType?: string) => Array.from({ length: count }, () => ({
+      key: `question-${++number}`, number, type: manualType ?? 'short_answer', prompt: 'Original synthetic question.',
+      options: [], correctAnswers: manualType ? [] : ['word'], acceptedVariants: [], points: manualType ? 9 : 1,
+      sourceRef: 'Original synthetic fixture',
+    }));
+    const group = (key: string, qs: ReturnType<typeof questions>) => ({
+      key, title: key, instructions: 'Answer each question.', passageText: 'Original source text.',
+      contentHtml: '', contentLayout: 'document', audioScript: '', questions: qs,
+    });
+    pkg.exam.sections = [
+      { key: 'listening', skill: 'listening', title: 'Listening', instructions: '', groups: [1, 2, 3, 4].map((part) => ({
+        ...group(`listening-${part}`, questions(10)), partNumber: part, audioRef: `audio-${part}`,
+      })) },
+      { key: 'reading', skill: 'reading', title: 'Reading', instructions: '', groups: [14, 13, 13].map((count, index) => group(`reading-${index}`, questions(count))) },
+      { key: 'writing', skill: 'writing', title: 'Writing', instructions: '', groups: [group('task1', questions(1, 'essay_task1')), group('task2', questions(1, 'essay_task2'))] },
+    ];
+    pkg.media = [1, 2, 3, 4].map((part) => ({ key: `audio-${part}`, kind: 'audio', fileName: `part-${part}.mp3`, requiredForPublish: true }));
+    return pkg;
+  }
+  const mediaBindings = Object.fromEntries([1, 2, 3, 4].map((part) => [`audio-${part}`, `upload-${part}`]));
+
+  it.each(['ielts_academic', 'ielts_general'])('accepts the exact %s blueprint with bound audio', (type) => {
+    const report = validateImportPackage(completePackage(type), { mediaBindings });
+    expect(report.issues).toEqual([]);
+    expect(report.canPublish).toBe(true);
+  });
+
+  it('rejects extra listening or reading blocks even when the forty-question total stays unchanged', () => {
+    for (const sectionIndex of [0, 1]) {
+      const pkg = completePackage();
+      const section = pkg.exam.sections[sectionIndex];
+      const extra = structuredClone(section.groups[0]);
+      extra.key = 'extra-group';
+      extra.questions = [section.groups[0].questions.pop()];
+      section.groups.push(extra);
+      const report = validateImportPackage(pkg, { mediaBindings });
+      expect(report.canImport).toBe(true);
+      expect(report.canPublish).toBe(false);
+      expect(report.issues.some((issue) => issue.code === 'PROFILE_BLUEPRINT')).toBe(true);
+    }
+  });
+
+  it('rejects duplicate listening part identifiers and repeated writing tasks', () => {
+    const duplicatePart = completePackage();
+    duplicatePart.exam.sections[0].groups[3].partNumber = 3;
+    expect(validateImportPackage(duplicatePart, { mediaBindings }).canPublish).toBe(false);
+    const extraWriting = completePackage();
+    const extra = structuredClone(extraWriting.exam.sections[2].groups[0]);
+    extra.key = 'extra-task';
+    extra.questions[0].key = 'question-extra';
+    extra.questions[0].number = 83;
+    extraWriting.exam.sections[2].groups.push(extra);
+    const report = validateImportPackage(extraWriting, { mediaBindings });
+    expect(report.canImport).toBe(true);
+    expect(report.canPublish).toBe(false);
+  });
+
+  it('rejects practice levels on IELTS or full-mock packages', () => {
+    const ielts = sample();
+    ielts.exam.practiceLevel = 'A1';
+    expect(validateImportPackage(ielts).issues.some((issue) => issue.code === 'PRACTICE_LEVEL')).toBe(true);
+    const full = completePackage('multilevel');
+    full.exam.practiceLevel = 'B2';
+    expect(validateImportPackage(full).issues.some((issue) => issue.code === 'PRACTICE_LEVEL')).toBe(true);
+  });
+});

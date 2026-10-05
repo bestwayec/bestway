@@ -193,6 +193,13 @@ export class MockExamImportService {
               409,
             );
           }
+          // Lock the exam row before appending content so publication cannot race
+          // the draft check, and every open editor observes a new content version.
+          const locked = await tx.mockExam.updateMany({
+            where: { id: target.id, isPublished: false, attempts: { none: {} }, contentVersion: target.contentVersion },
+            data: { contentVersion: { increment: 1 } },
+          });
+          if (locked.count !== 1) throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam changed. Reload before appending the import', 409);
         }
         const exam = target ?? await (tx as any).mockExam.create({
           data: {
@@ -310,12 +317,6 @@ export class MockExamImportService {
             }
           }
         }
-        if (target) {
-          await (tx as any).mockExam.update({
-            where: { id: exam.id },
-            data: { contentVersion: { increment: 1 } },
-          });
-        }
         const importRow = await (tx as any).mockExamImport.create({
           data: {
             createdById: actor.id,
@@ -359,7 +360,7 @@ export class MockExamImportService {
           });
         }
         return { examId: exam.id, importId: importRow.id, addedToExisting: !!target };
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
       await this.audit.log({
         userId: actor.id,
         action: result.addedToExisting ? 'mock.exam.import.append' : 'mock.exam.import',
@@ -376,6 +377,9 @@ export class MockExamImportService {
         editorUrl: `/exam-builder/${result.examId}`,
       };
     } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Another editor changed this exam. Reload before importing', 409);
+      }
       // Concurrent retry: unique buzilishi → replay yoki 409 (preflight poygasi).
       if (typeof e === 'object' && e !== null && (e as any).code === 'P2002') {
         const raced = await this.prisma.mockExamImport.findUnique({

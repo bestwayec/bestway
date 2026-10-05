@@ -135,6 +135,7 @@ describe('shared objective question engine', () => {
     const path = await import('node:path');
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../docs/ai-test-import/example-reading.json'), 'utf8'));
     pkg.exam.practiceLevel = 'A2';
+    pkg.exam.type = 'multilevel';
     const decision = pkg.exam.sections[0].groups[1].questions.find((q: { type: string }) => q.type === 'true_false_notgiven');
     decision.correctAnswers = ['NO_INFORMATION'];
     decision.options = ['TRUE', 'FALSE', 'NO_INFORMATION'];

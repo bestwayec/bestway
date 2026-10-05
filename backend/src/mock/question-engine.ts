@@ -20,8 +20,9 @@ export function canonicalDecision(value: string): string {
 
 export function respectsAnswerRule(value: string, rule: AnswerRule): boolean {
   const tokens = strictAnswerText(value).split(' ').filter(Boolean);
-  const numeric = tokens.filter((token) => /^\d+(?:[.,]\d+)?$/.test(token)).length;
-  const words = tokens.length - numeric;
+  const numeric = tokens.filter((token) => /^[+-]?\d+(?:[.,:/-]\d+)*%?$/.test(token)).length;
+  const words = tokens.filter((token) => /^[\p{L}]+(?:[-'’][\p{L}]+)*$/u.test(token)).length;
+  if (words + numeric !== tokens.length) return false;
   return rule === 'ONE_WORD'
     ? tokens.length === 1 && words === 1
     : tokens.length > 0 && words <= 1 && numeric <= 1;

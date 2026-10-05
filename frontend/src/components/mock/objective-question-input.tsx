@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
+import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
 export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false }: {
@@ -13,7 +13,8 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   disabled?: boolean;
 }) {
   const multiple = q.type === "multi_select";
-  const selected = multiple ? value.split(",").map((v) => v.trim()) : [value];
+  const options = objectiveOptions(q);
+  const selected = multiple ? selectedObjectiveOptions(value, options) : [value];
   const hint = answerRuleHint(q);
   return (
     <div className="space-y-2">
@@ -32,7 +33,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                 return (
                   <label key={option} className={cn("flex min-h-10 items-center gap-3 rounded-[6px] border px-3 py-1.5 text-sm leading-snug", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-border-strong")}>
                     <input type={multiple ? "checkbox" : "radio"} name={`objective-answer-${q.id}`} value={option} checked={checked} disabled={disabled || unavailable}
-                      onChange={() => onChange(multiple ? toggleObjectiveOption(value, option) : option)} className="size-4 shrink-0 accent-brand" />
+                      onChange={() => onChange(multiple ? toggleObjectiveOption(value, option, options) : option)} className="size-4 shrink-0 accent-brand" />
                     <span className="min-w-0 flex-1 break-words">{option}</span>
                     {unavailable && <span className="text-xs text-fg-subtle">Already used</span>}
                   </label>

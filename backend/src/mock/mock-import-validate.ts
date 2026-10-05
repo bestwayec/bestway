@@ -196,6 +196,7 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
     if (typeof exam['description'] !== 'string') add('EXAM_DESC', '/exam/description', 'exam.description must be a string', ['import']);
     if (typeof exam['level'] !== 'string') add('EXAM_LEVEL', '/exam/level', 'exam.level must be a string', ['import']);
     if (exam.practiceLevel != null && !['A1','A2','B1','B2','C1'].includes(String(exam.practiceLevel))) add('ENUM_INVALID', '/exam/practiceLevel', 'practiceLevel must be A1, A2, B1, B2 or C1', ['import']);
+    if (exam.practiceLevel != null && (exam.type !== 'multilevel' || profile !== 'practice')) add('PRACTICE_LEVEL', '/exam/practiceLevel', 'practiceLevel is only available for Multilevel practice packages', ['import']);
     if (typeof exam['isDemo'] !== 'boolean') add('EXAM_DEMO', '/exam/isDemo', 'exam.isDemo must be boolean', ['import']);
     if (!Number.isInteger(exam['price']) || (exam['price'] as number) < 0) add('EXAM_PRICE', '/exam/price', 'exam.price must be a non-negative integer', ['import']);
     if (typeof exam['isFreeForApproved'] !== 'boolean') add('EXAM_FREE', '/exam/isFreeForApproved', 'exam.isFreeForApproved must be boolean', ['import']);
@@ -594,13 +595,13 @@ export function validateImportPackage(pkg: unknown, opts: ValidateOptions = {}):
         const listening = bySkill.get('listening');
         const reading = bySkill.get('reading');
         const writing = bySkill.get('writing');
-        if (!listening || listening.groups < 4 || listening.questions !== 40) {
+        if (!listening || listening.groups !== 4 || listening.questions !== 40 || listening.parts.size !== 4 || ![1, 2, 3, 4].every((part) => listening.parts.has(part))) {
           add('PROFILE_BLUEPRINT', '/exam/sections', `full_mock listening needs 4 parts / 40 questions (found ${listening?.groups ?? 0} groups, ${listening?.questions ?? 0} questions)`, ['publish']);
         }
-        if (!reading || reading.groups < 3 || reading.questions !== 40) {
+        if (!reading || reading.groups !== 3 || reading.questions !== 40) {
           add('PROFILE_BLUEPRINT', '/exam/sections', `full_mock reading needs 3 groups / 40 questions (found ${reading?.groups ?? 0} groups, ${reading?.questions ?? 0} questions)`, ['publish']);
         }
-        if (!writing || !writing.types.has('essay_task1') || !writing.types.has('essay_task2')) {
+        if (!writing || writing.questions !== 2 || !writing.types.has('essay_task1') || !writing.types.has('essay_task2')) {
           add('PROFILE_BLUEPRINT', '/exam/sections', 'full_mock writing needs task 1 and task 2', ['publish']);
         }
       }

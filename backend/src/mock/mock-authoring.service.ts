@@ -111,17 +111,23 @@ export class MockAuthoringService {
 
   async updateExam(actor: AuthUser, id: string, dto: UpdateMockExamDto) {
     const existing = await this.examOrThrow(id);
-    await this.assertCanAuthor(actor, id);
+    await this.assertCanAuthor(actor, id, false);
+    const profileChanges = dto.profile !== undefined && dto.profile !== existing.profile;
+    if (profileChanges &&
+        await this.prisma.mockAttempt.count({ where: { examId: id } }) > 0) {
+      throw new AppException('EXAM_VERSION_IN_USE', 'Clone this exam before changing the profile used by attempts', 409);
+    }
     this.assertPracticeLevel(existing.type, dto.profile ?? existing.profile, dto.practiceLevel !== undefined ? dto.practiceLevel : existing.practiceLevel);
-    if (dto.isPublished === true) {
-      const ready = await this.readiness(actor, id);
+    const requiresReadiness = dto.isPublished === true || (existing.isPublished && dto.isPublished !== false && profileChanges);
+    if (requiresReadiness) {
+      const ready = await this.readiness(actor, id, dto.profile ?? existing.profile);
       if (!ready.ready) {
         const bad = ready.items.filter((i) => !i.ok).map((i) => i.detail || i.key).join('; ');
         throw new AppException('MOCK_NOT_READY', `Exam not ready to publish: ${bad}`, 400);
       }
     }
-    const updated = await this.prisma.mockExam.update({
-      where: { id },
+    const update: Prisma.MockExamUpdateArgs = {
+      where: { id, ...((requiresReadiness || profileChanges) ? { contentVersion: existing.contentVersion } : {}), ...(profileChanges ? { attempts: { none: {} } } : {}) },
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
         ...(dto.assessmentPolicy !== undefined ? { assessmentPolicy: dto.assessmentPolicy } : {}),
@@ -129,6 +135,7 @@ export class MockAuthoringService {
         ...(dto.level !== undefined ? { level: dto.level } : {}),
         ...(dto.practiceLevel !== undefined ? { practiceLevel: dto.practiceLevel } : {}),
         ...(dto.profile !== undefined ? { profile: dto.profile } : {}),
+        ...(profileChanges ? { contentVersion: { increment: 1 } } : {}),
         ...(dto.isPublished !== undefined ? { isPublished: dto.isPublished } : {}),
         ...(dto.isDemo !== undefined ? { isDemo: dto.isDemo } : {}),
         ...(dto.price !== undefined ? { price: dto.price } : {}),
@@ -136,6 +143,17 @@ export class MockAuthoringService {
           ? { isFreeForApproved: dto.isFreeForApproved }
           : {}),
       },
+    };
+    const write = requiresReadiness || profileChanges
+      ? this.prisma.$transaction((tx) => tx.mockExam.update(update), {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000,
+      })
+      : this.prisma.mockExam.update(update);
+    const updated = await write.catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2025', 'P2034'].includes(error.code)) {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam content changed. Reload and validate again before publishing', 409);
+      }
+      throw error;
     });
     await this.audit.log({
       userId: actor.id,
@@ -153,6 +171,8 @@ export class MockAuthoringService {
       include: { sections: { include: { groups: true } } },
     });
     if (!exam) throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+    await this.assertCanAuthor(actor, id);
+    await this.mutateContent(id, (tx) => tx.mockExam.delete({ where: { id } }));
     // Media fayllarni tozalash
     for (const s of exam.sections) {
       for (const g of s.groups) {
@@ -160,7 +180,6 @@ export class MockAuthoringService {
         if (g.imageKey) this.storage.delete(g.imageKey);
       }
     }
-    await this.prisma.mockExam.delete({ where: { id } });
     await this.audit.log({
       userId: actor.id,
       action: 'mock.exam.delete',
@@ -296,7 +315,7 @@ export class MockAuthoringService {
     if (exists) {
       throw new AppException('MOCK_SECTION_EXISTS', 'Bu bo\'lim allaqachon mavjud', 409);
     }
-    const section = await this.prisma.mockSection.create({
+    const section = await this.mutateContent(examId, (tx) => tx.mockSection.create({
       data: {
         examId,
         skill: dto.skill,
@@ -305,7 +324,7 @@ export class MockAuthoringService {
         durationMinutes: dto.durationMinutes,
         instructions: dto.instructions,
       },
-    });
+    }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.section.create',
@@ -319,7 +338,7 @@ export class MockAuthoringService {
   async updateSection(actor: AuthUser, sectionId: string, dto: UpdateSectionDto) {
     const section = await this.sectionOrThrow(sectionId);
     await this.assertCanAuthor(actor, section.examId);
-    const updated = await this.prisma.mockSection.update({
+    const updated = await this.mutateContent(section.examId, (tx) => tx.mockSection.update({
       where: { id: sectionId },
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
@@ -327,7 +346,7 @@ export class MockAuthoringService {
         ...(dto.durationMinutes !== undefined ? { durationMinutes: dto.durationMinutes } : {}),
         ...(dto.instructions !== undefined ? { instructions: dto.instructions } : {}),
       },
-    });
+    }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.section.update',
@@ -344,11 +363,11 @@ export class MockAuthoringService {
     });
     if (!section) throw new AppException('MOCK_SECTION_NOT_FOUND', 'Bo\'lim topilmadi', 404);
     await this.assertCanAuthor(actor, section.examId);
+    await this.mutateContent(section.examId, (tx) => tx.mockSection.delete({ where: { id: sectionId } }));
     for (const g of section.groups) {
       if (g.audioKey) this.storage.delete(g.audioKey);
       if (g.imageKey) this.storage.delete(g.imageKey);
     }
-    await this.prisma.mockSection.delete({ where: { id: sectionId } });
     await this.audit.log({
       userId: actor.id,
       action: 'mock.section.delete',
@@ -368,7 +387,7 @@ export class MockAuthoringService {
     const contentHtml = sanitizeMockContent(dto.contentHtml);
     const audioScript = sanitizeMockContent(dto.audioScript);
     assertDraftGapNumbers(contentHtml);
-    const group = await this.prisma.mockQuestionGroup.create({
+    const group = await this.mutateContent(section.examId, (tx) => tx.mockQuestionGroup.create({
       data: {
         sectionId,
         sortOrder: dto.sortOrder ?? count,
@@ -383,7 +402,7 @@ export class MockAuthoringService {
         audioDurationSec: dto.audioDurationSec,
         audioPlayLimit: dto.audioPlayLimit ?? 1,
       },
-    });
+    }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.group.create',
@@ -400,7 +419,7 @@ export class MockAuthoringService {
       include: { questions: { select: { number: true } } },
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
-    await this.assertCanAuthorForGroup(actor, groupId);
+    const examId = await this.assertCanAuthorForGroup(actor, groupId);
     if (dto.partNumber !== undefined) {
       const section = await this.sectionOrThrow(group.sectionId);
       await this.assertProgramPartNumber(section.examId, dto.partNumber);
@@ -412,7 +431,7 @@ export class MockAuthoringService {
       ? sanitizeMockContent(dto.audioScript)
       : group.audioScript;
     assertDraftGapNumbers(contentHtml);
-    const updated = await this.prisma.mockQuestionGroup.update({
+    const updated = await this.mutateContent(examId, (tx) => tx.mockQuestionGroup.update({
       where: { id: groupId },
       data: {
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
@@ -427,7 +446,7 @@ export class MockAuthoringService {
         ...(dto.audioDurationSec !== undefined ? { audioDurationSec: dto.audioDurationSec } : {}),
         ...(dto.audioPlayLimit !== undefined ? { audioPlayLimit: dto.audioPlayLimit } : {}),
       },
-    });
+    }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.group.update',
@@ -445,10 +464,10 @@ export class MockAuthoringService {
 
   async deleteGroup(actor: AuthUser, groupId: string) {
     const group = await this.groupOrThrow(groupId);
-    await this.assertCanAuthorForGroup(actor, groupId);
+    const examId = await this.assertCanAuthorForGroup(actor, groupId);
+    await this.mutateContent(examId, (tx) => tx.mockQuestionGroup.delete({ where: { id: groupId } }));
     if (group.audioKey) this.storage.delete(group.audioKey);
     if (group.imageKey) this.storage.delete(group.imageKey);
-    await this.prisma.mockQuestionGroup.delete({ where: { id: groupId } });
     await this.audit.log({
       userId: actor.id,
       action: 'mock.group.delete',
@@ -465,7 +484,7 @@ export class MockAuthoringService {
     files: { audio?: Express.Multer.File[]; image?: Express.Multer.File[] },
   ) {
     const group = await this.groupOrThrow(groupId);
-    await this.assertCanAuthorForGroup(actor, groupId);
+    const examId = await this.assertCanAuthorForGroup(actor, groupId);
     const data: Prisma.MockQuestionGroupUpdateInput = {};
     const audio = files.audio?.[0];
     const image = files.image?.[0];
@@ -473,14 +492,19 @@ export class MockAuthoringService {
       throw new AppException('NO_FILE', 'Fayl yuklanmadi (audio yoki image)', 400);
     }
     if (audio) {
-      if (group.audioKey) this.storage.delete(group.audioKey);
       data.audioKey = `mock/${audio.filename}`;
     }
     if (image) {
-      if (group.imageKey) this.storage.delete(group.imageKey);
       data.imageKey = `mock/${image.filename}`;
     }
-    const updated = await this.prisma.mockQuestionGroup.update({ where: { id: groupId }, data });
+    const { updated, version } = await this.mutateContent(examId, async (tx) => {
+      const updated = await tx.mockQuestionGroup.update({ where: { id: groupId }, data });
+      const exam = await tx.mockExam.findUnique({ where: { id: examId }, select: { contentVersion: true } });
+      if (!exam) throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam changed while saving media', 409);
+      return { updated, version: exam.contentVersion };
+    });
+    if (audio && group.audioKey) this.storage.delete(group.audioKey);
+    if (image && group.imageKey) this.storage.delete(group.imageKey);
     await this.audit.log({
       userId: actor.id,
       action: 'mock.group.media',
@@ -492,6 +516,7 @@ export class MockAuthoringService {
       hasAudio: !!updated.audioKey,
       audioUrl: updated.audioKey ? `${this.base}/mock/groups/${groupId}/audio` : null,
       imageUrl: updated.imageKey ? `${this.base}/mock/groups/${groupId}/image` : null,
+      version,
     };
   }
 
@@ -516,6 +541,9 @@ export class MockAuthoringService {
       },
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
+    if (!isStaff(viewer) && !group.section.exam.isPublished && !group.section.exam.isDemo) {
+      throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+    }
     const key = kind === 'audio' ? group.audioKey : group.imageKey;
     if (kind === 'audio' && group.section.exam.type === 'multilevel' && viewer?.role === 'student') {
       const timed = await this.prisma.mockAttempt.findFirst({ where: { studentId: viewer.id, examId: group.section.exam.id, mode: 'timed', status: 'in_progress' } });
@@ -586,7 +614,7 @@ export class MockAuthoringService {
       include: { section: { select: { skill: true, exam: { select: { type: true } } } } },
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
-    await this.assertCanAuthorForGroup(actor, groupId);
+    const examId = await this.assertCanAuthorForGroup(actor, groupId);
 
     const parsed = parseQuestions(dto.text);
     if (parsed.questions.length === 0) {
@@ -641,24 +669,19 @@ export class MockAuthoringService {
       );
     }
 
-    // Muqaddima (Questions 1-5: ...) — blok ko'rsatmasi bo'sh bo'lsa to'ldiramiz
-    if (parsed.instructions && !group.instructions) {
-      await this.prisma.mockQuestionGroup.update({
-        where: { id: groupId },
-        data: { instructions: parsed.instructions },
-      });
-    }
-    await this.prisma.mockQuestion.createMany({ data });
+    const questions = await this.mutateContent(examId, async (tx) => {
+      if (parsed.instructions && !group.instructions) {
+        await tx.mockQuestionGroup.update({ where: { id: groupId }, data: { instructions: parsed.instructions } });
+      }
+      await tx.mockQuestion.createMany({ data });
+      return tx.mockQuestion.findMany({ where: { groupId }, orderBy: { sortOrder: 'asc' } });
+    });
     await this.audit.log({
       userId: actor.id,
       action: 'mock.questions.import',
       entity: 'mockQuestionGroup',
       entityId: groupId,
       newValue: { count: data.length },
-    });
-    const questions = await this.prisma.mockQuestion.findMany({
-      where: { groupId },
-      orderBy: { sortOrder: 'asc' },
     });
     return { added: data.length, questions };
   }
@@ -766,18 +789,20 @@ export class MockAuthoringService {
         include: { questions: { orderBy: [{ sortOrder: 'asc' }, { number: 'asc' }] } },
       });
       if (!freshGroup) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
-      // Version bump faqat tekshiruv so'ralganda — eski mijozlar o'zgarishsiz ishlaydi.
-      let version = (exam as { contentVersion?: number }).contentVersion ?? 1;
-      if (checkVersion !== undefined) {
-        const bumped = await tx.mockExam.update({
-          where: { id: exam.id },
-          data: { contentVersion: { increment: 1 } },
-          select: { contentVersion: true },
-        });
-        version = bumped.contentVersion;
-      }
+      // Every successful content write invalidates snapshots held by other editors.
+      const bumped = await tx.mockExam.update({
+        where: { id: exam.id, isPublished: false, attempts: { none: {} } },
+        data: { contentVersion: { increment: 1 } },
+        select: { contentVersion: true },
+      });
+      const version = bumped.contentVersion;
       return { saved: questions.length, questions, group: freshGroup, version };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 }).catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2025', 'P2034'].includes(error.code)) {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam content changed. Reload before saving', 409);
+      }
+      throw error;
+    });
     await this.audit.log({ userId: actor.id, action: 'mock.group.content.save', entity: 'mockQuestionGroup', entityId: groupId, newValue: { count: result.saved } });
     return result;
   }
@@ -788,7 +813,7 @@ export class MockAuthoringService {
       include: { section: { select: { skill: true, exam: { select: { type: true } } } } },
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
-    await this.assertCanAuthorForGroup(actor, groupId);
+    const examId = await this.assertCanAuthorForGroup(actor, groupId);
 
     const isAuto = AUTO_SKILLS.includes(group.section.skill);
     const base = await this.prisma.mockQuestion.count({ where: { groupId } });
@@ -807,20 +832,23 @@ export class MockAuthoringService {
       if (coll.length) throw new AppException('VALIDATION_ERROR', `Already used in this exam: ${[...new Set(coll)].join(', ')}`, 400);
     }
 
-    await this.prisma.mockQuestion.createMany({
-      data: dto.questions.map((q, i) => ({
-        groupId,
-        number: q.number,
-        sortOrder: q.sortOrder ?? base + i,
-        type: q.type,
-        prompt: q.prompt,
-        options: q.options ? (q.options as Prisma.InputJsonValue) : undefined,
-        correctAnswers: q.correctAnswers ? (q.correctAnswers as Prisma.InputJsonValue) : undefined,
-        acceptedVariants: q.acceptedVariants ? (q.acceptedVariants as Prisma.InputJsonValue) : undefined,
-        points: this.resolvePoints(group.section.exam.type, isAuto, q.points, `#${i + 1}-savol: `),
-        wordLimit: q.wordLimit,
-        answerRule: q.answerRule,
-      })),
+    const questions = await this.mutateContent(examId, async (tx) => {
+      await tx.mockQuestion.createMany({
+        data: dto.questions.map((q, i) => ({
+          groupId,
+          number: q.number,
+          sortOrder: q.sortOrder ?? base + i,
+          type: q.type,
+          prompt: q.prompt,
+          options: q.options ? (q.options as Prisma.InputJsonValue) : undefined,
+          correctAnswers: q.correctAnswers ? (q.correctAnswers as Prisma.InputJsonValue) : undefined,
+          acceptedVariants: q.acceptedVariants ? (q.acceptedVariants as Prisma.InputJsonValue) : undefined,
+          points: this.resolvePoints(group.section.exam.type, isAuto, q.points, `#${i + 1}-savol: `),
+          wordLimit: q.wordLimit,
+          answerRule: q.answerRule,
+        })),
+      });
+      return tx.mockQuestion.findMany({ where: { groupId }, orderBy: { sortOrder: 'asc' } });
     });
     await this.audit.log({
       userId: actor.id,
@@ -830,10 +858,6 @@ export class MockAuthoringService {
       newValue: { count: dto.questions.length },
     });
 
-    const questions = await this.prisma.mockQuestion.findMany({
-      where: { groupId },
-      orderBy: { sortOrder: 'asc' },
-    });
     return { added: dto.questions.length, questions };
   }
 
@@ -845,7 +869,7 @@ export class MockAuthoringService {
       },
     });
     if (!question) throw new AppException('MOCK_QUESTION_NOT_FOUND', 'Savol topilmadi', 404);
-    await this.assertCanAuthorForQuestion(actor, questionId);
+    const examId = await this.assertCanAuthorForQuestion(actor, questionId);
 
     const type = dto.type ?? question.type;
     const isAuto = AUTO_SKILLS.includes(question.group.section.skill);
@@ -862,7 +886,7 @@ export class MockAuthoringService {
     };
     this.validateQuestion(merged, isAuto, 0);
 
-    const updated = await this.prisma.mockQuestion.update({
+    const updated = await this.mutateContent(examId, (tx) => tx.mockQuestion.update({
       where: { id: questionId },
       data: {
         ...(dto.number !== undefined ? { number: dto.number } : {}),
@@ -890,7 +914,7 @@ export class MockAuthoringService {
         ...(dto.wordLimit !== undefined ? { wordLimit: dto.wordLimit } : {}),
         ...(dto.answerRule !== undefined ? { answerRule: dto.answerRule } : {}),
       },
-    });
+    }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.question.update',
@@ -903,8 +927,8 @@ export class MockAuthoringService {
   async deleteQuestion(actor: AuthUser, questionId: string) {
     const question = await this.prisma.mockQuestion.findUnique({ where: { id: questionId } });
     if (!question) throw new AppException('MOCK_QUESTION_NOT_FOUND', 'Savol topilmadi', 404);
-    await this.assertCanAuthorForQuestion(actor, questionId);
-    await this.prisma.mockQuestion.delete({ where: { id: questionId } });
+    const examId = await this.assertCanAuthorForQuestion(actor, questionId);
+    await this.mutateContent(examId, (tx) => tx.mockQuestion.delete({ where: { id: questionId } }));
     await this.audit.log({
       userId: actor.id,
       action: 'mock.question.delete',
@@ -1018,7 +1042,7 @@ export class MockAuthoringService {
   }
 
   /** Publish-readiness checklist — nashr oldidan kamchiliklarni ko'rsatadi (bloklamaydi). */
-  async readiness(actor: AuthUser, id: string) {
+  async readiness(actor: AuthUser, id: string, effectiveProfile?: string) {
     const exam = await this.prisma.mockExam.findUnique({
       where: { id },
       include: {
@@ -1034,7 +1058,7 @@ export class MockAuthoringService {
 
     // Profile-aware publish gate: practice validates only existing content,
     // full_mock additionally enforces the strict IELTS blueprint.
-    const profile = (exam as { profile?: string }).profile ?? 'practice';
+    const profile = effectiveProfile ?? (exam as { profile?: string }).profile ?? 'practice';
     const isFullMock = profile === 'full_mock';
     const bySkill = new Map(exam.sections.map((s) => [s.skill, s]));
     const items: Array<{ key: string; ok: boolean; detail: string }> = [];
@@ -1075,9 +1099,11 @@ export class MockAuthoringService {
           const parts = new Set(groups.map((g) => g.partNumber).filter((p) => p != null));
           items.push({
             key: 'listening_parts',
-            ok: groups.length >= 4 && parts.size >= 4,
+            ok: groups.length === 4 && parts.size === 4 && [1, 2, 3, 4].every((part) => parts.has(part)),
             detail: `${groups.length} groups, parts: ${[...parts].sort().join(',') || '—'}`,
           });
+          const count = groups.reduce((total, group) => total + group.questions.length, 0);
+          items.push({ key: 'listening_questions', ok: count === 40, detail: `${count}/40 questions` });
         }
         items.push({
           key: 'listening_audio',
@@ -1087,6 +1113,11 @@ export class MockAuthoringService {
       }
       if (skill === 'reading') {
         const groups = section.groups as Array<{ passageText: string | null; contentHtml?: string | null; questions: unknown[] }>;
+        if (isFullMock && exam.type !== 'multilevel') {
+          const count = groups.reduce((total, group) => total + group.questions.length, 0);
+          items.push({ key: 'reading_groups', ok: groups.length === 3, detail: `${groups.length}/3 passages` });
+          items.push({ key: 'reading_questions', ok: count === 40, detail: `${count}/40 questions` });
+        }
         const missingPassage = groups.filter((g) => g.questions.length > 0 && !g.passageText?.trim() && !g.contentHtml?.trim()).length;
         items.push({
           key: 'reading_passage',
@@ -1100,8 +1131,8 @@ export class MockAuthoringService {
           const types = new Set(questions.map((q) => q.type));
           items.push({
             key: 'writing_tasks',
-            ok: types.has('essay_task1') && types.has('essay_task2'),
-            detail: `tasks: ${[...types].join(',') || '—'}`,
+            ok: questions.length === 2 && types.has('essay_task1') && types.has('essay_task2'),
+            detail: `${questions.length}/2 tasks: ${[...types].join(',') || '—'}`,
           });
         } else {
           const essays = questions.filter(
@@ -1173,6 +1204,29 @@ export class MockAuthoringService {
 
     const total = questionTotal;
     items.push({ key: 'total_questions', ok: total > 0, detail: `${total} question(s)` });
+
+    // Resolving a review warning must not publish generated template prose.
+    // Match the case-sensitive scaffold prefixes, not ordinary "replace" prose.
+    const templateMarker = /\bREPLACE(?:\s+[—-]\s+|\s+WITH THE COMPLETE TEXT FOR READING PASSAGE\b)/;
+    const hasMarker = (values: unknown[]) => values.some((value) => typeof value === 'string' && templateMarker.test(value));
+    const generatedTemplate = await this.prisma.mockImportReviewIssue.count({ where: {
+      import: { examId: id }, OR: [
+        { message: { startsWith: 'Template placeholders and sample answer keys must be replaced' } },
+        { message: { startsWith: 'Replace and verify all Listening placeholders and answer keys' } },
+        { message: { startsWith: 'Replace and verify all Part ' } },
+      ],
+    } }) > 0;
+    let placeholderBlocks = hasMarker([exam.title, exam.description]) ? 1 : 0;
+    for (const section of exam.sections) if (hasMarker([section.title, section.instructions])) placeholderBlocks++;
+    for (const section of exam.sections) for (const group of section.groups) {
+      const values: unknown[] = [group.title, group.passageText, group.contentHtml, group.audioScript, group.instructions,
+        ...group.questions.flatMap((question) => [question.prompt, ...(Array.isArray(question.options) ? question.options : [])])];
+      const placeholderKey = generatedTemplate && group.questions.some((question) =>
+        [question.correctAnswers, question.acceptedVariants].some((answers) => Array.isArray(answers) && answers.includes('REPLACE')));
+      if (placeholderKey || hasMarker(values)) placeholderBlocks++;
+    }
+    items.push({ key: 'template_placeholders', ok: placeholderBlocks === 0,
+      detail: placeholderBlocks ? `${placeholderBlocks} content block(s) still contain generated template placeholders` : 'no generated template placeholders' });
 
     // AI import review issues: teacher resolve qilgunga qadar publish bloklanadi.
     const openImportIssues = await this.prisma.mockImportReviewIssue.count({
@@ -1274,36 +1328,61 @@ export class MockAuthoringService {
    * Teacher faqat O'ZI yaratgan imtihonni tahrirlaydi (createdById).
    * Admin/super_admin — barcha imtihonlar. Eski (createdById=null) imtihonlar teacher uchun yopiq.
    */
-  private async assertCanAuthor(actor: AuthUser, examId: string): Promise<void> {
+  private async assertCanAuthor(actor: AuthUser, examId: string, contentChange = true): Promise<void> {
     const exam = await this.examOrThrow(examId);
-    if (actor.role === 'teacher' && exam.createdById !== actor.id) {
+    if (!['admin', 'super_admin', 'teacher'].includes(actor.role) ||
+        (actor.role === 'teacher' && exam.createdById !== actor.id)) {
       throw new AppException(
         'MOCK_NOT_OWNER',
         'Bu imtihonni faqat yaratgan o‘qituvchi (yoki admin) tahrirlay oladi',
         403,
       );
     }
-    if (exam.type === 'multilevel' && await this.prisma.mockAttempt.count({ where: { examId } }) > 0) {
-      throw new AppException('EXAM_VERSION_IN_USE', 'Clone this Multilevel exam before editing content used by attempts', 409);
+    if (contentChange && exam.isPublished) {
+      throw new AppException('MOCK_CONTENT_LOCKED', 'Unpublish an unused draft or clone this exam before editing published content', 409);
+    }
+    if (contentChange && await this.prisma.mockAttempt.count({ where: { examId } }) > 0) {
+      throw new AppException('EXAM_VERSION_IN_USE', 'Clone this exam before editing content used by attempts', 409);
     }
   }
 
-  private async assertCanAuthorForGroup(actor: AuthUser, groupId: string): Promise<void> {
+  private async assertCanAuthorForGroup(actor: AuthUser, groupId: string): Promise<string> {
     const group = await this.prisma.mockQuestionGroup.findUnique({
       where: { id: groupId },
       select: { section: { select: { examId: true } } },
     });
     if (!group) throw new AppException('MOCK_GROUP_NOT_FOUND', 'Blok topilmadi', 404);
     await this.assertCanAuthor(actor, group.section.examId);
+    return group.section.examId;
   }
 
-  private async assertCanAuthorForQuestion(actor: AuthUser, questionId: string): Promise<void> {
+  private async assertCanAuthorForQuestion(actor: AuthUser, questionId: string): Promise<string> {
     const question = await this.prisma.mockQuestion.findUnique({
       where: { id: questionId },
       select: { group: { select: { section: { select: { examId: true } } } } },
     });
     if (!question) throw new AppException('MOCK_QUESTION_NOT_FOUND', 'Savol topilmadi', 404);
     await this.assertCanAuthor(actor, question.group.section.examId);
+    return question.group.section.examId;
+  }
+
+  /** The exam row serializes legacy writes against publishing and invalidates stale drafts. */
+  private async mutateContent<T>(examId: string, mutate: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const locked = await tx.mockExam.updateMany({
+          where: { id: examId, isPublished: false, attempts: { none: {} } },
+          data: { contentVersion: { increment: 1 } },
+        });
+        if (locked.count !== 1) throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam state changed. Reload or clone before editing', 409);
+        return mutate(tx);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Another editor changed this exam. Reload before saving', 409);
+      }
+      throw error;
+    }
   }
 
   private async sectionOrThrow(id: string) {
