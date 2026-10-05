@@ -63,10 +63,10 @@ export class MockAttemptService {
     }
     // Pullik kirish tekshiruvi
     await this.access.assertCanStart(student, exam);
-    const existing = await this.prisma.mockAttempt.findFirst({
+    const existing = await this.withDefinitionLock(exam, (tx) => tx.mockAttempt.findFirst({
       where: { studentId: student.id, examId, status: 'in_progress' },
       include: { answers: true },
-    });
+    }));
     if (existing) {
       // Migration stamps exam definitions, never historical attempts. Resume
       // the original contract even if its content predates the new blueprint.
@@ -131,28 +131,21 @@ export class MockAttemptService {
       // Faqat speaking'dan iborat exam timed bo'lsa ham — deadline null.
     }
 
-    let attempt: MockAttempt;
-    try {
-      attempt = await this.prisma.mockAttempt.create({
-        data: {
-          examId,
-          studentId: student.id,
-          specificationVersion: exam.specificationVersion,
-          speakingProfileVersion: exam.speakingProfileVersion ?? null,
-          mode,
-          deadlineAt,
-          ...(sectionDeadlines ? { sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue } : {}),
-          ...(overallDeadlineAt ? { overallDeadlineAt } : {}),
-        },
-      });
-    } catch (err) {
-      const raced = await this.prisma.mockAttempt.findFirst({
-        where: { studentId: student.id, examId, status: 'in_progress' },
-        include: { answers: true },
-      });
-      if (!raced) throw err;
-      return this.resumeResponse(raced, shaped, duration);
+    const opened = await this.openAttempt(exam, {
+      examId,
+      studentId: student.id,
+      specificationVersion: exam.specificationVersion,
+      speakingProfileVersion: exam.speakingProfileVersion ?? null,
+      mode,
+      deadlineAt,
+      ...(sectionDeadlines ? { sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue } : {}),
+      ...(overallDeadlineAt ? { overallDeadlineAt } : {}),
+    });
+    if (opened.resumed) {
+      const resumeExam = { ...exam, specificationVersion: opened.attempt.specificationVersion, speakingProfileVersion: opened.attempt.speakingProfileVersion ?? null };
+      return this.resumeResponse(opened.attempt, shapeExam(resumeExam as unknown as ExamRow, false, this.base), duration);
     }
+    const attempt = opened.attempt;
     return {
       attemptId: attempt.id,
       resumed: false,
@@ -203,32 +196,25 @@ export class MockAttemptService {
     // guard L/R/W; the speaking key is simply omitted (missing key tolerated).
     const overallDeadline: Date | null = hasSpeaking ? null : writingDeadline;
 
-    let attempt: MockAttempt;
-    try {
-      attempt = await this.prisma.mockAttempt.create({
-        data: {
-          examId,
-          studentId: student.id,
-          specificationVersion: exam.specificationVersion,
-          speakingProfileVersion: exam.speakingProfileVersion ?? null,
-          mode: 'timed',
-          deadlineAt: overallDeadline,
-          flowMode: 'full_test',
-          currentSkill: 'listening',
-          sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue,
-          overallDeadlineAt: overallDeadline,
-          audioPlays: {} as unknown as Prisma.InputJsonValue,
-          submittedSections: [] as unknown as Prisma.InputJsonValue,
-        },
-      });
-    } catch (err) {
-      const raced = await this.prisma.mockAttempt.findFirst({
-        where: { studentId: student.id, examId, status: 'in_progress' },
-        include: { answers: true },
-      });
-      if (!raced) throw err;
-      return this.resumeResponse(raced, shaped, totalDuration(exam));
+    const opened = await this.openAttempt(exam, {
+      examId,
+      studentId: student.id,
+      specificationVersion: exam.specificationVersion,
+      speakingProfileVersion: exam.speakingProfileVersion ?? null,
+      mode: 'timed',
+      deadlineAt: overallDeadline,
+      flowMode: 'full_test',
+      currentSkill: 'listening',
+      sectionDeadlines: sectionDeadlines as unknown as Prisma.InputJsonValue,
+      overallDeadlineAt: overallDeadline,
+      audioPlays: {} as unknown as Prisma.InputJsonValue,
+      submittedSections: [] as unknown as Prisma.InputJsonValue,
+    });
+    if (opened.resumed) {
+      const resumeExam = { ...exam, specificationVersion: opened.attempt.specificationVersion, speakingProfileVersion: opened.attempt.speakingProfileVersion ?? null };
+      return this.resumeResponse(opened.attempt, shapeExam(resumeExam, false, this.base), totalDuration(exam));
     }
+    const attempt = opened.attempt;
     return {
       attemptId: attempt.id,
       resumed: false,
@@ -245,6 +231,40 @@ export class MockAttemptService {
       annotations: [],
       savedAnswers: {},
     };
+  }
+
+  /** Definition writes and starts share the exam row lock and Serializable isolation. */
+  private async withDefinitionLock<T>(exam: Pick<ExamRow, 'id' | 'contentVersion'>, run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<Array<{ contentVersion: number; isPublished: boolean; isDemo: boolean }>>`
+          SELECT "contentVersion", "isPublished", "isDemo" FROM "MockExam" WHERE "id" = ${exam.id} FOR UPDATE`;
+        const current = rows[0];
+        if (!current) throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+        if (current.contentVersion !== (exam.contentVersion ?? 1)) {
+          throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam content changed. Reload before starting or resuming', 409);
+        }
+        if (!current.isPublished && !current.isDemo) {
+          throw new AppException('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan', 400);
+        }
+        return run(tx);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2034' || (error.code === 'P2010' && ['40001', '40P01'].includes(String(error.meta?.code))))) {
+        throw new AppException('MOCK_CONTENT_CONFLICT', 'Exam state changed. Reload before starting or resuming', 409);
+      }
+      throw error;
+    }
+  }
+
+  private async openAttempt(exam: Pick<ExamRow, 'id' | 'contentVersion'>, data: Prisma.MockAttemptUncheckedCreateInput) {
+    return this.withDefinitionLock(exam, async (tx) => {
+      const existing = await tx.mockAttempt.findFirst({ where: { studentId: data.studentId, examId: exam.id, status: 'in_progress' }, include: { answers: true } });
+      if (existing) return { attempt: existing, resumed: true };
+      const attempt = await tx.mockAttempt.create({ data, include: { answers: true } });
+      return { attempt, resumed: false };
+    });
   }
 
   /**
