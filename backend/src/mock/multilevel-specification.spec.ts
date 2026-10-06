@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { convertExpertScore, estimateObjective, multilevelBlueprintIssues, multilevelLevel, multilevelOverall, SPEAKING_CONVERSION, WRITING_CONVERSION, taskGuidance } from './multilevel-specification';
+import { convertExpertScore, estimateObjective, MULTILEVEL_VERSION, multilevelBlueprintIssues, multilevelLevel, multilevelOverall, multilevelStartReadiness, SPEAKING_CONVERSION, WRITING_CONVERSION, taskGuidance } from './multilevel-specification';
 import { multilevelFixture } from './multilevel.fixture';
 import { computeSkillTiming } from './mock-shape';
 
@@ -27,6 +27,14 @@ describe('versioned Multilevel specification', () => {
     expect(multilevelBlueprintIssues(fixture, true)).toEqual([]);
     expect(taskGuidance('writing', 0, 0)?.displayLabel).toBe('Task 1.1 — Informal Letter');
     expect(taskGuidance('writing', 1, 0)?.displayLabel).toBe('Task 1.2 — Formal Letter');
+  });
+  it('uses one explicit start contract for the versioned blueprint', () => {
+    const fixture = multilevelFixture();
+    expect(multilevelStartReadiness({ specificationVersion: MULTILEVEL_VERSION, profile: 'full_mock', sections: fixture })).toMatchObject({ supported: true, issues: [] });
+    expect(multilevelStartReadiness({ specificationVersion: null, profile: 'full_mock', sections: fixture })).toMatchObject({
+      supported: false,
+      issues: ['Unsupported Multilevel specification'],
+    });
   });
   it.each(['writing','speaking'] as const)('converts every %s half-point, rejecting invalid scores', (skill) => {
     const table = skill === 'writing' ? WRITING_CONVERSION : SPEAKING_CONVERSION;

@@ -11,7 +11,9 @@ RUN npm run build
 
 FROM node:22.23.2-slim
 WORKDIR /app
+ARG BUILD_COMMIT=unknown
 ENV NODE_ENV=production
+ENV BUILD_COMMIT=${BUILD_COMMIT}
 RUN apt-get update -y && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/* \
   && useradd -m -u 1001 app && mkdir -p /app/storage && chown -R app:app /app
 COPY package*.json ./
