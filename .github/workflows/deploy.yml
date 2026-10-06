@@ -20,6 +20,11 @@ name: Deploy to VPS
 #     step here, so there is exactly ONE migration runner (no race).
 #   - Never `docker compose down` in CI — only up --wait (no dropped volumes).
 #   - Rollback = git revert + push (re-deploys previous image).
+#   - If main's history is ever rewritten (force-push), --ff-only can NEVER
+#     succeed again; the script falls back to hard-syncing the checkout to
+#     origin/main instead of wedging every future deploy. Untracked files
+#     (backend/.env, root .env) are preserved because reset --hard does not
+#     touch them.
 
 on:
   push:
@@ -44,7 +49,15 @@ jobs:
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
             test -f ./backend/.env || { echo "backend/.env missing on VPS"; exit 1; }
-            git pull --ff-only
+            git fetch origin main
+            if git merge --ff-only origin/main; then
+              echo "checkout fast-forwarded to $(git rev-parse --short HEAD)"
+            else
+              echo "WARN: origin/main is not a fast-forward — history was rewritten upstream"
+              echo "      checkout before: $(git rev-parse --short HEAD)"
+              git reset --hard origin/main
+              echo "      checkout after:  $(git rev-parse --short HEAD)"
+            fi
             export BUILD_COMMIT="$(git rev-parse HEAD)"
             if [ -f docker-compose.prod.yml ]; then
               docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait --wait-timeout 90
