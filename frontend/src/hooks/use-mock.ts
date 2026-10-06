@@ -423,6 +423,23 @@ export interface MockReadinessItem {
   detail: string;
 }
 
+export interface MultilevelRepairInspection {
+  exam: { id: string; title: string; isPublished: boolean; contentVersion: number; specificationVersion: string | null };
+  attempts: { attemptCount: number; activeAttemptCount: number; completedAttemptCount: number; submissionCount: number; resultCount: number };
+  readiness: { ready: boolean; exactIssues: string[]; writingProblems: string[]; speakingProblems: string[] };
+  writing: Array<{ task: string; role: string; exists: boolean; maxScore: number | null; expectedMaxScore: number | undefined; stimulusRef: string | null; promptPresent: boolean }>;
+  writingSharesStimulusRef: boolean;
+  speaking: Array<{ part: string; exists: boolean; responseCount: number; expectedResponseCount: number; maxScore: number | null; expectedMaxScore: number | undefined; imageAssetCount: number; requiresTwoPictureAsset: boolean }>;
+  safeRepairAllowed: boolean;
+  specificationVersion: string | null;
+  currentVersion: boolean;
+  historyExists: boolean;
+  requiresUnpublish: boolean;
+  proposedChanges: Array<{ field: string; from: unknown; to: unknown }>;
+  manualAuthoringRequired: string[];
+  recommendedAction: "CREATE_CORRECTED_COPY" | "REPAIR_DRAFT_THEN_REVIEW";
+}
+
 export function useCloneMockExam() {
   const qc = useQueryClient();
   return useMutation({
@@ -439,6 +456,37 @@ export function useMockReadiness(examId: string) {
         `/mock/exams/${examId}/readiness`,
       ),
     enabled: !!examId,
+  });
+}
+
+/** Admin-only, read-only gate; never runs until an administrator opens it. */
+export function useMultilevelRepairInspection(examId: string, enabled = false) {
+  return useQuery({
+    queryKey: ["multilevel-repair-inspection", examId],
+    queryFn: () => api.get<MultilevelRepairInspection>(`/mock/exams/${examId}/multilevel-repair-inspection`),
+    enabled: !!examId && enabled,
+    retry: false,
+  });
+}
+
+export function useApplyMultilevelSafeRepair(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ status: string }>(`/mock/exams/${examId}/apply-multilevel-safe-repair`, { confirm: true }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam", examId] });
+      qc.invalidateQueries({ queryKey: ["mock-readiness", examId] });
+      qc.invalidateQueries({ queryKey: ["multilevel-repair-inspection", examId] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+    },
+  });
+}
+
+export function useCloneCorrectedMultilevel(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ id: string; status: string; sourcePreserved: boolean }>(`/mock/exams/${examId}/clone-corrected-multilevel`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exams"] }),
   });
 }
 

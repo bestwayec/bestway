@@ -108,7 +108,19 @@ export interface BlueprintSection {
   skill: MockSkill;
   groups: Array<{ sortOrder: number; partNumber?: number | null; passageText?: string | null; audioKey?: string | null; audioDurationSec?: number | null; imageKey?: string | null;
     maxScore?: number | null; stimulusRef?: string | null;
-    questions: Array<{ type: string; points: number; options?: unknown; wordLimit?: number | null }> }>;
+    questions: Array<{ type: string; points: number; options?: unknown; wordLimit?: number | null; sortOrder?: number | null }> }>;
+}
+
+/**
+ * The blueprint maps parts and question formats by authored position, so the
+ * persisted order must never depend on physical row order. Callers that load
+ * questions without an explicit order still get the authored sequence.
+ */
+function inAuthoredOrder<T extends { sortOrder?: number | null }>(items: readonly T[]): T[] {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => (a.item.sortOrder ?? a.index) - (b.item.sortOrder ?? b.index) || a.index - b.index)
+    .map(({ item }) => item);
 }
 
 /**
@@ -136,7 +148,7 @@ export function multilevelBlueprintIssues(sections: BlueprintSection[], full: bo
   if (full && sections.length !== 4) issues.push('Full Multilevel mock requires all four sections');
   for (const section of sections) {
     const spec = MULTILEVEL_SPECIFICATION[section.skill];
-    const groups = [...section.groups].sort((a,b) => a.sortOrder - b.sortOrder);
+    const groups = inAuthoredOrder(section.groups);
     if (groups.length !== spec.parts.length) issues.push(`${section.skill}: requires ${spec.parts.length} parts`);
     // The source is a durable authoring relationship, not string equality. Two
     // tasks may phrase their prompts differently while referring to one source
@@ -153,7 +165,7 @@ export function multilevelBlueprintIssues(sections: BlueprintSection[], full: bo
       if ((section.skill === 'writing' || section.skill === 'speaking') && group.maxScore !== p.rawMax) {
         issues.push(`${at}: points must be ${p.rawMax}`);
       }
-      group.questions.forEach((q, qi) => {
+      inAuthoredOrder(group.questions).forEach((q, qi) => {
         let types = p.types;
         if (section.skill === 'reading' && p.key === '4') types = qi < 4 ? ['multiple_choice'] : ['true_false_notgiven'];
         if (section.skill === 'reading' && p.key === '5') types = qi < 4 ? ['short_answer','summary_completion'] : ['multiple_choice'];

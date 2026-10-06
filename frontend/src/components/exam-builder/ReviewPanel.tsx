@@ -51,6 +51,7 @@ import {
 } from "./reading-passage-clusters";
 import { reviewBlockerCount } from "./review-blockers";
 import { tx, type Selection } from "./types";
+import { MultilevelRepairDialog } from "./MultilevelRepairDialog";
 
 const SKILLS: MockSkill[] = ["listening", "reading", "writing", "speaking"];
 
@@ -336,6 +337,8 @@ export function ReviewPanel({
             : tx(t, "reviewHint", "Automatic checks before publishing. Fix every error, then publish.")}
         </p>
       </div>
+
+      {mode === "checks" && <MultilevelRepairDialog examId={examId} detail={detail} />}
 
       {mode === "checks" && (
         <ReviewChecks
