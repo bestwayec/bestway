@@ -110,6 +110,26 @@ export interface BlueprintSection {
     maxScore?: number | null; stimulusRef?: string | null;
     questions: Array<{ type: string; points: number; options?: unknown; wordLimit?: number | null }> }>;
 }
+
+/**
+ * The exact contract used before a new Multilevel attempt may start.
+ * Catalogue and authoring review consume this too, so a displayed `ready`
+ * state always means the saved definition can clear Start's blueprint gate.
+ */
+export function multilevelStartReadiness(exam: {
+  specificationVersion?: string | null;
+  profile?: string | null;
+  sections: BlueprintSection[];
+}) {
+  const supported = exam.specificationVersion === MULTILEVEL_VERSION;
+  return {
+    supported,
+    issues: supported
+      ? multilevelBlueprintIssues(exam.sections, exam.profile === 'full_mock')
+      : ['Unsupported Multilevel specification'],
+  };
+}
+
 /** Shared publication/start validation. No synthetic production success. */
 export function multilevelBlueprintIssues(sections: BlueprintSection[], full: boolean): string[] {
   const issues: string[] = [];

@@ -30,7 +30,7 @@ import { audioContentType } from './mock-storage';
 import { AUTO_SKILLS } from './mock-scoring';
 import { ExamRow, shapeExam, shapeExamMeta, totalDuration } from './mock-shape';
 import { starterSections } from './mock-starter';
-import { MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, multilevelBlueprintIssues } from './multilevel-specification';
+import { MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, multilevelStartReadiness } from './multilevel-specification';
 import { objectiveGroupIssues, objectiveQuestionIssues } from './question-engine';
 
 /** Variantlar (options) majburiy bo'lgan savol turlari */
@@ -823,8 +823,7 @@ export class MockAuthoringService {
   /** Keep student catalogue readiness byte-for-byte aligned with start(). */
   private isReadyForStart(exam: { type: MockExamType; specificationVersion?: string | null; profile?: string; sections: unknown[] }): boolean {
     if (exam.type !== 'multilevel') return true;
-    return exam.specificationVersion === MULTILEVEL_VERSION &&
-      multilevelBlueprintIssues(exam.sections as never, exam.profile === 'full_mock').length === 0;
+    return multilevelStartReadiness(exam as never).issues.length === 0;
   }
 
   /**
@@ -1232,9 +1231,16 @@ export class MockAuthoringService {
     let missingKeys = 0;
     let manualBadPoints = 0;
     const ielts = exam.type === 'ielts_academic' || exam.type === 'ielts_general';
-    if (!ielts && isFullMock) {
-      const problems = multilevelBlueprintIssues(exam.sections, isFullMock);
-      items.push({ key: 'multilevel_blueprint', ok: problems.length === 0, detail: problems.join('; ') || MULTILEVEL_VERSION });
+    if (!ielts) {
+      const startReadiness = multilevelStartReadiness(exam);
+      items.push({ key: 'multilevel_start', ok: startReadiness.issues.length === 0,
+        detail: startReadiness.issues.join('; ') || MULTILEVEL_VERSION });
+      if (isFullMock) {
+        // Retained for existing Review fix-target mapping; this is intentionally
+        // the same result the catalogue and Start consume.
+        items.push({ key: 'multilevel_blueprint', ok: startReadiness.issues.length === 0,
+          detail: startReadiness.issues.join('; ') || MULTILEVEL_VERSION });
+      }
     }
     const seenNumbers = new Map<string | number, number>();
     let duplicateCount = 0;

@@ -139,4 +139,19 @@ describe('Multilevel publication-to-start journey', () => {
     });
     expect(attempts).toHaveLength(1);
   });
+
+  it('keeps Review, catalogue, and Start aligned when the persisted version is not startable', async () => {
+    const { authoring, attemptsService, teacher, student, exam } = setup();
+    exam.specificationVersion = 'LEGACY_MULTILEVEL_SPECIFICATION';
+    exam.isPublished = true;
+
+    const review = await authoring.readiness(teacher, exam.id);
+    expect(review.ready).toBe(false);
+    expect(review.items.find((item) => item.key === 'multilevel_start')).toMatchObject({ ok: false });
+
+    const catalogue = await authoring.listExams(student, {} as never);
+    expect(catalogue[0]).toMatchObject({ id: exam.id, ready: false });
+    await expect(attemptsService.start(student, exam.id, { flow: 'full_test' } as never))
+      .rejects.toMatchObject({ code: 'SPECIFICATION_UNSUPPORTED' });
+  });
 });

@@ -45,6 +45,7 @@ jobs:
             cd "${VPS_PATH:-/opt/bestway}"
             test -f ./backend/.env || { echo "backend/.env missing on VPS"; exit 1; }
             git pull --ff-only
+            export BUILD_COMMIT="$(git rev-parse HEAD)"
             if [ -f docker-compose.prod.yml ]; then
               docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait --wait-timeout 90
             else

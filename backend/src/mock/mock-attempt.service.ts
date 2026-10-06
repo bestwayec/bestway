@@ -15,7 +15,7 @@ import {
 import { MockAccessService } from './mock-access.service';
 import { assertSpeakingAudio } from './speaking-audio';
 import { ExamRow, SKILL_ORDER, computeSkillTiming, shapeExam, totalDuration } from './mock-shape';
-import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelBlueprintIssues, taskGuidance } from './multilevel-specification';
+import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelStartReadiness, taskGuidance } from './multilevel-specification';
 import { BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
 
 export const MOCK_EXAM_INCLUDE = {
@@ -74,9 +74,9 @@ export class MockAttemptService {
       return this.resumeResponse(existing, shapeExam(resumeExam as unknown as ExamRow, false, this.base), totalDuration(exam as unknown as ExamRow));
     }
     if (exam.type === 'multilevel') {
-      if (exam.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Unsupported Multilevel specification', 400);
-      const issues = multilevelBlueprintIssues(exam.sections, exam.profile === 'full_mock');
-      if (issues.length) throw new AppException('MOCK_NOT_READY', issues.join('; '), 400);
+      const readiness = multilevelStartReadiness(exam);
+      if (!readiness.supported) throw new AppException('SPECIFICATION_UNSUPPORTED', readiness.issues[0], 400);
+      if (readiness.issues.length) throw new AppException('MOCK_NOT_READY', readiness.issues.join('; '), 400);
       exam.speakingProfileVersion ??= BESTWAY_MULTILEVEL_SPEAKING_2026_V2;
     }
 

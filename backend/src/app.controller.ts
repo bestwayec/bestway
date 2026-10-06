@@ -9,7 +9,11 @@ export class AppController {
   @Public()
   @Get('health')
   health() {
-    return { status: 'ok', time: new Date().toISOString() };
+    return {
+      status: 'ok',
+      time: new Date().toISOString(),
+      buildCommit: process.env.BUILD_COMMIT?.trim() || null,
+    };
   }
 
   /**
