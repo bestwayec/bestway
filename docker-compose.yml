@@ -56,6 +56,11 @@ services:
       CORS_ORIGIN: https://bestwayec.uz,https://www.bestwayec.uz
       PUBLIC_URL: https://api.bestwayec.uz
       NODE_ENV: production
+      # Versioned public release metadata overrides stale values in the
+      # persistent backend/.env without introducing any secret configuration.
+      DESKTOP_LATEST_VERSION: 0.5.1-rc.1
+      DESKTOP_DOWNLOAD_URL: https://github.com/bestwayec/bw-tauri/releases/download/v0.5.1-rc.1/Bestway.App_0.5.1-rc.1_x64-setup.exe
+      DESKTOP_PRERELEASE: "true"
     env_file:
       - ./backend/.env
     ports:

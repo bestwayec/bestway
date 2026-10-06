@@ -236,7 +236,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
     if (clone.isPending) return;
     clone.mutate(examId, {
       onSuccess: (res) => {
-        toast.success(tx(t, "duplicatedDraft", "Duplicated as a draft — audio and images are not copied."));
+        toast.success(tx(t, "duplicatedDraft", "Duplicated as a draft; the original exam remains unchanged."));
         router.push(`/exam-builder/${(res as { id: string }).id}`);
       },
       onError: () => toast.error(tc("unknownError")),
