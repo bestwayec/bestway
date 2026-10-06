@@ -4,7 +4,8 @@ import { MockAuthoringService } from './mock-authoring.service';
 import { MockController } from './mock.controller';
 import { ROLES_KEY } from '../common/decorators';
 import { multilevelFixture } from './multilevel.fixture';
-import { MULTILEVEL_VERSION } from './multilevel-specification';
+import { MULTILEVEL_CURRENT_VERSION, MULTILEVEL_VERSION, MULTILEVEL_VERSION_V1 } from './multilevel-specification';
+import { BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE } from './multilevel-speaking-profile';
 
 const LEGACY_VERSION = 'UZBMB_MULTILEVEL_EN_LEGACY';
 
@@ -185,6 +186,43 @@ describe('Multilevel legacy repair safety gate', () => {
       status: 'DRAFT_REQUIRES_REVIEW',
     });
     expect(exam.specificationVersion).toBe(MULTILEVEL_VERSION);
+    expect(exam.isPublished).toBe(false);
+  });
+
+  it('D/E. never rewrites an attempted, submitted or result-bearing historical revision', async () => {
+    for (const counts of [{ attempts: 1 }, { attempts: 0, submissions: 1 }, { attempts: 0, results: 1 }]) {
+      const state = buildExam(MULTILEVEL_VERSION_V1);
+      const { service, admin, exam } = makeService(state, counts);
+      const before = JSON.parse(JSON.stringify(exam)) as unknown;
+
+      const inspection = await service.multilevelRepairInspection(admin, exam.id);
+      expect(inspection).toMatchObject({
+        currentVersion: false,
+        historyExists: true,
+        safeRepairAllowed: false,
+        recommendedAction: 'CREATE_CORRECTED_COPY',
+      });
+      await expect(service.applyMultilevelSafeRepair(admin, exam.id, true)).rejects.toMatchObject({ code: 'EXAM_VERSION_IN_USE' });
+      expect(JSON.parse(JSON.stringify(exam))).toEqual(before);
+      expect(exam.specificationVersion).toBe(MULTILEVEL_VERSION_V1);
+    }
+  });
+
+  it('F. upgrades a zero-history historical draft to BOTH the current revision and the current speaking profile', async () => {
+    const { service, admin, exam } = makeService(buildExam(MULTILEVEL_VERSION_V1), { attempts: 0 });
+    const inspection = await service.multilevelRepairInspection(admin, exam.id);
+    expect(inspection).toMatchObject({ currentVersion: false, currentSpeakingProfile: false, safeRepairAllowed: true });
+
+    await expect(service.applyMultilevelSafeRepair(admin, exam.id, true)).resolves.toMatchObject({
+      versionUpgraded: true,
+      speakingProfileUpgraded: true,
+      unpublished: true,
+      status: 'DRAFT_REQUIRES_REVIEW',
+    });
+    // The blueprint version is meaningless without the profile that issues the
+    // preparation countdown, so both move together — and only through this gate.
+    expect(exam.specificationVersion).toBe(MULTILEVEL_CURRENT_VERSION);
+    expect(exam.speakingProfileVersion).toBe(BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE);
     expect(exam.isPublished).toBe(false);
   });
 

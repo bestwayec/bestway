@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { convertExpertScore, estimateObjective, MULTILEVEL_VERSION, multilevelBlueprintIssues, multilevelLevel, multilevelOverall, multilevelStartReadiness, SPEAKING_CONVERSION, WRITING_CONVERSION, taskGuidance } from './multilevel-specification';
+import { convertExpertScore, estimateObjective, MULTILEVEL_VERSION, MULTILEVEL_VERSION_V1, multilevelBlueprintIssues, multilevelLevel, multilevelOverall, multilevelStartReadiness, SPEAKING_CONVERSION, WRITING_CONVERSION, taskGuidance } from './multilevel-specification';
 import { multilevelFixture } from './multilevel.fixture';
 import { computeSkillTiming } from './mock-shape';
 
@@ -76,7 +76,10 @@ describe('versioned Multilevel specification', () => {
   });
   it('uses task timing and word targets while preserving IELTS speaking timing', () => {
     expect(taskGuidance('writing',0,0)).toMatchObject({wordMin:50,wordMax:50});
-    expect(taskGuidance('speaking',1,0)).toMatchObject({prepSeconds:15,responseSeconds:45});
+    // Current revision: Speaking Part 1.2 answers immediately.
+    expect(taskGuidance('speaking',1,0)).toMatchObject({prepSeconds:0,responseSeconds:45});
+    // Revision 1 is immutable: the same part still serves its 15-second preparation.
+    expect(taskGuidance('speaking',1,0,null,MULTILEVEL_VERSION_V1)).toMatchObject({prepSeconds:15,responseSeconds:45});
     expect(computeSkillTiming('speaking',{},0,'multilevel').seconds).toBe(660);
     expect(computeSkillTiming('speaking',{},0,'ielts_academic').deadline).toBeNull();
     expect(computeSkillTiming('listening',{groups:[{audioDurationSec:60}]},0,'ielts_academic').seconds).toBe(180);

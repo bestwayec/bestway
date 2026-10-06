@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { MULTILEVEL_VERSION } from './multilevel-specification';
+import { BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE } from './multilevel-speaking-profile';
 import { Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { AppException } from '../common/app.exception';
@@ -204,7 +205,7 @@ export class MockExamImportService {
         const exam = target ?? await (tx as any).mockExam.create({
           data: {
             type: p.exam.type,
-            ...(p.exam.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION } : {}),
+            ...(p.exam.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION, speakingProfileVersion: BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE } : {}),
             title: (p.exam.title as string).slice(0, 200),
             description: p.exam.description ?? null,
             level: p.exam.level ?? null,
