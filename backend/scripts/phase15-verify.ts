@@ -160,6 +160,23 @@ async function main() {
   const copyReadiness = await call('GET', `/mock/exams/${copy.id}/readiness`, admin);
   assert('clone: readiness === true', (copyReadiness.data as Record<string, any>).ready === true, (copyReadiness.data as any).items?.filter((i: any) => !i.ok));
 
+  // ─────────── Review readiness, Catalogue readiness and Start agree ───────────
+  // Catalogue (list) and exam detail read the same definition through different
+  // queries; all three must report the identical `ready` state.
+  const list = await call('GET', '/mock/exams', admin);
+  const listed = (Array.isArray(list.data) ? list.data : []) as Array<Record<string, any>>;
+  const listedA = listed.find((e) => e.id === A);
+  const listedCopy = listed.find((e) => e.id === copy.id);
+  const detailA = await call('GET', `/mock/exams/${A}`, admin);
+  const detailCopy = await call('GET', `/mock/exams/${copy.id}`, admin);
+  assert('catalogue: repaired exam is listed', !!listedA, { listedCount: listed.length });
+  assert('catalogue + detail + review readiness agree (repaired exam)',
+    listedA?.ready === true && (detailA.data as Record<string, any>).ready === true && rdata.ready === true,
+    { catalogue: listedA?.ready, detail: (detailA.data as Record<string, any>).ready, review: rdata.ready });
+  assert('catalogue + detail + review readiness agree (corrected copy)',
+    listedCopy?.ready === true && (detailCopy.data as Record<string, any>).ready === true && (copyReadiness.data as Record<string, any>).ready === true,
+    { catalogue: listedCopy?.ready, detail: (detailCopy.data as Record<string, any>).ready, review: (copyReadiness.data as Record<string, any>).ready });
+
   // ─────────── 6. Permissions through the real routes ───────────
   const studentInspect = await call('GET', `/mock/exams/${A}/multilevel-repair-inspection`, student);
   const studentRepair = await call('POST', `/mock/exams/${A}/apply-multilevel-safe-repair`, student, { confirm: true });
