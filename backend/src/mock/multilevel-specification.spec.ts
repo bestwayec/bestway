@@ -28,6 +28,30 @@ describe('versioned Multilevel specification', () => {
     expect(taskGuidance('writing', 0, 0)?.displayLabel).toBe('Task 1.1 — Informal Letter');
     expect(taskGuidance('writing', 1, 0)?.displayLabel).toBe('Task 1.2 — Formal Letter');
   });
+  it('validates authored question order even when database rows arrive unordered', () => {
+    const ordered = multilevelFixture();
+    const scrambled = multilevelFixture();
+    scrambled.forEach((section) => section.groups.forEach((group) => {
+      group.questions.forEach((question, index) => { question.sortOrder = index; });
+      group.questions.reverse(); // physical row order only, authored order intact
+    }));
+    expect(multilevelBlueprintIssues(scrambled, true)).toEqual(multilevelBlueprintIssues(ordered, true));
+    expect(multilevelBlueprintIssues(scrambled, true)).toEqual([]);
+
+    // A genuine authored-order change must still be reported.
+    const reordered = multilevelFixture();
+    const reading4 = reordered[1].groups[3];
+    reading4.questions.forEach((question, index) => { question.sortOrder = index; });
+    const first = reading4.questions[0];
+    reading4.questions[0] = reading4.questions[4];
+    reading4.questions[4] = first;
+    reading4.questions[0].sortOrder = 0;
+    reading4.questions[4].sortOrder = 4;
+    expect(multilevelBlueprintIssues(reordered, true)).toEqual(
+      expect.arrayContaining([expect.stringContaining('reading 4 question 1: invalid type')]),
+    );
+  });
+
   it('uses one explicit start contract for the versioned blueprint', () => {
     const fixture = multilevelFixture();
     expect(multilevelStartReadiness({ specificationVersion: MULTILEVEL_VERSION, profile: 'full_mock', sections: fixture })).toMatchObject({ supported: true, issues: [] });

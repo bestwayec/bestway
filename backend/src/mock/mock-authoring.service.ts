@@ -219,10 +219,15 @@ export class MockAuthoringService {
             skill: true,
             durationMinutes: true,
             groups: {
+              orderBy: { sortOrder: 'asc' as const },
               select: {
                 sortOrder: true, partNumber: true, passageText: true, audioKey: true, audioDurationSec: true, imageKey: true,
                 maxScore: true, stimulusRef: true,
-                questions: { select: { type: true, points: true, options: true, wordLimit: true } },
+                // Catalogue readiness shares Start's positional blueprint contract.
+                questions: {
+                  orderBy: { sortOrder: 'asc' as const },
+                  select: { type: true, points: true, options: true, wordLimit: true, sortOrder: true },
+                },
                 _count: { select: { questions: true } },
               },
             },
@@ -849,6 +854,190 @@ export class MockAuthoringService {
     return { repaired };
   }
 
+  /**
+   * The single authoritative history gate for in-place repair. Any attempt,
+   * submission or result means the stored definition is evidence and must not
+   * be rewritten in place.
+   */
+  private async multilevelHistory(client: PrismaService | Prisma.TransactionClient, id: string) {
+    const [attemptCount, activeAttemptCount, completedAttemptCount, submissionCount, resultCount] = await Promise.all([
+      client.mockAttempt.count({ where: { examId: id } }),
+      client.mockAttempt.count({ where: { examId: id, status: 'in_progress' } }),
+      client.mockAttempt.count({ where: { examId: id, status: 'completed' } }),
+      client.mockAttempt.count({ where: { examId: id, submittedAt: { not: null } } }),
+      client.assessmentJob.count({
+        where: {
+          attempt: { examId: id },
+          OR: [{ finalScore: { not: null } }, { finalResult: { not: Prisma.JsonNull } }],
+        },
+      }),
+    ]);
+    return {
+      attemptCount,
+      activeAttemptCount,
+      completedAttemptCount,
+      submissionCount,
+      resultCount,
+      historyExists: attemptCount > 0 || submissionCount > 0 || resultCount > 0,
+    };
+  }
+
+  /**
+   * Admin-only, read-only decision record for legacy Multilevel exams. The
+   * presence of even one attempt is a hard boundary: historical content is
+   * never reconciled in place. This method never writes.
+   */
+  async multilevelRepairInspection(actor: AuthUser, id: string) {
+    this.assertAdmin(actor);
+    const exam = await this.prisma.mockExam.findUnique({
+      where: { id },
+      include: EXAM_INCLUDE,
+    });
+    if (!exam) throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+    if (exam.type !== 'multilevel') {
+      throw new AppException('VALIDATION_ERROR', 'Multilevel repair inspection is only available for Multilevel exams', 400);
+    }
+
+    const { historyExists, ...attempts } = await this.multilevelHistory(this.prisma, id);
+    const readiness = multilevelStartReadiness(exam);
+    const bySkill = new Map(exam.sections.map((section) => [section.skill, section]));
+    const writing = [...(bySkill.get('writing')?.groups ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+    const speaking = [...(bySkill.get('speaking')?.groups ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+    const writingSpec = MULTILEVEL_SPECIFICATION.writing.parts;
+    const speakingSpec = MULTILEVEL_SPECIFICATION.speaking.parts;
+    const sharedStimulus = writing[0]?.stimulusRef || writing[1]?.stimulusRef || `multilevel:${exam.id}:writing-task-1`;
+    const proposedChanges: Array<{ field: string; from: unknown; to: unknown }> = [];
+
+    writing.forEach((group, index) => {
+      const expected = writingSpec[index];
+      if (!expected) return;
+      if (group.maxScore !== expected.rawMax) proposedChanges.push({
+        field: `Writing ${expected.key} maxScore`, from: group.maxScore, to: expected.rawMax,
+      });
+      if (index < 2 && group.stimulusRef !== sharedStimulus) proposedChanges.push({
+        field: `Writing ${expected.key} stimulusRef`, from: group.stimulusRef, to: sharedStimulus,
+      });
+    });
+    speaking.forEach((group, index) => {
+      const expected = speakingSpec[index];
+      if (expected && group.maxScore !== expected.rawMax) proposedChanges.push({
+        field: `Speaking ${expected.key} maxScore`, from: group.maxScore, to: expected.rawMax,
+      });
+    });
+
+    // Reconcile only rewrites the Writing/Speaking cap and the shared Writing
+    // stimulus reference. Everything else that still fails the blueprint is
+    // genuine authoring work that an admin must do by hand.
+    const autoRepairableIssue = /^(writing|speaking) [^:]+: points must be \d+$/;
+    const sharedStimulusIssue = 'writing: informal and formal emails must share the same source stimulus';
+    const manualAuthoringRequired = readiness.issues.filter(
+      (issue) => !autoRepairableIssue.test(issue) && issue !== sharedStimulusIssue,
+    );
+    return {
+      exam: {
+        id: exam.id,
+        title: exam.title,
+        isPublished: exam.isPublished,
+        contentVersion: exam.contentVersion,
+        specificationVersion: exam.specificationVersion,
+      },
+      attempts,
+      readiness: {
+        ready: readiness.issues.length === 0,
+        exactIssues: readiness.issues,
+        writingProblems: readiness.issues.filter((issue) => issue.startsWith('writing:')),
+        speakingProblems: readiness.issues.filter((issue) => issue.startsWith('speaking')),
+      },
+      writing: writingSpec.map((part, index) => {
+        const group = writing[index];
+        return {
+          task: part.key,
+          role: part.key === 'informal_email' ? 'Informal Letter' : part.key === 'formal_email' ? 'Formal Letter' : 'Publication',
+          exists: !!group,
+          maxScore: group?.maxScore ?? null,
+          expectedMaxScore: part.rawMax,
+          stimulusRef: group?.stimulusRef ?? null,
+          promptPresent: !!group?.questions.some((question) => question.prompt.trim().length > 0),
+        };
+      }),
+      writingSharesStimulusRef: !!writing[0]?.stimulusRef && writing[0]?.stimulusRef === writing[1]?.stimulusRef,
+      speaking: speakingSpec.map((part, index) => {
+        const group = speaking[index];
+        return {
+          part: part.key,
+          exists: !!group,
+          responseCount: group?.questions.length ?? 0,
+          expectedResponseCount: part.count,
+          maxScore: group?.maxScore ?? null,
+          expectedMaxScore: part.rawMax,
+          // A group currently has one image key. For Part 1.2 it is the
+          // two-picture composite asset used by the authoring UI.
+          imageAssetCount: group?.imageKey ? 1 : 0,
+          requiresTwoPictureAsset: part.key === '1.2',
+        };
+      }),
+      // Zero history is the only requirement: the repair transaction upgrades
+      // a legacy definition to the current version and leaves it as a draft.
+      safeRepairAllowed: !historyExists,
+      specificationVersion: exam.specificationVersion,
+      currentVersion: exam.specificationVersion === MULTILEVEL_VERSION,
+      historyExists,
+      requiresUnpublish: exam.isPublished,
+      proposedChanges,
+      manualAuthoringRequired,
+      recommendedAction: historyExists ? 'CREATE_CORRECTED_COPY' : 'REPAIR_DRAFT_THEN_REVIEW',
+    };
+  }
+
+  /** Explicit mutation behind the inspection gate; it always leaves the exam a draft. */
+  async applyMultilevelSafeRepair(actor: AuthUser, id: string, confirmed: boolean) {
+    this.assertAdmin(actor);
+    if (!confirmed) throw new AppException('CONFIRMATION_REQUIRED', 'Confirm the unused-exam repair before applying it', 400);
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      const exam = await tx.mockExam.findUnique({ where: { id } });
+      if (!exam) throw new AppException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404);
+      if (exam.type !== 'multilevel') {
+        throw new AppException('VALIDATION_ERROR', 'Only Multilevel exams can be reconciled', 400);
+      }
+      const { historyExists } = await this.multilevelHistory(tx, id);
+      if (historyExists) {
+        throw new AppException('EXAM_VERSION_IN_USE', 'Existing history requires a corrected copy; the original is preserved', 409);
+      }
+      const wasPublished = exam.isPublished;
+      // "current-version draft": a legacy definition may only be rewritten once
+      // it is proven unused, so stamp the current specification version here.
+      const needsVersionUpgrade = exam.specificationVersion !== MULTILEVEL_VERSION;
+      if (needsVersionUpgrade) {
+        await tx.mockExam.update({ where: { id }, data: { specificationVersion: MULTILEVEL_VERSION } });
+      }
+      if (wasPublished) await tx.mockExam.update({ where: { id }, data: { isPublished: false } });
+      const repaired = await this.reconcileCurrentMultilevelDraft(tx, {
+        ...exam,
+        specificationVersion: MULTILEVEL_VERSION,
+        isPublished: false,
+      });
+      const changed = repaired > 0 || needsVersionUpgrade;
+      const fresh = changed
+        ? await tx.mockExam.update({ where: { id }, data: { contentVersion: { increment: 1 } }, select: { contentVersion: true } })
+        : { contentVersion: exam.contentVersion };
+      return { unpublished: wasPublished, repaired, versionUpgraded: needsVersionUpgrade, contentVersion: fresh.contentVersion };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
+    await this.audit.log({ userId: actor.id, action: 'mock.exam.multilevel.safe_repair', entity: 'mockExam', entityId: id, newValue: outcome });
+    return { ...outcome, status: 'DRAFT_REQUIRES_REVIEW' };
+  }
+
+  /** Clone only once history exists; preserves the original and makes a reconciled draft. */
+  async cloneCorrectedMultilevel(actor: AuthUser, id: string) {
+    this.assertAdmin(actor);
+    const { historyExists } = await this.multilevelHistory(this.prisma, id);
+    if (!historyExists) {
+      throw new AppException('SAFE_REPAIR_AVAILABLE', 'No history exists; inspect and repair the draft instead', 409);
+    }
+    const copy = await this.cloneExam(actor, id);
+    await this.audit.log({ userId: actor.id, action: 'mock.exam.multilevel.clone_corrected', entity: 'mockExam', entityId: copy.id, oldValue: { sourceId: id } });
+    return { id: copy.id, status: 'DRAFT_REQUIRES_REVIEW', sourcePreserved: true };
+  }
+
   private async reconcileCurrentMultilevelDraft(
     tx: Prisma.TransactionClient,
     exam: { id: string; type: MockExamType; specificationVersion?: string | null; isPublished: boolean },
@@ -1014,7 +1203,8 @@ export class MockAuthoringService {
   /**
    * Imtihonni to'liq nusxalash — har qanday staff boshqa imtihonni O'Z qoralamasiga
    * ko'chiradi. Yangisi har doim isPublished=false, createdById=cloner.
-   * Media fayllar (audio/image) nusxalanmaydi — umumiy fayl o'chib ketmasligi uchun.
+   * Existing media keys are referenced, never moved or overwritten, so the
+   * clone keeps its authored content without altering the source assets.
    */
   async cloneExam(actor: AuthUser, id: string) {
     const source = await this.prisma.mockExam.findUnique({
@@ -1037,7 +1227,7 @@ export class MockAuthoringService {
       const exam = await tx.mockExam.create({
         data: {
           type: source.type,
-          specificationVersion: source.specificationVersion,
+          specificationVersion: source.type === 'multilevel' ? MULTILEVEL_VERSION : source.specificationVersion,
           speakingProfileVersion: source.type === 'multilevel' ? BESTWAY_MULTILEVEL_SPEAKING_2026_V2 : null,
           assessmentPolicy: source.assessmentPolicy,
           profile: source.profile,
@@ -1075,6 +1265,10 @@ export class MockAuthoringService {
               audioScript: g.audioScript,
               contentLayout: g.contentLayout,
               optionsReusable: g.optionsReusable,
+              audioKey: g.audioKey,
+              imageKey: g.imageKey,
+              maxScore: g.maxScore,
+              stimulusRef: g.stimulusRef,
               partNumber: g.partNumber,
               audioDurationSec: g.audioDurationSec,
               audioPlayLimit: g.audioPlayLimit,
@@ -1099,6 +1293,9 @@ export class MockAuthoringService {
           }
         }
       }
+      // The copied definition is a new, unattempted draft. Reconcile only the
+      // clone so the historical source and its results remain immutable.
+      await this.reconcileCurrentMultilevelDraft(tx, exam);
       return exam;
     });
 
@@ -1119,7 +1316,10 @@ export class MockAuthoringService {
       include: {
         sections: {
           include: {
-            groups: { include: { questions: true } },
+            groups: {
+              orderBy: { sortOrder: 'asc' as const },
+              include: { questions: { orderBy: [{ sortOrder: 'asc' as const }, { number: 'asc' as const }] } },
+            },
           },
         },
       },
@@ -1421,6 +1621,12 @@ export class MockAuthoringService {
     }
     if (contentChange && await this.prisma.mockAttempt.count({ where: { examId } }) > 0) {
       throw new AppException('EXAM_VERSION_IN_USE', 'Clone this exam before editing content used by attempts', 409);
+    }
+  }
+
+  private assertAdmin(actor: AuthUser): void {
+    if (!['admin', 'super_admin'].includes(actor.role)) {
+      throw new AppException('FORBIDDEN', 'Only an administrator can inspect or repair legacy Multilevel exams', 403);
     }
   }
 

@@ -94,6 +94,12 @@ export class CreateMockExamDto {
   isFreeForApproved?: boolean;
 }
 
+/** Explicit acknowledgement for the admin-only Multilevel repair transaction. */
+export class ConfirmMultilevelRepairDto {
+  @IsBoolean()
+  confirm: boolean;
+}
+
 export class UpdateMockExamDto {
   @IsOptional()
   @IsEnum(PracticeLevel)

@@ -26,6 +26,7 @@ import {
   SaveGroupContentDto,
   BulkAnswersDto,
   ConfirmPurchaseDto,
+  ConfirmMultilevelRepairDto,
   CreateGroupDto,
   CreateMockExamDto,
   CreateSectionDto,
@@ -493,6 +494,34 @@ export class MockController {
   @Get('exams/:id/readiness')
   readiness(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.authoring.readiness(user, id);
+  }
+
+  /** Read-only safety gate before a legacy Multilevel exam can be changed. */
+  @ApiBearerAuth()
+  @Roles('admin', 'super_admin')
+  @Get('exams/:id/multilevel-repair-inspection')
+  multilevelRepairInspection(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.authoring.multilevelRepairInspection(user, id);
+  }
+
+  /** Explicitly unpublish and reconcile an unused current-version Multilevel exam. */
+  @ApiBearerAuth()
+  @Roles('admin', 'super_admin')
+  @Post('exams/:id/apply-multilevel-safe-repair')
+  applyMultilevelSafeRepair(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ConfirmMultilevelRepairDto,
+  ) {
+    return this.authoring.applyMultilevelSafeRepair(user, id, dto.confirm);
+  }
+
+  /** Preserve historical attempts by correcting a reconciled draft copy instead. */
+  @ApiBearerAuth()
+  @Roles('admin', 'super_admin')
+  @Post('exams/:id/clone-corrected-multilevel')
+  cloneCorrectedMultilevel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.authoring.cloneCorrectedMultilevel(user, id);
   }
 
   /** Explicit, draft-only compatibility repair for the current Multilevel version. */
