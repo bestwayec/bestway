@@ -26,6 +26,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
+import { multilevelPartSummary } from "./multilevel-part-guidance";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
 import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
 
@@ -155,6 +156,20 @@ export function GroupEditor({
     [part, snapshot, imageFile, mode, visualText, visualQuestions],
   );
   React.useEffect(() => onDirty(dirty), [dirty, onDirty]);
+
+  // Multilevel parts are semantic (Part 1.2, Task 1.1 …): show the admin what
+  // this part still needs so Review failures are understandable up front.
+  const multilevelSummary = React.useMemo(() => {
+    if (detail.type !== "multilevel" || !group || !section) return null;
+    const index = [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder).findIndex((g) => g.id === groupId);
+    return multilevelPartSummary(skill, index, {
+      questionCount: group.questions.length,
+      hasAudio: group.hasAudio || part?.audioPendingFile != null,
+      hasImage: !!group.imageUrl || imageFile != null,
+      hasMaterial: !!group.passageText?.trim(),
+      hasPrompts: group.questions.some((q) => q.prompt.trim().length > 0),
+    });
+  }, [detail.type, group, section, groupId, skill, part, imageFile]);
 
   const save = React.useCallback(async () => {
     const g = group;
@@ -328,6 +343,25 @@ export function GroupEditor({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {multilevelSummary && (
+            <div className="rounded-[8px] border border-border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-fg">
+                  {meta.units} · {multilevelSummary.heading}
+                </p>
+                <Badge variant={multilevelSummary.ready ? "success" : "warning"}>
+                  {multilevelSummary.ready ? "READY" : "NEEDS WORK"}
+                </Badge>
+              </div>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                {multilevelSummary.rows.map((row) => (
+                  <li key={row.label} className={row.ok ? "text-fg-muted" : "text-warning"}>
+                    {row.label}: <span className="font-medium">{row.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label={tx(t, "blockTitle", "Block title")} htmlFor="ge-title" className="sm:col-span-2">
               <Input
@@ -405,7 +439,7 @@ export function GroupEditor({
               />
             </Field>
           )}
-          {detail.type === 'multilevel' && skill === 'writing' && <p className="text-sm text-fg-muted">Use the same source stimulus in task material for the informal and formal email tasks.</p>}
+          {detail.type === 'multilevel' && skill === 'writing' && <p className="text-sm text-fg-muted">Task 1.1 (Informal Letter) and Task 1.2 (Formal Letter) must share ONE source stimulus — put the same shared situation in the task material of both.</p>}
           {mode === "visual" && (skill === "writing" || skill === "speaking") && (
             <p className="text-xs text-fg-muted">
               {tx(
