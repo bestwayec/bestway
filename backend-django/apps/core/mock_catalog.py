@@ -8,6 +8,7 @@ from __future__ import annotations
 from apps.legacy_schema.models import MockExam, MockPurchase, MockQuestion, MockQuestionGroup, MockSection
 from common.api.exceptions import ContractAPIException
 from .exam_programs import state
+from .mock_authoring import readiness as authoring_readiness
 
 STAFF = {"teacher", "admin", "super_admin"}
 
@@ -85,7 +86,7 @@ def list_exams(user, *, program=None, exam_type=None, practice_level=None):
     items = []
     for exam in catalogue_queryset(user, program, exam_type, practice_level):
         data = shape_exam(exam, staff)
-        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": sum((section["durationMinutes"] or 0) for section in data["sections"]) or None, "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": False, "imported": None})
+        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": sum((section["durationMinutes"] or 0) for section in data["sections"]) or None, "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": authoring_readiness(None, exam.id)["ready"], "imported": None})
         data.pop("sections")
         items.append(data)
     return items
@@ -98,5 +99,5 @@ def get_exam(user, exam_id: str):
     if not staff and not exam.is_published and not exam.is_demo: raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
     access = access_for(user, exam)
     output = shape_exam(exam, staff, include_sections=staff or access == "granted")
-    output.update({"ready": False, "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
+    output.update({"ready": authoring_readiness(None, exam.id)["ready"], "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
     return output
