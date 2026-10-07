@@ -35,6 +35,7 @@ import {
 } from './mock-scoring';
 import { SettingsService } from '../settings/settings.service';
 import { ESTIMATE_VERSION, convertExpertScore, estimateObjective, multilevelIsSupportedVersion, multilevelLevel, multilevelOverall, taskGuidance } from './multilevel-specification';
+import { multilevelMissingWork, multilevelMissingWorkMessage } from './multilevel-completeness';
 
 interface SectionAgg {
   skill: MockSkill;
@@ -88,6 +89,7 @@ export class MockGradingService {
     if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       const profile = await this.prisma.studentProfile.findUnique({ where: { userId: student.id }, select: { availablePrograms: true } });
       if (!profile?.availablePrograms.includes('MULTILEVEL')) throw new AppException('PROGRAM_NOT_ENROLLED', 'Not enrolled in Multilevel', 403);
+      await this.assertMultilevelSubmittable(attemptId);
       const claimed = await this.prisma.mockAttempt.updateMany({ where: { id: attemptId, studentId: student.id, status: 'in_progress' }, data: { status: 'grading', submittedAt: new Date() } });
       if (!claimed.count) {
         const saved = await this.prisma.mockAttempt.findUniqueOrThrow({ where: { id: attemptId } });
@@ -101,6 +103,35 @@ export class MockGradingService {
       await this.notifyTeacherPending(attemptId);
     }
     return result;
+  }
+
+  /**
+   * Student-safe pre-submit gate (STEP 19). An unfinished exam is refused while
+   * the student still has time to finish it, and the message names the sections
+   * with counts only. When the attempt's whole clock has expired the exam is
+   * submitted as-is, so the timeout auto-submit path keeps working.
+   */
+  private async assertMultilevelSubmittable(attemptId: string): Promise<void> {
+    const attempt = await this.prisma.mockAttempt.findUnique({
+      where: { id: attemptId },
+      include: { exam: { include: MOCK_EXAM_INCLUDE }, answers: true },
+    });
+    if (!attempt) return;
+    const work = multilevelMissingWork(
+      attempt.exam.sections.map((section) => ({
+        skill: section.skill,
+        groups: section.groups.map((group) => ({ questions: group.questions.map((question) => ({ id: question.id, type: question.type })) })),
+      })),
+      attempt.answers.map((answer) => ({ questionId: answer.questionId, response: answer.response, audioKey: answer.audioKey })),
+      {
+        flowMode: attempt.flowMode,
+        currentSkill: attempt.currentSkill,
+        sectionDeadlines: attempt.sectionDeadlines,
+        overallDeadlineAt: attempt.overallDeadlineAt,
+        deadlineAt: attempt.deadlineAt,
+      },
+    );
+    if (!work.complete) throw new AppException('MOCK_ATTEMPT_INCOMPLETE', multilevelMissingWorkMessage(work), 400);
   }
 
   // ─────────────────── Staff attempt control ───────────────────
@@ -431,9 +462,14 @@ export class MockGradingService {
           // recordings are assessed. Average prompt ratings, round to .5.
           agg.score -= groupScores.reduce((sum, score) => sum + score, 0);
           if (groupScores.length === group.questions.length && groupScores.length) agg.score += roundHalfBand(groupScores.reduce((sum, score) => sum + score, 0) / groupScores.length);
-          agg.max -= group.questions.reduce((sum, q) => sum + q.points, 0);
-          agg.max += group.questions[0]?.points ?? 0;
         }
+      }
+      if (isVersionedMultilevel && agg.manual) {
+        // Writing/Speaking maxima are the authoring caps of the tasks and parts
+        // (`group.maxScore`), not the sum of per-question points. `recompute()`
+        // publishes the same numbers, so both paths must agree: an exam authored
+        // with points=1 would otherwise report Writing 13/3 and Speaking 17/4.
+        agg.max = section.groups.reduce((sum, group) => sum + (group.maxScore ?? group.questions[0]?.points ?? 0), 0);
       }
       aggs.push(agg);
     }

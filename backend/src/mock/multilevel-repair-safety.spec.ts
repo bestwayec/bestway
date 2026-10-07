@@ -71,6 +71,9 @@ function buildExam(specificationVersion: string | null = MULTILEVEL_VERSION) {
     title: 'cefr c1',
     profile: 'full_mock',
     specificationVersion,
+    // A stored exam carries the speaking profile that issues its preparation
+    // timing; only the current revision is paired with the current profile.
+    speakingProfileVersion: specificationVersion === MULTILEVEL_CURRENT_VERSION ? BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE : null as string | null,
     isPublished: true,
     contentVersion: 21,
     sections,
