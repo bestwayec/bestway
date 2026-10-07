@@ -27,6 +27,10 @@ export function NotificationsView() {
   const tc = useTranslations("common");
   const tb = useTranslations("broadcast");
   const format = useFormatter();
+  // `relativeTime` requires an explicit reference point, otherwise next-intl falls back to
+  // `Date.now()` on every call (ENVIRONMENT_FALLBACK). Anchor one value per mount so every
+  // row in the list is measured against the same instant as the fetch that produced it.
+  const [now] = React.useState(() => new Date());
   const { data, isLoading, isError, refetch } = useNotifications();
   const { data: me } = useMe();
   const markAll = useMarkAllRead();
@@ -107,7 +111,7 @@ export function NotificationsView() {
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-sm text-fg", !n.read && "font-medium")}>{n.text}</p>
                   <p className="mt-1 text-xs text-fg-subtle">
-                    {format.relativeTime(new Date(n.date))}
+                    {format.relativeTime(new Date(n.date), now)}
                   </p>
                 </div>
                 {!n.read && <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" />}
