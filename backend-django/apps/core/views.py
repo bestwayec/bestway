@@ -16,6 +16,7 @@ from common.auth.permissions import Authenticated
 from common.auth.throttling import PublicAuthThrottle, SensitiveAuthThrottle
 from . import auth_service
 from . import exam_programs
+from . import mock_catalog
 
 ROLES = {"super_admin", "admin", "teacher", "student", "parent"}
 PHONE = re.compile(r"^\+?[0-9]{9,15}$")
@@ -208,6 +209,24 @@ def student_exam_programs_view(request, student_id):
     if not isinstance(programs, list) or any(not isinstance(item, str) for item in programs) or (active is not None and not isinstance(active, str)):
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
     return success(exam_programs.enroll(request.user, student_id, programs, active))
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def mock_exams_view(request):
+    q = request.query_params
+    allowed = {"program", "type", "practiceLevel"}
+    if set(q) - allowed: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    program, exam_type, practice = q.get("program"), q.get("type"), q.get("practiceLevel")
+    if program and program not in {"IELTS", "MULTILEVEL"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    if exam_type and exam_type not in {"ielts_academic", "ielts_general", "multilevel"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    return success(mock_catalog.list_exams(request.user if getattr(request.user, "is_authenticated", False) else None, program=program, exam_type=exam_type, practice_level=practice))
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def mock_exam_detail_view(request, exam_id):
+    return success(mock_catalog.get_exam(request.user if getattr(request.user, "is_authenticated", False) else None, exam_id))
 
 
 def _user_shape(row, include_link_code: bool):

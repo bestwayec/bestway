@@ -53,8 +53,12 @@ def main():
         target = users[0]["id"]
         managed = expect(staff.get(f"/v1/exam-programs/students/{target}"), 200, "staff program state")
         expect(staff.put(f"/v1/exam-programs/students/{target}", {"availablePrograms": managed["availablePrograms"], "activeProgram": managed["activeProgram"]}, format="json"), 200, "staff preserves program assignment")
+        catalogue = expect(staff.get("/v1/mock/exams"), 200, "staff mock catalogue")
+        if catalogue:
+            detail = expect(staff.get(f"/v1/mock/exams/{catalogue[0]['id']}"), 200, "staff mock detail")
+            if detail["id"] != catalogue[0]["id"]: raise RuntimeError("mock detail identity mismatch")
         transaction.set_rollback(True)
-    print("PASS: student/self and super-admin program-track contract checks (all writes rolled back)")
+    print("PASS: program-track and staff mock-catalogue contract checks (all writes rolled back)")
 
 
 if __name__ == "__main__": main()
