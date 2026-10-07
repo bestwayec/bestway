@@ -1,13 +1,15 @@
 from typing import Any
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
-from rest_framework.views import exception_handler as drf_exception_handler
 class ContractAPIException(APIException):
     def __init__(self, code: str, message: str, status_code: int = 400, details: Any = None):
         self.status_code, self.contract_code, self.contract_message, self.contract_details = status_code, code, message, details
         super().__init__(detail=message, code=code)
 STATUS_CODES = {400:"BAD_REQUEST",401:"UNAUTHORIZED",403:"FORBIDDEN",404:"NOT_FOUND",409:"CONFLICT",413:"PAYLOAD_TOO_LARGE",429:"TOO_MANY_REQUESTS"}
 def exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
+    # Importing views during REST framework's authentication-class bootstrap causes
+    # a circular import.  The handler is only needed once a request is processed.
+    from rest_framework.views import exception_handler as drf_exception_handler
     response = drf_exception_handler(exc, context)
     if isinstance(exc, ContractAPIException):
         error: dict[str, Any] = {"code":exc.contract_code,"message":exc.contract_message}
