@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
+import { BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE } from './multilevel-speaking-profile';
 import { ConfigService } from '@nestjs/config';
 import { MockExamType, MockQuestionType, Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
@@ -86,7 +86,7 @@ export class MockAuthoringService {
       data: {
         type: dto.type,
         assessmentPolicy: dto.assessmentPolicy,
-        ...(dto.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION, speakingProfileVersion: BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } : {}),
+        ...(dto.type === 'multilevel' ? { specificationVersion: MULTILEVEL_VERSION, speakingProfileVersion: BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE } : {}),
         title: dto.title,
         description: dto.description,
         level: dto.level,
@@ -981,6 +981,8 @@ export class MockAuthoringService {
       safeRepairAllowed: !historyExists,
       specificationVersion: exam.specificationVersion,
       currentVersion: exam.specificationVersion === MULTILEVEL_VERSION,
+      speakingProfileVersion: exam.speakingProfileVersion ?? null,
+      currentSpeakingProfile: exam.speakingProfileVersion === BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE,
       historyExists,
       requiresUnpublish: exam.isPublished,
       proposedChanges,
@@ -1007,8 +1009,16 @@ export class MockAuthoringService {
       // "current-version draft": a legacy definition may only be rewritten once
       // it is proven unused, so stamp the current specification version here.
       const needsVersionUpgrade = exam.specificationVersion !== MULTILEVEL_VERSION;
-      if (needsVersionUpgrade) {
-        await tx.mockExam.update({ where: { id }, data: { specificationVersion: MULTILEVEL_VERSION } });
+      // The blueprint version alone does not decide Speaking timing: the exam's
+      // product speaking profile is what issues the per-response preparation
+      // countdown at runtime. A repaired draft must therefore be coherent on
+      // both, or a current-version exam would still serve the retired prep.
+      const needsProfileUpgrade = exam.speakingProfileVersion !== BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE;
+      if (needsVersionUpgrade || needsProfileUpgrade) {
+        await tx.mockExam.update({ where: { id }, data: {
+          specificationVersion: MULTILEVEL_VERSION,
+          speakingProfileVersion: BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE,
+        } });
       }
       if (wasPublished) await tx.mockExam.update({ where: { id }, data: { isPublished: false } });
       const repaired = await this.reconcileCurrentMultilevelDraft(tx, {
@@ -1016,11 +1026,11 @@ export class MockAuthoringService {
         specificationVersion: MULTILEVEL_VERSION,
         isPublished: false,
       });
-      const changed = repaired > 0 || needsVersionUpgrade;
+      const changed = repaired > 0 || needsVersionUpgrade || needsProfileUpgrade;
       const fresh = changed
         ? await tx.mockExam.update({ where: { id }, data: { contentVersion: { increment: 1 } }, select: { contentVersion: true } })
         : { contentVersion: exam.contentVersion };
-      return { unpublished: wasPublished, repaired, versionUpgraded: needsVersionUpgrade, contentVersion: fresh.contentVersion };
+      return { unpublished: wasPublished, repaired, versionUpgraded: needsVersionUpgrade, speakingProfileUpgraded: needsProfileUpgrade, contentVersion: fresh.contentVersion };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15000 });
     await this.audit.log({ userId: actor.id, action: 'mock.exam.multilevel.safe_repair', entity: 'mockExam', entityId: id, newValue: outcome });
     return { ...outcome, status: 'DRAFT_REQUIRES_REVIEW' };
@@ -1228,7 +1238,7 @@ export class MockAuthoringService {
         data: {
           type: source.type,
           specificationVersion: source.type === 'multilevel' ? MULTILEVEL_VERSION : source.specificationVersion,
-          speakingProfileVersion: source.type === 'multilevel' ? BESTWAY_MULTILEVEL_SPEAKING_2026_V2 : null,
+          speakingProfileVersion: source.type === 'multilevel' ? BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE : null,
           assessmentPolicy: source.assessmentPolicy,
           profile: source.profile,
           title: `${source.title} (copy)`.slice(0, 200),

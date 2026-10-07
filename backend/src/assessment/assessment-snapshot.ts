@@ -35,7 +35,7 @@ export async function buildAssessmentInput(exam: ExamRow, attempt: Pick<MockAtte
       });
     }
     const spec = program === 'MULTILEVEL' ? MULTILEVEL_SPECIFICATION[skill].parts[index] : null;
-    const guidance = group.questions.map((_, qi) => taskGuidance(skill, index, qi, attempt.speakingProfileVersion));
+    const guidance = group.questions.map((_, qi) => taskGuidance(skill, index, qi, attempt.speakingProfileVersion, attempt.specificationVersion));
     if (program === 'MULTILEVEL') {
       parts.push({ id: spec?.key ?? `part:${group.id}`, max: spec?.rawMax ?? group.questions[0]?.points ?? 0,
         task: [group.title, group.instructions].filter(Boolean).join('\n'), context: [group.passageText, group.contentHtml].filter(Boolean).join('\n'), responses,

@@ -1,8 +1,8 @@
 import { MockExamType, MockQuestionType, MockSkill } from '@prisma/client';
 import { studentExamTitle } from './student-exam-title';
 import { canonicalDecision } from './question-engine';
-import { MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, MULTILEVEL_VERSION, taskGuidance } from './multilevel-specification';
-import { MULTILEVEL_SPEAKING_V2, BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
+import { MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelIsSupportedVersion, multilevelSpecification, taskGuidance } from './multilevel-specification';
+import { multilevelSpeakingProfile } from './multilevel-speaking-profile';
 
 /**
  * Exam tuzilmasini javobga o'girish — sof funksiyalar.
@@ -124,7 +124,7 @@ export function shapeGroup(g: GroupRow, includeAnswers: boolean, base: string) {
   };
 }
 
-export function shapeSection(s: SectionRow, includeAnswers: boolean, base: string, multilevel = false, speakingProfileVersion?: string | null) {
+export function shapeSection(s: SectionRow, includeAnswers: boolean, base: string, multilevel = false, speakingProfileVersion?: string | null, specificationVersion?: string | null) {
   return {
     id: s.id,
     skill: s.skill,
@@ -140,7 +140,7 @@ export function shapeSection(s: SectionRow, includeAnswers: boolean, base: strin
         return { ...shaped,
           passageText: s.skill === 'listening' && !includeAnswers ? null : shaped.passageText,
           audioPlayLimit: s.skill === 'listening' ? MULTILEVEL_AUDIO.playLimit : shaped.audioPlayLimit,
-          questions: shaped.questions.map((q, qi) => ({ ...q, guidance: taskGuidance(s.skill, index, qi, speakingProfileVersion) })),
+          questions: shaped.questions.map((q, qi) => ({ ...q, guidance: taskGuidance(s.skill, index, qi, speakingProfileVersion, specificationVersion) })),
         };
       }),
   };
@@ -159,8 +159,8 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
     type: exam.type,
     speakingProfileVersion: exam.speakingProfileVersion ?? null,
     ...(includeAnswers ? { assessmentPolicy: exam.assessmentPolicy ?? null } : {}),
-    ...(exam.speakingProfileVersion === BESTWAY_MULTILEVEL_SPEAKING_2026_V2 ? { speakingProfile: MULTILEVEL_SPEAKING_V2 } : {}),
-    ...(exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: exam.specificationVersion, specification: MULTILEVEL_SPECIFICATION } : {}),
+    ...(multilevelSpeakingProfile(exam.speakingProfileVersion) ? { speakingProfile: multilevelSpeakingProfile(exam.speakingProfileVersion) } : {}),
+    ...(exam.type === 'multilevel' && multilevelSpecification(exam.specificationVersion) ? { specificationVersion: exam.specificationVersion, specification: multilevelSpecification(exam.specificationVersion) } : {}),
     profile: (exam as { profile?: string }).profile ?? 'practice',
     title: includeAnswers ? exam.title : studentExamTitle(exam.title),
     description: exam.description,
@@ -174,7 +174,7 @@ export function shapeExam(exam: ExamRow, includeAnswers: boolean, base: string) 
     questionCount: countQuestions(exam),
     sections: [...exam.sections]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((s) => shapeSection(s, includeAnswers, base, exam.type === 'multilevel' && exam.specificationVersion === MULTILEVEL_VERSION, exam.speakingProfileVersion)),
+      .map((s) => shapeSection(s, includeAnswers, base, exam.type === 'multilevel' && multilevelIsSupportedVersion(exam.specificationVersion), exam.speakingProfileVersion, exam.specificationVersion)),
   };
 }
 

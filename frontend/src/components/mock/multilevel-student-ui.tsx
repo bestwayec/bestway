@@ -31,10 +31,37 @@ export function scoreMaximum(guidance: TaskGuidance | undefined): number | undef
   return guidance?.rawMax;
 }
 
+function errorCode(error: unknown): string {
+  return typeof error === "object" && error && "code" in error ? String(error.code) : "";
+}
+
+function errorMessage(error: unknown): string {
+  if (typeof error === "object" && error && "message" in error) return String((error as { message: unknown }).message).trim();
+  return "";
+}
+
 export function studentStartMessage(error: unknown): string {
-  const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+  const code = errorCode(error);
   if (code === "MOCK_NOT_READY" || code === "SPECIFICATION_UNSUPPORTED") return "Exam is not ready yet.";
   return "The exam could not be started. Please try again.";
+}
+
+/**
+ * Hand-in refusals. For an unfinished exam the server names the sections and
+ * how much is missing — counts only, never answer content — so it is shown as
+ * is; the review surface then reopens with the same list.
+ */
+export function studentSubmitMessage(error: unknown): string {
+  const code = errorCode(error);
+  if (code === "MOCK_ATTEMPT_INCOMPLETE") return errorMessage(error) || "Some required work is still missing. Finish it, then submit.";
+  if (code === "MOCK_TIME_UP") return "Time is up for this section — the exam has been submitted.";
+  if (code === "PROGRAM_NOT_ENROLLED") return "You are not enrolled in the Multilevel program.";
+  return "Your exam could not be submitted. Please try again.";
+}
+
+/** True when the server refused an unfinished hand-in and the review panel should reopen. */
+export function studentSubmitNeedsReview(error: unknown): boolean {
+  return errorCode(error) === "MOCK_ATTEMPT_INCOMPLETE";
 }
 
 export function studentSaveMessage(state: "idle" | "saving" | "saved" | "error"): string {

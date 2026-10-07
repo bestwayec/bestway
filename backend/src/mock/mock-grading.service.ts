@@ -34,7 +34,8 @@ import {
   rubricKeysFor,
 } from './mock-scoring';
 import { SettingsService } from '../settings/settings.service';
-import { MULTILEVEL_VERSION, ESTIMATE_VERSION, convertExpertScore, estimateObjective, multilevelLevel, multilevelOverall, taskGuidance } from './multilevel-specification';
+import { ESTIMATE_VERSION, convertExpertScore, estimateObjective, multilevelIsSupportedVersion, multilevelLevel, multilevelOverall, taskGuidance } from './multilevel-specification';
+import { multilevelMissingWork, multilevelMissingWorkMessage } from './multilevel-completeness';
 
 interface SectionAgg {
   skill: MockSkill;
@@ -82,25 +83,55 @@ export class MockGradingService {
       throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404);
     }
     if (attempt.status !== 'in_progress') {
-      if (attempt.specificationVersion === MULTILEVEL_VERSION) return this.submissionResult(attempt);
+      if (multilevelIsSupportedVersion(attempt.specificationVersion)) return this.submissionResult(attempt);
       throw new AppException('MOCK_ATTEMPT_FINISHED', 'Bu urinish allaqachon topshirilgan', 400);
     }
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       const profile = await this.prisma.studentProfile.findUnique({ where: { userId: student.id }, select: { availablePrograms: true } });
       if (!profile?.availablePrograms.includes('MULTILEVEL')) throw new AppException('PROGRAM_NOT_ENROLLED', 'Not enrolled in Multilevel', 403);
+      await this.assertMultilevelSubmittable(attemptId);
       const claimed = await this.prisma.mockAttempt.updateMany({ where: { id: attemptId, studentId: student.id, status: 'in_progress' }, data: { status: 'grading', submittedAt: new Date() } });
       if (!claimed.count) {
         const saved = await this.prisma.mockAttempt.findUniqueOrThrow({ where: { id: attemptId } });
         return this.submissionResult(saved);
       }
     }
-    const result = await this.gradeAndCompute(attemptId, true, attempt.specificationVersion === MULTILEVEL_VERSION ? undefined : skills);
+    const result = await this.gradeAndCompute(attemptId, true, multilevelIsSupportedVersion(attempt.specificationVersion) ? undefined : skills);
     if (result.status === 'completed') {
       await this.notifyResult(attemptId);
     } else {
       await this.notifyTeacherPending(attemptId);
     }
     return result;
+  }
+
+  /**
+   * Student-safe pre-submit gate (STEP 19). An unfinished exam is refused while
+   * the student still has time to finish it, and the message names the sections
+   * with counts only. When the attempt's whole clock has expired the exam is
+   * submitted as-is, so the timeout auto-submit path keeps working.
+   */
+  private async assertMultilevelSubmittable(attemptId: string): Promise<void> {
+    const attempt = await this.prisma.mockAttempt.findUnique({
+      where: { id: attemptId },
+      include: { exam: { include: MOCK_EXAM_INCLUDE }, answers: true },
+    });
+    if (!attempt) return;
+    const work = multilevelMissingWork(
+      attempt.exam.sections.map((section) => ({
+        skill: section.skill,
+        groups: section.groups.map((group) => ({ questions: group.questions.map((question) => ({ id: question.id, type: question.type })) })),
+      })),
+      attempt.answers.map((answer) => ({ questionId: answer.questionId, response: answer.response, audioKey: answer.audioKey })),
+      {
+        flowMode: attempt.flowMode,
+        currentSkill: attempt.currentSkill,
+        sectionDeadlines: attempt.sectionDeadlines,
+        overallDeadlineAt: attempt.overallDeadlineAt,
+        deadlineAt: attempt.deadlineAt,
+      },
+    );
+    if (!work.complete) throw new AppException('MOCK_ATTEMPT_INCOMPLETE', multilevelMissingWorkMessage(work), 400);
   }
 
   // ─────────────────── Staff attempt control ───────────────────
@@ -230,7 +261,7 @@ export class MockGradingService {
       throw new AppException('NOT_MANUAL_QUESTION', 'Bu savol avtomatik baholanadi', 400);
     }
     const skill = question.group.section.skill;
-    if (attempt.specificationVersion === MULTILEVEL_VERSION && dto.rubricScores) throw new AppException('SCORE_REQUIRED', 'Multilevel uses holistic task raw scores; enter a half-point raw score', 400);
+    if (multilevelIsSupportedVersion(attempt.specificationVersion) && dto.rubricScores) throw new AppException('SCORE_REQUIRED', 'Multilevel uses holistic task raw scores; enter a half-point raw score', 400);
     this.validateRubrics(skill, dto.rubricScores);
 
     // Score berilmasa — 4 ta rubric to'liq bo'lsa o'rtachadan hisoblanadi.
@@ -254,7 +285,7 @@ export class MockGradingService {
     }
     // Versioned Multilevel uses one holistic cap per writing task/speaking
     // part. IELTS and historical exams retain question-level point caps.
-    const maxScore = attempt.specificationVersion === MULTILEVEL_VERSION
+    const maxScore = multilevelIsSupportedVersion(attempt.specificationVersion)
       ? question.group.maxScore ?? question.points
       : question.points;
     if (finalScore < 0 || finalScore > maxScore) {
@@ -264,7 +295,7 @@ export class MockGradingService {
         400,
       );
     }
-    if (attempt.specificationVersion === MULTILEVEL_VERSION && (!Number.isFinite(finalScore) || finalScore * 2 !== Math.round(finalScore * 2))) throw new AppException('SCORE_OUT_OF_RANGE', 'Use half-point raw scores', 400);
+    if (multilevelIsSupportedVersion(attempt.specificationVersion) && (!Number.isFinite(finalScore) || finalScore * 2 !== Math.round(finalScore * 2))) throw new AppException('SCORE_OUT_OF_RANGE', 'Use half-point raw scores', 400);
     const before = await this.prisma.mockAnswer.findUnique({ where: { attemptId_questionId: { attemptId, questionId: dto.questionId } } });
 
     await this.prisma.mockAnswer.upsert({
@@ -309,7 +340,7 @@ export class MockGradingService {
     const attempt = await tx.mockAttempt.findUnique({ where: { id: attemptId }, include: { exam: { include: MOCK_EXAM_INCLUDE }, answers: true } });
     if (!attempt) throw new AppException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404);
     const isIelts = attempt.exam.type === 'ielts_academic' || attempt.exam.type === 'ielts_general';
-    const isMl = !isIelts && attempt.specificationVersion === MULTILEVEL_VERSION;
+    const isMl = !isIelts && multilevelIsSupportedVersion(attempt.specificationVersion);
     const bands: SectionBands = {};
     const rawScores: RawScores = {};
     const standardScores: Record<string, unknown> = {};
@@ -364,7 +395,7 @@ export class MockGradingService {
     const answerByQ = new Map(attempt.answers.map((a) => [a.questionId, a]));
     const examType = attempt.exam.type;
     const isIelts = examType === 'ielts_academic' || examType === 'ielts_general';
-    const isVersionedMultilevel = !isIelts && attempt.specificationVersion === MULTILEVEL_VERSION;
+    const isVersionedMultilevel = !isIelts && multilevelIsSupportedVersion(attempt.specificationVersion);
     // Section-only submit: faqat so'ralgan skill'lar (bo'sh massiv = filtr yo'q).
     const wanted = skills && skills.length > 0 ? new Set<string>(skills) : null;
     const examSections = wanted
@@ -431,9 +462,14 @@ export class MockGradingService {
           // recordings are assessed. Average prompt ratings, round to .5.
           agg.score -= groupScores.reduce((sum, score) => sum + score, 0);
           if (groupScores.length === group.questions.length && groupScores.length) agg.score += roundHalfBand(groupScores.reduce((sum, score) => sum + score, 0) / groupScores.length);
-          agg.max -= group.questions.reduce((sum, q) => sum + q.points, 0);
-          agg.max += group.questions[0]?.points ?? 0;
         }
+      }
+      if (isVersionedMultilevel && agg.manual) {
+        // Writing/Speaking maxima are the authoring caps of the tasks and parts
+        // (`group.maxScore`), not the sum of per-question points. `recompute()`
+        // publishes the same numbers, so both paths must agree: an exam authored
+        // with points=1 would otherwise report Writing 13/3 and Speaking 17/4.
+        agg.max = section.groups.reduce((sum, group) => sum + (group.maxScore ?? group.questions[0]?.points ?? 0), 0);
       }
       aggs.push(agg);
     }
@@ -611,7 +647,7 @@ export class MockGradingService {
         id: g.id,
         title: g.title,
         instructions: g.instructions,
-        passageText: attempt.specificationVersion === MULTILEVEL_VERSION && s.skill === 'listening' && !showAnswers ? null : g.passageText,
+        passageText: multilevelIsSupportedVersion(attempt.specificationVersion) && s.skill === 'listening' && !showAnswers ? null : g.passageText,
         contentHtml: g.contentHtml,
         contentLayout: g.contentLayout,
         optionsReusable: g.optionsReusable,
@@ -627,7 +663,7 @@ export class MockGradingService {
             points: qq.points,
             wordLimit: qq.wordLimit,
             answerRule: qq.answerRule,
-            ...(attempt.specificationVersion === MULTILEVEL_VERSION ? { guidance: taskGuidance(s.skill, gi, qi) } : {}),
+            ...(multilevelIsSupportedVersion(attempt.specificationVersion) ? { guidance: taskGuidance(s.skill, gi, qi, attempt.speakingProfileVersion, attempt.specificationVersion) } : {}),
             response: ans?.response ?? null,
             hasAudio: !!ans?.audioKey,
             audioUrl: ans?.audioKey
@@ -787,7 +823,7 @@ export class MockGradingService {
       sectionBands: a.sectionBands ?? null,
       overallBand: a.overallBand,
       cefrLevel: a.cefrLevel,
-      ...(a.specificationVersion === MULTILEVEL_VERSION ? { specificationVersion: a.specificationVersion, standardScores: a.standardScores, overallScore: a.overallScore, scoreMethod: a.scoreMethod, scoreVersion: a.scoreVersion, isOfficial: false } : {}),
+      ...(multilevelIsSupportedVersion(a.specificationVersion) ? { specificationVersion: a.specificationVersion, standardScores: a.standardScores, overallScore: a.overallScore, scoreMethod: a.scoreMethod, scoreVersion: a.scoreVersion, isOfficial: false } : {}),
       antiCheatCount: a.antiCheatCount,
       startedAt: a.startedAt,
       submittedAt: a.submittedAt,
@@ -803,7 +839,7 @@ export class MockGradingService {
     if (!attempt) return;
     const headline =
       attempt.exam.type === 'multilevel'
-        ? attempt.specificationVersion === MULTILEVEL_VERSION
+        ? multilevelIsSupportedVersion(attempt.specificationVersion)
           ? `estimated (unofficial): ${attempt.overallScore ?? '—'}/75 · ${attempt.cefrLevel ?? '—'}`
           : `daraja: ${attempt.cefrLevel ?? '—'}`
         : `Overall Band: ${attempt.overallBand ?? '—'}`;

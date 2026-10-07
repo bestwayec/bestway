@@ -17,6 +17,8 @@ import {
   multilevelTaskName,
   studentStartMessage,
   studentSaveMessage,
+  studentSubmitMessage,
+  studentSubmitNeedsReview,
   taskDuration,
 } from "./multilevel-student-ui";
 
@@ -39,6 +41,16 @@ describe("Multilevel student UX", () => {
 
   it("uses student-safe readiness errors for start failures", () => {
     expect(studentStartMessage({ code: "MOCK_NOT_READY", message: "writing informal_email: points must be 5" })).toBe("Exam is not ready yet.");
+  });
+
+  it("surfaces a refused unfinished hand-in with the server's section counts", () => {
+    const refusal = { code: "MOCK_ATTEMPT_INCOMPLETE", message: "Finish the remaining work before submitting — Reading 12 of 35 unanswered." };
+    expect(studentSubmitMessage(refusal)).toBe(refusal.message);
+    expect(studentSubmitMessage(refusal)).toContain("Reading 12 of 35");
+    expect(studentSubmitNeedsReview(refusal)).toBe(true);
+    expect(studentSubmitNeedsReview({ code: "MOCK_TIME_UP" })).toBe(false);
+    expect(studentSubmitMessage({ code: "MOCK_ATTEMPT_INCOMPLETE" })).toBe("Some required work is still missing. Finish it, then submit.");
+    expect(studentSubmitMessage(new Error("network down"))).toBe("Your exam could not be submitted. Please try again.");
   });
 
   it("renders the current Writing terminology, shared task progress, and score metadata", () => {

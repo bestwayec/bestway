@@ -15,8 +15,8 @@ import {
 import { MockAccessService } from './mock-access.service';
 import { assertSpeakingAudio } from './speaking-audio';
 import { ExamRow, SKILL_ORDER, computeSkillTiming, shapeExam, totalDuration } from './mock-shape';
-import { MULTILEVEL_VERSION, MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelStartReadiness, taskGuidance } from './multilevel-specification';
-import { BESTWAY_MULTILEVEL_SPEAKING_2026_V2 } from './multilevel-speaking-profile';
+import { MULTILEVEL_AUDIO, MULTILEVEL_SPECIFICATION, multilevelIsSupportedVersion, multilevelStartReadiness, taskGuidance } from './multilevel-specification';
+import { BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE, speakingProfileRequiresUploadAck } from './multilevel-speaking-profile';
 
 export const MOCK_EXAM_INCLUDE = {
   sections: {
@@ -77,7 +77,7 @@ export class MockAttemptService {
       const readiness = multilevelStartReadiness(exam);
       if (!readiness.supported) throw new AppException('SPECIFICATION_UNSUPPORTED', readiness.issues[0], 400);
       if (readiness.issues.length) throw new AppException('MOCK_NOT_READY', readiness.issues.join('; '), 400);
-      exam.speakingProfileVersion ??= BESTWAY_MULTILEVEL_SPEAKING_2026_V2;
+      exam.speakingProfileVersion ??= BESTWAY_MULTILEVEL_CURRENT_SPEAKING_PROFILE;
     }
 
     const shaped = shapeExam(exam as unknown as ExamRow, false, this.base);
@@ -280,7 +280,7 @@ export class MockAttemptService {
     if (attempt.flowMode !== 'full_test') {
       throw new AppException('NOT_FULL_TEST', 'Bu urinish full_test rejimida emas', 400);
     }
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       return this.mutateVersionedAttempt(student, attemptId, [], async (tx, fresh) => {
         if (fresh.currentSkill !== attempt.currentSkill) return { saved: true, currentSkill: fresh.currentSkill, submittedSections: fresh.submittedSections, serverTime: new Date(), sectionDeadlines: fresh.sectionDeadlines, overallDeadlineAt: fresh.overallDeadlineAt };
         const order = ['listening', 'reading', 'writing', 'speaking'] as const;
@@ -322,7 +322,7 @@ export class MockAttemptService {
         submittedSections: submitted as unknown as Prisma.InputJsonValue,
         // Entering speaking clears any overall deadline (heals attempts
         // started before overallDeadlineAt=null; speaking is untimed).
-        ...(next === 'speaking' && attempt.specificationVersion !== MULTILEVEL_VERSION ? { overallDeadlineAt: null, deadlineAt: null } : {}),
+        ...(next === 'speaking' && !multilevelIsSupportedVersion(attempt.specificationVersion) ? { overallDeadlineAt: null, deadlineAt: null } : {}),
       },
     });
     return {
@@ -358,7 +358,7 @@ export class MockAttemptService {
     this.assertInProgress(attempt.status);
     this.assertNotTimedOut(attempt);
     if (attempt.flowMode === 'full_test' && attempt.currentSkill !== 'listening') throw new AppException('SECTION_LOCKED', 'Listening section is locked', 403);
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       const phase = (attempt.mediaState as Record<string, MediaPhase> | null)?.[groupId];
       if (!phase?.plays || Date.now() > new Date(phase.expiresAt).getTime()) throw new AppException('AUDIO_REPLAY_BLOCKED', 'Start the scheduled playback first', 403);
       return { allowed: true, plays: phase.plays, limited: true };
@@ -407,7 +407,7 @@ export class MockAttemptService {
     this.assertNotTimedOut(attempt);
     await this.assertQuestionInExam(attempt.examId, dto.questionId);
     await this.assertQuestionInCurrentSection(attempt.examId, dto.questionId, attempt);
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       return this.mutateVersionedAttempt(student, attemptId, [dto.questionId], async (tx) => {
         await tx.mockAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId: dto.questionId } }, update: { response: dto.response }, create: { attemptId, questionId: dto.questionId, response: dto.response } });
         return { saved: true };
@@ -440,7 +440,7 @@ export class MockAttemptService {
       : valid;
     const validIds = new Set(inSection.map((v) => v.id));
     const items = dto.answers.filter((a) => validIds.has(a.questionId));
-    if (attempt.specificationVersion === MULTILEVEL_VERSION && items.length !== dto.answers.length) throw new AppException('SECTION_LOCKED', 'All answers must belong to the current section', 403);
+    if (multilevelIsSupportedVersion(attempt.specificationVersion) && items.length !== dto.answers.length) throw new AppException('SECTION_LOCKED', 'All answers must belong to the current section', 403);
     if (items.length === 0) {
       throw new AppException(
         attempt.flowMode === 'full_test' ? 'SECTION_LOCKED' : 'QUESTION_NOT_IN_EXAM',
@@ -449,7 +449,7 @@ export class MockAttemptService {
       );
     }
 
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       return this.mutateVersionedAttempt(student, attemptId, items.map((a) => a.questionId), async (tx) => {
         for (const a of items) await tx.mockAnswer.upsert({ where: { attemptId_questionId: { attemptId, questionId: a.questionId } }, update: { response: a.response }, create: { attemptId, questionId: a.questionId, response: a.response } });
         return { saved: items.length };
@@ -482,7 +482,7 @@ export class MockAttemptService {
   private async persistSpeaking(student: AuthUser, attemptId: string, questionId: string, file: Express.Multer.File) {
     const attempt = await this.ownAttempt(student, attemptId);
     this.assertInProgress(attempt.status);
-    if (attempt.specificationVersion !== MULTILEVEL_VERSION) this.assertNotTimedOut(attempt);
+    if (!multilevelIsSupportedVersion(attempt.specificationVersion)) this.assertNotTimedOut(attempt);
     await this.assertQuestionInCurrentSection(attempt.examId, questionId, attempt);
 
     const q = await this.prisma.mockQuestion.findFirst({
@@ -497,7 +497,7 @@ export class MockAttemptService {
       );
     }
     const key = `mock/${file.filename}`;
-    if (attempt.specificationVersion === MULTILEVEL_VERSION) {
+    if (multilevelIsSupportedVersion(attempt.specificationVersion)) {
       assertSpeakingAudio(file);
       return this.mutateVersionedAttempt(student, attemptId, [questionId], async (tx, fresh) => {
         if (fresh.mode === 'timed') {
@@ -588,7 +588,7 @@ export class MockAttemptService {
   /** Durable server-issued media phases, reused by web and Tauri clients. */
   async startMediaPhase(student: AuthUser, attemptId: string, entityId: string, kind: 'listening' | 'speaking', play = false) {
     const attempt = await this.ownAttempt(student, attemptId);
-    if (attempt.specificationVersion !== MULTILEVEL_VERSION) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Multilevel task required', 400);
+    if (!multilevelIsSupportedVersion(attempt.specificationVersion)) throw new AppException('SPECIFICATION_UNSUPPORTED', 'Multilevel task required', 400);
     const exam = await this.prisma.mockExam.findUniqueOrThrow({ where: { id: attempt.examId }, include: MOCK_EXAM_INCLUDE });
     const section = exam.sections.find((s) => s.skill === kind);
     const groups = section?.groups ?? [];
@@ -596,7 +596,7 @@ export class MockAttemptService {
     const group = groups[gi];
     if (!group) throw new AppException('QUESTION_NOT_IN_EXAM', 'Media task not in exam', 400);
     const qi = group.questions.findIndex((q) => q.id === entityId);
-    const guidance = taskGuidance(kind, gi, qi, attempt.speakingProfileVersion);
+    const guidance = taskGuidance(kind, gi, qi, attempt.speakingProfileVersion, attempt.specificationVersion);
     const ids = kind === 'speaking' ? [entityId] : group.questions.map((q) => q.id);
     return this.mutateVersionedAttempt(student, attemptId, ids, async (tx, fresh) => {
       const now = Date.now();
@@ -615,7 +615,7 @@ export class MockAttemptService {
             if (!previous || now < new Date(previous.expiresAt).getTime()) throw new AppException('PART_LOCKED', 'Complete the previous speaking response first', 403);
           }
         }
-        if (kind === 'speaking' && fresh.speakingProfileVersion === BESTWAY_MULTILEVEL_SPEAKING_2026_V2) {
+        if (kind === 'speaking' && speakingProfileRequiresUploadAck(fresh.speakingProfileVersion)) {
           const ordered = groups.flatMap((g) => g.questions);
           const index = ordered.findIndex((q) => q.id === entityId);
           if (index > 0) {
