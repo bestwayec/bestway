@@ -15,6 +15,7 @@ from common.api.exceptions import ContractAPIException
 from common.auth.permissions import Authenticated
 from common.auth.throttling import PublicAuthThrottle, SensitiveAuthThrottle
 from . import auth_service
+from . import exam_programs
 
 ROLES = {"super_admin", "admin", "teacher", "student", "parent"}
 PHONE = re.compile(r"^\+?[0-9]{9,15}$")
@@ -181,6 +182,32 @@ def desktop_exchange_view(request):
     if len(data["verifier"]) > 128 or not 8 <= len(data["deviceId"]) <= 128:
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
     return success(auth_service.exchange_desktop(data["code"], data["verifier"], data["deviceId"]))
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([Authenticated])
+def my_exam_programs_view(request):
+    require_role(request, "student")
+    if request.method == "GET":
+        with connection.cursor() as cursor: return success(exam_programs.state(cursor, request.user.id))
+    data = body(request, {"program"}); required(data, "program")
+    return success(exam_programs.select(request.user.id, data["program"]))
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([Authenticated])
+def student_exam_programs_view(request, student_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "GET":
+        with connection.cursor() as cursor:
+            exam_programs.assert_staff_scope(cursor, request.user, student_id)
+            return success(exam_programs.state(cursor, student_id))
+    data = body(request, {"availablePrograms", "activeProgram"})
+    programs = data.get("availablePrograms")
+    active = data.get("activeProgram")
+    if not isinstance(programs, list) or any(not isinstance(item, str) for item in programs) or (active is not None and not isinstance(active, str)):
+        raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    return success(exam_programs.enroll(request.user, student_id, programs, active))
 
 
 def _user_shape(row, include_link_code: bool):
