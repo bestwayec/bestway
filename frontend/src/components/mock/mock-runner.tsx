@@ -32,7 +32,9 @@ import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
 import { usedMatchingOptions } from '@/lib/objective-question';
-import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage } from './multilevel-student-ui';
+import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
+import { MultilevelSubmitReview } from './multilevel-submit-review';
+import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -97,6 +99,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     : selectedSection;
   const [cheatWarn, setCheatWarn] = React.useState(false);
   const [cheatCount, setCheatCount] = React.useState(0);
+  // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
+  // 'advance' = warning before the one-way "Next section" move.
+  const [review, setReview] = React.useState<null | "submit" | "advance">(null);
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
@@ -162,16 +167,34 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     () => (deadline ? deadline - Date.now() - serverOffset : null),
   );
 
+  // Server clock for the deadline math below. Reading it is an effect, never
+  // render: the panel only needs second-level freshness to notice a section or
+  // the whole attempt running out of time.
+  const [serverNow, setServerNow] = React.useState<number>(() => Date.now() + serverOffset);
+
+  // Multilevel practice/timed exams get the explicit review surface; IELTS and
+  // legacy exams keep the plain submit button.
+  const multilevelReview = versioned && !!exam && exam.type === "multilevel";
+  const missingWork = React.useMemo(() => {
+    if (!multilevelReview || !exam?.sections.length) return null;
+    return multilevelMissingWork(exam.sections, answers, audioSet, {
+      flowMode: attempt.flowMode,
+      currentSkill: attempt.currentSkill,
+      sectionDeadlines: attempt.sectionDeadlines,
+      overallDeadlineAt: attempt.overallDeadlineAt,
+      deadlineAt: attempt.deadlineAt,
+    }, new Date(serverNow));
+  }, [multilevelReview, exam, answers, audioSet, attempt.flowMode, attempt.currentSkill, attempt.sectionDeadlines, attempt.overallDeadlineAt, attempt.deadlineAt, serverNow]);
 
   const doSubmit = React.useCallback(
-    async (auto = false) => {
+    async (auto = false, confirmed = false) => {
       if (submittingRef.current) return;
       if (versioned) {
         try {
           if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
         } catch { toast.error('Recording recovery could not be checked. Keep this page open and retry.'); return; }
       }
-      if (!auto && !confirm(t("submitConfirm"))) return;
+      if (!auto && !confirmed && !confirm(t("submitConfirm"))) return;
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
@@ -184,7 +207,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.success(t("submitted"));
       } catch (e) {
         submittingRef.current = false;
-        toast.error(versioned ? "Your exam could not be submitted. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
+        // A refused incomplete hand-in reopens the review panel so the student
+        // sees exactly which section still owes work.
+        if (studentSubmitNeedsReview(e)) setReview("submit");
+        toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
     [bulk, submit, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
@@ -192,6 +218,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   React.useEffect(() => {
     if (!deadline) return;
+    const clock = setInterval(() => setServerNow(Date.now() + serverOffset), 1000);
     let nextRetry = 0;
     const id = setInterval(() => {
       const r = deadline - Date.now() - serverOffset;
@@ -206,7 +233,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         } else void doSubmit(true);
       }
     }, 1000);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); clearInterval(clock); };
   }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, advance]);
 
   // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
@@ -234,6 +261,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     if (isFullTest) void goNextSection();
     else void doSubmit(true);
   }, [isFullTest, goNextSection, doSubmit]);
+
+  // Review panel jump: switch the visible section (full-test sections are locked
+  // one-way, so the panel offers no jump there).
+  const jumpToSection = React.useCallback((skill: MockSkill) => {
+    const index = exam?.sections.findIndex((section) => section.skill === skill) ?? -1;
+    if (index < 0) return;
+    flush();
+    setActiveSection(index);
+  }, [exam, flush]);
 
   // Anti-cheat: warn-only (qaror #5) — tab/blur ni qayd etadi, imtihonni to'xtatmaydi.
   // Clipboard (copy/cut/paste) + contextmenu + drag ildizda bloklanadi (spec §7).
@@ -307,11 +343,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <div className="flex items-center gap-2">
             {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
             {isFullTest && activeSection < exam.sections.length - 1 ? (
-              <Button size="sm" variant="outline" loading={advance.isPending} onClick={() => void goNextSection()}>
+              <Button size="sm" variant="outline" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
                 Next section
               </Button>
             ) : null}
-            <Button size="sm" loading={submit.isPending} onClick={() => doSubmit(false)}>
+            <Button size="sm" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
               <Send />
               {t("submit")}
             </Button>
@@ -398,6 +434,24 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             />
           ))}
         </div>
+      )}
+
+      {review && missingWork && (
+        <MultilevelSubmitReview
+          work={missingWork}
+          advance={review === "advance"}
+          busy={submit.isPending || advance.isPending}
+          onClose={() => setReview(null)}
+          // The review surface covers the runner, so a jump closes it and shows
+          // the section the student asked for.
+          onJump={isFullTest ? undefined : (skill) => { setReview(null); jumpToSection(skill); }}
+          onConfirm={() => {
+            const purpose = review;
+            setReview(null);
+            if (purpose === "advance") void goNextSection();
+            else void doSubmit(false, true);
+          }}
+        />
       )}
     </div>
   );
@@ -545,7 +599,10 @@ function GroupBlock({
       {skill === "speaking" && group.questions[0]?.guidance && (
         <section className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-brand/20 bg-brand-subtle p-3">
           <div>
-            <p className="font-semibold text-fg">{multilevelTaskName(group.questions[0].guidance, "Speaking part")}</p>
+            {/* The part name is already the group heading when the two agree. */}
+            {multilevelTaskName(group.questions[0].guidance, "Speaking part") !== group.title && (
+              <p className="font-semibold text-fg">{multilevelTaskName(group.questions[0].guidance, "Speaking part")}</p>
+            )}
             <p className="text-xs text-fg-muted">{group.questions.length} {group.questions.length === 1 ? "response" : "responses"}</p>
             {group.questions.length > 1 && <p className="mt-1 text-xs text-fg-muted">Response timing: {group.questions.map((question) => question.guidance?.responseSeconds ? `${question.guidance.responseSeconds}s` : null).filter(Boolean).join(" · ")}</p>}
           </div>
@@ -597,6 +654,7 @@ function GroupBlock({
               <QuestionInput
                 key={q.id}
                 question={q}
+                groupTitle={group.title ?? undefined}
                 attemptId={attemptId}
                 value={answers[q.id] ?? ""}
                 hasAudio={audioSet.has(q.id)}
@@ -622,6 +680,7 @@ function QuestionInput({
   onChange,
   unavailableOptions,
   multilevelSkill,
+  groupTitle,
 }: {
   question: MockQuestion;
   attemptId: string;
@@ -631,6 +690,7 @@ function QuestionInput({
   onChange: (v: string) => void;
   unavailableOptions?: string[];
   multilevelSkill?: MockSkill;
+  groupTitle?: string;
 }) {
   const t = useTranslations("mock");
 
@@ -664,7 +724,10 @@ function QuestionInput({
       <div className="space-y-2">
         {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>
+            {/* The task name is already the group heading when the two agree. */}
+            {multilevelTaskName(q.guidance, `Task ${q.number}`) === groupTitle
+              ? <span />
+              : <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>}
             <MultilevelTaskMeta question={q} />
           </div>
           <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>

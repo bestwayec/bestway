@@ -9,6 +9,13 @@ import type { MockSkill } from "@/lib/types";
  * so the Exam Builder can show an admin what a part still needs.
  *
  * Human labels deliberately avoid legacy enum wording such as "email".
+ *
+ * This mirror describes the CURRENT revision
+ * (`MULTILEVEL_SPECIFICATIONS[MULTILEVEL_CURRENT_VERSION]`), in which Speaking
+ * Parts 1.1 and 1.2 have NO official preparation. The historical revision's
+ * 15/5/5 preparation must never be rendered here, and the panel deliberately
+ * shows preparation and responses as separate rows so a retired timing cannot
+ * be carried over by a single combined string.
  */
 export interface MultilevelPartDisplay {
   key: string;
@@ -17,7 +24,10 @@ export interface MultilevelPartDisplay {
   rawMax: number;
   /** Human wording for the response/task expectation. */
   expectation: string;
-  timing?: string;
+  /** Official preparation before the response; "None" for the current revision. */
+  prep?: string;
+  /** Response length(s), in authored response order. */
+  responses?: string;
   requiresTwoPictureAsset?: boolean;
   requiresAudio?: boolean;
   requiresContext?: boolean;
@@ -30,10 +40,10 @@ const WRITING: MultilevelPartDisplay[] = [
 ];
 
 const SPEAKING: MultilevelPartDisplay[] = [
-  { key: "1.1", label: "Part 1.1", count: 3, rawMax: 5, expectation: "3 personal questions", timing: "no prep · 30s each" },
-  { key: "1.2", label: "Part 1.2", count: 3, rawMax: 5, expectation: "3 responses about two pictures", timing: "no official prep · 45s · 30s · 30s", requiresTwoPictureAsset: true },
-  { key: "2", label: "Part 2", count: 1, rawMax: 5, expectation: "one long turn", timing: "60s prep · 120s response", requiresContext: true },
-  { key: "3", label: "Part 3", count: 1, rawMax: 6, expectation: "discussion: for and against", timing: "60s prep · 120s response" },
+  { key: "1.1", label: "Part 1.1", count: 3, rawMax: 5, expectation: "3 personal questions", prep: "None", responses: "30s each" },
+  { key: "1.2", label: "Part 1.2", count: 3, rawMax: 5, expectation: "3 responses about two pictures", prep: "None", responses: "45s · 30s · 30s", requiresTwoPictureAsset: true },
+  { key: "2", label: "Part 2", count: 1, rawMax: 5, expectation: "one long turn", prep: "60s", responses: "120s", requiresContext: true },
+  { key: "3", label: "Part 3", count: 1, rawMax: 6, expectation: "discussion: for and against", prep: "60s", responses: "120s" },
 ];
 
 const OBJECTIVE: Record<"listening" | "reading", Array<{ key: string; count: number }>> = {
@@ -119,7 +129,8 @@ export function multilevelPartSummary(
   if (part.expectation) {
     rows.push({ label: "Task", value: part.expectation, ok: state.hasPrompts });
   }
-  if (part.timing) rows.push({ label: "Timing", value: part.timing, ok: true });
+  if (part.prep) rows.push({ label: "Prep", value: part.prep, ok: true });
+  if (part.responses) rows.push({ label: "Responses", value: part.responses, ok: true });
   if (skill === "writing" && part.key !== "publication") {
     rows.push({ label: "Source stimulus", value: state.hasMaterial ? "shared Task 1 material" : "missing", ok: state.hasMaterial });
   }

@@ -43,6 +43,8 @@ describe("Multilevel part guidance", () => {
       expect.objectContaining({ label: "Questions", value: "3 / 3", ok: true }),
       expect.objectContaining({ label: "Two-picture asset", value: "0 / 1", ok: false }),
       expect.objectContaining({ label: "Score", value: "/5" }),
+      expect.objectContaining({ label: "Prep", value: "None", ok: true }),
+      expect.objectContaining({ label: "Responses", value: "45s · 30s · 30s", ok: true }),
     ]));
 
     const ready = multilevelPartSummary("speaking", 1, { ...complete, questionCount: 3 });
@@ -51,6 +53,26 @@ describe("Multilevel part guidance", () => {
     const listening1 = multilevelPartSummary("listening", 0, { ...empty, questionCount: 8 });
     expect(listening1?.ready).toBe(false); // audio still missing
     expect(multilevelPartSummary("listening", 0, { ...complete, questionCount: 8 })?.ready).toBe(true);
+  });
+
+  it("never renders the retired speaking preparation for the current revision", () => {
+    const speaking = multilevelPartsFor("speaking");
+    // Parts 1.1 and 1.2 are answered immediately in the current revision.
+    expect(speaking[0].prep).toBe("None");
+    expect(speaking[1].prep).toBe("None");
+    expect(speaking[1].responses).toBe("45s · 30s · 30s");
+    // Only Parts 2 and 3 keep an official preparation, and it is 60 seconds.
+    expect(speaking.map((part) => part.prep)).toEqual(["None", "None", "60s", "60s"]);
+    // The historical 15/5/5 countdown must not be reachable from this mirror.
+    for (const part of speaking) {
+      expect(part.prep ?? "").not.toContain("15");
+      expect(part.responses ?? "").not.toContain("15");
+    }
+    for (const part of speaking) {
+      const summary = multilevelPartSummary("speaking", speaking.indexOf(part), { ...complete, questionCount: part.count });
+      const prep = summary?.rows.find((row) => row.label === "Prep");
+      expect(prep?.value ?? "").not.toContain("15");
+    }
   });
 
   it("returns null outside the blueprint", () => {

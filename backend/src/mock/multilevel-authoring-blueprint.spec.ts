@@ -5,6 +5,7 @@ import { multilevelFixture } from './multilevel.fixture';
 import {
   MULTILEVEL_SPECIFICATION,
   MULTILEVEL_VERSION,
+  MULTILEVEL_VERSION_V1,
   multilevelBlueprintIssues,
   taskGuidance,
 } from './multilevel-specification';
@@ -211,9 +212,13 @@ describe('Multilevel authoring blueprint', () => {
   });
 
   it('exposes the official part timing metadata the part panel displays', () => {
+    // Current revision: Parts 1.1 and 1.2 have NO official preparation.
     expect(taskGuidance('speaking', 0, 0)).toMatchObject({ prepSeconds: 0, responseSeconds: 30 });
-    expect(taskGuidance('speaking', 1, 0)).toMatchObject({ prepSeconds: 15, responseSeconds: 45 });
-    expect(taskGuidance('speaking', 1, 2)).toMatchObject({ prepSeconds: 5, responseSeconds: 30 });
+    expect(taskGuidance('speaking', 1, 0)).toMatchObject({ prepSeconds: 0, responseSeconds: 45 });
+    expect(taskGuidance('speaking', 1, 2)).toMatchObject({ prepSeconds: 0, responseSeconds: 30 });
+    // Revision 1 stays byte-identical for every exam already stamped with it.
+    expect(taskGuidance('speaking', 1, 0, null, MULTILEVEL_VERSION_V1)).toMatchObject({ prepSeconds: 15, responseSeconds: 45 });
+    expect(taskGuidance('speaking', 1, 2, null, MULTILEVEL_VERSION_V1)).toMatchObject({ prepSeconds: 5, responseSeconds: 30 });
     expect(taskGuidance('speaking', 2, 0)).toMatchObject({ prepSeconds: 60, responseSeconds: 120 });
     expect(taskGuidance('speaking', 3, 0)).toMatchObject({ prepSeconds: 60, responseSeconds: 120 });
     expect(taskGuidance('writing', 0, 0)).toMatchObject({ rawMax: 5, wordMin: 50, wordMax: 50, displayLabel: 'Task 1.1 — Informal Letter' });

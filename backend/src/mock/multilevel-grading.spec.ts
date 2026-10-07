@@ -6,12 +6,16 @@ import { MULTILEVEL_VERSION } from './multilevel-specification';
 
 function setup(ungraded = false) {
   const sections = multilevelFixture().map((s) => ({ ...s, groups:s.groups.map((g,gi) => ({ ...g, questions:g.questions.map((q,qi) => ({...q,id:`${s.skill}-${gi}-${qi}`,correctAnswers:['library'],acceptedVariants:[]})) })) }));
-  const answers = sections.flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => ({id:`a-${q.id}`,questionId:q.id,response:'library',isGraded:!ungraded,score:q.points}))));
-  const attempt = {id:'attempt',studentId:'student',status:'in_progress',specificationVersion:MULTILEVEL_VERSION,exam:{type:'multilevel',sections},answers};
+  // A speaking prompt is answered by a recorded take, not by text — the
+  // pre-submit completeness gate refuses a hand-in without one.
+  const answers = sections.flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => ({id:`a-${q.id}`,questionId:q.id,response:'library',audioKey:s.skill === 'speaking' ? `audio/${q.id}.webm` : null,isGraded:!ungraded,score:q.points}))));
+  const attempt = {id:'attempt',studentId:'student',status:'in_progress',specificationVersion:MULTILEVEL_VERSION as string | null,flowMode:null as string | null,currentSkill:null as string | null,sectionDeadlines:null as Record<string,string> | null,overallDeadlineAt:null as Date | null,exam:{type:'multilevel',sections},answers};
   const update = vi.fn().mockImplementation(async ({data}) => Object.assign(attempt,data));
   const updateMany = vi.fn().mockImplementation(async ({where,data}) => { if (where.status !== attempt.status) return {count:0}; Object.assign(attempt,data); return {count:1}; });
   const prisma = {mockAttempt:{findUnique:vi.fn().mockResolvedValue(attempt),findUniqueOrThrow:vi.fn().mockResolvedValue(attempt),update,updateMany},mockAnswer:{update:vi.fn().mockResolvedValue({})},studentProfile:{findUnique:vi.fn().mockResolvedValue({availablePrograms:['MULTILEVEL']})},$transaction:vi.fn().mockImplementation(async (ops) => Promise.all(ops))};
-  const service = new MockGradingService(prisma as never,{} as never,{} as never,{} as never,{} as never,{} as never,{get:()=>undefined} as never);
+  // IELTS reaches the band tables; the Multilevel path never reads settings.
+  const settings = { getBandTables: vi.fn(async () => undefined) };
+  const service = new MockGradingService(prisma as never,{} as never,{} as never,{} as never,{} as never,settings as never,{get:()=>undefined} as never);
   // Notification transport is outside scoring; avoid requiring a live account.
   const notifications = service as unknown as { notifyResult(id: string): Promise<void>; notifyTeacherPending(id: string): Promise<void> };
   vi.spyOn(notifications,'notifyResult').mockResolvedValue(undefined);
@@ -37,5 +41,66 @@ describe('Multilevel submission through the real scoring service', () => {
     const {service,prisma} = setup();
     await expect(service.submit({id:'outside'} as never,'attempt')).rejects.toMatchObject({status:404});
     expect(prisma.mockAttempt.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('Multilevel pre-submit completeness gate', () => {
+  it('refuses an unfinished exam while the student still has time, without touching it',async () => {
+    const {service,prisma,attempt} = setup();
+    attempt.answers.find((a) => a.questionId.startsWith('reading-'))!.response = '';
+    await expect(service.submit({id:'student'} as never,'attempt')).rejects.toMatchObject({
+      code:'MOCK_ATTEMPT_INCOMPLETE',status:400,message:expect.stringContaining('Reading 1 of 35 unanswered'),
+    });
+    expect(prisma.mockAttempt.updateMany).not.toHaveBeenCalled();
+    expect(attempt.status).toBe('in_progress');
+  });
+
+  it('refuses a speaking section that has no recorded take',async () => {
+    const {service,attempt} = setup();
+    for (const a of attempt.answers) if (a.questionId.startsWith('speaking-')) a.audioKey = null;
+    await expect(service.submit({id:'student'} as never,'attempt')).rejects.toMatchObject({
+      code:'MOCK_ATTEMPT_INCOMPLETE',message:expect.stringContaining('Speaking 8 of 8 not recorded'),
+    });
+  });
+
+  it('submits the partial exam once the attempt clock has expired (timeout auto-submit)',async () => {
+    const {service,attempt} = setup();
+    for (const a of attempt.answers) { a.response = ''; a.audioKey = null; }
+    attempt.overallDeadlineAt = new Date(Date.now() - 1000);
+    await expect(service.submit({id:'student'} as never,'attempt')).resolves.toMatchObject({status:'completed'});
+  });
+
+  it('ignores a section whose own clock has already run out',async () => {
+    const {service,attempt} = setup();
+    for (const a of attempt.answers) if (a.questionId.startsWith('reading-')) a.response = '';
+    attempt.sectionDeadlines = {reading:new Date(Date.now() - 1000).toISOString()};
+    await expect(service.submit({id:'student'} as never,'attempt')).resolves.toMatchObject({status:'completed'});
+  });
+
+  it('never applies to IELTS: a partial IELTS hand-in is still graded',async () => {
+    const {service,prisma,attempt} = setup();
+    attempt.exam.type = 'ielts_academic';
+    attempt.specificationVersion = null;
+    for (const a of attempt.answers) a.response = '';
+    const result = await service.submit({id:'student'} as never,'attempt') as Record<string, unknown>;
+    expect(prisma.mockAttempt.updateMany).not.toHaveBeenCalled();
+    expect(result).not.toHaveProperty('scoreMethod');
+    expect(attempt.status).not.toBe('in_progress');
+  });
+
+  it('requires only the live section of a full-test attempt, never the closed ones',async () => {
+    // Sections the student has already been advanced past are closed one-way, so
+    // their gaps must not block a hand-in that can no longer repair them.
+    const closed = setup();
+    closed.attempt.flowMode = 'full_test';
+    closed.attempt.currentSkill = 'speaking';
+    for (const a of closed.attempt.answers) if (a.questionId.startsWith('reading-')) a.response = '';
+    await expect(closed.service.submit({id:'student'} as never,'attempt')).resolves.toMatchObject({status:'completed'});
+
+    const live = setup();
+    live.attempt.flowMode = 'full_test';
+    live.attempt.currentSkill = 'speaking';
+    for (const a of live.attempt.answers) if (a.questionId.startsWith('speaking-')) a.audioKey = null;
+    await expect(live.service.submit({id:'student'} as never,'attempt')).rejects.toMatchObject({code:'MOCK_ATTEMPT_INCOMPLETE'});
   });
 });
