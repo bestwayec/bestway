@@ -2,6 +2,9 @@
 
 Date: 2026-10-08. Verdict: **STAGE_B_INTEGRATION_BLOCKED**.
 
+Evidence/infrastructure commit: `140bba1` —
+`test(django): record real client integration blockers`.
+
 Stage A and the 43/43 Stage B API implementation remain intact. This gate is
 separate from API parity; native desktop tests and complete browser lifecycle
 coverage have not passed. No Stage C implementation, merge or deployment.
