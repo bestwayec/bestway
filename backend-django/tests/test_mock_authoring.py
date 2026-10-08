@@ -65,7 +65,7 @@ class AuthoringSanitizationAndParityTests(SimpleTestCase):
         payload = mock_authoring._student_question_payload(_fake_question("matching"), _fake_group(content_layout="headings", options_reusable=False))
         self.assertIsNone(payload["options"])
         payload = mock_authoring._student_question_payload(_fake_question("matching"), _fake_group(content_layout="headings", options_reusable=True))
-        self.assertTrue(payload["options"])
+        self.assertIsNone(payload["options"])
 
     def test_student_payload_caps_options_reusable_to_none_when_false_and_missing(self):
         payload = mock_authoring._student_question_payload(_fake_question("matching"), _fake_group(content_layout="headings", options_reusable=False))
@@ -123,9 +123,19 @@ class AuthoringSanitizationAndParityTests(SimpleTestCase):
         issues = mock_authoring.multilevel_readiness(tree)["issues"]
         self.assertIn("Full Multilevel mock requires all four sections", issues)
 
-    def test_authoring_readiness_is_the_canonical_readiness_used_everywhere(self):
-        from apps.core.mock_catalog import canonical_readiness
-        self.assertIs(canonical_readiness, mock_authoring.readiness)
+    def test_catalogue_preserves_nest_ielts_start_readiness(self):
+        from apps.core.mock_catalog import start_ready
+        from types import SimpleNamespace
+        # Nest catalogue/detail intentionally do not apply Review's key/media checks.
+        self.assertTrue(start_ready(SimpleNamespace(type="ielts")))
+
+    def test_catalogue_multilevel_uses_structural_start_readiness(self):
+        from apps.core.mock_catalog import start_ready
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        tree = {"specification_version": "OLD_SPEC", "sections": []}
+        with patch.object(mock_authoring, "_exam_tree", return_value=tree):
+            self.assertFalse(start_ready(SimpleNamespace(type="multilevel")))
 
     def test_create_exam_rejects_invalid_type_and_too_short_title(self):
         actor = _fake_actor()

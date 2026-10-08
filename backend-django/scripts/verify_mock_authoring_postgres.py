@@ -28,6 +28,7 @@ import django
 django.setup()
 
 from django.db import connection
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -54,6 +55,7 @@ client = APIClient()
 exam_ids: list[str] = []
 user_ids: list[str] = []
 checks: list[str] = []
+media_keys: list[str] = []
 
 
 def check(condition: bool, label: str) -> None:
@@ -108,16 +110,23 @@ def author_full_multilevel(exam_id: str) -> None:
         groups = list(MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"))
         for part_index, group in enumerate(groups):
             changed = []
+            files = {}
             if section.skill == "listening":
-                group.audio_key = f"mock/django-verify-{run_id}-{group.id}.mp3"
+                files['audio'] = SimpleUploadedFile('fixture.mp3', b'ID3-disposable-local-fixture', content_type='audio/mpeg')
                 group.audio_duration_sec = 30 + part_index
                 group.passage_text = f"SECRET LISTENING TRANSCRIPT {part_index + 1}"
-                changed.extend(["audio_key", "audio_duration_sec", "passage_text"])
+                changed.extend(["audio_duration_sec", "passage_text"])
             if section.skill == "speaking" and part_index == 1:
-                group.image_key = f"mock/django-verify-{run_id}-{group.id}.png"
-                changed.append("image_key")
+                files['image'] = SimpleUploadedFile('fixture.png', b'\x89PNG\r\n\x1a\n-disposable-fixture', content_type='image/png')
+            if section.skill == "reading":
+                response_data(client.patch(f'/v1/mock/groups/{group.id}',
+                    {'passageText': f'Original disposable reading passage {part_index + 1}.'}, format='json'), 200)
             if changed:
                 group.save(update_fields=changed)
+            if files:
+                response_data(client.post(f'/v1/mock/groups/{group.id}/media', files, format='multipart'), 201)
+                group.refresh_from_db()
+                media_keys.extend(k for k in (group.audio_key, group.image_key) if k)
             rows = question_rows(section.skill, part_index, counters[section.skill])
             counters[section.skill] += len(rows)
             version = MockExam.objects.values_list("content_version", flat=True).get(id=exam_id)
@@ -293,7 +302,7 @@ try:
 
     author_full_multilevel(full_id)
     review = response_data(client.get(f"/v1/mock/exams/{full_id}/readiness"), 200)
-    check(review["ready"] is True, "fully authored Multilevel review is ready")
+    check(review["ready"] is True, f"fully authored Multilevel review is ready: {[i for i in review['items'] if not i['ok']]}")
     published = response_data(client.patch(f"/v1/mock/exams/{full_id}", {"isPublished": True}, format="json"), 200)
     check(published["isPublished"] is True, "ready Multilevel exam publishes")
     detail = response_data(client.get(f"/v1/mock/exams/{full_id}"), 200)
@@ -344,5 +353,8 @@ finally:
     if user_ids:
         User.objects.filter(id__in=user_ids).delete()
     AuditLog.objects.filter(user_id__in=[admin.id, super_admin.id]).delete()
+    from apps.core.mock_media import delete_unreferenced
+    for key in media_keys:
+        delete_unreferenced(key)
     leftovers = MockExam.objects.filter(id__in=exam_ids).count() if exam_ids else 0
     print(f"CLEANUP disposable_exam_leftovers={leftovers}")
