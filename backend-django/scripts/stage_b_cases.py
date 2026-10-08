@@ -81,3 +81,25 @@ def run(call, ids, db, schemas, results):
     for method, path, payload in paths:
         for role in (None, 'teacher', 'admin', 'super_admin'):
             call(method, path, payload, role=role, label='B:security:'+str(role))
+    # Checkpoint 1: real synchronous submission, not a mocked grading service.
+    call('POST','/v1/mock/attempts/{ielts_attempt}/submit',{},role='student',label='B:submit:IELTS-timeout-unanswered')
+    call('POST','/v1/mock/attempts/{ielts_attempt}/submit',{},role='student',label='B:submit:IELTS-duplicate-rejected')
+    for role in (None,'teacher','admin','super_admin'):
+        call('POST','/v1/mock/attempts/{ielts_attempt}/submit',{},role=role,label='B:submit:role:'+str(role))
+    remember('submission_exam',call('POST','/v1/mock/exams',dict(type='ielts_academic',title='Submission handoff fixture',profile='practice',isDemo=True)),'id')
+    remember('submission_section',call('POST','/v1/mock/exams/{submission_exam}/sections',dict(skill='writing')),'id')
+    remember('submission_group',call('POST','/v1/mock/sections/{submission_section}/groups',dict(title='Task one',instructions='Write original text')),'id')
+    call('POST','/v1/mock/groups/{submission_group}/questions',dict(questions=[dict(number=1,type='essay_task1',prompt='Original task',points=9)]))
+    # Equal fixture identity is needed for comparing cryptographic hashes. These
+    # isolated schemas have no answers yet; no live history is altered.
+    question_id = str(uuid4())
+    for side,schema in enumerate(schemas):
+        db.execute(sql.SQL('UPDATE {}."MockQuestion" SET id=%s WHERE "groupId"=%s').format(sql.Identifier(schema)),(question_id,ids[side]['submission_group']))
+        ids[side]['submission_question']=question_id
+    remember('submission_attempt',call('POST','/v1/mock/exams/{submission_exam}/start',dict(mode='practice'),role='student',label='B:submit:manual-start'))
+    call('POST','/v1/mock/attempts/{submission_attempt}/answer',dict(questionId='{submission_question}',response='Original submitted essay.'),role='student')
+    call('POST','/v1/mock/attempts/{submission_attempt}/submit',{},role='student',label='B:submit:manual-pending-snapshot')
+    call('POST','/v1/mock/attempts/{submission_attempt}/answer',dict(questionId='{submission_question}',response='Forbidden rewrite'),role='student',label='B:submit:history-protected')
+    call('POST','/v1/mock/attempts/{submission_attempt}/submit',{},role='student',label='B:submit:legacy-pending-duplicate')
+    from stage_b_submission_checks import run as submission_checks
+    submission_checks(call,ids,db,schemas,results)

@@ -59,8 +59,13 @@ function firstMessage(errors) {
     const {MockGradingService} = load('mock/mock-grading.service.js');
     const {AccessService} = load('common/access.service.js');
     const {SettingsService} = load('settings/settings.service.js');
+    const {AssessmentService} = load('assessment/assessment.service.js');
+    const {NotificationsService} = load('notifications/notifications.service.js');
+    const studentAccess = new AccessService(prisma);
+    const notifications = new NotificationsService(prisma, {send: async () => {}});
+    values.set(AssessmentService, new AssessmentService(prisma, studentAccess, programs, storage, config));
     values.set(MockAttemptService, new MockAttemptService(prisma, access, storage, config));
-    values.set(MockGradingService, new MockGradingService(prisma, new AccessService(prisma), inaccessible,
+    values.set(MockGradingService, new MockGradingService(prisma, studentAccess, notifications,
       storage, audit, new SettingsService(prisma, audit), config, programs));
   }
   for (const controller of [MockController, MockExamImportController]) {

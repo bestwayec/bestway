@@ -4,7 +4,7 @@ Reference: the active built `MockController` and `TestsController`, their source
 
 Run `node backend-django/scripts/stage_b_inventory.cjs` for exact methods, paths, role metadata, public/optional authentication and success statuses. This is not an inventory of all backend routes: authoring mutations and assessment/grading implementation are outside Stage B. Direct lifecycle access, management and result-support contracts are included, even when unimplemented. The user explicitly included legacy `/tests`.
 
-Active scoped contracts: **43** (28 mock, 15 legacy). Registered in Django: **17** (13 new lifecycle routes, four existing catalogue/media routes). Missing: **26**. Registration is not proof of full compatibility.
+Active scoped contracts: **43** (28 mock, 15 legacy). Registered in Django: **18** (14 new lifecycle routes, four existing catalogue/media routes). Missing: **25**. Registration is not proof of full compatibility.
 
 JSON responses use `{success:true,data:...}`; paginated routes add top-level `meta:{page,limit,total}`. Errors use `{success:false,error:{code,message}}`. POST success defaults to 201; GET/PUT success defaults to 200. Binary streams also support 206 and 416. Below `S` means JWT student; `A` means authenticated with student/linked-parent/assigned-teacher/admin scope; `T` means teacher/admin/super_admin; `D` means admin/super_admin; `O` means optional JWT; `P` means public. All paths start with `/v1`.
 
@@ -29,7 +29,7 @@ JSON responses use `{success:true,data:...}`; paginated routes add top-level `me
 | POST `/mock/attempts/:attemptId/advance` | S | No DTO; saved/currentSkill/submittedSections/serverTime/deadlines | New |
 | GET `/mock/groups/:groupId/audio` | O | `attemptId?`, Range; stream | Existing; approved security change |
 | GET `/mock/groups/:groupId/image` | O | Range; image stream | Existing |
-| POST `/mock/attempts/:attemptId/submit` | S | `{skills?:MockSkill[]}`; grading/submission result + enqueue | Missing |
+| POST `/mock/attempts/:attemptId/submit` | S | `{skills?:MockSkill[]}`; synchronous scores/submission result + immutable enqueue | Checkpoint 1 |
 | POST `/mock/exams/:id/purchase` | S | No DTO; `{status,amount}` | Missing |
 | GET `/mock/attempts` | T | ListAttemptsQueryDto; summaries/meta scoped by student | Missing |
 | POST `/mock/attempts/:attemptId/force-submit` | T | No DTO; submission result, audit, enqueue | Missing |
@@ -57,7 +57,9 @@ MediaPhase is `{startedAt,prepEndsAt,expiresAt,plays,serverTime,playLimit:2}`. L
 
 Known errors: `MOCK_EXAM_NOT_FOUND`/`MOCK_ATTEMPT_NOT_FOUND` 404; `NOT_A_STUDENT`/`PROGRAM_NOT_ENROLLED`/`SECTION_LOCKED`/`PART_LOCKED`/`PREVIEW_ACTIVE`/`AUDIO_REPLAY_BLOCKED` 403; `MOCK_CONTENT_CONFLICT`/`PREVIOUS_UPLOAD_PENDING` 409; validation/empty/not-ready/unsupported/finished/time-up/section-time-up/flow-complete/recording-not-started/upload-window-expired/invalid-audio 400. Exact invalid-DTO first-error ordering and UTF-16 length parity are not fully verified.
 
-Submission remains unimplemented. Reference Multilevel incomplete manual submission returns `MOCK_ATTEMPT_INCOMPLETE` with counts only; expired overall/section clocks excuse missing work. Full-test completeness requires only the current section. Versioned repeat submit returns the saved result; legacy repeat submit errors. `MockGradingService.submit` synchronously scores objective sections, updates status/scores and notifies, then the controller calls `AssessmentService.enqueue`. Porting a bare status change would not preserve this contract. Snapshot/job enqueue is a required compatibility handoff, not authorization to run providers. No separate mock timeout endpoint or background mock timeout job was found: the clients use advance/submit on clock expiration.
+Checkpoint 1 implements submission. Multilevel incomplete manual submission returns `MOCK_ATTEMPT_INCOMPLETE` with counts only; expired overall/section clocks excuse missing work. Full-test completeness requires only the current section. Versioned repeat submit returns the saved result; legacy repeat submit errors. Django ports synchronous deterministic scoring into `mock_scoring.py`, preserving result JSON, IELTS tables/rounding, Multilevel conversions and manual pending states. It writes scores, snapshots and in-app notifications under the attempt lock. Snapshot/job enqueue is a required compatibility handoff, not authorization to run providers. No separate mock timeout endpoint or background mock timeout job was found: the clients use advance/submit on clock expiration.
+
+Transaction safety: Django rolls back score projections, finalization, snapshots and in-app notifications together if any handoff fails. Nest's public controller performs snapshot enqueue after the grading transaction and notifications. This stronger atomic boundary follows the requested rollback requirement; success JSON and persisted results match. A concurrent Nest loser can observe the intermediate `grading` claim; the harness retains its raw response rather than normalizing it away. Django's loser waits for the finalized transaction and returns the saved stable result. Existing manual scores are reused without introducing teacher-review functionality.
 
 ## Approved compatibility/security decisions
 

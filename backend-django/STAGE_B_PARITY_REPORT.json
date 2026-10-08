@@ -1,7 +1,7 @@
 {
   "activeContracts": 43,
-  "comparisons": 356,
-  "passed": 355,
+  "comparisons": 394,
+  "passed": 393,
   "failed": 1,
   "normalization": [
     "UUID",
@@ -732,35 +732,35 @@
     },
     {
       "method": "PUT",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/content",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/content",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PUT",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/content",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/content",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PUT",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/content",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/content",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PUT",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/content",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/content",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PUT",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/content",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/content",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
@@ -872,805 +872,805 @@
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/audio",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/audio",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/audio",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/audio",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/audio",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/audio",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/audio",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/audio",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/audio",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/audio",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/image",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/image",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/image",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/image",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/image",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/image",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/image",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/image",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/image",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/image",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/media",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/media",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/media",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/media",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/media",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/media",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/media",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/media",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/media",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/media",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions/import",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions/import",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions/import",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions/import",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions/import",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions/import",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions/import",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions/import",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions/import",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions/import",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/questions",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "PATCH",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "PATCH",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "PATCH",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "PATCH",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "PATCH",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/groups/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/groups",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/groups",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/groups",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/groups",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/groups",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827/questions",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/sections/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/groups/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "PATCH",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "method": "POST",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827/groups",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "PATCH",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "method": "POST",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827/groups",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "PATCH",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "method": "POST",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827/groups",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "PATCH",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "method": "POST",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827/groups",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "PATCH",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "DELETE",
-      "path": "/v1/mock/questions/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "method": "POST",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827/groups",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "PATCH",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "DELETE",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/sections/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/readiness",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/readiness",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/readiness",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/readiness",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/readiness",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/multilevel-repair-inspection",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/multilevel-repair-inspection",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/multilevel-repair-inspection",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/multilevel-repair-inspection",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/multilevel-repair-inspection",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/apply-multilevel-safe-repair",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/apply-multilevel-safe-repair",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/apply-multilevel-safe-repair",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/apply-multilevel-safe-repair",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/apply-multilevel-safe-repair",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone-corrected-multilevel",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone-corrected-multilevel",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone-corrected-multilevel",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone-corrected-multilevel",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/clone-corrected-multilevel",
-      "label": "security:super_admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/repair-multilevel",
-      "label": "security:None",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/repair-multilevel",
-      "label": "security:student",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/repair-multilevel",
-      "label": "security:teacher",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/repair-multilevel",
-      "label": "security:admin",
-      "status": "PASS",
-      "database": "PASS"
-    },
-    {
-      "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/repair-multilevel",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/preview",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/preview",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/preview",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/preview",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/preview",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/sections",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/sections",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/sections",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/sections",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exams/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/sections",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/readiness",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/readiness",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/readiness",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/readiness",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/readiness",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/multilevel-repair-inspection",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/multilevel-repair-inspection",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/multilevel-repair-inspection",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/multilevel-repair-inspection",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/multilevel-repair-inspection",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/apply-multilevel-safe-repair",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/apply-multilevel-safe-repair",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/apply-multilevel-safe-repair",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/apply-multilevel-safe-repair",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/apply-multilevel-safe-repair",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone-corrected-multilevel",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone-corrected-multilevel",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone-corrected-multilevel",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone-corrected-multilevel",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/clone-corrected-multilevel",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/repair-multilevel",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/repair-multilevel",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/repair-multilevel",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/repair-multilevel",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/repair-multilevel",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/preview",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/preview",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/preview",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/preview",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/preview",
+      "label": "security:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/sections",
+      "label": "security:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/sections",
+      "label": "security:student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/sections",
+      "label": "security:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/sections",
+      "label": "security:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/ea48ee71-82b5-4ca6-92ba-275efcb3a827/sections",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
@@ -1817,70 +1817,70 @@
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exam-imports/by-exam/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/exam-imports/by-exam/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exam-imports/by-exam/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/exam-imports/by-exam/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exam-imports/by-exam/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/exam-imports/by-exam/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exam-imports/by-exam/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/exam-imports/by-exam/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "GET",
-      "path": "/v1/mock/exam-imports/by-exam/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0",
+      "path": "/v1/mock/exam-imports/by-exam/ea48ee71-82b5-4ca6-92ba-275efcb3a827",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exam-imports/issues/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/resolve",
+      "path": "/v1/mock/exam-imports/issues/ea48ee71-82b5-4ca6-92ba-275efcb3a827/resolve",
       "label": "security:None",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exam-imports/issues/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/resolve",
+      "path": "/v1/mock/exam-imports/issues/ea48ee71-82b5-4ca6-92ba-275efcb3a827/resolve",
       "label": "security:student",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exam-imports/issues/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/resolve",
+      "path": "/v1/mock/exam-imports/issues/ea48ee71-82b5-4ca6-92ba-275efcb3a827/resolve",
       "label": "security:teacher",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exam-imports/issues/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/resolve",
+      "path": "/v1/mock/exam-imports/issues/ea48ee71-82b5-4ca6-92ba-275efcb3a827/resolve",
       "label": "security:admin",
       "status": "PASS",
       "database": "PASS"
     },
     {
       "method": "POST",
-      "path": "/v1/mock/exam-imports/issues/bdd01ca2-5d69-4982-8bf2-dee0f76ccfa0/resolve",
+      "path": "/v1/mock/exam-imports/issues/ea48ee71-82b5-4ca6-92ba-275efcb3a827/resolve",
       "label": "security:super_admin",
       "status": "PASS",
       "database": "PASS"
@@ -2547,21 +2547,385 @@
       "label": "B:security:super_admin",
       "status": "PASS",
       "database": "PASS"
-    }
-  ],
-  "registeredContracts": 17,
-  "missingContracts": [
+    },
     {
       "method": "POST",
-      "path": "/v1/mock/attempts/:attemptId/submit",
-      "handler": "submit",
-      "roles": [
-        "student"
-      ],
-      "optionalAuth": false,
-      "public": false,
-      "successStatus": 201
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:IELTS-timeout-unanswered",
+      "status": "PASS",
+      "database": "PASS"
     },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:IELTS-duplicate-rejected",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:role:None",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:role:teacher",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:role:admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{ielts_attempt}/submit",
+      "label": "B:submit:role:super_admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams",
+      "label": "admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/{submission_exam}/sections",
+      "label": "admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/sections/{submission_section}/groups",
+      "label": "admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/groups/{submission_group}/questions",
+      "label": "admin",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/exams/{submission_exam}/start",
+      "label": "B:submit:manual-start",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{submission_attempt}/answer",
+      "label": "student",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{submission_attempt}/submit",
+      "label": "B:submit:manual-pending-snapshot",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{submission_attempt}/answer",
+      "label": "B:submit:history-protected",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{submission_attempt}/submit",
+      "label": "B:submit:legacy-pending-duplicate",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_complete}/submit",
+      "label": "B:submit:Multilevel-ignores-skill-filter",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_complete}/submit",
+      "label": "B:submit:Multilevel-idempotent-completed",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_missing}/submit",
+      "label": "B:submit:Multilevel-incomplete-denied",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_timeout}/submit",
+      "label": "B:submit:Multilevel-timeout-partial",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_timeout}/submit",
+      "label": "B:submit:Multilevel-timeout-idempotent",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_wrong}/submit",
+      "label": "B:submit:attempted-zero-raw",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{full_pending}/submit",
+      "label": "B:submit:four-skills-pending-snapshots",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{full_pending}/submit",
+      "label": "B:submit:four-skills-idempotent-full_pending",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{full_scored}/submit",
+      "label": "B:submit:four-skills-existing-manual-scores",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{full_scored}/submit",
+      "label": "B:submit:four-skills-idempotent-full_scored",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_missing}/submit",
+      "label": "B:submit:invalid-DTO",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_missing}/submit",
+      "label": "B:submit:invalid-DTO",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_missing}/submit",
+      "label": "B:submit:invalid-DTO",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{foreign_owner}/submit",
+      "label": "B:submit:second-student-IDOR",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/bea91402-06da-4be4-b551-480ca4fe1f30/submit",
+      "label": "B:submit:not-found",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{revoked}/submit",
+      "label": "B:submit:revoked-enrollment",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_rollback}/submit",
+      "label": "B:submit:rollback-retry",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PG",
+      "path": "reference-concurrent-submit",
+      "label": "B:submit:Nest-manual-race",
+      "status": "PASS",
+      "database": "PASS",
+      "responses": [
+        {
+          "status": 201,
+          "body": {
+            "success": true,
+            "data": {
+              "status": "completed",
+              "rawScores": {
+                "listening": {
+                  "score": 1,
+                  "max": 1
+                }
+              },
+              "sectionBands": null,
+              "overallBand": null,
+              "cefrLevel": null,
+              "standardScores": {
+                "listening": {
+                  "rawCorrect": 1,
+                  "questionCount": 1,
+                  "estimatedStandardScore": 75,
+                  "scoreMethod": "ESTIMATED",
+                  "scoreVersion": "UZBMB_MULTILEVEL_EN_2026_V1_ESTIMATE_V1",
+                  "isOfficial": false
+                }
+              },
+              "overallScore": null,
+              "scoreMethod": "ESTIMATED",
+              "scoreVersion": "UZBMB_MULTILEVEL_EN_2026_V1_ESTIMATE_V1",
+              "specificationVersion": "UZBMB_MULTILEVEL_EN_2026_V2",
+              "isOfficial": false
+            }
+          }
+        },
+        {
+          "status": 201,
+          "body": {
+            "success": true,
+            "data": {
+              "status": "grading",
+              "rawScores": {},
+              "sectionBands": null,
+              "overallBand": null,
+              "cefrLevel": null,
+              "standardScores": null,
+              "overallScore": null,
+              "specificationVersion": "UZBMB_MULTILEVEL_EN_2026_V2",
+              "scoreMethod": null,
+              "scoreVersion": null,
+              "isOfficial": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_race}/submit",
+      "label": "B:submit:PG-manual-race-persisted-parity",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PG",
+      "path": "reference-concurrent-submit",
+      "label": "B:submit:Nest-timeout-race",
+      "status": "PASS",
+      "database": "PASS",
+      "responses": [
+        {
+          "status": 201,
+          "body": {
+            "success": true,
+            "data": {
+              "status": "grading",
+              "rawScores": {},
+              "sectionBands": null,
+              "overallBand": null,
+              "cefrLevel": null,
+              "standardScores": null,
+              "overallScore": null,
+              "specificationVersion": "UZBMB_MULTILEVEL_EN_2026_V2",
+              "scoreMethod": null,
+              "scoreVersion": null,
+              "isOfficial": false
+            }
+          }
+        },
+        {
+          "status": 201,
+          "body": {
+            "success": true,
+            "data": {
+              "status": "completed",
+              "rawScores": {
+                "listening": {
+                  "score": 1,
+                  "max": 1
+                }
+              },
+              "sectionBands": null,
+              "overallBand": null,
+              "cefrLevel": null,
+              "standardScores": {
+                "listening": {
+                  "rawCorrect": 1,
+                  "questionCount": 1,
+                  "estimatedStandardScore": 75,
+                  "scoreMethod": "ESTIMATED",
+                  "scoreVersion": "UZBMB_MULTILEVEL_EN_2026_V1_ESTIMATE_V1",
+                  "isOfficial": false
+                }
+              },
+              "overallScore": null,
+              "scoreMethod": "ESTIMATED",
+              "scoreVersion": "UZBMB_MULTILEVEL_EN_2026_V1_ESTIMATE_V1",
+              "specificationVersion": "UZBMB_MULTILEVEL_EN_2026_V2",
+              "isOfficial": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{score_race}/submit",
+      "label": "B:submit:PG-timeout-race-persisted-parity",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{save_submit_race}/submit",
+      "label": "B:submit:PG-save-submit-serialization",
+      "status": "PASS",
+      "database": "PASS"
+    },
+    {
+      "method": "PG",
+      "path": "submission-locks-and-rollback",
+      "label": "B:submit:postgres-concurrency",
+      "status": "PASS",
+      "database": "PASS",
+      "checks": 17
+    }
+  ],
+  "registeredContracts": 18,
+  "missingContracts": [
     {
       "method": "POST",
       "path": "/v1/mock/exams/:id/purchase",
@@ -2835,9 +3199,9 @@
     }
   ],
   "stageAComparisons": 268,
-  "stageBComparisons": 88,
+  "stageBComparisons": 126,
   "verdict": "STAGE_B_BLOCKED",
-  "coverage": "Partial lifecycle; submission and full security/concurrency gates remain outstanding",
+  "coverage": "Checkpoint 1 submission implemented; legacy lifecycle, support routes and full security/concurrency gates remain outstanding",
   "approvedSecurityDifferences": [
     {
       "method": "GET",

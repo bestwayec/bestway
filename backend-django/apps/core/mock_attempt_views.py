@@ -81,6 +81,21 @@ def answers_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def submit_view(request, attempt_id):
+    from .mock_submissions import submit
+    student(request)
+    data = body(request, {'skills'})
+    skills = data.get('skills')
+    if skills is not None:
+        if not isinstance(skills, list):
+            engine.fail('VALIDATION_ERROR', 'skills must be an array')
+        if any(skill not in engine.SKILLS for skill in skills):
+            engine.fail('VALIDATION_ERROR', 'each value in skills must be one of the following values: listening, reading, writing, speaking')
+    return success(submit(request.user, attempt_id, skills), 201)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def advance_view(request, attempt_id):
     student(request)
     return success(engine.advance(request.user, attempt_id), 201)

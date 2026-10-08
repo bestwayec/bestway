@@ -4,15 +4,15 @@ Workspace/branch preserved: `migration/django-backend`, baseline `bba9707`. Stag
 
 ## Scope and current coverage
 
-43 active scoped lifecycle/access/result-support contracts: 28 `/mock`, 15 legacy `/tests`. 17 registered Django contracts: four pre-existing catalogue/media routes plus 13 new lifecycle routes. 26 missing routes are listed exactly in `DJANGO_STAGE_B_CONTRACT.md` and the machine report. Registration is not a completed parity gate.
+43 active scoped lifecycle/access/result-support contracts: 28 `/mock`, 15 legacy `/tests`. 18 registered Django contracts: four pre-existing catalogue/media routes plus 14 new lifecycle routes. 25 missing routes are listed exactly in `DJANGO_STAGE_B_CONTRACT.md` and the machine report. Registration is not a completed parity gate.
 
-Implemented slice: transactional mock Start/resume, single/bulk response saves, own history and scoped detail, annotations, cheat signals, section advance, durable Listening/Speaking phases, Speaking upload and authorized recorded-audio stream. Existing tables remain unmanaged. Student audio now binds to an active own attempt even when the request omits attemptId, per explicit user security direction. Post-submit annotations retain exact reference behavior, also explicitly approved.
+Implemented slice: transactional mock Start/resume, single/bulk response saves, own history and scoped detail, annotations, cheat signals, section advance, durable Listening/Speaking phases, Speaking upload, authorized recorded-audio stream and synchronous submit/timeout. Existing tables remain unmanaged. Student audio now binds to an active own attempt even when the request omits attemptId, per explicit user security direction. Post-submit annotations retain exact reference behavior, also explicitly approved.
 
 ## Verification
 
 - Django check: pass with the existing local DATABASE_URL. Initial check without DATABASE_URL correctly refused SQLite fallback; rerun with local configuration passed.
-- pytest: 88 passed +11 subtests. Seventeen new lifecycle clock/boundary tests; real database tests are in the separate harness.
-- Final combined run: 356 comparisons, 355 exact matches and one explicitly approved security mismatch. Stage B contributes 88 comparisons: 87 matches plus the IELTS audio security difference (Django 400 MOCK_TIME_UP vs NestJS 200 audio bytes). Zero unapproved mismatches. The strict differential process intentionally exits 1 for the retained difference; this is not a clean full-parity gate.
+- pytest: 94 passed +11 subtests, including 578 direct calls comparing unchanged Nest pure scoring functions (tables, every conversion entry, rounding, answer rules and Unicode). Real database tests are in the separate harness.
+- Final combined run: 394 recorded comparisons/check groups, 393 pass and one explicitly approved security mismatch. Stage B contributes 126 groups: 123 API/DB comparisons and three PostgreSQL concurrency groups. The IELTS audio security difference remains Django 400 MOCK_TIME_UP vs NestJS 200 audio bytes. Zero unapproved mismatches. The strict differential process intentionally exits 1 for the retained difference; this is not a clean full-parity gate.
 - Stage A regression: 268/268 API/DB comparisons pass in the combined isolated runner.
 - PostgreSQL authoring regression: 163/163 pass; disposable fixture cleanup reports zero leftovers.
 - NestJS: 421 tests across 31 files pass; TypeScript check, build and Prisma validation pass.
@@ -24,13 +24,13 @@ The final machine report is `backend-django/STAGE_B_PARITY_REPORT.json`. It rema
 
 Verified for the slice: anonymous and teacher/admin/super_admin mutation denial; student-safe in-progress detail; hidden answer keys/transcript omitted from Start; foreign question and atomic mixed bulk denial; completed answer denial; late timed save denial; unsupported media rejection; upload header rejection; protected recorded-audio scope; immutable timed take logic and safe practice replacement.
 
-Not yet a full security gate: second-student IDOR matrix, assigned-teacher/parent ownership matrix, revoked enrollment, concurrent fresh starts, concurrent save/submit/force-submit, rollback fault injection, all skill media/timing recovery, and legacy `/tests`. No tenant boundary should be invented where the existing schema has none. Cheat event cap is serialized, but route-specific 30/minute throttle parity is still missing.
+Checkpoint 1 additionally verifies submission second-student IDOR, revoked enrollment, duplicate submissions, save-vs-submit races and rollback fault injection. Not yet a full security gate: the cross-route second-student IDOR matrix, assigned-teacher/parent ownership matrix, enrollment across remaining routes, concurrent fresh starts/force-submit, all skill media/timing recovery, and legacy `/tests`. No tenant boundary should be invented where the existing schema has none. Cheat event cap is serialized, but route-specific 30/minute throttle parity is still missing.
 
 ## Exact remaining work
 
 1. Complete detailed error/JSON/DB inventory for missing legacy and support routes; decide whether certificate generation is lifecycle support or a separate result-stage artifact without dropping actual client calls from coverage.
-2. Implement `/mock/attempts/:attemptId/submit`: completeness, timed exception, objective-score compatibility, saved result idempotency, notifications and AssessmentJob snapshot enqueue. No DeepSeek/Deepgram/provider execution.
-3. Implement force-submit, extend, reopen, delete and staff attempt queue, plus purchase request/list/confirm/reject and certificate support (11 missing mock contracts).
+2. Checkpoint 1 submission is completed; extend the final Stage B gate with additional profiles/media and staff force-submit concurrency when those routes exist. No DeepSeek/Deepgram/provider execution.
+3. Implement force-submit, extend, reopen, delete and staff attempt queue, plus purchase request/list/confirm/reject and certificate support (10 missing mock contracts).
 4. Implement and compare all 15 legacy `/tests` lifecycle/support contracts, including persisted random selection, marks, audio, demo scoring, submit and recovery.
 5. Finish exact invalid-DTO/Unicode length/first-error parity and multipart limits, Range edge cases, phase ordering/retries, all supported speaking profiles and route throttle.
 6. Real concurrent new Start/save/submit tests, timeout-vs-submit races, stale-definition race, rollback injection and second-student/program/staff-scope security matrix.
@@ -39,6 +39,10 @@ Not yet a full security gate: second-student IDOR matrix, assigned-teacher/paren
 9. Rerun all gates after the remaining implementations. Stage C must not begin.
 
 ## Commits and reproduction
+
+Checkpoint 1 (2026-10-08): deterministic scoring is isolated in `mock_scoring.py`; submission uses the shared row lock; manual/timeout/duplicate paths preserve persisted result JSON. Full four-skill fixtures compare objective totals, existing manual scores, status transitions, immutable snapshots and exact input hashes. Tests verify denied incomplete/revoked/foreign-owner submissions, rollback after a synthetic snapshot failure, save-vs-submit serialization, duplicate manual/timeout races and no duplicate notifications. The local Nest reference also receives concurrent submits; raw transient claim responses are retained in the machine report, while final persisted results match. Django's stronger atomic snapshot/notification boundary is documented in the contract. Writing/Speaking awaiting assessment retain `grading` status and no invented scores.
+
+One expanded run initially failed with PostgreSQL `DiskFull: No space left on device`. Read-only diagnosis confirmed zero remaining disposable schemas; cleanup recovered sufficient space and the subsequent full run passed all new checks. C: remains low on free space; no existing data was deleted or moved. All verification schemas/storage were cleaned up. Stage C provider execution, jobs and teacher review remain deferred.
 
 - `b4e48c7` — initial mock attempt lifecycle and approved media policy.
 - `0484bfb` — lifecycle tests, scoped inventory and local PG differential report.

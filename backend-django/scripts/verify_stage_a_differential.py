@@ -109,7 +109,7 @@ try:
             state = {}
             tables = ('MockExam', 'MockSection', 'MockQuestionGroup', 'MockQuestion', 'MockExamImport', 'MockImportSourceMap', 'MockImportReviewIssue', 'MockStagedMedia', 'MockAttempt')
             if STAGE_B:
-                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob')
+                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob', 'Notification')
             for table in tables:
                 rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
                 state[table] = sorted((normalize(row[0]) for row in rows), key=lambda value: json.dumps(value, sort_keys=True))
@@ -292,6 +292,8 @@ try:
         stage_a_count = len(results)
         if STAGE_B:
             from stage_b_cases import run as run_stage_b
+            call.reference_base = f'http://127.0.0.1:{port}'
+            call.reference_student_token = tokens[1]['student']
             run_stage_b(call, ids, db, schemas, results)
         summary = dict(activeContracts=inventory['count'], comparisons=len(results),
             passed=sum(r['status'] == 'PASS' for r in results),
@@ -316,7 +318,7 @@ try:
                 registeredContracts=stage_b_inventory['count']-len(missing_contracts),
                 missingContracts=missing_contracts)
             summary.update(stageAComparisons=stage_a_count, stageBComparisons=len(results)-stage_a_count,
-                verdict='STAGE_B_BLOCKED', coverage='Partial lifecycle; submission and full security/concurrency gates remain outstanding')
+                verdict='STAGE_B_BLOCKED', coverage='Checkpoint 1 submission implemented; legacy lifecycle, support routes and full security/concurrency gates remain outstanding')
             summary['approvedSecurityDifferences'] = [r for r in results if r.get('approvedSecurityDifference')]
             summary['unapprovedFailures'] = sum(r['status'] == 'FAIL' and not r.get('approvedSecurityDifference') for r in results)
         REPORT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')

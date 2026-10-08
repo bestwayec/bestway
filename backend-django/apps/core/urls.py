@@ -1,7 +1,7 @@
 from django.urls import path
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
-    mine_view, detail_view, speaking_upload_view, speaking_audio_view)
+    mine_view, detail_view, speaking_upload_view, speaking_audio_view, submit_view)
 from .mock_media import group_media_view, group_audio_view, group_image_view
 from .mock_import_views import (validate_import_view, commit_import_view, stage_import_media_view,
                                import_by_package_view, import_by_exam_view, resolve_import_issue_view)
@@ -29,6 +29,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/answers/<str:question_id>/audio', speaking_audio_view),
     path('mock/attempts/<str:attempt_id>/answer', answer_view),
     path('mock/attempts/<str:attempt_id>/answers', answers_view),
+    path('mock/attempts/<str:attempt_id>/submit', submit_view),
     path('mock/attempts/<str:attempt_id>/advance', advance_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/prepare', prepare_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/play', play_view),
