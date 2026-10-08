@@ -53,6 +53,16 @@ function firstMessage(errors) {
   const imports = new MockExamImportService(prisma, audit);
   const values = new Map([[PrismaService, prisma], [MockAuthoringService, authoring],
     [MockExamImportService, imports], [MockAccessService, access]]);
+  // Stage B opts into real lifecycle dependencies, never workers/providers.
+  if (process.env.VERIFY_STAGE_B === '1') {
+    const {MockAttemptService} = load('mock/mock-attempt.service.js');
+    const {MockGradingService} = load('mock/mock-grading.service.js');
+    const {AccessService} = load('common/access.service.js');
+    const {SettingsService} = load('settings/settings.service.js');
+    values.set(MockAttemptService, new MockAttemptService(prisma, access, storage, config));
+    values.set(MockGradingService, new MockGradingService(prisma, new AccessService(prisma), inaccessible,
+      storage, audit, new SettingsService(prisma, audit), config, programs));
+  }
   for (const controller of [MockController, MockExamImportController]) {
     for (const token of Reflect.getMetadata('design:paramtypes', controller)) {
       if (!values.has(token)) values.set(token, inaccessible);

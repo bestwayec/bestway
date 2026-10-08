@@ -21,7 +21,8 @@ import psycopg
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT_PATH = ROOT / 'STAGE_A_PARITY_REPORT.json'
+STAGE_B = os.environ.get('VERIFY_STAGE_B') == '1'
+REPORT_PATH = ROOT / ('STAGE_B_PARITY_REPORT.json' if STAGE_B else 'STAGE_A_PARITY_REPORT.json')
 sys.path.insert(0, str(ROOT))
 raw_url = os.environ.get('DATABASE_URL', '')
 parsed = urlparse(raw_url)
@@ -41,9 +42,12 @@ db = psycopg.connect(connection_url, autocommit=True)
 def schema_url(schema):
     return urlunparse(parsed._replace(query=urlencode(dict(query, schema=schema))))
 
+uuid_keys = {}
+
+
 def normalize(value):
     if isinstance(value, dict):
-        return {normalize(k): normalize(v) for k, v in value.items()}
+        return {uuid_keys.get(k, normalize(k)): normalize(v) for k, v in value.items()}
     if isinstance(value, list):
         return [normalize(v) for v in value]
     if isinstance(value, str):
@@ -103,7 +107,10 @@ try:
 
         def database_state(side):
             state = {}
-            for table in ('MockExam', 'MockSection', 'MockQuestionGroup', 'MockQuestion', 'MockExamImport', 'MockImportSourceMap', 'MockImportReviewIssue', 'MockStagedMedia', 'MockAttempt'):
+            tables = ('MockExam', 'MockSection', 'MockQuestionGroup', 'MockQuestion', 'MockExamImport', 'MockImportSourceMap', 'MockImportReviewIssue', 'MockStagedMedia', 'MockAttempt')
+            if STAGE_B:
+                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob')
+            for table in tables:
                 rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
                 state[table] = sorted((normalize(row[0]) for row in rows), key=lambda value: json.dumps(value, sort_keys=True))
             return state
@@ -146,11 +153,27 @@ try:
                     raw = response.read()
                     result = dict(status=response.status, body=json.loads(raw) if 'json' in response.headers.get('Content-Type', '') else dict(bytes=list(raw)))
                 responses.append(result)
+            if STAGE_B:
+                # UUID-keyed savedAnswers/mediaState must retain distinct keys.
+                # Collapsing them all to <UUID> hides losses and causes false
+                # mismatches when the two ORMs return answers in different order.
+                def pair_keys(left, right):
+                    if isinstance(left, dict) and isinstance(right, dict):
+                        for key in ('id', 'attemptId'):
+                            if isinstance(left.get(key), str) and isinstance(right.get(key), str):
+                                a, b = left[key], right[key]
+                                if re.fullmatch(r'[0-9a-f-]{36}', a) and re.fullmatch(r'[0-9a-f-]{36}', b):
+                                    alias = uuid_keys.get(a) or uuid_keys.get(b) or '<UUID_KEY_' + str(len(uuid_keys)//2) + '>'
+                                    uuid_keys[a] = uuid_keys[b] = alias
+                        for key in left.keys() & right.keys(): pair_keys(left[key], right[key])
+                    elif isinstance(left, list) and isinstance(right, list):
+                        for a, b in zip(left, right): pair_keys(a, b)
+                pair_keys(responses[0], responses[1])
             passed = normalize(responses[0]) == normalize(responses[1])
             states = [database_state(side) for side in (0, 1)]
             db_passed = states[0] == states[1]
             results.append(dict(method=method, path=path, label=label or role or 'anonymous', status='PASS' if passed and db_passed else 'FAIL', database='PASS' if db_passed else 'FAIL', **({} if passed else dict(django=normalize(responses[0]), nest=normalize(responses[1]))), **({} if db_passed else dict(databaseDifferences={table: dict(django=states[0][table], nest=states[1][table]) for table in states[0] if states[0][table] != states[1][table]}))))
-            print(json.dumps(results[-1], ensure_ascii=True), flush=True)
+            print(json.dumps({key: results[-1][key] for key in ('method', 'path', 'label', 'status', 'database')}, ensure_ascii=True), flush=True)
             return [r.get('body', {}).get('data') for r in responses]
 
         def capture(name, values):
@@ -266,12 +289,36 @@ try:
             for role in (None, 'student', 'teacher', 'admin', 'super_admin'):
                 call(endpoint['method'], path, payload,
                     role=role, label='security:' + str(role))
+        stage_a_count = len(results)
+        if STAGE_B:
+            from stage_b_cases import run as run_stage_b
+            run_stage_b(call, ids, db, schemas, results)
         summary = dict(activeContracts=inventory['count'], comparisons=len(results),
             passed=sum(r['status'] == 'PASS' for r in results),
             failed=sum(r['status'] == 'FAIL' for r in results),
             normalization=['UUID', 'ISO timestamp'],
             isolation='two disposable localhost PostgreSQL schemas with real JWT authentication',
             results=results)
+        if STAGE_B:
+            stage_b_inventory = json.loads(subprocess.run(['node', str(ROOT / 'scripts/stage_b_inventory.cjs')], capture_output=True, text=True, check=True).stdout)
+            from django.urls import resolve, Resolver404
+            missing_contracts = []
+            for endpoint in stage_b_inventory['endpoints']:
+                target = re.sub(r':[^/]+', 'fixture', endpoint['path'])
+                try:
+                    found = resolve(target).func
+                    implemented = endpoint['method'].lower() in getattr(found, 'cls').http_method_names
+                except (Resolver404, AttributeError):
+                    implemented = False
+                if not implemented:
+                    missing_contracts.append(endpoint)
+            summary.update(activeContracts=stage_b_inventory['count'],
+                registeredContracts=stage_b_inventory['count']-len(missing_contracts),
+                missingContracts=missing_contracts)
+            summary.update(stageAComparisons=stage_a_count, stageBComparisons=len(results)-stage_a_count,
+                verdict='STAGE_B_BLOCKED', coverage='Partial lifecycle; submission and full security/concurrency gates remain outstanding')
+            summary['approvedSecurityDifferences'] = [r for r in results if r.get('approvedSecurityDifference')]
+            summary['unapprovedFailures'] = sum(r['status'] == 'FAIL' and not r.get('approvedSecurityDifference') for r in results)
         REPORT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
         print('SUMMARY ' + json.dumps({key: summary[key] for key in ('activeContracts', 'comparisons', 'passed', 'failed')}))
 finally:
