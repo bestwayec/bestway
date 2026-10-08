@@ -66,6 +66,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
   const advance = useAdvanceMockSection(attempt.id);
+  // Mutation wrappers change on every render; their callbacks stay stable.
+  // Depending on a wrapper resets the 1500ms debounce on each 1000ms clock tick.
+  const bulkMutateAsync = bulk.mutateAsync;
+  const submitMutateAsync = submit.mutateAsync;
+  const advanceMutateAsync = advance.mutateAsync;
+  const flagMutate = flag.mutate;
 
   // Timed = exam-strict playback (full_test ham, single_skill ham).
   // Eslatma: `strict` clipboard/contextmenu bloklashni ham yoqadi — Timed
@@ -110,6 +116,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const dirty = React.useRef<Set<string>>(new Set());
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
+  const [saveRevision, setSaveRevision] = React.useState(0);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
   React.useEffect(() => {
     const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string}>).detail; if (detail?.attemptId === attempt.id) setAudioSet((previous) => new Set([...previous,detail.questionId])); };
@@ -118,32 +125,31 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
 
   const flush = React.useCallback(() => {
-    if (versioned && (saveInFlight.current || submittingRef.current)) return;
+    if (saveInFlight.current || submittingRef.current) return;
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === id)));
     if (!ids.length) return;
-    if (!versioned) dirty.current.clear();
     const snapshot = { ...answersRef.current };
-    if (versioned) {
-      setSaveState("saving");
-      saveInFlight.current = bulk.mutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then(() => {
-        ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-        if (!dirty.current.size) setSaveState("saved");
-      }).catch(() => { setSaveState("error"); toast.error("Your response could not be saved. Try again."); }).finally(() => { saveInFlight.current = null; });
-      return;
-    }
-    bulk.mutate(
-      ids.map((id) => ({ questionId: id, response: answersRef.current[id] ?? "" })),
-      { onSuccess: () => {
-        ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-      }, onError: () => { ids.forEach((id) => dirty.current.add(id)); toast.error(tc("saveFailed")); } },
-    );
-  }, [bulk, tc, versioned, isFullTest, attempt.sections, attempt.currentSkill]);
+    if (versioned) setSaveState("saving");
+    let succeeded = false;
+    saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then(() => {
+      succeeded = true;
+      ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
+      if (versioned && !dirty.current.size) setSaveState("saved");
+    }).catch(() => {
+      if (versioned) setSaveState("error");
+      toast.error(versioned ? "Your response could not be saved. Try again." : tc("saveFailed"));
+    }).finally(() => {
+      saveInFlight.current = null;
+      // Edits made while saving remain dirty; debounce their latest snapshot.
+      if (succeeded && dirty.current.size) setSaveRevision((revision) => revision + 1);
+    });
+  }, [bulkMutateAsync, tc, versioned, isFullTest, attempt.sections, attempt.currentSkill]);
 
   // Debounce autosave
   React.useEffect(() => {
     const id = setTimeout(flush, 1500);
     return () => clearTimeout(id);
-  }, [answers, flush]);
+  }, [answers, flush, saveRevision]);
 
   function setAnswer(qid: string, val: string) {
     dirty.current.add(qid);
@@ -198,12 +204,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
-        if (versioned) await saveInFlight.current;
+        await saveInFlight.current;
         const all = Object.entries(answersRef.current)
           .filter(([qid, v]) => versioned ? (!isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === qid))) : v !== '')
           .map(([questionId, response]) => ({ questionId, response }));
-        if (all.length && (!versioned || !auto)) await bulk.mutateAsync(all);
-        await submit.mutateAsync();
+        if (all.length && (!versioned || !auto)) await bulkMutateAsync(all);
+        await submitMutateAsync();
         toast.success(t("submitted"));
       } catch (e) {
         submittingRef.current = false;
@@ -213,7 +219,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulk, submit, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
+    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
   );
 
   React.useEffect(() => {
@@ -229,12 +235,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         nextRetry = Date.now() + 10000;
         if (isFullTest && attempt.currentSkill !== 'speaking') {
           submittingRef.current = true;
-          void advance.mutateAsync().catch(() => toast.error('Section transition failed. Retrying…')).finally(() => { submittingRef.current = false; });
+          void advanceMutateAsync().catch(() => toast.error('Section transition failed. Retrying…')).finally(() => { submittingRef.current = false; });
         } else void doSubmit(true);
       }
     }, 1000);
     return () => { clearInterval(id); clearInterval(clock); };
-  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, advance]);
+  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, advanceMutateAsync]);
 
   // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
   const goNextSection = React.useCallback(async () => {
@@ -244,15 +250,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       if (versioned) {
         await saveInFlight.current;
         const ids = attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.flatMap((g) => g.questions.map((q) => q.id)) ?? [];
-        await bulk.mutateAsync(ids.map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
+        await bulkMutateAsync(ids.map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
         ids.forEach((id) => dirty.current.delete(id));
       } else flush();
-      await advance.mutateAsync();
+      await advanceMutateAsync();
       toast.success("Next section");
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { if (versioned) submittingRef.current = false; }
-  }, [advance, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulk]);
+  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -276,7 +282,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   React.useEffect(() => {
     if (attempt.mode !== "timed") return;
     function report(event: string) {
-      flag.mutate(event);
+      flagMutate(event);
       setCheatWarn(true);
       setCheatCount((c) => c + 1);
     }
@@ -292,7 +298,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("blur", onBlur);
     };
-  }, [attempt.mode, flag]);
+  }, [attempt.mode, flagMutate]);
 
   function blockClipboard(e: React.ClipboardEvent | React.MouseEvent | React.DragEvent) {
     if (!strict) return;
