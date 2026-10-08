@@ -52,3 +52,9 @@ npx prisma validate
 The differential run writes [STAGE_A_PARITY_REPORT.json](backend-django/STAGE_A_PARITY_REPORT.json), a machine-readable 33-contract report. It starts a loopback-only NestJS reference harness and drops only its own validated disposable schemas and storage directory.
 
 Frontend and Tauri are unchanged. NestJS is read-only reference code. Remaining Stage A blockers: **none**.
+
+## Stage B — partial student lifecycle, not complete
+
+See `DJANGO_STAGE_B_CONTRACT.md` and `DJANGO_STAGE_B_REPORT.md`. The explicitly expanded scope includes legacy `/tests`: 43 active lifecycle/access/result-support contracts, 17 registered in Django, 26 missing. Thirteen new mock lifecycle routes are implemented; submission, legacy lifecycle and full concurrency/security gates remain outstanding. Verdict: **STAGE_B_BLOCKED**. Stage C has not started.
+
+Verified partial slice: 87 of 88 Stage B API/DB comparisons match, with one explicitly retained, user-approved IELTS attempt-bound-audio security difference (Django denies expired audio, Nest streams it). Zero unapproved mismatches; strict parity exits 1 for the difference. Stage A regression remains 268/268 API/DB and 163/163 PG authoring checks; Django has 88 passing pytest tests plus 11 subtests; NestJS has 421 passing tests and passing type/build/schema checks. Do not interpret partial route coverage as full Stage B parity.
