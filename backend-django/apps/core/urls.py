@@ -1,4 +1,5 @@
 from django.urls import path
+from . import legacy_test_views as legacy
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
     mine_view, detail_view, speaking_upload_view, speaking_audio_view, submit_view)
@@ -21,6 +22,21 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('tests',legacy.list_view),
+    path('tests/demo/list',legacy.demos_view),
+    path('tests/demo/<str:test_id>/submit',legacy.demo_submit_view),
+    path('tests/demo/<str:test_id>',legacy.demo_view),
+    path('tests/attempts/mine',legacy.mine_view),
+    path('tests/attempts',legacy.attempts_view),
+    path('tests/attempts/<str:attempt_id>/answer',legacy.answer_view),
+    path('tests/attempts/<str:attempt_id>/marks',legacy.marks_view),
+    path('tests/attempts/<str:attempt_id>/flag-cheat',legacy.cheat_view),
+    path('tests/attempts/<str:attempt_id>/submit',legacy.submit_view),
+    path('tests/attempts/<str:attempt_id>/certificate',legacy.certificate_view),
+    path('tests/attempts/<str:attempt_id>',legacy.attempt_view),
+    path('tests/questions/<str:question_id>/audio',legacy.audio_view),
+    path('tests/<str:test_id>/start',legacy.start_view),
+    path('tests/<str:test_id>',legacy.test_view),
     path('mock/exams/<str:exam_id>/start', start_view),
     path('mock/attempts/mine', mine_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
