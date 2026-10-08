@@ -2,7 +2,7 @@
 
 ## Verdict
 
-**STAGE_A_COMPLETE**, **STAGE_B_CHECKPOINT_3_COMPLETE** as of 2026-10-08. All **43/43** scoped Stage B lifecycle/access/result-support routes are now registered and verified, including legacy15 and mock28; zero missing. Three approved media-security restrictions remain explicit differences, not exact parity. Stage C has not started.
+**STAGE_A_COMPLETE**; Stage B API **STAGE_B_CHECKPOINT_3_COMPLETE**, but final client gate **STAGE_B_INTEGRATION_BLOCKED** as of 2026-10-08. All **43/43** scoped Stage B lifecycle/access/result-support routes are registered and API-verified, including legacy15 and mock28; zero missing. Three approved media-security restrictions remain explicit differences, not exact parity. Real browser login/catalogue smoke evidence exists; full lifecycle/native desktop gates remain unverified. Native UI initialization and disk-space failures block completion. See `DJANGO_STAGE_B_INTEGRATION_REPORT.md`. Stage C has not started.
 
 Workspace command execution was restored and all work stayed on `migration/django-backend`. Existing committed and uncommitted work was preserved; no reset, stash, discard, production access or deployment occurred.
 

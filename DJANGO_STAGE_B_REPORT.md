@@ -1,4 +1,20 @@
-# Stage B scoped lifecycle — STAGE_B_CHECKPOINT_3_COMPLETE
+# Stage B scoped lifecycle — STAGE_B_INTEGRATION_BLOCKED
+
+## Checkpoint 4 — local clients, 2026-10-08
+
+**STAGE_B_INTEGRATION_BLOCKED**. Checkpoint 3's 43/43 implemented API contracts
+and 702/705 differential result remain valid (three approved security differences,
+zero unapproved failures). Real student/teacher/admin browser login and initial
+catalogue/setup rendering are verified; full student/staff/media UI coverage and
+native desktop E2E are not. Cold Next compilation and document-navigation test
+synchronization were isolated; test infrastructure now records timings and screenshots.
+Native UI tools fail initialization and native Rust testing exhausted disk space.
+Expanded timed Reading UI testing found no autosave request for 90 seconds:
+the frontend save debounce depends on an unstable mutation wrapper and is reset
+by one-second timer renders. A minimal client fix requires explicit approval;
+frontend source is unchanged. Next typecheck/lint pass (31 existing warnings).
+Full evidence, regressions and remaining gates: `DJANGO_STAGE_B_INTEGRATION_REPORT.md`.
+Do not claim STAGE_B_COMPLETE or begin Stage C.
 
 ## Checkpoint 3 — final current result, 2026-10-08
 
