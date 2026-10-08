@@ -17,3 +17,17 @@ class BestwayJWTAuthentication(BaseAuthentication):
             c.execute('SELECT "id","name","phone","role","isActive" FROM "User" WHERE "id"=%s', [user_id]); row=c.fetchone()
         if not row or not row[4]: raise ContractAPIException("UNAUTHORIZED", "Token yaroqsiz yoki muddati tugagan", 401)
         return LegacyUser(*row), header[7:]
+
+
+class OptionalMockJWTAuthentication(BestwayJWTAuthentication):
+    """Nest OptionalAuth falls back to anonymous for invalid GET bearer tokens.
+
+    Mixed catalogue/detail views keep strict authentication for mutations.
+    """
+    def authenticate(self, request):
+        try:
+            return super().authenticate(request)
+        except ContractAPIException as error:
+            if request.method == 'GET' and error.status_code == 401:
+                return None
+            raise

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 CURRENT_SPEC = "UZBMB_MULTILEVEL_EN_2026_V2"
 V1_SPEC = "UZBMB_MULTILEVEL_EN_2026_V1"
-CURRENT_SPEAKING_PROFILE = "BESTWAY_MULTILEVEL_SPEAKING_2026_V2"
+CURRENT_SPEAKING_PROFILE = "BESTWAY_MULTILEVEL_SPEAKING_2026_V3"
 
 
 def _spec(part12_prep: list[int]) -> dict:
@@ -19,16 +19,18 @@ SPECS = {V1_SPEC: _spec([15, 5, 5]), CURRENT_SPEC: _spec([0, 0, 0])}
 
 
 def authored(items):
-    return sorted(items, key=lambda item: (item.get("sort_order", item.get("sortOrder", 0)), item.get("id", "")))
+    return [item for _index, item in sorted(enumerate(items), key=lambda row: (
+        row[1].get('sort_order', row[1].get('sortOrder')) if row[1].get('sort_order', row[1].get('sortOrder')) is not None else row[0], row[0]))]
 
 
-def readiness(exam: dict) -> dict:
-    spec = SPECS.get(exam.get("specification_version", exam.get("specificationVersion")))
-    if not spec:
-        return {"supported": False, "issues": ["Unsupported Multilevel specification"]}
-    sections = exam.get("sections") or []
+def blueprint_issues(sections, full=True, specification_version=None, *, imported=False):
+    spec = SPECS.get(specification_version) or SPECS[CURRENT_SPEC]
+    if imported:
+        sections = [dict(s, groups=[dict(g, sortOrder=i, audioKey=g.get('audioRef'), imageKey=g.get('imageRef'),
+            audioDurationSec=None, maxScore=None, stimulusRef=None) for i, g in enumerate(s.get('groups') or []) if isinstance(g, dict)])
+            for s in sections if isinstance(s, dict) and s.get('skill') in spec]
     issues: list[str] = []
-    if exam.get("profile") == "full_mock" and len(sections) != 4:
+    if full and len(sections) != 4:
         issues.append("Full Multilevel mock requires all four sections")
     for section in sections:
         skill = section.get("skill")
@@ -39,7 +41,7 @@ def readiness(exam: dict) -> dict:
         parts = spec[skill]["parts"]
         if len(groups) != len(parts):
             issues.append(f"{skill}: requires {len(parts)} parts")
-        if skill == "writing" and (not groups or len(groups) < 2 or not groups[0].get("stimulus_ref", groups[0].get("stimulusRef")) or groups[0].get("stimulus_ref", groups[0].get("stimulusRef")) != groups[1].get("stimulus_ref", groups[1].get("stimulusRef"))):
+        if skill == "writing" and (not groups or len(groups) < 2 or not (groups[0].get("stimulus_ref", groups[0].get("stimulusRef")) or '').strip() or groups[0].get("stimulus_ref", groups[0].get("stimulusRef")) != groups[1].get("stimulus_ref", groups[1].get("stimulusRef"))):
             issues.append("writing: informal and formal emails must share the same source stimulus")
         for index, group in enumerate(groups):
             if index >= len(parts):
@@ -68,9 +70,69 @@ def readiness(exam: dict) -> dict:
                     issues.append(f"{label} question {question_index + 1}: invalid type")
                 if skill not in {"writing", "speaking"} and question.get("points") != 1:
                     issues.append(f"{label}: points must be 1")
-                option_count = options or (4 if skill == "reading" and question.get("type") == "multiple_choice" else None)
+                option_count = options if skill in {'listening', 'reading'} else None
+                option_count = option_count or (4 if skill == "reading" and question.get("type") == "multiple_choice" else None)
                 if option_count and len(question.get("options") or []) != option_count:
                     issues.append(f"{label}: requires {option_count} options")
                 if question.get("type") in {"short_answer", "note_completion", "sentence_completion", "summary_completion"} and question.get("word_limit", question.get("wordLimit")) != 1:
                     issues.append(f"{label}: one-word/number answer required")
-    return {"supported": True, "issues": issues}
+    return issues
+
+
+def readiness(exam):
+    version = exam.get('specification_version', exam.get('specificationVersion'))
+    if version not in SPECS:
+        return dict(supported=False, issues=['Unsupported Multilevel specification'])
+    return dict(supported=True, issues=blueprint_issues(exam.get('sections') or [], exam.get('profile') == 'full_mock', version))
+
+
+def specification_payload(version):
+    spec = SPECS.get(version)
+    if spec is None:
+        return None
+    result = {}
+    for skill, section in spec.items():
+        parts = []
+        for index, (key, count, types, extra) in enumerate(section['parts']):
+            part = dict(key=key, count=count, types=types)
+            if skill in ('listening', 'reading') and extra:
+                part['options'] = extra
+            if skill in ('writing', 'speaking'):
+                part['rawMax'] = extra
+            if skill == 'writing':
+                part.update(wordMin=[50, 120, 180][index], wordMax=[50, 150, 200][index])
+            if skill == 'speaking':
+                part.update(prepSeconds=[[0, 0, 0], section['part12Prep'], [60], [60]][index],
+                            responseSeconds=[[30, 30, 30], [45, 30, 30], [120], [120]][index])
+            parts.append(part)
+        result[skill] = dict(durationSeconds=section['duration'] * 60, parts=parts)
+    return result
+
+
+def speaking_profile(version):
+    if version not in ('BESTWAY_MULTILEVEL_SPEAKING_2026_V2', CURRENT_SPEAKING_PROFILE):
+        return None
+    old = version == 'BESTWAY_MULTILEVEL_SPEAKING_2026_V2'
+    return dict(version=version, isOfficialTiming=False, parts=[dict(key=key, prepSeconds=prep, responseSeconds=response)
+        for key, prep, response in [('1.1', [5, 5, 5] if old else [0, 0, 0], [30, 30, 30]),
+            ('1.2', [10, 5, 5] if old else [0, 0, 0], [45, 30, 30]), ('2', [60], [120]), ('3', [60], [120])]])
+
+
+def task_guidance(skill, part_index, question_index, profile_version, version):
+    parts = (specification_payload(version) or specification_payload(CURRENT_SPEC))[skill]['parts']
+    if part_index >= len(parts):
+        return None
+    part = parts[part_index]
+    label = {'informal_email': 'Task 1.1 — Informal Letter', 'formal_email': 'Task 1.2 — Formal Letter', 'publication': 'Task 2 — Publication'}.get(part['key'], f'Part {part["key"]}')
+    value = dict(taskKey=part['key'], displayLabel=label)
+    for field in ('wordMin', 'wordMax', 'rawMax'):
+        if field in part:
+            value[field] = part[field]
+    if skill == 'speaking':
+        value.update(speakingProfileVersion=profile_version, profileLabel='BestWay product timing profile' if profile_version else 'Historical Multilevel timing profile')
+        profile = speaking_profile(profile_version)
+        timing = profile['parts'][part_index] if profile else part
+        for field in ('prepSeconds', 'responseSeconds'):
+            if question_index < len(timing[field]):
+                value[field] = timing[field][question_index]
+    return value

@@ -1,4 +1,7 @@
 from django.urls import path
+from .mock_media import group_media_view, group_audio_view, group_image_view
+from .mock_import_views import (validate_import_view, commit_import_view, stage_import_media_view,
+                               import_by_package_view, import_by_exam_view, resolve_import_issue_view)
 from .views import mock_parse_questions_view, mock_import_questions_view
 
 from .views import (desktop_authorize_view, desktop_exchange_view, desktop_version,
@@ -15,6 +18,15 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('mock/groups/<str:group_id>/media', group_media_view),
+    path('mock/groups/<str:group_id>/audio', group_audio_view),
+    path('mock/groups/<str:group_id>/image', group_image_view),
+    path('mock/exam-imports/validate', validate_import_view),
+    path('mock/exam-imports/media', stage_import_media_view),
+    path('mock/exam-imports', commit_import_view),
+    path('mock/exam-imports/by-package/<str:package_id>/revisions/<str:revision>', import_by_package_view),
+    path('mock/exam-imports/by-exam/<str:exam_id>', import_by_exam_view),
+    path('mock/exam-imports/issues/<str:issue_id>/resolve', resolve_import_issue_view),
     path('mock/parse-questions', mock_parse_questions_view),
     path('mock/groups/<str:group_id>/questions/import', mock_import_questions_view),
     path("health", health), path("desktop-version", desktop_version),

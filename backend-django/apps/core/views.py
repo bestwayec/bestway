@@ -7,7 +7,8 @@ import uuid
 from django.conf import settings
 from django.db import connection, transaction
 from django.utils.timezone import now
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
+from common.auth.authentication import OptionalMockJWTAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -28,6 +29,10 @@ def success(data: object, status: int = 200) -> Response:
 
 
 def body(request, allowed: set[str]):
+    if isinstance(request.data, dict) and request.path.startswith('/v1/mock/'):
+        extra = next((key for key in request.data if key not in allowed), None)
+        if extra is not None:
+            raise ContractAPIException('VALIDATION_ERROR', f'property {extra} should not exist', 400)
     if not isinstance(request.data, dict) or set(request.data) - allowed:
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
     return request.data
@@ -219,6 +224,7 @@ def student_exam_programs_view(request, student_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
+@authentication_classes([OptionalMockJWTAuthentication])
 def mock_exams_view(request):
     if request.method == "POST":
         require_authenticated(request)
@@ -236,6 +242,7 @@ def mock_exams_view(request):
 
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([AllowAny])
+@authentication_classes([OptionalMockJWTAuthentication])
 def mock_exam_detail_view(request, exam_id):
     if request.method == "GET":
         return success(mock_catalog.get_exam(request.user if getattr(request.user, "is_authenticated", False) else None, exam_id))
@@ -342,7 +349,7 @@ def mock_group_questions_view(request, group_id):
     require_role(request, "teacher", "admin", "super_admin")
     data = body(request, {"questions"})
     questions = mock_authoring.add_questions(request.user, group_id, data)
-    return success({"added": len(questions), "questions": [mock_authoring.question_payload(question) for question in questions]}, status=201)
+    return success({"added": len(data['questions']), "questions": [mock_authoring.question_payload(question) for question in questions]}, status=201)
 
 
 def _paste_body(request, *, importing=False):

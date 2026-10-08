@@ -19,7 +19,12 @@ if not DATABASE_URL: raise RuntimeError("DATABASE_URL is required; Phase 1 never
 DATABASES = {"default": database_from_url(DATABASE_URL)}
 INSTALLED_APPS = ["django.contrib.auth", "django.contrib.contenttypes", "django.contrib.staticfiles", "corsheaders", "rest_framework", "apps.core", "apps.legacy_schema"]
 MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", "django.middleware.security.SecurityMiddleware", "django.middleware.common.CommonMiddleware"]
-ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = []; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/"); MEDIA_ROOT = env("STORAGE_DIR", str(BASE_DIR / "storage"))
+ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = []; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/")
+# Share the reference storage root by default so existing mock keys still resolve.
+MEDIA_ROOT = env("STORAGE_DIR", str(BASE_DIR.parent / "backend" / "storage"))
+if not Path(MEDIA_ROOT).is_absolute():
+    MEDIA_ROOT = str((BASE_DIR.parent / "backend" / MEDIA_ROOT).resolve())
+DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", env("FRONTEND_ORIGIN", "http://localhost:3000")); CORS_ALLOW_CREDENTIALS = True
 REST_FRAMEWORK = {"EXCEPTION_HANDLER": "common.api.exceptions.exception_handler", "DEFAULT_AUTHENTICATION_CLASSES": ["common.auth.authentication.BestwayJWTAuthentication"], "DEFAULT_THROTTLE_RATES": {"auth_public": "30/min", "auth_sensitive": "10/min"}}
 BUILD_COMMIT = env("BUILD_COMMIT") or None; DESKTOP_LATEST_VERSION = env("DESKTOP_LATEST_VERSION", "0.5.1-rc.1"); DESKTOP_DOWNLOAD_URL = env("DESKTOP_DOWNLOAD_URL", "https://github.com/bestwayec/bw-tauri/releases/download/v0.5.1-rc.1/Bestway.App_0.5.1-rc.1_x64-setup.exe"); DESKTOP_PRERELEASE = env_bool("DESKTOP_PRERELEASE", True); DESKTOP_UPDATE_CHANNEL = "manual_installer"
