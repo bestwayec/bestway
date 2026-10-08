@@ -173,10 +173,14 @@ def mine_view(request):
     return Response(dict(success=True, data=wire(data), meta=meta))
 
 
-@api_view(['GET'])
+@api_view(['GET','DELETE'])
 @permission_classes([AllowAny])
 def detail_view(request, attempt_id):
     require_authenticated(request)
+    if request.method=='DELETE':
+        require_role(request,'admin','super_admin')
+        from .mock_support import delete
+        return success(delete(request.user,attempt_id))
     return success(engine.detail(request.user, attempt_id))
 
 

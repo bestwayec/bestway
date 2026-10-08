@@ -59,17 +59,22 @@ def band_tables():
 
 
 @transaction.atomic
-def submit(actor, attempt_id, skills=None):
+def submit(actor, attempt_id, skills=None, *, force=False):
     """Lock shared with response/media writers; a timeout uses this same route."""
     from .mock_submission_snapshots import enqueue, notify
-    attempt = attempts.own(actor, attempt_id, lock=True)
+    if force:
+        from .mock_support import locked
+        attempt = locked(actor, attempt_id)
+        attempts.assert_in_progress(attempt)
+    else:
+        attempt = attempts.own(actor, attempt_id, lock=True)
     versioned = attempts.versioned(attempt)
     if attempt.status != 'in_progress':
         if not versioned:
             attempts.fail('MOCK_ATTEMPT_FINISHED', 'Bu urinish allaqachon topshirilgan')
         enqueue(attempt, skills)
         return saved_result(attempt)
-    if versioned:
+    if versioned and not force:
         attempts.assert_program(actor, attempt)
     exam = attempt.exam
     sections = mock_catalog.shape_exam(exam, True)['sections']
@@ -77,7 +82,7 @@ def submit(actor, attempt_id, skills=None):
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
         isGraded=a.is_graded, score=a.score) for a in rows}
     now = timezone.now()
-    if versioned:
+    if versioned and not force:
         assert_complete(attempt, sections, answers, now)
     elif skills:
         sections = [s for s in sections if s['skill'] in skills]
@@ -101,6 +106,9 @@ def submit(actor, attempt_id, skills=None):
     attempt.submitted_at = now
     attempt.finished_at = now if result['status'] == 'completed' else None
     attempt.save(update_fields=[*fields, 'submitted_at', 'finished_at'])
+    if force:
+        from .mock_authoring import audit_event
+        audit_event(actor,'mock.attempt.force_submit','mockAttempt',attempt.id,new=dict(status=result['status']))
     enqueue(attempt, skills)
     notify(attempt)
     return result

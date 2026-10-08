@@ -1,5 +1,6 @@
 from django.urls import path
 from . import legacy_test_views as legacy
+from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
     mine_view, detail_view, speaking_upload_view, speaking_audio_view, submit_view)
@@ -22,6 +23,15 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('mock/exams/<str:exam_id>/purchase',support.purchase_view),
+    path('mock/exams/<str:exam_id>/confirm-purchase',support.confirm_view),
+    path('mock/exams/<str:exam_id>/reject-purchase',support.reject_view),
+    path('mock/purchases',support.purchases_view),
+    path('mock/attempts',support.attempts_view),
+    path('mock/attempts/<str:attempt_id>/force-submit',support.force_view),
+    path('mock/attempts/<str:attempt_id>/extend',support.extend_view),
+    path('mock/attempts/<str:attempt_id>/reopen',support.reopen_view),
+    path('mock/attempts/<str:attempt_id>/certificate',support.certificate_view),
     path('tests',legacy.list_view),
     path('tests/demo/list',legacy.demos_view),
     path('tests/demo/<str:test_id>/submit',legacy.demo_submit_view),
