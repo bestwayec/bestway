@@ -16,6 +16,7 @@ from common.auth.permissions import Authenticated
 from common.auth.throttling import PublicAuthThrottle, SensitiveAuthThrottle
 from . import auth_service
 from . import exam_programs
+from . import mock_authoring
 from . import mock_catalog
 
 ROLES = {"super_admin", "admin", "teacher", "student", "parent"}
@@ -45,6 +46,11 @@ def phone(value: str):
 def require_role(request, *roles):
     if request.user.role not in roles:
         raise ContractAPIException("FORBIDDEN", "Bu amal uchun rolingiz yetarli emas", 403)
+
+
+def require_authenticated(request):
+    if not getattr(request.user, "is_authenticated", False):
+        raise ContractAPIException("UNAUTHORIZED", "Avval tizimga kiring", 401)
 
 
 @api_view(["GET"])
@@ -211,9 +217,14 @@ def student_exam_programs_view(request, student_id):
     return success(exam_programs.enroll(request.user, student_id, programs, active))
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 @permission_classes([AllowAny])
 def mock_exams_view(request):
+    if request.method == "POST":
+        require_authenticated(request)
+        require_role(request, "teacher", "admin", "super_admin")
+        data = body(request, {"type", "title", "description", "level", "practiceLevel", "assessmentPolicy", "starterStructure", "profile", "skills", "isDemo", "price", "isFreeForApproved"})
+        return success(mock_authoring.exam_payload(mock_authoring.create_exam(request.user, data)), status=201)
     q = request.query_params
     allowed = {"program", "type", "practiceLevel"}
     if set(q) - allowed: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
@@ -223,10 +234,179 @@ def mock_exams_view(request):
     return success(mock_catalog.list_exams(request.user if getattr(request.user, "is_authenticated", False) else None, program=program, exam_type=exam_type, practice_level=practice))
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([AllowAny])
 def mock_exam_detail_view(request, exam_id):
-    return success(mock_catalog.get_exam(request.user if getattr(request.user, "is_authenticated", False) else None, exam_id))
+    if request.method == "GET":
+        return success(mock_catalog.get_exam(request.user if getattr(request.user, "is_authenticated", False) else None, exam_id))
+    require_authenticated(request)
+    if request.method == "DELETE":
+        require_role(request, "super_admin")
+        return success(mock_authoring.delete_exam(request.user, exam_id))
+    require_role(request, "teacher", "admin", "super_admin")
+    data = body(request, {"title", "description", "level", "practiceLevel", "assessmentPolicy", "isPublished", "isDemo", "price", "isFreeForApproved", "profile"})
+    return success(mock_authoring.exam_payload(mock_authoring.update_exam(request.user, exam_id, data)))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_clone_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    return success(mock_authoring.exam_payload(mock_authoring.clone_exam(request.user, exam_id)), status=201)
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def mock_exam_readiness_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    return success(mock_authoring.readiness(request.user, exam_id))
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def mock_exam_preview_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    return success(mock_authoring.preview(request.user, exam_id))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_repair_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    return success(mock_authoring.repair_multilevel_draft(request.user, exam_id), status=201)
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def mock_exam_repair_inspection_view(request, exam_id):
+    require_role(request, "admin", "super_admin")
+    return success(mock_authoring.multilevel_repair_inspection(request.user, exam_id))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_safe_repair_view(request, exam_id):
+    require_role(request, "admin", "super_admin")
+    data = body(request, {"confirm"})
+    if not isinstance(data.get("confirm"), bool):
+        raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    return success(mock_authoring.apply_multilevel_safe_repair(request.user, exam_id, data["confirm"]), status=201)
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_corrected_clone_view(request, exam_id):
+    require_role(request, "admin", "super_admin")
+    return success(mock_authoring.clone_corrected_multilevel(request.user, exam_id), status=201)
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_sections_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = body(request, {"skill", "title", "sortOrder", "durationMinutes", "instructions"})
+    return success(mock_authoring.section_payload(mock_authoring.create_section(request.user, exam_id, data)), status=201)
+
+
+@api_view(["PATCH", "DELETE"])
+@permission_classes([Authenticated])
+def mock_section_view(request, section_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "DELETE":
+        return success(mock_authoring.delete_section(request.user, section_id))
+    data = body(request, {"title", "sortOrder", "durationMinutes", "instructions"})
+    return success(mock_authoring.section_payload(mock_authoring.update_section(request.user, section_id, data)))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_section_groups_view(request, section_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = body(request, {"sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
+    return success(mock_authoring.group_payload(mock_authoring.create_group(request.user, section_id, data)), status=201)
+
+
+@api_view(["PATCH", "DELETE"])
+@permission_classes([Authenticated])
+def mock_group_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "DELETE":
+        return success(mock_authoring.delete_group(request.user, group_id))
+    data = body(request, {"sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
+    return success(mock_authoring.group_payload(mock_authoring.update_group(request.user, group_id, data)))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_group_questions_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = body(request, {"questions"})
+    questions = mock_authoring.add_questions(request.user, group_id, data)
+    return success({"added": len(questions), "questions": [mock_authoring.question_payload(question) for question in questions]}, status=201)
+
+
+def _paste_body(request, *, importing=False):
+    data = request.data
+    allowed = {'text', 'answers', 'points'} if importing else {'text'}
+    if not isinstance(data, dict):
+        raise ContractAPIException('VALIDATION_ERROR', 'Validatsiya xatosi', 400)
+    extra = next((key for key in data if key not in allowed), None)
+    if extra is not None:
+        raise ContractAPIException('VALIDATION_ERROR', f'property {extra} should not exist', 400)
+    text = data.get('text')
+    # class-validator evaluates MaxLength before IsNotEmpty/IsString and its
+    # validator dependency counts Unicode characters rather than JS code units.
+    if not isinstance(text, str) or len(text) - len(re.findall(r'[^\ufe0f\ufe0e][\ufe0f\ufe0e]', text)) > 20000:
+        raise ContractAPIException('VALIDATION_ERROR', 'text must be shorter than or equal to 20000 characters', 400)
+    if not text:
+        raise ContractAPIException('VALIDATION_ERROR', 'text should not be empty', 400)
+    if data.get('answers') is not None and not isinstance(data['answers'], dict):
+        raise ContractAPIException('VALIDATION_ERROR', 'answers must be an object', 400)
+    points = data.get('points')
+    if points is not None and (type(points) is not int or not 1 <= points <= 20):
+        message = 'points must not be greater than 20' if type(points) is not int or points > 20 else 'points must not be less than 1'
+        raise ContractAPIException('VALIDATION_ERROR', message, 400)
+    return data
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def mock_parse_questions_view(request):
+    require_role(request, 'teacher', 'admin', 'super_admin')
+    from .mock_parse import parse_questions
+    parsed = parse_questions(_paste_body(request)['text'])
+    return success({**parsed, 'count': len(parsed['questions'])}, status=201)
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def mock_import_questions_view(request, group_id):
+    require_role(request, 'teacher', 'admin', 'super_admin')
+    return success(mock_authoring.import_questions(request.user, group_id, _paste_body(request, importing=True)), status=201)
+
+
+@api_view(["PUT"])
+@permission_classes([Authenticated])
+def mock_group_content_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = body(request, {"questions", "deletedQuestionIds", "expectedContentVersion", "sortOrder", "title", "instructions", "passageText", "contentHtml", "audioScript", "contentLayout", "optionsReusable", "maxScore", "stimulusRef", "partNumber", "audioDurationSec", "audioPlayLimit"})
+    result = mock_authoring.save_group_content(request.user, group_id, data)
+    return success({
+        "saved": result["saved"],
+        "questions": [mock_authoring.question_payload(question) for question in result["questions"]],
+        "group": mock_authoring.group_payload(result["group"], questions=result["questions"]),
+        "version": result["version"],
+    })
+
+
+@api_view(["PATCH", "DELETE"])
+@permission_classes([Authenticated])
+def mock_question_view(request, question_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "DELETE":
+        return success(mock_authoring.delete_question(request.user, question_id))
+    data = body(request, {"number", "sortOrder", "type", "prompt", "options", "correctAnswers", "acceptedVariants", "points", "wordLimit", "answerRule"})
+    return success(mock_authoring.question_payload(mock_authoring.update_question(request.user, question_id, data)))
 
 
 def _user_shape(row, include_link_code: bool):

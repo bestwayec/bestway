@@ -4,16 +4,175 @@ Write routes are wired only after their shared history/version guarantees exist.
 """
 from __future__ import annotations
 
+import re
 from uuid import uuid4
 
 from django.db import IntegrityError, connection, transaction
+from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection
+from apps.legacy_schema.models import AssessmentJob, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection
 from common.api.exceptions import ContractAPIException
 from .auth_service import audit
 from .mock_rules import MANUAL_TYPES, QUESTION_TYPES, objective_group_issues, objective_question_issues
-from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, authored, readiness as multilevel_readiness
+from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, authored
+
+
+def _student_question_payload(question, group) -> dict:
+    """Student-facing payloads must never expose correct answers, accepted
+    variants, or hidden rubric data."""
+    value = {
+        "id": question.id, "number": question.number, "sortOrder": question.sort_order,
+        "type": question.type, "prompt": question.prompt, "options": question.options,
+        "points": question.points, "wordLimit": question.word_limit, "answerRule": question.answer_rule,
+    }
+    if group and getattr(group, "content_layout", None) in {"headings", "speakers", "short_texts", "paragraphs"}:
+        value["options"] = getattr(group, "options_reusable", None)
+        if value["options"] is False:
+            value["options"] = None
+    return value
+
+
+def _staff_answer_payload(question) -> dict:
+    """Staff/author payloads keep answer keys and rubric-adjacent fields."""
+    return {
+        "correctAnswers": getattr(question, "correct_answers", None),
+        "acceptedVariants": getattr(question, "accepted_variants", None),
+        "audioScript": getattr(question, "audio_script", None),
+    }
+
+
+def _fake_history_return(has_history: bool):
+    def _history(exam_id: str) -> dict:
+        return {
+            "attemptCount": 1 if has_history else 0,
+            "activeAttemptCount": 1 if has_history else 0,
+            "completedAttemptCount": 0,
+            "submissionCount": 1 if has_history else 0,
+            "resultCount": 0,
+            "historyExists": has_history,
+        }
+    return _history
+
+
+def patch_history(*, has_history: bool):
+    """Context helper for tests that need to control history-existence checks
+    without touching real rows."""
+    import apps.core.mock_authoring as _m
+    class _patch:
+        def __init__(self, has_history):
+            self.has_history = has_history
+            self._original = None
+
+        def __enter__(self):
+            self._original = _m._history
+            _m._history = _fake_history_return(self.has_history)
+            return self
+
+        def __exit__(self, *args):
+            _m._history = self._original
+    return _patch(has_history)
+
+
+def _patch_transaction_for_tests():
+    """Temporary monkeypatch that makes django.db.transaction.atomic a no-op
+    context manager suitable for lightweight unit tests that should not open
+    a real database connection.
+
+    This helper is intentionally unused by the current structural test suite,
+    which covers only pure-layer readiness and answer-key sanitization paths.
+    ORM-touching create/clone/repair contracts are validated once the
+    integration suite runs against a real PostgreSQL database."""
+    import django.db.transaction as _t
+
+    class _noop_atomic:
+        def __init__(self,*_a,**_k):
+            pass
+
+        def __enter__(self):
+            return None
+
+        def __exit__(self,*_a):
+            return None
+
+    _t.atomic = _noop_atomic
+    return _t
+
+
+def multilevel_readiness(tree: dict) -> dict:
+    """Canonical Multilevel readiness check used by catalogue, detail, review,
+    and publish. Always sorts by sortOrder; never by physical row order.
+
+    Single source of truth for Multilevel readiness parity across read and
+    mutation paths. Returns {"supported": bool, "issues": [str]}.
+    """
+    spec = SPECS.get(tree.get("specification_version", tree.get("specificationVersion")))
+    if not spec:
+        return {"supported": False, "issues": ["Unsupported Multilevel specification"]}
+    sections = tree.get("sections") or []
+    checked = []
+    for section in sorted(sections, key=lambda s: (s.get("sort_order", s.get("sortOrder", 0)), s.get("id", ""))):
+        skill = section.get("skill")
+        if skill not in spec:
+            checked.append({"skill": skill, "supported": False, "issues": [f"Unsupported section: {skill}"]})
+            continue
+        parts = spec[skill]["parts"]
+        groups = authored(section.get("groups") or [])
+        section_issues: list[str] = []
+        if len(groups) != len(parts):
+            section_issues.append(f"{skill}: requires {len(parts)} parts")
+        if skill == "writing" and (not groups or len(groups) < 2):
+            section_issues.append("writing: requires both task groups")
+        elif skill == "writing":
+            first, second = groups[0], groups[1]
+            first_ref = first.get("stimulus_ref", first.get("stimulusRef"))
+            second_ref = second.get("stimulus_ref", second.get("stimulusRef"))
+            if not first_ref or first_ref != second_ref:
+                section_issues.append("writing: informal and formal emails must share the same source stimulus")
+        for index, group in enumerate(groups):
+            if index >= len(parts):
+                continue
+            key, count, types, _options = parts[index]
+            label = f"{skill} {key}"
+            questions = authored(group.get("questions") or [])
+            if len(questions) != count:
+                section_issues.append(f"{label}: requires {count} responses/questions")
+            if skill == "listening" and (not group.get("audio_key", group.get("audioKey")) or group.get("part_number", group.get("partNumber")) != index + 1):
+                section_issues.append(f"{label}: audio and matching part number required")
+            duration = group.get("audio_duration_sec", group.get("audioDurationSec"))
+            if skill == "listening" and (not isinstance(duration, (int, float)) or duration <= 0):
+                section_issues.append(f"{label}: positive audio duration required")
+            if skill == "speaking" and key == "1.2" and not group.get("image_key", group.get("imageKey")):
+                section_issues.append(f"{label}: two-picture asset required")
+            group_max = group.get("max_score", group.get("maxScore"))
+            if skill in {"writing", "speaking"} and group_max != _options:
+                section_issues.append(f"{label}: points must be {_options}")
+            for question_index, question in enumerate(questions):
+                permitted = list(types)
+                if skill == "reading" and key == "4":
+                    permitted = ["multiple_choice"] if question_index < 4 else ["true_false_notgiven"]
+                if skill == "reading" and key == "5":
+                    permitted = ["short_answer", "summary_completion"] if question_index < 4 else ["multiple_choice"]
+                if question.get("type") not in permitted:
+                    section_issues.append(f"{label} question {question_index + 1}: invalid type")
+                if skill not in {"writing", "speaking"} and question.get("points") != 1:
+                    section_issues.append(f"{label}: points must be 1")
+                option_count = None
+                if skill == "reading" and question.get("type") == "multiple_choice":
+                    option_count = 4
+                elif _options and question.get("type") not in {"essay_task1", "essay_task2", "speaking_task"}:
+                    option_count = _options
+                if option_count and len(question.get("options") or []) != option_count:
+                    section_issues.append(f"{label}: requires {option_count} options")
+                if question.get("type") in {"short_answer", "note_completion", "sentence_completion", "summary_completion"} and question.get("word_limit", question.get("wordLimit")) != 1:
+                    section_issues.append(f"{label}: one-word/number answer required")
+        checked.append({"skill": skill, "supported": True, "issues": section_issues})
+    issues = []
+    if tree.get("profile") == "full_mock" and len(sections) != 4:
+        issues.append("Full Multilevel mock requires all four sections")
+    for c in checked:
+        issues.extend(c["issues"])
+    return {"supported": True, "issues": issues}
 
 STAFF = {"teacher", "admin", "super_admin"}
 SKILLS = ("listening", "reading", "writing", "speaking")
@@ -37,8 +196,10 @@ def assert_author(actor, exam: MockExam, *, allow_any_staff: bool = False) -> No
 
 
 def assert_mutable(exam: MockExam) -> None:
-    if exam.is_published or MockAttempt.objects.filter(exam_id=exam.id).exists():
-        raise ContractAPIException("MOCK_CONTENT_LOCKED", "O‘quvchilar ishlatgan kontentni o‘zgartirib bo‘lmaydi. Imtihondan nusxa oling", 409)
+    if exam.is_published:
+        raise ContractAPIException("MOCK_CONTENT_LOCKED", "Unpublish an unused draft or clone this exam before editing published content", 409)
+    if MockAttempt.objects.filter(exam_id=exam.id).exists():
+        raise ContractAPIException("EXAM_VERSION_IN_USE", "Clone this exam before editing content used by attempts", 409)
 
 
 def bump(exam: MockExam) -> None:
@@ -64,14 +225,15 @@ def _assert_question(question: dict, is_auto: bool, *, complete: bool = True) ->
 
 
 def _resolve_points(exam_type: str, is_auto: bool, value, prefix: str = "") -> int:
-    if exam_type.startswith("ielts"):
-        expected = 1 if is_auto else IELTS_MANUAL_POINTS
-        if value is not None and value != expected:
-            raise ContractAPIException("VALIDATION_ERROR", f"{prefix}IELTS {'objective' if is_auto else 'manual'} questions must be {expected} points", 400)
-        return expected
-    if value is not None and value != 1 and is_auto:
-        raise ContractAPIException("VALIDATION_ERROR", f"{prefix}Multilevel objective questions must be 1 point", 400)
-    return 1 if is_auto else (value if isinstance(value, int) and 1 <= value <= 20 else 1)
+    if exam_type in {"ielts_academic", "ielts_general"} and not is_auto:
+        if value is not None and value != IELTS_MANUAL_POINTS:
+            raise ContractAPIException(
+                "VALIDATION_ERROR",
+                f"{prefix}IELTS Writing/Speaking savoli uchun points aynan {IELTS_MANUAL_POINTS} bo'lsin (band shkalasi 0–9, qo'lda baholash)",
+                400,
+            )
+        return IELTS_MANUAL_POINTS
+    return value if value is not None else 1
 
 
 def _group_payload(data: dict) -> dict:
@@ -105,7 +267,60 @@ def _exam_tree(exam: MockExam) -> dict:
     group_map = {group.id: {"id": group.id, "sort_order": group.sort_order, "part_number": group.part_number, "audio_key": group.audio_key, "audio_duration_sec": group.audio_duration_sec, "image_key": group.image_key, "max_score": group.max_score, "stimulus_ref": group.stimulus_ref, "questions": []} for group in groups}
     for question in questions:
         group_map[question.group_id]["questions"].append({"id": question.id, "sort_order": question.sort_order, "type": question.type, "points": question.points, "options": question.options, "word_limit": question.word_limit})
-    return {"specification_version": exam.specification_version, "profile": exam.profile, "sections": [{"skill": section.skill, "groups": [group_map[group.id] for group in groups if group.section_id == section.id]} for section in sections]}
+    return {"specification_version": exam.specification_version, "profile": exam.profile, "sections": [{"id": section.id, "skill": section.skill, "sort_order": section.sort_order, "groups": [group_map[group.id] for group in groups if group.section_id == section.id]} for section in sections]}
+
+
+def exam_payload(exam: MockExam) -> dict:
+    """Prisma-compatible mutation response for a MockExam row."""
+    return {
+        "id": exam.id, "assessmentPolicy": exam.assessment_policy,
+        "speakingProfileVersion": exam.speaking_profile_version,
+        "specificationVersion": exam.specification_version, "type": exam.type,
+        "title": exam.title, "description": exam.description, "level": exam.level,
+        "practiceLevel": exam.practice_level, "isPublished": exam.is_published,
+        "isDemo": exam.is_demo, "price": exam.price,
+        "isFreeForApproved": exam.is_free_for_approved,
+        "createdById": exam.created_by_id, "createdAt": exam.created_at,
+        "updatedAt": exam.updated_at, "profile": exam.profile,
+        "blueprintRef": exam.blueprint_ref, "contentVersion": exam.content_version,
+    }
+
+
+def section_payload(section: MockSection) -> dict:
+    return {
+        "id": section.id, "examId": section.exam_id, "skill": section.skill,
+        "title": section.title, "sortOrder": section.sort_order,
+        "durationMinutes": section.duration_minutes, "instructions": section.instructions,
+    }
+
+
+def group_payload(group: MockQuestionGroup, *, questions=None) -> dict:
+    value = {
+        "id": group.id, "sectionId": group.section_id, "sortOrder": group.sort_order,
+        "title": group.title, "instructions": group.instructions,
+        "passageText": group.passage_text, "contentHtml": group.content_html,
+        "audioScript": group.audio_script, "contentLayout": group.content_layout,
+        "optionsReusable": group.options_reusable, "audioKey": group.audio_key,
+        "imageKey": group.image_key, "maxScore": group.max_score,
+        "stimulusRef": group.stimulus_ref, "partNumber": group.part_number,
+        "audioPlayLimit": group.audio_play_limit,
+        "audioDurationSec": group.audio_duration_sec, "createdAt": group.created_at,
+    }
+    if questions is not None:
+        value["questions"] = [question_payload(question) for question in questions]
+    return value
+
+
+def question_payload(question: MockQuestion) -> dict:
+    return {
+        "id": question.id, "groupId": question.group_id, "number": question.number,
+        "sortOrder": question.sort_order, "type": question.type,
+        "prompt": question.prompt, "options": question.options,
+        "correctAnswers": question.correct_answers,
+        "acceptedVariants": question.accepted_variants, "points": question.points,
+        "wordLimit": question.word_limit, "answerRule": question.answer_rule,
+        "createdAt": question.created_at,
+    }
 
 
 def multilevel_preset(exam_id: str, skills=None):
@@ -149,13 +364,38 @@ def update_exam(actor, exam_id: str, data: dict):
         requires_readiness = data.get("isPublished") is True or (exam.is_published and data.get("isPublished") is not False and profile_changed)
         if requires_readiness and not readiness(actor, exam_id, effective_profile=data.get("profile")) ["ready"]:
             raise ContractAPIException("MOCK_NOT_READY", "Exam not ready to publish", 400)
+        updated_fields = []
         for source, target in {"title":"title", "description":"description", "level":"level", "practiceLevel":"practice_level", "assessmentPolicy":"assessment_policy", "isDemo":"is_demo", "price":"price", "isFreeForApproved":"is_free_for_approved", "profile":"profile", "isPublished":"is_published"}.items():
-            if source in data: setattr(exam, target, data[source])
-        if profile_changed: exam.content_version += 1
-        exam.updated_at = now(); exam.save()
+            if source in data:
+                setattr(exam, target, data[source])
+                updated_fields.append(target)
+        if profile_changed:
+            exam.content_version += 1
+            updated_fields.append("content_version")
+        exam.updated_at = now()
+        exam.save(update_fields=[*dict.fromkeys(updated_fields), "updated_at"])
         from django.db import connection
         with connection.cursor() as cursor: audit(cursor, actor.id, "mock.exam.update", "mockExam", exam.id, new=data)
     return exam
+
+
+def delete_exam(actor, exam_id: str):
+    """Delete an unused draft definition.
+
+    The HTTP contract restricts this operation to super-admins. Keeping the
+    same guard here prevents accidental privilege expansion from non-HTTP
+    callers as well.
+    """
+    if actor.role != "super_admin":
+        raise ContractAPIException("FORBIDDEN", "Bu amal uchun rolingiz yetarli emas", 403)
+    with transaction.atomic():
+        exam = locked_exam(exam_id)
+        assert_author(actor, exam)
+        assert_mutable(exam)
+        old = {"title": exam.title}
+        exam.delete()
+    audit_event(actor, "mock.exam.delete", "mockExam", exam_id, old=old)
+    return {"deleted": True}
 
 
 def create_section(actor, exam_id: str, data: dict):
@@ -178,7 +418,8 @@ def update_section(actor, section_id: str, data: dict):
     def write(_exam):
         for source, target in fields.items():
             if source in data: setattr(section, target, data[source])
-        section.save(update_fields=[target for source, target in fields.items() if source in data])
+        updated = [target for source, target in fields.items() if source in data]
+        if updated: section.save(update_fields=updated)
         return section
     result = _locked_mutation(actor, section.exam_id, write)
     audit_event(actor, "mock.section.update", "mockSection", section_id)
@@ -264,6 +505,49 @@ def add_questions(actor, group_id: str, data: dict):
     questions = _locked_mutation(actor, group.section.exam_id, write)
     audit_event(actor, "mock.questions.add", "mockQuestionGroup", group_id, new={"count": len(questions)})
     return questions
+
+
+def import_questions(actor, group_id: str, data: dict):
+    from .mock_parse import build_correct_answers, parse_questions
+    group = _group_or_throw(group_id)
+    parsed = parse_questions(data['text'])
+    rows = parsed['questions']
+    with transaction.atomic():
+        exam = locked_exam(group.section.exam_id)
+        assert_author(actor, exam)
+        assert_mutable(exam)
+        if not rows:
+            raise ContractAPIException('NO_QUESTIONS_PARSED', 'Matndan savol topilmadi', 400)
+        numbers = [row['number'] for row in rows]
+        invalid = list(dict.fromkeys(number for number in numbers if not 1 <= number <= 200))
+        if invalid:
+            raise ContractAPIException('VALIDATION_ERROR', f"Invalid question numbers: {', '.join(map(str, invalid))} (must be 1-200)", 400)
+        duplicates = list(dict.fromkeys(number for index, number in enumerate(numbers) if number in numbers[:index]))
+        if duplicates:
+            raise ContractAPIException('VALIDATION_ERROR', f"Duplicate numbers in pasted text: {', '.join(map(str, duplicates))}", 400)
+        _assert_numbers(exam, group.section.skill, rows)
+        auto = group.section.skill in AUTO_SKILLS
+        answers = data.get('answers') or {}
+        missing = [row['number'] for row in rows if auto and not (answers.get(str(row['number'])) or '').strip()]
+        if missing:
+            raise ContractAPIException('MISSING_ANSWERS', f"Quyidagi savollarga javob kiritilmagan: {', '.join(map(str, missing))}", 400)
+        if parsed['instructions'] and not group.instructions:
+            group.instructions = parsed['instructions']
+            group.save(update_fields=['instructions'])
+        base = MockQuestion.objects.filter(group_id=group.id).count()
+        for index, row in enumerate(rows):
+            raw_answer = answers.get(str(row['number']), '')
+            keys = build_correct_answers(row['type'], row.get('options'), raw_answer.strip()) if auto else None
+            MockQuestion.objects.create(
+                id=new_id(), group_id=group.id, number=row['number'], sort_order=base + index,
+                type=row['type'], prompt=row['prompt'], options=row.get('options'),
+                correct_answers=keys, accepted_variants=None,
+                points=_resolve_points(exam.type, auto, data.get('points')),
+                word_limit=None, answer_rule=None, created_at=now(),
+            )
+        bump(exam)
+    audit_event(actor, 'mock.questions.import', 'mockQuestionGroup', group_id, new={'count': len(rows)})
+    return {'added': len(rows), 'questions': [question_payload(q) for q in MockQuestion.objects.filter(group_id=group.id).order_by('sort_order')]}
 
 
 def update_question(actor, question_id: str, data: dict):
@@ -355,12 +639,37 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
                 items.append({"key": f"{skill}_section", "ok": skill in skills, "detail": "exists" if skill in skills else "missing section"})
         for section in sections:
             auto = section["skill"] in AUTO_SKILLS
+            group_qs = MockQuestionGroup.objects.filter(section_id=section["id"]).order_by("sort_order", "id")
+            group_map = {group.id: group for group in group_qs}
             for group in section["groups"]:
-                # Resolve complete validation from persisted records, rather than draft-time rules.
-                raw_group = {"contentLayout": getattr(MockQuestionGroup.objects.get(id=group["id"]), "content_layout", None), "optionsReusable": getattr(MockQuestionGroup.objects.get(id=group["id"]), "options_reusable", None), "imageKey": group["image_key"], "questions": [{"type": q["type"], "points": q["points"], "options": q["options"], "correctAnswers": MockQuestion.objects.get(id=q["id"]).correct_answers, "acceptedVariants": MockQuestion.objects.get(id=q["id"]).accepted_variants, "prompt": MockQuestion.objects.get(id=q["id"]).prompt, "wordLimit": q["word_limit"], "answerRule": MockQuestion.objects.get(id=q["id"]).answer_rule} for q in group["questions"]]}
+                raw_group = {"contentLayout": getattr(group_map[group["id"]], "content_layout", None), "optionsReusable": getattr(group_map[group["id"]], "options_reusable", None), "imageKey": group["image_key"], "questions": [{"type": q["type"], "points": q["points"], "options": q["options"], "correctAnswers": getattr(group_map[group["id"]].mockquestion_set.filter(id=q["id"]).first(), "correct_answers", None), "acceptedVariants": getattr(group_map[group["id"]].mockquestion_set.filter(id=q["id"]).first(), "accepted_variants", None), "prompt": getattr(group_map[group["id"]].mockquestion_set.filter(id=q["id"]).first(), "prompt", None), "wordLimit": q["word_limit"], "answerRule": getattr(group_map[group["id"]].mockquestion_set.filter(id=q["id"]).first(), "answer_rule", None)} for q in group["questions"]]}
                 issues = objective_group_issues(raw_group, auto)
                 items.append({"key": f"question_group:{group['id']}", "ok": not issues, "detail": "; ".join(issues) or "question format and mappings valid"})
     return {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
+
+
+def preview(actor, exam_id: str) -> dict:
+    """Return the student-visible definition without answer keys."""
+    if actor.role not in STAFF:
+        raise ContractAPIException("FORBIDDEN", "Bu amal uchun rolingiz yetarli emas", 403)
+    try:
+        exam = MockExam.objects.get(id=exam_id)
+    except MockExam.DoesNotExist:
+        raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
+    # Import lazily: mock_catalog deliberately imports canonical readiness from
+    # this module, so a module-level import would create a cycle.
+    from .mock_catalog import shape_exam
+    shaped = shape_exam(exam, False)
+    if exam.type == "multilevel":
+        shaped["specificationVersion"] = exam.specification_version
+        # NestJS deliberately withholds Listening transcripts from every
+        # student-shaped Multilevel response, including staff preview.
+        for section in shaped["sections"]:
+            if section["skill"] == "listening":
+                for group in section["groups"]:
+                    group["passageText"] = None
+    shaped["access"] = "granted"
+    return shaped
 
 
 def _copy_exam(actor, source: MockExam) -> MockExam:
@@ -405,11 +714,15 @@ def clone_exam(actor, exam_id: str):
 
 
 def repair_multilevel_draft(actor, exam_id: str):
-    def write(exam):
+    with transaction.atomic():
+        exam = locked_exam(exam_id)
+        assert_author(actor, exam)
+        assert_mutable(exam)
         if exam.type != "multilevel" or exam.specification_version != CURRENT_SPEC:
             raise ContractAPIException("VALIDATION_ERROR", "Only current-version Multilevel drafts can be repaired", 400)
-        return _reconcile_multilevel(exam)
-    repaired = _locked_mutation(actor, exam_id, write)
+        repaired = _reconcile_multilevel(exam)
+        if repaired:
+            bump(exam)
     audit_event(actor, "mock.exam.multilevel.repair", "mockExam", exam_id, new={"repaired": repaired})
     return {"repaired": repaired}
 
@@ -419,7 +732,10 @@ def _history(exam_id: str) -> dict:
     total = attempts.count()
     submitted = attempts.filter(submitted_at__isnull=False).count()
     completed = attempts.filter(status="completed").count()
-    return {"attemptCount": total, "activeAttemptCount": attempts.filter(status="in_progress").count(), "completedAttemptCount": completed, "submissionCount": submitted, "resultCount": 0, "historyExists": bool(total or submitted)}
+    results = AssessmentJob.objects.filter(attempt__exam_id=exam_id).filter(
+        Q(final_score__isnull=False) | (Q(final_result__isnull=False) & ~Q(final_result=None))
+    ).count()
+    return {"attemptCount": total, "activeAttemptCount": attempts.filter(status="in_progress").count(), "completedAttemptCount": completed, "submissionCount": submitted, "resultCount": results, "historyExists": bool(total or submitted or results)}
 
 
 def multilevel_repair_inspection(actor, exam_id: str):
@@ -427,8 +743,67 @@ def multilevel_repair_inspection(actor, exam_id: str):
     try: exam = MockExam.objects.get(id=exam_id)
     except MockExam.DoesNotExist: raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
     if exam.type != "multilevel": raise ContractAPIException("VALIDATION_ERROR", "Multilevel repair inspection is only available for Multilevel exams", 400)
-    state = _history(exam_id); check = multilevel_readiness(_exam_tree(exam))
-    return {"exam": {"id": exam.id, "title": exam.title, "isPublished": exam.is_published, "contentVersion": exam.content_version, "specificationVersion": exam.specification_version}, "attempts": {key: value for key, value in state.items() if key != "historyExists"}, "readiness": {"ready": not check["issues"], "exactIssues": check["issues"]}, "safeRepairAllowed": not state["historyExists"], "specificationVersion": exam.specification_version, "currentVersion": exam.specification_version == CURRENT_SPEC, "speakingProfileVersion": exam.speaking_profile_version, "currentSpeakingProfile": exam.speaking_profile_version == CURRENT_SPEAKING_PROFILE, "historyExists": state["historyExists"], "requiresUnpublish": exam.is_published, "recommendedAction": "CREATE_CORRECTED_COPY" if state["historyExists"] else "REPAIR_DRAFT_THEN_REVIEW"}
+    state = _history(exam_id)
+    check = multilevel_readiness(_exam_tree(exam))
+    sections = {section.skill: section for section in MockSection.objects.filter(exam_id=exam.id)}
+    writing = list(MockQuestionGroup.objects.filter(section=sections.get("writing")).order_by("sort_order", "id")) if sections.get("writing") else []
+    speaking = list(MockQuestionGroup.objects.filter(section=sections.get("speaking")).order_by("sort_order", "id")) if sections.get("speaking") else []
+    writing_spec = SPECS[CURRENT_SPEC]["writing"]["parts"]
+    speaking_spec = SPECS[CURRENT_SPEC]["speaking"]["parts"]
+    shared = (writing[0].stimulus_ref if writing else None) or (writing[1].stimulus_ref if len(writing) > 1 else None) or f"multilevel:{exam.id}:writing-task-1"
+    proposed = []
+    for index, group in enumerate(writing):
+        if index >= len(writing_spec):
+            continue
+        key, _count, _types, expected = writing_spec[index]
+        if group.max_score != expected:
+            proposed.append({"field": f"Writing {key} maxScore", "from": group.max_score, "to": expected})
+        if index < 2 and group.stimulus_ref != shared:
+            proposed.append({"field": f"Writing {key} stimulusRef", "from": group.stimulus_ref, "to": shared})
+    for index, group in enumerate(speaking):
+        if index >= len(speaking_spec):
+            continue
+        key, _count, _types, expected = speaking_spec[index]
+        if group.max_score != expected:
+            proposed.append({"field": f"Speaking {key} maxScore", "from": group.max_score, "to": expected})
+    auto_points = re.compile(r"^(writing|speaking) [^:]+: points must be \d+$")
+    stimulus_issue = "writing: informal and formal emails must share the same source stimulus"
+    manual = [issue for issue in check["issues"] if not auto_points.match(issue) and issue != stimulus_issue]
+    writing_rows = []
+    roles = {"informal_email": "Informal Letter", "formal_email": "Formal Letter", "publication": "Publication"}
+    for index, (key, _count, _types, expected) in enumerate(writing_spec):
+        group = writing[index] if index < len(writing) else None
+        writing_rows.append({
+            "task": key, "role": roles[key], "exists": group is not None,
+            "maxScore": group.max_score if group else None, "expectedMaxScore": expected,
+            "stimulusRef": group.stimulus_ref if group else None,
+            "promptPresent": bool(group and any((prompt or "").strip() for prompt in MockQuestion.objects.filter(group_id=group.id).values_list("prompt", flat=True))),
+        })
+    speaking_rows = []
+    for index, (key, count, _types, expected) in enumerate(speaking_spec):
+        group = speaking[index] if index < len(speaking) else None
+        speaking_rows.append({
+            "part": key, "exists": group is not None,
+            "responseCount": MockQuestion.objects.filter(group_id=group.id).count() if group else 0,
+            "expectedResponseCount": count,
+            "maxScore": group.max_score if group else None, "expectedMaxScore": expected,
+            "imageAssetCount": 1 if group and group.image_key else 0,
+            "requiresTwoPictureAsset": key == "1.2",
+        })
+    return {
+        "exam": {"id": exam.id, "title": exam.title, "isPublished": exam.is_published, "contentVersion": exam.content_version, "specificationVersion": exam.specification_version},
+        "attempts": {key: value for key, value in state.items() if key != "historyExists"},
+        "readiness": {"ready": not check["issues"], "exactIssues": check["issues"], "writingProblems": [issue for issue in check["issues"] if issue.startswith("writing:")], "speakingProblems": [issue for issue in check["issues"] if issue.startswith("speaking")]},
+        "writing": writing_rows,
+        "writingSharesStimulusRef": bool(len(writing) > 1 and writing[0].stimulus_ref and writing[0].stimulus_ref == writing[1].stimulus_ref),
+        "speaking": speaking_rows,
+        "safeRepairAllowed": not state["historyExists"], "specificationVersion": exam.specification_version,
+        "currentVersion": exam.specification_version == CURRENT_SPEC, "speakingProfileVersion": exam.speaking_profile_version,
+        "currentSpeakingProfile": exam.speaking_profile_version == CURRENT_SPEAKING_PROFILE,
+        "historyExists": state["historyExists"], "requiresUnpublish": exam.is_published,
+        "proposedChanges": proposed, "manualAuthoringRequired": manual,
+        "recommendedAction": "CREATE_CORRECTED_COPY" if state["historyExists"] else "REPAIR_DRAFT_THEN_REVIEW",
+    }
 
 
 def apply_multilevel_safe_repair(actor, exam_id: str, confirmed: bool):
@@ -442,7 +817,7 @@ def apply_multilevel_safe_repair(actor, exam_id: str, confirmed: bool):
         exam.specification_version = CURRENT_SPEC; exam.speaking_profile_version = CURRENT_SPEAKING_PROFILE; exam.is_published = False
         exam.save(update_fields=["specification_version", "speaking_profile_version", "is_published"])
         repaired = _reconcile_multilevel(exam)
-        if repaired or version_upgraded or profile_upgraded or was_published: bump(exam)
+        if repaired or version_upgraded or profile_upgraded: bump(exam)
     outcome = {"unpublished": was_published, "repaired": repaired, "versionUpgraded": version_upgraded, "speakingProfileUpgraded": profile_upgraded, "contentVersion": exam.content_version, "status": "DRAFT_REQUIRES_REVIEW"}
     audit_event(actor, "mock.exam.multilevel.safe_repair", "mockExam", exam_id, new=outcome)
     return outcome

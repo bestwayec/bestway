@@ -1,11 +1,22 @@
 from django.urls import path
+from .views import mock_parse_questions_view, mock_import_questions_view
 
 from .views import (desktop_authorize_view, desktop_exchange_view, desktop_version,
                     health, link_child_view, login_view, logout_view, me_view,
-                    mock_exam_detail_view, mock_exams_view, my_exam_programs_view, refresh_view, register_view,
+                    mock_exam_clone_view, mock_exam_corrected_clone_view,
+                    mock_exam_detail_view, mock_exam_preview_view,
+                    mock_exam_readiness_view, mock_exam_repair_inspection_view,
+                    mock_exam_repair_view, mock_exam_safe_repair_view,
+                    mock_exam_sections_view, mock_exams_view,
+                    mock_group_content_view, mock_group_questions_view,
+                    mock_group_view, mock_question_view, mock_section_groups_view,
+                    mock_section_view, my_exam_programs_view, refresh_view, register_view,
                     student_exam_programs_view, user_detail_view, users_view)
 
+
 urlpatterns = [
+    path('mock/parse-questions', mock_parse_questions_view),
+    path('mock/groups/<str:group_id>/questions/import', mock_import_questions_view),
     path("health", health), path("desktop-version", desktop_version),
     path("auth/register", register_view), path("auth/login", login_view),
     path("auth/refresh", refresh_view), path("auth/logout", logout_view),
@@ -16,5 +27,19 @@ urlpatterns = [
     path("exam-programs/students/<str:student_id>", student_exam_programs_view),
     path("mock/exams", mock_exams_view),
     path("mock/exams/<str:exam_id>", mock_exam_detail_view),
+    path("mock/exams/<str:exam_id>/clone", mock_exam_clone_view),
+    path("mock/exams/<str:exam_id>/readiness", mock_exam_readiness_view),
+    path("mock/exams/<str:exam_id>/multilevel-repair-inspection", mock_exam_repair_inspection_view),
+    path("mock/exams/<str:exam_id>/apply-multilevel-safe-repair", mock_exam_safe_repair_view),
+    path("mock/exams/<str:exam_id>/clone-corrected-multilevel", mock_exam_corrected_clone_view),
+    path("mock/exams/<str:exam_id>/repair-multilevel", mock_exam_repair_view),
+    path("mock/exams/<str:exam_id>/preview", mock_exam_preview_view),
+    path("mock/exams/<str:exam_id>/sections", mock_exam_sections_view),
+    path("mock/sections/<str:section_id>", mock_section_view),
+    path("mock/sections/<str:section_id>/groups", mock_section_groups_view),
+    path("mock/groups/<str:group_id>", mock_group_view),
+    path("mock/groups/<str:group_id>/questions", mock_group_questions_view),
+    path("mock/groups/<str:group_id>/content", mock_group_content_view),
+    path("mock/questions/<str:question_id>", mock_question_view),
     path("users", users_view), path("users/<str:user_id>", user_detail_view),
 ]

@@ -8,7 +8,8 @@ from __future__ import annotations
 from apps.legacy_schema.models import MockExam, MockPurchase, MockQuestion, MockQuestionGroup, MockSection
 from common.api.exceptions import ContractAPIException
 from .exam_programs import state
-from .mock_authoring import readiness as authoring_readiness
+from .mock_authoring import readiness as canonical_readiness
+from .mock_rules import MANUAL_TYPES
 
 STAFF = {"teacher", "admin", "super_admin"}
 
@@ -16,6 +17,18 @@ STAFF = {"teacher", "admin", "super_admin"}
 def is_staff(user) -> bool: return bool(user and user.role in STAFF)
 def program_for_type(exam_type: str) -> str: return "MULTILEVEL" if exam_type == "multilevel" else "IELTS"
 def student_title(title: str) -> str: return title
+
+
+def _staff_answer_payload(question) -> dict:
+    """Staff/author payloads keep answer keys and rubric-adjacent fields."""
+    return {"correctAnswers": question.correct_answers, "acceptedVariants": question.accepted_variants, "audioScript": None}
+
+
+def _student_question_payload(question, group) -> dict:
+    """Student-facing payloads must never expose correct answers, accepted
+    variants, or hidden rubric data."""
+    from apps.core.mock_authoring import _student_question_payload
+    return _student_question_payload(question, group)
 
 
 def catalogue_queryset(user, program: str | None, exam_type: str | None, practice_level: str | None):
@@ -67,16 +80,36 @@ def shape_question(question, answers: bool):
 
 
 def shape_exam(exam, answers: bool, include_sections: bool = True):
-    result = {"id": exam.id, "type": exam.type, "speakingProfileVersion": exam.speaking_profile_version, "profile": exam.profile, "title": exam.title, "description": exam.description, "level": exam.level, "practiceLevel": exam.practice_level, "isPublished": exam.is_published, "isDemo": exam.is_demo, "createdAt": exam.created_at, "updatedAt": exam.updated_at, "contentVersion": exam.content_version, "questionCount": 0, "sections": []}
+    """Catalogue/detail definition shape. `answers` is True only for staff
+    authoring/grading contexts."""
+    result = {
+        "id": exam.id, "type": exam.type, "speakingProfileVersion": exam.speaking_profile_version,
+        "profile": exam.profile, "title": exam.title, "description": exam.description, "level": exam.level,
+        "practiceLevel": exam.practice_level, "isPublished": exam.is_published, "isDemo": exam.is_demo,
+        "createdAt": exam.created_at, "updatedAt": exam.updated_at, "contentVersion": exam.content_version,
+        "questionCount": 0, "sections": [],
+    }
     if answers: result["assessmentPolicy"] = exam.assessment_policy
     if not include_sections: return result
     sections = list(MockSection.objects.filter(exam_id=exam.id).order_by("sort_order"))
     for section in sections:
-        shaped = {"id": section.id, "skill": section.skill, "title": section.title, "sortOrder": section.sort_order, "durationMinutes": section.duration_minutes, "instructions": section.instructions, "groups": []}
+        shaped = {
+            "id": section.id, "skill": section.skill, "title": section.title, "sortOrder": section.sort_order,
+            "durationMinutes": section.duration_minutes, "instructions": section.instructions, "groups": [],
+        }
         for group in _groups(section):
             questions = [shape_question(question, answers) for question in _questions(group)]
             result["questionCount"] += len(questions)
-            shaped["groups"].append({"id": group.id, "sortOrder": group.sort_order, "title": group.title, "instructions": group.instructions, "passageText": group.passage_text, "contentHtml": group.content_html, "contentLayout": group.content_layout, "optionsReusable": group.options_reusable, "hasAudio": bool(group.audio_key), "audioUrl": f"/v1/mock/groups/{group.id}/audio" if group.audio_key else None, "imageUrl": f"/v1/mock/groups/{group.id}/image" if group.image_key else None, "partNumber": group.part_number, "audioDurationSec": group.audio_duration_sec, "audioPlayLimit": group.audio_play_limit, "questions": questions, **({"audioScript": group.audio_script, "maxScore": group.max_score, "stimulusRef": group.stimulus_ref} if answers else {})})
+            shaped["groups"].append({
+                "id": group.id, "sortOrder": group.sort_order, "title": group.title, "instructions": group.instructions,
+                "passageText": group.passage_text, "contentHtml": group.content_html, "contentLayout": group.content_layout,
+                "optionsReusable": group.options_reusable, "hasAudio": bool(group.audio_key),
+                "audioUrl": f"/v1/mock/groups/{group.id}/audio" if group.audio_key else None,
+                "imageUrl": f"/v1/mock/groups/{group.id}/image" if group.image_key else None,
+                "partNumber": group.part_number, "audioDurationSec": group.audio_duration_sec,
+                "audioPlayLimit": group.audio_play_limit, "questions": questions,
+                **({"audioScript": group.audio_script, "maxScore": group.max_score, "stimulusRef": group.stimulus_ref} if answers else {}),
+            })
         result["sections"].append(shaped)
     return result
 
@@ -86,10 +119,11 @@ def list_exams(user, *, program=None, exam_type=None, practice_level=None):
     items = []
     for exam in catalogue_queryset(user, program, exam_type, practice_level):
         data = shape_exam(exam, staff)
-        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": sum((section["durationMinutes"] or 0) for section in data["sections"]) or None, "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": authoring_readiness(None, exam.id)["ready"], "imported": None})
+        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": sum((section["durationMinutes"] or 0) for section in data["sections"]) or None, "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))),                "ready": canonical_readiness(None, exam.id)["ready"], "imported": None})
         data.pop("sections")
         items.append(data)
     return items
+
 
 
 def get_exam(user, exam_id: str):
@@ -99,5 +133,5 @@ def get_exam(user, exam_id: str):
     if not staff and not exam.is_published and not exam.is_demo: raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
     access = access_for(user, exam)
     output = shape_exam(exam, staff, include_sections=staff or access == "granted")
-    output.update({"ready": authoring_readiness(None, exam.id)["ready"], "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
+    output.update({"ready": canonical_readiness(None, exam.id)["ready"], "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
     return output

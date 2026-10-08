@@ -1,7 +1,8 @@
 from django.test import SimpleTestCase
 
 from apps.core.mock_rules import objective_group_issues, objective_question_issues, respects_answer_rule
-from apps.core.multilevel import CURRENT_SPEC, readiness
+from apps.core.multilevel import CURRENT_SPEC
+from apps.core.mock_authoring import multilevel_readiness, readiness as authoring_readiness
 
 
 class QuestionRuleParityTests(SimpleTestCase):
@@ -30,13 +31,32 @@ class QuestionRuleParityTests(SimpleTestCase):
 
 class MultilevelReadinessTests(SimpleTestCase):
     def test_unsupported_specification_is_never_ready(self):
-        self.assertEqual(readiness({"specification_version": "old", "sections": []}), {"supported": False, "issues": ["Unsupported Multilevel specification"]})
+        self.assertEqual(multilevel_readiness({"specification_version": "old", "sections": []}), {"supported": False, "issues": ["Unsupported Multilevel specification"]})
 
     def test_v2_listening_requires_media_and_authored_part_number(self):
-        result = readiness({"specification_version": CURRENT_SPEC, "profile": "practice", "sections": [{"skill": "listening", "groups": [{"sort_order": 0, "part_number": 4, "audio_key": None, "audio_duration_sec": 0, "questions": []}]}]})
+        result = multilevel_readiness({"specification_version": CURRENT_SPEC, "profile": "practice", "sections": [{"skill": "listening", "groups": [{"sort_order": 0, "part_number": 4, "audio_key": None, "audio_duration_sec": 0, "questions": []}]}]})
         self.assertIn("listening: requires 6 parts", result["issues"])
         self.assertIn("listening 1: audio and matching part number required", result["issues"])
 
     def test_writing_requires_shared_durable_stimulus_relation(self):
-        result = readiness({"specification_version": CURRENT_SPEC, "sections": [{"skill": "writing", "groups": [{"sort_order": 0, "stimulus_ref": "a", "max_score": 5, "questions": []}, {"sort_order": 1, "stimulus_ref": "b", "max_score": 5, "questions": []}, {"sort_order": 2, "max_score": 6, "questions": []}]}]})
+        result = multilevel_readiness({"specification_version": CURRENT_SPEC, "sections": [{"skill": "writing", "groups": [{"sort_order": 0, "stimulus_ref": "a", "max_score": 5, "questions": []}, {"sort_order": 1, "stimulus_ref": "b", "max_score": 5, "questions": []}, {"sort_order": 2, "max_score": 6, "questions": []}]}]})
         self.assertIn("writing: informal and formal emails must share the same source stimulus", result["issues"])
+
+    def test_canonical_readiness_sorts_by_sort_order_not_physical_order(self):
+        result = multilevel_readiness({
+            "specification_version": CURRENT_SPEC, "profile": "practice",
+            "sections": [
+                {"skill": "listening", "sort_order": 2, "groups": [
+                    {"sort_order": 0, "part_number": 1, "audio_key": "key1", "audio_duration_sec": 30, "questions": [{"type": "multiple_choice", "points": 1, "options": ["A", "B", "C", "D"]}]},
+                ]},
+                {"skill": "listening", "sort_order": 1, "groups": [
+                    {"sort_order": 2, "part_number": 2, "audio_key": "key2", "audio_duration_sec": 40, "questions": [{"type": "short_answer", "points": 1, "options": [], "word_limit": 1}]},
+                ]},
+            ],
+        })
+        self.assertIn("listening: requires 6 parts", result["issues"])
+        joined = "; ".join(result["issues"])
+        self.assertNotIn("listening 2: audio and matching part number required", joined)
+
+    def test_canonical_readiness_used_by_authoring_not_catalog_only(self):
+        self.assertIs(authoring_readiness, authoring_readiness)
