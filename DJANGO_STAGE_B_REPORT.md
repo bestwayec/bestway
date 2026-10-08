@@ -1,5 +1,53 @@
 # Stage B partial implementation — STAGE_B_BLOCKED
 
+## Current checkpoint — 2026-10-08
+
+**STAGE_B_CHECKPOINT_2_COMPLETE**. All **15/15** active scoped legacy `/tests` lifecycle/result-support routes are implemented and locally verified. Baseline `0f1a31c` preserved. `/tests` remains separate from `/mock`; existing unmanaged Prisma tables are reused without migrations. Full Stage B: **33/43** registered, **10** remaining mock contracts. Do not start Checkpoint 3 from this handoff.
+
+Latest checks supersede the historical Checkpoint 1 counts below:
+
+| Gate | Result |
+|---|---|
+| Django check | clean |
+| pytest | 113 passed +11 subtests |
+| Existing pure mock scoring comparisons | 578 preserved |
+| Combined API/DB/PG groups | 552 total; 549 pass; 3 approved differences; 0 unapproved failures |
+| Legacy-only groups | 158 total; 156 pass; 2 approved differences; 0 unapproved failures |
+| Legacy PostgreSQL concurrency/rollback | 16 checks within one recorded PG group, all pass |
+| Stage A differential regression | 268/268 pass |
+| Stage A local PostgreSQL regression | 163/163 pass, zero leftovers |
+| Nest reference regression | 421 tests in 31 files pass |
+| Nest typecheck/build/Prisma validate | all pass |
+
+The differential process still exits 1 because raw approved differences remain visible: existing expired IELTS mock audio, anonymous private legacy audio (Django401/Nest200), and finalized/no-live-attempt private legacy audio (Django404/Nest200). The latter two follow the explicitly approved attempt-bound media policy. Authenticated Tauri playback during a valid selected attempt passes unchanged; public/expired playback is intentionally incompatible and must not be re-enabled for legacy convenience.
+
+Legacy tests cover discovery/detail, persisted randomized start/resume and original timer, answer upsert/autosave, marks, cheat cap/throttle, objective scoring, blank versus pending manual work, duplicate/timeout submission, histories/review, parent/teacher/admin scope, second-student denial, program revocation, protected keys, completed answer/marks immutability, audio Range/header/error behavior, result PDF text/page bounds and certificate permissions. PDF skill render-and-inspect QA verified the generated certificate layout; ReportLab/PDFKit binary metadata differs, while result content is compared exactly. Full request/response/error/DB inventory is in `DJANGO_STAGE_B_CONTRACT.md`.
+
+Separate PostgreSQL connections exercise concurrent starts/saves/submits, timeout-vs-submit and save-vs-submit. Injected notification failure rolls back answer grading, scores, finalization and notifications; retry succeeds. Test row locks prevent duplicate starts and attempt row locks prevent double finalization. Nest's legacy implementation does not provide equivalent locks/notification atomicity; this requested safety hardening is documented rather than advertised as identical concurrent reference behavior. Equivalent stable Nest API results and final database state are verified after each race. No provider jobs, manual grading, invented snapshot/tenant tables or timeout endpoint were added.
+
+All disposable localhost schemas/storage and PDF QA scratch files are cleaned. No frontend, Tauri or Nest source changes; no production access, merge or deployment.
+
+### Exact remaining Stage B routes — not started
+
+All paths below start with `/v1`:
+
+1. POST `/mock/exams/:id/purchase`
+2. GET `/mock/attempts`
+3. POST `/mock/attempts/:attemptId/force-submit`
+4. POST `/mock/attempts/:attemptId/extend`
+5. POST `/mock/attempts/:attemptId/reopen`
+6. DELETE `/mock/attempts/:attemptId`
+7. GET `/mock/purchases`
+8. POST `/mock/exams/:id/confirm-purchase`
+9. POST `/mock/exams/:id/reject-purchase`
+10. GET `/mock/attempts/:attemptId/certificate`
+
+The final full Stage B security/media/concurrency gate remains outstanding with those routes. The historical broader mock verification limitations below are not erased by completing legacy `/tests`.
+
+Checkpoint 2 implementation: `0aa1102` — `feat(django): port legacy tests lifecycle`. Verification: `test(django): verify legacy tests parity`; its hash is supplied in the final handoff (a commit cannot embed its own hash). Machine report: `backend-django/STAGE_B_PARITY_REPORT.json`, including `checkpoint2Verdict`, registered counts and explicit differences. Reproduction commands below remain valid. Overall verdict remains **STAGE_B_BLOCKED** until all 43 scoped contracts and the final gate pass.
+
+## Historical Checkpoint 1 report (superseded counts)
+
 Workspace/branch preserved: `migration/django-backend`, baseline `bba9707`. Stage A was not rewritten. No frontend/Tauri/NestJS source edits, schema migration, production access, deployment or merge.
 
 ## Scope and current coverage

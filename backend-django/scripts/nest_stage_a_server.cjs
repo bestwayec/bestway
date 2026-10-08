@@ -4,7 +4,7 @@ const {createRequire} = require('node:module');
 const root = path.resolve(__dirname, '../../backend');
 const ref = createRequire(path.join(root, 'package.json'));
 ref('reflect-metadata');
-const {Module, ValidationPipe} = ref('@nestjs/common');
+const {Module, ValidationPipe, UseGuards} = ref('@nestjs/common');
 const {NestFactory, Reflector} = ref('@nestjs/core');
 const {ConfigService} = ref('@nestjs/config');
 const {JwtService} = ref('@nestjs/jwt');
@@ -13,6 +13,8 @@ const load = p => ref(path.join(root, 'dist', p));
 // normalizing checksum semantics. Applied only inside this disposable harness.
 let uploadSequence = 0;
 require('crypto').randomUUID = () => `00000000-0000-4000-8000-${String(++uploadSequence).padStart(12, '0')}`;
+// Deterministic Fisher-Yates draws only in the equivalent legacy test fixture.
+require('crypto').randomInt = () => 0;
 const {PrismaService} = load('prisma/prisma.service.js');
 const {AuditService} = load('audit/audit.service.js');
 const {StorageService} = load('videos/storage.service.js');
@@ -64,18 +66,34 @@ function firstMessage(errors) {
     const studentAccess = new AccessService(prisma);
     const notifications = new NotificationsService(prisma, {send: async () => {}});
     values.set(AssessmentService, new AssessmentService(prisma, studentAccess, programs, storage, config));
+    const {TestsService} = load('tests/tests.service.js');
+    const {GradingService} = load('tests/grading.service.js');
+    const {CertificateService} = load('tests/certificate.service.js');
+    values.set(TestsService, new TestsService(prisma,audit,programs));
+    values.set(GradingService, new GradingService(prisma,studentAccess,notifications,programs));
+    values.set(CertificateService, new CertificateService(config));
     values.set(MockAttemptService, new MockAttemptService(prisma, access, storage, config));
     values.set(MockGradingService, new MockGradingService(prisma, studentAccess, notifications,
       storage, audit, new SettingsService(prisma, audit), config, programs));
   }
-  for (const controller of [MockController, MockExamImportController]) {
+  const controllers = [MockController, MockExamImportController];
+  const moduleImports=[], extraProviders=[];
+  if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);
+  if (process.env.VERIFY_STAGE_B === '1') {
+    const {ThrottlerModule,ThrottlerGuard}=ref('@nestjs/throttler');
+    const controller=controllers[controllers.length-1];
+    UseGuards(ThrottlerGuard)(controller.prototype,'flagCheat',Object.getOwnPropertyDescriptor(controller.prototype,'flagCheat'));
+    moduleImports.push(ThrottlerModule.forRoot([{name:'default',ttl:60000,limit:100000}]));
+    extraProviders.push(ThrottlerGuard);
+  }
+  for (const controller of controllers) {
     for (const token of Reflect.getMetadata('design:paramtypes', controller)) {
       if (!values.has(token)) values.set(token, inaccessible);
     }
   }
   class StageAModule {}
-  Module({controllers: [MockController, MockExamImportController],
-    providers: [...values].map(([provide, useValue]) => ({provide, useValue}))})(StageAModule);
+  Module({controllers,imports:moduleImports,
+    providers: [...values].map(([provide, useValue]) => ({provide, useValue})).concat(extraProviders)})(StageAModule);
   const app = await NestFactory.create(StageAModule, {logger: false, abortOnError: false, bodyParser: false});
   const express = ref('express');
   app.use(express.json({limit: '3mb', verify: (req, _res, buf) => {req.rawBody = buf;}}));

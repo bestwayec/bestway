@@ -79,6 +79,7 @@ try:
     os.environ['JWT_SECRET'] = 'local-stage-a-differential-secret-no-production'
     os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings.local'
     os.environ['ALLOWED_HOSTS'] = 'testserver,localhost,127.0.0.1'
+    os.environ['CENTER_NAME'] = 'Local Legacy Centre'
     import django
     django.setup()
     from django.conf import settings
@@ -109,31 +110,34 @@ try:
             state = {}
             tables = ('MockExam', 'MockSection', 'MockQuestionGroup', 'MockQuestion', 'MockExamImport', 'MockImportSourceMap', 'MockImportReviewIssue', 'MockStagedMedia', 'MockAttempt')
             if STAGE_B:
-                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob', 'Notification')
+                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob', 'Notification', 'Test','Question','TestAttempt','Answer','AntiCheatEvent')
             for table in tables:
                 rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
                 state[table] = sorted((normalize(row[0]) for row in rows), key=lambda value: json.dumps(value, sort_keys=True))
             return state
 
-        def call(method, path, body=None, *, role='admin', files=None, label=None):
+        def call(method, path, body=None, *, role='admin', files=None, label=None, extra_headers=None):
             responses = []
             for side in (0, 1):
                 target = path.format(**ids[side])
                 def expand(value):
-                    if isinstance(value, dict): return {k: expand(v) for k, v in value.items()}
+                    if isinstance(value, dict): return {expand(k): expand(v) for k, v in value.items()}
                     if isinstance(value, list): return [expand(v) for v in value]
                     if isinstance(value, str) and re.fullmatch(r'\{\w+\}', value): return value.format(**ids[side])
                     return value
                 payload = expand(body)
                 headers = {'Authorization': 'Bearer ' + tokens[side][role]} if role else {}
+                headers.update(extra_headers or {})
                 if side == 0:
-                    client.credentials(**({'HTTP_AUTHORIZATION': headers['Authorization']} if role else {}))
+                    client.credentials(**{'HTTP_'+k.upper().replace('-','_'):v for k,v in headers.items()})
                     if files:
                         data = {name: SimpleUploadedFile(filename, content, content_type=mime) for name, (filename, content, mime) in files.items()}
                         response = getattr(client, method.lower())(target, data, format='multipart')
                     else:
                         response = getattr(client, method.lower())(target, payload or {}, format='json')
-                    result = dict(status=response.status_code, body=json.loads(response.content) if hasattr(response, 'data') else dict(bytes=list(b''.join(response.streaming_content))))
+                    result = dict(status=response.status_code, body=json.loads(response.content) if hasattr(response, 'data') else dict(bytes=list(b''.join(response.streaming_content) if response.streaming else response.content)))
+                    if extra_headers is not None or path.endswith('/certificate') and '/tests/' in path:
+                        result['headers']={k:response.headers[k] for k in ('Content-Type','Accept-Ranges','Content-Range','Content-Disposition') if k in response.headers}
                 else:
                     if files:
                         boundary = 'stage-a-fixture-boundary'
@@ -152,6 +156,8 @@ try:
                         response = exc
                     raw = response.read()
                     result = dict(status=response.status, body=json.loads(raw) if 'json' in response.headers.get('Content-Type', '') else dict(bytes=list(raw)))
+                    if extra_headers is not None or path.endswith('/certificate') and '/tests/' in path:
+                        result['headers']={k:response.headers[k] for k in ('Content-Type','Accept-Ranges','Content-Range','Content-Disposition') if k in response.headers}
                 responses.append(result)
             if STAGE_B:
                 # UUID-keyed savedAnswers/mediaState must retain distinct keys.
@@ -169,6 +175,14 @@ try:
                     elif isinstance(left, list) and isinstance(right, list):
                         for a, b in zip(left, right): pair_keys(a, b)
                 pair_keys(responses[0], responses[1])
+            # PDFs have different generators/metadata; compare their complete
+            # text and page dimensions, not arbitrary binary serialization.
+            if '/tests/attempts/' in path and path.endswith('/certificate') and all(r['status']==200 for r in responses):
+                from io import BytesIO
+                from pypdf import PdfReader
+                for result in responses:
+                    reader=PdfReader(BytesIO(bytes(result['body']['bytes'])))
+                    result['body']=dict(pdfPages=[dict(text=p.extract_text(),size=[float(v) for v in p.mediabox]) for p in reader.pages])
             passed = normalize(responses[0]) == normalize(responses[1])
             states = [database_state(side) for side in (0, 1)]
             db_passed = states[0] == states[1]
@@ -294,7 +308,11 @@ try:
             from stage_b_cases import run as run_stage_b
             call.reference_base = f'http://127.0.0.1:{port}'
             call.reference_student_token = tokens[1]['student']
+            call.tokenmaps=tokens
             run_stage_b(call, ids, db, schemas, results)
+            legacy_start = len(results)
+            from legacy_test_cases import run as run_legacy
+            run_legacy(call,ids,db,schemas,results)
         summary = dict(activeContracts=inventory['count'], comparisons=len(results),
             passed=sum(r['status'] == 'PASS' for r in results),
             failed=sum(r['status'] == 'FAIL' for r in results),
@@ -318,9 +336,15 @@ try:
                 registeredContracts=stage_b_inventory['count']-len(missing_contracts),
                 missingContracts=missing_contracts)
             summary.update(stageAComparisons=stage_a_count, stageBComparisons=len(results)-stage_a_count,
-                verdict='STAGE_B_BLOCKED', coverage='Checkpoint 1 submission implemented; legacy lifecycle, support routes and full security/concurrency gates remain outstanding')
+                verdict='STAGE_B_BLOCKED', coverage='Checkpoints 1 and 2 implemented; 10 mock management/purchase/certificate routes and the final Stage B gate remain outstanding')
             summary['approvedSecurityDifferences'] = [r for r in results if r.get('approvedSecurityDifference')]
             summary['unapprovedFailures'] = sum(r['status'] == 'FAIL' and not r.get('approvedSecurityDifference') for r in results)
+            legacy_results=results[legacy_start:]
+            legacy_failures=sum(r['status']=='FAIL' and not r.get('approvedSecurityDifference') for r in legacy_results)
+            legacy_missing=[e for e in missing_contracts if e['path'].startswith('/v1/tests')]
+            summary.update(legacyContracts=15, legacyRegisteredContracts=15-len(legacy_missing),
+                legacyComparisons=len(legacy_results), legacyUnapprovedFailures=legacy_failures,
+                checkpoint2Verdict='STAGE_B_CHECKPOINT_2_COMPLETE' if not legacy_missing and not legacy_failures else 'STAGE_B_CHECKPOINT_2_BLOCKED')
         REPORT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
         print('SUMMARY ' + json.dumps({key: summary[key] for key in ('activeContracts', 'comparisons', 'passed', 'failed')}))
 finally:
