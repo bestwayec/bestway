@@ -110,7 +110,7 @@ try:
             state = {}
             tables = ('MockExam', 'MockSection', 'MockQuestionGroup', 'MockQuestion', 'MockExamImport', 'MockImportSourceMap', 'MockImportReviewIssue', 'MockStagedMedia', 'MockAttempt')
             if STAGE_B:
-                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob', 'Notification', 'Test','Question','TestAttempt','Answer','AntiCheatEvent')
+                tables += ('MockAnswer', 'MockCheatEvent', 'AssessmentJob', 'Notification', 'MockPurchase', 'Test','Question','TestAttempt','Answer','AntiCheatEvent')
             for table in tables:
                 rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
                 state[table] = sorted((normalize(row[0]) for row in rows), key=lambda value: json.dumps(value, sort_keys=True))
@@ -136,7 +136,7 @@ try:
                     else:
                         response = getattr(client, method.lower())(target, payload or {}, format='json')
                     result = dict(status=response.status_code, body=json.loads(response.content) if hasattr(response, 'data') else dict(bytes=list(b''.join(response.streaming_content) if response.streaming else response.content)))
-                    if extra_headers is not None or path.endswith('/certificate') and '/tests/' in path:
+                    if extra_headers is not None or path.endswith('/certificate'):
                         result['headers']={k:response.headers[k] for k in ('Content-Type','Accept-Ranges','Content-Range','Content-Disposition') if k in response.headers}
                 else:
                     if files:
@@ -156,7 +156,7 @@ try:
                         response = exc
                     raw = response.read()
                     result = dict(status=response.status, body=json.loads(raw) if 'json' in response.headers.get('Content-Type', '') else dict(bytes=list(raw)))
-                    if extra_headers is not None or path.endswith('/certificate') and '/tests/' in path:
+                    if extra_headers is not None or path.endswith('/certificate'):
                         result['headers']={k:response.headers[k] for k in ('Content-Type','Accept-Ranges','Content-Range','Content-Disposition') if k in response.headers}
                 responses.append(result)
             if STAGE_B:
@@ -177,7 +177,7 @@ try:
                 pair_keys(responses[0], responses[1])
             # PDFs have different generators/metadata; compare their complete
             # text and page dimensions, not arbitrary binary serialization.
-            if '/tests/attempts/' in path and path.endswith('/certificate') and all(r['status']==200 for r in responses):
+            if path.endswith('/certificate') and all(r['status']==200 for r in responses):
                 from io import BytesIO
                 from pypdf import PdfReader
                 for result in responses:
@@ -309,10 +309,14 @@ try:
             call.reference_base = f'http://127.0.0.1:{port}'
             call.reference_student_token = tokens[1]['student']
             call.tokenmaps=tokens
+            call.normalize=normalize
             run_stage_b(call, ids, db, schemas, results)
             legacy_start = len(results)
             from legacy_test_cases import run as run_legacy
             run_legacy(call,ids,db,schemas,results)
+            support_start=len(results)
+            from mock_support_cases import run as run_support
+            run_support(call,ids,db,schemas,results)
         summary = dict(activeContracts=inventory['count'], comparisons=len(results),
             passed=sum(r['status'] == 'PASS' for r in results),
             failed=sum(r['status'] == 'FAIL' for r in results),
@@ -336,15 +340,21 @@ try:
                 registeredContracts=stage_b_inventory['count']-len(missing_contracts),
                 missingContracts=missing_contracts)
             summary.update(stageAComparisons=stage_a_count, stageBComparisons=len(results)-stage_a_count,
-                verdict='STAGE_B_BLOCKED', coverage='Checkpoints 1 and 2 implemented; 10 mock management/purchase/certificate routes and the final Stage B gate remain outstanding')
+                verdict='STAGE_B_BLOCKED', coverage='All 43 scoped routes registered; Checkpoint 3 verdict depends on recorded API/DB/security verification, not registration alone')
             summary['approvedSecurityDifferences'] = [r for r in results if r.get('approvedSecurityDifference')]
             summary['unapprovedFailures'] = sum(r['status'] == 'FAIL' and not r.get('approvedSecurityDifference') for r in results)
-            legacy_results=results[legacy_start:]
+            legacy_results=results[legacy_start:support_start]
             legacy_failures=sum(r['status']=='FAIL' and not r.get('approvedSecurityDifference') for r in legacy_results)
             legacy_missing=[e for e in missing_contracts if e['path'].startswith('/v1/tests')]
             summary.update(legacyContracts=15, legacyRegisteredContracts=15-len(legacy_missing),
                 legacyComparisons=len(legacy_results), legacyUnapprovedFailures=legacy_failures,
                 checkpoint2Verdict='STAGE_B_CHECKPOINT_2_COMPLETE' if not legacy_missing and not legacy_failures else 'STAGE_B_CHECKPOINT_2_BLOCKED')
+            support_results=results[support_start:]
+            support_failures=sum(r['status']=='FAIL' and not r.get('approvedSecurityDifference') for r in support_results)
+            summary.update(checkpoint3Contracts=10,checkpoint3Comparisons=len(support_results),checkpoint3UnapprovedFailures=support_failures,
+                checkpoint3Verdict='STAGE_B_CHECKPOINT_3_COMPLETE' if not missing_contracts and not summary['unapprovedFailures'] else 'STAGE_B_CHECKPOINT_3_BLOCKED')
+            if summary['checkpoint3Verdict']=='STAGE_B_CHECKPOINT_3_COMPLETE':
+                summary.update(verdict='STAGE_B_CHECKPOINT_3_COMPLETE',coverage='All 43 scoped contracts implemented; no unapproved recorded failures. Three approved media security restrictions remain explicit. Provider execution and teacher assessment remain Stage C.')
         REPORT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
         print('SUMMARY ' + json.dumps({key: summary[key] for key in ('activeContracts', 'comparisons', 'passed', 'failed')}))
 finally:

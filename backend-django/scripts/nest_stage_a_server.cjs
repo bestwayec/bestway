@@ -65,6 +65,9 @@ function firstMessage(errors) {
     const {NotificationsService} = load('notifications/notifications.service.js');
     const studentAccess = new AccessService(prisma);
     const notifications = new NotificationsService(prisma, {send: async () => {}});
+    access.notifications=notifications;
+    const {MockCertificateService}=load('mock/mock-certificate.service.js');
+    values.set(MockCertificateService,new MockCertificateService(config));
     values.set(AssessmentService, new AssessmentService(prisma, studentAccess, programs, storage, config));
     const {TestsService} = load('tests/tests.service.js');
     const {GradingService} = load('tests/grading.service.js');

@@ -1,10 +1,10 @@
-# Stage B lifecycle contract inventory — incomplete gate
+# Stage B lifecycle contract inventory — Checkpoint 3 complete
 
 Reference: the active built `MockController` and `TestsController`, their source services/DTOs, and actual calls in `frontend/src/hooks/use-mock.ts`, `frontend/src/components/mock/mock-runner.tsx`, and `../bw-tauri/src/lib/{mocks,tests,cheat}.ts`.
 
 Run `node backend-django/scripts/stage_b_inventory.cjs` for exact methods, paths, role metadata, public/optional authentication and success statuses. This is not an inventory of all backend routes: authoring mutations and assessment/grading implementation are outside Stage B. Direct lifecycle access, management and result-support contracts are included, even when unimplemented. The user explicitly included legacy `/tests`.
 
-Active scoped contracts: **43** (28 mock, 15 legacy). Registered in Django: **33** (18 from Checkpoint 1 plus all 15 legacy contracts from Checkpoint 2). Missing: **10**, all mock management/purchase/certificate routes listed below. Registration is not proof of the remaining full Stage B gate.
+Active scoped contracts: **43** (28 mock, 15 legacy). Registered in Django: **43**. Missing: **0**. Checkpoint3 verifies the remaining ten access/staff/result-support contracts; exact implementation matrix and results are in `DJANGO_STAGE_B_CHECKPOINT_3.md`. Approved media restrictions remain explicit differences. Provider grading/teacher review remain Stage C, not covered by this inventory.
 
 JSON responses use `{success:true,data:...}`; paginated routes add top-level `meta:{page,limit,total}`. Errors use `{success:false,error:{code,message}}`. POST success defaults to 201; GET/PUT success defaults to 200. Binary streams also support 206 and 416. Below `S` means JWT student; `A` means authenticated with student/linked-parent/assigned-teacher/admin scope; `T` means teacher/admin/super_admin; `D` means admin/super_admin; `O` means optional JWT; `P` means public. All paths start with `/v1`.
 
@@ -30,16 +30,16 @@ JSON responses use `{success:true,data:...}`; paginated routes add top-level `me
 | GET `/mock/groups/:groupId/audio` | O | `attemptId?`, Range; stream | Existing; approved security change |
 | GET `/mock/groups/:groupId/image` | O | Range; image stream | Existing |
 | POST `/mock/attempts/:attemptId/submit` | S | `{skills?:MockSkill[]}`; synchronous scores/submission result + immutable enqueue | Checkpoint 1 |
-| POST `/mock/exams/:id/purchase` | S | No DTO; `{status,amount}` | Missing |
-| GET `/mock/attempts` | T | ListAttemptsQueryDto; summaries/meta scoped by student | Missing |
-| POST `/mock/attempts/:attemptId/force-submit` | T | No DTO; submission result, audit, enqueue | Missing |
-| POST `/mock/attempts/:attemptId/extend` | T | `{minutes:integer 1..180}`; saved/deadlines/serverTime | Missing |
-| POST `/mock/attempts/:attemptId/reopen` | T | No DTO; `{saved:true,status:in_progress}` | Missing |
-| DELETE `/mock/attempts/:attemptId` | D | No DTO; `{deleted:true}`, cascading response cleanup | Missing |
-| GET `/mock/purchases` | D | page/limit/status; purchase summaries/meta | Missing |
-| POST `/mock/exams/:id/confirm-purchase` | D | `{userId}`; purchased result, notification/audit | Missing |
-| POST `/mock/exams/:id/reject-purchase` | D | `{userId}`; rejection, notification/audit | Missing |
-| GET `/mock/attempts/:attemptId/certificate` | A | Authorized result PDF | Missing result-support contract |
+| POST `/mock/exams/:id/purchase` | S | No DTO; `{status,amount}` | Checkpoint3 |
+| GET `/mock/attempts` | T | ListAttemptsQueryDto; summaries/meta scoped by student | Checkpoint3 |
+| POST `/mock/attempts/:attemptId/force-submit` | T | No DTO; submission result, audit, enqueue | Checkpoint3 |
+| POST `/mock/attempts/:attemptId/extend` | T | `{minutes:integer 1..180}`; saved/deadlines/serverTime | Checkpoint3 |
+| POST `/mock/attempts/:attemptId/reopen` | T | No DTO; `{saved:true,status:in_progress}` | Checkpoint3 |
+| DELETE `/mock/attempts/:attemptId` | D | No DTO; `{deleted:true}`, cascading response cleanup | Checkpoint3 |
+| GET `/mock/purchases` | D | page/limit/status; purchase summaries/meta | Checkpoint3 |
+| POST `/mock/exams/:id/confirm-purchase` | D | `{userId}`; `{confirmed:true}`, notification/audit | Checkpoint3 |
+| POST `/mock/exams/:id/reject-purchase` | D | `{userId}`; `{rejected:true}`, notification/audit | Checkpoint3 |
+| GET `/mock/attempts/:attemptId/certificate` | A | Authorized completed result PDF | Checkpoint3 |
 
 ## Persisted mock semantics
 
@@ -112,4 +112,4 @@ Catalogue/demo-list queries are `page` (default 1), `limit` (default 20, maximum
 
 Django locks Test for fresh starts and TestAttempt for saves/marks/cheat/submit under transaction.atomic. Separate-connection PostgreSQL tests verify one durable start, one duplicate-save row, one successful concurrent submit and one ATTEMPT_FINISHED, timeout-vs-submit, save-vs-submit, no double scoring/notifications and rollback after injected notification failure. Reference sequential JSON and final persisted state match. Nest lacks these start/submit locks and sends notifications outside its scoring transaction: Django intentionally strengthens serialization/atomicity as required by Checkpoint 2 Step 5. This is not a claim of identical concurrent Nest responses. Legacy scoring remains separate from `mock_scoring.py`; only proven-identical ECMAScript whitespace helpers are reused.
 
-No orphaned desktop student lifecycle route was established. Legacy authoring/admin grading routes are active but explicitly outside the scoped student lifecycle; no claim that all backend `/tests` functionality has migrated. Provider/teacher assessment remains deferred. Checkpoint 2: 15/15 registered, 158 recorded groups (157 API/DB plus one PG group containing 16 checks), 156 pass, two explicitly approved private-media denials, zero unapproved differences. Remaining overall Stage B contracts: the ten mock routes marked Missing above.
+No orphaned desktop student lifecycle route was established. Legacy authoring/admin grading routes are active but explicitly outside the scoped student lifecycle; no claim that all backend `/tests` functionality has migrated. Provider/teacher assessment remains deferred. Checkpoint2: 15/15 registered, 158 recorded groups (157 API/DB plus one PG group containing 16 checks), 156 pass, two explicitly approved private-media denials, zero unapproved differences. Checkpoint3 adds all ten formerly missing mock contracts: 153/153 recorded groups pass. No scoped routes remain missing. The broader historical mock verification limitations are not claims of provider/assessment coverage; the scoped Checkpoint3 gate verifies current routes without starting Stage C.

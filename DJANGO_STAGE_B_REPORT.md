@@ -1,4 +1,20 @@
-# Stage B partial implementation — STAGE_B_BLOCKED
+# Stage B scoped lifecycle — STAGE_B_CHECKPOINT_3_COMPLETE
+
+## Checkpoint 3 — final current result, 2026-10-08
+
+**STAGE_B_CHECKPOINT_3_COMPLETE**. **43/43** active scoped Stage B contracts implemented and registered; **zero missing routes**. All ten newly ported mock access/staff/result-support routes are differentially verified. Baseline `c1f15db` and prior checkpoints preserved. Exact method/path/request/response/roles/side-effect/test matrix: `DJANGO_STAGE_B_CHECKPOINT_3.md`.
+
+- Combined differential: **705 recorded groups**, **702 pass**, **three approved media-security differences**, **zero unapproved failures**. New Checkpoint 3: **153/153 groups pass** (151 API/DB, one PostgreSQL safety group, one audit-record comparison group). Strict runner exits1 to keep raw approved differences visible; this is not an exact parity claim for those unsafe media paths.
+- PostgreSQL: **18** new support concurrency/rollback checks pass; prior legacy16 and submission checks rerun. Concurrent force/manual submission finalizes once, extensions accumulate, purchase requests are unique, notification failures roll back, snapshots stay immutable and deletion uses the existing ledger cascades. Equivalent stable Nest results/database state match. Django retains the requested stronger transaction/row-lock safety instead of copying reference races.
+- Security: every new route has real-JWT role checks, missing resources and invalid DTO/query cases. Cross-student certificate/detail access and unassigned teacher controls are denied. Purchased entitlement never bypasses Start enrollment. Completed answers/scores are not rewritten; completed reopen/extend are denied. Reopen is the explicit reference grading-only administrative exception, retaining original scores, clocks and snapshots. Certificate authorization includes linked parents/assigned teachers/admins and denies pending work. No answer keys are added to catalogue/queue/certificate output.
+- Result support uses persisted deterministic scores. Force-submit reuses Checkpoint1 scoring/snapshot service, bypassing student completeness only as the reference requires; Writing/Speaking pending assessment stay grading. PDF metadata/content/page bounds match reference fixtures; PDF skill render/inspection checked IELTS and Multilevel layouts. Binary generator metadata is not identical.
+- Django check clean; **127 pytest +11 subtests**, **578** scoring comparisons preserved. Stage A **268/268** differential and **163/163** local PG checks pass. Nest **421 tests/31 files**, typecheck/build/Prisma validate pass.
+
+Approved differences remain the existing expired IELTS mock audio denial and legacy anonymous/finalized private-audio denials, per attempt-bound media policy. Legitimate playback uses an authorized live own practice/timed context; staff/demo access remains unchanged. No new compatibility exceptions were added. No provider or teacher grading, schema changes, frontend/Tauri/NestJS source edits, production access, merge or deployment. All disposable schemas/storage and PDF scratch files cleaned. **Stop before Stage C.**
+
+Implementation commit: `9389532` — `feat(django): complete mock access and result support`. Verification commit: `test(django): verify Stage B checkpoint 3 parity`; its hash is supplied in the final handoff (a commit cannot embed its own hash). Machine results: `backend-django/STAGE_B_PARITY_REPORT.json`. The historical remaining lists below are superseded, not current blockers.
+
+## Historical Checkpoint 2 (superseded coverage/results)
 
 ## Current checkpoint — 2026-10-08
 
