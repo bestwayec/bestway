@@ -158,7 +158,8 @@ def record_audio_access(actor, attempt_id, group_id):
             raise ContractAPIException('MOCK_ATTEMPT_FINISHED', 'Bu urinish allaqachon yakunlangan', 400)
         now = timezone.now()
         deadline = attempt.overall_deadline_at or attempt.deadline_at
-        if deadline and now > deadline:
+        from .mock_attempts import aware
+        if deadline and now > aware(deadline):
             raise ContractAPIException('MOCK_TIME_UP', 'Vaqt tugadi — imtihonni yakunlang', 400)
         section_deadline = (attempt.section_deadlines or {}).get(attempt.current_skill)
         if section_deadline and now > parse_datetime(section_deadline):
@@ -182,7 +183,20 @@ def stream_media(request, group_id, kind):
     from .mock_catalog import is_staff, access_for
     actor = request.user if request.user.is_authenticated else None
     attempt_id = request.query_params.get('attemptId')
-    if kind == 'audio' and attempt_id and actor:
+    if kind == 'audio' and actor and actor.role == 'student':
+        # Approved Stage B security difference: omitted IDs no longer bypass
+        # timed playback gates. Bind unchanged practice-client requests to the
+        # one active student/exam attempt, never to a completed or foreign one.
+        with transaction.atomic():
+            bound_group = _group_or_throw(group_id)
+            rows = MockAttempt.objects.select_for_update().filter(student_id=actor.id,
+                exam_id=bound_group.section.exam_id, status='in_progress')
+            attempt = rows.filter(id=attempt_id).first() if attempt_id else rows.order_by('-started_at').first()
+            if attempt is None:
+                raise ContractAPIException('MOCK_ATTEMPT_NOT_FOUND', 'Active attempt required for student audio', 404)
+            attempt_id = attempt.id
+            record_audio_access(actor, attempt_id, group_id)
+    elif kind == 'audio' and attempt_id and actor:
         record_audio_access(actor, attempt_id, group_id)
     group = _group_or_throw(group_id)
     exam = group.section.exam
