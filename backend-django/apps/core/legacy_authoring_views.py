@@ -8,8 +8,9 @@ from .legacy_import_parser import parse
 from .legacy_test_views import list_view,test_view
 from .views import require_authenticated,require_role
 from .mock_attempt_views import success
-from .domain_contracts import payload,invalid
+from .domain_contracts import payload,invalid,js_length
 from .game_points_views import js_number
+from common.api.exceptions import ContractAPIException
 
 TEST_KEYS={'type','title','level','isDemo','durationMinutes','sectionQuestionCounts'}
 QUESTION_KEYS={'section','type','prompt','options','correctAnswer','maxScore','passageText','instructions','audioUrl'}
@@ -62,7 +63,7 @@ def audio(request,question_id):
         from .legacy_test_views import audio_view
         return audio_view(request._request,question_id)
     require_authenticated(request);require_role(request,'admin','super_admin')
-    if any(k!='audio' for k in request.FILES) or len(request.FILES.getlist('audio'))>1:invalid('Unexpected field')
+    if any(k!='audio' for k in request.FILES) or len(request.FILES.getlist('audio'))>1:raise ContractAPIException('BAD_REQUEST','Unexpected field',400)
     return success(service.upload_audio(request.user,question_id,request.FILES.get('audio')),201)
 
 
@@ -75,5 +76,5 @@ def grade(request,attempt_id):
     score=js_number(data.get('score'))
     if not score>=0:invalid('score must not be less than 0')
     if not math.isfinite(score):invalid('score must be a number conforming to the specified constraints')
-    if data.get('comment') is not None and (not isinstance(data['comment'],str) or len(data['comment'])>1000):invalid('comment must be shorter than or equal to 1000 characters')
+    if data.get('comment') is not None and (not isinstance(data['comment'],str) or js_length(data['comment'])>1000):invalid('comment must be shorter than or equal to 1000 characters')
     return success(service.grade(request.user,attempt_id,dict(data,score=score)),201)

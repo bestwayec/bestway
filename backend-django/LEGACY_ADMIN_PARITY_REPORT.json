@@ -1,7 +1,7 @@
 {
   "contracts": 9,
-  "comparisons": 89,
-  "passed": 89,
+  "comparisons": 104,
+  "passed": 104,
   "failed": 0,
   "results": [
     {
@@ -371,6 +371,12 @@
       "status": "PASS"
     },
     {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
       "method": "PATCH",
       "path": "/v1/tests/{legacy_test}",
       "label": "super_admin",
@@ -536,6 +542,90 @@
       "method": "DELETE",
       "path": "/v1/tests/questions/{legacy_question}",
       "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/tests/attempts/{legacy_attempt}",
+      "label": "student",
       "status": "PASS"
     }
   ]

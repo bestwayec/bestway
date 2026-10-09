@@ -50,7 +50,13 @@ def attach(user_id,chat_id):
 
 def consume(token,chat_id):
     row=TelegramLinkToken.objects.filter(token_hash=token_hash(token)).select_related('user').first()
-    if not row or row.used_at or row.expires_at<timezone.now():
+    expires_at=row.expires_at if row else None
+    # Prisma's legacy PostgreSQL schema uses TIMESTAMP WITHOUT TIME ZONE; values
+    # are UTC wall time. Interpret naive values as UTC before comparing.
+    if expires_at is not None and timezone.is_naive(expires_at):
+        from datetime import timezone as datetime_timezone
+        expires_at=expires_at.replace(tzinfo=datetime_timezone.utc)
+    if not row or row.used_at or expires_at<timezone.now():
         api.plain(chat_id,'❌ Bog\'lash havolasi eskirgan yoki ishlatilgan.\nSaytga kiring va "Telegramni ulash" tugmasini qaytadan bosing.');return
     if not row.user.is_active:api.plain(chat_id,'❌ Akkaunt bloklangan. Administratsiyaga murojaat qiling.');return
     attach(row.user_id,chat_id)

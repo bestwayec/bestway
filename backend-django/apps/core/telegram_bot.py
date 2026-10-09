@@ -45,7 +45,7 @@ def handle(update):
         if text.startswith('/help'):api.send(chat_id,HELP);return
         if menu.handle(chat_id,text) or show(chat_id):return
         api.contact_request(chat_id,welcome())
-    except Exception:logging.getLogger(__name__).warning('Telegram update processing failed')
+    except Exception as error:logging.getLogger(__name__).warning('Telegram update processing failed: %r',error)
 
 
 def initialize():

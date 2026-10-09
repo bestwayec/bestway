@@ -8,7 +8,7 @@ from apps.legacy_schema.models import Test,Question,TestAttempt,Answer
 from . import legacy_tests as service
 from .legacy_import_parser import parse
 from .system_settings import audit
-from .domain_contracts import invalid
+from .domain_contracts import invalid,js_length
 from .game_points_views import bounded
 from .content_media import storage_path,delete_file
 from .points import assert_can_view
@@ -27,8 +27,8 @@ def validate(data,question=False,update=False,importing=False):
         required=not update and key in ('text','prompt','title')
         if (key not in data or data[key] is None) and not required:continue
         value=data.get(key)
-        if maximum and (not isinstance(value,str) or len(value)>maximum):invalid(f'{key} must be shorter than or equal to {maximum} characters')
-        if not isinstance(value,str) or len(value)<minimum:invalid(f'{key} must be longer than or equal to {minimum} characters')
+        if maximum and (not isinstance(value,str) or js_length(value)>maximum):invalid(f'{key} must be shorter than or equal to {maximum} characters')
+        if not isinstance(value,str) or js_length(value)<minimum:invalid(f'{key} must be longer than or equal to {minimum} characters')
     enums={'defaultSection':service.SECTIONS} if importing else {'section':service.SECTIONS,'type':('multiple_choice','short_answer','essay','speaking_prompt')} if question else {'type':('ielts','multilevel')}
     for key,values in enums.items():
         if (importing or update) and (key not in data or data[key] is None):continue
