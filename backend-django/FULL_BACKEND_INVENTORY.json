@@ -559,10 +559,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "game",
@@ -577,10 +577,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "game",
@@ -594,10 +594,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "groups",
@@ -1891,10 +1891,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "points",
@@ -1906,10 +1906,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "points",
@@ -1925,10 +1925,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.game_points_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Separate game scheduler process required; full runtime gate remains",
+      "coverage": "GAME_POINTS_PARITY_REPORT.json; test_game_points.py"
     },
     {
       "module": "settings",
@@ -3681,9 +3681,9 @@
   ],
   "summary": {
     "total": 173,
-    "implemented": 123,
-    "verified": 118,
-    "missing": 50,
+    "implemented": 129,
+    "verified": 124,
+    "missing": 44,
     "partial": 5
   }
 }

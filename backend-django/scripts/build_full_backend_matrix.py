@@ -25,6 +25,8 @@ foundation = ROOT/'FULL_FOUNDATION_PARITY_REPORT.json'
 foundation_verified = foundation.exists() and json.loads(foundation.read_text())['failed'] == 0
 attendance_report = ROOT/'ATTENDANCE_PARITY_REPORT.json'
 attendance_verified = attendance_report.exists() and json.loads(attendance_report.read_text())['failed'] == 0
+game_report = ROOT/'GAME_POINTS_PARITY_REPORT.json'
+game_verified = game_report.exists() and json.loads(game_report.read_text())['failed'] == 0
 counts = dict(total=len(data['routes']), implemented=0, verified=0, missing=0, partial=0)
 lines = ['# Full NestJS to Django backend matrix', '',
     'Generated from all built controller metadata and actual source on 2026-10-09. Source remains read-only. Registration is reported separately from verified business behavior.', '',
@@ -48,6 +50,10 @@ for row in data['routes']:
         status='COMPLETE' if attendance_verified else 'PARTIAL'
         missing='Full runtime gate remains' if attendance_verified else 'Attendance differential verification pending'
         coverage='ATTENDANCE_PARITY_REPORT.json; test_attendance.py'
+    if implementation and module in ('game', 'points'):
+        status='COMPLETE' if game_verified else 'PARTIAL'
+        missing='Separate game scheduler process required; full runtime gate remains' if game_verified else 'Game/points differential verification pending'
+        coverage='GAME_POINTS_PARITY_REPORT.json; test_game_points.py'
     if implementation and row['path'] in ('/v1/mock/groups/:groupId/audio','/v1/tests/questions/:id/audio'):
         status = 'APPROVED_DIFFERENCE'; missing = 'Attempt-bound policy retained'; coverage = 'Three explicitly approved media restrictions; Stage B report'
     row.update(django=implementation, migrationStatus=status, missingBehavior=missing, coverage=coverage)
@@ -64,6 +70,7 @@ for item in data['services'] + data['guards']:
     module = item['source'].split('/')[1]
     complete = module in ('settings','audit','groups','articles','notifications','payments') and foundation_verified
     complete = complete or (module == 'attendance' and attendance_verified)
+    complete = complete or (module in ('game','points') and game_verified)
     state = 'COMPLETE — foundation differential verified' if complete else 'PARTIAL — inspect remaining methods/dependencies' if module in ('auth','mock','tests','common','prisma') else 'MISSING — port source behavior'
     if module=='stats' and item['name']=='ExportService' and attendance_verified:
         state='PARTIAL — attendance CSV verified; students/payments exports pending'
@@ -71,8 +78,11 @@ for item in data['services'] + data['guards']:
 lines += ['', '## Background jobs, startup recovery, events and WebSockets', '',
     'Attendance inventory: 0 independent jobs, 0 event handlers, 0 WebSocket contracts. Parent absence delivery reuses the verified shared NotificationsService contract; there is no attendance reminder scheduler to port.', '']
 for job in data['jobs']:
+    if job['name']=='GameService' and game_verified:
+        lines.append('- COMPLETE scoped verification: GameService.monthlyReset — `python manage.py run_game_scheduler`; 00:05 Asia/Tashkent, startup recovery, archive/reset, rollback and concurrency verified. Separate process must be operated alongside the web server; deployment/runtime gate remains.')
+        continue
     lines.append(f"- MISSING: `{job['name']}.{job['handler']}` {job['decorator']} — backend/{job['source']}; preserve durable row claims/retries or monthly archive/reset semantics.")
-lines += ['- MISSING: GameService.onModuleInit — recover missed monthly rollovers.',
+lines += ['- COMPLETE scoped verification: GameService.onModuleInit — scheduler startup recovers missed monthly rollovers; `--once` runs recovery and exits.' if game_verified else '- MISSING: GameService.onModuleInit — recover missed monthly rollovers.',
     '- MISSING: TelegramBotService.onModuleInit/onModuleDestroy — configured polling or webhook lifecycle; dispatch account-link and menu update events, retry polling failures.',
     '- PARTIAL: StorageService startup directory initialization — exam file storage works; video/gallery/teacher protected storage contracts remain.',
     '- No @OnEvent consumers, @SubscribeMessage handlers or WebSocket gateways found. WebSocket contracts: 0/0; Channels is not required by this source inventory.',
@@ -83,7 +93,7 @@ lines += ['- MISSING: GameService.onModuleInit — recover missed monthly rollov
     '| Deepgram transcription | backend/src/assessment/deepgram.provider.ts | MISSING: audio/mime/hash contract, transcript reuse, confidence and failure handling |',
     '| Telegram Bot API, polling/webhook, menus and linking | backend/src/telegram/ | PARTIAL: real sendMessage delivery with disabled/provider-failure tests; polling, updates, menus and linking pending; no live provider gate claimed |',
     '| Local storage and signed video streams | backend/src/videos/ | PARTIAL: exam media works; protected video tokens/ranges, gallery/teacher uploads pending |',
-    '| PDF certificates and CSV exports | backend/src/tests/, mock/, stats/, game/ | PARTIAL: exam PDFs verified; statistics/game exports pending |', '', '## Prisma model and enum inventory', '',
+    '| PDF certificates and CSV exports | backend/src/tests/, mock/, stats/, game/ | PARTIAL: exam PDFs, attendance CSV and game CSV verified; remaining statistics exports pending |', '', '## Prisma model and enum inventory', '',
     '| Model / enum | Django mapping | Status |', '|---|---|---|']
 mapped = {m._meta.db_table: m for _, m in inspect.getmembers(models, inspect.isclass) if issubclass(m, models.LegacyModel) and m is not models.LegacyModel}
 for item in data['models']:
@@ -94,7 +104,7 @@ for item in data['enums']:
     match = mapped_enum is not None and set(mapped_enum.values) == set(item['values'])
     lines.append(f"| enum {item['name']}: {', '.join(item['values'])} | apps.legacy_schema.models.{item['name']} | {'COMPLETE' if match else 'PARTIAL — compare exact values'} |")
 lines += ['', 'ParentStudent has a composite Prisma primary key represented by a read-only surrogate in Django; do not use unrestricted ORM writes on it. Existing linking uses exact-column SQL. No production migrations or table recreation are authorized.', '',
-    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications/payments plus attendance and its CSV export: 31 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. AttendanceService has no independent jobs/events. Next port GameService (3 routes, monthly rollover/archive, startup recovery, qualification), which PointsService depends on; then points (3), Telegram lifecycle, remaining user administration, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam discovery.']
+    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications/payments, attendance CSV, game and points: 37 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Game startup recovery and monthly reset have scoped lifecycle verification. Remaining: Telegram lifecycle, five partial user contracts, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam or game/points discovery.']
 data['summary'] = counts
 (ROOT/'FULL_BACKEND_INVENTORY.json').write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8')
 (ROOT.parent/'DJANGO_FULL_BACKEND_MATRIX.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')

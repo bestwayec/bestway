@@ -75,9 +75,15 @@ try:
     if not line: raise RuntimeError('Reference failed: '+server.stderr.read())
     port = json.loads(line)['port']
 
+    def reference_control(action, **values):
+        server.stdin.write(json.dumps(dict(action=action,**values))+'\n');server.stdin.flush()
+        line=server.stdout.readline()
+        if not line.startswith('CONTROL '): raise RuntimeError('Invalid private reference control response')
+        return json.loads(line[8:])
+
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance', 'MonthlyPointsArchive', 'PointsLog'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
         return result
@@ -109,6 +115,7 @@ try:
                     result['headers']={key:response.headers[key] for key in ('Content-Type','Content-Disposition')}
             responses.append(result)
             if capture and result['status'] < 300: ids[side][capture] = result['body']['data']['id']
+        assert reference_control('drain')['ok']
         states = [state(0), state(1)]
         equal = normalize(responses[0]) == normalize(responses[1]) and states[0] == states[1]
         row = dict(method=method, path=path, label=label or role or 'anonymous', status='PASS' if equal else 'FAIL')
@@ -269,6 +276,13 @@ try:
     attendance_report=dict(contracts=4,comparisons=len(attendance_results),passed=sum(r['status']=='PASS' for r in attendance_results),
         failed=sum(r['status']=='FAIL' for r in attendance_results),localChecks=[s for s in local_checks if s.startswith('Attendance:')],results=attendance_results)
     (ROOT/'ATTENDANCE_PARITY_REPORT.json').write_text(json.dumps(attendance_report,indent=2)+'\n',encoding='utf-8')
+    from game_points_contracts import verify_game_points
+    game_start=len(results)
+    verify_game_points(call,db,schemas,ids,state,local_checks,reference_control,tokens,port)
+    game_results=results[game_start:]
+    game_report=dict(contracts=6,comparisons=len(game_results),passed=sum(r['status']=='PASS' for r in game_results),
+        failed=sum(r['status']=='FAIL' for r in game_results),localChecks=[s for s in local_checks if s.startswith('Game/points:')],results=game_results)
+    (ROOT/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     from django.db import connections
@@ -294,7 +308,7 @@ try:
         rows=db.execute(sql.SQL('SELECT amount FROM {}."Payment" WHERE "studentId"=%s AND year=2026 AND month=9').format(sql.Identifier(schemas[side])),(ids[side]['student'],)).fetchall()
         assert len(rows)==1 and rows[0][0] in (100,200),rows
         local_checks.append(('Django' if side==0 else 'NestJS')+': concurrent same-cell upserts both succeed with one persisted row and a submitted amount')
-    summary = dict(contracts=31,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
+    summary = dict(contracts=37,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
     (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:

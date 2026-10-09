@@ -80,6 +80,7 @@ function firstMessage(errors) {
       storage, audit, new SettingsService(prisma, audit), config, programs));
   }
   const controllers = [MockController, MockExamImportController];
+  let gameControl;
   if (process.env.VERIFY_FULL_FOUNDATION === '1') {
     const {SettingsService} = load('settings/settings.service.js');
     const {GroupsService} = load('groups/groups.service.js');
@@ -100,6 +101,39 @@ function firstMessage(errors) {
     values.set(AttendanceService,new AttendanceService(prisma,new AccessService(prisma),audit,values.get(NotificationsService)));
     values.set(ExportService,new ExportService(prisma));
     values.set(StatsService,new StatsService(prisma));
+    const {GameService}=load('game/game.service.js');
+    const {PointsService}=load('points/points.service.js');
+    const game=new GameService(prisma,values.get(SettingsService),values.get(NotificationsService),audit);
+    const startup=game.onModuleInit.bind(game);
+    // Initial fixture setup must not silently mutate one side. Exercise the real
+    // startup method explicitly through the private stdin lifecycle channel.
+    game.onModuleInit=async()=>{};
+    values.set(GameService,game);
+    values.set(PointsService,new PointsService(prisma,new AccessService(prisma),audit,
+      values.get(SettingsService),values.get(NotificationsService),game));
+    const pending=new Set();
+    const notifications=values.get(NotificationsService);
+    let failedNotificationType=null;
+    const originalMany=notifications.notifyMany.bind(notifications);
+    notifications.notifyMany=(...args)=>failedNotificationType===args[1]
+      ?Promise.reject(new Error('Injected local fixture notification failure')):originalMany(...args);
+    for(const method of ['notify','notifyParents']) {
+      const original=notifications[method].bind(notifications);
+      notifications[method]=(...args)=>{
+        const promise=original(...args);pending.add(promise);
+        promise.then(()=>pending.delete(promise),()=>pending.delete(promise));return promise;
+      };
+    }
+    gameControl=async command=>{
+      if(command.action==='notificationFailure') {failedNotificationType=command.type??null;return true;}
+      if(command.action==='drain') {while(pending.size) await Promise.allSettled([...pending]);return true;}
+      if(command.action==='rollover') return game.rolloverStale();
+      if(command.action==='startup') {await startup();return null;}
+      if(command.action==='monthly') {await game.monthlyReset();return null;}
+      if(command.action==='ensure') return prisma.$transaction(tx=>game.ensureCurrentPeriod(tx,command.studentId));
+      if(command.action==='qualify') return game.checkAndQualify(command.actorId??null,command.studentId,command.points,command.name);
+      throw new Error('Unknown private fixture control');
+    };
     controllers.splice(0, controllers.length,
       load('settings/settings.controller.js').SettingsController,
       load('audit/audit.controller.js').AuditController,
@@ -108,7 +142,9 @@ function firstMessage(errors) {
       load('notifications/notifications.controller.js').NotificationsController,
       load('payments/payments.controller.js').PaymentsController,
       load('attendance/attendance.controller.js').AttendanceController,
-      load('stats/stats.controller.js').StatsController);
+      load('stats/stats.controller.js').StatsController,
+      load('game/game.controller.js').GameController,
+      load('points/points.controller.js').PointsController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);
@@ -140,5 +176,12 @@ function firstMessage(errors) {
   await app.listen(0, '127.0.0.1');
   process.stdout.write(JSON.stringify({port: app.getHttpServer().address().port}) + '\n');
   process.stdin.resume();
-  process.stdin.once('data', async () => {await app.close(); process.exit(0);});
+  if(gameControl) {
+    const input=require('node:readline').createInterface({input:process.stdin});let queue=Promise.resolve();
+    input.on('line',line=>{queue=queue.then(async()=>{
+      if(line==='stop') {await app.close();process.exit(0);}
+      try {const result=await gameControl(JSON.parse(line));process.stdout.write('CONTROL '+JSON.stringify({ok:true,result})+'\n');}
+      catch {process.stdout.write('CONTROL '+JSON.stringify({ok:false})+'\n');}
+    });});
+  } else process.stdin.once('data', async () => {await app.close(); process.exit(0);});
 })().catch(e => {console.error(e); process.exitCode = 2;});

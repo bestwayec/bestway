@@ -39,9 +39,9 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | gallery / GalleryController.create | `POST /v1/gallery`; JWT; roles=admin,super_admin; 201 | — | galleryImage | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | gallery / GalleryController.update | `PATCH /v1/gallery/:id`; JWT; roles=admin,super_admin; 200 | — | galleryImage | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | gallery / GalleryController.remove | `DELETE /v1/gallery/:id`; JWT; roles=admin,super_admin; 200 | — | galleryImage | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| game / GameController.roster | `GET /v1/game/roster`; JWT; roles=admin,super_admin; 200 | — | monthlyPointsArchive, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| game / GameController.export | `GET /v1/game/roster/export`; JWT; roles=admin,super_admin; 200 | — | monthlyPointsArchive, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| game / GameController.status | `GET /v1/game/status`; JWT; roles=student; 200 | — | monthlyPointsArchive, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| game / GameController.roster | `GET /v1/game/roster`; JWT; roles=admin,super_admin; 200 | apps.core.game_points_views | monthlyPointsArchive, studentProfile | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
+| game / GameController.export | `GET /v1/game/roster/export`; JWT; roles=admin,super_admin; 200 | apps.core.game_points_views | monthlyPointsArchive, studentProfile | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
+| game / GameController.status | `GET /v1/game/status`; JWT; roles=student; 200 | apps.core.game_points_views | monthlyPointsArchive, studentProfile | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
 | groups / GroupsController.list | `GET /v1/groups`; JWT; roles=any; 200 | apps.core.group_views | group, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | groups / GroupsController.create | `POST /v1/groups`; JWT; roles=admin,super_admin; 201 | apps.core.group_views | group, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | groups / GroupsController.getOne | `GET /v1/groups/:id`; JWT; roles=any; 200 | apps.core.group_views | group, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
@@ -114,9 +114,9 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | payments / PaymentsController.debtors | `GET /v1/payments/debtors`; JWT; roles=admin,super_admin,teacher; 200 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | payments / PaymentsController.bulk | `PUT /v1/payments/bulk`; JWT; roles=admin,super_admin,teacher; 200 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | payments / PaymentsController.remind | `POST /v1/payments/remind`; JWT; roles=admin,super_admin,teacher; 201 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
-| points / PointsController.leaderboard | `GET /v1/points/leaderboard`; public; roles=any; 200 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| points / PointsController.getPoints | `GET /v1/points/:studentId`; JWT; roles=any; 200 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| points / PointsController.adjust | `POST /v1/points/:studentId/adjust`; JWT; roles=teacher,admin,super_admin; 201 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| points / PointsController.leaderboard | `GET /v1/points/leaderboard`; public; roles=any; 200 | apps.core.game_points_views | pointsLog, studentProfile, user | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
+| points / PointsController.getPoints | `GET /v1/points/:studentId`; JWT; roles=any; 200 | apps.core.game_points_views | pointsLog, studentProfile, user | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
+| points / PointsController.adjust | `POST /v1/points/:studentId/adjust`; JWT; roles=teacher,admin,super_admin; 201 | apps.core.game_points_views | pointsLog, studentProfile, user | COMPLETE | Separate game scheduler process required; full runtime gate remains | GAME_POINTS_PARITY_REPORT.json; test_game_points.py |
 | settings / SettingsController.getProgramPolicy | `GET /v1/settings/exam-program-policy`; JWT; roles=super_admin,admin,teacher; 200 | apps.core.system_views | setting | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | settings / SettingsController.updateProgramPolicy | `PUT /v1/settings/exam-program-policy`; JWT; roles=super_admin; 200 | apps.core.system_views | setting | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | settings / SettingsController.get | `GET /v1/settings`; JWT; roles=super_admin,admin,teacher; 200 | apps.core.system_views | setting | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
@@ -182,7 +182,7 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 
 ## Totals
 
-Active HTTP: 173; implemented: 123; verified within recorded scope: 118; missing: 50; partial: 5.
+Active HTTP: 173; implemented: 129; verified within recorded scope: 124; missing: 44; partial: 5.
 
 Verified counts refer to recorded scopes. Full global throttling, external delivery, worker execution and complete Django-only clients remain separate required gates. New domains are never marked complete from URL registration alone.
 
@@ -198,7 +198,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | AccessService | backend/src/common/access.service.ts | parentStudent, studentProfile, group | PARTIAL — inspect remaining methods/dependencies |
 | ExamProgramService | backend/src/common/exam-program.service.ts | studentProfile | PARTIAL — inspect remaining methods/dependencies |
 | GalleryService | backend/src/gallery/gallery.service.ts | galleryImage | MISSING — port source behavior |
-| GameService | backend/src/game/game.service.ts | studentProfile, monthlyPointsArchive | MISSING — port source behavior |
+| GameService | backend/src/game/game.service.ts | studentProfile, monthlyPointsArchive | COMPLETE — foundation differential verified |
 | GroupsService | backend/src/groups/groups.service.ts | user, group, studentProfile | COMPLETE — foundation differential verified |
 | MockAccessService | backend/src/mock/mock-access.service.ts | mockPurchase, mockExam | PARTIAL — inspect remaining methods/dependencies |
 | MockAttemptService | backend/src/mock/mock-attempt.service.ts | mockExam, mockSection, mockAttempt, mockQuestionGroup, mockAnswer, mockQuestion, mockCheatEvent | PARTIAL — inspect remaining methods/dependencies |
@@ -208,7 +208,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | MockGradingService | backend/src/mock/mock-grading.service.ts | mockAttempt, studentProfile, mockAnswer, mockCheatEvent, mockQuestion | PARTIAL — inspect remaining methods/dependencies |
 | NotificationsService | backend/src/notifications/notifications.service.ts | notification, user, parentStudent, studentProfile | COMPLETE — foundation differential verified |
 | PaymentsService | backend/src/payments/payments.service.ts | payment, studentProfile | COMPLETE — foundation differential verified |
-| PointsService | backend/src/points/points.service.ts | studentProfile, pointsLog, user | MISSING — port source behavior |
+| PointsService | backend/src/points/points.service.ts | studentProfile, pointsLog, user | COMPLETE — foundation differential verified |
 | PrismaService | backend/src/prisma/prisma.service.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
 | SettingsService | backend/src/settings/settings.service.ts | setting | COMPLETE — foundation differential verified |
 | ExportService | backend/src/stats/export.service.ts | studentProfile, payment, user, attendance | PARTIAL — attendance CSV verified; students/payments exports pending |
@@ -233,8 +233,8 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 Attendance inventory: 0 independent jobs, 0 event handlers, 0 WebSocket contracts. Parent absence delivery reuses the verified shared NotificationsService contract; there is no attendance reminder scheduler to port.
 
 - MISSING: `AssessmentWorker.tick` @Interval(20_000) — backend/src/assessment/assessment.worker.ts; preserve durable row claims/retries or monthly archive/reset semantics.
-- MISSING: `GameService.monthlyReset` @Cron('5 0 1 * *', { timeZone: 'Asia/Tashkent' }) — backend/src/game/game.service.ts; preserve durable row claims/retries or monthly archive/reset semantics.
-- MISSING: GameService.onModuleInit — recover missed monthly rollovers.
+- COMPLETE scoped verification: GameService.monthlyReset — `python manage.py run_game_scheduler`; 00:05 Asia/Tashkent, startup recovery, archive/reset, rollback and concurrency verified. Separate process must be operated alongside the web server; deployment/runtime gate remains.
+- COMPLETE scoped verification: GameService.onModuleInit — scheduler startup recovers missed monthly rollovers; `--once` runs recovery and exits.
 - MISSING: TelegramBotService.onModuleInit/onModuleDestroy — configured polling or webhook lifecycle; dispatch account-link and menu update events, retry polling failures.
 - PARTIAL: StorageService startup directory initialization — exam file storage works; video/gallery/teacher protected storage contracts remain.
 - No @OnEvent consumers, @SubscribeMessage handlers or WebSocket gateways found. WebSocket contracts: 0/0; Channels is not required by this source inventory.
@@ -248,7 +248,7 @@ Attendance inventory: 0 independent jobs, 0 event handlers, 0 WebSocket contract
 | Deepgram transcription | backend/src/assessment/deepgram.provider.ts | MISSING: audio/mime/hash contract, transcript reuse, confidence and failure handling |
 | Telegram Bot API, polling/webhook, menus and linking | backend/src/telegram/ | PARTIAL: real sendMessage delivery with disabled/provider-failure tests; polling, updates, menus and linking pending; no live provider gate claimed |
 | Local storage and signed video streams | backend/src/videos/ | PARTIAL: exam media works; protected video tokens/ranges, gallery/teacher uploads pending |
-| PDF certificates and CSV exports | backend/src/tests/, mock/, stats/, game/ | PARTIAL: exam PDFs verified; statistics/game exports pending |
+| PDF certificates and CSV exports | backend/src/tests/, mock/, stats/, game/ | PARTIAL: exam PDFs, attendance CSV and game CSV verified; remaining statistics exports pending |
 
 ## Prisma model and enum inventory
 
@@ -319,4 +319,4 @@ ParentStudent has a composite Prisma primary key represented by a read-only surr
 
 ## Next implementation checkpoint
 
-Settings/audit/groups/articles/notifications/payments plus attendance and its CSV export: 31 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. AttendanceService has no independent jobs/events. Next port GameService (3 routes, monthly rollover/archive, startup recovery, qualification), which PointsService depends on; then points (3), Telegram lifecycle, remaining user administration, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam discovery.
+Settings/audit/groups/articles/notifications/payments, attendance CSV, game and points: 37 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Game startup recovery and monthly reset have scoped lifecycle verification. Remaining: Telegram lifecycle, five partial user contracts, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam or game/points discovery.

@@ -1,7 +1,7 @@
 {
-  "contracts": 31,
-  "comparisons": 461,
-  "passed": 461,
+  "contracts": 37,
+  "comparisons": 603,
+  "passed": 603,
   "failed": 0,
   "localChecks": [
     "both APIs preserve exact original group creation time",
@@ -15,6 +15,17 @@
     "Attendance: NestJS concurrent ('present', 'present') both succeed with one row; notifications=0",
     "Attendance: NestJS concurrent ('absent', 'late') both succeed with one row; notifications=1",
     "Attendance: NestJS concurrent ('absent', 'absent') both succeed with one row; notifications=0",
+    "Game/points: rollover archives stale periods, preserves null-period points and is idempotent in both services",
+    "Game/points: real startup recovery and monthly reset match reference database effects",
+    "Game/points: repeated archive upsert preserves the exact original creation timestamp",
+    "Game/points: history-write failure rolls back archive/reset/increment and emits no audit or notifications",
+    "Game/points: real Django scheduler --once startup matches Nest startup recovery",
+    "Game/points: safe points-notification failures retain success; awaited game failures match reference post-commit 500 and persisted state",
+    "Game/points: actual scheduled monthly callback matches Nest reset at 00:05 Asia/Tashkent",
+    "Game/points: Django concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
+    "Game/points: NestJS concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
+    "Game/points: Django concurrent rollover/increments persist 120, two history rows, four points notices and 0 game notices",
+    "Game/points: NestJS concurrent rollover/increments persist 120, two history rows, four points notices and 0 game notices",
     "Django: concurrent same-cell upserts both succeed with one persisted row and a submitted amount",
     "NestJS: concurrent same-cell upserts both succeed with one persisted row and a submitted amount"
   ],
@@ -2783,6 +2794,858 @@
       "method": "PUT",
       "path": "/v1/attendance/bulk",
       "label": "no-invented-receptionist-grant",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2000",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2100&month=12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2000",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2100&month=12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=100",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=0",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=101",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=1.5",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=bad",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?groupId={second}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?groupId=missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?page=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "null-initial-points-status-coercion",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "safe-notification-failure-preserves-201",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "game-failure-preserves-committed-points-and-qualified-flag",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "history-100-cap-system-and-missing-author-names",
       "status": "PASS"
     }
   ]

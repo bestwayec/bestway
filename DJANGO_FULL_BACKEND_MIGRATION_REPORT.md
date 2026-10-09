@@ -2,7 +2,7 @@
 
 Verdict: NOT COMPLETE. No production access, deployment or merge performed.
 
-Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 21 enums. Django implements 123 matching contracts; 118 have recorded scoped verification, 50 are missing and five user-administration contracts remain partial. Registration is not a global parity claim. Exact missing method/path rows are in `DJANGO_FULL_BACKEND_MATRIX.md`.
+Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 21 enums. Django implements 129 matching contracts; 124 have recorded scoped verification, 44 are missing and five user-administration contracts remain partial. Registration is not a global parity claim. Exact missing method/path rows are in `DJANGO_FULL_BACKEND_MATRIX.md`.
 
 ## Verified implementation checkpoints
 
@@ -12,20 +12,21 @@ Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 2
 - `d372d81`: articles (5), notifications (4), real token-configured Telegram sendMessage adapter. External delivery was disabled in the differential harness; no live Telegram claim.
 - `5e686fb`: payments list/debtors, bulk manual records and reminders (4).
 - `381448c`: attendance listing, statistics, bulk mutation and the related statistics-module CSV export. Full foundation PostgreSQL suite now passes 461/461 across 31 newly ported contracts, with 13 additional local rollback/history/concurrency checks. Attendance checkpoint: 165/165 comparisons (161 attendance/CSV requests plus four membership-fixture mutations), zero semantic differences. Concurrent winner order is tested separately, not normalized into a differential pass.
-- Fresh Django regression: 156 passed, 48 subtests passed. `manage.py check` with local database configuration: no issues. Pytest cache access warning does not affect test results.
+- Game/points checkpoint: six additional routes, startup recovery and monthly reset. Full foundation PostgreSQL suite: 603/603 comparisons across 37 newly ported contracts; 24 additional local checks. Game/points evidence: 142/142 comparisons, 11 additional lifecycle/rollback/concurrency checks, zero semantic differences.
+- Fresh Django regression: 172 passed, 64 subtests passed. `manage.py check` with local database configuration: no issues. Pytest cache access warning does not affect test results.
 - NestJS reference: 421 tests passed; `npx tsc --noEmit`, `npm run build` and `npx prisma validate` passed. Unit tests required a sandbox escalation after Windows `spawn EPERM`; NestJS source remains unchanged.
 
 The PostgreSQL enum bulk-insert failure was reproduced and corrected without schema changes. Null article updates preserve the reference's 500 response and create no audit. Notification read endpoints are owner-scoped and idempotent. Telegram logs omit tokens and message content. Notification batches are atomic; outbound delivery starts only after commit.
 
 ## Remaining gates
 
-Implement and differentially verify the matrix's missing routes: assessment (3), gallery (6), game (3), mock (1), points (3), stats (5), teachers (6), Telegram (4), legacy tests administration (9), videos (10). Complete five partial user contracts. Existing auth/exam registrations retain their recorded scope; review global throttling and full-domain dependencies before final parity.
+Implement and differentially verify the matrix's missing routes: assessment (3), gallery (6), mock (1), stats (5), teachers (6), Telegram (4), legacy tests administration (9), videos (10). Complete five partial user contracts. Existing auth/exam registrations retain their recorded scope; review global throttling and full-domain dependencies before final parity.
 
-Background jobs: 0/2 verified — assessment 20-second durable PostgreSQL job polling/claims/retries and monthly game reset/archive. Game startup recovery and Telegram polling/webhook, menu dispatch, account-link security and shutdown lifecycle are still missing. DeepSeek and Deepgram provider contracts/worker execution remain missing. WebSocket source inventory is 0/0; no Channels implementation is implied.
+Background jobs: 1/2 scoped-verified — game monthly reset/archive and startup recovery are implemented and tested. Assessment 20-second durable PostgreSQL job polling/claims/retries remains missing. Telegram polling/webhook, menu dispatch, account-link security and shutdown lifecycle are still missing. DeepSeek and Deepgram provider contracts/worker execution remain missing. WebSocket source inventory is 0/0; no Channels implementation is implied. Operating the separate game scheduler alongside Django remains a runtime/deployment gate; no deployment was performed.
 
 All 39 models and 21 enums have unmanaged mappings; domain write/concurrency verification is incomplete. Do not recreate tables or run destructive schema migrations. ParentStudent composite-key writes require exact-column SQL.
 
-Complete protected video/storage/gallery/teacher uploads, statistics/game exports and full Django-only runtime verification. Two abandoned harness schemas from an earlier failed reference startup were removed only after exact-name validation, verifying all eight fixture users and confirming every other table contained only the expected fixture records. No application/public schema data was removed. Every current differential run cleans up its two disposable schemas.
+Complete protected video/storage/gallery/teacher uploads, remaining statistics exports and full Django-only runtime verification. Game CSV and attendance CSV are scoped-verified. Two abandoned harness schemas from an earlier failed reference startup were removed only after exact-name validation, verifying all eight fixture users and confirming every other table contained only the expected fixture records. No application/public schema data was removed. Every current differential run cleans up its two disposable schemas.
 
 ## Client/native gates
 
@@ -35,7 +36,7 @@ Native gate is NOT VERIFIED: no local-compatible debug executable, low disk spac
 
 ## Exact next action
 
-Port `backend/src/game/game.service.ts` and its controller/DTOs: GET `/v1/game/roster`, GET `/v1/game/roster/export`, GET `/v1/game/status`. Implement monthly archive/reset, startup recovery and sticky qualification together with those routes; PointsService.adjust calls GameService.ensureCurrentPeriod inside its transaction, making game the next dependency to complete before points. Then port GET `/v1/points/leaderboard`, GET `/v1/points/:studentId`, POST `/v1/points/:studentId/adjust`. Do not repeat completed exam, auth, payment or notification discovery.
+GameService and PointsService dependencies are complete within this checkpoint. Resume from the matrix's remaining Telegram lifecycle, partial user administration, content/media/statistics, legacy authoring and assessment rows. Do not repeat completed exam, auth, payment, attendance or game/points discovery.
 
 ## Attendance checkpoint — ATTENDANCE_MIGRATION_COMPLETE
 
@@ -61,3 +62,26 @@ Statistics use PostgreSQL ICU matching the reference's host locale (ru-RU on thi
 Evidence: `backend-django/ATTENDANCE_PARITY_REPORT.json`, `FULL_FOUNDATION_PARITY_REPORT.json`, `tests/test_attendance.py`, `scripts/attendance_contracts.py`. Fresh Stage A regression: 279/279. Fresh Stage B: 713/716 with the same three explicitly approved attempt-bound media differences and zero unapproved failures. Sandbox temp-media access initially failed with WinError 5; both regressions were rerun successfully outside that sandbox (Stage B returns exit 1 because it retains the approved raw differences). NestJS 421 tests, typecheck, build and Prisma validation passed. Disk free space was approximately 1.19 GiB; no Rust/Tauri build or cache cleanup was attempted.
 
 Frontend, Tauri and NestJS source were not changed by this checkpoint. Existing browser evidence and unrelated files remain uncommitted and preserved. Full backend replacement and Web/native integration remain incomplete; this is not DJANGO_BACKEND_PARITY_COMPLETE.
+
+## Game/points checkpoint — GAME_POINTS_MIGRATION_COMPLETE
+
+Identified/implemented/scoped-verified: GameController 3/3/3, PointsController 3/3/3, game monthly job 1/1/1 and startup recovery. No independent points job, event consumer or WebSocket handler was invented.
+
+| Contract | Roles | Success |
+|---|---|---|
+| GET `/v1/game/roster` | Admin, super_admin | 200 JSON; current or historical active qualified students |
+| GET `/v1/game/roster/export` | Admin, super_admin | 200 exact BOM/semicolon/CRLF CSV, filename and formula protection |
+| GET `/v1/game/status` | Student only | 200 own status; stale period projects initial points without writing |
+| GET `/v1/points/leaderboard` | Public | 200 active students, optional group/limit, competition ranks |
+| GET `/v1/points/:studentId` | Owner student, linked parent, own-group teacher, admins | 200 current points and newest 100 history entries |
+| POST `/v1/points/:studentId/adjust` | Own-group teacher within configured limit, admins | 201 current points; exact number coercion, reason validation and errors |
+
+Rollover covers inactive profiles too. A null period adopts the current month without resetting points or qualification. Stale periods archive prior points/qualification, then reset initial points and clear qualification. Native archive upserts preserve exact original creation timestamps. Qualification remains sticky after points decrease. History reads and public ranking do not reset a stale period. Null settings retain reference coercion and failure behavior.
+
+The row lock, rollover, increment and history write share one transaction. Injected history-write failures roll back archive/reset/points and emit neither audit nor notifications. Concurrent increments and rollover produce one archive, two history rows and correct persisted totals through both APIs. Qualification emits one student/parent notification pair under concurrent adjustments. Safe points-notification failures retain 201; an awaited game-notification failure returns the reference's post-commit 500, preserving points and the qualification flag. These semantics are documented, not normalized away.
+
+Run `python manage.py run_game_scheduler` as a separate process with the same local/runtime configuration as Django. It performs best-effort startup recovery, executes monthly reset at 00:05 Asia/Tashkent, closes database connections and handles shutdown signals. `--once` performs recovery and exits. The actual scheduled callback and command startup were tested against disposable PostgreSQL fixtures. No implicit worker or database mutation is started by app initialization, system checks or test imports. No worker was launched against application data.
+
+Evidence: `backend-django/GAME_POINTS_PARITY_REPORT.json`, `FULL_FOUNDATION_PARITY_REPORT.json`, `tests/test_game_points.py`, `scripts/game_points_contracts.py`. PostgreSQL comparisons preserve response JSON, status/error codes, role/ownership restrictions, persisted state, notification/audit content and transaction failure boundaries. Only nondeterministic IDs/timestamps are canonicalized; fixture identities remain distinct. Both temporary schemas were removed after the run.
+
+This checkpoint does not authorize deployment, production access, broader scoring work or frontend/Tauri changes. Existing unrelated browser artifacts remain preserved. Full backend replacement still has 44 missing routes, five partial user contracts and the runtime/provider/client/native gates above.
