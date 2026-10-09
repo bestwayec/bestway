@@ -1,0 +1,1014 @@
+{
+  "contracts": 14,
+  "comparisons": 167,
+  "passed": 167,
+  "failed": 0,
+  "localChecks": [
+    "both APIs preserve exact original group creation time",
+    "failed multi-setting transaction rolls back database, audit and numeric cache"
+  ],
+  "results": [
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:100000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:100001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:100000000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:100000001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:100000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:100001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "all-table-validation-before-write",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?page=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?limit=101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?page=1.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?limit=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?extra=x",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?entity=setting&action=ielts&page=2&limit=2",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "foreign-key-contract",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "membership-moves-between-groups",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{second}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?entity=group",
+      "label": "super_admin",
+      "status": "PASS"
+    }
+  ]
+}

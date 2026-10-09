@@ -1,0 +1,3689 @@
+{
+  "routes": [
+    {
+      "module": "app.controller.ts",
+      "controller": "AppController",
+      "source": "src/app.controller.ts",
+      "handler": "health",
+      "method": "GET",
+      "path": "/v1/health",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "app.controller.ts",
+      "controller": "AppController",
+      "source": "src/app.controller.ts",
+      "handler": "desktopVersion",
+      "method": "GET",
+      "path": "/v1/desktop-version",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "articles",
+      "controller": "ArticlesController",
+      "source": "src/articles/articles.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/articles",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "articles",
+      "controller": "ArticlesController",
+      "source": "src/articles/articles.controller.ts",
+      "handler": "getOne",
+      "method": "GET",
+      "path": "/v1/articles/:id",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "articles",
+      "controller": "ArticlesController",
+      "source": "src/articles/articles.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/articles",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "articles",
+      "controller": "ArticlesController",
+      "source": "src/articles/articles.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/articles/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "articles",
+      "controller": "ArticlesController",
+      "source": "src/articles/articles.controller.ts",
+      "handler": "remove",
+      "method": "DELETE",
+      "path": "/v1/articles/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "assessment",
+      "controller": "AssessmentController",
+      "source": "src/assessment/assessment.controller.ts",
+      "handler": "get",
+      "method": "GET",
+      "path": "/v1/assessment/attempts/:attemptId",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "assessment",
+      "controller": "AssessmentController",
+      "source": "src/assessment/assessment.controller.ts",
+      "handler": "review",
+      "method": "POST",
+      "path": "/v1/assessment/jobs/:jobId/review",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "assessment",
+      "controller": "AssessmentController",
+      "source": "src/assessment/assessment.controller.ts",
+      "handler": "audio",
+      "method": "GET",
+      "path": "/v1/assessment/jobs/:jobId/audio/:questionId",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "attendance",
+      "controller": "AttendanceController",
+      "source": "src/attendance/attendance.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/attendance",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "attendance",
+      "controller": "AttendanceController",
+      "source": "src/attendance/attendance.controller.ts",
+      "handler": "stats",
+      "method": "GET",
+      "path": "/v1/attendance/stats",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "attendance",
+      "controller": "AttendanceController",
+      "source": "src/attendance/attendance.controller.ts",
+      "handler": "bulk",
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "audit",
+      "controller": "AuditController",
+      "source": "src/audit/audit.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "register",
+      "method": "POST",
+      "path": "/v1/auth/register",
+      "roles": [],
+      "auth": "public",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "login",
+      "method": "POST",
+      "path": "/v1/auth/login",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "refresh",
+      "method": "POST",
+      "path": "/v1/auth/refresh",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "linkChild",
+      "method": "POST",
+      "path": "/v1/auth/link-child",
+      "roles": [
+        "parent"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "me",
+      "method": "GET",
+      "path": "/v1/auth/me",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "updateMe",
+      "method": "PATCH",
+      "path": "/v1/auth/me",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "logout",
+      "method": "POST",
+      "path": "/v1/auth/logout",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "authorizeDesktop",
+      "method": "POST",
+      "path": "/v1/auth/desktop/authorize",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "auth",
+      "controller": "AuthController",
+      "source": "src/auth/auth.controller.ts",
+      "handler": "exchangeDesktopCode",
+      "method": "POST",
+      "path": "/v1/auth/desktop/exchange",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "common",
+      "controller": "ExamProgramController",
+      "source": "src/common/exam-program.controller.ts",
+      "handler": "mine",
+      "method": "GET",
+      "path": "/v1/exam-programs/mine",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "common",
+      "controller": "ExamProgramController",
+      "source": "src/common/exam-program.controller.ts",
+      "handler": "select",
+      "method": "PATCH",
+      "path": "/v1/exam-programs/mine",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "common",
+      "controller": "ExamProgramController",
+      "source": "src/common/exam-program.controller.ts",
+      "handler": "state",
+      "method": "GET",
+      "path": "/v1/exam-programs/students/:id",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "common",
+      "controller": "ExamProgramController",
+      "source": "src/common/exam-program.controller.ts",
+      "handler": "enroll",
+      "method": "PUT",
+      "path": "/v1/exam-programs/students/:id",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/gallery",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "listAll",
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "image",
+      "method": "GET",
+      "path": "/v1/gallery/:id/image",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/gallery",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/gallery/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "gallery",
+      "controller": "GalleryController",
+      "source": "src/gallery/gallery.controller.ts",
+      "handler": "remove",
+      "method": "DELETE",
+      "path": "/v1/gallery/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "game",
+      "controller": "GameController",
+      "source": "src/game/game.controller.ts",
+      "handler": "roster",
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "game",
+      "controller": "GameController",
+      "source": "src/game/game.controller.ts",
+      "handler": "export",
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "game",
+      "controller": "GameController",
+      "source": "src/game/game.controller.ts",
+      "handler": "status",
+      "method": "GET",
+      "path": "/v1/game/status",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/groups",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/groups",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "getOne",
+      "method": "GET",
+      "path": "/v1/groups/:id",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/groups/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "addStudent",
+      "method": "POST",
+      "path": "/v1/groups/:id/students",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "groups",
+      "controller": "GroupsController",
+      "source": "src/groups/groups.controller.ts",
+      "handler": "removeStudent",
+      "method": "DELETE",
+      "path": "/v1/groups/:id/students/:studentId",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.group_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "validate",
+      "method": "POST",
+      "path": "/v1/mock/exam-imports/validate",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "stageMedia",
+      "method": "POST",
+      "path": "/v1/mock/exam-imports/media",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "commit",
+      "method": "POST",
+      "path": "/v1/mock/exam-imports",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "status",
+      "method": "GET",
+      "path": "/v1/mock/exam-imports/by-package/:packageId/revisions/:revision",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "byExam",
+      "method": "GET",
+      "path": "/v1/mock/exam-imports/by-exam/:examId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockExamImportController",
+      "source": "src/mock/mock-exam-import.controller.ts",
+      "handler": "resolveIssue",
+      "method": "POST",
+      "path": "/v1/mock/exam-imports/issues/:issueId/resolve",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_import_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "saveGroupContent",
+      "method": "PUT",
+      "path": "/v1/mock/groups/:groupId/content",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "listExams",
+      "method": "GET",
+      "path": "/v1/mock/exams",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "createExam",
+      "method": "POST",
+      "path": "/v1/mock/exams",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "parseQuestions",
+      "method": "POST",
+      "path": "/v1/mock/parse-questions",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "listPurchases",
+      "method": "GET",
+      "path": "/v1/mock/purchases",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "listAttempts",
+      "method": "GET",
+      "path": "/v1/mock/attempts",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "myAttempts",
+      "method": "GET",
+      "path": "/v1/mock/attempts/mine",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "getAttempt",
+      "method": "GET",
+      "path": "/v1/mock/attempts/:attemptId",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "saveAnswer",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/answer",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "prepareListening",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/listening/:groupId/prepare",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "playListening",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/listening/:groupId/play",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "startSpeaking",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/speaking/:questionId/start",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "bulkAnswers",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/answers",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "uploadSpeaking",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/speaking/:questionId",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "speakingAudio",
+      "method": "GET",
+      "path": "/v1/mock/attempts/:attemptId/answers/:questionId/audio",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "saveAnnotations",
+      "method": "PUT",
+      "path": "/v1/mock/attempts/:attemptId/annotations",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "flagCheat",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/flag-cheat",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "submit",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/submit",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "forceSubmit",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/force-submit",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "extend",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/extend",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "reopen",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/reopen",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "deleteAttempt",
+      "method": "DELETE",
+      "path": "/v1/mock/attempts/:attemptId",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "advance",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/advance",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "grade",
+      "method": "POST",
+      "path": "/v1/mock/attempts/:attemptId/grade",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "certificate",
+      "method": "GET",
+      "path": "/v1/mock/attempts/:attemptId/certificate",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "audio",
+      "method": "GET",
+      "path": "/v1/mock/groups/:groupId/audio",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": "apps.core.mock_media",
+      "migrationStatus": "APPROVED_DIFFERENCE",
+      "missingBehavior": "Attempt-bound policy retained",
+      "coverage": "Three explicitly approved media restrictions; Stage B report"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "image",
+      "method": "GET",
+      "path": "/v1/mock/groups/:groupId/image",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": "apps.core.mock_media",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "setGroupMedia",
+      "method": "POST",
+      "path": "/v1/mock/groups/:groupId/media",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_media",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "importQuestions",
+      "method": "POST",
+      "path": "/v1/mock/groups/:groupId/questions/import",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "addQuestions",
+      "method": "POST",
+      "path": "/v1/mock/groups/:groupId/questions",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "updateGroup",
+      "method": "PATCH",
+      "path": "/v1/mock/groups/:groupId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "deleteGroup",
+      "method": "DELETE",
+      "path": "/v1/mock/groups/:groupId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "createGroup",
+      "method": "POST",
+      "path": "/v1/mock/sections/:sectionId/groups",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "updateSection",
+      "method": "PATCH",
+      "path": "/v1/mock/sections/:sectionId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "deleteSection",
+      "method": "DELETE",
+      "path": "/v1/mock/sections/:sectionId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "updateQuestion",
+      "method": "PATCH",
+      "path": "/v1/mock/questions/:questionId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "deleteQuestion",
+      "method": "DELETE",
+      "path": "/v1/mock/questions/:questionId",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "getExam",
+      "method": "GET",
+      "path": "/v1/mock/exams/:id",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "updateExam",
+      "method": "PATCH",
+      "path": "/v1/mock/exams/:id",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "deleteExam",
+      "method": "DELETE",
+      "path": "/v1/mock/exams/:id",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "cloneExam",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/clone",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "readiness",
+      "method": "GET",
+      "path": "/v1/mock/exams/:id/readiness",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "multilevelRepairInspection",
+      "method": "GET",
+      "path": "/v1/mock/exams/:id/multilevel-repair-inspection",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "applyMultilevelSafeRepair",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/apply-multilevel-safe-repair",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "cloneCorrectedMultilevel",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/clone-corrected-multilevel",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "repairMultilevel",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/repair-multilevel",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "preview",
+      "method": "GET",
+      "path": "/v1/mock/exams/:id/preview",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "createSection",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/sections",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "purchase",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/purchase",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "confirmPurchase",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/confirm-purchase",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "rejectPurchase",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/reject-purchase",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_support_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "mock",
+      "controller": "MockController",
+      "source": "src/mock/mock.controller.ts",
+      "handler": "start",
+      "method": "POST",
+      "path": "/v1/mock/exams/:id/start",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.mock_attempt_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "notifications",
+      "controller": "NotificationsController",
+      "source": "src/notifications/notifications.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/notifications",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "notifications",
+      "controller": "NotificationsController",
+      "source": "src/notifications/notifications.controller.ts",
+      "handler": "broadcast",
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "notifications",
+      "controller": "NotificationsController",
+      "source": "src/notifications/notifications.controller.ts",
+      "handler": "markAllRead",
+      "method": "PATCH",
+      "path": "/v1/notifications/read-all",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "notifications",
+      "controller": "NotificationsController",
+      "source": "src/notifications/notifications.controller.ts",
+      "handler": "markRead",
+      "method": "PATCH",
+      "path": "/v1/notifications/:id/read",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "payments",
+      "controller": "PaymentsController",
+      "source": "src/payments/payments.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/payments",
+      "roles": [
+        "admin",
+        "super_admin",
+        "parent",
+        "student",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "payments",
+      "controller": "PaymentsController",
+      "source": "src/payments/payments.controller.ts",
+      "handler": "debtors",
+      "method": "GET",
+      "path": "/v1/payments/debtors",
+      "roles": [
+        "admin",
+        "super_admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "payments",
+      "controller": "PaymentsController",
+      "source": "src/payments/payments.controller.ts",
+      "handler": "bulk",
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "roles": [
+        "admin",
+        "super_admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "payments",
+      "controller": "PaymentsController",
+      "source": "src/payments/payments.controller.ts",
+      "handler": "remind",
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "roles": [
+        "admin",
+        "super_admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "points",
+      "controller": "PointsController",
+      "source": "src/points/points.controller.ts",
+      "handler": "leaderboard",
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "points",
+      "controller": "PointsController",
+      "source": "src/points/points.controller.ts",
+      "handler": "getPoints",
+      "method": "GET",
+      "path": "/v1/points/:studentId",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "points",
+      "controller": "PointsController",
+      "source": "src/points/points.controller.ts",
+      "handler": "adjust",
+      "method": "POST",
+      "path": "/v1/points/:studentId/adjust",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "getProgramPolicy",
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "roles": [
+        "super_admin",
+        "admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "updateProgramPolicy",
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "get",
+      "method": "GET",
+      "path": "/v1/settings",
+      "roles": [
+        "super_admin",
+        "admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "getBands",
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "roles": [
+        "super_admin",
+        "admin",
+        "teacher"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "updateBands",
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "settings",
+      "controller": "SettingsController",
+      "source": "src/settings/settings.controller.ts",
+      "handler": "resetBands",
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.system_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "dashboard",
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "income",
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "examActivity",
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "exportStudents",
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "exportPayments",
+      "method": "GET",
+      "path": "/v1/stats/export/payments",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "stats",
+      "controller": "StatsController",
+      "source": "src/stats/stats.controller.ts",
+      "handler": "exportAttendance",
+      "method": "GET",
+      "path": "/v1/stats/export/attendance",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/teachers",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "listAll",
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "photo",
+      "method": "GET",
+      "path": "/v1/teachers/:id/photo",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/teachers",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/teachers/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "teachers",
+      "controller": "TeachersController",
+      "source": "src/teachers/teachers.controller.ts",
+      "handler": "remove",
+      "method": "DELETE",
+      "path": "/v1/teachers/:id",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "telegram",
+      "controller": "TelegramController",
+      "source": "src/telegram/telegram.controller.ts",
+      "handler": "status",
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "telegram",
+      "controller": "TelegramController",
+      "source": "src/telegram/telegram.controller.ts",
+      "handler": "linkToken",
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "telegram",
+      "controller": "TelegramController",
+      "source": "src/telegram/telegram.controller.ts",
+      "handler": "unlink",
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "telegram",
+      "controller": "TelegramController",
+      "source": "src/telegram/telegram.controller.ts",
+      "handler": "webhook",
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/tests",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "listDemo",
+      "method": "GET",
+      "path": "/v1/tests/demo/list",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "previewQuestionImport",
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "getDemo",
+      "method": "GET",
+      "path": "/v1/tests/demo/:id",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "submitDemo",
+      "method": "POST",
+      "path": "/v1/tests/demo/:id/submit",
+      "roles": [],
+      "auth": "public",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/tests",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "listAttempts",
+      "method": "GET",
+      "path": "/v1/tests/attempts",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "myAttempts",
+      "method": "GET",
+      "path": "/v1/tests/attempts/mine",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "getAttempt",
+      "method": "GET",
+      "path": "/v1/tests/attempts/:attemptId",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "answer",
+      "method": "POST",
+      "path": "/v1/tests/attempts/:attemptId/answer",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "saveMarks",
+      "method": "POST",
+      "path": "/v1/tests/attempts/:attemptId/marks",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "flagCheat",
+      "method": "POST",
+      "path": "/v1/tests/attempts/:attemptId/flag-cheat",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "submit",
+      "method": "POST",
+      "path": "/v1/tests/attempts/:attemptId/submit",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "grade",
+      "method": "POST",
+      "path": "/v1/tests/attempts/:attemptId/grade",
+      "roles": [
+        "teacher",
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "certificate",
+      "method": "GET",
+      "path": "/v1/tests/attempts/:attemptId/certificate",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "uploadQuestionAudio",
+      "method": "POST",
+      "path": "/v1/tests/questions/:questionId/audio",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "questionAudio",
+      "method": "GET",
+      "path": "/v1/tests/questions/:questionId/audio",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "updateQuestion",
+      "method": "PATCH",
+      "path": "/v1/tests/questions/:questionId",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "deleteQuestion",
+      "method": "DELETE",
+      "path": "/v1/tests/questions/:questionId",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "getOne",
+      "method": "GET",
+      "path": "/v1/tests/:id",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/tests/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "start",
+      "method": "POST",
+      "path": "/v1/tests/:id/start",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.legacy_test_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "addQuestion",
+      "method": "POST",
+      "path": "/v1/tests/:id/questions",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "tests",
+      "controller": "TestsController",
+      "source": "src/tests/tests.controller.ts",
+      "handler": "importQuestions",
+      "method": "POST",
+      "path": "/v1/tests/:id/questions/import",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "users",
+      "controller": "UsersController",
+      "source": "src/users/users.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/users",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "PARTIAL",
+      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
+      "coverage": "Existing scoped tests; full-domain audit pending"
+    },
+    {
+      "module": "users",
+      "controller": "UsersController",
+      "source": "src/users/users.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/users",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": "apps.core.views",
+      "migrationStatus": "PARTIAL",
+      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
+      "coverage": "Existing scoped tests; full-domain audit pending"
+    },
+    {
+      "module": "users",
+      "controller": "UsersController",
+      "source": "src/users/users.controller.ts",
+      "handler": "getOne",
+      "method": "GET",
+      "path": "/v1/users/:id",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "PARTIAL",
+      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
+      "coverage": "Existing scoped tests; full-domain audit pending"
+    },
+    {
+      "module": "users",
+      "controller": "UsersController",
+      "source": "src/users/users.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/users/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "PARTIAL",
+      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
+      "coverage": "Existing scoped tests; full-domain audit pending"
+    },
+    {
+      "module": "users",
+      "controller": "UsersController",
+      "source": "src/users/users.controller.ts",
+      "handler": "deactivate",
+      "method": "DELETE",
+      "path": "/v1/users/:id",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": "apps.core.views",
+      "migrationStatus": "PARTIAL",
+      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
+      "coverage": "Existing scoped tests; full-domain audit pending"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "list",
+      "method": "GET",
+      "path": "/v1/videos",
+      "roles": [],
+      "auth": "optional",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "create",
+      "method": "POST",
+      "path": "/v1/videos",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "stream",
+      "method": "GET",
+      "path": "/v1/videos/stream",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "listPurchases",
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "thumbnail",
+      "method": "GET",
+      "path": "/v1/videos/:id/thumbnail",
+      "roles": [],
+      "auth": "public",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "streamUrl",
+      "method": "GET",
+      "path": "/v1/videos/:id/stream-url",
+      "roles": [],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "purchase",
+      "method": "POST",
+      "path": "/v1/videos/:id/purchase",
+      "roles": [
+        "student"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "confirmPurchase",
+      "method": "POST",
+      "path": "/v1/videos/:id/confirm-purchase",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 201,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "update",
+      "method": "PATCH",
+      "path": "/v1/videos/:id",
+      "roles": [
+        "admin",
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    },
+    {
+      "module": "videos",
+      "controller": "VideosController",
+      "source": "src/videos/videos.controller.ts",
+      "handler": "remove",
+      "method": "DELETE",
+      "path": "/v1/videos/:id",
+      "roles": [
+        "super_admin"
+      ],
+      "auth": "JWT",
+      "status": 200,
+      "django": null,
+      "migrationStatus": "MISSING",
+      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
+      "coverage": "None"
+    }
+  ],
+  "services": [
+    {
+      "name": "ArticlesService",
+      "source": "src/articles/articles.service.ts",
+      "tables": [
+        "article"
+      ]
+    },
+    {
+      "name": "AssessmentService",
+      "source": "src/assessment/assessment.service.ts",
+      "tables": [
+        "mockAttempt",
+        "assessmentJob"
+      ]
+    },
+    {
+      "name": "AttendanceService",
+      "source": "src/attendance/attendance.service.ts",
+      "tables": [
+        "attendance",
+        "studentProfile",
+        "user"
+      ]
+    },
+    {
+      "name": "AuditService",
+      "source": "src/audit/audit.service.ts",
+      "tables": [
+        "auditLog"
+      ]
+    },
+    {
+      "name": "AuthService",
+      "source": "src/auth/auth.service.ts",
+      "tables": [
+        "user",
+        "refreshToken",
+        "desktopAuthCode",
+        "studentProfile",
+        "parentStudent",
+        "notification",
+        "group"
+      ]
+    },
+    {
+      "name": "AccessService",
+      "source": "src/common/access.service.ts",
+      "tables": [
+        "parentStudent",
+        "studentProfile",
+        "group"
+      ]
+    },
+    {
+      "name": "ExamProgramService",
+      "source": "src/common/exam-program.service.ts",
+      "tables": [
+        "studentProfile"
+      ]
+    },
+    {
+      "name": "GalleryService",
+      "source": "src/gallery/gallery.service.ts",
+      "tables": [
+        "galleryImage"
+      ]
+    },
+    {
+      "name": "GameService",
+      "source": "src/game/game.service.ts",
+      "tables": [
+        "studentProfile",
+        "monthlyPointsArchive"
+      ]
+    },
+    {
+      "name": "GroupsService",
+      "source": "src/groups/groups.service.ts",
+      "tables": [
+        "user",
+        "group",
+        "studentProfile"
+      ]
+    },
+    {
+      "name": "MockAccessService",
+      "source": "src/mock/mock-access.service.ts",
+      "tables": [
+        "mockPurchase",
+        "mockExam"
+      ]
+    },
+    {
+      "name": "MockAttemptService",
+      "source": "src/mock/mock-attempt.service.ts",
+      "tables": [
+        "mockExam",
+        "mockSection",
+        "mockAttempt",
+        "mockQuestionGroup",
+        "mockAnswer",
+        "mockQuestion",
+        "mockCheatEvent"
+      ]
+    },
+    {
+      "name": "MockAuthoringService",
+      "source": "src/mock/mock-authoring.service.ts",
+      "tables": [
+        "mockExam",
+        "mockAttempt",
+        "mockExamImport",
+        "mockSection",
+        "mockQuestionGroup",
+        "mockQuestion",
+        "mockImportReviewIssue"
+      ]
+    },
+    {
+      "name": "MockCertificateService",
+      "source": "src/mock/mock-certificate.service.ts",
+      "tables": []
+    },
+    {
+      "name": "MockExamImportService",
+      "source": "src/mock/mock-exam-import.service.ts",
+      "tables": [
+        "mockStagedMedia",
+        "mockExamImport",
+        "mockExam",
+        "mockImportReviewIssue",
+        "mockImportSourceMap"
+      ]
+    },
+    {
+      "name": "MockGradingService",
+      "source": "src/mock/mock-grading.service.ts",
+      "tables": [
+        "mockAttempt",
+        "studentProfile",
+        "mockAnswer",
+        "mockCheatEvent",
+        "mockQuestion"
+      ]
+    },
+    {
+      "name": "NotificationsService",
+      "source": "src/notifications/notifications.service.ts",
+      "tables": [
+        "notification",
+        "user",
+        "parentStudent",
+        "studentProfile"
+      ]
+    },
+    {
+      "name": "PaymentsService",
+      "source": "src/payments/payments.service.ts",
+      "tables": [
+        "payment",
+        "studentProfile"
+      ]
+    },
+    {
+      "name": "PointsService",
+      "source": "src/points/points.service.ts",
+      "tables": [
+        "studentProfile",
+        "pointsLog",
+        "user"
+      ]
+    },
+    {
+      "name": "PrismaService",
+      "source": "src/prisma/prisma.service.ts",
+      "tables": []
+    },
+    {
+      "name": "SettingsService",
+      "source": "src/settings/settings.service.ts",
+      "tables": [
+        "setting"
+      ]
+    },
+    {
+      "name": "ExportService",
+      "source": "src/stats/export.service.ts",
+      "tables": [
+        "studentProfile",
+        "payment",
+        "user",
+        "attendance"
+      ]
+    },
+    {
+      "name": "StatsService",
+      "source": "src/stats/stats.service.ts",
+      "tables": [
+        "studentProfile",
+        "user",
+        "group",
+        "attendance",
+        "testAttempt",
+        "videoPurchase",
+        "mockAttempt",
+        "mockPurchase",
+        "mockExam",
+        "payment",
+        "videoLesson",
+        "test"
+      ]
+    },
+    {
+      "name": "TeachersService",
+      "source": "src/teachers/teachers.service.ts",
+      "tables": [
+        "teacher"
+      ]
+    },
+    {
+      "name": "TelegramBotService",
+      "source": "src/telegram/telegram-bot.service.ts",
+      "tables": [
+        "user"
+      ]
+    },
+    {
+      "name": "TelegramLinkService",
+      "source": "src/telegram/telegram-link.service.ts",
+      "tables": [
+        "telegramLinkToken",
+        "user"
+      ]
+    },
+    {
+      "name": "TelegramMenuService",
+      "source": "src/telegram/telegram-menu.service.ts",
+      "tables": [
+        "user",
+        "parentStudent",
+        "studentProfile",
+        "pointsLog",
+        "attendance",
+        "payment",
+        "testAttempt",
+        "group"
+      ]
+    },
+    {
+      "name": "TelegramService",
+      "source": "src/telegram/telegram.service.ts",
+      "tables": []
+    },
+    {
+      "name": "CertificateService",
+      "source": "src/tests/certificate.service.ts",
+      "tables": []
+    },
+    {
+      "name": "GradingService",
+      "source": "src/tests/grading.service.ts",
+      "tables": [
+        "testAttempt",
+        "answer",
+        "studentProfile",
+        "question"
+      ]
+    },
+    {
+      "name": "TestsService",
+      "source": "src/tests/tests.service.ts",
+      "tables": [
+        "test",
+        "question",
+        "testAttempt",
+        "answer",
+        "antiCheatEvent"
+      ]
+    },
+    {
+      "name": "UsersService",
+      "source": "src/users/users.service.ts",
+      "tables": [
+        "user",
+        "group",
+        "parentStudent",
+        "studentProfile",
+        "refreshToken"
+      ]
+    },
+    {
+      "name": "StorageService",
+      "source": "src/videos/storage.service.ts",
+      "tables": []
+    },
+    {
+      "name": "StreamTokenService",
+      "source": "src/videos/stream-token.service.ts",
+      "tables": []
+    },
+    {
+      "name": "VideosService",
+      "source": "src/videos/videos.service.ts",
+      "tables": [
+        "videoLesson",
+        "videoPurchase",
+        "user"
+      ]
+    }
+  ],
+  "guards": [
+    {
+      "name": "JwtAuthGuard",
+      "source": "src/common/jwt-auth.guard.ts",
+      "tables": [
+        "user"
+      ]
+    },
+    {
+      "name": "RolesGuard",
+      "source": "src/common/roles.guard.ts",
+      "tables": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "AssessmentWorker",
+      "source": "src/assessment/assessment.worker.ts",
+      "tables": [
+        "mockAttempt",
+        "assessmentJob",
+        "speechTranscript",
+        "assessmentEvaluation"
+      ],
+      "handler": "tick",
+      "decorator": "@Interval(20_000)"
+    },
+    {
+      "name": "GameService",
+      "source": "src/game/game.service.ts",
+      "tables": [
+        "studentProfile",
+        "monthlyPointsArchive"
+      ],
+      "handler": "monthlyReset",
+      "decorator": "@Cron('5 0 1 * *', { timeZone: 'Asia/Tashkent' })"
+    }
+  ],
+  "events": [],
+  "gateways": [],
+  "models": [
+    {
+      "name": "User",
+      "definition": "id             String   @id @default(uuid())\r\n  name           String\r\n  phone          String   @unique\r\n  email          String?  @unique\r\n  passwordHash   String\r\n  role           Role\r\n  isActive       Boolean  @default(true)\r\n  /// Telegram bot bilan bog'langan chat (bir chat \u2014 bitta foydalanuvchi)\r\n  telegramChatId String?  @unique\r\n  createdAt      DateTime @default(now())\r\n  updatedAt      DateTime @updatedAt\r\n\r\n  studentProfile   StudentProfile?\r\n  parentLinks      ParentStudent[]     @relation(\"ParentLinks\")\r\n  teachingGroups   Group[]             @relation(\"GroupTeacher\")\r\n  refreshTokens    RefreshToken[]\r\n  desktopAuthCodes DesktopAuthCode[]\r\n  notifications    Notification[]\r\n  articles         Article[]\r\n  videoPurchases   VideoPurchase[]\r\n  mockPurchases    MockPurchase[]\r\n  telegramTokens   TelegramLinkToken[]\r\n\r\n  @@index([role])"
+    },
+    {
+      "name": "TelegramLinkToken",
+      "definition": "id        String    @id @default(uuid())\r\n  userId    String\r\n  tokenHash String    @unique\r\n  expiresAt DateTime\r\n  usedAt    DateTime?\r\n  createdAt DateTime  @default(now())\r\n\r\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([userId])"
+    },
+    {
+      "name": "RefreshToken",
+      "definition": "id        String    @id @default(uuid())\r\n  userId    String\r\n  tokenHash String    @unique\r\n  familyId  String    @default(\"\")\r\n  expiresAt DateTime\r\n  revokedAt DateTime?\r\n  createdAt DateTime  @default(now())\r\n\r\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([userId])\r\n  @@index([familyId])"
+    },
+    {
+      "name": "DesktopAuthCode",
+      "definition": "id            String    @id @default(uuid())\r\n  userId        String\r\n  codeHash      String    @unique\r\n  codeChallenge String\r\n  deviceId      String\r\n  state         String\r\n  expiresAt     DateTime\r\n  usedAt        DateTime?\r\n  createdAt     DateTime  @default(now())\r\n\r\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([userId])\r\n  @@index([expiresAt])"
+    },
+    {
+      "name": "StudentProfile",
+      "definition": "userId            String        @id\r\n  availablePrograms ExamProgram[] @default([IELTS])\r\n  activeProgram     ExamProgram?  @default(IELTS)\r\n  isApproved        Boolean       @default(false) // \"Tasdiqlangan o'quv markaz o'quvchisi\"\r\n  groupId           String?\r\n  currentPoints     Int           @default(0)\r\n  linkCode          String        @unique // ota-ona farzandini shu kod bilan bog'laydi\r\n  createdAt         DateTime      @default(now())\r\n\r\n  // --- Oylik o'yin tizimi ---\r\n  /// currentPoints qaysi oyga tegishli (\"YYYY-MM\"). Oy o'zgarsa ball qayta boshlanadi.\r\n  pointsPeriod  String?\r\n  /// Shu oyda chegara ballga yetib o'yinga qo'shilganmi (oy oxirigacha \"yopishqoq\")\r\n  gameQualified Boolean   @default(false)\r\n  qualifiedAt   DateTime?\r\n\r\n  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n  group          Group?                 @relation(fields: [groupId], references: [id], onDelete: SetNull)\r\n  parents        ParentStudent[]\r\n  attendance     Attendance[]\r\n  payments       Payment[]\r\n  pointsLog      PointsLog[]\r\n  attempts       TestAttempt[]\r\n  pointsArchive  MonthlyPointsArchive[]\r\n  mockAttempts   MockAttempt[]\r\n  assessmentJobs AssessmentJob[]\r\n\r\n  @@index([groupId])"
+    },
+    {
+      "name": "MonthlyPointsArchive",
+      "definition": "id        String   @id @default(uuid())\r\n  studentId String\r\n  year      Int\r\n  month     Int // 1..12\r\n  points    Int\r\n  qualified Boolean  @default(false) // o'sha oyda o'yinga qo'shilgan edimi\r\n  createdAt DateTime @default(now())\r\n\r\n  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n\r\n  @@unique([studentId, year, month])\r\n  @@index([year, month])"
+    },
+    {
+      "name": "ParentStudent",
+      "definition": "parentUserId String\r\n  studentId    String\r\n  createdAt    DateTime @default(now())\r\n\r\n  parent  User           @relation(\"ParentLinks\", fields: [parentUserId], references: [id], onDelete: Cascade)\r\n  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n\r\n  @@id([parentUserId, studentId])"
+    },
+    {
+      "name": "Group",
+      "definition": "id        String   @id @default(uuid())\r\n  name      String\r\n  teacherId String?\r\n  schedule  Json? // [{day:\"mon\", startTime:\"14:00\", endTime:\"16:00\"}]\r\n  createdAt DateTime @default(now())\r\n\r\n  teacher    User?            @relation(\"GroupTeacher\", fields: [teacherId], references: [id], onDelete: SetNull)\r\n  students   StudentProfile[]\r\n  attendance Attendance[]"
+    },
+    {
+      "name": "Attendance",
+      "definition": "id         String          @id @default(uuid())\r\n  studentId  String\r\n  groupId    String\r\n  date       DateTime        @db.Date\r\n  state      AttendanceState\r\n  markedById String\r\n  createdAt  DateTime        @default(now())\r\n  updatedAt  DateTime        @updatedAt\r\n\r\n  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n  group   Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([studentId, groupId, date])\r\n  @@index([groupId, date])"
+    },
+    {
+      "name": "Payment",
+      "definition": "id         String        @id @default(uuid())\r\n  studentId  String\r\n  month      Int // 1..12\r\n  year       Int\r\n  state      PaymentState\r\n  amount     Int           @default(0) // so'mda\r\n  method     PaymentMethod @default(manual)\r\n  note       String?\r\n  markedById String?\r\n  createdAt  DateTime      @default(now())\r\n  updatedAt  DateTime      @updatedAt\r\n\r\n  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n\r\n  @@unique([studentId, month, year])\r\n  @@index([year, month])"
+    },
+    {
+      "name": "PointsLog",
+      "definition": "id        String   @id @default(uuid())\r\n  studentId String\r\n  change    Int\r\n  reason    String\r\n  byUserId  String? // null = tizim (masalan boshlang'ich ball)\r\n  createdAt DateTime @default(now())\r\n\r\n  student StudentProfile @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n\r\n  @@index([studentId, createdAt])"
+    },
+    {
+      "name": "Test",
+      "definition": "id                    String   @id @default(uuid())\r\n  type                  TestType\r\n  title                 String\r\n  level                 String? // masalan \"B2\", \"Academic\"\r\n  isDemo                Boolean  @default(false) // mehmonlar ko'ra oladigan demo test\r\n  isActive              Boolean  @default(true)\r\n  durationMinutes       Int?\r\n  sectionQuestionCounts Json? // {\"listening\":10,\"reading\":10} \u2014 random tanlab olinadigan savollar soni\r\n  createdAt             DateTime @default(now())\r\n\r\n  questions Question[]\r\n  attempts  TestAttempt[]"
+    },
+    {
+      "name": "Question",
+      "definition": "id            String       @id @default(uuid())\r\n  testId        String\r\n  section       TestSection\r\n  type          QuestionType\r\n  prompt        String\r\n  options       Json? // string[] \u2014 multiple_choice uchun\r\n  correctAnswer String? // avtomatik baholanadiganlar uchun; variantlar \"|\" bilan ajratiladi\r\n  maxScore      Int          @default(1)\r\n  // Comfortable testing: audio/passage/instructions (Survey about shopping kabi)\r\n  // Migration: npx prisma migrate dev --name add_question_media_fields\r\n  // Agar DB allaqachon mavjud bo'lsa, quyidagi maydonlar nullable \u2014 migrate xavfsiz.\r\n  audioUrl      String? // storage kaliti, masalan \"tests/<uuid>.mp3\" \u2014 streaming via GET /tests/questions/:id/audio\r\n  passageText   String? // Reading/Listening uzun matn (masalan Survey matni)\r\n  instructions  String? // \"Listen and answer...\" kabi guruh ko'rsatmasi\r\n  createdAt     DateTime     @default(now())\r\n\r\n  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)\r\n  answers Answer[]\r\n\r\n  @@index([testId, section])"
+    },
+    {
+      "name": "TestAttempt",
+      "definition": "id             String        @id @default(uuid())\r\n  studentId      String\r\n  testId         String\r\n  status         AttemptStatus @default(in_progress)\r\n  questionOrder  Json // string[] \u2014 shu urinish uchun random tanlangan savollar tartibi\r\n  autoScore      Float?\r\n  manualScore    Float?\r\n  totalScore     Float?\r\n  antiCheatCount Int           @default(0)\r\n  startedAt      DateTime      @default(now())\r\n  finishedAt     DateTime?\r\n\r\n  student     StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n  test        Test             @relation(fields: [testId], references: [id], onDelete: Cascade)\r\n  answers     Answer[]\r\n  cheatEvents AntiCheatEvent[]\r\n\r\n  @@index([studentId])\r\n  @@index([status])"
+    },
+    {
+      "name": "AntiCheatEvent",
+      "definition": "id        String   @id @default(uuid())\r\n  attemptId String\r\n  event     String // masalan \"tab_switch\"\r\n  createdAt DateTime @default(now())\r\n\r\n  attempt TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([attemptId])"
+    },
+    {
+      "name": "Answer",
+      "definition": "id         String   @id @default(uuid())\r\n  attemptId  String\r\n  questionId String\r\n  answer     String\r\n  score      Float?\r\n  isGraded   Boolean  @default(false)\r\n  gradedById String? // Writing/Speaking uchun baholagan o'qituvchi\r\n  comment    String?\r\n  // Exam-time reading aids: highlighted passage snippets + private note.\r\n  // Stored on the passage-owner question of each part (see saveMarks).\r\n  highlights Json? // string[] \u2014 ajratilgan matn parchalari\r\n  note       String? // shaxsiy eslatma (2000 belgigacha)\r\n  updatedAt  DateTime @updatedAt\r\n\r\n  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)\r\n  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([attemptId, questionId])"
+    },
+    {
+      "name": "VideoLesson",
+      "definition": "id                String   @id @default(uuid())\r\n  title             String\r\n  description       String?\r\n  price             Int      @default(0) // so'mda; 0 = bepul\r\n  isFreeForApproved Boolean  @default(true) // tasdiqlangan o'quvchiga bepulmi\r\n  fileKey           String // storage ichidagi nisbiy yo'l\r\n  mimeType          String?\r\n  thumbnailKey      String?\r\n  createdAt         DateTime @default(now())\r\n\r\n  purchases VideoPurchase[]"
+    },
+    {
+      "name": "VideoPurchase",
+      "definition": "id            String         @id @default(uuid())\r\n  userId        String\r\n  videoId       String\r\n  status        PurchaseStatus @default(pending_confirmation)\r\n  method        PaymentMethod  @default(manual)\r\n  confirmedById String?\r\n  createdAt     DateTime       @default(now())\r\n  updatedAt     DateTime       @updatedAt\r\n\r\n  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n  video VideoLesson @relation(fields: [videoId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([userId, videoId])"
+    },
+    {
+      "name": "Article",
+      "definition": "id        String   @id @default(uuid())\r\n  title     String\r\n  body      String\r\n  category  String\r\n  tags      String[]\r\n  authorId  String?\r\n  createdAt DateTime @default(now())\r\n  updatedAt DateTime @updatedAt\r\n\r\n  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)\r\n\r\n  @@index([category])"
+    },
+    {
+      "name": "Teacher",
+      "definition": "id              String   @id @default(uuid())\r\n  name            String\r\n  /// Yo'nalish / mutaxassislik \u2014 masalan \"Academic IELTS\", \"Speaking\"\r\n  specialty       String\r\n  /// Yutuq yoki sertifikat \u2014 masalan \"IELTS 8.5\" (kartadagi nishon)\r\n  achievement     String?\r\n  /// Qisqacha ma'lumot (ixtiyoriy)\r\n  bio             String?\r\n  /// Ish tajribasi (yil)\r\n  experienceYears Int?\r\n  /// Yuklangan rasm kaliti (storage ichida) \u2014 /teachers/:id/photo orqali beriladi\r\n  photoKey        String?\r\n  /// Ijtimoiy tarmoq / Telegram havolasi (ixtiyoriy)\r\n  socialUrl       String?\r\n  /// Saytdagi ko'rinish tartibi (kichik son \u2014 oldinroq chiqadi)\r\n  sortOrder       Int      @default(0)\r\n  /// Saytda ko'rsatilsinmi (yashirish uchun false)\r\n  isActive        Boolean  @default(true)\r\n  createdAt       DateTime @default(now())\r\n  updatedAt       DateTime @updatedAt\r\n\r\n  @@index([isActive, sortOrder])"
+    },
+    {
+      "name": "GalleryImage",
+      "definition": "id        String   @id @default(uuid())\r\n  /// Storage kaliti \u2014 gallery/ ichida (storage/gallery/<uuid>.jpg)\r\n  imageKey  String\r\n  /// Yorliq \u2014 masalan o'qituvchi ismi yoki tavsif (AccordionGallery label)\r\n  label     String?\r\n  /// Havola \u2014 bosilganda o'tish (ixtiyoriy)\r\n  link      String?\r\n  /// Alt matn \u2014 rasm tavsifi (SEO/accessibility)\r\n  alt       String?\r\n  /// Tartib (kichik son \u2014 oldinroq chiqadi)\r\n  sortOrder Int      @default(0)\r\n  isActive  Boolean  @default(true)\r\n  createdAt DateTime @default(now())\r\n  updatedAt DateTime @updatedAt\r\n\r\n  @@index([isActive, sortOrder])"
+    },
+    {
+      "name": "Notification",
+      "definition": "id        String           @id @default(uuid())\r\n  userId    String\r\n  type      NotificationType\r\n  text      String\r\n  read      Boolean          @default(false)\r\n  createdAt DateTime         @default(now())\r\n\r\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([userId, read])"
+    },
+    {
+      "name": "AuditLog",
+      "definition": "id        String   @id @default(uuid())\r\n  userId    String?\r\n  action    String // masalan \"payment.set\", \"points.adjust\", \"user.deactivate\"\r\n  entity    String\r\n  entityId  String?\r\n  oldValue  Json?\r\n  newValue  Json?\r\n  createdAt DateTime @default(now())\r\n\r\n  @@index([entity, createdAt])\r\n  @@index([userId])"
+    },
+    {
+      "name": "Setting",
+      "definition": "key   String @id\r\n  value Json"
+    },
+    {
+      "name": "MockExam",
+      "definition": "id                     String                @id @default(uuid())\r\n  assessmentPolicy       AssessmentPolicyMode?\r\n  speakingProfileVersion String?\r\n  specificationVersion   String?\r\n  type                   MockExamType\r\n  title                  String\r\n  description            String?\r\n  level                  String? // masalan \"Academic\", \"B1-C1\"\r\n  practiceLevel          PracticeLevel?\r\n  isPublished            Boolean               @default(false)\r\n  isDemo                 Boolean               @default(false) // mehmonlar/ota-ona ko'radigan demo\r\n  // --- Pullik kirish (video modeli kabi; oddiy userlar sotib olib ishlatadi) ---\r\n  price                  Int                   @default(0) // so'mda; 0 = bepul\r\n  isFreeForApproved      Boolean               @default(true) // tasdiqlangan markaz o'quvchisiga bepulmi\r\n  createdById            String? // yaratgan admin/teacher (User.id)\r\n  createdAt              DateTime              @default(now())\r\n  updatedAt              DateTime              @updatedAt\r\n  // --- AI JSON import (additive; legacy imtihonlarda default qiymatlar) ---\r\n  profile                String                @default(\"practice\") // practice | full_mock\r\n  blueprintRef           String? // full_mock tasdiqlangan blueprint havolasi (ixtiyoriy)\r\n  contentVersion         Int                   @default(1) // optimistic concurrency (teacher save bilan)\r\n\r\n  sections  MockSection[]\r\n  attempts  MockAttempt[]\r\n  purchases MockPurchase[]\r\n  imports   MockExamImport[]\r\n\r\n  @@index([type])"
+    },
+    {
+      "name": "MockExamImport",
+      "definition": "id                 String   @id @default(uuid())\r\n  createdById        String // session egasi \u2014 AI JSON yaratuvchini tanlay olmaydi\r\n  packageId          String\r\n  revision           Int\r\n  schemaVersion      String   @default(\"1.0\")\r\n  profile            String   @default(\"practice\")\r\n  rawChecksum        String // kelgan JSON ning canonical checksum\r\n  normalizedChecksum String // server normalizatsiyasidan keyingi checksum\r\n  validatedChecksum  String // dry-run da qaytarilgan checksum (commit tasdig'i)\r\n  examId             String\r\n  createdAt          DateTime @default(now())\r\n\r\n  exam       MockExam                @relation(fields: [examId], references: [id], onDelete: Cascade)\r\n  sourceMaps MockImportSourceMap[]\r\n  issues     MockImportReviewIssue[]\r\n\r\n  @@unique([createdById, packageId, revision])\r\n  @@index([examId])"
+    },
+    {
+      "name": "MockImportSourceMap",
+      "definition": "id        String @id @default(uuid())\r\n  importId  String\r\n  kind      String // section | group | question | media\r\n  sourceKey String\r\n  entityId  String\r\n\r\n  import MockExamImport @relation(fields: [importId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([importId, kind, sourceKey])\r\n  @@index([importId])"
+    },
+    {
+      "name": "MockImportReviewIssue",
+      "definition": "id           String    @id @default(uuid())\r\n  importId     String\r\n  sourceKey    String?\r\n  entityKind   String?\r\n  code         String\r\n  path         String\r\n  message      String\r\n  status       String    @default(\"open\") // open | resolved\r\n  resolvedById String?\r\n  resolvedAt   DateTime?\r\n  createdAt    DateTime  @default(now())\r\n\r\n  import MockExamImport @relation(fields: [importId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([importId, status])"
+    },
+    {
+      "name": "MockStagedMedia",
+      "definition": "id              String    @id @default(uuid())\r\n  ownerId         String // yuklagan staff (User.id)\r\n  storageKey      String    @unique // mock/ ichidagi opaque kalit\r\n  fileName        String // asl basename (ko'rsatish uchun)\r\n  mimeType        String?\r\n  sizeBytes       Int\r\n  checksum        String // sha256 (file content)\r\n  kind            String // audio | image\r\n  expiresAt       DateTime\r\n  claimedAt       DateTime?\r\n  claimedImportId String?\r\n  createdAt       DateTime  @default(now())\r\n\r\n  @@index([ownerId])\r\n  @@index([expiresAt])"
+    },
+    {
+      "name": "MockPurchase",
+      "definition": "id            String         @id @default(uuid())\r\n  userId        String\r\n  examId        String\r\n  status        PurchaseStatus @default(pending_confirmation)\r\n  method        PaymentMethod  @default(manual)\r\n  amount        Int            @default(0)\r\n  confirmedById String?\r\n  createdAt     DateTime       @default(now())\r\n  updatedAt     DateTime       @updatedAt\r\n\r\n  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)\r\n  exam MockExam @relation(fields: [examId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([userId, examId])\r\n  @@index([status])"
+    },
+    {
+      "name": "MockSection",
+      "definition": "id              String    @id @default(uuid())\r\n  examId          String\r\n  skill           MockSkill\r\n  title           String?\r\n  sortOrder       Int       @default(0)\r\n  durationMinutes Int? // bo'lim vaqti (IELTS: L~30, R~60, W~60)\r\n  instructions    String?\r\n\r\n  exam   MockExam            @relation(fields: [examId], references: [id], onDelete: Cascade)\r\n  groups MockQuestionGroup[]\r\n\r\n  @@unique([examId, skill])\r\n  @@index([examId, sortOrder])"
+    },
+    {
+      "name": "MockQuestionGroup",
+      "definition": "id               String   @id @default(uuid())\r\n  sectionId        String\r\n  sortOrder        Int      @default(0)\r\n  title            String?\r\n  instructions     String? // \"Complete the notes. Write ONE WORD ONLY.\"\r\n  passageText      String? // Reading matni / Listening transkripti\r\n  contentHtml      String? // Sanitized rich document; gaps are <span data-gap=\"N\"></span>\r\n  audioScript      String? // Staff-only sanitized transcript/review material\r\n  contentLayout    String? // document | table | notes | summary | sentences\r\n  optionsReusable  Boolean? // null keeps legacy clients; false requires one-use matching\r\n  audioKey         String? // Listening audio (storage kaliti)\r\n  imageKey         String? // Map/diagram labelling uchun rasm\r\n  // Versioned Multilevel keeps assessment caps and shared task stimuli at the\r\n  // semantic part/task level. Legacy IELTS continues to use question.points.\r\n  maxScore         Int?\r\n  stimulusRef      String?\r\n  // --- IELTS full-test (v2026.1): Listening 4 part, dynamic audio muddati ---\r\n  partNumber       Int? // Listening uchun 1..4 (Reading/Writing da null)\r\n  audioPlayLimit   Int      @default(1) // exam rejimda 1, practice da cheksiz (service tekshiradi)\r\n  audioDurationSec Int? // audio davomiyligi (sekund); deadline = duration + 120s review\r\n  createdAt        DateTime @default(now())\r\n\r\n  section   MockSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)\r\n  questions MockQuestion[]\r\n\r\n  @@index([sectionId, sortOrder])"
+    },
+    {
+      "name": "MockQuestion",
+      "definition": "id               String           @id @default(uuid())\r\n  groupId          String\r\n  number           Int // imtihondagi savol raqami (1..40)\r\n  sortOrder        Int              @default(0)\r\n  type             MockQuestionType\r\n  prompt           String\r\n  options          Json? // multiple_choice/matching uchun: string[]\r\n  correctAnswers   Json? // string[] \u2014 qabul qilinadigan to'g'ri javoblar (auto-baholash)\r\n  points           Int              @default(1)\r\n  wordLimit        Int? // \"NO MORE THAN X WORDS\" cheklovi (ixtiyoriy)\r\n  answerRule       String? // ONE_WORD | ONE_WORD_AND_OR_NUMBER; null keeps legacy IELTS normalization\r\n  acceptedVariants Json? // British/American imlo variantlari: string[] (masalan [\"colour\",\"color\"])\r\n  createdAt        DateTime         @default(now())\r\n\r\n  group   MockQuestionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)\r\n  answers MockAnswer[]\r\n\r\n  @@index([groupId, sortOrder])"
+    },
+    {
+      "name": "MockAttempt",
+      "definition": "id                     String            @id @default(uuid())\r\n  speakingProfileVersion String?\r\n  specificationVersion   String?\r\n  scoreMethod            String?\r\n  scoreVersion           String?\r\n  standardScores         Json?\r\n  overallScore           Float?\r\n  mediaState             Json?\r\n  examId                 String\r\n  studentId              String\r\n  status                 MockAttemptStatus @default(in_progress)\r\n  startedAt              DateTime          @default(now())\r\n  submittedAt            DateTime?\r\n  finishedAt             DateTime?\r\n  rawScores              Json? // {\"listening\":{\"score\":32,\"max\":40},...}\r\n  sectionBands           Json? // {\"listening\":7,\"reading\":6.5,...}\r\n  overallBand            Float? // IELTS umumiy band (0-9)\r\n  cefrLevel              String? // Multilevel uchun CEFR (A1..C1)\r\n  antiCheatCount         Int               @default(0)\r\n  mode                   MockAttemptMode   @default(practice) // practice=vaqtsiz, timed=vaqtli\r\n  deadlineAt             DateTime? // timed rejimda tugash vaqti (startedAt + davomiylik)\r\n  annotations            Json? // o'quvchining highlight/eslatmalari (frontend uchun saqlanadi)\r\n  // --- IELTS full-test flow (v2026.1): L\u2192R\u2192W ketma-ket, server-soat ---\r\n  flowMode               String? // \"full_test\" | \"single_skill\" (null = single_skill, eski yozuvlar)\r\n  currentSkill           MockSkill? // full_test da joriy bo'lim (listening\u2192reading\u2192writing)\r\n  sectionDeadlines       Json? // {\"listening\": ISO, \"reading\": ISO, \"writing\": ISO}\r\n  overallDeadlineAt      DateTime? // full_test umumiy deadline (oxirgi bo'lim tugashi)\r\n  audioPlays             Json? // {\"groupId\": count} \u2014 Listening once-only nazorati\r\n  submittedSections      Json? // [\"listening\", ...] \u2014 yakunlangan bo'limlar\r\n\r\n  exam           MockExam         @relation(fields: [examId], references: [id], onDelete: Cascade)\r\n  student        StudentProfile   @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n  answers        MockAnswer[]\r\n  cheatEvents    MockCheatEvent[]\r\n  assessmentJobs AssessmentJob[]\r\n\r\n  @@index([studentId])\r\n  @@index([status])\r\n  @@index([examId])"
+    },
+    {
+      "name": "MockAnswer",
+      "definition": "id           String   @id @default(uuid())\r\n  attemptId    String\r\n  questionId   String\r\n  response     String   @default(\"\") // o'quvchi javobi (matn)\r\n  audioKey     String? // Speaking javobi \u2014 yuklangan audio (storage kaliti)\r\n  isCorrect    Boolean? // auto-baholangan savollar uchun\r\n  score        Float?\r\n  isGraded     Boolean  @default(false)\r\n  gradedById   String? // writing/speaking ni baholagan o'qituvchi (User.id)\r\n  feedback     String?\r\n  rubricScores Json? // 4 mezon: writing {TA,CC,LR,GRA} / speaking {fluency,lexical,grammar,pronun} 0..9\r\n  updatedAt    DateTime @updatedAt\r\n\r\n  attempt  MockAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)\r\n  question MockQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([attemptId, questionId])\r\n  @@index([attemptId])"
+    },
+    {
+      "name": "MockCheatEvent",
+      "definition": "id        String   @id @default(uuid())\r\n  attemptId String\r\n  event     String\r\n  createdAt DateTime @default(now())\r\n\r\n  attempt MockAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)\r\n\r\n  @@index([attemptId])"
+    },
+    {
+      "name": "AssessmentJob",
+      "definition": "id                   String                 @id @default(uuid())\r\n  attemptId            String\r\n  studentId            String\r\n  program              String\r\n  skill                MockSkill\r\n  inputHash            String\r\n  inputSnapshot        Json\r\n  generation           Int                    @default(0)\r\n  rubricVersion        String\r\n  promptVersion        String\r\n  policyMode           AssessmentPolicyMode\r\n  status               AssessmentJobStatus    @default(PENDING)\r\n  version              Int                    @default(1)\r\n  attemptCount         Int                    @default(0)\r\n  leaseToken           String?\r\n  leaseExpiresAt       DateTime?\r\n  retryAt              DateTime?\r\n  startedAt            DateTime?\r\n  completedAt          DateTime?\r\n  failureCode          String?\r\n  selectedEvaluationId String?\r\n  aiScore              Float?\r\n  teacherScore         Float?\r\n  finalScore           Float?\r\n  finalScoreSource     AssessmentScoreSource?\r\n  confidence           Float?\r\n  finalResult          Json?\r\n  approvedFeedback     Json?\r\n  createdAt            DateTime               @default(now())\r\n  updatedAt            DateTime               @updatedAt\r\n\r\n  attempt     MockAttempt            @relation(fields: [attemptId], references: [id], onDelete: Cascade)\r\n  student     StudentProfile         @relation(fields: [studentId], references: [userId], onDelete: Cascade)\r\n  evaluations AssessmentEvaluation[]\r\n  transcripts SpeechTranscript[]\r\n\r\n  @@unique([attemptId, skill, inputHash, generation])\r\n  @@index([status, retryAt, createdAt])\r\n  @@index([attemptId, skill, createdAt])\r\n  @@index([studentId, createdAt])"
+    },
+    {
+      "name": "AssessmentEvaluation",
+      "definition": "id            String               @id @default(uuid())\r\n  jobId         String\r\n  role          String\r\n  attemptNumber Int\r\n  inputHash     String\r\n  status        AssessmentCallStatus @default(STARTED)\r\n  provider      String\r\n  model         String\r\n  result        Json?\r\n  confidence    Float?\r\n  inputTokens   Int?\r\n  outputTokens  Int?\r\n  latencyMs     Int?\r\n  failureCode   String?\r\n  uncertain     Boolean              @default(false)\r\n  startedAt     DateTime             @default(now())\r\n  completedAt   DateTime?\r\n\r\n  job AssessmentJob @relation(fields: [jobId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([jobId, role, attemptNumber])\r\n  @@index([jobId, status])"
+    },
+    {
+      "name": "SpeechTranscript",
+      "definition": "id                    String               @id @default(uuid())\r\n  jobId                 String\r\n  questionId            String\r\n  audioHash             String\r\n  status                AssessmentCallStatus @default(STARTED)\r\n  attemptNumber         Int                  @default(1)\r\n  text                  String?\r\n  segments              Json?\r\n  confidence            Float?\r\n  provider              String\r\n  model                 String\r\n  durationMs            Int?\r\n  pronunciationEvidence String               @default(\"UNAVAILABLE\")\r\n  failureCode           String?\r\n  uncertain             Boolean              @default(false)\r\n  startedAt             DateTime             @default(now())\r\n  completedAt           DateTime?\r\n\r\n  job AssessmentJob @relation(fields: [jobId], references: [id], onDelete: Cascade)\r\n\r\n  @@unique([jobId, questionId, attemptNumber])\r\n  @@index([audioHash, status])"
+    }
+  ],
+  "enums": [
+    {
+      "name": "Role",
+      "values": [
+        "super_admin",
+        "admin",
+        "teacher",
+        "student",
+        "parent"
+      ]
+    },
+    {
+      "name": "AttendanceState",
+      "values": [
+        "present",
+        "absent",
+        "late"
+      ]
+    },
+    {
+      "name": "PaymentState",
+      "values": [
+        "paid",
+        "unpaid",
+        "partial"
+      ]
+    },
+    {
+      "name": "PaymentMethod",
+      "values": [
+        "manual"
+      ]
+    },
+    {
+      "name": "TestType",
+      "values": [
+        "ielts",
+        "multilevel"
+      ]
+    },
+    {
+      "name": "ExamProgram",
+      "values": [
+        "IELTS",
+        "MULTILEVEL"
+      ]
+    },
+    {
+      "name": "PracticeLevel",
+      "values": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "C1"
+      ]
+    },
+    {
+      "name": "TestSection",
+      "values": [
+        "listening",
+        "reading",
+        "writing",
+        "speaking"
+      ]
+    },
+    {
+      "name": "QuestionType",
+      "values": [
+        "multiple_choice",
+        "short_answer",
+        "essay",
+        "speaking_prompt"
+      ]
+    },
+    {
+      "name": "AttemptStatus",
+      "values": [
+        "in_progress",
+        "grading",
+        "completed"
+      ]
+    },
+    {
+      "name": "NotificationType",
+      "values": [
+        "points",
+        "payment_reminder",
+        "test_result",
+        "attendance",
+        "announcement",
+        "game"
+      ]
+    },
+    {
+      "name": "PurchaseStatus",
+      "values": [
+        "pending_confirmation",
+        "purchased"
+      ]
+    },
+    {
+      "name": "MockExamType",
+      "values": [
+        "ielts_academic",
+        "ielts_general",
+        "multilevel"
+      ]
+    },
+    {
+      "name": "MockSkill",
+      "values": [
+        "listening",
+        "reading",
+        "writing",
+        "speaking"
+      ]
+    },
+    {
+      "name": "MockQuestionType",
+      "values": [
+        "multiple_choice",
+        "multi_select",
+        "true_false_notgiven",
+        "yes_no_notgiven",
+        "matching",
+        "matching_headings",
+        "sentence_completion",
+        "note_completion",
+        "summary_completion",
+        "table_completion",
+        "short_answer",
+        "map_labelling",
+        "essay_task1",
+        "essay_task2",
+        "speaking_task"
+      ]
+    },
+    {
+      "name": "MockAttemptStatus",
+      "values": [
+        "in_progress",
+        "grading",
+        "completed"
+      ]
+    },
+    {
+      "name": "MockAttemptMode",
+      "values": [
+        "practice",
+        "timed"
+      ]
+    },
+    {
+      "name": "AssessmentPolicyMode",
+      "values": [
+        "PRACTICE_AUTO_AI",
+        "FULL_MOCK_AI_WITH_REVIEW",
+        "MANUAL_ONLY"
+      ]
+    },
+    {
+      "name": "AssessmentJobStatus",
+      "values": [
+        "PENDING",
+        "PROCESSING",
+        "SUCCEEDED",
+        "RETRY",
+        "FAILED",
+        "NEEDS_REVIEW"
+      ]
+    },
+    {
+      "name": "AssessmentScoreSource",
+      "values": [
+        "AI",
+        "TEACHER",
+        "ADJUDICATED"
+      ]
+    },
+    {
+      "name": "AssessmentCallStatus",
+      "values": [
+        "STARTED",
+        "SUCCEEDED",
+        "FAILED"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 173,
+    "implemented": 106,
+    "verified": 101,
+    "missing": 67,
+    "partial": 5
+  }
+}

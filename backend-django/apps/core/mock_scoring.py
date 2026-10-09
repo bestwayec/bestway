@@ -133,16 +133,24 @@ def duplicate_matching(questions, responses):
 
 
 def parse_band_table(raw):
-    if not isinstance(raw, list) or not raw: raise ValueError('Empty band table')
+    def display(value):
+        if value is None: return 'null'
+        if isinstance(value, bool): return 'true' if value else 'false'
+        if isinstance(value, list): return ','.join('' if v is None else display(v) for v in value)
+        if isinstance(value, dict): return '[object Object]'
+        if isinstance(value, float) and value.is_integer(): return str(int(value))
+        return str(value)
+    if not isinstance(raw, list) or not raw: raise ValueError('Band jadvali bo‘sh bo‘lmasligi kerak')
     result = {}
     for row in raw:
-        if not isinstance(row, (list,tuple)) or len(row)!=2: raise ValueError('Invalid band row')
+        if not isinstance(row, (list,tuple)) or len(row)!=2: raise ValueError('Har bir qator [minRaw, band] ko‘rinishida bo‘lsin')
         minimum, band = row
-        if type(minimum) not in (int,float) or not math.isfinite(minimum) or minimum != int(minimum) or not 0<=minimum<=40: raise ValueError('Invalid raw minimum')
-        if type(band) not in (int,float) or not math.isfinite(band) or not 0<=band<=9 or band*2!=js_round(band*2): raise ValueError('Invalid band')
+        if type(minimum) not in (int,float) or not math.isfinite(minimum) or minimum != int(minimum) or not 0<=minimum<=40: raise ValueError(f'minRaw 0 dan 40 gacha butun son bo‘lsin (keldi: {display(minimum)})')
+        if type(band) not in (int,float) or not math.isfinite(band) or not 0<=band<=9: raise ValueError(f'band 0 dan 9 gacha bo‘lsin (keldi: {display(band)})')
+        if band*2!=js_round(band*2): raise ValueError(f'band 0.5 qadamda bo‘lsin (keldi: {display(band)})')
         # Nest's stable sort retains the first duplicate (despite its comment).
         result.setdefault(minimum, band)
-    if 0 not in result: raise ValueError('Missing zero row')
+    if 0 not in result: raise ValueError('Jadvalning oxirgi qatori minRaw=0 bo‘lishi shart')
     return sorted(result.items(), reverse=True)
 
 

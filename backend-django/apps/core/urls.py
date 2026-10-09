@@ -1,4 +1,6 @@
 from django.urls import path
+from . import system_views as system
+from . import group_views as groups
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
@@ -23,6 +25,14 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('groups', groups.groups_view),
+    path('groups/<str:group_id>', groups.group_view),
+    path('groups/<str:group_id>/students', groups.add_student_view),
+    path('groups/<str:group_id>/students/<str:student_id>', groups.remove_student_view),
+    path('settings', system.settings_view),
+    path('settings/exam-program-policy', system.program_policy_view),
+    path('settings/ielts-bands', system.ielts_bands_view),
+    path('audit-logs', system.audit_logs_view),
     path('mock/exams/<str:exam_id>/purchase',support.purchase_view),
     path('mock/exams/<str:exam_id>/confirm-purchase',support.confirm_view),
     path('mock/exams/<str:exam_id>/reject-purchase',support.reject_view),

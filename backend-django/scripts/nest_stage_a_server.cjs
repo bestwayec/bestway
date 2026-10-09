@@ -80,6 +80,19 @@ function firstMessage(errors) {
       storage, audit, new SettingsService(prisma, audit), config, programs));
   }
   const controllers = [MockController, MockExamImportController];
+  if (process.env.VERIFY_FULL_FOUNDATION === '1') {
+    const {SettingsService} = load('settings/settings.service.js');
+    const {GroupsService} = load('groups/groups.service.js');
+    const {AccessService} = load('common/access.service.js');
+    values.set(PrismaService, prisma);
+    values.set(AuditService, audit);
+    values.set(SettingsService, new SettingsService(prisma));
+    values.set(GroupsService, new GroupsService(prisma, audit, new AccessService(prisma)));
+    controllers.splice(0, controllers.length,
+      load('settings/settings.controller.js').SettingsController,
+      load('audit/audit.controller.js').AuditController,
+      load('groups/groups.controller.js').GroupsController);
+  }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);
   if (process.env.VERIFY_STAGE_B === '1') {
