@@ -16,9 +16,9 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | assessment / AssessmentController.get | `GET /v1/assessment/attempts/:attemptId`; JWT; roles=any; 200 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | assessment / AssessmentController.review | `POST /v1/assessment/jobs/:jobId/review`; JWT; roles=teacher,admin,super_admin; 201 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | assessment / AssessmentController.audio | `GET /v1/assessment/jobs/:jobId/audio/:questionId`; JWT; roles=any; 200 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| attendance / AttendanceController.list | `GET /v1/attendance`; JWT; roles=any; 200 | — | attendance, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| attendance / AttendanceController.stats | `GET /v1/attendance/stats`; JWT; roles=teacher,admin,super_admin; 200 | — | attendance, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| attendance / AttendanceController.bulk | `PUT /v1/attendance/bulk`; JWT; roles=teacher,admin,super_admin; 200 | — | attendance, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| attendance / AttendanceController.list | `GET /v1/attendance`; JWT; roles=any; 200 | apps.core.attendance_views | attendance, studentProfile, user | COMPLETE | Full runtime gate remains | ATTENDANCE_PARITY_REPORT.json; test_attendance.py |
+| attendance / AttendanceController.stats | `GET /v1/attendance/stats`; JWT; roles=teacher,admin,super_admin; 200 | apps.core.attendance_views | attendance, studentProfile, user | COMPLETE | Full runtime gate remains | ATTENDANCE_PARITY_REPORT.json; test_attendance.py |
+| attendance / AttendanceController.bulk | `PUT /v1/attendance/bulk`; JWT; roles=teacher,admin,super_admin; 200 | apps.core.attendance_views | attendance, studentProfile, user | COMPLETE | Full runtime gate remains | ATTENDANCE_PARITY_REPORT.json; test_attendance.py |
 | audit / AuditController.list | `GET /v1/audit-logs`; JWT; roles=super_admin; 200 | apps.core.system_views | auditLog | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | auth / AuthController.register | `POST /v1/auth/register`; public; roles=any; 201 | apps.core.views | desktopAuthCode, group, notification, parentStudent, refreshToken, studentProfile, user | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
 | auth / AuthController.login | `POST /v1/auth/login`; public; roles=any; 200 | apps.core.views | desktopAuthCode, group, notification, parentStudent, refreshToken, studentProfile, user | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
@@ -129,7 +129,7 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | stats / StatsController.examActivity | `GET /v1/stats/exam-activity`; JWT; roles=admin,super_admin; 200 | — | attendance, group, mockAttempt, mockExam, mockPurchase, payment, studentProfile, test, testAttempt, user, videoLesson, videoPurchase | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | stats / StatsController.exportStudents | `GET /v1/stats/export/students`; JWT; roles=admin,super_admin; 200 | — | attendance, group, mockAttempt, mockExam, mockPurchase, payment, studentProfile, test, testAttempt, user, videoLesson, videoPurchase | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | stats / StatsController.exportPayments | `GET /v1/stats/export/payments`; JWT; roles=admin,super_admin; 200 | — | attendance, group, mockAttempt, mockExam, mockPurchase, payment, studentProfile, test, testAttempt, user, videoLesson, videoPurchase | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| stats / StatsController.exportAttendance | `GET /v1/stats/export/attendance`; JWT; roles=admin,super_admin; 200 | — | attendance, group, mockAttempt, mockExam, mockPurchase, payment, studentProfile, test, testAttempt, user, videoLesson, videoPurchase | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| stats / StatsController.exportAttendance | `GET /v1/stats/export/attendance`; JWT; roles=admin,super_admin; 200 | apps.core.attendance_views | attendance, group, mockAttempt, mockExam, mockPurchase, payment, studentProfile, test, testAttempt, user, videoLesson, videoPurchase | COMPLETE | Full runtime gate remains | ATTENDANCE_PARITY_REPORT.json; test_attendance.py |
 | teachers / TeachersController.list | `GET /v1/teachers`; public; roles=any; 200 | — | teacher | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | teachers / TeachersController.listAll | `GET /v1/teachers/all`; JWT; roles=admin,super_admin; 200 | — | teacher | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | teachers / TeachersController.photo | `GET /v1/teachers/:id/photo`; public; roles=any; 200 | — | teacher | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
@@ -182,7 +182,7 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 
 ## Totals
 
-Active HTTP: 173; implemented: 119; verified within recorded scope: 114; missing: 54; partial: 5.
+Active HTTP: 173; implemented: 123; verified within recorded scope: 118; missing: 50; partial: 5.
 
 Verified counts refer to recorded scopes. Full global throttling, external delivery, worker execution and complete Django-only clients remain separate required gates. New domains are never marked complete from URL registration alone.
 
@@ -192,7 +192,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 |---|---|---|---|
 | ArticlesService | backend/src/articles/articles.service.ts | article | COMPLETE — foundation differential verified |
 | AssessmentService | backend/src/assessment/assessment.service.ts | mockAttempt, assessmentJob | MISSING — port source behavior |
-| AttendanceService | backend/src/attendance/attendance.service.ts | attendance, studentProfile, user | MISSING — port source behavior |
+| AttendanceService | backend/src/attendance/attendance.service.ts | attendance, studentProfile, user | COMPLETE — foundation differential verified |
 | AuditService | backend/src/audit/audit.service.ts | auditLog | COMPLETE — foundation differential verified |
 | AuthService | backend/src/auth/auth.service.ts | user, refreshToken, desktopAuthCode, studentProfile, parentStudent, notification, group | PARTIAL — inspect remaining methods/dependencies |
 | AccessService | backend/src/common/access.service.ts | parentStudent, studentProfile, group | PARTIAL — inspect remaining methods/dependencies |
@@ -211,7 +211,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | PointsService | backend/src/points/points.service.ts | studentProfile, pointsLog, user | MISSING — port source behavior |
 | PrismaService | backend/src/prisma/prisma.service.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
 | SettingsService | backend/src/settings/settings.service.ts | setting | COMPLETE — foundation differential verified |
-| ExportService | backend/src/stats/export.service.ts | studentProfile, payment, user, attendance | MISSING — port source behavior |
+| ExportService | backend/src/stats/export.service.ts | studentProfile, payment, user, attendance | PARTIAL — attendance CSV verified; students/payments exports pending |
 | StatsService | backend/src/stats/stats.service.ts | studentProfile, user, group, attendance, testAttempt, videoPurchase, mockAttempt, mockPurchase, mockExam, payment, videoLesson, test | MISSING — port source behavior |
 | TeachersService | backend/src/teachers/teachers.service.ts | teacher | MISSING — port source behavior |
 | TelegramBotService | backend/src/telegram/telegram-bot.service.ts | user | MISSING — port source behavior |
@@ -229,6 +229,8 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | RolesGuard | backend/src/common/roles.guard.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
 
 ## Background jobs, startup recovery, events and WebSockets
+
+Attendance inventory: 0 independent jobs, 0 event handlers, 0 WebSocket contracts. Parent absence delivery reuses the verified shared NotificationsService contract; there is no attendance reminder scheduler to port.
 
 - MISSING: `AssessmentWorker.tick` @Interval(20_000) — backend/src/assessment/assessment.worker.ts; preserve durable row claims/retries or monthly archive/reset semantics.
 - MISSING: `GameService.monthlyReset` @Cron('5 0 1 * *', { timeZone: 'Asia/Tashkent' }) — backend/src/game/game.service.ts; preserve durable row claims/retries or monthly archive/reset semantics.
@@ -317,4 +319,4 @@ ParentStudent has a composite Prisma primary key represented by a read-only surr
 
 ## Next implementation checkpoint
 
-Settings/audit/groups/articles/notifications/payments: 27 contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Next port attendance (GET list/stats, PUT bulk), points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.
+Settings/audit/groups/articles/notifications/payments plus attendance and its CSV export: 31 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. AttendanceService has no independent jobs/events. Next port GameService (3 routes, monthly rollover/archive, startup recovery, qualification), which PointsService depends on; then points (3), Telegram lifecycle, remaining user administration, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam discovery.

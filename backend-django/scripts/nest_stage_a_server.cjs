@@ -94,13 +94,21 @@ function firstMessage(errors) {
     values.set(NotificationsService, new NotificationsService(prisma, {send:async()=>{}}));
     const {PaymentsService}=load('payments/payments.service.js');
     values.set(PaymentsService, new PaymentsService(prisma,new AccessService(prisma),audit,values.get(NotificationsService)));
+    const {AttendanceService}=load('attendance/attendance.service.js');
+    const {ExportService}=load('stats/export.service.js');
+    const {StatsService}=load('stats/stats.service.js');
+    values.set(AttendanceService,new AttendanceService(prisma,new AccessService(prisma),audit,values.get(NotificationsService)));
+    values.set(ExportService,new ExportService(prisma));
+    values.set(StatsService,new StatsService(prisma));
     controllers.splice(0, controllers.length,
       load('settings/settings.controller.js').SettingsController,
       load('audit/audit.controller.js').AuditController,
       load('groups/groups.controller.js').GroupsController,
       load('articles/articles.controller.js').ArticlesController,
       load('notifications/notifications.controller.js').NotificationsController,
-      load('payments/payments.controller.js').PaymentsController);
+      load('payments/payments.controller.js').PaymentsController,
+      load('attendance/attendance.controller.js').AttendanceController,
+      load('stats/stats.controller.js').StatsController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);

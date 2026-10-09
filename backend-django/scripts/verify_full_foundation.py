@@ -30,6 +30,9 @@ def normalize(value):
     if isinstance(value, dict): return {k: normalize(v) for k, v in value.items()}
     if isinstance(value, list): return [normalize(v) for v in value]
     if isinstance(value, str):
+        for side in ids:
+            for label, identifier in side.items():
+                if value == identifier: return '<ID:'+label+'>'
         value = re.sub(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', '<UUID>', value)
         return re.sub(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+00:00)?', '<TIME>', value)
     return value
@@ -74,7 +77,7 @@ try:
 
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
         return result
@@ -92,13 +95,18 @@ try:
             if side == 0:
                 client.credentials(**{'HTTP_AUTHORIZATION': headers['Authorization']} if role else {})
                 response = getattr(client, method.lower())(target, body or {}, format='json')
-                result = dict(status=response.status_code, body=json.loads(response.content))
+                result = dict(status=response.status_code, body=json.loads(response.content) if 'application/json' in response['Content-Type'] else response.content.decode('utf-8'))
+                if 'text/csv' in response['Content-Type']:
+                    result['headers']={key:response[key] for key in ('Content-Type','Content-Disposition')}
             else:
                 headers['Content-Type'] = 'application/json'
                 request = Request(f'http://127.0.0.1:{port}'+target, data=json.dumps(body).encode() if body is not None else None, headers=headers, method=method)
                 try: response = urlopen(request, timeout=20)
                 except HTTPError as error: response = error
-                result = dict(status=response.status, body=json.loads(response.read()))
+                raw=response.read()
+                result = dict(status=response.status, body=json.loads(raw) if 'application/json' in response.headers['Content-Type'] else raw.decode('utf-8'))
+                if 'text/csv' in response.headers['Content-Type']:
+                    result['headers']={key:response.headers[key] for key in ('Content-Type','Content-Disposition')}
             responses.append(result)
             if capture and result['status'] < 300: ids[side][capture] = result['body']['data']['id']
         states = [state(0), state(1)]
@@ -254,6 +262,13 @@ try:
         else: raise AssertionError('fault injection did not run')
     assert state(0)==before
     local_checks.append('second payment write failure rolls back every payment and creates no audit')
+    from attendance_contracts import verify_attendance
+    attendance_start=len(results)
+    verify_attendance(call,db,schemas,ids,state,local_checks,client,tokens,port)
+    attendance_results=results[attendance_start:]
+    attendance_report=dict(contracts=4,comparisons=len(attendance_results),passed=sum(r['status']=='PASS' for r in attendance_results),
+        failed=sum(r['status']=='FAIL' for r in attendance_results),localChecks=[s for s in local_checks if s.startswith('Attendance:')],results=attendance_results)
+    (ROOT/'ATTENDANCE_PARITY_REPORT.json').write_text(json.dumps(attendance_report,indent=2)+'\n',encoding='utf-8')
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     from django.db import connections
@@ -279,7 +294,7 @@ try:
         rows=db.execute(sql.SQL('SELECT amount FROM {}."Payment" WHERE "studentId"=%s AND year=2026 AND month=9').format(sql.Identifier(schemas[side])),(ids[side]['student'],)).fetchall()
         assert len(rows)==1 and rows[0][0] in (100,200),rows
         local_checks.append(('Django' if side==0 else 'NestJS')+': concurrent same-cell upserts both succeed with one persisted row and a submitted amount')
-    summary = dict(contracts=27,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
+    summary = dict(contracts=31,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
     (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:

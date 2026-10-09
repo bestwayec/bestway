@@ -23,6 +23,8 @@ for pattern in urlpatterns:
             registered[(method.upper(), canonical('/v1/'+str(pattern.pattern)))] = pattern.callback.__module__
 foundation = ROOT/'FULL_FOUNDATION_PARITY_REPORT.json'
 foundation_verified = foundation.exists() and json.loads(foundation.read_text())['failed'] == 0
+attendance_report = ROOT/'ATTENDANCE_PARITY_REPORT.json'
+attendance_verified = attendance_report.exists() and json.loads(attendance_report.read_text())['failed'] == 0
 counts = dict(total=len(data['routes']), implemented=0, verified=0, missing=0, partial=0)
 lines = ['# Full NestJS to Django backend matrix', '',
     'Generated from all built controller metadata and actual source on 2026-10-09. Source remains read-only. Registration is reported separately from verified business behavior.', '',
@@ -42,6 +44,10 @@ for row in data['routes']:
         status = 'COMPLETE' if foundation_verified else 'PARTIAL'
         missing = 'Full runtime gate remains' if foundation_verified else 'Differential verification in progress'
         coverage = 'FULL_FOUNDATION_PARITY_REPORT.json' if foundation_verified else 'verify_full_foundation.py'
+    if implementation and (module == 'attendance' or row['path']=='/v1/stats/export/attendance'):
+        status='COMPLETE' if attendance_verified else 'PARTIAL'
+        missing='Full runtime gate remains' if attendance_verified else 'Attendance differential verification pending'
+        coverage='ATTENDANCE_PARITY_REPORT.json; test_attendance.py'
     if implementation and row['path'] in ('/v1/mock/groups/:groupId/audio','/v1/tests/questions/:id/audio'):
         status = 'APPROVED_DIFFERENCE'; missing = 'Attempt-bound policy retained'; coverage = 'Three explicitly approved media restrictions; Stage B report'
     row.update(django=implementation, migrationStatus=status, missingBehavior=missing, coverage=coverage)
@@ -57,9 +63,13 @@ lines += ['', '## Totals', '', f"Active HTTP: {counts['total']}; implemented: {c
 for item in data['services'] + data['guards']:
     module = item['source'].split('/')[1]
     complete = module in ('settings','audit','groups','articles','notifications','payments') and foundation_verified
+    complete = complete or (module == 'attendance' and attendance_verified)
     state = 'COMPLETE — foundation differential verified' if complete else 'PARTIAL — inspect remaining methods/dependencies' if module in ('auth','mock','tests','common','prisma') else 'MISSING — port source behavior'
+    if module=='stats' and item['name']=='ExportService' and attendance_verified:
+        state='PARTIAL — attendance CSV verified; students/payments exports pending'
     lines.append(f"| {item['name']} | backend/{item['source']} | {', '.join(item['tables']) or 'provider/helper'} | {state} |")
-lines += ['', '## Background jobs, startup recovery, events and WebSockets', '']
+lines += ['', '## Background jobs, startup recovery, events and WebSockets', '',
+    'Attendance inventory: 0 independent jobs, 0 event handlers, 0 WebSocket contracts. Parent absence delivery reuses the verified shared NotificationsService contract; there is no attendance reminder scheduler to port.', '']
 for job in data['jobs']:
     lines.append(f"- MISSING: `{job['name']}.{job['handler']}` {job['decorator']} — backend/{job['source']}; preserve durable row claims/retries or monthly archive/reset semantics.")
 lines += ['- MISSING: GameService.onModuleInit — recover missed monthly rollovers.',
@@ -84,7 +94,7 @@ for item in data['enums']:
     match = mapped_enum is not None and set(mapped_enum.values) == set(item['values'])
     lines.append(f"| enum {item['name']}: {', '.join(item['values'])} | apps.legacy_schema.models.{item['name']} | {'COMPLETE' if match else 'PARTIAL — compare exact values'} |")
 lines += ['', 'ParentStudent has a composite Prisma primary key represented by a read-only surrogate in Django; do not use unrestricted ORM writes on it. Existing linking uses exact-column SQL. No production migrations or table recreation are authorized.', '',
-    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications/payments: 27 contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Next port attendance (GET list/stats, PUT bulk), points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.']
+    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications/payments plus attendance and its CSV export: 31 newly ported contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. AttendanceService has no independent jobs/events. Next port GameService (3 routes, monthly rollover/archive, startup recovery, qualification), which PointsService depends on; then points (3), Telegram lifecycle, remaining user administration, content/media/statistics, legacy authoring and assessment. Resume from this matrix; do not repeat completed exam discovery.']
 data['summary'] = counts
 (ROOT/'FULL_BACKEND_INVENTORY.json').write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8')
 (ROOT.parent/'DJANGO_FULL_BACKEND_MATRIX.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')

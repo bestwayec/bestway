@@ -173,10 +173,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.attendance_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "ATTENDANCE_PARITY_REPORT.json; test_attendance.py"
     },
     {
       "module": "attendance",
@@ -192,10 +192,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.attendance_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "ATTENDANCE_PARITY_REPORT.json; test_attendance.py"
     },
     {
       "module": "attendance",
@@ -211,10 +211,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.attendance_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "ATTENDANCE_PARITY_REPORT.json; test_attendance.py"
     },
     {
       "module": "audit",
@@ -2158,10 +2158,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.attendance_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "ATTENDANCE_PARITY_REPORT.json; test_attendance.py"
     },
     {
       "module": "teachers",
@@ -3681,9 +3681,9 @@
   ],
   "summary": {
     "total": 173,
-    "implemented": 119,
-    "verified": 114,
-    "missing": 54,
+    "implemented": 123,
+    "verified": 118,
+    "missing": 50,
     "partial": 5
   }
 }

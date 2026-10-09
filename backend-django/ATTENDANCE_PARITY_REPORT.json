@@ -1,0 +1,1008 @@
+{
+  "contracts": 4,
+  "comparisons": 165,
+  "passed": 165,
+  "failed": 0,
+  "localChecks": [
+    "Attendance: failed second write rolls back entire batch, audit and parent notifications",
+    "Attendance: repeat absence preserves creation timestamp and emits no extra notifications in both APIs",
+    "Attendance: Django concurrent ('present', 'present') both succeed with one row; notifications=0",
+    "Attendance: Django concurrent ('absent', 'late') both succeed with one row; notifications=1",
+    "Attendance: Django concurrent ('absent', 'absent') both succeed with one row; notifications=0",
+    "Attendance: NestJS concurrent ('present', 'present') both succeed with one row; notifications=0",
+    "Attendance: NestJS concurrent ('absent', 'late') both succeed with one row; notifications=1",
+    "Attendance: NestJS concurrent ('absent', 'absent') both succeed with one row; notifications=0"
+  ],
+  "results": [
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{second}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:bad",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-13-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-00-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-32",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T00:30:00+05:00",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-31T23:59:00-05:00",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-09-30",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-11-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-02-31",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:20261009",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-W41-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-282",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01 12:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-04-31",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T24:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T25:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01\n",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01\r\n",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T12:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T12Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:+2026-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:-0001-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:\uff12\uff10\uff12\uff16-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "inactive-student-cannot-mark",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "inactive-history-retained",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "inactive-other-member-does-not-block",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "CSV-byte-and-header-contract",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU-name-order",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:\u00e9clair/Eagle",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:Alice/alice",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:Ali/\u0410\u043b\u0438",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:O'quvchi/\u00d6quvchi",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "attendance-history-membership-move",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "history-survives-membership-move",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "parent-group-filter-remains-ignored",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "former-member-cannot-mark-in-old-group",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "idempotent-absence-no-notification",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "forged-admin-claim-does-not-elevate-database-role",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "no-invented-receptionist-grant",
+      "status": "PASS"
+    }
+  ]
+}
