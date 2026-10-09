@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode, unquote
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -23,6 +24,8 @@ prefix = 'stage_a_diff_' + uuid4().hex
 schemas = [prefix + '_django', prefix + '_nest']
 created = []; server = None; results = []
 db = psycopg.connect(base, autocommit=True)
+media_fixture=tempfile.TemporaryDirectory(prefix='bestway-foundation-media-')
+media_roots=[str(Path(media_fixture.name)/side) for side in ('django','nest')]
 ids = [{}, {}]
 
 
@@ -33,7 +36,9 @@ def normalize(value):
         for side in ids:
             for label, identifier in side.items():
                 if value == identifier: return '<ID:'+label+'>'
+                if label.startswith('tg_token') and identifier in value:value=value.replace(identifier,'<ID:'+label+'>')
         value = re.sub(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', '<UUID>', value)
+        value=re.sub(r'(?<=\?v=)\d+', '<CACHE_TIME>', value)
         return re.sub(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+00:00)?', '<TIME>', value)
     return value
 
@@ -59,8 +64,10 @@ try:
                 (user_id, role, '+fixture'+str(index), 'unused', actual), prepare=False)
             if actual == 'student':
                 db.execute('INSERT INTO "StudentProfile" ("userId","linkCode","availablePrograms","activeProgram") VALUES (%s,%s,ARRAY[\'IELTS\']::"ExamProgram"[],\'IELTS\')', (user_id, 'link'+str(index)))
+            # Stable unique ordering fixtures, not timestamp-order normalization.
+            db.execute('UPDATE "User" SET "createdAt"=%s WHERE id=%s',(f'2020-01-{index+1:02d}',user_id))
         db.execute('INSERT INTO "ParentStudent" ("parentUserId","studentId") VALUES (%s,%s)', (ids[side]['parent'], ids[side]['student']))
-    os.environ.update(DATABASE_URL=schema_url(schemas[0]), JWT_SECRET='full-foundation-local-secret-no-production-2026', DJANGO_SETTINGS_MODULE='config.settings.local', ALLOWED_HOSTS='testserver,localhost,127.0.0.1')
+    os.environ.update(DATABASE_URL=schema_url(schemas[0]), JWT_SECRET='full-foundation-local-secret-no-production-2026', DJANGO_SETTINGS_MODULE='config.settings.local', ALLOWED_HOSTS='testserver,localhost,127.0.0.1',STORAGE_DIR=media_roots[0],STREAM_TOKEN_SECRET='isolated-local-stream-secret')
     import django
     django.setup()
     from rest_framework.test import APIClient
@@ -68,7 +75,8 @@ try:
     client = APIClient()
     tokens = [{role: issue_access(uid, role.removeprefix('other_')) for role, uid in side.items()} for side in ids]
     env = {k: v for k, v in os.environ.items() if not k.startswith(('TELEGRAM_', 'DEEPSEEK_', 'DEEPGRAM_'))}
-    env.update(DATABASE_URL=schema_url(schemas[1]), VERIFY_FULL_FOUNDATION='1')
+    env.update(DATABASE_URL=schema_url(schemas[1]), VERIFY_FULL_FOUNDATION='1',STORAGE_DIR=media_roots[1],
+        TELEGRAM_BOT_TOKEN='local-fixture-not-a-real-token',TELEGRAM_BOT_USERNAME='fixture_bot',TELEGRAM_MODE='off',TELEGRAM_WEBHOOK_SECRET='local-fixture-secret')
     env.pop('VERIFY_STAGE_B', None)
     server = subprocess.Popen(['node', str(ROOT/'scripts/nest_stage_a_server.cjs')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', env=env)
     line = server.stdout.readline()
@@ -83,16 +91,16 @@ try:
 
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance', 'MonthlyPointsArchive', 'PointsLog'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance', 'MonthlyPointsArchive', 'PointsLog','GalleryImage','Teacher','VideoLesson','VideoPurchase','Test','Question','TestAttempt','Answer','TelegramLinkToken'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
         return result
 
-    def call(method, path, payload=None, role='super_admin', label=None, capture=None):
+    def call(method, path, payload=None, role='super_admin', label=None, capture=None, files=None, capture_token=None):
         responses = []
         for side in (0, 1):
             def expand(value):
-                if isinstance(value, str) and re.fullmatch(r'\{\w+\}', value): return value.format(**ids[side])
+                if isinstance(value, str):return re.sub(r'\{(\w+)\}',lambda m:ids[side][m[1]],value)
                 if isinstance(value, list): return [expand(v) for v in value]
                 if isinstance(value, dict): return {k: expand(v) for k, v in value.items()}
                 return value
@@ -100,13 +108,24 @@ try:
             headers = {'Authorization': 'Bearer '+tokens[side][role]} if role else {}
             if side == 0:
                 client.credentials(**{'HTTP_AUTHORIZATION': headers['Authorization']} if role else {})
-                response = getattr(client, method.lower())(target, body or {}, format='json')
-                result = dict(status=response.status_code, body=json.loads(response.content) if 'application/json' in response['Content-Type'] else response.content.decode('utf-8'))
+                if files:
+                    from django.core.files.uploadedfile import SimpleUploadedFile
+                    upload={key:SimpleUploadedFile(name,raw,mime) for key,(name,raw,mime) in files.items()}
+                    response=getattr(client,method.lower())(target,dict(body or {},**upload),format='multipart')
+                else:response = getattr(client, method.lower())(target, body or {}, format='json')
+                raw=b''.join(response.streaming_content) if response.streaming else response.content
+                result = dict(status=response.status_code, body=json.loads(raw) if 'application/json' in response['Content-Type'] else raw.decode('utf-8'))
                 if 'text/csv' in response['Content-Type']:
                     result['headers']={key:response[key] for key in ('Content-Type','Content-Disposition')}
             else:
                 headers['Content-Type'] = 'application/json'
-                request = Request(f'http://127.0.0.1:{port}'+target, data=json.dumps(body).encode() if body is not None else None, headers=headers, method=method)
+                raw=json.dumps(body).encode() if body is not None else None
+                if files:
+                    boundary='fixture-'+uuid4().hex;parts=[]
+                    for key,value in (body or {}).items():parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
+                    for key,(name,value,mime) in files.items():parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"; filename="{name}"\r\nContent-Type: {mime}\r\n\r\n'.encode()+value+b'\r\n')
+                    parts.append(f'--{boundary}--\r\n'.encode());raw=b''.join(parts);headers['Content-Type']='multipart/form-data; boundary='+boundary
+                request = Request(f'http://127.0.0.1:{port}'+target, data=raw, headers=headers, method=method)
                 try: response = urlopen(request, timeout=20)
                 except HTTPError as error: response = error
                 raw=response.read()
@@ -114,7 +133,14 @@ try:
                 if 'text/csv' in response.headers['Content-Type']:
                     result['headers']={key:response.headers[key] for key in ('Content-Type','Content-Disposition')}
             responses.append(result)
-            if capture and result['status'] < 300: ids[side][capture] = result['body']['data']['id']
+            if capture_token and result['status']<300:
+                import hashlib
+                token=result['body']['data']['token'];ids[side][capture_token]=token
+                ids[side][capture_token+'_hash']=hashlib.sha256(token.encode()).hexdigest()
+            if capture and result['status'] < 300:
+                ids[side][capture] = result['body']['data']['id']
+                student=result['body']['data'].get('student')
+                if student and student.get('linkCode'): ids[side][capture+'_link']=student['linkCode']
         assert reference_control('drain')['ok']
         states = [state(0), state(1)]
         equal = normalize(responses[0]) == normalize(responses[1]) and states[0] == states[1]
@@ -283,7 +309,34 @@ try:
     game_report=dict(contracts=6,comparisons=len(game_results),passed=sum(r['status']=='PASS' for r in game_results),
         failed=sum(r['status']=='FAIL' for r in game_results),localChecks=[s for s in local_checks if s.startswith('Game/points:')],results=game_results)
     (ROOT/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
+    from remaining_admin_contracts import verify_admin
+    admin_start=len(results)
+    verify_admin(call)
+    admin_results=results[admin_start:]
+    (ROOT/'ADMIN_CONTENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=32,comparisons=len(admin_results),
+        passed=sum(r['status']=='PASS' for r in admin_results),failed=sum(r['status']=='FAIL' for r in admin_results),results=admin_results),indent=2)+'\n',encoding='utf-8')
     from concurrent.futures import ThreadPoolExecutor
+    from legacy_admin_contracts import verify_legacy
+    legacy_start=len(results)
+    verify_legacy(call)
+    legacy_results=results[legacy_start:]
+    (ROOT/'LEGACY_ADMIN_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=9,comparisons=len(legacy_results),
+        passed=sum(r['status']=='PASS' for r in legacy_results),failed=sum(r['status']=='FAIL' for r in legacy_results),results=legacy_results),indent=2)+'\n',encoding='utf-8')
+    from game_points_contracts import verify_concurrency
+    from telegram_contracts import verify_telegram
+    telegram_start=len(results)
+    verify_telegram(call,reference_control,normalize,local_checks)
+    telegram_results=results[telegram_start:]
+    (ROOT/'TELEGRAM_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(telegram_results),
+        passed=sum(r['status']=='PASS' for r in telegram_results),failed=sum(r['status']=='FAIL' for r in telegram_results),
+        localChecks=[s for s in local_checks if s.startswith('Telegram:')],results=telegram_results),indent=2)+'\n',encoding='utf-8')
+    from apps.core.game import period_key
+    current=period_key()
+    year,month=map(int,current.split('-'))
+    old=f'{year-1 if month==1 else year}-{12 if month==1 else month-1:02d}'
+    verify_concurrency(db,schemas,ids,tokens,port,local_checks,reference_control,current,old)
+    game_report['localChecks']=[s for s in local_checks if s.startswith('Game/points:')]
+    (ROOT/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
     from threading import Barrier
     from django.db import connections
     for side in (0,1):
@@ -308,7 +361,7 @@ try:
         rows=db.execute(sql.SQL('SELECT amount FROM {}."Payment" WHERE "studentId"=%s AND year=2026 AND month=9').format(sql.Identifier(schemas[side])),(ids[side]['student'],)).fetchall()
         assert len(rows)==1 and rows[0][0] in (100,200),rows
         local_checks.append(('Django' if side==0 else 'NestJS')+': concurrent same-cell upserts both succeed with one persisted row and a submitted amount')
-    summary = dict(contracts=37,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
+    summary = dict(contracts=82,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
     (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:
@@ -323,4 +376,5 @@ finally:
         db.execute(sql.SQL('DROP SCHEMA {} CASCADE').format(sql.Identifier(schema)))
     db.close()
     print('CLEANUP isolated_schemas_removed='+str(len(created)))
+    media_fixture.cleanup()
 sys.exit(1 if any(r['status']=='FAIL' for r in results) else 0)

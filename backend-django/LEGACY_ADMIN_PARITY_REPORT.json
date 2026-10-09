@@ -1,0 +1,542 @@
+{
+  "contracts": 9,
+  "comparisons": 89,
+  "passed": 89,
+  "failed": 0,
+  "results": [
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/{legacy_test}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    }
+  ]
+}

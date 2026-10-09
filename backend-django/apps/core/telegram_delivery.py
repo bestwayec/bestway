@@ -20,3 +20,26 @@ def call(method, payload=None):
 
 def send(chat_id,text):
     if chat_id:call('sendMessage',dict(chat_id=chat_id,text=text,parse_mode='HTML'))
+
+
+_username=None
+
+def username():
+    global _username
+    configured=os.environ.get('TELEGRAM_BOT_USERNAME')
+    if configured:return configured.replace('@','',1)
+    if _username:return _username
+    _username=(call('getMe') or {}).get('username')
+    return _username
+
+
+def plain(chat_id,text):
+    call('sendMessage',dict(chat_id=chat_id,text=text,parse_mode='HTML',reply_markup=dict(remove_keyboard=True)))
+
+
+def menu(chat_id,text,keyboard):
+    call('sendMessage',dict(chat_id=chat_id,text=text,parse_mode='HTML',reply_markup=keyboard))
+
+
+def contact_request(chat_id,text):
+    call('sendMessage',dict(chat_id=chat_id,text=text,reply_markup=dict(keyboard=[[dict(text='📱 Telefon raqamimni yuborish',request_contact=True)]],resize_keyboard=True,one_time_keyboard=True)))

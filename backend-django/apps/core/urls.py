@@ -6,7 +6,13 @@ from . import notification_views as notifications
 from . import payment_views as payments
 from . import attendance_views as attendance
 from . import game_points_views as game_points
+from . import content_views as content
+from . import user_admin
+from . import statistics_views as statistics
+from . import video_views as videos
+from . import telegram_views as telegram
 from . import legacy_test_views as legacy
+from . import legacy_authoring_views as legacy_admin
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
@@ -67,7 +73,12 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/extend',support.extend_view),
     path('mock/attempts/<str:attempt_id>/reopen',support.reopen_view),
     path('mock/attempts/<str:attempt_id>/certificate',support.certificate_view),
-    path('tests',legacy.list_view),
+    path('tests',legacy_admin.tests),
+    path('tests/questions/import/preview',legacy_admin.imports),
+    path('tests/questions/<str:question_id>',legacy_admin.question),
+    path('tests/attempts/<str:attempt_id>/grade',legacy_admin.grade),
+    path('tests/<str:test_id>/questions/import',legacy_admin.imports),
+    path('tests/<str:test_id>/questions',legacy_admin.question_create),
     path('tests/demo/list',legacy.demos_view),
     path('tests/demo/<str:test_id>/submit',legacy.demo_submit_view),
     path('tests/demo/<str:test_id>',legacy.demo_view),
@@ -79,9 +90,9 @@ urlpatterns = [
     path('tests/attempts/<str:attempt_id>/submit',legacy.submit_view),
     path('tests/attempts/<str:attempt_id>/certificate',legacy.certificate_view),
     path('tests/attempts/<str:attempt_id>',legacy.attempt_view),
-    path('tests/questions/<str:question_id>/audio',legacy.audio_view),
+    path('tests/questions/<str:question_id>/audio',legacy_admin.audio),
     path('tests/<str:test_id>/start',legacy.start_view),
-    path('tests/<str:test_id>',legacy.test_view),
+    path('tests/<str:test_id>',legacy_admin.test),
     path('mock/exams/<str:exam_id>/start', start_view),
     path('mock/attempts/mine', mine_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
@@ -131,5 +142,15 @@ urlpatterns = [
     path("mock/groups/<str:group_id>/questions", mock_group_questions_view),
     path("mock/groups/<str:group_id>/content", mock_group_content_view),
     path("mock/questions/<str:question_id>", mock_question_view),
-    path("users", users_view), path("users/<str:user_id>", user_detail_view),
+    path('gallery', content.cards), path('gallery/all', content.all_cards),
+    path('videos',videos.videos),path('videos/stream',videos.stream),path('videos/purchases',videos.purchases),
+    path('telegram/status',telegram.status),path('telegram/link-token',telegram.token),path('telegram/link',telegram.unlink),path('telegram/webhook',telegram.webhook),
+    path('videos/<str:identifier>/thumbnail',videos.thumbnail),path('videos/<str:identifier>/stream-url',videos.stream_url),
+    path('videos/<str:identifier>/purchase',videos.purchase),path('videos/<str:identifier>/confirm-purchase',videos.confirm),path('videos/<str:identifier>',videos.video),
+    path('stats/dashboard',statistics.dashboard),path('stats/income',statistics.income),path('stats/exam-activity',statistics.activity),
+    path('stats/export/students',statistics.export),path('stats/export/payments',statistics.export,{'payments':True}),
+    path('gallery/<str:identifier>/image', content.card_image), path('gallery/<str:identifier>', content.card),
+    path('teachers', content.cards, {'teacher':True}), path('teachers/all', content.all_cards, {'teacher':True}),
+    path('teachers/<str:identifier>/photo', content.card_image, {'teacher':True}), path('teachers/<str:identifier>', content.card, {'teacher':True}),
+    path("users", user_admin.users), path("users/<str:user_id>", user_admin.user),
 ]

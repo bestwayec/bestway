@@ -102,6 +102,34 @@ function firstMessage(errors) {
     values.set(ExportService,new ExportService(prisma));
     values.set(StatsService,new StatsService(prisma));
     const {GameService}=load('game/game.service.js');
+    const {GalleryService}=load('gallery/gallery.service.js');
+    const {TeachersService}=load('teachers/teachers.service.js');
+    const {UsersService}=load('users/users.service.js');
+    const {VideosService}=load('videos/videos.service.js');
+    const {StreamTokenService}=load('videos/stream-token.service.js');
+    values.set(VideosService,new VideosService(prisma,storage,new StreamTokenService(config),audit,config));
+    values.set(GalleryService,new GalleryService(prisma,storage,audit,config));
+    values.set(TeachersService,new TeachersService(prisma,storage,audit,config));
+    values.set(UsersService,new UsersService(prisma,audit,new AccessService(prisma),values.get(SettingsService)));
+    const {TestsService}=load('tests/tests.service.js');
+    const {GradingService}=load('tests/grading.service.js');
+    const {CertificateService}=load('tests/certificate.service.js');
+    values.set(TestsService,new TestsService(prisma,audit,programs));
+    values.set(GradingService,new GradingService(prisma,new AccessService(prisma),values.get(NotificationsService),programs));
+    values.set(CertificateService,new CertificateService(config));
+    const {TelegramService}=load('telegram/telegram.service.js');
+    const {TelegramLinkService}=load('telegram/telegram-link.service.js');
+    const {TelegramMenuService}=load('telegram/telegram-menu.service.js');
+    const {TelegramBotService}=load('telegram/telegram-bot.service.js');
+    const telegram=new TelegramService(config), deliveries=[];
+    // Real link/menu/bot services with a recording transport, never Telegram API.
+    telegram.call=async(method,payload)=>{deliveries.push({method,payload});return method==='getMe'?{username:'fixture_bot'}:true;};
+    const links=new TelegramLinkService(prisma,telegram,config,audit);
+    const menu=new TelegramMenuService(prisma,telegram);
+    const bot=new TelegramBotService(telegram,links,menu,prisma,config);
+    bot.onModuleInit=async()=>{};
+    values.set(TelegramService,telegram);values.set(TelegramLinkService,links);
+    values.set(TelegramMenuService,menu);values.set(TelegramBotService,bot);
     const {PointsService}=load('points/points.service.js');
     const game=new GameService(prisma,values.get(SettingsService),values.get(NotificationsService),audit);
     const startup=game.onModuleInit.bind(game);
@@ -125,6 +153,7 @@ function firstMessage(errors) {
       };
     }
     gameControl=async command=>{
+      if(command.action==='telegramDeliveries')return deliveries.splice(0);
       if(command.action==='notificationFailure') {failedNotificationType=command.type??null;return true;}
       if(command.action==='drain') {while(pending.size) await Promise.allSettled([...pending]);return true;}
       if(command.action==='rollover') return game.rolloverStale();
@@ -145,6 +174,10 @@ function firstMessage(errors) {
       load('stats/stats.controller.js').StatsController,
       load('game/game.controller.js').GameController,
       load('points/points.controller.js').PointsController);
+    controllers.push(load('gallery/gallery.controller.js').GalleryController,
+      load('teachers/teachers.controller.js').TeachersController,load('users/users.controller.js').UsersController,
+      load('videos/videos.controller.js').VideosController);
+    controllers.push(load('tests/tests.controller.js').TestsController,load('telegram/telegram.controller.js').TelegramController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);

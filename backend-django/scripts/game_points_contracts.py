@@ -156,7 +156,8 @@ def verify_game_points(call,db,schemas,ids,state,checks,control,tokens,port):
             db.execute(sql.SQL('INSERT INTO {}."PointsLog" (id,"studentId",change,reason,"byUserId","createdAt") VALUES (%s,%s,1,%s,%s,\'2000-01-01\'::timestamp+%s*interval \'1 second\')').format(sql.Identifier(schemas[side])),
                 (str(uuid4()),ids[side]['student'],'Legacy history '+str(index),None if index%2==0 else 'missing-staff',index))
     call('GET','/v1/points/{student}',label='history-100-cap-system-and-missing-author-names')
-    verify_concurrency(db,schemas,ids,tokens,port,checks,control,current,old)
+    # Cross-API request comparisons must finish before concurrent winner tests:
+    # their legitimate notification winner may differ between isolated APIs.
 
 
 def verify_concurrency(db,schemas,ids,tokens,port,checks,control,current,old):

@@ -2,6 +2,14 @@
 
 Verdict: NOT COMPLETE. No production access, deployment or merge performed.
 
+## Remaining-domain batch in progress
+
+2026-10-09: 40 previously missing HTTP routes are now implemented: gallery (6), teachers (6), videos (10), statistics (5), legacy administration (9), Telegram (4). Five user-administration contracts now use the reference DTOs and service behavior. Local Django regression: 189 tests and 91 subtests passed. Local PostgreSQL foundation differential: 1001/1001 comparisons, zero differences, across 82 scoped contracts. Administration/content: 290/290; legacy administration: 89/89; Telegram HTTP/token boundary: 19/19. Both disposable schemas were cleaned. Telegram delivery is recorded, not sent externally.
+
+The remaining four routes are mock teacher grading and three assessment contracts. Their durable worker/providers are being ported next. Legacy grading success/rollback, authenticated media ranges, complete Telegram bot linking/menu lifecycle, assessment worker recovery/concurrency and provider fixtures still require expanded verification. Registration and successful negative cases are not proof of full domain parity. The original counts below describe the previous checkpoint and will be superseded after the remaining gates finish.
+
+Concurrent game qualification can legitimately select different notification winners between APIs. Such tests now run after sequential differential comparisons, with their persisted invariants checked independently; no notification content is normalized to conceal differences. Frontend, Tauri, NestJS source and existing unrelated browser artifacts remain unchanged by this batch.
+
 Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 21 enums. Django implements 129 matching contracts; 124 have recorded scoped verification, 44 are missing and five user-administration contracts remain partial. Registration is not a global parity claim. Exact missing method/path rows are in `DJANGO_FULL_BACKEND_MATRIX.md`.
 
 ## Verified implementation checkpoints
