@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import bcrypt
+from common.auth.passwords import hash_password
 import re
 import uuid
 
@@ -114,7 +114,7 @@ def register_view(request):
         if cursor.fetchone():
             raise ContractAPIException("PHONE_TAKEN", "Bu telefon raqam allaqachon ro'yxatdan o'tgan", 409)
         user_id = str(uuid.uuid4())
-        password_hash = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt(rounds=12)).decode()
+        password_hash = hash_password(data["password"])
         cursor.execute('INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","createdAt","updatedAt") VALUES (%s,%s,%s,%s,%s,true,NOW(),NOW())', [user_id, data["name"], data["phone"], password_hash, data["role"]])
         if data["role"] == "student":
             points = auth_service.initial_points(cursor)
@@ -486,7 +486,7 @@ def users_view(request):
         if group_id:
             cursor.execute('SELECT 1 FROM "Group" WHERE "id"=%s', [group_id])
             if not cursor.fetchone(): raise ContractAPIException("GROUP_NOT_FOUND", "Guruh topilmadi", 404)
-        target = str(uuid.uuid4()); hashed = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt(rounds=12)).decode()
+        target = str(uuid.uuid4()); hashed = hash_password(data["password"])
         cursor.execute('INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","createdAt","updatedAt") VALUES (%s,%s,%s,%s,%s,true,NOW(),NOW())', [target, data["name"], data["phone"], hashed, data["role"]])
         if data["role"] == "student":
             points = auth_service.initial_points(cursor); link = auth_service.unique_link_code(cursor)
@@ -542,7 +542,7 @@ def user_detail_view(request, user_id):
         fields = {"name": "name", "phone": "phone", "role": "role", "isActive": "isActive", "telegramChatId": "telegramChatId"}
         for payload, column in fields.items():
             if payload in data: sets.append(f'"{column}"=%s'); values.append(data[payload])
-        if "password" in data: sets.append('"passwordHash"=%s'); values.append(bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt(rounds=12)).decode())
+        if "password" in data: sets.append('"passwordHash"=%s'); values.append(hash_password(data["password"]))
         if sets: cursor.execute('UPDATE "User" SET ' + ','.join(sets) + ',"updatedAt"=NOW() WHERE "id"=%s', values + [user_id])
-        auth_service.audit(cursor, request.user.id, "user.update", "user", user_id, new={**data, "passwordChanged": bool(data.get("password"))})
+        auth_service.audit(cursor, request.user.id, "user.update", "user", user_id, new={**{key: value for key, value in data.items() if key != "password"}, "passwordChanged": bool(data.get("password"))})
         return success(_user_detail(cursor, request.user, user_id))

@@ -12,7 +12,11 @@ def jwt_secret() -> str:
 def issue_access(user_id: str, role: str) -> str:
     return jwt.encode({"sub":user_id,"role":role,"iat":datetime.now(UTC),"exp":datetime.now(UTC)+timedelta(minutes=settings.JWT_ACCESS_TTL_MINUTES)}, jwt_secret(), algorithm="HS256")
 def decode_access(token: str) -> dict[str, object]:
-    try: return jwt.decode(token, jwt_secret(), algorithms=["HS256"])
+    try:
+        payload = jwt.decode(token, jwt_secret(), algorithms=["HS256"], options={"require": ["sub", "exp", "iat"]})
+        if not isinstance(payload["sub"], str) or not payload["sub"].strip():
+            raise jwt.InvalidTokenError("Token subject must be a nonempty string")
+        return payload
     except jwt.PyJWTError as exc: raise ContractAPIException("UNAUTHORIZED", "Token yaroqsiz yoki muddati tugagan", 401) from exc
 def base64url_random(byte_count: int) -> str:
     """Match Node's randomBytes(n).toString('base64url') exactly in shape."""

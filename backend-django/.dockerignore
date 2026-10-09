@@ -1,0 +1,11 @@
+.env*
+.venv/
+storage/
+evidence/
+tests/
+scripts/
+__pycache__/
+.pytest_cache/
+*.json
+*.png
+*.md

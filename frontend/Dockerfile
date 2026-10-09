@@ -2,7 +2,7 @@ FROM node:24.20.0-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 COPY . .
 # Build-time API_URL can be overridden; default will use runtime env (http://backend:3001/v1)
 ARG API_URL=http://backend:3001/v1

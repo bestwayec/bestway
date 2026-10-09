@@ -33,6 +33,13 @@ class EndpointContractTests(SimpleTestCase):
 
 
 class ExceptionEnvelopeTests(SimpleTestCase):
+    def test_throttle_preserves_retry_after_header(self):
+        from rest_framework.exceptions import Throttled
+        response = exception_handler(Throttled(wait=12), {})
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response['Retry-After'], '12')
+        self.assertEqual(response.data['error']['code'], 'TOO_MANY_REQUESTS')
+
     def test_contract_error_preserves_code_message_and_details(self):
         response = exception_handler(ContractAPIException("MOCK_NOT_READY", "not ready", 409, {"reason": "draft"}), {})
         self.assertEqual(response.status_code, 409)

@@ -1,5 +1,5 @@
 """User administration with source DTOs and exact non-atomic update boundaries."""
-import bcrypt
+from common.auth.passwords import hash_password
 import re
 from uuid import uuid4
 from django.db import connection, transaction
@@ -48,7 +48,7 @@ def create(actor,data):
     if data['role']=='admin' and actor.role!='super_admin': raise ContractAPIException('FORBIDDEN',"Admin qo'shish huquqi faqat super adminda",403)
     if User.objects.filter(phone=data['phone']).exists(): raise ContractAPIException('PHONE_TAKEN',"Bu telefon raqam allaqachon ro'yxatdan o'tgan",409)
     group_exists(data.get('groupId'))
-    hashed=bcrypt.hashpw(data['password'].encode(),bcrypt.gensalt(rounds=12)).decode()
+    hashed=hash_password(data['password'])
     initial=numeric_settings()['initialPoints']
     identifier=str(uuid4())
     with transaction.atomic():
@@ -79,7 +79,7 @@ def update(actor,identifier,data):
         values={column:data[key] for key,column in [('isApproved','is_approved'),('groupId','group_id')] if key in data}
         StudentProfile.objects.filter(user_id=identifier).update(**values)
     values={column:data[key] for key,column in [('name','name'),('phone','phone'),('role','role'),('isActive','is_active'),('telegramChatId','telegram_chat_id')] if key in data}
-    if data.get('password'): values['password_hash']=bcrypt.hashpw(data['password'].encode(),bcrypt.gensalt(rounds=12)).decode()
+    if data.get('password'): values['password_hash']=hash_password(data['password'])
     if values: User.objects.filter(id=identifier).update(**values,updated_at=timezone.now())
     new={key:(data[key] if data.get(key) is not None else old[key]) for key in old}
     if 'groupId' in data: new['groupId']=data['groupId']

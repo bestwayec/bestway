@@ -64,3 +64,11 @@ BESTWAY-production-deploy-EN.md
 INCIDENT_RESPONSE_REPORT_2026-09-28.md
 
 docker-compose.override.yml
+
+# Local probes and generated release verification artifacts
+/tmp/
+/tmpprobe*.py
+/backend-django/evidence/
+/backend-django/STAGE_B_CLIENT*.png
+/backend-django/STAGE_B_CLIENT_REPORT.json
+/DJANGO_ONLY_RELEASE_READINESS.md

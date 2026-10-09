@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import base64
-import bcrypt
 import hashlib
 import hmac
 import json
@@ -16,6 +15,7 @@ from django.utils import timezone
 
 from common.api.exceptions import ContractAPIException
 from common.auth.jwt import base64url_random, issue_access, new_family, new_refresh, token_hash
+from common.auth.passwords import verify_password
 
 DUMMY_HASH = b"$2a$10$S0DkiNylcFUhAIuwhOeOz.jS/i48bFSlu6E0mrcE/jVrZ9Ph9i6Zy"
 LINK_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -38,7 +38,7 @@ def fetch_user(*, phone: str | None = None, user_id: str | None = None):
 
 
 def verify(password: str, encoded: str) -> bool:
-    return bcrypt.checkpw(password.encode(), encoded.encode())
+    return verify_password(password, encoded)
 
 
 def initial_points(cursor) -> int:
@@ -86,10 +86,10 @@ def issue_tokens(user, *, family_id: str | None = None):
 def login(phone: str, password: str):
     user = fetch_user(phone=phone.strip())
     if not user:
-        bcrypt.checkpw(password.encode(), DUMMY_HASH)
+        verify_password(password, DUMMY_HASH)
         raise ContractAPIException("INVALID_CREDENTIALS", "Telefon raqam yoki parol noto'g'ri", 401)
     if not user[6]:
-        bcrypt.checkpw(password.encode(), user[5].encode())
+        verify_password(password, user[5])
         raise ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
     if not verify(password, user[5]):
         raise ContractAPIException("INVALID_CREDENTIALS", "Telefon raqam yoki parol noto'g'ri", 401)
@@ -97,17 +97,23 @@ def login(phone: str, password: str):
 
 
 def refresh(raw: str):
+    reused = False
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE', [token_hash(raw)])
         row = cursor.fetchone()
         if not row or row[3] < db_now() or not row[11]:
             raise ContractAPIException("INVALID_REFRESH_TOKEN", "Sessiya muddati tugagan — qaytadan kiring", 401)
         if row[4]:
-            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId"=%s', [row[1], row[2]])
-            raise ContractAPIException("SESSION_EXPIRED", "Sessiya xavfsizlik sababli bekor qilindi — qaytadan kiring", 401)
-        user = (row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
-        cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "id"=%s', [row[0]])
-        return issue_tokens(user, family_id=row[2] or new_family())
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId" IS NOT DISTINCT FROM %s', [row[1], row[2]])
+            reused = True
+        else:
+            user = (row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "id"=%s', [row[0]])
+            tokens = issue_tokens(user, family_id=row[2] or new_family())
+    # Raise after committing the family revocation; raising inside atomic rolls it back.
+    if reused:
+        raise ContractAPIException("SESSION_EXPIRED", "Sessiya xavfsizlik sababli bekor qilindi — qaytadan kiring", 401)
+    return tokens
 
 
 def verify_challenge(verifier: str, challenge: str) -> bool:
@@ -136,6 +142,7 @@ def authorize_desktop(user_id: str, *, device_id: str, state: str, challenge: st
 
 
 def exchange_desktop(code: str, verifier: str, device_id: str):
+    failure = None
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute('SELECT d."id",d."userId",d."codeChallenge",d."deviceId",d."expiresAt",d."usedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "DesktopAuthCode" d JOIN "User" u ON u."id"=d."userId" WHERE d."codeHash"=%s FOR UPDATE', [token_hash(code)])
         row = cursor.fetchone()
@@ -146,13 +153,18 @@ def exchange_desktop(code: str, verifier: str, device_id: str):
         if row[4] < db_now():
             raise ContractAPIException("DESKTOP_CODE_EXPIRED", "Desktop kodi muddati o‘tgan — qaytadan urinib ko‘ring", 401)
         cursor.execute('UPDATE "DesktopAuthCode" SET "usedAt"=NOW() WHERE "id"=%s', [row[0]])
-        if row[3] != device_id:
-            raise ContractAPIException("DEVICE_MISMATCH", "Kod boshqa qurilma uchun yaratilgan", 400)
-        if not verify_challenge(verifier, row[2]):
-            raise ContractAPIException("INVALID_VERIFIER", "Xavfsizlik tekshiruvi o‘tmadi", 401)
         user = (row[6], row[7], row[8], row[9], row[10], row[11], row[12], row[13])
-        if not user[6]:
-            raise ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
-        if user[3] != "student":
-            raise ContractAPIException("NOT_A_STUDENT", "Desktop ilova faqat o‘quvchilar uchun", 403)
-        return {"user": public(user), **issue_tokens(user)}
+        if row[3] != device_id:
+            failure = ContractAPIException("DEVICE_MISMATCH", "Kod boshqa qurilma uchun yaratilgan", 400)
+        elif not verify_challenge(verifier, row[2]):
+            failure = ContractAPIException("INVALID_VERIFIER", "Xavfsizlik tekshiruvi o‘tmadi", 401)
+        elif not user[6]:
+            failure = ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
+        elif user[3] != "student":
+            failure = ContractAPIException("NOT_A_STUDENT", "Desktop ilova faqat o‘quvchilar uchun", 403)
+        else:
+            result = {"user": public(user), **issue_tokens(user)}
+    # Failed exchanges consume the code too, matching the one-time Nest contract.
+    if failure is not None:
+        raise failure
+    return result

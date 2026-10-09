@@ -2,7 +2,7 @@
 import logging
 import math
 from uuid import uuid4
-from django.db import transaction, connection
+from django.db import transaction
 from django.db.models import Value, JSONField
 from django.utils import timezone
 from apps.legacy_schema.models import Setting, AuditLog
@@ -11,11 +11,6 @@ from .mock_scoring import parse_band_table, LISTENING, ACADEMIC, GENERAL
 DEFAULTS = dict(teacherPointLimit=20, initialPoints=100, monthlyFee=0, gameThreshold=150)
 BAND_KEYS = dict(listening='ieltsBandListening', readingAcademic='ieltsBandReadingAcademic', readingGeneral='ieltsBandReadingGeneral')
 BAND_DEFAULTS = dict(listening=LISTENING, readingAcademic=ACADEMIC, readingGeneral=GENERAL)
-_number_cache = {}
-
-
-def cache_key(key):
-    return (connection.settings_dict['NAME'], str(connection.settings_dict.get('OPTIONS')), key)
 
 
 def audit(actor, action, entity='setting', entity_id=None, old=None, new=None):
@@ -39,25 +34,19 @@ def set_value(key, value):
     # JSON null is a valid Prisma Json value; SQL NULL violates this table.
     stored = Value(None, output_field=JSONField()) if value is None else value
     Setting.objects.update_or_create(key=key, defaults={'value': stored})
-    if key in DEFAULTS:
-        token = cache_key(key)
-        transaction.on_commit(lambda: _number_cache.__setitem__(token, value))
 
 
 def numeric_settings():
     result = {}
+    # A process-local cache never invalidates in other Gunicorn/workers after an
+    # admin update. Read all four settings together, including uncommitted writes.
+    stored = dict(Setting.objects.filter(key__in=DEFAULTS).values_list('key', 'value'))
     for key, default in DEFAULTS.items():
-        token = cache_key(key)
-        if token in _number_cache:
-            result[key] = _number_cache[token]
-            continue
-        row = Setting.objects.filter(key=key).first()
-        raw = row.value if row else default
+        raw = stored.get(key, default)
         # JavaScript Number(null/boolean/empty string) contracts.
         try: number = float(raw or 0) if not isinstance(raw, (dict, list)) else float('nan')
         except (ValueError, TypeError): number = float('nan')
         result[key] = int(number) if math.isfinite(number) and number.is_integer() else number if math.isfinite(number) else None
-        _number_cache[token] = result[key]
     return result
 
 
