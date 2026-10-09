@@ -14,7 +14,8 @@ def verify_admin(call):
     for target,role in [('student','parent'),('other_student','parent'),('student','teacher'),('other_teacher','teacher'),('parent','parent'),('teacher','teacher')]:
         call('GET','/v1/users/{'+target+'}',role=role)
     base=dict(name='New student',phone='+998901110001',password='SafeLocalPassword!',role='student',groupId='{group}')
-    for key,value in [('name','x'),('name',None),('phone','bad'),('password','short'),('role','invalid'),('groupId',1),('unexpected',1)]:
+    call('POST','/v1/users',dict(base,name='😀'*51,phone='+998901110002',role='teacher'),label='unicode-codepoint-name-boundary')
+    for key,value in [('name','x'),('name',None),('phone','bad'),('password','short'),('password','😀'*73),('role','invalid'),('groupId',1),('unexpected',1)]:
         call('POST','/v1/users',dict(base,**{key:value}))
     call('POST','/v1/users',dict(base,role='super_admin'))
     call('POST','/v1/users',dict(base,role='admin'),role='admin')
@@ -31,7 +32,7 @@ def verify_admin(call):
     call('DELETE','/v1/users/{new_student}')
     call('GET','/v1/users/{new_student}')
     teacher=dict(name=' Teacher ',specialty=' IELTS ',bio=' Biography ',achievement='8.5',experienceYears='10',socialUrl='/teacher',sortOrder='2',isActive='false')
-    for key,value in [('name','x'),('name',None),('specialty',1),('socialUrl','javascript:bad'),('experienceYears',81),('sortOrder',-1),('extra',1)]:
+    for key,value in [('name','x'),('name',None),('name','😀'*61),('specialty',1),('socialUrl','javascript:bad'),('experienceYears',81),('sortOrder',-1),('extra',1)]:
         call('POST','/v1/teachers',dict(teacher,**{key:value}))
     call('POST','/v1/teachers',teacher,capture='teacher_card')
     call('GET','/v1/teachers');call('GET','/v1/teachers/all')
@@ -74,6 +75,11 @@ def verify_admin(call):
     call('POST','/v1/videos/{video}/confirm-purchase',{'userId':'{student}'})
     call('POST','/v1/videos/{video}/purchase',role='student')
     call('GET','/v1/videos/purchases?status=purchased')
+    call('GET','/v1/videos/{video}/stream-url',role='student',capture_stream='stream_token_student')
+    call('GET','/v1/videos/stream?token={stream_token_student}',role=None)
+    for range in ('bytes=0-3','bytes=3-','bytes=-3','bytes=1-100','bytes=99-','bytes=5-2','bytes=-0','garbage','bytes=0-1,3-4'):
+        call('GET','/v1/videos/stream?token={stream_token_student}',role=None,extra_headers={'Range':range},label='video-range:'+range)
+    call('GET','/v1/videos/stream?token=invalid',role=None)
     call('PATCH','/v1/videos/{video}',{'price':0,'isFreeForApproved':True})
     call('GET','/v1/videos',role='other_student')
     call('DELETE','/v1/videos/{video}')

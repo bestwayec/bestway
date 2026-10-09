@@ -4,16 +4,19 @@ import re
 from pathlib import Path
 from uuid import uuid4
 from django.http import FileResponse
+from django.conf import settings
 from django.utils import timezone
 from apps.legacy_schema.models import GalleryImage, Teacher
 from common.api.exceptions import ContractAPIException
 from .system_settings import audit
-from .domain_contracts import invalid
+from .domain_contracts import invalid,js_length
 from .game_points_views import js_number
 
 
 def storage_path(key):
-    base = Path(os.environ.get('STORAGE_DIR', './storage')).resolve()
+    base = Path(os.environ.get('STORAGE_DIR', settings.MEDIA_ROOT))
+    if not base.is_absolute():base=Path(settings.BASE_DIR).parent/'backend'/base
+    base=base.resolve()
     target = (base / key).resolve()
     if target != base and base not in target.parents:
         raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
@@ -68,8 +71,8 @@ def validate(data, teacher=False, update=False):
         value=data[key]
         if key in ('link','socialUrl') and (not isinstance(value,str) or not re.fullmatch(r'(https?://[^\s]+|/[^\s]*)',value)):
             invalid('Havola https:// bilan yoki / bilan boshlanishi kerak')
-        if not isinstance(value,str) or len(value)>maximum: invalid(f'{key} must be shorter than or equal to {maximum} characters')
-        if len(value)<minimum: invalid(f'{key} must be longer than or equal to {minimum} characters')
+        if not isinstance(value,str) or js_length(value)>maximum: invalid(f'{key} must be shorter than or equal to {maximum} characters')
+        if js_length(value)<minimum: invalid(f'{key} must be longer than or equal to {minimum} characters')
     for key in ('sortOrder','experienceYears'):
         if key not in out or out[key] is None: continue
         number=js_number(out[key])

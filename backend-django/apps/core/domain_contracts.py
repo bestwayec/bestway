@@ -9,6 +9,11 @@ def invalid(message):
     raise ContractAPIException('VALIDATION_ERROR', message, 400)
 
 
+def js_length(value):
+    """Match class-validator/validator.js isLength (Unicode code points)."""
+    return len(value)
+
+
 def payload(request, allowed):
     if not isinstance(request.data, dict): invalid('Validatsiya xatosi')
     for key in request.data:

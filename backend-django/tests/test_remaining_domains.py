@@ -7,9 +7,15 @@ from django.test import SimpleTestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from common.api.exceptions import ContractAPIException
 from apps.core import content_media,user_admin,video_views,videos,legacy_import_parser,telegram_bot,telegram_menu,telegram_delivery
+from apps.core.domain_contracts import js_length
 
 
 class ContentStorageTests(SimpleTestCase):
+    def test_nest_validator_lengths_count_unicode_code_points(self):
+        self.assertEqual(js_length('A😀'),2)
+        user_admin.validate(dict(name='😀'*51,phone='+998901234567',password='SafeLocalPassword!',role='student'))
+        with self.assertRaises(ContractAPIException):user_admin.validate(dict(name='Name',phone='+998901234567',password='😀'*73,role='student'))
+
     def test_storage_rejects_directory_escape(self):
         with TemporaryDirectory() as directory,patch.dict(os.environ,{'STORAGE_DIR':directory}):
             for key in ('../private','../../private'):

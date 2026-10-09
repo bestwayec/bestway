@@ -10,7 +10,7 @@ from common.auth.permissions import Authenticated
 from common.api.exceptions import ContractAPIException
 from apps.legacy_schema.models import User, StudentProfile, PointsLog, Group, RefreshToken
 from .views import require_role, _user_detail, ROLES
-from .domain_contracts import payload, pagination, paginated, invalid
+from .domain_contracts import payload, pagination, paginated, invalid,js_length
 from .mock_attempt_views import success
 from .system_settings import audit, numeric_settings
 from .auth_service import unique_link_code
@@ -20,8 +20,8 @@ def validate(data, update=False):
     for key,low,high in [('name',2,100),('password',8,72)]:
         if update and (key not in data or data[key] is None): continue
         value=data.get(key)
-        if not isinstance(value,str) or len(value)>high: invalid(f'{key} must be shorter than or equal to {high} characters')
-        if len(value)<low: invalid(f'{key} must be longer than or equal to {low} characters')
+        if not isinstance(value,str) or js_length(value)>high: invalid(f'{key} must be shorter than or equal to {high} characters')
+        if js_length(value)<low: invalid(f'{key} must be longer than or equal to {low} characters')
     if not update or ('phone' in data and data['phone'] is not None):
         if not isinstance(data.get('phone'),str) or not re.fullmatch(r'\+?[0-9]{9,15}',data['phone']):
             invalid("Telefon raqam formati noto'g'ri (masalan +998901234567)")

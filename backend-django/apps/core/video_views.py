@@ -5,9 +5,9 @@ from rest_framework.permissions import AllowAny
 from common.auth.permissions import Authenticated,roles
 from common.auth.authentication import OptionalMockJWTAuthentication
 from .views import require_authenticated,require_role
-from .domain_contracts import payload,pagination,paginated,invalid
+from .domain_contracts import payload,pagination,paginated,invalid,js_length
 from .game_points_views import js_number
-from .content_media import save_upload
+from .content_media import save_upload,delete_file
 from .mock_attempt_views import success
 from . import videos as service
 
@@ -16,8 +16,8 @@ def validate(data,update=False):
     for key,minimum,maximum in [('title',2,200),('description',0,2000)]:
         if (key not in data or data[key] is None) and (update or key=='description'):continue
         value=data.get(key)
-        if not isinstance(value,str) or len(value)>maximum:invalid(f'{key} must be shorter than or equal to {maximum} characters')
-        if len(value)<minimum:invalid(f'{key} must be longer than or equal to {minimum} characters')
+        if not isinstance(value,str) or js_length(value)>maximum:invalid(f'{key} must be shorter than or equal to {maximum} characters')
+        if js_length(value)<minimum:invalid(f'{key} must be longer than or equal to {minimum} characters')
     if not update or ('price' in data and data['price'] is not None):
         number=js_number(data.get('price'))
         if not number>=0:invalid('price must not be less than 0')
@@ -34,7 +34,12 @@ def videos(request):
     if request.method=='GET':return success(service.listing(request.user if request.user.is_authenticated else None))
     require_authenticated(request);require_role(request,'admin','super_admin')
     if any(k not in ('file','thumbnail') or len(request.FILES.getlist(k))>1 for k in request.FILES):service.fail('BAD_REQUEST','Unexpected field')
-    keys={key:save_upload(file,'videos' if key=='file' else 'thumbnails',int(os.environ.get('MAX_UPLOAD_MB','500'))*1024*1024) for key,file in request.FILES.items()}
+    keys={}
+    try:
+        for key,file in request.FILES.items():keys[key]=save_upload(file,'videos' if key=='file' else 'thumbnails',int(os.environ.get('MAX_UPLOAD_MB','500'))*1024*1024)
+    except Exception:
+        for key in keys.values():delete_file(key)
+        raise
     data={k:v for k,v in request.data.items() if k not in request.FILES}
     for key in data:
         if key not in {'title','description','price','isFreeForApproved'}:invalid(f'property {key} should not exist')
