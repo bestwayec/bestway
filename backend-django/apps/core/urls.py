@@ -5,6 +5,7 @@ from . import article_views as articles
 from . import notification_views as notifications
 from . import payment_views as payments
 from . import attendance_views as attendance
+from . import game_points_views as game_points
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
@@ -29,6 +30,12 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('game/roster', game_points.roster_view),
+    path('game/roster/export', game_points.export_view),
+    path('game/status', game_points.status_view),
+    path('points/leaderboard', game_points.leaderboard_view),
+    path('points/<str:student_id>', game_points.history_view),
+    path('points/<str:student_id>/adjust', game_points.adjust_view),
     path('attendance', attendance.list_view),
     path('attendance/stats', attendance.stats_view),
     path('attendance/bulk', attendance.bulk_view),
