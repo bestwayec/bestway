@@ -12,6 +12,15 @@ Assessment exposes an explicit `run_assessment_worker` command and bounded DeepS
 
 No frontend or Tauri source was changed in this route batch. Student browser evidence remains scoped to the prior report; staff/login/proxy browser gates have not completed, and native UI testing remains unverified. Preserve these as overall migration blockers rather than treating route parity as an end-to-end release gate.
 
+Commits for this batch:
+
+- `eeef996` — admin, content and media contracts
+- `9f20862` — legacy authoring and Telegram lifecycle
+- `f1aab87` — assessment grading, worker and providers
+- `cdefe56` — full route differential evidence and matrix
+
+Exact remaining blockers for an overall release verdict: complete staff browser E2E and resolve/test the `/login` redirect and transient proxy 502 independently; determine whether sufficient disk space and a local-compatible executable permit Tauri native UI testing; external DeepSeek/Deepgram credentialed smoke calls remain intentionally unrun. No deployment or production verification is authorized.
+
 The historical checkpoint notes below describe earlier verified states; the latest counts and evidence above supersede their “remaining route” and “in progress” statements. `DJANGO_FULL_BACKEND_MATRIX.md` contains the exact active route/status inventory.
 
 ## Verified implementation checkpoints
