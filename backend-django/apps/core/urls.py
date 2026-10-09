@@ -1,6 +1,8 @@
 from django.urls import path
 from . import system_views as system
 from . import group_views as groups
+from . import article_views as articles
+from . import notification_views as notifications
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
@@ -25,6 +27,12 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('articles', articles.articles_view),
+    path('articles/<str:article_id>', articles.article_view),
+    path('notifications', notifications.notifications_view),
+    path('notifications/broadcast', notifications.broadcast_view),
+    path('notifications/read-all', notifications.read_all_view),
+    path('notifications/<str:notification_id>/read', notifications.read_view),
     path('groups', groups.groups_view),
     path('groups/<str:group_id>', groups.group_view),
     path('groups/<str:group_id>/students', groups.add_student_view),

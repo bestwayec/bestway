@@ -74,7 +74,7 @@ try:
 
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
         return result
@@ -107,6 +107,8 @@ try:
         if not equal: row.update(django=normalize(responses[0]), nest=normalize(responses[1]), databaseDifferences={k:dict(django=states[0][k], nest=states[1][k]) for k in states[0] if states[0][k] != states[1][k]})
         results.append(row)
         print(json.dumps({k:row[k] for k in ('method','path','label','status')}), flush=True)
+        if not equal:
+            print('DIFFERENCE '+json.dumps(dict(django=normalize(responses[0]),nest=normalize(responses[1]),tables=list(row['databaseDifferences']))),flush=True)
         return responses
 
     routes = [('GET','/v1/settings'),('PATCH','/v1/settings',{}),('GET','/v1/settings/exam-program-policy'),('PUT','/v1/settings/exam-program-policy',{'accessPolicy':'SELF_SELECT'}),('GET','/v1/settings/ielts-bands'),('PUT','/v1/settings/ielts-bands',{}),('DELETE','/v1/settings/ielts-bands'),('GET','/v1/audit-logs')]
@@ -168,13 +170,52 @@ try:
         else: raise AssertionError('Rollback injection did not run')
     assert state(0)==before and system_settings.numeric_settings()==cache_before
     local_checks.append('failed multi-setting transaction rolls back database, audit and numeric cache')
-    summary = dict(contracts=14,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
+    for role in (None,'student','teacher','parent','admin','super_admin'):
+        call('GET','/v1/articles',role=role)
+        call('POST','/v1/articles',{'title':'Reference article','body':'At least ten characters','category':'news','tags':['English','tips']},role=role,capture='article' if role in ('admin','super_admin') else None)
+        call('POST','/v1/notifications/broadcast',{'audience':'all','text':'Welcome message'},role=role)
+        call('GET','/v1/notifications?unreadOnly=true',role=role)
+    call('GET','/v1/articles/{article}',role=None)
+    for query in ('?category=news&tag=English','?page=2&limit=1','?tag=missing','?unknown=true','?limit=0'):
+        call('GET','/v1/articles'+query,role=None)
+    for body in ({'title':'x'},{'body':'short'},{'category':'x'},{'tags':['good',3]},{'tags':'wrong'},{'unknown':True},{'title':None},{'tags':None},{}):
+        call('PATCH','/v1/articles/{article}',body)
+    for role in ('student','teacher','parent',None):
+        call('PATCH','/v1/articles/{article}',{'title':'Forbidden change'},role=role)
+        call('DELETE','/v1/articles/{article}',role=role)
+    call('PATCH','/v1/articles/{article}',{'title':'Revised article','tags':[]})
+    call('DELETE','/v1/articles/{article}')
+    call('GET','/v1/articles/{article}',role=None)
+    call('GET','/v1/articles/missing',role=None)
+    for body in ({'audience':'role','text':'Role required'},{'audience':'group','text':'Group required'},
+                 {'audience':'role','role':'student','text':'Student announcement'},
+                 {'audience':'group','groupId':'{second}','includeParents':True,'text':'Family announcement'},
+                 {'audience':'group','groupId':'missing','text':'Empty audience'},
+                 {'audience':'debtors','includeParents':True,'text':'Payment reminder'},
+                 {'audience':'all','text':'xx'},{'audience':'bad','text':'Unknown audience'},
+                 {'audience':'all','includeParents':'true','text':'Invalid boolean'},
+                 {'audience':'role','role':'bad','text':'Invalid role'}):
+        call('POST','/v1/notifications/broadcast',body)
+    for query in ('?unreadOnly=1','?unreadOnly=false','?unreadOnly=anything','?type=announcement','?type=bad','?page=2&limit=1'):
+        call('GET','/v1/notifications'+query,role='student')
+    for side in (0,1):
+        row=db.execute(sql.SQL('SELECT id FROM {}."Notification" WHERE "userId"=%s ORDER BY "createdAt" DESC LIMIT 1').format(sql.Identifier(schemas[side])),(ids[side]['student'],)).fetchone()
+        ids[side]['notification']=row[0] if row else 'missing-fixture'
+    call('PATCH','/v1/notifications/{notification}/read',role='parent',label='cross-user-notification-IDOR')
+    call('PATCH','/v1/notifications/{notification}/read',role='student')
+    call('PATCH','/v1/notifications/{notification}/read',role='student',label='idempotent-mark-read')
+    call('PATCH','/v1/notifications/read-all',role='student')
+    call('PATCH','/v1/notifications/read-all',role='student',label='idempotent-read-all')
+    call('GET','/v1/notifications?unreadOnly=true',role='student')
+    call('PATCH','/v1/notifications/missing/read',role='student')
+    summary = dict(contracts=23,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
     (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:
     if server:
         if server.poll() is None:
-            server.stdin.write('stop\n');server.stdin.flush()
+            try: server.stdin.write('stop\n');server.stdin.flush()
+            except (OSError, BrokenPipeError): pass
             try: server.wait(timeout=10)
             except subprocess.TimeoutExpired: server.terminate();server.wait(timeout=10)
     for schema in created:

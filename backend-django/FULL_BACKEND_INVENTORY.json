@@ -40,10 +40,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.article_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "articles",
@@ -55,10 +55,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.article_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "articles",
@@ -73,10 +73,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.article_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "articles",
@@ -91,10 +91,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.article_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "articles",
@@ -109,10 +109,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.article_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "assessment",
@@ -1750,10 +1750,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.notification_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "notifications",
@@ -1768,10 +1768,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.notification_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "notifications",
@@ -1783,10 +1783,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.notification_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "notifications",
@@ -1798,10 +1798,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.notification_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Full runtime gate remains",
+      "coverage": "FULL_FOUNDATION_PARITY_REPORT.json"
     },
     {
       "module": "payments",
@@ -3681,9 +3681,9 @@
   ],
   "summary": {
     "total": 173,
-    "implemented": 106,
-    "verified": 101,
-    "missing": 67,
+    "implemented": 115,
+    "verified": 110,
+    "missing": 58,
     "partial": 5
   }
 }

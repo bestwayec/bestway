@@ -84,14 +84,20 @@ function firstMessage(errors) {
     const {SettingsService} = load('settings/settings.service.js');
     const {GroupsService} = load('groups/groups.service.js');
     const {AccessService} = load('common/access.service.js');
+    const {ArticlesService} = load('articles/articles.service.js');
+    const {NotificationsService} = load('notifications/notifications.service.js');
     values.set(PrismaService, prisma);
     values.set(AuditService, audit);
     values.set(SettingsService, new SettingsService(prisma));
     values.set(GroupsService, new GroupsService(prisma, audit, new AccessService(prisma)));
+    values.set(ArticlesService, new ArticlesService(prisma, audit));
+    values.set(NotificationsService, new NotificationsService(prisma, {send:async()=>{}}));
     controllers.splice(0, controllers.length,
       load('settings/settings.controller.js').SettingsController,
       load('audit/audit.controller.js').AuditController,
-      load('groups/groups.controller.js').GroupsController);
+      load('groups/groups.controller.js').GroupsController,
+      load('articles/articles.controller.js').ArticlesController,
+      load('notifications/notifications.controller.js').NotificationsController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);

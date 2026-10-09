@@ -8,11 +8,11 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 |---|---|---|---|---|---|---|
 | app.controller.ts / AppController.health | `GET /v1/health`; public; roles=any; 200 | apps.core.views | see source dependencies | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
 | app.controller.ts / AppController.desktopVersion | `GET /v1/desktop-version`; public; roles=any; 200 | apps.core.views | see source dependencies | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
-| articles / ArticlesController.list | `GET /v1/articles`; public; roles=any; 200 | — | article | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| articles / ArticlesController.getOne | `GET /v1/articles/:id`; public; roles=any; 200 | — | article | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| articles / ArticlesController.create | `POST /v1/articles`; JWT; roles=admin,super_admin; 201 | — | article | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| articles / ArticlesController.update | `PATCH /v1/articles/:id`; JWT; roles=admin,super_admin; 200 | — | article | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| articles / ArticlesController.remove | `DELETE /v1/articles/:id`; JWT; roles=admin,super_admin; 200 | — | article | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| articles / ArticlesController.list | `GET /v1/articles`; public; roles=any; 200 | apps.core.article_views | article | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| articles / ArticlesController.getOne | `GET /v1/articles/:id`; public; roles=any; 200 | apps.core.article_views | article | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| articles / ArticlesController.create | `POST /v1/articles`; JWT; roles=admin,super_admin; 201 | apps.core.article_views | article | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| articles / ArticlesController.update | `PATCH /v1/articles/:id`; JWT; roles=admin,super_admin; 200 | apps.core.article_views | article | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| articles / ArticlesController.remove | `DELETE /v1/articles/:id`; JWT; roles=admin,super_admin; 200 | apps.core.article_views | article | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | assessment / AssessmentController.get | `GET /v1/assessment/attempts/:attemptId`; JWT; roles=any; 200 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | assessment / AssessmentController.review | `POST /v1/assessment/jobs/:jobId/review`; JWT; roles=teacher,admin,super_admin; 201 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | assessment / AssessmentController.audio | `GET /v1/assessment/jobs/:jobId/audio/:questionId`; JWT; roles=any; 200 | — | assessmentJob, mockAttempt | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
@@ -106,10 +106,10 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | mock / MockController.confirmPurchase | `POST /v1/mock/exams/:id/confirm-purchase`; JWT; roles=admin,super_admin; 201 | apps.core.mock_support_views | mockAnswer, mockAttempt, mockCheatEvent, mockExam, mockExamImport, mockImportReviewIssue, mockImportSourceMap, mockPurchase, mockQuestion, mockQuestionGroup, mockSection, mockStagedMedia, studentProfile | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
 | mock / MockController.rejectPurchase | `POST /v1/mock/exams/:id/reject-purchase`; JWT; roles=admin,super_admin; 201 | apps.core.mock_support_views | mockAnswer, mockAttempt, mockCheatEvent, mockExam, mockExamImport, mockImportReviewIssue, mockImportSourceMap, mockPurchase, mockQuestion, mockQuestionGroup, mockSection, mockStagedMedia, studentProfile | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
 | mock / MockController.start | `POST /v1/mock/exams/:id/start`; JWT; roles=student; 201 | apps.core.mock_attempt_views | mockAnswer, mockAttempt, mockCheatEvent, mockExam, mockExamImport, mockImportReviewIssue, mockImportSourceMap, mockPurchase, mockQuestion, mockQuestionGroup, mockSection, mockStagedMedia, studentProfile | COMPLETE | Global runtime/worker/provider gates tracked separately | Existing Phase 1–3 / Stage A–B scoped parity evidence |
-| notifications / NotificationsController.list | `GET /v1/notifications`; JWT; roles=any; 200 | — | notification, parentStudent, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| notifications / NotificationsController.broadcast | `POST /v1/notifications/broadcast`; JWT; roles=admin,super_admin; 200 | — | notification, parentStudent, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| notifications / NotificationsController.markAllRead | `PATCH /v1/notifications/read-all`; JWT; roles=any; 200 | — | notification, parentStudent, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| notifications / NotificationsController.markRead | `PATCH /v1/notifications/:id/read`; JWT; roles=any; 200 | — | notification, parentStudent, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| notifications / NotificationsController.list | `GET /v1/notifications`; JWT; roles=any; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| notifications / NotificationsController.broadcast | `POST /v1/notifications/broadcast`; JWT; roles=admin,super_admin; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| notifications / NotificationsController.markAllRead | `PATCH /v1/notifications/read-all`; JWT; roles=any; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| notifications / NotificationsController.markRead | `PATCH /v1/notifications/:id/read`; JWT; roles=any; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | payments / PaymentsController.list | `GET /v1/payments`; JWT; roles=admin,super_admin,parent,student,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | payments / PaymentsController.debtors | `GET /v1/payments/debtors`; JWT; roles=admin,super_admin,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | payments / PaymentsController.bulk | `PUT /v1/payments/bulk`; JWT; roles=admin,super_admin,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
@@ -182,7 +182,7 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 
 ## Totals
 
-Active HTTP: 173; implemented: 106; verified within recorded scope: 101; missing: 67; partial: 5.
+Active HTTP: 173; implemented: 115; verified within recorded scope: 110; missing: 58; partial: 5.
 
 Verified counts refer to recorded scopes. Full global throttling, external delivery, worker execution and complete Django-only clients remain separate required gates. New domains are never marked complete from URL registration alone.
 
@@ -190,7 +190,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 
 | Source class | Source file | Tables | Django status / requirement |
 |---|---|---|---|
-| ArticlesService | backend/src/articles/articles.service.ts | article | MISSING — port source behavior |
+| ArticlesService | backend/src/articles/articles.service.ts | article | COMPLETE — foundation differential verified |
 | AssessmentService | backend/src/assessment/assessment.service.ts | mockAttempt, assessmentJob | MISSING — port source behavior |
 | AttendanceService | backend/src/attendance/attendance.service.ts | attendance, studentProfile, user | MISSING — port source behavior |
 | AuditService | backend/src/audit/audit.service.ts | auditLog | COMPLETE — foundation differential verified |
@@ -206,7 +206,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | MockCertificateService | backend/src/mock/mock-certificate.service.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
 | MockExamImportService | backend/src/mock/mock-exam-import.service.ts | mockStagedMedia, mockExamImport, mockExam, mockImportReviewIssue, mockImportSourceMap | PARTIAL — inspect remaining methods/dependencies |
 | MockGradingService | backend/src/mock/mock-grading.service.ts | mockAttempt, studentProfile, mockAnswer, mockCheatEvent, mockQuestion | PARTIAL — inspect remaining methods/dependencies |
-| NotificationsService | backend/src/notifications/notifications.service.ts | notification, user, parentStudent, studentProfile | MISSING — port source behavior |
+| NotificationsService | backend/src/notifications/notifications.service.ts | notification, user, parentStudent, studentProfile | COMPLETE — foundation differential verified |
 | PaymentsService | backend/src/payments/payments.service.ts | payment, studentProfile | MISSING — port source behavior |
 | PointsService | backend/src/points/points.service.ts | studentProfile, pointsLog, user | MISSING — port source behavior |
 | PrismaService | backend/src/prisma/prisma.service.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
@@ -244,7 +244,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 |---|---|---|
 | DeepSeek Responses / primary and adjudicator | backend/src/assessment/deepseek.provider.ts | MISSING: HTTP payload, bounded configuration, strict rubric result validation, call ledger and failures |
 | Deepgram transcription | backend/src/assessment/deepgram.provider.ts | MISSING: audio/mime/hash contract, transcript reuse, confidence and failure handling |
-| Telegram Bot API, polling/webhook, menus and linking | backend/src/telegram/ | MISSING: actual notifications, updates and account-link security |
+| Telegram Bot API, polling/webhook, menus and linking | backend/src/telegram/ | PARTIAL: real sendMessage delivery with disabled/provider-failure tests; polling, updates, menus and linking pending; no live provider gate claimed |
 | Local storage and signed video streams | backend/src/videos/ | PARTIAL: exam media works; protected video tokens/ranges, gallery/teacher uploads pending |
 | PDF certificates and CSV exports | backend/src/tests/, mock/, stats/, game/ | PARTIAL: exam PDFs verified; statistics/game exports pending |
 
@@ -317,4 +317,4 @@ ParentStudent has a composite Prisma primary key represented by a read-only surr
 
 ## Next implementation checkpoint
 
-Finish and commit settings/audit/groups after strict differential checks. Then port attendance, payment and points/game dependencies, notifications/Telegram, remaining user administration, content/media/statistics, legacy authoring and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.
+Settings/audit/groups/articles/notifications: 23 contracts, 241 strict PostgreSQL comparisons passed. Next port payments (GET list/debtors, PUT bulk, POST remind), attendance and points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.

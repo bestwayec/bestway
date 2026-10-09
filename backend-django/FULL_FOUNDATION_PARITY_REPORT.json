@@ -1,7 +1,7 @@
 {
-  "contracts": 14,
-  "comparisons": 167,
-  "passed": 167,
+  "contracts": 23,
+  "comparisons": 241,
+  "passed": 241,
   "failed": 0,
   "localChecks": [
     "both APIs preserve exact original group creation time",
@@ -1008,6 +1008,450 @@
       "method": "GET",
       "path": "/v1/audit-logs?entity=group",
       "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?category=news&tag=English",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?page=2&limit=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?tag=missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?unknown=true",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?limit=0",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=1",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=false",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=anything",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?type=announcement",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?type=bad",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?page=2&limit=1",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "cross-user-notification-IDOR",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "idempotent-mark-read",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/read-all",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/read-all",
+      "label": "idempotent-read-all",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/missing/read",
+      "label": "student",
       "status": "PASS"
     }
   ]
