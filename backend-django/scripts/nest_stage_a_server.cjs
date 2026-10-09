@@ -92,12 +92,15 @@ function firstMessage(errors) {
     values.set(GroupsService, new GroupsService(prisma, audit, new AccessService(prisma)));
     values.set(ArticlesService, new ArticlesService(prisma, audit));
     values.set(NotificationsService, new NotificationsService(prisma, {send:async()=>{}}));
+    const {PaymentsService}=load('payments/payments.service.js');
+    values.set(PaymentsService, new PaymentsService(prisma,new AccessService(prisma),audit,values.get(NotificationsService)));
     controllers.splice(0, controllers.length,
       load('settings/settings.controller.js').SettingsController,
       load('audit/audit.controller.js').AuditController,
       load('groups/groups.controller.js').GroupsController,
       load('articles/articles.controller.js').ArticlesController,
-      load('notifications/notifications.controller.js').NotificationsController);
+      load('notifications/notifications.controller.js').NotificationsController,
+      load('payments/payments.controller.js').PaymentsController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);

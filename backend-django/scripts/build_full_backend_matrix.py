@@ -38,7 +38,7 @@ for row in data['routes']:
     coverage = 'None' if not implementation else 'Existing scoped tests; full-domain audit pending'
     if implementation and module in ('mock','tests','auth','common','app.controller.ts'):
         status = 'COMPLETE'; missing = 'Global runtime/worker/provider gates tracked separately'; coverage = 'Existing Phase 1–3 / Stage A–B scoped parity evidence'
-    if implementation and module in ('groups','settings','audit','articles','notifications'):
+    if implementation and module in ('groups','settings','audit','articles','notifications','payments'):
         status = 'COMPLETE' if foundation_verified else 'PARTIAL'
         missing = 'Full runtime gate remains' if foundation_verified else 'Differential verification in progress'
         coverage = 'FULL_FOUNDATION_PARITY_REPORT.json' if foundation_verified else 'verify_full_foundation.py'
@@ -56,7 +56,7 @@ lines += ['', '## Totals', '', f"Active HTTP: {counts['total']}; implemented: {c
     '| Source class | Source file | Tables | Django status / requirement |', '|---|---|---|---|']
 for item in data['services'] + data['guards']:
     module = item['source'].split('/')[1]
-    complete = module in ('settings','audit','groups','articles','notifications') and foundation_verified
+    complete = module in ('settings','audit','groups','articles','notifications','payments') and foundation_verified
     state = 'COMPLETE — foundation differential verified' if complete else 'PARTIAL — inspect remaining methods/dependencies' if module in ('auth','mock','tests','common','prisma') else 'MISSING — port source behavior'
     lines.append(f"| {item['name']} | backend/{item['source']} | {', '.join(item['tables']) or 'provider/helper'} | {state} |")
 lines += ['', '## Background jobs, startup recovery, events and WebSockets', '']
@@ -84,7 +84,7 @@ for item in data['enums']:
     match = mapped_enum is not None and set(mapped_enum.values) == set(item['values'])
     lines.append(f"| enum {item['name']}: {', '.join(item['values'])} | apps.legacy_schema.models.{item['name']} | {'COMPLETE' if match else 'PARTIAL — compare exact values'} |")
 lines += ['', 'ParentStudent has a composite Prisma primary key represented by a read-only surrogate in Django; do not use unrestricted ORM writes on it. Existing linking uses exact-column SQL. No production migrations or table recreation are authorized.', '',
-    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications: 23 contracts, 241 strict PostgreSQL comparisons passed. Next port payments (GET list/debtors, PUT bulk, POST remind), attendance and points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.']
+    '## Next implementation checkpoint', '', 'Settings/audit/groups/articles/notifications/payments: 27 contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Next port attendance (GET list/stats, PUT bulk), points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.']
 data['summary'] = counts
 (ROOT/'FULL_BACKEND_INVENTORY.json').write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8')
 (ROOT.parent/'DJANGO_FULL_BACKEND_MATRIX.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')

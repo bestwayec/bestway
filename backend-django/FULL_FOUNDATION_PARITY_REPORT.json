@@ -1,11 +1,14 @@
 {
-  "contracts": 23,
-  "comparisons": 241,
-  "passed": 241,
+  "contracts": 27,
+  "comparisons": 296,
+  "passed": 296,
   "failed": 0,
   "localChecks": [
     "both APIs preserve exact original group creation time",
-    "failed multi-setting transaction rolls back database, audit and numeric cache"
+    "failed multi-setting transaction rolls back database, audit and numeric cache",
+    "second payment write failure rolls back every payment and creates no audit",
+    "Django: concurrent same-cell upserts both succeed with one persisted row and a submitted amount",
+    "NestJS: concurrent same-cell upserts both succeed with one persisted row and a submitted amount"
   ],
   "results": [
     {
@@ -1452,6 +1455,336 @@
       "method": "PATCH",
       "path": "/v1/notifications/missing/read",
       "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?state=empty",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2026&month=10&state=unpaid",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "blocked-student-payment",
       "status": "PASS"
     }
   ]

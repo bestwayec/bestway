@@ -3,6 +3,7 @@ from . import system_views as system
 from . import group_views as groups
 from . import article_views as articles
 from . import notification_views as notifications
+from . import payment_views as payments
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
@@ -27,6 +28,10 @@ from .views import (desktop_authorize_view, desktop_exchange_view, desktop_versi
 
 
 urlpatterns = [
+    path('payments', payments.list_view),
+    path('payments/debtors', payments.debtors_view),
+    path('payments/bulk', payments.bulk_view),
+    path('payments/remind', payments.remind_view),
     path('articles', articles.articles_view),
     path('articles/<str:article_id>', articles.article_view),
     path('notifications', notifications.notifications_view),

@@ -110,10 +110,10 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 | notifications / NotificationsController.broadcast | `POST /v1/notifications/broadcast`; JWT; roles=admin,super_admin; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | notifications / NotificationsController.markAllRead | `PATCH /v1/notifications/read-all`; JWT; roles=any; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | notifications / NotificationsController.markRead | `PATCH /v1/notifications/:id/read`; JWT; roles=any; 200 | apps.core.notification_views | notification, parentStudent, studentProfile, user | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
-| payments / PaymentsController.list | `GET /v1/payments`; JWT; roles=admin,super_admin,parent,student,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| payments / PaymentsController.debtors | `GET /v1/payments/debtors`; JWT; roles=admin,super_admin,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| payments / PaymentsController.bulk | `PUT /v1/payments/bulk`; JWT; roles=admin,super_admin,teacher; 200 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
-| payments / PaymentsController.remind | `POST /v1/payments/remind`; JWT; roles=admin,super_admin,teacher; 201 | — | payment, studentProfile | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
+| payments / PaymentsController.list | `GET /v1/payments`; JWT; roles=admin,super_admin,parent,student,teacher; 200 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| payments / PaymentsController.debtors | `GET /v1/payments/debtors`; JWT; roles=admin,super_admin,teacher; 200 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| payments / PaymentsController.bulk | `PUT /v1/payments/bulk`; JWT; roles=admin,super_admin,teacher; 200 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
+| payments / PaymentsController.remind | `POST /v1/payments/remind`; JWT; roles=admin,super_admin,teacher; 201 | apps.core.payment_views | payment, studentProfile | COMPLETE | Full runtime gate remains | FULL_FOUNDATION_PARITY_REPORT.json |
 | points / PointsController.leaderboard | `GET /v1/points/leaderboard`; public; roles=any; 200 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | points / PointsController.getPoints | `GET /v1/points/:studentId`; JWT; roles=any; 200 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
 | points / PointsController.adjust | `POST /v1/points/:studentId/adjust`; JWT; roles=teacher,admin,super_admin; 201 | — | pointsLog, studentProfile, user | MISSING | Implement controller/service/DTO and differential PostgreSQL checks | None |
@@ -182,7 +182,7 @@ Existing exam evidence: Stage A 279/279; Stage B 713/716 with three approved att
 
 ## Totals
 
-Active HTTP: 173; implemented: 115; verified within recorded scope: 110; missing: 58; partial: 5.
+Active HTTP: 173; implemented: 119; verified within recorded scope: 114; missing: 54; partial: 5.
 
 Verified counts refer to recorded scopes. Full global throttling, external delivery, worker execution and complete Django-only clients remain separate required gates. New domains are never marked complete from URL registration alone.
 
@@ -207,7 +207,7 @@ Verified counts refer to recorded scopes. Full global throttling, external deliv
 | MockExamImportService | backend/src/mock/mock-exam-import.service.ts | mockStagedMedia, mockExamImport, mockExam, mockImportReviewIssue, mockImportSourceMap | PARTIAL — inspect remaining methods/dependencies |
 | MockGradingService | backend/src/mock/mock-grading.service.ts | mockAttempt, studentProfile, mockAnswer, mockCheatEvent, mockQuestion | PARTIAL — inspect remaining methods/dependencies |
 | NotificationsService | backend/src/notifications/notifications.service.ts | notification, user, parentStudent, studentProfile | COMPLETE — foundation differential verified |
-| PaymentsService | backend/src/payments/payments.service.ts | payment, studentProfile | MISSING — port source behavior |
+| PaymentsService | backend/src/payments/payments.service.ts | payment, studentProfile | COMPLETE — foundation differential verified |
 | PointsService | backend/src/points/points.service.ts | studentProfile, pointsLog, user | MISSING — port source behavior |
 | PrismaService | backend/src/prisma/prisma.service.ts | provider/helper | PARTIAL — inspect remaining methods/dependencies |
 | SettingsService | backend/src/settings/settings.service.ts | setting | COMPLETE — foundation differential verified |
@@ -317,4 +317,4 @@ ParentStudent has a composite Prisma primary key represented by a read-only surr
 
 ## Next implementation checkpoint
 
-Settings/audit/groups/articles/notifications: 23 contracts, 241 strict PostgreSQL comparisons passed. Next port payments (GET list/debtors, PUT bulk, POST remind), attendance and points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.
+Settings/audit/groups/articles/notifications/payments: 27 contracts verified in FULL_FOUNDATION_PARITY_REPORT.json. Next port attendance (GET list/stats, PUT bulk), points/game dependencies, Telegram lifecycle, remaining user administration, content/media/statistics and complete assessment engine. Resume from this matrix; do not repeat completed exam discovery.

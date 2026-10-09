@@ -74,7 +74,7 @@ try:
 
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
         return result
@@ -208,7 +208,78 @@ try:
     call('PATCH','/v1/notifications/read-all',role='student',label='idempotent-read-all')
     call('GET','/v1/notifications?unreadOnly=true',role='student')
     call('PATCH','/v1/notifications/missing/read',role='student')
-    summary = dict(contracts=23,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
+    for role in (None,'student','parent','teacher','other_teacher','admin','super_admin'):
+        call('GET','/v1/payments',role=role)
+        call('GET','/v1/payments/debtors?year=2026&month=10',role=role)
+        call('PUT','/v1/payments/bulk',{'year':2026,'records':[{'studentId':'{student}','month':10,'state':'unpaid','amount':100}]},role=role)
+        call('POST','/v1/payments/remind',{'year':2026,'month':10,'studentIds':['{student}']},role=role)
+    for role in ('student','parent','teacher','admin'):
+        call('GET','/v1/payments?studentId={other_student}',role=role)
+    for query in ('?year=1999','?year=2101','?month=0','?month=13','?year=2026.5','?state=empty','?unknown=1','?year=2026&month=10&state=unpaid'):
+        call('GET','/v1/payments'+query)
+    for body in ({'year':2026,'records':[]},{'year':2026,'records':'wrong'},
+                 {'year':2026,'records':[{'studentId':'missing','month':10,'state':'paid'}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':13,'state':'paid'}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':10,'state':'bad'}]},
+                 {'year':'2026','records':[{'studentId':'{student}','month':'10','state':'partial','amount':'25','note':'Manual payment'}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':10,'state':'paid'}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':10,'state':'paid','amount':None}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':11,'state':'unpaid'}, {'studentId':'{student}','month':11,'state':'paid','amount':300}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':11,'state':'empty'}, {'studentId':'{student}','month':11,'state':'paid','amount':200}]},
+                 {'year':2026,'records':[{'studentId':'{student}','month':10,'state':'empty'}]}):
+        call('PUT','/v1/payments/bulk',body)
+    call('GET','/v1/payments',role='parent')
+    call('GET','/v1/payments/debtors?year=2026&month=10')
+    call('POST','/v1/payments/remind',{'year':2026,'month':10,'studentIds':[]})
+    for side in (0,1):
+        db.execute(sql.SQL('UPDATE {}."User" SET "isActive"=false WHERE id=%s').format(sql.Identifier(schemas[side])),(ids[side]['student'],))
+    call('PUT','/v1/payments/bulk',{'year':2026,'records':[{'studentId':'{student}','month':10,'state':'paid'}]},label='blocked-student-payment')
+    for side in (0,1):
+        db.execute(sql.SQL('UPDATE {}."User" SET "isActive"=true WHERE id=%s').format(sql.Identifier(schemas[side])),(ids[side]['student'],))
+    from apps.core import payments
+    from types import SimpleNamespace
+    before=state(0);original=payments.Payment.objects.update_or_create
+    calls=0
+    def fail_second_payment(*args,**kwargs):
+        global calls
+        calls+=1
+        if calls==2: raise RuntimeError('injected local fixture write failure')
+        return original(*args,**kwargs)
+    with patch.object(payments.Payment.objects,'update_or_create',side_effect=fail_second_payment):
+        try:
+            payments.bulk(SimpleNamespace(id=ids[0]['super_admin'],role='super_admin'),dict(year=2026,records=[
+                dict(studentId=ids[0]['student'],month=12,state='paid'),
+                dict(studentId=ids[0]['other_student'],month=12,state='paid')]))
+        except RuntimeError: pass
+        else: raise AssertionError('fault injection did not run')
+    assert state(0)==before
+    local_checks.append('second payment write failure rolls back every payment and creates no audit')
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from django.db import connections
+    for side in (0,1):
+        barrier=Barrier(2)
+        def concurrent_payment(amount):
+            body=dict(year=2026,records=[dict(studentId=ids[side]['student'],month=9,state='paid',amount=amount)])
+            barrier.wait(timeout=10)
+            if side==0:
+                parallel=APIClient();parallel.credentials(HTTP_AUTHORIZATION='Bearer '+tokens[0]['super_admin'])
+                try:
+                    response=parallel.put('/v1/payments/bulk',body,format='json')
+                    return response.status_code,json.loads(response.content)
+                finally: connections.close_all()
+            request=Request(f'http://127.0.0.1:{port}/v1/payments/bulk',data=json.dumps(body).encode(),
+                headers={'Authorization':'Bearer '+tokens[1]['super_admin'],'Content-Type':'application/json'},method='PUT')
+            try: response=urlopen(request,timeout=20)
+            except HTTPError as error: response=error
+            return response.status,json.loads(response.read())
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            outcomes=list(executor.map(concurrent_payment,[100,200]))
+        assert outcomes==[(200,{'success':True,'data':{'updated':1}})]*2,outcomes
+        rows=db.execute(sql.SQL('SELECT amount FROM {}."Payment" WHERE "studentId"=%s AND year=2026 AND month=9').format(sql.Identifier(schemas[side])),(ids[side]['student'],)).fetchall()
+        assert len(rows)==1 and rows[0][0] in (100,200),rows
+        local_checks.append(('Django' if side==0 else 'NestJS')+': concurrent same-cell upserts both succeed with one persisted row and a submitted amount')
+    summary = dict(contracts=27,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
     (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:
