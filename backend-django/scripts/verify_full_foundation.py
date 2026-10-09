@@ -30,13 +30,13 @@ ids = [{}, {}]
 
 
 def normalize(value):
-    if isinstance(value, dict): return {k: normalize(v) for k, v in value.items()}
+    if isinstance(value, dict): return {k: ('<LINK_CODE>' if k == 'linkCode' and isinstance(v, str) else normalize(v)) for k, v in value.items()}
     if isinstance(value, list): return [normalize(v) for v in value]
     if isinstance(value, str):
         for side in ids:
             for label, identifier in side.items():
                 if value == identifier: return '<ID:'+label+'>'
-                if label.startswith('tg_token') and identifier in value:value=value.replace(identifier,'<ID:'+label+'>')
+                if label.startswith(('tg_token','stream_token')) and identifier in value:value=value.replace(identifier,'<ID:'+label+'>')
         value = re.sub(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', '<UUID>', value)
         value=re.sub(r'(?<=\?v=)\d+', '<CACHE_TIME>', value)
         return re.sub(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+00:00)?', '<TIME>', value)
@@ -67,7 +67,8 @@ try:
             # Stable unique ordering fixtures, not timestamp-order normalization.
             db.execute('UPDATE "User" SET "createdAt"=%s WHERE id=%s',(f'2020-01-{index+1:02d}',user_id))
         db.execute('INSERT INTO "ParentStudent" ("parentUserId","studentId") VALUES (%s,%s)', (ids[side]['parent'], ids[side]['student']))
-    os.environ.update(DATABASE_URL=schema_url(schemas[0]), JWT_SECRET='full-foundation-local-secret-no-production-2026', DJANGO_SETTINGS_MODULE='config.settings.local', ALLOWED_HOSTS='testserver,localhost,127.0.0.1',STORAGE_DIR=media_roots[0],STREAM_TOKEN_SECRET='isolated-local-stream-secret')
+    os.environ.update(DATABASE_URL=schema_url(schemas[0]), JWT_SECRET='full-foundation-local-secret-no-production-2026', DJANGO_SETTINGS_MODULE='config.settings.local', ALLOWED_HOSTS='testserver,localhost,127.0.0.1',STORAGE_DIR=media_roots[0],STREAM_TOKEN_SECRET='isolated-local-stream-secret',CENTER_NAME='Local Differential Center')
+    os.environ.update(DEEPSEEK_MODEL='fixture-model',DEEPSEEK_ADJUDICATOR_MODEL='fixture-adjudicator',STT_MODEL='fixture-stt',STT_PROVIDER='deepgram')
     import django
     django.setup()
     from rest_framework.test import APIClient
@@ -76,9 +77,10 @@ try:
     tokens = [{role: issue_access(uid, role.removeprefix('other_')) for role, uid in side.items()} for side in ids]
     env = {k: v for k, v in os.environ.items() if not k.startswith(('TELEGRAM_', 'DEEPSEEK_', 'DEEPGRAM_'))}
     env.update(DATABASE_URL=schema_url(schemas[1]), VERIFY_FULL_FOUNDATION='1',STORAGE_DIR=media_roots[1],
-        TELEGRAM_BOT_TOKEN='local-fixture-not-a-real-token',TELEGRAM_BOT_USERNAME='fixture_bot',TELEGRAM_MODE='off',TELEGRAM_WEBHOOK_SECRET='local-fixture-secret')
+        TELEGRAM_BOT_TOKEN='local-fixture-not-a-real-token',TELEGRAM_BOT_USERNAME='fixture_bot',TELEGRAM_MODE='off',TELEGRAM_WEBHOOK_SECRET='local-fixture-secret',
+        DEEPSEEK_MODEL='fixture-model',DEEPSEEK_ADJUDICATOR_MODEL='fixture-adjudicator',STT_MODEL='fixture-stt',STT_PROVIDER='deepgram')
     env.pop('VERIFY_STAGE_B', None)
-    server = subprocess.Popen(['node', str(ROOT/'scripts/nest_stage_a_server.cjs')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', env=env)
+    server = subprocess.Popen(['node', str(ROOT/'scripts/nest_stage_a_server.cjs')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace', env=env)
     line = server.stdout.readline()
     if not line: raise RuntimeError('Reference failed: '+server.stderr.read())
     port = json.loads(line)['port']
@@ -91,12 +93,17 @@ try:
 
     def state(side):
         result = {}
-        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance', 'MonthlyPointsArchive', 'PointsLog','GalleryImage','Teacher','VideoLesson','VideoPurchase','Test','Question','TestAttempt','Answer','TelegramLinkToken'):
+        for table in ('Setting', 'AuditLog', 'Group', 'StudentProfile', 'Article', 'Notification', 'Payment', 'Attendance', 'MonthlyPointsArchive', 'PointsLog','GalleryImage','Teacher','VideoLesson','VideoPurchase','Test','Question','TestAttempt','Answer','TelegramLinkToken','MockAttempt','MockAnswer','AssessmentJob','AssessmentEvaluation','SpeechTranscript'):
             rows = db.execute(sql.SQL('SELECT row_to_json(t) FROM {}.{} t').format(sql.Identifier(schemas[side]), sql.Identifier(table))).fetchall()
             result[table] = sorted([normalize(row[0]) for row in rows], key=lambda v: json.dumps(v, sort_keys=True))
+        import hashlib
+        rows=db.execute(sql.SQL('SELECT row_to_json(t) FROM {}."User" t').format(sql.Identifier(schemas[side]))).fetchall()
+        result['User']=sorted([normalize({k:v for k,v in row[0].items() if k!='passwordHash'}) for row in rows],key=lambda v:json.dumps(v,sort_keys=True))
+        base=Path(media_roots[side])
+        result['StorageFiles']=sorted([dict(key=normalize(p.relative_to(base).as_posix()),sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in base.rglob('*') if p.is_file()],key=lambda v:json.dumps(v,sort_keys=True))
         return result
 
-    def call(method, path, payload=None, role='super_admin', label=None, capture=None, files=None, capture_token=None):
+    def call(method, path, payload=None, role='super_admin', label=None, capture=None, files=None, capture_token=None, extra_headers=None,capture_stream=None):
         responses = []
         for side in (0, 1):
             def expand(value):
@@ -106,8 +113,11 @@ try:
                 return value
             target = path.format(**ids[side]); body = expand(payload)
             headers = {'Authorization': 'Bearer '+tokens[side][role]} if role else {}
+            headers.update(extra_headers or {})
+            import time
+            issued=time.time()
             if side == 0:
-                client.credentials(**{'HTTP_AUTHORIZATION': headers['Authorization']} if role else {})
+                client.credentials(**{'HTTP_'+key.upper().replace('-','_'):value for key,value in headers.items()})
                 if files:
                     from django.core.files.uploadedfile import SimpleUploadedFile
                     upload={key:SimpleUploadedFile(name,raw,mime) for key,(name,raw,mime) in files.items()}
@@ -133,6 +143,20 @@ try:
                 if 'text/csv' in response.headers['Content-Type']:
                     result['headers']={key:response.headers[key] for key in ('Content-Type','Content-Disposition')}
             responses.append(result)
+            if path.startswith('/v1/users') and body and body.get('password') and result['status']<300:
+                import bcrypt
+                identifier=result['body']['data']['id']
+                stored=db.execute(sql.SQL('SELECT "passwordHash" FROM {}."User" WHERE id=%s').format(sql.Identifier(schemas[side])),(identifier,)).fetchone()[0]
+                assert stored[4:7]=='12$' and bcrypt.checkpw(body['password'].encode(),stored.encode())
+            if capture_stream and result['status']<300:
+                from apps.core.videos import verify
+                from django.utils.dateparse import parse_datetime
+                token=dict(parse_qsl(urlparse(result['body']['data']['url']).query))['token']
+                claims=verify(token)
+                assert set(claims)=={'v','u','e'} and claims['v']==ids[side]['video'] and claims['u']==ids[side][role]
+                assert int(issued)<=claims['e']-3600<=int(time.time())
+                assert parse_datetime(result['body']['data']['expiresAt']).timestamp()==claims['e']
+                ids[side][capture_stream]=token
             if capture_token and result['status']<300:
                 import hashlib
                 token=result['body']['data']['token'];ids[side][capture_token]=token
@@ -318,11 +342,18 @@ try:
     from concurrent.futures import ThreadPoolExecutor
     from legacy_admin_contracts import verify_legacy
     legacy_start=len(results)
-    verify_legacy(call)
+    verify_legacy(call,db,schemas,ids,state,local_checks)
     legacy_results=results[legacy_start:]
     (ROOT/'LEGACY_ADMIN_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=9,comparisons=len(legacy_results),
         passed=sum(r['status']=='PASS' for r in legacy_results),failed=sum(r['status']=='FAIL' for r in legacy_results),results=legacy_results),indent=2)+'\n',encoding='utf-8')
     from game_points_contracts import verify_concurrency
+    from assessment_contracts import verify_assessment
+    assessment_start=len(results)
+    verify_assessment(call,db,schemas,ids,state,reference_control,normalize,local_checks,media_roots)
+    assessment_results=results[assessment_start:]
+    (ROOT/'ASSESSMENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(assessment_results),
+        passed=sum(r['status']=='PASS' for r in assessment_results),failed=sum(r['status']=='FAIL' for r in assessment_results),
+        localChecks=[s for s in local_checks if s.startswith('Assessment:')],results=assessment_results),indent=2)+'\n',encoding='utf-8')
     from telegram_contracts import verify_telegram
     telegram_start=len(results)
     verify_telegram(call,reference_control,normalize,local_checks)

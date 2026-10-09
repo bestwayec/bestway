@@ -124,10 +124,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.assessment_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Review, protected audio, grading and durable worker/provider fixture parity verified",
+      "coverage": "ASSESSMENT_PARITY_REPORT.json; test_assessment.py; test_provider_http.py"
     },
     {
       "module": "assessment",
@@ -143,10 +143,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.assessment_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Review, protected audio, grading and durable worker/provider fixture parity verified",
+      "coverage": "ASSESSMENT_PARITY_REPORT.json; test_assessment.py; test_provider_http.py"
     },
     {
       "module": "assessment",
@@ -158,10 +158,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.assessment_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Review, protected audio, grading and durable worker/provider fixture parity verified",
+      "coverage": "ASSESSMENT_PARITY_REPORT.json; test_assessment.py; test_provider_http.py"
     },
     {
       "module": "attendance",
@@ -454,10 +454,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "gallery",
@@ -472,10 +472,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "gallery",
@@ -487,10 +487,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "gallery",
@@ -505,10 +505,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "gallery",
@@ -523,10 +523,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "gallery",
@@ -541,10 +541,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "game",
@@ -1230,10 +1230,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.assessment_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Teacher grading and recomputation parity verified",
+      "coverage": "ASSESSMENT_PARITY_REPORT.json; test_assessment.py"
     },
     {
       "module": "mock",
@@ -2068,10 +2068,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.statistics_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "stats",
@@ -2086,10 +2086,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.statistics_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "stats",
@@ -2104,10 +2104,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.statistics_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "stats",
@@ -2122,10 +2122,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.statistics_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "stats",
@@ -2140,10 +2140,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.statistics_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "stats",
@@ -2160,8 +2160,8 @@
       "status": 200,
       "django": "apps.core.attendance_views",
       "migrationStatus": "COMPLETE",
-      "missingBehavior": "Full runtime gate remains",
-      "coverage": "ATTENDANCE_PARITY_REPORT.json; test_attendance.py"
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2173,10 +2173,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2191,10 +2191,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2206,10 +2206,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2224,10 +2224,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2242,10 +2242,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "teachers",
@@ -2259,10 +2259,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.content_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "telegram",
@@ -2274,10 +2274,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.telegram_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Webhook, linking, menu, transport and PostgreSQL lifecycle parity verified",
+      "coverage": "TELEGRAM_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "telegram",
@@ -2289,10 +2289,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.telegram_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Webhook, linking, menu, transport and PostgreSQL lifecycle parity verified",
+      "coverage": "TELEGRAM_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "telegram",
@@ -2304,10 +2304,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.telegram_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Webhook, linking, menu, transport and PostgreSQL lifecycle parity verified",
+      "coverage": "TELEGRAM_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "telegram",
@@ -2319,10 +2319,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.telegram_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Webhook, linking, menu, transport and PostgreSQL lifecycle parity verified",
+      "coverage": "TELEGRAM_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2334,7 +2334,7 @@
       "roles": [],
       "auth": "optional",
       "status": 200,
-      "django": "apps.core.legacy_test_views",
+      "django": "apps.core.legacy_authoring_views",
       "migrationStatus": "COMPLETE",
       "missingBehavior": "Global runtime/worker/provider gates tracked separately",
       "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
@@ -2367,10 +2367,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
+      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
     },
     {
       "module": "tests",
@@ -2415,10 +2415,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2553,10 +2553,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2586,10 +2586,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2601,10 +2601,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": "apps.core.legacy_test_views",
+      "django": "apps.core.legacy_authoring_views",
       "migrationStatus": "COMPLETE",
-      "missingBehavior": "Global runtime/worker/provider gates tracked separately",
-      "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2619,10 +2619,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2637,10 +2637,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2652,7 +2652,7 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": "apps.core.legacy_test_views",
+      "django": "apps.core.legacy_authoring_views",
       "migrationStatus": "COMPLETE",
       "missingBehavior": "Global runtime/worker/provider gates tracked separately",
       "coverage": "Existing Phase 1\u20133 / Stage A\u2013B scoped parity evidence"
@@ -2670,10 +2670,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2705,10 +2705,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "tests",
@@ -2723,10 +2723,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.legacy_authoring_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Legacy authoring and grading PostgreSQL parity verified",
+      "coverage": "LEGACY_ADMIN_PARITY_REPORT.json; verify_full_foundation.py"
     },
     {
       "module": "users",
@@ -2741,10 +2741,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": "apps.core.views",
-      "migrationStatus": "PARTIAL",
-      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
-      "coverage": "Existing scoped tests; full-domain audit pending"
+      "django": "apps.core.user_admin",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "users",
@@ -2759,10 +2759,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": "apps.core.views",
-      "migrationStatus": "PARTIAL",
-      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
-      "coverage": "Existing scoped tests; full-domain audit pending"
+      "django": "apps.core.user_admin",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "users",
@@ -2774,10 +2774,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": "apps.core.views",
-      "migrationStatus": "PARTIAL",
-      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
-      "coverage": "Existing scoped tests; full-domain audit pending"
+      "django": "apps.core.user_admin",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "users",
@@ -2792,10 +2792,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": "apps.core.views",
-      "migrationStatus": "PARTIAL",
-      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
-      "coverage": "Existing scoped tests; full-domain audit pending"
+      "django": "apps.core.user_admin",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "users",
@@ -2809,10 +2809,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": "apps.core.views",
-      "migrationStatus": "PARTIAL",
-      "missingBehavior": "Review full-domain behavior and exact contract; registration alone is insufficient",
-      "coverage": "Existing scoped tests; full-domain audit pending"
+      "django": "apps.core.user_admin",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2824,10 +2824,10 @@
       "roles": [],
       "auth": "optional",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2842,10 +2842,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2857,10 +2857,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2875,10 +2875,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2890,10 +2890,10 @@
       "roles": [],
       "auth": "public",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2905,10 +2905,10 @@
       "roles": [],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2922,10 +2922,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2940,10 +2940,10 @@
       ],
       "auth": "JWT",
       "status": 201,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2958,10 +2958,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     },
     {
       "module": "videos",
@@ -2975,10 +2975,10 @@
       ],
       "auth": "JWT",
       "status": 200,
-      "django": null,
-      "migrationStatus": "MISSING",
-      "missingBehavior": "Implement controller/service/DTO and differential PostgreSQL checks",
-      "coverage": "None"
+      "django": "apps.core.video_views",
+      "migrationStatus": "COMPLETE",
+      "missingBehavior": "Scoped API, storage and PostgreSQL parity verified",
+      "coverage": "ADMIN_CONTENT_PARITY_REPORT.json; test_remaining_domains.py"
     }
   ],
   "services": [
@@ -3681,9 +3681,9 @@
   ],
   "summary": {
     "total": 173,
-    "implemented": 129,
-    "verified": 124,
-    "missing": 44,
-    "partial": 5
+    "implemented": 173,
+    "verified": 173,
+    "missing": 0,
+    "partial": 0
   }
 }

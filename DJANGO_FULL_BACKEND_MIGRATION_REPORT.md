@@ -1,16 +1,18 @@
 # Full backend migration — resumable checkpoint, 2026-10-09
 
-Verdict: NOT COMPLETE. No production access, deployment or merge performed.
+Verdict: all 173 active HTTP routes are implemented and verified within the recorded scope. The broader web/native migration is not complete: browser staff/login/proxy and native Tauri gates remain open. No production access, deployment or merge was performed.
 
-## Remaining-domain batch in progress
+## Latest route and worker checkpoint
 
-2026-10-09: 40 previously missing HTTP routes are now implemented: gallery (6), teachers (6), videos (10), statistics (5), legacy administration (9), Telegram (4). Five user-administration contracts now use the reference DTOs and service behavior. Local Django regression: 189 tests and 91 subtests passed. Local PostgreSQL foundation differential: 1001/1001 comparisons, zero differences, across 82 scoped contracts. Administration/content: 290/290; legacy administration: 89/89; Telegram HTTP/token boundary: 19/19. Both disposable schemas were cleaned. Telegram delivery is recorded, not sent externally.
+The final missing 44 routes are implemented: gallery (6), teachers (6), videos (10), statistics (5), legacy `/tests` authoring/grading/media (9), Telegram (4), assessment (3), and mock teacher grading (1). The five previously partial user-administration contracts are complete. The generated matrix reports 173 active, 173 implemented, 173 verified within scope, zero missing, zero partial. Three previously approved attempt-bound media differences remain explicitly identified as approved differences, not normalized away.
 
-The remaining four routes are mock teacher grading and three assessment contracts. Their durable worker/providers are being ported next. Legacy grading success/rollback, authenticated media ranges, complete Telegram bot linking/menu lifecycle, assessment worker recovery/concurrency and provider fixtures still require expanded verification. Registration and successful negative cases are not proof of full domain parity. The original counts below describe the previous checkpoint and will be superseded after the remaining gates finish.
+Fresh Django verification: `python manage.py check` clean; `pytest -q -p no:cacheprovider` reports 207 passed and 356 subtests passed. The isolated local PostgreSQL NestJS/Django differential reports 1,184/1,184 comparisons across 82 grouped contracts, zero differences; its local checks also exercise transactional rollback, concurrency, game scheduler recovery, legacy grading, Telegram link/menu lifecycle, assessment review, provider ledgers, retries and concurrent `SKIP LOCKED` claims. Disposable schemas were removed after each run.
 
-Concurrent game qualification can legitimately select different notification winners between APIs. Such tests now run after sequential differential comparisons, with their persisted invariants checked independently; no notification content is normalized to conceal differences. Frontend, Tauri, NestJS source and existing unrelated browser artifacts remain unchanged by this batch.
+Assessment exposes an explicit `run_assessment_worker` command and bounded DeepSeek/Deepgram providers with validation, durable claims/leases/retries, fixture-based provider tests, and a real loopback HTTP test. Telegram polling/webhook runs through an explicit command; delivery is recorded in parity tests and was never sent externally. Provider credentials or external provider calls were not used. NestJS remained read-only: 421 tests passed, `npx tsc --noEmit`, `npm run build`, and `npx prisma validate` passed.
 
-Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 21 enums. Django implements 129 matching contracts; 124 have recorded scoped verification, 44 are missing and five user-administration contracts remain partial. Registration is not a global parity claim. Exact missing method/path rows are in `DJANGO_FULL_BACKEND_MATRIX.md`.
+No frontend or Tauri source was changed in this route batch. Student browser evidence remains scoped to the prior report; staff/login/proxy browser gates have not completed, and native UI testing remains unverified. Preserve these as overall migration blockers rather than treating route parity as an end-to-end release gate.
+
+The historical checkpoint notes below describe earlier verified states; the latest counts and evidence above supersede their “remaining route” and “in progress” statements. `DJANGO_FULL_BACKEND_MATRIX.md` contains the exact active route/status inventory.
 
 ## Verified implementation checkpoints
 
@@ -26,7 +28,7 @@ Source inventory: 173 active HTTP contracts, 35 services, 39 Prisma models and 2
 
 The PostgreSQL enum bulk-insert failure was reproduced and corrected without schema changes. Null article updates preserve the reference's 500 response and create no audit. Notification read endpoints are owner-scoped and idempotent. Telegram logs omit tokens and message content. Notification batches are atomic; outbound delivery starts only after commit.
 
-## Remaining gates
+## Historical gates at the previous checkpoint (route scope superseded above)
 
 Implement and differentially verify the matrix's missing routes: assessment (3), gallery (6), mock (1), stats (5), teachers (6), Telegram (4), legacy tests administration (9), videos (10). Complete five partial user contracts. Existing auth/exam registrations retain their recorded scope; review global throttling and full-domain dependencies before final parity.
 
@@ -42,7 +44,7 @@ Recorded real browser student IELTS/Multilevel timed autosave, reload/resume and
 
 Native gate is NOT VERIFIED: no local-compatible debug executable, low disk space, and the existing release binary has a production API URL. Do not launch it against production or start another Rust build until enough space is available. No cache, database or personal-file deletion was performed. Existing unrelated tmp files and browser evidence remain preserved.
 
-## Exact next action
+## Prior checkpoint next action (completed by the latest route batch)
 
 GameService and PointsService dependencies are complete within this checkpoint. Resume from the matrix's remaining Telegram lifecycle, partial user administration, content/media/statistics, legacy authoring and assessment rows. Do not repeat completed exam, auth, payment, attendance or game/points discovery.
 

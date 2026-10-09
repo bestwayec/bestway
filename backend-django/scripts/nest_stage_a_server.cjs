@@ -53,7 +53,7 @@ function firstMessage(errors) {
   const access = new MockAccessService(prisma, audit, inaccessible, programs);
   const authoring = new MockAuthoringService(prisma, audit, storage, access, config, programs);
   const imports = new MockExamImportService(prisma, audit);
-  const values = new Map([[PrismaService, prisma], [MockAuthoringService, authoring],
+  const values = new Map([[PrismaService, prisma], [StorageService,storage], [MockAuthoringService, authoring],
     [MockExamImportService, imports], [MockAccessService, access]]);
   // Stage B opts into real lifecycle dependencies, never workers/providers.
   if (process.env.VERIFY_STAGE_B === '1') {
@@ -117,6 +117,12 @@ function firstMessage(errors) {
     values.set(TestsService,new TestsService(prisma,audit,programs));
     values.set(GradingService,new GradingService(prisma,new AccessService(prisma),values.get(NotificationsService),programs));
     values.set(CertificateService,new CertificateService(config));
+    const {AssessmentService}=load('assessment/assessment.service.js');
+    const {AssessmentWorker}=load('assessment/assessment.worker.js');
+    const {MockGradingService}=load('mock/mock-grading.service.js');
+    const grading=new MockGradingService(prisma,new AccessService(prisma),values.get(NotificationsService),storage,audit,values.get(SettingsService),config,programs);
+    const assessment=new AssessmentService(prisma,new AccessService(prisma),programs,storage,config);
+    values.set(AssessmentService,assessment);values.set(MockGradingService,grading);
     const {TelegramService}=load('telegram/telegram.service.js');
     const {TelegramLinkService}=load('telegram/telegram-link.service.js');
     const {TelegramMenuService}=load('telegram/telegram-menu.service.js');
@@ -153,6 +159,17 @@ function firstMessage(errors) {
       };
     }
     gameControl=async command=>{
+      if(command.action==='assessmentClaim')return assessment.claim();
+      if(command.action==='assessmentConcurrentClaims')return Promise.all([assessment.claim(),assessment.claim()]);
+      if(command.action==='assessmentWorker') {
+        const calls=[];
+        const worker=new AssessmentWorker(prisma,assessment,{assess:async(input,role)=>{
+          calls.push({type:'assess',role,input});
+          if(command.failure)throw new (load('assessment/contracts.js').AssessmentProviderError)(command.failure.code,command.failure.transient,command.failure.uncertain);
+          return {result:command.result,provider:'fixture',model:'fixture-model',inputTokens:10,outputTokens:20,latencyMs:1};
+        }},{transcribe:async(input)=>{calls.push({type:'transcribe',input:{...input,audioPath:path.basename(input.audioPath)}});return command.transcript;}},storage,grading,config);
+        return {ran:await worker.runOnce(),calls};
+      }
       if(command.action==='telegramDeliveries')return deliveries.splice(0);
       if(command.action==='notificationFailure') {failedNotificationType=command.type??null;return true;}
       if(command.action==='drain') {while(pending.size) await Promise.allSettled([...pending]);return true;}
@@ -178,6 +195,7 @@ function firstMessage(errors) {
       load('teachers/teachers.controller.js').TeachersController,load('users/users.controller.js').UsersController,
       load('videos/videos.controller.js').VideosController);
     controllers.push(load('tests/tests.controller.js').TestsController,load('telegram/telegram.controller.js').TelegramController);
+    controllers.push(MockController,load('assessment/assessment.controller.js').AssessmentController);
   }
   const moduleImports=[], extraProviders=[];
   if (process.env.VERIFY_STAGE_B === '1') controllers.push(load('tests/tests.controller.js').TestsController);

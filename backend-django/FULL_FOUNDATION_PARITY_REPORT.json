@@ -1,7 +1,7 @@
 {
   "contracts": 82,
-  "comparisons": 1001,
-  "passed": 1001,
+  "comparisons": 1184,
+  "passed": 1184,
   "failed": 0,
   "localChecks": [
     "both APIs preserve exact original group creation time",
@@ -22,7 +22,17 @@
     "Game/points: real Django scheduler --once startup matches Nest startup recovery",
     "Game/points: safe points-notification failures retain success; awaited game failures match reference post-commit 500 and persisted state",
     "Game/points: actual scheduled monthly callback matches Nest reset at 00:05 Asia/Tashkent",
-    "Telegram: all roles, token format/hash/expiry and replacement, unlink idempotency, webhook rejection; transport matches real Nest service without live calls",
+    "Legacy: teacher ownership, half-point scoring, upsert of a same-test question outside questionOrder and completed-attempt regrade preserve reference result/notification behavior",
+    "Legacy: failed second import insert rolls back all question writes and emits no audit",
+    "Assessment: primary worker validates immutable hash, persists token ledger and automatically projects practice IELTS rubric/attempt in one finalization transaction",
+    "Assessment: explicit rate limit persists FAILED provider call plus bounded RETRY; raw claim retains reference database-session-timezone eligibility",
+    "Assessment: uncertain billed timeout is NEEDS_REVIEW, never automatic retry",
+    "Assessment: failed transactional review audit rolls back final ledger score, answer projection and attempt recomputation completely",
+    "Assessment: expired lease with STARTED provider ledger becomes NEEDS_REVIEW/PROVIDER_OUTCOME_UNCERTAIN and is never re-claimed",
+    "Assessment: low-confidence primary invokes an independent adjudicator, combines validated criteria and preserves prior teacher answer grades",
+    "Assessment: real local immutable audio checksum, STARTED/SUCCEEDED STT ledger and transcript-to-rater handoff match; ASR never fabricates pronunciation or a complete IELTS speaking score",
+    "Assessment: two concurrent real PostgreSQL SKIP LOCKED claims select distinct jobs exactly once in both Django and NestJS",
+    "Telegram: all roles, token hash/expiry/replacement and one-use consume, menus, contact ownership/validation, secret webhook, chat-owner transfer and both unlink paths match recorded Nest transport and local database",
     "Game/points: Django concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
     "Game/points: NestJS concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
     "Game/points: Django concurrent rollover/increments persist 120, two history rows, four points notices and 0 game notices",
@@ -4528,6 +4538,18 @@
     {
       "method": "POST",
       "path": "/v1/users",
+      "label": "unicode-codepoint-name-boundary",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
       "label": "super_admin",
       "status": "PASS"
     },
@@ -4648,6 +4670,12 @@
     {
       "method": "GET",
       "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
       "label": "super_admin",
       "status": "PASS"
     },
@@ -5372,6 +5400,78 @@
       "status": "PASS"
     },
     {
+      "method": "GET",
+      "path": "/v1/videos/{video}/stream-url",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=0-3",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=3-",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=-3",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=1-100",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=99-",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=5-2",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=-0",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:garbage",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=0-1,3-4",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token=invalid",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
       "method": "PATCH",
       "path": "/v1/videos/{video}",
       "label": "super_admin",
@@ -5756,6 +5856,12 @@
       "status": "PASS"
     },
     {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
       "method": "PATCH",
       "path": "/v1/tests/{legacy_test}",
       "label": "super_admin",
@@ -5924,6 +6030,492 @@
       "status": "PASS"
     },
     {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/tests/attempts/{legacy_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_manual}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
       "method": "GET",
       "path": "/v1/telegram/status",
       "label": "anonymous",
@@ -6029,6 +6621,522 @@
       "method": "POST",
       "path": "/v1/telegram/link-token",
       "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "parent",
       "status": "PASS"
     },
     {
