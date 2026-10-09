@@ -1,0 +1,15 @@
+# Apply ONLY after stopping the Nest backend. Both frontend and Cloudflare
+# continue using backend:3001; the alias now resolves to the Django API.
+# docker compose -f docker-compose.django.yml -f docker-compose.django.cutover.yml --profile workers up -d --wait
+services:
+  django-api:
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:3001", "--workers", "2", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+    environment:
+      HEALTHCHECK_PORT: "3001"
+    ports: !override
+      - "127.0.0.1:8001:3001"
+    networks:
+      education-net:
+        aliases:
+          - backend
+      django-cache-net: {}

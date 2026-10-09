@@ -70,6 +70,10 @@ jobs:
           script: |
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
+            if [ -f .bestway-runtime ] && [ "$(cat .bestway-runtime)" = django ]; then
+              echo "Django owns this VPS runtime; refusing to restart Nest automatically"
+              exit 1
+            fi
             test -f ./backend/.env || { echo "backend/.env missing on VPS"; exit 1; }
             git fetch origin main
             test "$(git rev-parse origin/main)" = "$DEPLOY_SHA" \

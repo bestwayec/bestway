@@ -16,7 +16,8 @@ def main():
             if cursor.fetchone() != (1,):
                 return 1
         cache.get('container-readiness')
-        request = urllib.request.Request('http://127.0.0.1:8000/v1/health',
+        port = int(os.environ.get('HEALTHCHECK_PORT', '8000'))
+        request = urllib.request.Request(f'http://127.0.0.1:{port}/v1/health',
                                          headers={'Host': 'api.bestwayec.uz'})
         with urllib.request.urlopen(request, timeout=3) as response:
             return 0 if response.status == 200 else 1

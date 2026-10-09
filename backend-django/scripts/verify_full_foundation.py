@@ -15,6 +15,8 @@ import psycopg
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
+REPORT_DIR = Path(os.environ.get('VERIFY_REPORT_DIR', str(ROOT)))
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT))
 parsed = urlparse(os.environ.get('DATABASE_URL', ''))
 if parsed.hostname not in ('localhost', '127.0.0.1', '::1'): raise SystemExit('Local PostgreSQL required')
@@ -325,40 +327,40 @@ try:
     attendance_results=results[attendance_start:]
     attendance_report=dict(contracts=4,comparisons=len(attendance_results),passed=sum(r['status']=='PASS' for r in attendance_results),
         failed=sum(r['status']=='FAIL' for r in attendance_results),localChecks=[s for s in local_checks if s.startswith('Attendance:')],results=attendance_results)
-    (ROOT/'ATTENDANCE_PARITY_REPORT.json').write_text(json.dumps(attendance_report,indent=2)+'\n',encoding='utf-8')
+    (REPORT_DIR/'ATTENDANCE_PARITY_REPORT.json').write_text(json.dumps(attendance_report,indent=2)+'\n',encoding='utf-8')
     from game_points_contracts import verify_game_points
     game_start=len(results)
     verify_game_points(call,db,schemas,ids,state,local_checks,reference_control,tokens,port)
     game_results=results[game_start:]
     game_report=dict(contracts=6,comparisons=len(game_results),passed=sum(r['status']=='PASS' for r in game_results),
         failed=sum(r['status']=='FAIL' for r in game_results),localChecks=[s for s in local_checks if s.startswith('Game/points:')],results=game_results)
-    (ROOT/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
+    (REPORT_DIR/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
     from remaining_admin_contracts import verify_admin
     admin_start=len(results)
     verify_admin(call)
     admin_results=results[admin_start:]
-    (ROOT/'ADMIN_CONTENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=32,comparisons=len(admin_results),
+    (REPORT_DIR/'ADMIN_CONTENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=32,comparisons=len(admin_results),
         passed=sum(r['status']=='PASS' for r in admin_results),failed=sum(r['status']=='FAIL' for r in admin_results),results=admin_results),indent=2)+'\n',encoding='utf-8')
     from concurrent.futures import ThreadPoolExecutor
     from legacy_admin_contracts import verify_legacy
     legacy_start=len(results)
     verify_legacy(call,db,schemas,ids,state,local_checks)
     legacy_results=results[legacy_start:]
-    (ROOT/'LEGACY_ADMIN_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=9,comparisons=len(legacy_results),
+    (REPORT_DIR/'LEGACY_ADMIN_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=9,comparisons=len(legacy_results),
         passed=sum(r['status']=='PASS' for r in legacy_results),failed=sum(r['status']=='FAIL' for r in legacy_results),results=legacy_results),indent=2)+'\n',encoding='utf-8')
     from game_points_contracts import verify_concurrency
     from assessment_contracts import verify_assessment
     assessment_start=len(results)
     verify_assessment(call,db,schemas,ids,state,reference_control,normalize,local_checks,media_roots)
     assessment_results=results[assessment_start:]
-    (ROOT/'ASSESSMENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(assessment_results),
+    (REPORT_DIR/'ASSESSMENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(assessment_results),
         passed=sum(r['status']=='PASS' for r in assessment_results),failed=sum(r['status']=='FAIL' for r in assessment_results),
         localChecks=[s for s in local_checks if s.startswith('Assessment:')],results=assessment_results),indent=2)+'\n',encoding='utf-8')
     from telegram_contracts import verify_telegram
     telegram_start=len(results)
     verify_telegram(call,reference_control,normalize,local_checks)
     telegram_results=results[telegram_start:]
-    (ROOT/'TELEGRAM_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(telegram_results),
+    (REPORT_DIR/'TELEGRAM_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=4,comparisons=len(telegram_results),
         passed=sum(r['status']=='PASS' for r in telegram_results),failed=sum(r['status']=='FAIL' for r in telegram_results),
         localChecks=[s for s in local_checks if s.startswith('Telegram:')],results=telegram_results),indent=2)+'\n',encoding='utf-8')
     from apps.core.game import period_key
@@ -367,7 +369,7 @@ try:
     old=f'{year-1 if month==1 else year}-{12 if month==1 else month-1:02d}'
     verify_concurrency(db,schemas,ids,tokens,port,local_checks,reference_control,current,old)
     game_report['localChecks']=[s for s in local_checks if s.startswith('Game/points:')]
-    (ROOT/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
+    (REPORT_DIR/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
     from threading import Barrier
     from django.db import connections
     for side in (0,1):
@@ -393,7 +395,7 @@ try:
         assert len(rows)==1 and rows[0][0] in (100,200),rows
         local_checks.append(('Django' if side==0 else 'NestJS')+': concurrent same-cell upserts both succeed with one persisted row and a submitted amount')
     summary = dict(contracts=82,comparisons=len(results),passed=sum(r['status']=='PASS' for r in results),failed=sum(r['status']=='FAIL' for r in results),localChecks=local_checks,results=results)
-    (ROOT/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
+    (REPORT_DIR/'FULL_FOUNDATION_PARITY_REPORT.json').write_text(json.dumps(summary,indent=2)+'\n',encoding='utf-8')
     print('SUMMARY '+json.dumps({k:v for k,v in summary.items() if k!='results'}))
 finally:
     if server:

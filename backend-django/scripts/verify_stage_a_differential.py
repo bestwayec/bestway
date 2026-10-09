@@ -22,7 +22,9 @@ from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE_B = os.environ.get('VERIFY_STAGE_B') == '1'
-REPORT_PATH = ROOT / ('STAGE_B_PARITY_REPORT.json' if STAGE_B else 'STAGE_A_PARITY_REPORT.json')
+REPORT_DIR = Path(os.environ.get('VERIFY_REPORT_DIR', str(ROOT)))
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
+REPORT_PATH = REPORT_DIR / ('STAGE_B_PARITY_REPORT.json' if STAGE_B else 'STAGE_A_PARITY_REPORT.json')
 sys.path.insert(0, str(ROOT))
 raw_url = os.environ.get('DATABASE_URL', '')
 parsed = urlparse(raw_url)

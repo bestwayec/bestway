@@ -9,7 +9,7 @@ permissions:
 jobs:
   django:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend-django
@@ -20,6 +20,7 @@ jobs:
       ALLOWED_HOSTS: api.bestwayec.uz,django-api
       CORS_ALLOWED_ORIGINS: https://bestwayec.uz,https://www.bestwayec.uz
       REDIS_URL: redis://localhost:6379/0
+      PUBLIC_URL: https://api.bestwayec.uz
     services:
       postgres:
         image: postgres:17.11-alpine
@@ -65,11 +66,29 @@ jobs:
         run: |
           npm ci
           npx prisma generate
+          npx prisma migrate deploy
           npm run build
       - name: Install Django dependencies
         run: python -m pip install -r requirements/dev.txt -r requirements/prod.txt
       - name: Django regressions
         run: python -m pytest
+      - name: Match PostgreSQL dump client to the database server
+        run: |
+          mkdir -p "$RUNNER_TEMP/pg-client"
+          cat > "$RUNNER_TEMP/pg-client/pg_dump" <<'SH'
+          #!/usr/bin/env bash
+          exec docker run --rm --network host -e PGPASSWORD postgres:17.11-alpine pg_dump "$@"
+          SH
+          chmod +x "$RUNNER_TEMP/pg-client/pg_dump"
+          echo "$RUNNER_TEMP/pg-client" >> "$GITHUB_PATH"
+      - name: Verify actual Django HTTP and worker integration
+        run: |
+          VERIFY_REPORT_DIR="$RUNNER_TEMP/bestway-http" python scripts/verify_release_http.py
+          VERIFY_REPORT_DIR="$RUNNER_TEMP/bestway-workers" python scripts/verify_release_workers.py
+      - name: Check authoritative migration ledger and Django schema
+        run: python manage.py check_legacy_schema --settings=config.settings.production
+      - name: Verify authoritative Prisma migration manifest
+        run: python -m common.schema_validation ../backend/prisma/migrations
       - name: Check production security configuration
         run: python manage.py check --deploy --fail-level WARNING --settings=config.settings.production
       - name: Check shared cache
@@ -82,6 +101,36 @@ jobs:
           assert cache.get('ci-cache-check') == 'ok'
           cache.delete('ci-cache-check')
           PY
+      - name: Check deploy scripts and production container configuration
+        run: |
+          bash -n scripts/deploy_django.sh
+          sh -n config/docker-entrypoint.sh
+          cat > .env <<'ENV'
+          DATABASE_URL=postgresql://postgres:postgres@postgres:5432/education_center?schema=public
+          DJANGO_SECRET_KEY=ci-only-bestway-django-secret-long-enough-for-production-checks-987654321
+          JWT_SECRET=ci-only-bestway-jwt-secret-987654321
+          ALLOWED_HOSTS=api.bestwayec.uz,django-api,backend
+          CORS_ALLOWED_ORIGINS=https://bestwayec.uz,https://www.bestwayec.uz
+          PUBLIC_URL=https://api.bestwayec.uz
+          TELEGRAM_MODE=off
+          ASSESSMENT_WORKER_ENABLED=false
+          ENV
+          docker compose -f ../docker-compose.django.yml --profile workers config --quiet
+          docker compose -f ../docker-compose.django.yml -f ../docker-compose.django.cutover.yml --profile workers config --quiet
+      - name: Build and verify the actual Django API and worker containers
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker network create education-net
+          docker network connect --alias postgres education-net "$POSTGRES_CONTAINER"
+          docker volume create education_backend_storage
+          docker compose -f ../docker-compose.django.yml up -d --build --wait --wait-timeout 180 django-cache django-api
+          docker compose -f ../docker-compose.django.yml exec -T django-api python -m config.healthcheck
+          docker compose -f ../docker-compose.django.yml --profile workers run --rm --no-deps assessment-worker python manage.py run_assessment_worker --once
+          docker compose -f ../docker-compose.django.yml --profile workers run --rm --no-deps game-scheduler python manage.py run_game_scheduler --once
+      - name: Stop CI verification containers
+        if: always()
+        run: docker compose -f ../docker-compose.django.yml --profile workers down || true
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 20

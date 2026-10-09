@@ -6,6 +6,20 @@ from django.test import SimpleTestCase
 from apps.core.system_settings import numeric_settings
 from common.api.throttling import GlobalAPIThrottle
 from rest_framework.test import APIRequestFactory
+from django.core.exceptions import ImproperlyConfigured
+from common.deployment_config import require_public_origin
+
+
+class PublicOriginTests(SimpleTestCase):
+    def test_valid_api_origin(self):
+        self.assertEqual(require_public_origin('https://api.bestwayec.uz/'), 'https://api.bestwayec.uz')
+
+    def test_invalid_media_origins_fail_before_startup(self):
+        for value in ('', 'http://api.bestwayec.uz', 'https://api.bestwayec.uz/v1',
+                      'https://user:secret@api.bestwayec.uz', 'https://api.bestwayec.uz?token=secret',
+                      'https://api.bestwayec.uz#fragment', 'https://api.bestwayec.uz:bad'):
+            with self.subTest(value=value), self.assertRaises(ImproperlyConfigured):
+                require_public_origin(value)
 
 
 class NumericSettingsConsistencyTests(SimpleTestCase):

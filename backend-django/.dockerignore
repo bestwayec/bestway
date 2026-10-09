@@ -7,5 +7,6 @@ scripts/
 __pycache__/
 .pytest_cache/
 *.json
+!config/prisma_migrations.json
 *.png
 *.md

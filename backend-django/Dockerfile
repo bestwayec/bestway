@@ -9,7 +9,9 @@ COPY --chown=bestway:bestway apps/ ./apps/
 COPY --chown=bestway:bestway common/ ./common/
 COPY --chown=bestway:bestway config/ ./config/
 COPY --chown=bestway:bestway manage.py ./
-RUN mkdir -p /app/storage && chown bestway:bestway /app/storage
+RUN mkdir -p /app/storage && chown bestway:bestway /app/storage \
+    && chmod 755 /app/config/docker-entrypoint.sh
 USER bestway
 EXPOSE 8000
+ENTRYPOINT ["/bin/sh", "/app/config/docker-entrypoint.sh"]
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]

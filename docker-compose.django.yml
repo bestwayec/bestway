@@ -19,6 +19,7 @@ x-django: &django
   environment:
     DJANGO_SETTINGS_MODULE: config.settings.production
     STORAGE_DIR: /app/storage
+    BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
     REDIS_URL: redis://django-cache:6379/0
     # TLS terminates at the trusted tunnel/proxy. Internal Next.js calls use HTTP.
     SECURE_SSL_REDIRECT: "false"

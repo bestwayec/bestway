@@ -132,7 +132,7 @@ finally:
         db.execute(sql.SQL('DROP SCHEMA {} CASCADE').format(sql.Identifier(schema)))
     db.close()
     report['cleanup'] = 'only generated schema and owned loopback provider removed'
-    evidence = ROOT/'evidence'/'release-20261009'; evidence.mkdir(parents=True,exist_ok=True)
+    evidence = Path(os.environ.get('VERIFY_REPORT_DIR', str(ROOT/'evidence'/'release-20261009'))); evidence.mkdir(parents=True,exist_ok=True)
     (evidence/'WORKER_REPORT.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report))
 sys.exit(1 if report.get('error') else 0)

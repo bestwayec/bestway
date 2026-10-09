@@ -1,9 +1,11 @@
 """Explicit production configuration; never selected by local development."""
 from django.core.exceptions import ImproperlyConfigured
+from common.deployment_config import require_public_origin
 
 from .base import *  # noqa: F403
 
 DEBUG = False
+PUBLIC_URL = require_public_origin(env('PUBLIC_URL'))
 for name, value in (("DJANGO_SECRET_KEY", SECRET_KEY), ("JWT_SECRET", JWT_SECRET)):
     minimum = 50 if name == "DJANGO_SECRET_KEY" else 32
     if len(value) < minimum or len(set(value)) < 5 or value.lower().startswith(("change-me", "phase-1")):
