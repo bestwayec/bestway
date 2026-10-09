@@ -200,6 +200,23 @@ def make_legacy_copy(source_id: str, *, attempted: bool) -> str:
 
 
 try:
+    # Approved IELTS starter compatibility: nested writes share the audit transaction.
+    for exam_type in ('ielts_academic', 'ielts_general'):
+        starter = mock_authoring.create_exam(admin, dict(type=exam_type, title=f'IELTS starter {run_id}', starterStructure=True))
+        exam_ids.append(starter.id)
+        sections = list(MockSection.objects.filter(exam_id=starter.id).order_by('sort_order'))
+        check([section.skill for section in sections] == ['listening', 'reading', 'writing', 'speaking'], f'{exam_type} starter skills')
+        check([MockQuestionGroup.objects.filter(section_id=section.id).count() for section in sections] == [4, 3, 2, 3], f'{exam_type} starter groups')
+        check(not MockQuestion.objects.filter(group__section__exam_id=starter.id).exists(), f'{exam_type} starter has no fabricated questions')
+    counts_before = (MockExam.objects.count(), MockSection.objects.count(), MockQuestionGroup.objects.count())
+    with patch('apps.core.auth_service.audit', side_effect=RuntimeError('starter audit failure')):
+        try:
+            mock_authoring.create_exam(admin, dict(type='ielts_academic', title=f'Rollback starter {run_id}', starterStructure=True))
+            raise AssertionError('Starter audit failure was not raised')
+        except RuntimeError as error:
+            check(str(error) == 'starter audit failure', 'starter reaches audit inside transaction')
+    check(counts_before == (MockExam.objects.count(), MockSection.objects.count(), MockQuestionGroup.objects.count()), 'starter exam, sections and groups roll back together')
+
     # Final gate: paste import, persisted keys, versioning and rejected-write rollback.
     client.force_authenticate(user=admin)
     paste_exam = response_data(client.post('/v1/mock/exams', {

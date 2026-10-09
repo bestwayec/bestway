@@ -195,6 +195,18 @@ try:
                 for side, value in enumerate(values): ids[side][name] = value['id']
             else: raise RuntimeError(f'Cannot capture {name}: {values}')
 
+        for index, (exam_type, skills, starter) in enumerate([
+            ('ielts_academic', None, True), ('ielts_general', None, True),
+            ('ielts_academic', ['reading'], True), ('ielts_general', ['speaking', 'reading'], True),
+            ('ielts_general', None, False),
+        ]):
+            key = f'ielts_starter_{index}'
+            payload = dict(type=exam_type, title=f'IELTS starter parity {index}', starterStructure=starter)
+            if skills is not None: payload['skills'] = skills
+            capture(key, call('POST', '/v1/mock/exams', payload, label=key))
+            call('GET', '/v1/mock/exams/{' + key + '}', label=key + '-detail')
+        call('POST', '/v1/mock/exams', dict(type='ielts_academic', title='Empty starter skills', starterStructure=True, skills=[]), label='ielts-starter-empty-skills-rejected')
+
         capture('exam', call('POST', '/v1/mock/exams', dict(type='multilevel', title='Differential fixture', profile='practice')))
         capture('section', call('POST', '/v1/mock/exams/{exam}/sections', dict(skill='reading', title='Reading', sortOrder=0)))
         capture('group', call('POST', '/v1/mock/sections/{section}/groups', dict(title='Group', passageText='Original passage', sortOrder=0)))

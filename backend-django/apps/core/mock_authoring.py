@@ -275,17 +275,35 @@ def multilevel_preset(exam_id: str, skills=None):
     MockQuestionGroup.objects.bulk_create(rows)
 
 
+def ielts_preset(exam_id: str, skills=None):
+    """Port NestJS starterSections: editable blocks, never invented questions."""
+    selected = set(skills or SKILLS)
+    counts = {"listening": 4, "reading": 3, "writing": 2, "speaking": 3}
+    rows = []
+    for skill_index, skill in enumerate(SKILLS):
+        if skill not in selected:
+            continue
+        section = MockSection.objects.create(id=new_id(), exam_id=exam_id, skill=skill, title=skill.title(), sort_order=skill_index, duration_minutes=60 if skill in {"reading", "writing"} else None, instructions=None)
+        unit = "Passage" if skill == "reading" else "Task" if skill == "writing" else "Part"
+        for index in range(counts[skill]):
+            rows.append(MockQuestionGroup(id=new_id(), section_id=section.id, sort_order=index, title=f"{unit} {index + 1}", instructions=None, passage_text=None, content_html=None, audio_script=None, content_layout=None, options_reusable=None, audio_key=None, image_key=None, max_score=None, stimulus_ref=None, part_number=index + 1 if skill == "listening" else None, audio_play_limit=1, audio_duration_sec=None, created_at=now()))
+    MockQuestionGroup.objects.bulk_create(rows)
+
+
 def create_exam(actor, data: dict):
     exam_type = data.get("type")
     title = data.get("title")
     if exam_type not in {"ielts_academic", "ielts_general", "multilevel"} or not isinstance(title, str) or not 3 <= len(title) <= 200:
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    skills = data.get("skills")
+    if isinstance(skills, list) and not skills:
+        raise ContractAPIException("VALIDATION_ERROR", "skills must contain at least 1 elements", 400)
     with transaction.atomic():
         stamp = now()
         exam = MockExam.objects.create(id=new_id(), assessment_policy=data.get("assessmentPolicy"), speaking_profile_version=CURRENT_SPEAKING_PROFILE if exam_type == "multilevel" else None, specification_version=CURRENT_SPEC if exam_type == "multilevel" else None, type=exam_type, title=title, description=data.get("description"), level=data.get("level"), practice_level=data.get("practiceLevel"), is_published=False, is_demo=bool(data.get("isDemo", False)), price=data.get("price", 0), is_free_for_approved=data.get("isFreeForApproved", True), created_by_id=actor.id, created_at=stamp, updated_at=stamp, profile=data.get("profile", "practice"), blueprint_ref=None, content_version=1)
         if data.get("starterStructure"):
             if exam_type == "multilevel": multilevel_preset(exam.id, data.get("skills"))
-            # IELTS starter content is intentionally not synthetic: it remains a draft.
+            else: ielts_preset(exam.id, data.get("skills"))
         from .auth_service import audit
         from django.db import connection
         with connection.cursor() as cursor: audit(cursor, actor.id, "mock.exam.create", "mockExam", exam.id, new={"title": exam.title, "type": exam.type})

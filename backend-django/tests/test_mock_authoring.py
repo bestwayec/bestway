@@ -7,6 +7,8 @@ transaction routes ship; this file validates pure-layer parity and the
 student/auditor visibility boundary here and now.
 """
 from __future__ import annotations
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 from django.urls import resolve
@@ -46,6 +48,31 @@ def _fake_actor(role: str = "teacher", owner_id: str = "owner-1"):
 
 
 class AuthoringSanitizationAndParityTests(SimpleTestCase):
+    def test_ielts_starter_matches_reference_without_placeholder_questions(self):
+        for skills, expected in [(None, ['listening', 'reading', 'writing', 'speaking']),
+                                 ([], ['listening', 'reading', 'writing', 'speaking']),
+                                 (['speaking', 'reading'], ['reading', 'speaking'])]:
+            with self.subTest(skills=skills), patch.object(mock_authoring.MockSection.objects, 'create', side_effect=lambda **kw: SimpleNamespace(**kw)) as sections, patch.object(mock_authoring.MockQuestionGroup.objects, 'bulk_create') as groups:
+                mock_authoring.ielts_preset('exam', skills)
+                self.assertEqual([call.kwargs['skill'] for call in sections.call_args_list], expected)
+                rows = groups.call_args.args[0]
+                offset = 0
+                for call in sections.call_args_list:
+                    skill = call.kwargs['skill']
+                    count = {'listening': 4, 'reading': 3, 'writing': 2, 'speaking': 3}[skill]
+                    self.assertEqual(call.kwargs['sort_order'], mock_authoring.SKILLS.index(skill))
+                    self.assertEqual(call.kwargs['duration_minutes'], 60 if skill in ('reading', 'writing') else None)
+                    unit = 'Passage' if skill == 'reading' else 'Task' if skill == 'writing' else 'Part'
+                    for index, group in enumerate(rows[offset:offset + count]):
+                        self.assertEqual(group.title, f'{unit} {index + 1}')
+                        self.assertEqual(group.sort_order, index)
+                        self.assertEqual(group.part_number, index + 1 if skill == 'listening' else None)
+                        self.assertEqual(group.audio_play_limit, 1)
+                        self.assertIsNone(group.max_score)
+                        self.assertIsNone(group.audio_key)
+                    offset += count
+                self.assertEqual(len(rows), offset)
+
     def setUp(self):
         self.client = APIClient()
 
@@ -149,6 +176,12 @@ class AuthoringSanitizationAndParityTests(SimpleTestCase):
     def test_create_exam_accepts_minimal_valid_multilevel_payload(self):
         # Requires Django transaction boundary; covered by integration suite once routes ship.
         pass
+
+    def test_create_exam_rejects_empty_starter_skills_before_writes(self):
+        with self.assertRaises(mock_authoring.ContractAPIException) as error:
+            mock_authoring.create_exam(_fake_actor(), {'type': 'ielts_academic', 'title': 'Reading starter', 'starterStructure': True, 'skills': []})
+        self.assertEqual(error.exception.contract_code, 'VALIDATION_ERROR')
+        self.assertEqual(error.exception.detail, 'skills must contain at least 1 elements')
 
     def test_clone_rejects_non_staff(self):
         actor = _fake_actor(role="student")
