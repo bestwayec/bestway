@@ -1,0 +1,101 @@
+# Opt-in parallel Django deployment. This file does not replace the Nest backend,
+# alter the existing frontend/tunnel routing, or run schema migrations.
+# Prepare backend-django/.env using .env.example, including the existing database URL.
+# Usage: docker compose -f docker-compose.django.yml up -d --build --wait
+# The existing production stack must already provide education-net and storage,
+# and its Prisma migrations must have prepared the compatible database schema.
+# API starts alone. Stop the corresponding Nest workers before enabling the
+# explicit --profile workers (assessment + monthly game recovery/reset).
+name: bestway-django
+
+x-django: &django
+  build:
+    context: ./backend-django
+  image: bestway-django:local
+  restart: unless-stopped
+  init: true
+  env_file:
+    - ./backend-django/.env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.production
+    STORAGE_DIR: /app/storage
+    BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+    REDIS_URL: redis://django-cache:6379/0
+    # TLS terminates at the trusted tunnel/proxy. Internal Next.js calls use HTTP.
+    SECURE_SSL_REDIRECT: "false"
+    TRUST_PROXY_SSL_HEADER: "true"
+  volumes:
+    - backend_storage:/app/storage
+  networks:
+    - education-net
+    - django-cache-net
+  depends_on:
+    django-cache:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  django-api:
+    <<: *django
+    mem_limit: 768m
+    cpus: 1.0
+    ports:
+      - "127.0.0.1:8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-m", "config.healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  assessment-worker:
+    <<: *django
+    profiles: [workers]
+    command: ["python", "manage.py", "run_assessment_worker"]
+    mem_limit: 512m
+    cpus: 0.5
+  game-scheduler:
+    <<: *django
+    profiles: [workers]
+    command: ["python", "manage.py", "run_game_scheduler"]
+    mem_limit: 256m
+    cpus: 0.25
+  telegram-bot:
+    <<: *django
+    profiles: [telegram-polling]
+    command: ["python", "manage.py", "run_telegram_bot"]
+    mem_limit: 256m
+    cpus: 0.25
+  django-cache:
+    image: redis:8.2.10-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    # No host port; cache is isolated from the shared production network.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "96mb", "--maxmemory-policy", "noeviction"]
+    networks:
+      - django-cache-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  backend_storage:
+    external: true
+    name: education_backend_storage
+networks:
+  django-cache-net:
+    internal: true
+  education-net:
+    external: true
+    name: education-net

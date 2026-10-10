@@ -1,0 +1,463 @@
+{
+  "verdict": "STAGE_B_INTEGRATION_BLOCKED",
+  "nativeTauri": "UNVERIFIED",
+  "browser": [
+    {
+      "role": "student",
+      "gate": "login-rendered-catalogue",
+      "url": "http://localhost:3000/en/mock",
+      "text": "BestWay\nDashboard\nExams\nVideo lessons\nLeaderboard\nExam Track\nNotifications\n\nBEST WAY · 2007\n\nExams\nEN\nLU\nLocal UI student\nStudent\nMock exams\n\nFull-length IELTS and Multilevel practice exams\n\nExam Track\nIELTS\n\nAcademic / General IELTS\n\nActive track\n\nActive track\nMULTILEVEL\n\nUzbekistan CEFR B1 / B2 / C1\n\nEnrolled\n\nSwitch to MULTILEVEL\nIELTS Academic\nDemo\nLocal UI Reading fixture\n1 questions\n60 min\n0 attempts\nStart",
+      "inputs": [],
+      "buttons": [
+        "",
+        "en",
+        "LULocal UI studentStudent",
+        "Active track",
+        "Switch to MULTILEVEL",
+        ""
+      ]
+    },
+    {
+      "role": "student",
+      "gate": "exam-detail",
+      "text": "BestWay\nDashboard\nExams\nVideo lessons\nLeaderboard\nExam Track\nNotifications\n\nBEST WAY · 2007\n\nExams\nEN",
+      "buttons": [
+        "",
+        "en",
+        ""
+      ]
+    }
+  ],
+  "network": [
+    {
+      "method": "POST",
+      "url": "http://localhost:3000/api/auth/login",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/auth/me",
+      "path": "/api/backend/auth/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "path": "/api/backend/exam-programs/mine",
+      "status": 502
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "path": "/api/backend/exam-programs/mine",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/exams?program=IELTS",
+      "path": "/api/backend/mock/exams",
+      "status": 502
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "path": "/api/backend/mock/attempts/mine",
+      "status": 502
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "path": "/api/backend/mock/attempts/mine",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/exams?program=IELTS",
+      "path": "/api/backend/mock/exams",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/auth/me",
+      "path": "/api/backend/auth/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "path": "/api/backend/exam-programs/mine",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "path": "/api/backend/mock/attempts/mine",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a",
+      "path": "/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:3000/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a/start",
+      "path": "/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a/start",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/mock/attempts/9fbfe113-a21a-416d-8980-fc3cb2dffa56",
+      "path": "/api/backend/mock/attempts/9fbfe113-a21a-416d-8980-fc3cb2dffa56",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "path": "/api/backend/exam-programs/mine",
+      "status": 200
+    }
+  ],
+  "console": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x585c08112900]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x585c08112900]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x585c08112900]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x585c08112900]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    }
+  ],
+  "blockedExternal": [],
+  "runtime": [
+    "Django health 200 on 127.0.0.1:8001",
+    "django: [08/Oct/2026 21:35:27] \"GET /v1/health HTTP/1.1\" 200 109",
+    "django: [08/Oct/2026 21:35:45] \"POST /v1/auth/login HTTP/1.1\" 200 496",
+    "django: [08/Oct/2026 21:35:47] \"POST /v1/auth/login HTTP/1.1\" 401 103",
+    "django: [08/Oct/2026 21:35:47] \"POST /v1/auth/login HTTP/1.1\" 401 103",
+    "django: [08/Oct/2026 21:36:16] \"POST /v1/auth/login HTTP/1.1\" 200 496",
+    "django: [08/Oct/2026 21:37:14] \"GET /v1/auth/me HTTP/1.1\" 200 406",
+    "django: [08/Oct/2026 21:37:26] \"GET /v1/exam-programs/mine HTTP/1.1\" 200 121",
+    "django: [08/Oct/2026 21:37:41] \"GET /v1/mock/attempts/mine?program=IELTS HTTP/1.1\" 200 65",
+    "django: [08/Oct/2026 21:37:41] \"GET /v1/mock/exams?program=IELTS HTTP/1.1\" 200 371",
+    "django: [08/Oct/2026 21:38:11] \"GET /v1/auth/me HTTP/1.1\" 200 406",
+    "django: [08/Oct/2026 21:38:11] \"GET /v1/exam-programs/mine HTTP/1.1\" 200 121",
+    "django: [08/Oct/2026 21:38:12] \"GET /v1/mock/attempts/mine?program=IELTS HTTP/1.1\" 200 65",
+    "django: [08/Oct/2026 21:38:13] \"GET /v1/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a HTTP/1.1\" 200 1129",
+    "django: [08/Oct/2026 21:38:17] \"POST /v1/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a/start HTTP/1.1\" 201 1475",
+    "django: [08/Oct/2026 21:38:42] \"GET /v1/mock/attempts/9fbfe113-a21a-416d-8980-fc3cb2dffa56 HTTP/1.1\" 200 1454",
+    "django: [08/Oct/2026 21:38:43] \"GET /v1/exam-programs/mine HTTP/1.1\" 200 121",
+    "next:  GET /en/login 200 in 1005ms (next.js: 9ms, proxy.ts: 6ms, generate-params: 352ms, application-code: 639ms)",
+    "next:  POST /api/auth/login 401 in 1708ms (next.js: 1101ms, application-code: 607ms)",
+    "next:  POST /api/auth/login 401 in 359ms (next.js: 4ms, application-code: 355ms)",
+    "next:  GET /en/login?next=/en/mock 200 in 2.9s (next.js: 161ms, proxy.ts: 14ms, generate-params: 2.3s, application-code: 520ms)",
+    "next:  POST /api/auth/login 200 in 4.9s (next.js: 4ms, application-code: 4.9s)",
+    "next:  GET /en/mock 200 in 27.7s (next.js: 19.8s, proxy.ts: 874ms, generate-params: 5.5s, application-code: 1515ms)",
+    "next:  GET /api/backend/auth/me 200 in 26.7s (next.js: 20.4s, application-code: 6.3s)",
+    "next:  GET /api/backend/exam-programs/mine 502 in 9.2s (next.js: 243ms, application-code: 8.9s)",
+    "next:  GET /api/backend/exam-programs/mine 200 in 1337ms (next.js: 407ms, application-code: 930ms)",
+    "next:  GET /api/backend/mock/exams?program=IELTS 502 in 8.2s (next.js: 211ms, application-code: 8.0s)",
+    "next:  GET /api/backend/mock/attempts/mine?program=IELTS 502 in 8.0s (next.js: 4ms, application-code: 8.0s)",
+    "next:  GET /api/backend/mock/attempts/mine?program=IELTS 200 in 5.8s (next.js: 2ms, application-code: 5.8s)",
+    "next:  GET /api/backend/mock/exams?program=IELTS 200 in 6.1s (next.js: 107ms, application-code: 6.0s)",
+    "next:  GET /en/mock/f299db17-f8f5-4145-98af-831de0f5744a 200 in 12.8s (next.js: 10.2s, proxy.ts: 1371ms, application-code: 1267ms)",
+    "next:  GET /api/backend/auth/me 200 in 720ms (next.js: 118ms, application-code: 602ms)",
+    "next:  GET /api/backend/exam-programs/mine 200 in 661ms (next.js: 1.8ms, application-code: 659ms)",
+    "next:  GET /api/backend/mock/attempts/mine?program=IELTS 200 in 779ms (next.js: 21ms, application-code: 758ms)",
+    "next:  GET /api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a 200 in 1332ms (next.js: 2ms, application-code: 1330ms)",
+    "next:  POST /api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a/start 201 in 3.1s (next.js: 12ms, application-code: 3.1s)",
+    "next:  GET /en/mock/attempt/9fbfe113-a21a-416d-8980-fc3cb2dffa56 200 in 18.0s (next.js: 17.7s, proxy.ts: 131ms, application-code: 192ms)",
+    "next:  GET /api/backend/mock/attempts/9fbfe113-a21a-416d-8980-fc3cb2dffa56 200 in 5.6s (next.js: 44ms, application-code: 5.6s)",
+    "next:  GET /api/backend/exam-programs/mine 200 in 1241ms (next.js: 611ms, application-code: 631ms)"
+  ],
+  "timings": [
+    {
+      "gate": "direct Django login",
+      "status": 200,
+      "durationMs": 413
+    },
+    {
+      "gate": "cold Next login route (invalid credentials)",
+      "status": 401,
+      "durationMs": 1719
+    },
+    {
+      "gate": "warm Next login route (invalid credentials)",
+      "status": 401,
+      "durationMs": 368
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/auth/login",
+      "timing": {
+        "startTime": 1791477371590.4949,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.484,
+        "responseStart": 4960.302,
+        "responseEnd": 4982.669
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/auth/me",
+      "timing": {
+        "startTime": 1791477407758.517,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.803,
+        "responseStart": 26769.723,
+        "responseEnd": 26817.164
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "timing": {
+        "startTime": 1791477434762.2468,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.649,
+        "responseStart": 9223.731,
+        "responseEnd": 9240.073
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "timing": {
+        "startTime": 1791477445008.0737,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 1.038,
+        "responseStart": 1345.702,
+        "responseEnd": 1354.452
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/exams?program=IELTS",
+      "timing": {
+        "startTime": 1791477446374.135,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.418,
+        "responseStart": 8252.321,
+        "responseEnd": 8262.26
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "timing": {
+        "startTime": 1791477446376.934,
+        "domainLookupStart": 0.364,
+        "domainLookupEnd": 0.371,
+        "connectStart": 0.371,
+        "secureConnectionStart": -1,
+        "connectEnd": 0.893,
+        "requestStart": 1.049,
+        "responseStart": 8258.907,
+        "responseEnd": 8268.943
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "timing": {
+        "startTime": 1791477455749.385,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.416,
+        "responseStart": 5838.816,
+        "responseEnd": 5858.318
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/exams?program=IELTS",
+      "timing": {
+        "startTime": 1791477455654.4312,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 1.837,
+        "responseStart": 6139.733,
+        "responseEnd": 6156.069
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/auth/me",
+      "timing": {
+        "startTime": 1791477490272.6938,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.469,
+        "responseStart": 735.521,
+        "responseEnd": 764.274
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "timing": {
+        "startTime": 1791477491035.661,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.506,
+        "responseStart": 663.021,
+        "responseEnd": 675.025
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/attempts/mine?program=IELTS",
+      "timing": {
+        "startTime": 1791477491797.1448,
+        "domainLookupStart": 1.06,
+        "domainLookupEnd": 1.07,
+        "connectStart": 1.07,
+        "secureConnectionStart": -1,
+        "connectEnd": 1.754,
+        "requestStart": 1.899,
+        "responseStart": 871.574,
+        "responseEnd": 962.326
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a",
+      "timing": {
+        "startTime": 1791477491793.8691,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.54,
+        "responseStart": 1343.617,
+        "responseEnd": 1433.422
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/exams/f299db17-f8f5-4145-98af-831de0f5744a/start",
+      "timing": {
+        "startTime": 1791477494352.2861,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.642,
+        "responseStart": 3147.202,
+        "responseEnd": 3159.298
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/mock/attempts/9fbfe113-a21a-416d-8980-fc3cb2dffa56",
+      "timing": {
+        "startTime": 1791477516796.8608,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.608,
+        "responseStart": 5687.855,
+        "responseEnd": 5700.691
+      }
+    },
+    {
+      "gate": "browser request",
+      "url": "http://localhost:3000/api/backend/exam-programs/mine",
+      "timing": {
+        "startTime": 1791477522574.1948,
+        "domainLookupStart": -1,
+        "domainLookupEnd": -1,
+        "connectStart": -1,
+        "secureConnectionStart": -1,
+        "connectEnd": -1,
+        "requestStart": 0.586,
+        "responseStart": 1248.772,
+        "responseEnd": 1257.738
+      }
+    }
+  ],
+  "failedRequests": [],
+  "cookies": [
+    {
+      "name": "bw_at",
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "bw_rt",
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "bw_role",
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "failureUrl": "http://localhost:3000/en/mock/attempt/9fbfe113-a21a-416d-8980-fc3cb2dffa56",
+  "failureDom": "BestWay\nDashboard\nExams\nVideo lessons\nLeaderboard\nExam Track\nNotifications\n\nBEST WAY · 2007\n\nExams\nEN\nLU\nLocal UI student\nStudent\n\nLocal UI Reading fixture\n\n1 / 1 answered\n\n58:01\nFinish\nLocal passage\nThe original answer is station.\n1\n\nWhere?",
+  "error": "TimeoutError: Timeout 90000ms exceeded while waiting for event \"response\"",
+  "captureError": "Error",
+  "cleanup": "disposable schema, storage and owned service processes removed"
+}

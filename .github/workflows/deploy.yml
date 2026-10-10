@@ -1,7 +1,7 @@
 name: Deploy to VPS
 
 # Single-VPS Docker + Cloudflare deploy. Runs AFTER CI is green.
-# Trigger: push to main (or manual dispatch). PRs do NOT deploy.
+# Trigger: successful main CI (or manual dispatch with a successful CI gate).
 #
 # Required GitHub secrets (repo Settings → Secrets → Actions):
 #   VPS_HOST     — VPS IP or hostname (e.g. 203.0.113.10)
@@ -27,29 +27,57 @@ name: Deploy to VPS
 #     touch them.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: bestway-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Require successful main CI for the deployment commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=100" \
+            --jq '.workflow_runs[].head_sha' | grep -Fx "$DEPLOY_SHA" >/dev/null \
+            || { echo "No successful main CI run for this commit; deployment blocked"; exit 1; }
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
         env:
           VPS_PATH: ${{ secrets.VPS_PATH }}
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: VPS_PATH
+          envs: VPS_PATH,DEPLOY_SHA
           script: |
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
+            if [ -f .bestway-runtime ] && [ "$(cat .bestway-runtime)" = django ]; then
+              echo "Django owns this VPS runtime; refusing to restart Nest automatically"
+              exit 1
+            fi
             test -f ./backend/.env || { echo "backend/.env missing on VPS"; exit 1; }
             git fetch origin main
+            test "$(git rev-parse origin/main)" = "$DEPLOY_SHA" \
+              || { echo "main advanced beyond the verified commit; wait for its CI"; exit 1; }
             if git merge --ff-only origin/main; then
               echo "checkout fast-forwarded to $(git rev-parse --short HEAD)"
             else

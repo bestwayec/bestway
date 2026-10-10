@@ -1,0 +1,420 @@
+{
+  "contracts": 4,
+  "comparisons": 67,
+  "passed": 67,
+  "failed": 0,
+  "localChecks": [
+    "Assessment: primary worker validates immutable hash, persists token ledger and automatically projects practice IELTS rubric/attempt in one finalization transaction",
+    "Assessment: explicit rate limit persists FAILED provider call plus bounded RETRY; raw claim retains reference database-session-timezone eligibility",
+    "Assessment: uncertain billed timeout is NEEDS_REVIEW, never automatic retry",
+    "Assessment: failed transactional review audit rolls back final ledger score, answer projection and attempt recomputation completely",
+    "Assessment: expired lease with STARTED provider ledger becomes NEEDS_REVIEW/PROVIDER_OUTCOME_UNCERTAIN and is never re-claimed",
+    "Assessment: low-confidence primary invokes an independent adjudicator, combines validated criteria and preserves prior teacher answer grades",
+    "Assessment: real local immutable audio checksum, STARTED/SUCCEEDED STT ledger and transcript-to-rater handoff match; ASR never fabricates pronunciation or a complete IELTS speaking score",
+    "Assessment: two concurrent real PostgreSQL SKIP LOCKED claims select distinct jobs exactly once in both Django and NestJS"
+  ],
+  "results": [
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_manual}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "other_student",
+      "status": "PASS"
+    }
+  ]
+}

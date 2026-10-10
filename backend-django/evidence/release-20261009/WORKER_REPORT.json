@@ -1,0 +1,12 @@
+{
+  "gates": [
+    "PASS actual management worker + real loopback provider HTTP + persisted final score/attempt",
+    "PASS new process/restart does not redeliver completed job",
+    "PASS 429 failure ledger, durable retry and recovery in a fresh worker process",
+    "PASS crashed STARTED provider ledger is not automatically billed again after restart",
+    "PASS actual game scheduler startup/restart commands (monthly rollover covered separately by PostgreSQL contracts)"
+  ],
+  "provider": "loopback fixture ONLY",
+  "liveProviders": "UNVERIFIED",
+  "cleanup": "only generated schema and owned loopback provider removed"
+}

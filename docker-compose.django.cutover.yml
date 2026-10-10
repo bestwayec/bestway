@@ -1,0 +1,27 @@
+# Apply ONLY after stopping the Nest backend. Both frontend and Cloudflare
+# continue using backend:3001; the alias now resolves to the Django API.
+# docker compose -f docker-compose.django.yml -f docker-compose.django.cutover.yml --profile workers up -d --wait
+x-cutover-environment: &cutover-environment
+  # All processes use the authoritative Nest/Prisma database. Ignore stale or
+  # local database URLs in Django's env file during the production cutover.
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+
+services:
+  django-api:
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:3001", "--workers", "2", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+    environment:
+      <<: *cutover-environment
+      HEALTHCHECK_PORT: "3001"
+    ports: !override
+      - "127.0.0.1:8001:3001"
+    networks:
+      education-net:
+        aliases:
+          - backend
+      django-cache-net: {}
+  assessment-worker:
+    environment: *cutover-environment
+  game-scheduler:
+    environment: *cutover-environment
+  telegram-bot:
+    environment: *cutover-environment

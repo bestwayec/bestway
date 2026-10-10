@@ -1,0 +1,15 @@
+[project]
+name = "bestway-backend-django"
+version = "0.1.0"
+description = "Parallel Django compatibility backend for BESTWAY"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_tests.py"]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+branch = true
+source = ["apps", "common", "config"]

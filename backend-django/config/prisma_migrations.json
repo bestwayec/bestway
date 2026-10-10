@@ -1,0 +1,145 @@
+{
+  "owner": "Prisma",
+  "migrations": [
+    {
+      "name": "20260710140141_init",
+      "checksums": [
+        "26a4c79ff8ee277e847d96c34a76165c01c45d1a9dae2ad5de6a5134bfad4cf1",
+        "6a572519522df69ab1b9a83c5c744d6cb39a457603cb185d0dab484322a9acaf"
+      ]
+    },
+    {
+      "name": "20260710150000_telegram_link",
+      "checksums": [
+        "04da0c28cf6642225ebc9aea5a733fe2934a6155db900260c727417ccf9bfb92",
+        "922eddadf9b02328d638975b3a447e7c29fa0bd375b0637f3d186dac7659a5bd"
+      ]
+    },
+    {
+      "name": "20260710160000_announcement_and_monthly_fee",
+      "checksums": [
+        "9c5cdf1c6ed975049b07dc00571bb603e22545ca301cc9b656460bc6554b89e2",
+        "c9cfd1bb80f060d93e1db9b3f50602633bd02197d3905a02230e7a4803deffb8"
+      ]
+    },
+    {
+      "name": "20260711125059_game_points_monthly",
+      "checksums": [
+        "820bc1511ac19e3d305f584b5e107e8979baf04c744ffe27fd2506bf0a543c49",
+        "d1035ca86a260df3c35a101d730566672d63cddd27bfde2bbcdbf43e2bdbf87c"
+      ]
+    },
+    {
+      "name": "20260711184849_add_teachers_marketing",
+      "checksums": [
+        "41094d4090a708a877073d1d383ca3ece2ee2bc2d26b77323a93e3c79e9e6db1",
+        "4de31b9b36968dc634f290d2bea8024776e74fff5c7762e28967fad79506e6e2"
+      ]
+    },
+    {
+      "name": "20260712055927_mock_exam_system",
+      "checksums": [
+        "35b57aecf5e6ec36b9f3976079db5df8d047285c45440f70e0b2559467241775",
+        "9841126581212a024f9bd2547bfadfb63df6a371f9629f5c79e9bdcdb94d33e6"
+      ]
+    },
+    {
+      "name": "20260712064120_mock_paid_mode_speaking",
+      "checksums": [
+        "7fd9820b4ecf791ae79bb17f90fcb5b392ef3dffed5009b2cb90b328b37ca9ef",
+        "b70360f7cbde15fc57a5cc5bf5d0ab0234ecff5bdfe17c1e844f5b6fc6752773"
+      ]
+    },
+    {
+      "name": "20260826113247_refresh_token_rotation",
+      "checksums": [
+        "1d5b8c71187af3a3a71a64c98e3988ffd7994b2dc73185cecec97d999597da53",
+        "22b47b87e45df3d43a75132b37e5df660b5a9feaaada9d59e7976ac6ff5217fb"
+      ]
+    },
+    {
+      "name": "20260827145842_add_gallery",
+      "checksums": [
+        "1599907ee363d83d3e2c2b873544c84162a1ea25e2af5f2838128a087e291579",
+        "94f51a71647bc196f4bee8559a2043048ad77344476b9a953da92f1541c18f0d"
+      ]
+    },
+    {
+      "name": "20260906000000_ielts_full_test_flow",
+      "checksums": [
+        "555222ecaf02a1f397f6b06001eebbd50bdf174d32488d7ec8f205cf3ace7c94",
+        "c65d3afd91cf5b3bb3c80216ffb891ac2b18cedaaf7ae093ed3e8a3ff40dfe04"
+      ]
+    },
+    {
+      "name": "20260906050000_desktop_auth_code",
+      "checksums": [
+        "470f27357d595545891c15eba6e4ccd4e2a8afaa7ab63bf782a502ab189a7a45",
+        "f3816bfb4a3b3cfe7c183895416a676bf8fad7aa48b29da99e77fe0cda615e4e"
+      ]
+    },
+    {
+      "name": "20260906121148_add_question_media_fields",
+      "checksums": [
+        "3c0bcf6eedf8008b891d9aa88e3faabb1df9d44148ba8d5d26e90eff45776a47",
+        "5c1f275d9b2fb009a82b27bce81b013b784cdaa99a158d2d073d87fa7c2b3f99"
+      ]
+    },
+    {
+      "name": "20260907000000_attempt_answer_marks",
+      "checksums": [
+        "63b601f75c5ba9b6133cb6ec63cdd66568811459d3abe4efb9bff4d42a0ace32",
+        "b3a48bef858a080f1c8f596af184368daebcfa2b9f070515863417c8ed3dbcce"
+      ]
+    },
+    {
+      "name": "20260930000000_add_mock_gapped_document",
+      "checksums": [
+        "1071d9495ddd73954b9e859a9b38e3cb062d2c0f280eca4d141316e40cd392f1",
+        "41d0407757b465f7cc963b5bda26a82fc2b9a302d4a4d94b8268c1d86eaab11f"
+      ]
+    },
+    {
+      "name": "20261001000000_mock_exam_import_ledger",
+      "checksums": [
+        "0734eeb306f58be8a149eab95aaaecb11bcb50cd43bf7952120f5bf725a8b875",
+        "c6110137db27c18b526ed24fd021c9747091a20b43072a5b6070e2af3b25f42e"
+      ]
+    },
+    {
+      "name": "20261002000000_mock_import_issue_entity",
+      "checksums": [
+        "0803251aac6366810916145c46a2e93e24ac3c5e912387cfba6bba8c82655b77",
+        "2677a3a64ec0e4b28c926fcfe253fe128eb987e5d78db800263acf16921177ad"
+      ]
+    },
+    {
+      "name": "20261003000000_multilevel_exam_track",
+      "checksums": [
+        "83ac505a483f9eae5b0adcbe128ba5401fd8a066861de702b28ad5bd03193fd5",
+        "c80eb38b7a52b83fdd70f08b9a5109ce36617d2a04c7969fa8acf72489a6286a"
+      ]
+    },
+    {
+      "name": "20261004000000_ai_assessment_engine",
+      "checksums": [
+        "01ed1d04dc142866816432d95bddc4a5945452bf6cd09e5fe43395bf1577df59",
+        "073dc0dcf4237456b2cd83142307f7759d95d6ad6835d002e0c84c1c4abfecfc"
+      ]
+    },
+    {
+      "name": "20261004010000_question_engine_metadata",
+      "checksums": [
+        "3722c94d3a6f2574072ccf720c2c958968f0e642a9d458f6e9510a8b5c24fe8f",
+        "a5a821f1bcaea1b553121743fdfeb2dabbcd90e045d2ae4d8fb24527422afe00"
+      ]
+    },
+    {
+      "name": "20261005000000_multilevel_part_semantics",
+      "checksums": [
+        "3c825ee2d55f2919ff1dff1fe38dc6e62b5de3c07328c7254004edbcaa106e1c",
+        "c84e6d9f914df576e563ff13c89dcb5170ef0a7084108a81aa19d222e7bd8be4"
+      ]
+    }
+  ]
+}

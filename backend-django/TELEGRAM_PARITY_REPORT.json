@@ -1,0 +1,641 @@
+{
+  "contracts": 4,
+  "comparisons": 105,
+  "passed": 105,
+  "failed": 0,
+  "localChecks": [
+    "Telegram: all roles, token hash/expiry/replacement and one-use consume, menus, contact ownership/validation, secret webhook, chat-owner transfer and both unlink paths match recorded Nest transport and local database"
+  ],
+  "results": [
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    }
+  ]
+}

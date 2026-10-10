@@ -1,0 +1,12 @@
+.env*
+.venv/
+storage/
+evidence/
+tests/
+scripts/
+__pycache__/
+.pytest_cache/
+*.json
+!config/prisma_migrations.json
+*.png
+*.md

@@ -1,0 +1,7149 @@
+{
+  "contracts": 82,
+  "comparisons": 1184,
+  "passed": 1184,
+  "failed": 0,
+  "localChecks": [
+    "both APIs preserve exact original group creation time",
+    "failed multi-setting transaction rolls back database, audit and numeric cache",
+    "second payment write failure rolls back every payment and creates no audit",
+    "Attendance: failed second write rolls back entire batch, audit and parent notifications",
+    "Attendance: repeat absence preserves creation timestamp and emits no extra notifications in both APIs",
+    "Attendance: Django concurrent ('present', 'present') both succeed with one row; notifications=0",
+    "Attendance: Django concurrent ('absent', 'late') both succeed with one row; notifications=1",
+    "Attendance: Django concurrent ('absent', 'absent') both succeed with one row; notifications=0",
+    "Attendance: NestJS concurrent ('present', 'present') both succeed with one row; notifications=0",
+    "Attendance: NestJS concurrent ('absent', 'late') both succeed with one row; notifications=1",
+    "Attendance: NestJS concurrent ('absent', 'absent') both succeed with one row; notifications=0",
+    "Game/points: rollover archives stale periods, preserves null-period points and is idempotent in both services",
+    "Game/points: real startup recovery and monthly reset match reference database effects",
+    "Game/points: repeated archive upsert preserves the exact original creation timestamp",
+    "Game/points: history-write failure rolls back archive/reset/increment and emits no audit or notifications",
+    "Game/points: real Django scheduler --once startup matches Nest startup recovery",
+    "Game/points: safe points-notification failures retain success; awaited game failures match reference post-commit 500 and persisted state",
+    "Game/points: actual scheduled monthly callback matches Nest reset at 00:05 Asia/Tashkent",
+    "Legacy: teacher ownership, half-point scoring, upsert of a same-test question outside questionOrder and completed-attempt regrade preserve reference result/notification behavior",
+    "Legacy: failed second import insert rolls back all question writes and emits no audit",
+    "Assessment: primary worker validates immutable hash, persists token ledger and automatically projects practice IELTS rubric/attempt in one finalization transaction",
+    "Assessment: explicit rate limit persists FAILED provider call plus bounded RETRY; raw claim retains reference database-session-timezone eligibility",
+    "Assessment: uncertain billed timeout is NEEDS_REVIEW, never automatic retry",
+    "Assessment: failed transactional review audit rolls back final ledger score, answer projection and attempt recomputation completely",
+    "Assessment: expired lease with STARTED provider ledger becomes NEEDS_REVIEW/PROVIDER_OUTCOME_UNCERTAIN and is never re-claimed",
+    "Assessment: low-confidence primary invokes an independent adjudicator, combines validated criteria and preserves prior teacher answer grades",
+    "Assessment: real local immutable audio checksum, STARTED/SUCCEEDED STT ledger and transcript-to-rater handoff match; ASR never fabricates pronunciation or a complete IELTS speaking score",
+    "Assessment: two concurrent real PostgreSQL SKIP LOCKED claims select distinct jobs exactly once in both Django and NestJS",
+    "Telegram: all roles, token hash/expiry/replacement and one-use consume, menus, contact ownership/validation, secret webhook, chat-owner transfer and both unlink paths match recorded Nest transport and local database",
+    "Game/points: Django concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
+    "Game/points: NestJS concurrent qualification/increments persist 160, two history rows, four points notices and 2 game notices",
+    "Game/points: Django concurrent rollover/increments persist 120, two history rows, four points notices and 0 game notices",
+    "Game/points: NestJS concurrent rollover/increments persist 120, two history rows, four points notices and 0 game notices",
+    "Django: concurrent same-cell upserts both succeed with one persisted row and a submitted amount",
+    "NestJS: concurrent same-cell upserts both succeed with one persisted row and a submitted amount"
+  ],
+  "results": [
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs",
+      "label": "roles:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "teacherPointLimit:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:100000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:100001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "initialPoints:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:100000000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:100000001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "monthlyFee:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:100000",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:100001",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:1.5",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:12",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:True",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "gameThreshold:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/exam-program-policy",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/settings/ielts-bands",
+      "label": "all-table-validation-before-write",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/settings/ielts-bands",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?page=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?limit=101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?page=1.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?limit=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?extra=x",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?entity=setting&action=ielts&page=2&limit=2",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "foreign-key-contract",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/groups/{group}/students/{student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "membership-moves-between-groups",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{second}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/{group}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/groups/missing",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/audit-logs?entity=group",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/articles",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?category=news&tag=English",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?page=2&limit=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?tag=missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?unknown=true",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles?limit=0",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/articles/{article}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/{article}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/articles/missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notifications/broadcast",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=1",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=false",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=anything",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?type=announcement",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?type=bad",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?page=2&limit=1",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "cross-user-notification-IDOR",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/{notification}/read",
+      "label": "idempotent-mark-read",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/read-all",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/read-all",
+      "label": "idempotent-read-all",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notifications?unreadOnly=true",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/notifications/missing/read",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?studentId={other_student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?state=empty",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments?year=2026&month=10&state=unpaid",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/debtors?year=2026&month=10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/remind",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/payments/bulk",
+      "label": "blocked-student-payment",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/groups/{second}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&studentId={other_student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&studentId={student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&studentId={student}&month=2026-10",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&page=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=0000-01",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=0099-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=9999-12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId=",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:bad",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-13-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-00-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-32",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T00:30:00+05:00",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-31T23:59:00-05:00",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-09-30",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-11-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-02-31",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:20261009",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-W41-1",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-282",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01 12:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-04-31",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T24:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T25:00:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01\n",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01\r\n",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T12:00Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:2026-10-01T12Z",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:+2026-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:-0001-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "date:\uff12\uff10\uff12\uff16-10-01",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "inactive-student-cannot-mark",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "inactive-history-retained",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "inactive-other-member-does-not-block",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId=missing&month=2026-10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/attendance?groupId={second}&month=2026-10",
+      "label": "CSV-byte-and-header-contract",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU-name-order",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:\u00e9clair/Eagle",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:Alice/alice",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:Ali/\u0410\u043b\u0438",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance/stats?groupId={second}&month=2026-10",
+      "label": "ICU:O'quvchi/\u00d6quvchi",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{group}/students",
+      "label": "attendance-history-membership-move",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?month=2026-10",
+      "label": "history-survives-membership-move",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/attendance?groupId={group}&month=2026-10",
+      "label": "parent-group-filter-remains-ignored",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "former-member-cannot-mark-in-old-group",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/groups/{second}/students",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "idempotent-absence-no-notification",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "forged-admin-claim-does-not-elevate-database-role",
+      "status": "PASS"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/attendance/bulk",
+      "label": "no-invented-receptionist-grant",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status?ignored=anything",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2000",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2100&month=12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2000",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2100&month=12",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=bad",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2026.5",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=100",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=0",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=101",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=1.5",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?limit=bad",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?groupId={second}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?groupId=missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard?page=1",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{other_student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{other_student}/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/missing/adjust",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster/export?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/leaderboard",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/roster?year=2026&month=9",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "null-initial-points-status-coercion",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/game/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "safe-notification-failure-preserves-201",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/settings",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/points/{student}/adjust",
+      "label": "game-failure-preserves-committed-points-and-qualified-flag",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/points/{student}",
+      "label": "history-100-cap-system-and-missing-author-names",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{student}",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/missing",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/all",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/missing/image",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/missing",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/missing/photo",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/missing",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/dashboard",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026",
+      "label": "remaining-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?unknown=x",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?page=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?limit=101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?page=abc",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?role=invalid",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?search=student",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?groupId={group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users?role=student",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{other_student}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{student}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{other_teacher}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{parent}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{teacher}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "unicode-codepoint-name-boundary",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/users",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{new_student}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/{super_admin}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/users/{new_student}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/all",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/{teacher_card}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/{teacher_card}/photo",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/{teacher_card}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/{teacher_card}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/{teacher_card}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?unknown=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?months=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?months=25",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?months=abc",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?months=1",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/income?months=24",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=today",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=7d",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=30d",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=3m",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=6m",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=year",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/exam-activity?range=invalid",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=1999",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2101",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=abc",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026&month=0",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026&month=13",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026&month=10",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/payments?year=2026&unknown=x",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students?groupId={group}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/stats/export/students?unknown=x",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/gallery",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/{gallery_image}/image",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/gallery/{gallery_image}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/{gallery_image}/image",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/gallery/{gallery_image}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/gallery/{gallery_image}/image",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/teachers",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/{teachers_image}/photo",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/teachers/{teachers_image}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/{teachers_image}/photo",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/teachers/{teachers_image}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/teachers/{teachers_image}/photo",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/stream-url",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/purchase",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/missing/confirm-purchase",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/missing",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/missing",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/missing/thumbnail",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/{video}/thumbnail",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/{video}/stream-url",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/{video}/purchase",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/{video}/purchase",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases?status=pending_confirmation",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/{video}/stream-url",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/{video}/confirm-purchase",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/{video}/confirm-purchase",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/videos/{video}/purchase",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/purchases?status=purchased",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/{video}/stream-url",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=0-3",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=3-",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=-3",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=1-100",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=99-",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=5-2",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=-0",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:garbage",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token={stream_token_student}",
+      "label": "video-range:bytes=0-1,3-4",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos/stream?token=invalid",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/videos/{video}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/videos",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/videos/{video}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/missing",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/missing/questions/import",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/missing/audio",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/missing/grade",
+      "label": "legacy-admin-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/{legacy_test}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/import/preview",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions/import",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/questions/{legacy_question}/audio",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/tests/questions/{legacy_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/{legacy_test}/questions",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tests/attempts/{legacy_attempt}/grade",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/tests/attempts/{legacy_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:None",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/missing/review",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/missing/audio/missing",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/missing/grade",
+      "label": "assessment-role:super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_job}/audio/{assessment_question}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "other_teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_job}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/mock/attempts/{assessment_attempt}/grade",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/assessment/jobs/{assessment_manual}/review",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/attempts/{assessment_attempt}",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/assessment/jobs/{assessment_speech}/audio/{speaking_question}",
+      "label": "other_student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "teacher",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "admin",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "super_admin",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/telegram/link",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/link-token",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "student",
+      "status": "PASS"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/telegram/status",
+      "label": "parent",
+      "status": "PASS"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/telegram/webhook",
+      "label": "anonymous",
+      "status": "PASS"
+    }
+  ]
+}
