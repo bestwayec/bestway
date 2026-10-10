@@ -107,12 +107,31 @@ if [[ "$telegram_mode" == polling ]]; then
 elif [[ "$telegram_mode" == webhook ]]; then
   "${django[@]}" exec -T django-api python manage.py run_telegram_bot --once
 fi
+wait_for_public_readiness() {
+  local attempt public_health
+  # Restarted frontend and Cloudflare tunnel need time to reconnect. Each probe
+  # is bounded; an old API revision or an unavailable site must not pass cutover.
+  for attempt in {1..30}; do
+    if "${nest[@]}" exec -T frontend wget -qO- -T 5 http://backend:3001/v1/health >/dev/null 2>&1 &&
+      public_health="$(curl -fsS --connect-timeout 3 --max-time 5 https://api.bestwayec.uz/v1/health 2>/dev/null)" &&
+      printf '%s' "$public_health" | "${django[@]}" exec -T django-api python -c 'import json,os,sys
+try:
+    matches = json.load(sys.stdin)["data"]["buildCommit"] == os.environ["BUILD_COMMIT"]
+except (ValueError, KeyError, TypeError):
+    matches = False
+sys.exit(0 if matches else 1)' 2>/dev/null &&
+      curl -fsS --connect-timeout 3 --max-time 5 https://bestwayec.uz/ >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "Waiting for public API release and website readiness ($attempt/30)"
+    if [[ "$attempt" -lt 30 ]]; then sleep 2; fi
+  done
+  echo 'Public API release and website readiness failed after 30 attempts' >&2
+  return 1
+}
 # Restart edge processes to discard any cached DNS or connections to stopped Nest.
 "${nest[@]}" restart frontend cloudflared
-"${nest[@]}" exec -T frontend wget -qO- http://backend:3001/v1/health >/dev/null
-curl -fsS --max-time 30 https://api.bestwayec.uz/v1/health | \
-  "${django[@]}" exec -T django-api python -c 'import json,os,sys; assert json.load(sys.stdin)["data"]["buildCommit"] == os.environ["BUILD_COMMIT"], "Public API is not this release"'
-curl -fsS --max-time 30 https://bestwayec.uz/ >/dev/null
+wait_for_public_readiness
 "${django[@]}" ps
 printf 'django\n' > .bestway-runtime
 cutover_started=false
