@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { locales, routing, type Locale } from "@/i18n/routing";
 import { COOKIE } from "@/lib/config";
 import type { Role } from "@/lib/types";
+import { homePathForRole } from "@/lib/role-routing";
 
 // Next.js 16: "middleware" -> "proxy" (funksionallik o'zgarmagan)
 const intlProxy = createIntlMiddleware(routing);
@@ -20,6 +21,7 @@ const PUBLIC_PREFIXES = ["/demo"];
  */
 const PROTECTED_PREFIXES = [
   "/dashboard",
+  "/super-admin",
   "/attendance",
   "/payments",
   "/students",
@@ -102,6 +104,12 @@ function decodeRole(token: string | undefined): Role | undefined {
 
 export default function proxy(req: NextRequest) {
   const { locale, path } = splitLocale(req.nextUrl.pathname);
+  // Preserve old admin bookmarks, locale and query parameters.
+  if (path === "/admin" || path === "/admin/") {
+    const url = new URL(req.url);
+    url.pathname = withLocale(locale, "/super-admin");
+    return NextResponse.redirect(url);
+  }
   // Legacy "/tests" bo'limi o'chirildi — hamma imtihonlar "/mock" da (Exams).
   // Eski bookmarklar 404 emas, Exams ga tushadi.
   if (matches(path, ["/tests"])) {
@@ -119,15 +127,22 @@ export default function proxy(req: NextRequest) {
   const role = (roleFromJwt ?? req.cookies.get(COOKIE.role)?.value) as Role | undefined;
 
   if (matches(path, PROTECTED_PREFIXES) && !role) {
+    if (req.cookies.has(COOKIE.refresh) && (path === "/super-admin" || path === "/dashboard")) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/api/auth/resume";
+      url.search = "";
+      url.searchParams.set("next", withLocale(locale, path));
+      return NextResponse.redirect(url);
+    }
     const url = req.nextUrl.clone();
     url.pathname = withLocale(locale, "/login");
     url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
     return NextResponse.redirect(url);
   }
 
-  if (matches(path, AUTH_PAGES) && role && req.cookies.has(COOKIE.access)) {
+  if (matches(path, AUTH_PAGES) && role && req.cookies.has(COOKIE.access) && req.nextUrl.searchParams.get("reauth") !== "1") {
     const url = req.nextUrl.clone();
-    url.pathname = withLocale(locale, "/dashboard");
+    url.pathname = withLocale(locale, homePathForRole(role));
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -136,7 +151,7 @@ export default function proxy(req: NextRequest) {
     const rule = ROUTE_ROLES.find(([prefix]) => matches(path, [prefix]));
     if (rule && !rule[1].includes(role)) {
       const url = req.nextUrl.clone();
-      url.pathname = withLocale(locale, "/dashboard");
+      url.pathname = withLocale(locale, homePathForRole(role));
       url.search = "";
       return NextResponse.redirect(url);
     }

@@ -1,8 +1,8 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { COOKIE } from "./config";
-import type { Role } from "./types";
+import { API_URL, COOKIE } from "./config";
+import type { ApiResponse, Me, Role } from "./types";
 
 const ACCESS_MAX_AGE = 15 * 60; // 15 daqiqa — backend JWT_ACCESS_TTL bilan bir xil
 const REFRESH_MAX_AGE = 60 * 60 * 24 * 30; // 30 kun (JWT_REFRESH_TTL_DAYS)
@@ -101,17 +101,25 @@ export async function getSessionRole(): Promise<Role | undefined> {
   return (await cookies()).get(COOKIE.role)?.value as Role | undefined;
 }
 
-/** Rolga mos boshlang'ich sahifa — login qilgandan keyin shu yerga tushadi */
-export function homePathForRole(role: Role): string {
-  switch (role) {
-    case "super_admin":
-    case "admin":
-    case "teacher":
-      return "/dashboard";
-    case "student":
-    case "parent":
-      return "/dashboard";
-    default:
-      return "/dashboard";
-  }
+/** Cookie roles are UI hints; this confirms the current role with the backend. */
+export async function getVerifiedSessionRole(): Promise<Role | undefined> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return undefined;
+
+  const response = await fetch(`${API_URL}/auth/me`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000),
+  });
+  if (response.status === 401 || response.status === 403) return undefined;
+  if (!response.ok) throw new Error("Unable to verify session with the backend");
+
+  const json = (await response.json()) as ApiResponse<Me>;
+  if (!json.success) return undefined;
+  const role = json.data?.user?.role;
+  return role && ["super_admin", "admin", "teacher", "student", "parent"].includes(role)
+    ? role
+    : undefined;
 }
+
+export { homePathForRole } from "./role-routing";
