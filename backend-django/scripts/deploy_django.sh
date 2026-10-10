@@ -24,10 +24,22 @@ django=(docker compose -f docker-compose.django.yml -f docker-compose.django.cut
 "${django[@]}" config --quiet
 "${nest[@]}" exec -T postgres pg_isready -U postgres -d education_center
 "${nest[@]}" exec -T backend wget -qO- http://localhost:3001/v1/health >/dev/null
-previous_image="$(docker inspect --format '{{.Image}}' "$("${nest[@]}" ps -q backend)")"
-[[ "$previous_image" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'Previous Nest image identity unavailable'; exit 1; }
+previous_container="$("${nest[@]}" ps -q backend)"
+[[ "$previous_container" =~ ^[0-9a-f]{12,64}$ ]] || { echo 'Previous Nest container identity unavailable'; exit 1; }
 "${nest[@]}" build backend
 "${django[@]}" build django-api
+# Match the running backend, not merely two possibly edited env files. Hashes
+# stay inside this shell; neither connection string is written to logs.
+nest_database_hash="$(docker exec "$previous_container" node -e 'process.stdout.write(require("crypto").createHash("sha256").update(process.env.DATABASE_URL || "").digest("hex"))')"
+django_database_hash="$("${django[@]}" run --rm --no-deps django-api python -c 'import hashlib,os; print(hashlib.sha256(os.environ["DATABASE_URL"].encode()).hexdigest())')"
+[[ "$nest_database_hash" == "$django_database_hash" ]] || { echo 'Django and the running Nest backend must use the same DATABASE_URL'; exit 1; }
+# Existing web and Tauri sessions must remain verifiable after the cutover.
+nest_jwt_hash="$(docker exec "$previous_container" node -e 'process.stdout.write(require("crypto").createHash("sha256").update(process.env.JWT_SECRET || "").digest("hex"))')"
+django_jwt_hash="$("${django[@]}" run --rm --no-deps django-api python -c 'import hashlib,os; print(hashlib.sha256(os.environ["JWT_SECRET"].encode()).hexdigest())')"
+[[ "$nest_jwt_hash" == "$django_jwt_hash" ]] || { echo 'Django JWT_SECRET differs from running Nest; copy the existing secret before cutover'; exit 1; }
+# Verify the image's runtime UID can write the existing shared volume before
+# stopping production. Preserve all existing ownership and media files.
+"${django[@]}" run --rm --no-deps django-api python -c 'import os,tempfile; fd,path=tempfile.mkstemp(prefix=".bestway-deploy-write-",dir=os.environ["STORAGE_DIR"]); os.close(fd); os.unlink(path)'
 # Validate production settings before downtime; edge intentionally terminates TLS.
 "${django[@]}" run --rm --no-deps django-api python manage.py check --deploy --fail-level ERROR
 "${django[@]}" run --rm --no-deps django-api python -c 'import django; django.setup(); from django.conf import settings; assert "backend" in settings.ALLOWED_HOSTS, "ALLOWED_HOSTS must include backend for the existing frontend proxy"'
@@ -40,22 +52,44 @@ backup="backups/before-django-${release_sha:0:12}-$(date -u +%Y%m%dT%H%M%SZ).dum
 test -s "$backup" || { echo 'Database backup failed'; exit 1; }
 "${nest[@]}" exec -T postgres pg_restore --list < "$backup" >/dev/null
 echo "Database backup verified: $backup"
-rollback_overlay="${backup%.dump}-rollback.yml"
-printf 'services:\n  backend:\n    image: %s\n    pull_policy: never\n' "$previous_image" > "$rollback_overlay"
 cutover_started=false
 rollback() {
   status=$?
   if [[ "$cutover_started" == true && "$status" != 0 ]]; then
     echo 'Cutover failed; stopping Django workers and restoring Nest service routing'
-    "${django[@]}" --profile telegram-polling stop django-api assessment-worker game-scheduler telegram-bot || true
-    docker compose -f docker-compose.yml -f docker-compose.prod.yml -f "$rollback_overlay" \
-      up -d --no-build --wait --wait-timeout 120 backend || true
-    "${nest[@]}" restart frontend cloudflared || true
+    if ! "${django[@]}" --profile telegram-polling stop django-api assessment-worker game-scheduler telegram-bot; then
+      echo 'Django shutdown failed; Nest was not restarted to avoid duplicate workers. Inspect the running containers.'
+      echo "Database migrations were NOT rolled back. Backup retained at $backup"
+      exit "$status"
+    fi
+    # The original stopped container retains its exact image, environment and
+    # mounts. Recreating it from this release's compose could also reconcile
+    # PostgreSQL and would not restore the previous running configuration.
+    if docker start "$previous_container" >/dev/null; then
+      nest_ready=false
+      for attempt in {1..60}; do
+        if docker exec "$previous_container" wget -qO- http://localhost:3001/v1/health >/dev/null 2>&1; then
+          nest_ready=true
+          break
+        fi
+        sleep 2
+      done
+      if [[ "$nest_ready" == true ]]; then
+        "${nest[@]}" restart frontend cloudflared || true
+      else
+        echo 'Previous Nest container did not recover health; inspect its logs before resuming traffic.'
+      fi
+    else
+      echo 'Previous Nest container could not be restarted; manual recovery is required.'
+    fi
     echo "Database migrations were NOT rolled back. Backup retained at $backup"
   fi
   exit "$status"
 }
 trap rollback EXIT
+# Convert catchable cancellation signals into failures so EXIT recovery runs.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 cutover_started=true
 # Nest runs its schedulers inside the API process. Stop it before starting any
 # Django worker, and before assigning the same Docker backend DNS alias.
