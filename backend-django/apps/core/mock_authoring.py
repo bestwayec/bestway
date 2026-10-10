@@ -705,7 +705,11 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
     item('template_placeholders', placeholders == 0, f'{placeholders} content block(s) still contain generated template placeholders' if placeholders else 'no generated template placeholders')
     open_issues = sum(i.status == 'open' for i in review)
     item('import_issues', open_issues == 0, f'{open_issues} open import issue(s) — resolve in Exam Builder' if open_issues else 'no open import issues')
-    return {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
+    output = {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
+    if exam.type == 'multilevel':
+        from .mock_practice import metadata
+        output.update(metadata(exam))
+    return output
 
 
 def preview(actor, exam_id: str) -> dict:

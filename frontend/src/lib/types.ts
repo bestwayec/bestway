@@ -695,6 +695,10 @@ export interface MockExamListItem {
   isPublished: boolean;
   /** Server-authoritative start readiness. */
   ready?: boolean;
+  /** Authored Writing/Speaking practice availability; full readiness stays separate. */
+  practiceReady?: boolean;
+  practiceSkills?: MockPracticeSkill[];
+  practiceQuestionCount?: number;
   canEdit: boolean;
   skills: MockSkill[];
   questionCount: number;
@@ -723,6 +727,7 @@ export interface MockQuestion {
 export interface MockGroup {
   id: string;
   sortOrder: number;
+  sourcePartIndex?: number;
   title: string | null;
   instructions: string | null;
   passageText: string | null;
@@ -780,6 +785,9 @@ export interface MockExamStructure {
 export interface MockExamDetail extends MockExamStructure {
   /** Server-authoritative start readiness. */
   ready?: boolean;
+  practiceReady?: boolean;
+  practiceSkills?: MockPracticeSkill[];
+  practiceQuestionCount?: number;
   price: number;
   isFreeForApproved: boolean;
   access: MockAccess;
@@ -795,6 +803,7 @@ export interface StartMockResult {
   serverTime: string;
   durationMinutes: number | null;
   flowMode: string;
+  practiceScope?: MockPracticeScope | null;
   currentSkill: MockSkill | null;
   sectionDeadlines: Partial<Record<string, string>> | null;
   overallDeadlineAt: string | null;
@@ -808,6 +817,12 @@ export interface MockSectionScore {
   max: number;
 }
 
+export type MockPracticeSkill = "writing" | "speaking";
+export interface MockPracticeScope {
+  skills: MockPracticeSkill[];
+  questionIds: string[];
+}
+
 export interface MockAttemptSummary {
   id: string;
   examId: string;
@@ -819,6 +834,7 @@ export interface MockAttemptSummary {
   mode: MockAttemptMode;
   deadlineAt: string | null;
   flowMode: string;
+  practiceScope?: MockPracticeScope | null;
   currentSkill: MockSkill | null;
   sectionDeadlines: Partial<Record<string, string>> | null;
   overallDeadlineAt: string | null;
@@ -827,7 +843,7 @@ export interface MockAttemptSummary {
   overallBand: number | null;
   cefrLevel: string | null;
   specificationVersion?: string;
-  scoreMethod?: 'ESTIMATED' | 'OFFICIAL_CALIBRATED';
+  scoreMethod?: 'ESTIMATED' | 'OFFICIAL_CALIBRATED' | 'PRACTICE_PARTIAL';
   scoreVersion?: string;
   standardScores?: Record<string, { estimatedStandardScore: number; rawCorrect?: number; questionCount?: number; gradingSource?: string }>;
   overallScore?: number | null;

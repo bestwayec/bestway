@@ -32,6 +32,7 @@ import {
   useCloneMockExam,
   useExamImportProvenance,
   useMockExam,
+  useMockReadiness,
   useResolveImportIssue,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
@@ -47,6 +48,7 @@ import { SpeakingTaskEditor } from "./SpeakingTaskEditor";
 import { WritingSectionPanel } from "./WritingSectionPanel";
 import { WritingTaskEditor } from "./WritingTaskEditor";
 import { OverviewPanel } from "./OverviewPanel";
+import { reviewBlockerCount } from "./review-blockers";
 import { ReviewPanel } from "./ReviewPanel";
 import { SectionPanel } from "./SectionPanel";
 import { Sidebar } from "./Sidebar";
@@ -206,7 +208,13 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const router = useRouter();
   const clone = useCloneMockExam();
   const provQ = useExamImportProvenance(examId, true);
+  const readinessQ = useMockReadiness(examId);
   const resolveMut = useResolveImportIssue(examId);
+  // Same open-issue source the Review panel and the Publish gate use, so the
+  // toolbar/sidebar badge and the panel always show one number.
+  const openImportIssues = provQ.data
+    ? provQ.data.issues.filter((issue) => issue.status !== "resolved").length
+    : null;
 
   function handleResolveIssue(issueId: string) {
     if (resolveMut.isPending) return;
@@ -224,10 +232,15 @@ export function ExamBuilder({ examId }: { examId: string }) {
   }
   const blockers = React.useMemo(
     () =>
-      examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice", detail?.type).filter(
-        (c) => c.level === "error",
-      ).length + (provQ.data?.openIssues ?? 0),
-    [detail, provQ.data?.openIssues],
+      reviewBlockerCount(
+        examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice", detail?.type).filter(
+          (c) => c.level === "error",
+        ).length,
+        readinessQ.data?.items ?? [],
+        openImportIssues,
+        readinessQ.isError,
+      ),
+    [detail, openImportIssues, readinessQ.data, readinessQ.isError],
   );
 
   // Clone is the only manage-view action missing here (ported during the

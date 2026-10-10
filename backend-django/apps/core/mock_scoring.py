@@ -248,3 +248,9 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
     result = dict(status='grading' if pending else 'completed',rawScores=raw,sectionBands=bands,overallBand=overall,cefrLevel=cefr)
     if versioned: result.update(standardScores=standards,overallScore=overall_score,scoreMethod='ESTIMATED',scoreVersion=ESTIMATE_VERSION,isOfficial=False)
     return result, projections
+
+
+def partial_result(result):
+    """A selected/incomplete practice is graded only on its observed work."""
+    return dict(result,standardScores={},overallScore=None,overallBand=None,cefrLevel=None,
+        scoreMethod='PRACTICE_PARTIAL',scoreVersion=None,isOfficial=False)

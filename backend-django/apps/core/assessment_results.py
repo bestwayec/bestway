@@ -88,7 +88,9 @@ def score(input,result):
         parts.append(dict(id=part['id'],score=value))
     if any(p['score'] is None for p in parts):return dict(score=None,rawTotal=None,level=None,parts=parts)
     if input['program']=='MULTILEVEL':
-        raw=sum(p['score'] for p in parts);value=convert_expert(input['skill'],raw)
+        raw=sum(p['score'] for p in parts)
+        if input.get('practiceMode')=='PARTIAL':return dict(score=raw,rawTotal=raw,level=None,parts=parts)
+        value=convert_expert(input['skill'],raw)
         return dict(score=value,rawTotal=raw,level=multilevel_level(value),parts=parts)
     weights=[p.get('weight',2 if p['id'].startswith('task2') else 1) if input['skill']=='writing' else 1 for p in input['parts']]
     return dict(score=round_half(sum(p['score']*w for p,w in zip(parts,weights))/sum(weights)),rawTotal=None,level=None,parts=parts)
@@ -107,6 +109,26 @@ def empty(input):
     return dict(parts=[dict(id=p['id'],rawScore=0 if input['program']=='MULTILEVEL' else None,criteria={},evidence={},
         feedback=dict(**{k:'' for k in TEXT},**{k:[] for k in LISTS},forCovered=None,againstCovered=None)) for p in input['parts']],
         **{k:[] for k in TOP},grammarCorrections=[],vocabularyUpgrades=[],improvedExamples=[],confidence=0,pronunciationEvidence='UNAVAILABLE')
+
+def feedback_edit(value,base):
+    """Validate editable feedback without manufacturing manual rubric evidence."""
+    row=exact(value,RESULT);parts=array(row['parts'],20)
+    if len(parts)!=len(base['parts']):invalid()
+    seen=set();rated=[]
+    for part in parts:
+        exact(part,['id','rawScore','criteria','evidence','feedback']);identifier=text(part['id'])
+        if identifier in seen or not any(p['id']==identifier for p in base['parts']):invalid()
+        seen.add(identifier);fb=exact(part['feedback'],[*TEXT,*LISTS,'forCovered','againstCovered'])
+        feedback={k:text(fb[k]) for k in TEXT};feedback.update({k:texts(fb[k]) for k in LISTS})
+        for key in ('forCovered','againstCovered'):
+            if fb[key] is not None and type(fb[key]) is not bool:invalid()
+            feedback[key]=fb[key]
+        rated.append(dict(part,feedback=feedback))
+    examples=objects(row['improvedExamples'],['partId','text'])
+    if any(e['partId'] not in seen for e in examples):invalid()
+    return dict(row,parts=rated,**{k:texts(row[k]) for k in TOP},
+        grammarCorrections=objects(row['grammarCorrections'],['original','corrected','explanation']),
+        vocabularyUpgrades=objects(row['vocabularyUpgrades'],['original','alternative','explanation']),improvedExamples=examples)
 
 def teacher_result(input,base,parts):
     if len(parts)!=len(input['parts']) or len({p['id'] for p in parts})!=len(parts):fail('Provide each formal part once')

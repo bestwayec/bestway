@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from apps.legacy_schema.models import MockAnswer, Setting
 from . import mock_attempts as attempts, mock_catalog, mock_scoring as scoring
+from .mock_practice import is_partial, scope, scope_sections
 
 
 def saved_result(attempt):
@@ -78,6 +79,12 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         attempts.assert_program(actor, attempt)
     exam = attempt.exam
     sections = mock_catalog.shape_exam(exam, True)['sections']
+    sections = scope_sections(attempt, sections)
+    if is_partial(attempt):
+        if not sections:
+            attempts.fail('MOCK_PRACTICE_NOT_READY', 'The stored practice scope contains no tasks')
+        if skills is not None and set(skills) != set(scope(attempt)['skills']):
+            attempts.fail('VALIDATION_ERROR', 'Submit the complete selected practice scope')
     rows = list(MockAnswer.objects.filter(attempt_id=attempt.id))
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
         isGraded=a.is_graded, score=a.score) for a in rows}
@@ -90,6 +97,8 @@ def submit(actor, attempt_id, skills=None, *, force=False):
             attempts.fail('VALIDATION_ERROR', 'Bunday bo‘lim bu imtihonda yo‘q')
     result, projections = scoring.calculate(exam.type, sections, answers,
         versioned=versioned, full_test=attempt.flow_mode == 'full_test', tables=band_tables())
+    if is_partial(attempt):
+        result = scoring.partial_result(result)
     for answer in rows:
         if answer.question_id in projections:
             projection = projections[answer.question_id]

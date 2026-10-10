@@ -19,6 +19,7 @@ from common.api.exceptions import ContractAPIException
 from . import exam_programs, mock_catalog
 from .mock_authoring import _exam_tree, multilevel_readiness, new_id
 from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, speaking_profile, task_guidance
+from .mock_practice import is_partial, scope, scope_sections, selected_scope, SCOPE_KEY
 
 SKILLS = ('listening', 'reading', 'writing', 'speaking')
 
@@ -72,6 +73,9 @@ def assert_program(actor, attempt):
 
 
 def questions(attempt, ids):
+    selected = scope(attempt)
+    if selected is not None:
+        ids = [qid for qid in ids if qid in selected['questionIds']]
     return list(MockQuestion.objects.filter(id__in=ids,
         group__section__exam_id=attempt.exam_id).select_related('group__section'))
 
@@ -124,7 +128,9 @@ def start_response(attempt, exam, resumed, full_duration=None):
     definition.specification_version = attempt.specification_version
     definition.speaking_profile_version = attempt.speaking_profile_version
     shaped = mock_catalog.shape_exam(definition, False)
-    return dict(attemptId=attempt.id, resumed=resumed, mode=attempt.mode,
+    shaped['sections'] = scope_sections(attempt, shaped['sections'])
+    shaped['questionCount'] = sum(len(g['questions']) for s in shaped['sections'] for g in s['groups'])
+    result = dict(attemptId=attempt.id, resumed=resumed, mode=attempt.mode,
         startedAt=attempt.started_at,
         deadlineAt=(attempt.overall_deadline_at or attempt.deadline_at) if resumed else attempt.deadline_at,
         serverTime=timezone.now(), durationMinutes=full_duration if full_duration is not None else mock_catalog.total_duration(exam, shaped['sections']),
@@ -132,7 +138,11 @@ def start_response(attempt, exam, resumed, full_duration=None):
         sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
         exam=shaped, annotations=attempt.annotations or [] if resumed else [],
         savedAnswers={a.question_id: '[audio]' if a.audio_key else a.response
-            for a in MockAnswer.objects.filter(attempt_id=attempt.id)} if resumed else {})
+            for a in MockAnswer.objects.filter(attempt_id=attempt.id)
+            if not is_partial(attempt) or a.question_id in scope(attempt)['questionIds']} if resumed else {})
+    if is_partial(attempt):
+        result['practiceScope'] = scope(attempt)
+    return result
 
 
 def start(actor, exam_id, data):
@@ -141,6 +151,9 @@ def start(actor, exam_id, data):
     exam = MockExam.objects.filter(id=exam_id).first()
     if not exam:
         fail('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404)
+    partial = 'skills' in data
+    if partial and (exam.type != 'multilevel' or data.get('mode') != 'practice' or data.get('flow') == 'full_test'):
+        fail('VALIDATION_ERROR', 'Selected task practice is only available for Multilevel practice mode')
     if not exam.is_published and not exam.is_demo:
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
@@ -162,18 +175,23 @@ def start(actor, exam_id, data):
             fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
         existing = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').first()
         if existing:
+            if partial and (not is_partial(existing) or set(scope(existing)['skills']) != set(data['skills'])):
+                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
             return start_response(existing, exam, True)
-        if exam.type == 'multilevel':
+        practice = selected_scope(exam, data['skills']) if partial else None
+        if exam.type == 'multilevel' and not partial:
             readiness = multilevel_readiness(_exam_tree(exam))
             if not readiness['supported']:
                 fail('SPECIFICATION_UNSUPPORTED', readiness['issues'][0])
             if readiness['issues']:
                 fail('MOCK_NOT_READY', '; '.join(readiness['issues']))
             exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
+        if partial:
+            exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
         shaped = mock_catalog.shape_exam(exam, False)
         if shaped['questionCount'] == 0:
             fail('MOCK_EXAM_EMPTY', "Bu imtihonda hali savollar yo'q")
-        flow = 'full_test' if data.get('flow') == 'full_test' else 'single_skill'
+        flow = 'partial_practice' if partial else 'full_test' if data.get('flow') == 'full_test' else 'single_skill'
         if flow == 'full_test' and exam.profile != 'full_mock':
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow == 'full_test' else data.get('mode') or 'practice'
@@ -183,7 +201,8 @@ def start(actor, exam_id, data):
             specification_version=exam.specification_version, speaking_profile_version=exam.speaking_profile_version,
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
-            flow_mode=flow if flow == 'full_test' else None, current_skill='listening' if flow == 'full_test' else None,
+            flow_mode=flow if flow in ('full_test', 'partial_practice') else None, current_skill='listening' if flow == 'full_test' else None,
+            media_state={SCOPE_KEY: practice} if partial else None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,
             submitted_sections=[] if flow == 'full_test' else None)
         duration = int((last-at).total_seconds()/60 + .5) if flow == 'full_test' else None
@@ -275,6 +294,8 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         attempt = own(actor, attempt_id, lock=True)
         if not versioned(attempt):
             fail('SPECIFICATION_UNSUPPORTED', 'Multilevel task required')
+        if is_partial(attempt) and kind not in scope(attempt)['skills']:
+            fail('QUESTION_NOT_IN_EXAM', 'Media skill is outside the selected practice scope', 403)
         groups = list(MockQuestionGroup.objects.filter(section__exam_id=attempt.exam_id,
             section__skill=kind).order_by('sort_order'))
         grouped = [list(MockQuestion.objects.filter(group_id=g.id).order_by('sort_order')) for g in groups]
@@ -288,12 +309,16 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         assert_in_progress(attempt)
         assert_time(attempt)
         qs = questions(attempt, ids)
+        if is_partial(attempt) and len(qs) != len(ids):
+            fail('QUESTION_NOT_IN_EXAM', 'Media task is outside the selected practice scope', 403)
         if attempt.flow_mode == 'full_test' and any(q.group.section.skill != attempt.current_skill for q in qs):
             fail('SECTION_LOCKED', 'Question outside current section', 403)
         at = timezone.now()
         state = dict(attempt.media_state or {})
         phase = state.get(entity_id)
-        ordered = [q for part in grouped for q in part]
+        selected = scope(attempt)
+        ordered = [q for part in grouped for q in part
+                   if selected is None or q.id in selected['questionIds']]
         index = next((i for i, q in enumerate(ordered) if q.id == entity_id), -1)
         if not phase or attempt.mode == 'practice':
             if attempt.mode == 'timed':
@@ -352,6 +377,8 @@ def summary(attempt, *, detail=False):
     if versioned(attempt):
         result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
+    if is_partial(attempt):
+        result['practiceScope'] = scope(attempt)
     return result
 
 
@@ -413,7 +440,7 @@ def detail(actor, attempt_id):
     if staff:
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
-    result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=sections)
+    result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections))
     return result
 
 
@@ -458,7 +485,7 @@ def upload_speaking(actor, attempt_id, question_id, upload):
             assert_in_progress(attempt)
             if not versioned(attempt):
                 assert_time(attempt)
-            if attempt.flow_mode == 'full_test' and attempt.current_skill:
+            if is_partial(attempt) or attempt.flow_mode == 'full_test' and attempt.current_skill:
                 assert_question(attempt, question_id)
             q = MockQuestion.objects.filter(id=question_id, group__section__exam_id=attempt.exam_id,
                 group__section__skill='speaking').first()

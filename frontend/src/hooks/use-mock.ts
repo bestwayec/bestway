@@ -102,10 +102,11 @@ export function useConfirmMockPurchase() {
 
 export function useStartMock() {
   return useMutation({
-    mutationFn: (v: { examId: string; mode?: "practice" | "timed"; flow?: "full_test" | "single_skill" }) =>
+    mutationFn: (v: { examId: string; mode?: "practice" | "timed"; flow?: "full_test" | "single_skill"; skills?: import("@/lib/types").MockPracticeSkill[] }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
         ...(v.flow ? { flow: v.flow } : {}),
+        ...(v.skills ? { skills: v.skills } : {}),
       }),
   });
 }
@@ -452,7 +453,7 @@ export function useMockReadiness(examId: string) {
   return useQuery({
     queryKey: ["mock-readiness", examId],
     queryFn: () =>
-      api.get<{ examId: string; ready: boolean; items: MockReadinessItem[] }>(
+      api.get<{ examId: string; ready: boolean; items: MockReadinessItem[]; practiceReady?: boolean; practiceSkills?: import("@/lib/types").MockPracticeSkill[]; practiceQuestionCount?: number }>(
         `/mock/exams/${examId}/readiness`,
       ),
     enabled: !!examId,

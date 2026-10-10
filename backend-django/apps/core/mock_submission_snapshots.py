@@ -12,6 +12,7 @@ from .mock_import_validate import canonical_checksum
 from .mock_media import resolve_key
 from .multilevel import CURRENT_SPEC, SPECS, task_guidance
 from common.api.exceptions import ContractAPIException
+from .mock_practice import is_partial,scope_sections
 
 PROMPT_VERSION = 'BESTWAY_ASSESSMENT_PROMPT_2026_V1'
 
@@ -27,7 +28,7 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
                 originalResponse=answer.get('response') or '', partNumber=group['partNumber'] if group['partNumber'] is not None else index+1)
             key = answer.get('audioKey')
             if key:
-                mime = {'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac'}.get(Path(key).suffix.lower(), 'audio/mpeg')
+                mime = {'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(Path(key).suffix.lower(), 'audio/mpeg')
                 response.update(audioKey=key, audioHash=hash_audio(key), mimeType=mime)
             phase = (attempt.media_state or {}).get(question['id'], {})
             try:
@@ -42,13 +43,18 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
         context = '\n'.join(filter(None, [group['passageText'], group['contentHtml']]))
         images = dict(imageKeys=[group['imageKey']]) if group.get('imageKey') else {}
         if program == 'MULTILEVEL':
-            spec = SPECS[CURRENT_SPEC][skill]['parts']
-            part = spec[index] if index < len(spec) else None
+            spec = (SPECS.get(attempt.specification_version) or SPECS[CURRENT_SPEC])[skill]['parts']
+            source_index=group.get('sourcePartIndex',index)
+            part = spec[source_index] if source_index < len(spec) else None
             value = dict(id=part[0] if part else 'part:'+group['id'],
                 max=part[3] if part else group['questions'][0]['points'] if group['questions'] else 0,
                 task=task, context=context, responses=responses, **images)
             if skill == 'speaking':
-                guidance = [task_guidance(skill,index,qi,attempt.speaking_profile_version,attempt.specification_version) or {} for qi,_ in enumerate(group['questions'])]
+                # Catalogue guidance was shaped before practice filtering. Its
+                # question timing must survive an omitted earlier response.
+                guidance = [q['guidance'] if isinstance(q.get('guidance'),dict) else
+                    task_guidance(skill,source_index,qi,attempt.speaking_profile_version,attempt.specification_version) or {}
+                    for qi,q in enumerate(group['questions'])]
                 value.update(prepSeconds=[g.get('prepSeconds',0) for g in guidance], responseSeconds=[g.get('responseSeconds',0) for g in guidance])
             parts.append(value)
         elif skill == 'writing':
@@ -61,17 +67,21 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
                 parts.append(dict(id='speaking',max=9,task='IELTS Speaking Parts 1, 2 and 3, assessed holistically',context='',responses=[]))
             parts[0]['responses'].extend(responses)
             parts[0]['context'] += f"\nPart {group['partNumber'] if group['partNumber'] is not None else index+1}: " + '\n'.join(filter(None,[group['title'],group['instructions'],group['passageText']]))
-    return dict(program=program,skill=skill,specificationVersion=attempt.specification_version,
+    result=dict(program=program,skill=skill,specificationVersion=attempt.specification_version,
         speakingProfileVersion=attempt.speaking_profile_version, rubricVersion=f"{'MULTILEVEL' if program=='MULTILEVEL' else 'IELTS'}_{skill.upper()}_RUBRIC_V1",
         promptVersion=PROMPT_VERSION,pronunciationEvidence='UNAVAILABLE',parts=parts)
+    if is_partial(attempt):result['practiceMode']='PARTIAL'
+    return result
 
 
 def blueprint_failure(value):
     parts = value['parts']
     if not parts or any(not p['responses'] for p in parts):
         return 'ASSESSMENT_INCOMPLETE_BLUEPRINT'
+    if value.get('practiceMode')=='PARTIAL':
+        return 'PARTIAL_PRACTICE_MANUAL_REVIEW'
     if value['program'] == 'MULTILEVEL':
-        spec = SPECS[CURRENT_SPEC][value['skill']]['parts']
+        spec = (SPECS.get(value.get('specificationVersion')) or SPECS[CURRENT_SPEC])[value['skill']]['parts']
         if len(parts)!=len(spec) or any(p['id']!=s[0] or len(p['responses'])!=s[1] or p['max']!=s[3] for p,s in zip(parts,spec)):
             return 'ASSESSMENT_INCOMPLETE_BLUEPRINT'
     if value['skill']=='speaking' and any(not r.get('audioKey') or not r.get('audioHash') for p in parts for r in p['responses']):
@@ -83,7 +93,7 @@ def enqueue(attempt, wanted=None):
     exam = attempt.exam
     answers = {a.question_id:dict(response=a.response,audioKey=a.audio_key) for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
     image_keys = dict(MockQuestionGroup.objects.filter(section__exam_id=exam.id).values_list('id','image_key'))
-    for section in shape_exam(exam, True)['sections']:
+    for section in scope_sections(attempt,shape_exam(exam, True)['sections']):
         skill = section['skill']
         if skill not in ('writing','speaking') or wanted and skill not in wanted:
             continue
@@ -99,6 +109,7 @@ def enqueue(attempt, wanted=None):
                 return 'UNAVAILABLE'
         value = build_input(exam,attempt,skill,section['groups'],answers,hash_audio)
         policy = exam.assessment_policy if exam.assessment_policy is not None else os.environ.get('ASSESSMENT_POLICY','MANUAL_ONLY')
+        if is_partial(attempt):policy='MANUAL_ONLY'
         if policy not in ('MANUAL_ONLY','PRACTICE_AUTO_AI','FULL_MOCK_AI_WITH_REVIEW'):
             policy = 'MANUAL_ONLY'
         if (exam.profile=='full_mock' or attempt.flow_mode=='full_test') and policy=='PRACTICE_AUTO_AI':
@@ -124,7 +135,7 @@ def notify(attempt):
     def number(value):
         return '—' if value is None else format(value,'.15g')
     if attempt.exam.type == 'multilevel':
-        headline = f"estimated (unofficial): {number(attempt.overall_score)}/75 · {attempt.cefr_level or '—'}" if versioned(attempt) else f"daraja: {attempt.cefr_level or '—'}"
+        headline = '; '.join(f"{skill}: {number(raw['score'])}/{number(raw['max'])}" for skill,raw in (attempt.raw_scores or {}).items())+' (qisman mashq, umumiy daraja berilmaydi)' if is_partial(attempt) else f"estimated (unofficial): {number(attempt.overall_score)}/75 · {attempt.cefr_level or '—'}" if versioned(attempt) else f"daraja: {attempt.cefr_level or '—'}"
     else:
         headline = 'Overall Band: '+number(attempt.overall_band)
     title = student_title(attempt.exam.title)

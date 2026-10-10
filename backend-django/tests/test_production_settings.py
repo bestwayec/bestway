@@ -39,9 +39,33 @@ class NumericSettingsConsistencyTests(SimpleTestCase):
                 ('gameThreshold', {'invalid': True}),
             ]
             self.assertEqual(numeric_settings(), {
-                'teacherPointLimit': 0, 'initialPoints': 100,
+                'teacherPointLimit': None, 'initialPoints': 100,
                 'monthlyFee': 125000, 'gameThreshold': None,
             })
+
+    def test_explicit_null_survives_an_unrelated_settings_update_and_fresh_read(self):
+        # The next settings update uses this read as its audit oldValue. Turning
+        # the prior teacherPointLimit=null into 0 silently changed that history.
+        with patch('apps.core.system_settings.Setting.objects.filter') as query:
+            query.return_value.values_list.side_effect = [
+                [('teacherPointLimit', None), ('initialPoints', 100)],
+                [('teacherPointLimit', None), ('initialPoints', 250)],
+                [('teacherPointLimit', None), ('initialPoints', 250)],
+            ]
+            before=numeric_settings();after=numeric_settings();fresh=numeric_settings()
+            self.assertIsNone(before['teacherPointLimit'])
+            self.assertIsNone(after['teacherPointLimit'])
+            self.assertEqual(after,fresh)
+            self.assertEqual(after['initialPoints'],250)
+            self.assertEqual(query.call_count,3)
+
+    def test_null_is_distinct_from_a_missing_setting_and_explicit_zero(self):
+        with patch('apps.core.system_settings.Setting.objects.filter') as query:
+            query.return_value.values_list.return_value = [('teacherPointLimit', None), ('monthlyFee', 0)]
+            values=numeric_settings()
+            self.assertIsNone(values['teacherPointLimit'])
+            self.assertEqual(values['initialPoints'],100)
+            self.assertEqual(values['monthlyFee'],0)
 
 
 class GlobalThrottleTests(SimpleTestCase):

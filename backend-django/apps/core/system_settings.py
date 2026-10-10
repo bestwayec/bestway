@@ -43,7 +43,14 @@ def numeric_settings():
     stored = dict(Setting.objects.filter(key__in=DEFAULTS).values_list('key', 'value'))
     for key, default in DEFAULTS.items():
         raw = stored.get(key, default)
-        # JavaScript Number(null/boolean/empty string) contracts.
+        # Optional numeric DTOs accept explicit JSON null. Nest setNumber keeps
+        # that value in its cache, so later API responses and audit snapshots
+        # retain null. Preserve the persisted value across all Django processes;
+        # domain arithmetic uses game.numeric when it needs null coerced to 0.
+        if raw is None:
+            result[key] = None
+            continue
+        # JavaScript Number(boolean/empty string) contracts.
         try: number = float(raw or 0) if not isinstance(raw, (dict, list)) else float('nan')
         except (ValueError, TypeError): number = float('nan')
         result[key] = int(number) if math.isfinite(number) and number.is_integer() else number if math.isfinite(number) else None

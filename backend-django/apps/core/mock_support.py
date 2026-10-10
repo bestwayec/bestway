@@ -136,6 +136,8 @@ def certificate_data(actor,attempt_id):
     row=MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     assert_view(actor,row.student_id)
+    from .mock_practice import is_partial
+    if is_partial(row): fail('MOCK_PARTIAL_PRACTICE_NO_CERTIFICATE','Selected task practice does not issue a full exam certificate')
     if row.status!='completed': fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
     sections=[dict(skill=skill,score=raw['score'],max=raw['max'],band=(row.section_bands or {}).get(skill),
         standardScore=(row.standard_scores or {}).get(skill,{}).get('estimatedStandardScore'))

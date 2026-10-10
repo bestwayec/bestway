@@ -39,8 +39,9 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
 
 export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJobView; attemptId: string; isStaff: boolean }) {
   const t = useTranslations("assessment");
-  const result = job.approvedFeedback ?? job.evaluation?.result;
-  const title = job.program === "MULTILEVEL" ? t(`multilevel.${job.skill}`) : t(`ielts.${job.skill}`);
+  const result = job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result;
+  const partial = job.practiceMode === "PARTIAL";
+  const title = partial ? t("partialPractice", { skill: job.skill === "writing" ? "Writing" : "Speaking" }) : job.program === "MULTILEVEL" ? t(`multilevel.${job.skill}`) : t(`ielts.${job.skill}`);
   const reviewed = job.finalScoreSource === "TEACHER";
   const active = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
   const variant = job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
@@ -52,11 +53,11 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           <h3 className="font-semibold text-fg">{title}</h3>
           <Badge variant={variant}>{t(`status.${assessmentStatusKey(job)}`)}</Badge>
         </div>
-        <p className="text-xs text-fg-subtle">{t("estimated")}</p>
+        <p className="text-xs text-fg-subtle">{t(partial ? "partialPracticeNotice" : "estimated")}</p>
         <dl className="grid gap-2 sm:grid-cols-3">
           {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => <div key={key} className="rounded-[8px] bg-bg-subtle p-3">
             <dt className="text-xs text-fg-muted">{t(key)}</dt>
-            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{job[key] ?? t("pending")}{job[key] != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
+            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{job[key] ?? t("pending")}{job[key] != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : job[key] != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
           </div>)}
         </dl>
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">
@@ -67,7 +68,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
         {pronunciationUnavailable && <p className="rounded-[8px] bg-warning-bg p-3 text-sm text-warning">{t("pronunciationUnavailable")}</p>}
         {(job.status === "FAILED" || job.status === "NEEDS_REVIEW") && <p className="text-sm text-fg-muted">{t("reviewFallback")}</p>}
         {job.finalScore == null && <p className="text-sm text-fg-muted">{t("resultPending")}</p>}
-        {reviewed && <p className="text-sm text-fg-muted">{t("teacherReviewed")}</p>}
+        {reviewed && <p className="text-sm text-fg-muted">{t(job.evaluation ? "teacherReviewed" : "teacherReviewedManual")}</p>}
       </div>
       <div className="space-y-5 p-5">
         {job.parts.map((part) => {
@@ -76,7 +77,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           return <section key={part.id} className="space-y-3" aria-label={part.task}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-semibold text-fg">{part.task}</h4>
-              {job.program === "MULTILEVEL" && partResult && <Badge variant="neutral">{t("aiRawPart")}: {partResult.rawScore ?? t("pending")} /{part.max}</Badge>}
+              {job.program === "MULTILEVEL" && partResult && <Badge variant="neutral">{t(reviewed ? "teacherRawPart" : "aiRawPart")}: {partResult.rawScore ?? t("pending")} /{part.max}</Badge>}
             </div>
             {part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{part.context}</p>}
             {job.program === "MULTILEVEL" && job.skill === "speaking" && submissions.length > 1 && <p className="text-xs text-fg-subtle">{t("holisticPart")}</p>}
@@ -100,7 +101,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
             </div>)}
             {partResult && <div className="space-y-3 rounded-[10px] bg-bg-subtle p-4">
               <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("feedback")}</h5>
-              <p className="text-xs font-medium text-fg-subtle">{t("aiRubric")}</p>
+              {!!Object.keys(partResult.criteria).length && <p className="text-xs font-medium text-fg-subtle">{t(reviewed ? "teacherRubric" : "aiRubric")}</p>}
               <dl className="grid gap-2 sm:grid-cols-2">{Object.entries(partResult.criteria).map(([key, score]) => <div key={key} className="text-sm">
                 <dt className="text-fg-muted">{t.has(`criteria.${key}`) ? t(`criteria.${key}`) : key}</dt>
                 <dd className="font-semibold text-fg tabular-nums">{score ?? t("unavailable")}</dd>
@@ -164,7 +165,7 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
 
 function initialOverrideValues(job: AssessmentJobView): Record<string, Record<string, string>> {
   return Object.fromEntries(job.parts.map((part) => {
-    const result = job.evaluation?.result.parts.find((item) => item.id === part.id);
+    const result = (job.finalResult ?? job.approvedFeedback ?? job.evaluation?.result)?.parts.find((item) => item.id === part.id);
     return [part.id, job.program === "MULTILEVEL" ? { rawScore: result?.rawScore == null ? "" : String(result.rawScore) }
       : Object.fromEntries(criterionKeys(job).map((key) => [key, result?.criteria[key] == null ? "" : String(result.criteria[key])]))];
   }));
@@ -179,7 +180,7 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
   const [confirmRegrade, setConfirmRegrade] = React.useState(false);
   const [scores, setScores] = React.useState(() => initialOverrideValues(job));
   const [feedback, setFeedback] = React.useState<AssessmentResult | null>(() => {
-    const value = job.approvedFeedback ?? job.evaluation?.result;
+    const value = job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result;
     return value ? structuredClone(value) : null;
   });
   const busy = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);

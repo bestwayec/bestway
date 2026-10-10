@@ -28,10 +28,12 @@ import {
   usePurchaseMock,
   useStartMock,
 } from "@/hooks/use-mock";
-import type { MockAttemptMode, MockSkill } from "@/lib/types";
+import type { MockAttemptMode, MockPracticeSkill, MockSkill } from "@/lib/types";
+import { availablePracticeSkills } from "@/lib/mock-practice";
 import { displayTotalMinutes } from "@/lib/mock-timing";
 import { formatMoney } from "@/lib/utils";
 import { MultilevelReadiness, studentStartMessage } from "./multilevel-student-ui";
+import { useMe } from "@/hooks/use-me";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -44,22 +46,27 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const router = useRouter();
+  const me = useMe();
+  const staff = ["teacher", "admin", "super_admin"].includes(me.data?.user.role ?? "");
   const examQ = useMockExam(examId);
   const attemptsQ = useMyMockAttempts();
   const start = useStartMock();
   const purchase = usePurchaseMock();
 
   const exam = examQ.data;
+  const practiceSkills = exam ? availablePracticeSkills(exam) : [];
+  const [selectedPractice, setSelectedPractice] = React.useState<MockPracticeSkill[] | null>(null);
+  const selectedSkills = practiceSkills.filter((skill) => selectedPractice === null || selectedPractice.includes(skill));
   const attempts = (attemptsQ.data ?? []).filter((a) => a.examId === examId);
   const inProgress = attempts.find((a) => a.status === "in_progress");
 
-  function onStart(mode: MockAttemptMode) {
-    if (exam?.ready === false) {
+  function onStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+    if (exam?.ready === false && !(mode === "practice" && skills?.length && practiceSkills.length)) {
       toast.error("Exam is not ready yet.");
       return;
     }
     start.mutate(
-      { examId, mode },
+      { examId, mode, ...(skills ? { skills } : {}) },
       {
         onSuccess: (res) => router.push(`/mock/attempt/${res.attemptId}`),
         onError: (e) => toast.error(exam?.type === "multilevel" ? studentStartMessage(e) : (e instanceof Error ? e.message : tc("unknownError"))),
@@ -118,7 +125,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
           <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
           {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
           {exam.level && <span className="text-sm text-fg-subtle">{exam.level}</span>}
-          {multilevel && <MultilevelReadiness ready={exam.ready} />}
+          {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
         </div>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-fg">{exam.title}</h1>
         {exam.description && <p className="mt-2 text-fg-muted">{exam.description}</p>}
@@ -154,7 +161,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-fg">{t(`skills.${sec.skill}`)}</p>
                   <p className="text-xs text-fg-muted">
-                    {multilevel && sec.skill === "writing" ? "3 tasks · 60 min · /16" : multilevel && sec.skill === "speaking" ? "4 parts · 11 min · /21" : `${qCount} ${t("questions")}${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds) ? ` · ${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds)} ${t("minutes")}` : ""}`}
+                    {multilevel && sec.skill === "writing" ? `${sec.groups.length} authored tasks · ${qCount} questions` : multilevel && sec.skill === "speaking" ? `${sec.groups.length} authored parts · ${qCount} questions` : `${qCount} ${t("questions")}${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds) ? ` · ${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds)} ${t("minutes")}` : ""}`}
                   </p>
                 </div>
               </div>
@@ -162,9 +169,31 @@ export function MockExamDetailView({ examId }: { examId: string }) {
           })}
         </div>
 
+        {!staff && !inProgress && exam.access === "granted" && practiceSkills.length > 0 && (
+          <div className="mt-5 space-y-3 rounded-[10px] border border-brand bg-brand-subtle p-4">
+            <p className="font-semibold text-fg">{t("practiceSelectionTitle")}</p>
+            <p className="text-sm text-fg-muted">{t("practiceSelectionHint")}</p>
+            <fieldset className="flex flex-wrap gap-4">
+              <legend className="sr-only">{t("choosePracticeSkills")}</legend>
+              {practiceSkills.map((skill) => (
+                <label key={skill} className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={selectedSkills.includes(skill)} onChange={(event) => setSelectedPractice(event.target.checked ? [...selectedSkills, skill] : selectedSkills.filter((item) => item !== skill))} />
+                  {t(`skills.${skill}`)}
+                </label>
+              ))}
+            </fieldset>
+            {exam.practiceQuestionCount != null && <p className="text-xs text-fg-muted">{t("availablePracticeTasks", { count: exam.practiceQuestionCount })}</p>}
+            <Button className="w-full" disabled={selectedSkills.length === 0} loading={start.isPending} onClick={() => onStart("practice", selectedSkills)}>
+              <Play className="fill-current" />{t("startSelectedPractice")}
+            </Button>
+          </div>
+        )}
+
         {/* Boshlash / sotib olish */}
         <div className="mt-6 border-t border-border pt-5">
-          {inProgress ? (
+          {staff ? (
+            <Link href={`/exam-builder/${examId}`}><Button className="w-full" variant="outline">{t("manage")}</Button></Link>
+          ) : inProgress ? (
             <Button
               className="w-full"
               loading={start.isPending}

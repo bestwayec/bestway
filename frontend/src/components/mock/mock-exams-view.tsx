@@ -40,6 +40,7 @@ import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
 import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
 import { formatMoney, formatPhone } from "@/lib/utils";
 import { MultilevelReadiness } from "./multilevel-student-ui";
+import { availablePracticeSkills } from "@/lib/mock-practice";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -179,7 +180,7 @@ export function MockExamCard({
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
         {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
-        {multilevel && <MultilevelReadiness ready={exam.ready} />}
+        {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
         {isStaff && (
           <Badge variant={exam.isPublished ? "success" : "warning"}>
             {exam.isPublished ? t("published") : t("draft")}
@@ -228,7 +229,7 @@ export function MockExamCard({
             <ClipboardCheck className="size-4" />
             {t("manage")}
           </Link>
-        ) : multilevel && exam.ready === false ? (
+        ) : multilevel && exam.ready === false && availablePracticeSkills(exam).length === 0 && !inProgress ? (
           <Button className="w-full" disabled>
             <Play className="fill-current" />
             Start Exam

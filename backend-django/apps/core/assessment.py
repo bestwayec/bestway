@@ -48,6 +48,7 @@ def for_attempt(actor,identifier):
         value.update(teacherReviewed=job.final_score_source=='TEACHER' or job.approved_feedback is not None,
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
+        if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
         for part in input['parts']:
             for r in part['responses']:
                 transcript=next((t for t in transcripts if t.question_id==r['questionId'] and t.audio_hash==r.get('audioHash')),None)
@@ -107,7 +108,11 @@ def review(actor,identifier,data):
         elif action=='NEEDS_REVIEW':updated=update(job,status='NEEDS_REVIEW',failure_code='TEACHER_REVIEW_REQUESTED',lease_token=None,lease_expires_at=None,version=F('version')+1)
         elif action=='EDIT_FEEDBACK':
             if not base or not data.get('feedback'):fail('ASSESSMENT_NO_RESULT','Feedback is not available')
-            approved=results.validate(data['feedback'],dict(input,pronunciationEvidence=data['feedback'].get('pronunciationEvidence')))
+            # A manual holistic grade has no invented AI criterion evidence.
+            # Feedback edits still validate every text/list and preserve all
+            # scoring facts, but need not satisfy an AI provider result schema.
+            try:approved=results.feedback_edit(data['feedback'],base)
+            except results.ProviderError:fail('ASSESSMENT_INVALID_FEEDBACK','Feedback must use the saved parts and valid text fields')
             if not feedback_only(approved,base):fail('ASSESSMENT_FEEDBACK_SCORE_CHANGE','Use score override to change rubric evidence or scores')
             updated=update(job,approved_feedback=approved,version=F('version')+1)
         else:
@@ -192,6 +197,10 @@ def record_legacy_grade(attempt_id,question_id):
     job=next((j for j in jobs if any(r['questionId']==question_id for p in j.input_snapshot['parts'] for r in p['responses'])),None)
     if job is None:return
     input=job.input_snapshot
+    # Historical unversioned Multilevel answers use their original per-question
+    # scale. They must not be reinterpreted as a current formal /5 or /6 rubric.
+    from .multilevel import SPECS
+    if input['program']=='MULTILEVEL' and input.get('specificationVersion') not in SPECS:return
     answers={a.question_id:a for a in MockAnswer.objects.filter(attempt_id=attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']])}
     if any(r['questionId'] not in answers or not answers[r['questionId']].is_graded for p in input['parts'] for r in p['responses']):return
     import copy
@@ -203,4 +212,4 @@ def record_legacy_grade(attempt_id,question_id):
         criteria={k:round_half(sum((a.rubric_scores or {}).get(k,a.score or 0) for a in selected)/len(selected)) for k in required}
         parts.append(dict(previous,rawScore=round_half(mean) if input['program']=='MULTILEVEL' else None,criteria=previous['criteria'] if input['program']=='MULTILEVEL' else criteria))
     result['parts']=parts;score=results.score(input,result)['score']
-    update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
+    update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,approved_feedback=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)

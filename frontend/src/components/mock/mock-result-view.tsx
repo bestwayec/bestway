@@ -34,6 +34,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 
   const isIelts = attempt.examType !== "multilevel";
   const completed = attempt.status === "completed";
+  const partialPractice = attempt.flowMode === "partial_practice";
   // IELTS: Overall Band faqat 4 bo'lim baholangach chiqadi — aks holda Pending.
   const gradedCount = attempt.sections.filter((s) => s.band != null).length;
 
@@ -59,7 +60,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
         </div>
 
-        {completed && (
+        {partialPractice && <div className="mt-4"><p className="font-semibold text-fg">{t("partialPracticeResult")}</p><p className="mt-2 text-sm text-fg-muted">{t("partialPracticeNotice")}</p></div>}
+        {completed && !partialPractice && (
           <div className="mt-4">
             {isIelts ? (
               <>
@@ -112,7 +114,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           ))}
         </div>
 
-        {completed && (
+        {completed && !partialPractice && (
           <a
             href={media(`/mock/attempts/${attempt.id}/certificate`)}
             className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
@@ -159,6 +161,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const manualSections = attempt.sections.filter((section) => section.skill === "writing" || section.skill === "speaking");
+  const partialPractice = attempt.flowMode === "partial_practice";
   return <section aria-labelledby="multilevel-score-breakdown" className="mt-6 space-y-4">
     <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
     {manualSections.map((section) => <Card key={section.id} className="p-4">
@@ -173,13 +176,13 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
           const max = scoreMaximum(question.guidance) ?? question.points;
           return <div key={group.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-bg-subtle px-3 py-2 text-sm">
             <span className="font-medium text-fg">{multilevelTaskName(question.guidance, `${section.skill === "writing" ? "Task" : "Part"} ${index + 1}`)}</span>
-            <span className="tabular-nums text-fg-muted">{question.score ?? "—"} / {max}</span>
+            <span className="tabular-nums text-fg-muted">{section.skill === "speaking" ? group.questions.every((q) => q.isGraded && q.score != null) ? Math.round(group.questions.reduce((sum, q) => sum + (q.score ?? 0), 0) / group.questions.length * 2) / 2 : "—" : question.score ?? "—"} / {max}</span>
           </div>;
         })}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
         <span>Raw <strong className="text-fg tabular-nums">{section.score ?? "—"} / {section.max ?? "—"}</strong></span>
-        <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>
+        {!partialPractice && <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>}
       </div>
     </Card>)}
   </section>;
@@ -382,6 +385,7 @@ function GradeForm({
     () => Object.fromEntries(Object.entries(q.rubricScores ?? {}).map(([k, v]) => [k, String(v)])),
   );
   const saving = grade.isPending && grade.variables?.questionId === q.id;
+  const maximum = scoreMaximum(q.guidance) ?? q.points;
   const rubricDefs = q.guidance ? [] : RUBRICS[skill] ?? [];
   const rubricsComplete =
     rubricDefs.length > 0 &&
@@ -409,8 +413,8 @@ function GradeForm({
     let n: number | undefined;
     if (score.trim() !== "") {
       n = Number(score);
-      if (Number.isNaN(n) || n < 0 || n > q.points) {
-        toast.error(`${t("score")}: 0–${q.points}`);
+      if (!Number.isFinite(n) || n < 0 || n > maximum || (q.guidance && !Number.isInteger(n * 2))) {
+        toast.error(`${t("score")}: 0–${maximum} (0.5)`);
         return;
       }
     } else if (!rubricDefs.length || Object.keys(rubricScores).length !== rubricDefs.length) {
@@ -435,12 +439,12 @@ function GradeForm({
     <div className="mt-3 space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3">
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-fg-muted">
-          {t("score")} (0–{q.points})
+          {t("score")} (0–{maximum})
         </label>
         <Input
           type="number"
           min={0}
-          max={q.points}
+          max={maximum}
           step={0.5}
           value={score}
           onChange={(e) => setScore(e.target.value)}

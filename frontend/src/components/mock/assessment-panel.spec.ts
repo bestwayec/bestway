@@ -98,6 +98,20 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain("Original AI feedback (retained)");
     expect(html).toContain("Address both sides");
     expect(html).toContain("Teacher reviewed");
+    expect(html).toContain("Teacher raw task/part score");
+    expect(html).not.toContain("AI raw task/part estimate");
+  });
+  it("shows a real teacher-only partial score with its raw maximum and prefilled edits", () => {
+    const manual = { ...result, parts: [{ ...result.parts[0], rawScore: 4.5, criteria: {}, evidence: {} }] };
+    const html = render({ ...speakingJob, status: "SUCCEEDED", policyMode: "MANUAL_ONLY", practiceMode: "PARTIAL", rawMax: 5, aiScore: null, evaluation: null, finalResult: manual, approvedFeedback: null, teacherScore: 4.5, finalScore: 4.5, finalScoreSource: "TEACHER" }, true);
+    expect(html).toContain("Speaking practice score");
+    expect(html).toContain("4.5 /5 raw");
+    expect(html).toContain('value="4.5"');
+    expect(html).toContain("without an overall Multilevel score");
+    expect(html).not.toContain(" /75");
+    expect(html).not.toContain("AI raw task/part estimate");
+    expect(html).not.toContain("AI rubric estimates");
+    expect((html.match(/<audio /g) ?? []).length).toBe(3);
   });
   it("keeps IELTS pronunciation pending and prevents incomplete accept", () => {
     const html = render({ ...speakingJob, program: "IELTS_ACADEMIC", aiScore: null, evaluation: { result: { ...result, parts: [{ ...result.parts[0], rawScore: null, criteria: { fluency: 7, lexical: 7, grammar: 6.5, pronunciation: null } }] } } }, true);

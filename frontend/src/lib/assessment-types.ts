@@ -54,8 +54,11 @@ export interface AssessmentJobView {
   confidence: number | null;
   rubricVersion: string;
   promptVersion: string;
+  practiceMode?: "PARTIAL";
+  rawMax?: number;
   evaluation: { result: AssessmentResult } | null;
   approvedFeedback: AssessmentResult | null;
+  finalResult?: AssessmentResult | null;
   submissions: Array<{
     questionId: string;
     partId: string;

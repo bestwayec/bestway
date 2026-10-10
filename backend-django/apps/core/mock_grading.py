@@ -9,6 +9,7 @@ from .mock_catalog import shape_exam
 from .mock_submissions import band_tables
 from . import mock_scoring as scoring
 from .points import assert_can_view
+from .mock_practice import is_partial,scope,scope_sections
 
 def save_projection(attempt,result):
     names=dict(status='status',raw_scores='rawScores',section_bands='sectionBands',overall_band='overallBand',cefr_level='cefrLevel')
@@ -20,43 +21,32 @@ def save_projection(attempt,result):
 def recompute(attempt_id):
     attempt=MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
-    sections=shape_exam(attempt.exam,True)['sections'];answers={a.question_id:a for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
-    ielts=attempt.exam.type in ('ielts_academic','ielts_general');ml=not ielts and versioned(attempt)
-    raw={};bands={};standard={};pending=False;tables=band_tables() if ielts else None
-    for section in sections:
-        skill=section['skill'];manual=skill not in ('listening','reading')
-        rows=[(q,answers.get(q['id'])) for g in section['groups'] for q in g['questions']]
-        graded=[(q,a) for q,a in rows if a and a.is_graded]
-        if manual and len(graded)!=len(rows):pending=True
-        value=sum(a.score or 0 for _,a in graded) if manual else sum(a.score or 0 for _,a in rows if a)
-        maximum=sum(g.get('maxScore') if g.get('maxScore') is not None else g['questions'][0]['points'] if g['questions'] else 0 for g in section['groups']) if ml and manual else sum(q['points'] for q,_ in rows)
-        if ml and skill=='speaking':
-            parts=[]
-            for group in section['groups']:
-                scores=[answers[q['id']].score for q in group['questions'] if q['id'] in answers and answers[q['id']].score is not None]
-                parts.append(scoring.round_half(sum(scores)/len(scores)) if scores and len(scores)==len(group['questions']) else None)
-            value=0 if None in parts else sum(parts)
-        raw[skill]=dict(score=value,max=maximum)
-        if ielts and not manual and maximum>0:bands[skill]=scoring.band_from_raw(skill,attempt.exam.type,value,maximum,tables,any(a and a.response.strip() for _,a in rows))
-        if ielts and manual and not pending and graded:
-            tasks=[(q['type'],a.score or 0) for q,a in graded];t1=next((s for t,s in tasks if t=='essay_task1'),None);t2=next((s for t,s in tasks if t=='essay_task2'),None)
-            bands[skill]=scoring.round_half((t1+2*t2)/3 if skill=='writing' and t1 is not None and t2 is not None else sum(s for _,s in tasks)/len(tasks))
-        if ml and maximum>0 and not pending:standard[skill]=dict(rawScore=value,rawMax=maximum,estimatedStandardScore=scoring.convert_expert(skill,value) if manual else scoring.estimate_objective(value,maximum)['estimatedStandardScore'],scoreMethod='ESTIMATED',scoreVersion=scoring.ESTIMATE_VERSION,isOfficial=False)
-    overall_band=scoring.round_half(sum(bands.values())/(4 if attempt.flow_mode=='full_test' else len(bands))) if ielts and not pending and bands else None
-    overall_score=sum(standard[s]['estimatedStandardScore'] for s in ('listening','reading','writing','speaking'))/4 if ml and not pending and all(s in standard for s in ('listening','reading','writing','speaking')) else None
-    cefr=scoring.cefr_band(overall_band) if overall_band is not None else scoring.multilevel_level(overall_score) if overall_score is not None else None
-    result=dict(status='grading' if pending else 'completed',rawScores=raw,sectionBands=bands if ielts else None,overallBand=overall_band,cefrLevel=cefr,
-        standardScores=standard,overallScore=overall_score,scoreMethod='ESTIMATED',scoreVersion=scoring.ESTIMATE_VERSION)
+    sections=scope_sections(attempt,shape_exam(attempt.exam,True)['sections']);answers={a.question_id:a for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
+    # Submission and teacher/AI reviews must use the same per-section pending
+    # rules. A global pending flag used to hide already graded later sections.
+    values={identifier:dict(response=a.response,isGraded=a.is_graded,score=a.score) for identifier,a in answers.items()}
+    result,_=scoring.calculate(attempt.exam.type,sections,values,versioned=versioned(attempt),
+        full_test=attempt.flow_mode=='full_test',tables=band_tables())
+    if is_partial(attempt):result=scoring.partial_result(result)
+    was_completed=attempt.status=='completed'
     save_projection(attempt,result)
+    if is_partial(attempt) and result['status']=='completed' and not was_completed:
+        from .mock_submission_snapshots import notify
+        notify(attempt)
     return result
 
+@transaction.atomic
 def grade(actor,attempt_id,data):
-    attempt=MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
+    # Share the attempt lock with assessment review/worker finalization so a
+    # saved teacher grade and its ledger projection cannot race an AI result.
+    attempt=MockAttempt.objects.select_for_update().select_related('exam').filter(id=attempt_id).first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     if attempt.status=='in_progress':fail('MOCK_ATTEMPT_NOT_SUBMITTED','Imtihon hali topshirilmagan')
     assert_can_view(actor,attempt.student_id)
     question=MockQuestion.objects.filter(id=data['questionId'],group__section__exam_id=attempt.exam_id).select_related('group__section').first()
     if question is None:fail('QUESTION_NOT_IN_EXAM','Savol bu imtihonga tegishli emas')
+    selected=scope(attempt)
+    if selected is not None and question.id not in selected['questionIds']:fail('QUESTION_NOT_IN_EXAM','Savol bu mashqqa tegishli emas')
     skill=question.group.section.skill
     if skill in ('listening','reading'):fail('NOT_MANUAL_QUESTION','Bu savol avtomatik baholanadi')
     allowed=['ta','cc','lr','gra'] if skill=='writing' else ['fluency','lexical','grammar','pronunciation']
@@ -80,11 +70,14 @@ def grade(actor,attempt_id,data):
         create_defaults=dict(values,id=new_id(),response=''))
     with transaction.atomic():
         rows=list(MockAnswer.objects.filter(attempt_id=attempt_id));answers={a.question_id:dict(response=a.response,isGraded=a.is_graded,score=a.score) for a in rows}
-        result,projections=scoring.calculate(attempt.exam.type,shape_exam(attempt.exam,True)['sections'],answers,versioned=versioned(attempt),full_test=attempt.flow_mode=='full_test',tables=band_tables())
+        result,projections=scoring.calculate(attempt.exam.type,scope_sections(attempt,shape_exam(attempt.exam,True)['sections']),answers,versioned=versioned(attempt),full_test=attempt.flow_mode=='full_test',tables=band_tables())
+        if is_partial(attempt):result=scoring.partial_result(result)
         for row in rows:
             if row.question_id in projections:
                 p=projections[row.question_id];MockAnswer.objects.filter(id=row.id).update(score=p['score'],is_correct=p['isCorrect'],is_graded=True,updated_at=timezone.now())
         save_projection(attempt,result)
+        from .assessment import record_legacy_grade
+        record_legacy_grade(attempt_id,question.id)
     from .system_settings import audit
     audit(actor,'mock.answer.grade','mockAnswer',question.id,old=dict(score=before.score if before else None,gradedById=before.graded_by_id if before else None,feedback=before.feedback if before else None),new=dict(attemptId=attempt_id,score=final,status=result['status']))
     if result['status']=='completed':

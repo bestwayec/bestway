@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Loader2, Mic, Send, Square } from "lucide-react";
+import { AlertTriangle, Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
   useFlagMockCheat,
   useMockExam,
   useSubmitMock,
-  useUploadMockSpeaking,
 } from "@/hooks/use-mock";
 import type {
   MockAttemptDetail,
@@ -28,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { ListeningAudio } from "@/components/mock/listening-engine";
 import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
 import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
+import { SpeakingRecorder } from './speaking-recorder';
+import { recordingFileName } from '@/lib/microphone';
 import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
@@ -35,6 +36,7 @@ import { usedMatchingOptions } from '@/lib/objective-question';
 import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
+import { practiceExam } from '@/lib/mock-practice';
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -59,7 +61,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const examQ = useMockExam(attempt.examId);
-  const exam = examQ.data;
+  const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
+  const partialPractice = attempt.flowMode === "partial_practice";
   const versioned = !!attempt.specificationVersion;
 
   const bulk = useBulkMockAnswers(attempt.id);
@@ -407,7 +410,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
       )}
 
-      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} /></div>}
+      {partialPractice && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
+      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} /></div>}
 
       {section && (
         <div className="space-y-4">
@@ -425,6 +429,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             answers={answers}
             audioSet={audioSet}
             onAnswer={setAnswer}
+            practice={partialPractice}
           /> : section.groups.map((g) => (
             <GroupBlock
               key={g.id}
@@ -496,6 +501,7 @@ export function GuidedMultilevelGroups({
   answers,
   audioSet,
   onAnswer,
+  practice = false,
 }: {
   skill: "writing" | "speaking";
   groups: MockSection["groups"];
@@ -507,6 +513,7 @@ export function GuidedMultilevelGroups({
   answers: Record<string, string>;
   audioSet: Set<string>;
   onAnswer: (qid: string, value: string) => void;
+  practice?: boolean;
 }) {
   const group = groups[activeTask];
   if (!group) return null;
@@ -519,7 +526,7 @@ export function GuidedMultilevelGroups({
     ? groups.slice(0, 2).map((candidate) => candidate.passageText || candidate.instructions).find((value) => !!value?.trim()) ?? undefined
     : undefined;
   return <div className="space-y-4">
-    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} />
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} practice={practice} rawMaximum={practice ? groups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
     <GroupBlock
       group={group}
       skill={skill}
@@ -715,7 +722,7 @@ function QuestionInput({
         {header}
         {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio}
           startPhase={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/speaking/${q.id}/start`)}
-          upload={async (blob) => { const form = new FormData(); form.append('audio', blob, blob.type.includes('mp4') ? 'speaking.m4a' : 'speaking.webm'); return api.post(`/mock/attempts/${attemptId}/speaking/${q.id}`, form); }}
+          upload={async (blob) => { const form = new FormData(); form.append('audio', blob, recordingFileName(blob)); return api.post(`/mock/attempts/${attemptId}/speaking/${q.id}`, form); }}
         /> : <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} />}
       </div>
     );
@@ -758,102 +765,4 @@ function QuestionInput({
   }
 
   return <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />;
-}
-
-function SpeakingRecorder({
-  attemptId,
-  questionId,
-  initialHasAudio,
-}: {
-  attemptId: string;
-  questionId: string;
-  initialHasAudio: boolean;
-}) {
-  const t = useTranslations("mock");
-  const tc = useTranslations("common");
-  const upload = useUploadMockSpeaking(attemptId);
-  const [recording, setRecording] = React.useState(false);
-  const [hasAudio, setHasAudio] = React.useState(initialHasAudio);
-  const recRef = React.useRef<MediaRecorder | null>(null);
-  const streamRef = React.useRef<MediaStream | null>(null);
-  const chunks = React.useRef<Blob[]>([]);
-
-  const halt = React.useCallback(() => {
-    const mr = recRef.current;
-    if (mr && mr.state === "recording") mr.stop();
-    setRecording(false);
-  }, []);
-
-  React.useEffect(() => {
-    window.addEventListener(STOP_RECORDINGS_EVENT, halt);
-    return () => {
-      window.removeEventListener(STOP_RECORDINGS_EVENT, halt);
-      halt();
-      streamRef.current?.getTracks().forEach((tr) => tr.stop());
-      streamRef.current = null;
-    };
-  }, [halt]);
-
-  async function start() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      chunks.current = [];
-      mr.ondataavailable = (e) => e.data.size > 0 && chunks.current.push(e.data);
-      mr.onstop = () => {
-        stream.getTracks().forEach((tr) => tr.stop());
-        const blob = new Blob(chunks.current, { type: mr.mimeType || "audio/webm" });
-        const form = new FormData();
-        form.append("audio", blob, "speaking.webm");
-        upload.mutate(
-          { questionId, form },
-          {
-            onSuccess: () => {
-              setHasAudio(true);
-              toast.success(tc("saved"));
-            },
-            onError: () => toast.error(tc("unknownError")),
-          },
-        );
-      };
-      recRef.current = mr;
-      streamRef.current = stream;
-      mr.start();
-      setRecording(true);
-    } catch {
-      toast.error(t("micError"));
-    }
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
-      {recording ? (
-        <Button size="sm" variant="danger" onClick={halt}>
-          <Square className="fill-current" />
-          {t("stopRecording")}
-        </Button>
-      ) : (
-        <Button size="sm" variant="outline" loading={upload.isPending} onClick={start}>
-          <Mic />
-          {hasAudio ? t("reRecord") : t("record")}
-        </Button>
-      )}
-      {hasAudio && !recording && (
-        <audio
-          controls
-          src={media(`/mock/attempts/${attemptId}/answers/${questionId}/audio`)}
-          className="h-9"
-          preload="none"
-        >
-          <track kind="captions" />
-        </audio>
-      )}
-      {recording && (
-        <span className="flex items-center gap-1.5 text-sm text-danger">
-          <span className="size-2 animate-pulse rounded-full bg-danger" />
-          {t("recording")}
-        </span>
-      )}
-    </div>
-  );
 }

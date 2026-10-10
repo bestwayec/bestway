@@ -47,11 +47,19 @@ def validate_answer(data):
 @permission_classes([AllowAny])
 def start_view(request, exam_id):
     student(request)
-    data = body(request, {'mode', 'flow'})
+    data = body(request, {'mode', 'flow', 'skills'})
     if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
         engine.fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
     if data.get('flow') is not None and not isinstance(data['flow'], str):
         engine.fail('VALIDATION_ERROR', 'flow must be a string')
+    if 'skills' in data:
+        skills = data['skills']
+        if (not isinstance(skills, list) or not 1 <= len(skills) <= 2
+                or any(skill not in ('writing', 'speaking') for skill in skills)
+                or len(set(skills)) != len(skills)):
+            engine.fail('VALIDATION_ERROR', 'skills must contain unique writing/speaking selections')
+        if data.get('mode') != 'practice' or data.get('flow') == 'full_test':
+            engine.fail('VALIDATION_ERROR', 'Selected task practice requires mode practice without full_test flow')
     return success(engine.start(request.user, exam_id, data), 201)
 
 
