@@ -160,6 +160,10 @@ def reference_collation():
         name = value.value
     else:
         name = (locale.getlocale(locale.LC_CTYPE)[0] or 'en-US').replace('_', '-')
+        # Python reports C for C.UTF-8; Node's Intl.Collator defaults to
+        # en-US here, and PostgreSQL has no C-x-icu or POSIX-x-icu.
+        if name in ('C', 'POSIX'):
+            name = 'en-US'
     return name + '-x-icu'
 
 

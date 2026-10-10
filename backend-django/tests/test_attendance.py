@@ -79,3 +79,29 @@ class AttendanceTests(SimpleTestCase):
             statement=connection.cursor.return_value.__enter__.return_value.execute.call_args.args[0]
             self.assertNotIn('createdAt',statement.split('DO UPDATE SET')[1])
             self.assertIn('ON CONFLICT',statement)
+
+
+class AttendanceCollationTests(SimpleTestCase):
+    def setUp(self):
+        attendance.reference_collation.cache_clear()
+        self.addCleanup(attendance.reference_collation.cache_clear)
+
+    def linux_collation(self, name, configured=''):
+        linux = SimpleNamespace(name='posix', environ={'REFERENCE_NAME_COLLATION': configured})
+        with patch.object(attendance, 'os', linux), \
+             patch.object(attendance.locale, 'getlocale', return_value=(name, 'UTF-8')):
+            return attendance.reference_collation()
+
+    def test_linux_c_and_posix_locales_use_node_default_collation(self):
+        # Python can report C for C.UTF-8. PostgreSQL has en-US-x-icu,
+        # but no C-x-icu; Node's Intl.Collator uses en-US in this locale.
+        for name in ('C', 'POSIX', None):
+            with self.subTest(locale=name):
+                attendance.reference_collation.cache_clear()
+                self.assertEqual(self.linux_collation(name), 'en-US-x-icu')
+
+    def test_linux_regional_locale_keeps_reference_name_order(self):
+        self.assertEqual(self.linux_collation('ru_RU'), 'ru-RU-x-icu')
+
+    def test_explicit_collation_overrides_host_locale(self):
+        self.assertEqual(self.linux_collation('C', 'uz-x-icu'), 'uz-x-icu')
