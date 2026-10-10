@@ -13,6 +13,7 @@ import { SpecularButton } from "@/components/ui/specular-button";
 import { Field, Input } from "@/components/ui/input";
 import { authApi, ApiError } from "@/lib/api-client";
 import { routing } from "@/i18n/routing";
+import { homePathForRole } from "@/lib/role-routing";
 
 function makeSchema(t: (k: string) => string) {
   return z.object({
@@ -50,7 +51,7 @@ export function LoginForm() {
       // Cookie'lar o'rnatildi — to'liq yangilanish bilan o'tamiz, shunda
       // middleware yangi rolni ko'radi va app qobig'i SSR'da to'g'ri render bo'ladi.
       const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-      let target = `${prefix}/dashboard`;
+      let target = `${prefix}${homePathForRole(user.role)}`;
       const next = params.get("next");
       if (next) {
         const normalized = next.replace(/\\/g, "/");
@@ -60,7 +61,6 @@ export function LoginForm() {
         }
       }
       window.location.assign(target);
-      void user;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : tc("unknownError");
       setServerError(message);

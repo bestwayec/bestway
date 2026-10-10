@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./types";
+import { homePathForRole } from "./role-routing";
 
 export interface NavItem {
   href: string;
@@ -60,7 +61,9 @@ const NAV: NavItem[] = [
 ];
 
 export function navForRole(role: Role): NavItem[] {
-  return NAV.filter((item) => item.roles.includes(role));
+  return NAV.filter((item) => item.roles.includes(role)).map((item) =>
+    item.key === "dashboard" ? { ...item, href: homePathForRole(role) } : item,
+  );
 }
 
 /**
@@ -69,11 +72,11 @@ export function navForRole(role: Role): NavItem[] {
  * Qolgan barcha rolga mos bo'limlar `navForRole()` orqali "More" panelida chiqadi.
  */
 export function mobileNavForRole(role: Role): NavItem[] {
-  return NAV.filter((item) => item.mobile && item.roles.includes(role)).slice(0, 4);
+  return navForRole(role).filter((item) => item.mobile).slice(0, 4);
 }
 
 /** Faol yo'nalishni aniqlash — /dashboard aniq, qolganlari prefiks bo'yicha */
 export function isActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/dashboard" || href === "/super-admin") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
