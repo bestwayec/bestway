@@ -7,10 +7,9 @@ const RESUME_PATHS = new Set(["/super-admin", "/dashboard", "/en/super-admin", "
 const ROLES: Role[] = ["super_admin", "admin", "teacher", "student", "parent"];
 
 function loginResponse(req: NextRequest, next: string) {
-  const url = new URL(req.url);
-  url.pathname = next.startsWith("/en/") ? "/en/login" : "/login";
-  url.search = new URLSearchParams({ next, reauth: "1" }).toString();
-  const response = NextResponse.redirect(url);
+  const login = next.startsWith("/en/") ? "/en/login" : "/login";
+  const location = `${login}?${new URLSearchParams({ next, reauth: "1" })}`;
+  const response = new NextResponse(null, { status: 307, headers: { location } });
   for (const cookie of Object.values(COOKIE)) {
     response.cookies.set(cookie, "", sessionCookieOptions(req, 0));
   }
@@ -65,10 +64,9 @@ export async function GET(req: NextRequest) {
       next = next.startsWith("/en/") ? "/en/dashboard" : "/dashboard";
     }
 
-    const url = new URL(req.url);
-    url.pathname = next;
-    url.search = "";
-    const response = NextResponse.redirect(url);
+    // Route-handler request URLs can use the internal Docker origin. A relative
+    // Location keeps navigation on the browser's origin without trusting hosts.
+    const response = new NextResponse(null, { status: 307, headers: { location: next } });
     if (renewed) {
       response.cookies.set(COOKIE.access, accessToken!, sessionCookieOptions(req, 15 * 60));
       response.cookies.set(COOKIE.refresh, refreshToken!, sessionCookieOptions(req, 30 * 24 * 60 * 60));

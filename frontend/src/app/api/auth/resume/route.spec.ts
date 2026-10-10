@@ -7,14 +7,47 @@ import { GET } from "./route";
 
 const me = (role = "super_admin") => Response.json({ success: true, data: { user: { role } } });
 const renewed = () => Response.json({ success: true, data: { accessToken: "renewed-access", refreshToken: "renewed-refresh", user: { role: "super_admin" } } });
-const request = (next: string, cookie: string) => new NextRequest(
-  `https://bestwayec.uz/api/auth/resume?${new URLSearchParams({ next })}`, { headers: { cookie } },
+const request = (next: string, cookie: string, origin = "https://bestwayec.uz") => new NextRequest(
+  `${origin}/api/auth/resume?${new URLSearchParams({ next })}`, { headers: { cookie, "x-forwarded-proto": "https" } },
 );
-const location = (response: Response) => new URL(response.headers.get("location")!);
+const location = (response: Response) => new URL(response.headers.get("location")!, "https://bestwayec.uz");
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("dashboard session recovery", () => {
+  it.each([
+    ["http://0.0.0.0:3000", "/super-admin"],
+    ["http://0.0.0.0:3000", "/en/super-admin"],
+    ["https://bestwayec.uz", "/super-admin"],
+    ["https://bestwayec.uz", "/en/super-admin"],
+  ])("uses a relative redirect after recovery from origin %s to %s", async (origin, next) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(renewed()).mockResolvedValueOnce(me()));
+    const response = await GET(request(next, "bw_rt=valid-refresh", origin));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(next);
+    expect(location(response).origin).toBe("https://bestwayec.uz");
+    expect(response.cookies.get("bw_at")?.value).toBe("renewed-access");
+    expect(response.cookies.get("bw_rt")?.value).toBe("renewed-refresh");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("Secure");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it.each([
+    ["http://0.0.0.0:3000", "/super-admin", "/login"],
+    ["http://0.0.0.0:3000", "/en/super-admin", "/en/login"],
+    ["https://bestwayec.uz", "/en/super-admin", "/en/login"],
+  ])("uses a relative login fallback from origin %s preserving %s", async (origin, next, login) => {
+    const response = await GET(request(next, "", origin));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`${login}?${new URLSearchParams({ next, reauth: "1" })}`);
+    expect(location(response).origin).toBe("https://bestwayec.uz");
+    expect(location(response).searchParams.get("next")).toBe(next);
+    expect(response.cookies.get("bw_rt")?.value).toBe("");
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("Secure");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
   it.each([false, true])("silently rotates a valid refresh token when expired access is present=%s", async (expired) => {
     const fetch = vi.fn();
     if (expired) fetch.mockResolvedValueOnce(new Response("{}", { status: 401 }));
