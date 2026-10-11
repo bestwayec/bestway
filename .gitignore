@@ -75,3 +75,17 @@ docker-compose.override.yml
 /.bestway-runtime
 /backend-django/bestway-stage-a-diff-*/
 /backend-django/bestway-foundation-media-*/
+
+# Historical local reports and completed agent prompts
+/DJANGO_EXAM_PARITY.md
+/DJANGO_FULL_BACKEND_MATRIX.md
+/DJANGO_FULL_BACKEND_MIGRATION_REPORT.md
+/DJANGO_MIGRATION_REPORT.md
+/DJANGO_STAGE_B_CHECKPOINT_3.md
+/DJANGO_STAGE_B_CONTRACT.md
+/DJANGO_STAGE_B_INTEGRATION_REPORT.md
+/DJANGO_STAGE_B_REPORT.md
+/bestway-fix-agent-prompt.md
+/bestway-test-system-fix-prompt.md
+/bestway-visual-question-builder-prompt.md
+/ielts-and-palftorms-report.md
