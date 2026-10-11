@@ -47,18 +47,21 @@ afterEach(async () => {
 });
 
 describe("practice start on an incomplete Multilevel definition", () => {
-  it.each(["uz", "en"])("explains internal AI assessment and localizes authored task counts (%s)", async (locale) => {
+  it.each(["uz", "en"])("shows concise submission guidance and localized task counts (%s)", async (locale) => {
     fixture.locale = locale;
     fixture.exam.sections = ["writing", "speaking"].map((skill) => ({ id: skill, skill, groups: [{ id: `${skill}-group`, questions: [{ id: `${skill}-question` }] }] })) as MockExamDetail["sections"];
     await React.act(async () => root.render(React.createElement(MockExamDetailView, { examId: "partial" })));
-    expect(container.textContent).toContain(locale === "uz" ? "AI ichki mashq bahosini beradi, zarur hollarda o‘qituvchi tekshiradi" : "AI provides an internal practice assessment, with teacher review when needed");
-    expect(container.textContent).toContain(locale === "uz" ? "Rasmiy umumiy Multilevel bali yoki CEFR darajasi berilmaydi" : "No official overall Multilevel score or CEFR level is issued");
+    expect(container.textContent).toContain(locale === "uz" ? "Writing va Speaking bo‘limlarini tanlang va javoblaringizni topshiring" : "Choose Writing and Speaking, then submit your responses");
+    expect(container.textContent).not.toContain("35–50");
+    expect(container.textContent).not.toContain("CEFR");
     expect(container.textContent).toContain(locale === "uz" ? "1 ta yozma topshiriq · 1 ta savol" : "Writing tasks: 1 · Questions: 1");
     expect(container.textContent).toContain(locale === "uz" ? "1 ta og‘zaki bo‘lim · 1 ta savol" : "Speaking parts: 1 · Questions: 1");
     expect(container.textContent).not.toContain("authored tasks");
     expect(container.textContent).not.toContain("authored parts");
     for (const messages of [uz.mock, en.mock]) {
-      expect(messages.practiceRunnerNotice).toContain("AI");
+      expect(messages.practiceRunnerNotice).toContain("Writing / Speaking");
+      expect(messages.practiceRunnerNotice).not.toContain("35–50");
+      expect(messages.practiceRunnerNotice).not.toContain("CEFR");
       expect(messages.practiceRunnerNotice).not.toContain("Teacher graded");
       expect(messages.practiceRunnerNotice).not.toContain("O‘qituvchi baholaydi");
     }

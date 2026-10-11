@@ -16,7 +16,6 @@ export function ExamTrackDashboard() {
   if (!program) return null;
   const matches = (type?: string) => program === 'MULTILEVEL' ? type === 'multilevel' : type !== 'multilevel';
   return <Card className="my-4 space-y-3 p-4"><h2 className="font-semibold">{program} · {t('practice')}</h2>
-    {program === 'MULTILEVEL' && <p className="text-sm text-fg-muted">{t('estimated')}</p>}
     <div className="grid gap-2 sm:grid-cols-2">{(['listening','reading','writing','speaking'] as MockSkill[]).map((skill) => <div key={skill}><h3 className="font-medium">{tm(`skills.${skill}`)}</h3>
       {exams.isPending ? <p role="status">{t('loading')}</p> : exams.isError ? <p role="alert">{t('loadError')}</p> : exams.data?.some((e) => e.skills.includes(skill)) ? exams.data.filter((e) => matches(e.type) && e.skills.includes(skill)).map((e) => <Link className="block text-sm text-brand" key={e.id} href={`/mock/${e.id}`}>{e.title}{e.practiceLevel ? ` · ${e.practiceLevel}` : ''}</Link>) : <p className="text-sm text-fg-muted">{t('noPractice')}</p>}
     </div>)}</div><Link className="text-brand" href="/mock">{t('browse')}</Link>

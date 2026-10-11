@@ -5,7 +5,7 @@ import { rankingScoreLabel, rankingStatusKey } from "@/lib/ai-ranking-types";
 import type { GroupAiRankingCohort, GroupAiRankingRow } from "@/lib/ai-ranking-types";
 
 vi.mock("@/hooks/use-ai-ranking", () => ({ useGroupAiRanking: () => ({ data: null }) }));
-import { GroupAiRankingTable } from "./group-ai-ranking";
+import { GroupAiRankingTable, GroupAllGradesTable } from "./group-ai-ranking";
 
 const row: GroupAiRankingRow = { studentId: "s", name: "Komiljon", attemptId: "a", jobId: "j",
   aiScore: 44, aiRawScore: 3, teacherScore: 4, finalScore: 4, finalScoreScaleMax: 5,
@@ -51,5 +51,15 @@ describe("teacher AI ranking", () => {
     const html = renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [review], cohort, t }));
     expect(html.match(/41 \/ 75/g)).toHaveLength(1);
     expect(html).toContain("proposalOnly");
+  });
+  it("shows both skills together without promoting an unapproved Speaking proposal", () => {
+    const speaking = { ...row, aiScore: 41, aiRawScore: 2, finalScore: null, finalScoreSource: null,
+      teacherScore: null, eligible: false, reviewRequired: true, status: "NEEDS_REVIEW",
+      finalPracticeGrade: { policyId: "policy", score: 41, scaleMax: 75, rawScore: 2, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false as const } };
+    const html = renderToStaticMarkup(React.createElement(GroupAllGradesTable, { t, rows: [{ studentId: row.studentId,
+      name: row.name, writing: { row, cohort }, speaking: { row: speaking, cohort } }] }));
+    expect(html).toContain("writing"); expect(html).toContain("speaking");
+    expect(html).toContain("44 / 75"); expect(html.match(/41 \/ 75/g)).toHaveLength(1);
+    expect(html).toContain("sourceTeacher"); expect(html).toContain("reviewRequired");
   });
 });

@@ -26,9 +26,9 @@
       "writing": "Estimated IELTS Writing Band",
       "speaking": "Estimated IELTS Speaking Band"
     },
-    "estimated": "Estimated practice assessment. This is not an official certificate result.",
+    "estimated": "Practice result",
     "partialPractice": "{skill} practice score",
-    "partialPracticeNotice": "Only the selected available tasks are graded. Original rubric scores are retained; internal practice grades may also be shown on a /75 scale. These are not an official overall Multilevel score, CEFR level or certificate.",
+    "partialPracticeNotice": "Selected task results",
     "teacherRawPart": "Teacher raw task/part score",
     "teacherRubric": "Teacher rubric scores",
     "aiScore": "AI estimate",
@@ -128,7 +128,7 @@
     "waitForWorker": "Assessment is still processing. Wait or refresh before submitting an AI review; existing manual grading is available below.",
     "saveReview": "Save review",
     "openFeedback": "Open feedback",
-    "internalPracticeNotice": "Website practice grades use {min}–{max} on a {scale}-point scale. Original rubric evidence is retained; this is an internal classroom grade, not an official CEFR result.",
+    "internalPracticeNotice": "Result",
     "rubricRawScore": "Original rubric score"
   },
   "examTrack": {
@@ -148,7 +148,7 @@
     "remove": "Remove access",
     "assign": "Assign access",
     "practice": "Exam practice",
-    "estimated": "Estimated Multilevel scores are practice results, not official UZBMB certificate scores.",
+    "estimated": "Practice results",
     "browse": "Browse full mocks and section practice",
     "history": "Track history",
     "noPractice": "No practice content for this track yet",
@@ -905,9 +905,9 @@
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
-    "partialPracticeNotice": "Only selected Writing and Speaking tasks were submitted. Scores describe that work; no overall Multilevel score, CEFR level or certificate is issued.",
+    "partialPracticeNotice": "Your submitted responses",
     "practiceSelectionTitle": "Writing / Speaking practice",
-    "practiceSelectionHint": "Practise the available tasks. AI provides an internal practice assessment, with teacher review when needed. No official overall Multilevel score or CEFR level is issued.",
+    "practiceSelectionHint": "Choose Writing and Speaking, then submit your responses.",
     "authoredWritingTasks": "Writing tasks: {count} · Questions: {questions}",
     "authoredSpeakingParts": "Speaking parts: {count} · Questions: {questions}",
     "choosePracticeSkills": "Choose practice skills",
@@ -915,7 +915,7 @@
     "availablePracticeTasks": "{count} available tasks / responses",
     "practiceAvailable": "Writing / Speaking practice available",
     "completeExamPreparing": "Complete exam is still being prepared.",
-    "practiceRunnerNotice": "Writing / Speaking practice · Internal AI assessment, with teacher review when needed · No official overall Multilevel score or CEFR level",
+    "practiceRunnerNotice": "Writing / Speaking practice",
     "subtitle": "Full-length IELTS and Multilevel practice exams",
     "create": "Create mock",
     "manage": "Manage",
@@ -994,8 +994,8 @@
       "grading": "Grading",
       "completed": "Completed"
     },
-    "internalPracticeScore": "Website practice grade",
-    "internalPracticeNotice": "Website practice grades use 35–50 on a 75-point scale. The original rubric result is retained. This internal grade does not award an official CEFR level."
+    "internalPracticeScore": "Score",
+    "internalPracticeNotice": "Results"
   },
   "wizard": {
     "title": "Create exam",
@@ -1600,7 +1600,19 @@
   },
   "teacherAiRanking": {
     "title": "Writing and Speaking AI ranking",
-    "description": "Compare the group's real AI assessments for the same exam and task scope.",
+    "description": "Group Writing and Speaking results.",
+    "allResults": "All grades",
+    "exportCsv": "Download group results (CSV)",
+    "exportDescription": "Writing and Speaking results for the selected exam in one file.",
+    "exportUnavailable": "Wait for both sections to load before downloading.",
+    "exportScope": "Task scope",
+    "exportAttempt": "Attempt",
+    "exportConfidence": "AI confidence",
+    "exportSource": "Final grade source",
+    "exportRank": "AI rank",
+    "exportReview": "Review required",
+    "exportYes": "Yes",
+    "exportNo": "No",
     "exam": "Exam",
     "skill": "Skill",
     "writing": "Writing",
@@ -1630,11 +1642,11 @@
     "cohort": "Comparable group {number}",
     "tasks": "{count} tasks",
     "historical": "Historical rubric",
-    "internalPolicy": "Internal practice policy: 35–50 / 75",
+    "internalPolicy": "Practice result",
     "practiceEstimate": "Practice skill estimate / 75",
     "rubricScore": "Multilevel skill rubric / 75",
     "unranked": "Awaiting a comparable AI assessment",
     "noScores": "No AI assessments yet",
-    "comparisonNote": "Rankings use AI grades only. Different tasks, rubric versions and grading policies are ranked separately. Missing or unverified work has no grade. Internal practice grades do not award a CEFR level or certificate."
+    "comparisonNote": "Writing and Speaking results"
   }
 }

@@ -69,7 +69,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
         </div>
 
-        {partialPractice && <div className="mt-4"><p className="font-semibold text-fg">{t("partialPracticeResult")}</p><p className="mt-2 text-sm text-fg-muted">{t("partialPracticeNotice")}</p></div>}
+        {partialPractice && <p className="mt-4 font-semibold text-fg">{t("partialPracticeResult")}</p>}
         {completed && !partialPractice && !internalPractice && (
           <div className="mt-4">
             {isIelts ? (
@@ -125,7 +125,6 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             </div>
           );})}
         </div>
-        {attempt.sections.some((s) => s.practiceGrade ?? attempt.rawScores?.[s.skill]?.practiceGrade) && <p className="mt-3 text-xs text-fg-muted">{t("internalPracticeNotice")}</p>}
 
         {completed && !partialPractice && !internalPractice && (
           <a

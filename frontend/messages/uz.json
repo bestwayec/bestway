@@ -26,9 +26,9 @@
       "writing": "Taxminiy IELTS Writing bandi",
       "speaking": "Taxminiy IELTS Speaking bandi"
     },
-    "estimated": "Bu mashq uchun taxminiy baho. Rasmiy sertifikat natijasi emas.",
+    "estimated": "Mashq natijasi",
     "partialPractice": "{skill} mashq bali",
-    "partialPracticeNotice": "Faqat tanlangan mavjud topshiriqlar baholanadi. Asl rubrika ballari saqlanadi; ichki mashq baholari /75 shkalada ham ko‘rsatilishi mumkin. Ular rasmiy umumiy Multilevel bali, CEFR darajasi yoki sertifikat hisoblanmaydi.",
+    "partialPracticeNotice": "Tanlangan topshiriqlar natijasi",
     "teacherRawPart": "O‘qituvchi vazifa / qism xom bali",
     "teacherRubric": "O‘qituvchi mezon baholari",
     "aiScore": "AI taxminiy bahosi",
@@ -128,7 +128,7 @@
     "waitForWorker": "Baholash davom etmoqda. AI tekshiruvini yuborishdan oldin kuting yoki yangilang; quyida qo‘lda baholash mavjud.",
     "saveReview": "Tekshiruvni saqlash",
     "openFeedback": "Tahlilni ochish",
-    "internalPracticeNotice": "Saytning amaliy bahosi {scale} ballik shkalada {min}–{max} oralig‘ida beriladi. Asl rubrika dalillari saqlanadi; bu guruhdagi mashq bahosi, rasmiy CEFR natijasi emas.",
+    "internalPracticeNotice": "Natija",
     "rubricRawScore": "Asl rubrika bahosi"
   },
   "examTrack": {
@@ -148,7 +148,7 @@
     "remove": "Ruxsatni olib tashlash",
     "assign": "Ruxsat berish",
     "practice": "Imtihon mashqlari",
-    "estimated": "Taxminiy Multilevel ballari mashq natijalaridir, UZBMB rasmiy sertifikat ballari emas.",
+    "estimated": "Mashq natijalari",
     "browse": "To'liq imtihonlar va bo'lim mashqlarini ko'rish",
     "history": "Yo'nalish tarixi",
     "noPractice": "Bu yo'nalishda mashqlar hali yo'q",
@@ -905,9 +905,9 @@
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
-    "partialPracticeNotice": "Faqat tanlangan Writing va Speaking topshiriqlari topshirilgan. Ballar shu ishga tegishli; umumiy Multilevel bali, CEFR darajasi va sertifikat berilmaydi.",
+    "partialPracticeNotice": "Topshirgan javoblaringiz",
     "practiceSelectionTitle": "Writing / Speaking mashqi",
-    "practiceSelectionHint": "Mavjud topshiriqlarni mashq qiling. AI ichki mashq bahosini beradi, zarur hollarda o‘qituvchi tekshiradi. Rasmiy umumiy Multilevel bali yoki CEFR darajasi berilmaydi.",
+    "practiceSelectionHint": "Writing va Speaking bo‘limlarini tanlang va javoblaringizni topshiring.",
     "authoredWritingTasks": "{count} ta yozma topshiriq · {questions} ta savol",
     "authoredSpeakingParts": "{count} ta og‘zaki bo‘lim · {questions} ta savol",
     "choosePracticeSkills": "Mashq bo‘limlarini tanlang",
@@ -915,7 +915,7 @@
     "availablePracticeTasks": "{count} ta mavjud topshiriq / javob",
     "practiceAvailable": "Writing / Speaking mashqi mavjud",
     "completeExamPreparing": "To‘liq imtihon hali tayyorlanmoqda.",
-    "practiceRunnerNotice": "Writing / Speaking mashqi · AI ichki mashq bahosini beradi, zarur hollarda o‘qituvchi tekshiradi · Rasmiy umumiy Multilevel bali yoki CEFR darajasi berilmaydi",
+    "practiceRunnerNotice": "Writing / Speaking mashqi",
     "subtitle": "To'liq IELTS va Multilevel formatidagi sinov imtihonlari",
     "create": "Mock yaratish",
     "manage": "Boshqarish",
@@ -994,8 +994,8 @@
       "grading": "Baholanmoqda",
       "completed": "Yakunlangan"
     },
-    "internalPracticeScore": "Saytdagi amaliy baho",
-    "internalPracticeNotice": "Saytning amaliy bahosi 75 ballik shkalada 35–50 oralig‘ida beriladi. Asl rubrika natijasi saqlanadi. Bu baho rasmiy CEFR darajasini bermaydi."
+    "internalPracticeScore": "Baho",
+    "internalPracticeNotice": "Natijalar"
   },
   "wizard": {
     "title": "Imtihon yaratish",
@@ -1600,7 +1600,19 @@
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",
-    "description": "Guruhning bir xil imtihon va topshiriqlar bo‘yicha haqiqiy AI baholarini solishtiring.",
+    "description": "Guruhning Writing va Speaking natijalari.",
+    "allResults": "Barcha baholar",
+    "exportCsv": "Guruh natijalarini yuklab olish (CSV)",
+    "exportDescription": "Tanlangan imtihonning Writing va Speaking natijalari bir faylda.",
+    "exportUnavailable": "Yuklab olish uchun ikkala bo‘lim natijalari yuklanishini kuting.",
+    "exportScope": "Topshiriqlar to‘plami",
+    "exportAttempt": "Urinish",
+    "exportConfidence": "AI ishonchi",
+    "exportSource": "Yakuniy baho manbasi",
+    "exportRank": "AI reytingi",
+    "exportReview": "Tekshiruv kerak",
+    "exportYes": "Ha",
+    "exportNo": "Yo‘q",
     "exam": "Imtihon",
     "skill": "Ko‘nikma",
     "writing": "Writing",
@@ -1630,11 +1642,11 @@
     "cohort": "Taqqoslash guruhi {number}",
     "tasks": "{count} ta topshiriq",
     "historical": "Oldingi baholash mezoni",
-    "internalPolicy": "Ichki mashq qoidasi: 35–50 / 75",
+    "internalPolicy": "Mashq natijasi",
     "practiceEstimate": "Mashq ko‘nikmasi bahosi / 75",
     "rubricScore": "Multilevel ko‘nikma mezoni / 75",
     "unranked": "Taqqoslanadigan AI bahosi kutilmoqda",
     "noScores": "Hali AI baholari yo‘q",
-    "comparisonNote": "Reyting faqat AI baholariga asoslanadi. Turli topshiriq, mezon versiyasi va baholash qoidalari alohida solishtiriladi. Yo‘q yoki tasdiqlanmagan javobga baho berilmaydi. Ichki mashq bahosi CEFR darajasi yoki sertifikat bermaydi."
+    "comparisonNote": "Writing va Speaking natijalari"
   }
 }

@@ -46,9 +46,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
   const active = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
   const variant = job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
   const pronunciationUnavailable = job.skill === "speaking" && result?.pronunciationEvidence !== "ACOUSTIC";
-  const internalPractice = job.aiPracticeGrade ?? job.practiceGrade ?? job.teacherPracticeGrade;
   const internalPolicy = job.gradingPolicy?.id === "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
-  const gradePolicy = job.gradingPolicy ?? internalPractice;
   return (
     <Card className="overflow-hidden">
       <div className="space-y-3 border-b border-border p-5">
@@ -56,8 +54,6 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           <h3 className="font-semibold text-fg">{title}</h3>
           <Badge variant={variant}>{t(`status.${assessmentStatusKey(job)}`)}</Badge>
         </div>
-        <p className="text-xs text-fg-subtle">{t(partial ? "partialPracticeNotice" : "estimated")}</p>
-        {gradePolicy && <p className="rounded-[8px] bg-brand-subtle p-3 text-sm text-brand-subtle-fg">{t("internalPracticeNotice", { min: gradePolicy.rangeMin, max: gradePolicy.rangeMax, scale: gradePolicy.scaleMax })}</p>}
         <dl className="grid gap-2 sm:grid-cols-3">
           {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => {
             const practiceGrade = key === "aiScore" ? job.aiPracticeGrade : key === "teacherScore" ? job.teacherPracticeGrade : job.practiceGrade;
@@ -70,7 +66,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">
           <span>{t("source")}: {job.finalScoreSource ? t(`sources.${job.finalScoreSource}`) : t("pending")}</span>
           <span>{t("confidence")}: {job.confidence == null ? t("unavailable") : `${Math.round(job.confidence * 100)}%`}</span>
-          <span>{t(`policies.${job.policyMode}`)}</span>
+          {isStaff && <span>{t(`policies.${job.policyMode}`)}</span>}
         </div>
         {pronunciationUnavailable && <p className="rounded-[8px] bg-warning-bg p-3 text-sm text-warning">{t("pronunciationUnavailable")}</p>}
         {(job.status === "FAILED" || job.status === "NEEDS_REVIEW") && <p className="text-sm text-fg-muted">{t("reviewFallback")}</p>}
@@ -87,7 +83,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               {job.program === "MULTILEVEL" && partResult && <Badge variant="neutral">{t(reviewed ? "teacherRawPart" : "aiRawPart")}: {partResult.rawScore ?? t("pending")} /{part.max}</Badge>}
             </div>
             {part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{part.context}</p>}
-            {job.program === "MULTILEVEL" && job.skill === "speaking" && submissions.length > 1 && <p className="text-xs text-fg-subtle">{t("holisticPart")}</p>}
+            {isStaff && job.program === "MULTILEVEL" && job.skill === "speaking" && submissions.length > 1 && <p className="text-xs text-fg-subtle">{t("holisticPart")}</p>}
             {submissions.map((submission) => <div key={submission.questionId} className="space-y-2 rounded-[10px] border border-border p-3">
               <p className="whitespace-pre-wrap text-sm font-medium text-fg">{submission.prompt}</p>
               {submission.context && submission.context !== part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{submission.context}</p>}

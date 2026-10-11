@@ -90,7 +90,7 @@ describe("partial teacher result presentation", () => {
   it("shows observed raw results without a fabricated overall, CEFR or certificate link", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: attempt() }));
     expect(html).toContain("Selected task practice result");
-    expect(html).toContain("no overall Multilevel score");
+    expect(html).not.toContain("no overall Multilevel score");
     expect(html).toContain("4/5");
     expect(html).not.toContain(" /75");
     expect(html).not.toContain("/certificate");
@@ -114,7 +114,7 @@ describe("partial teacher result presentation", () => {
     value.rawScores = { speaking: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } } };
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
     expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
-    expect(html).toContain("35–50");
+    expect(html).not.toContain("35–50");
     expect(html).not.toContain("75 /75");
     expect(html).not.toContain("/certificate");
   });
