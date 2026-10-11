@@ -368,7 +368,8 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         state[entity_id] = phase
         attempt.media_state = state
         attempt.save(update_fields=['media_state'])
-        return dict(phase, serverTime=iso(timezone.now()), playLimit=2)
+        public_phase = {key: value for key, value in phase.items() if key not in ('durationVerifiedKey', 'durationVerifiedHash')}
+        return dict(public_phase, serverTime=iso(timezone.now()), playLimit=2)
 
 
 def assert_view(actor, student_id):
