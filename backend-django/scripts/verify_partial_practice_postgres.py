@@ -3,6 +3,7 @@
 No external providers, production mutations, or browser E2E are involved.
 """
 import io
+from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ from types import SimpleNamespace
 from urllib.parse import urlparse
 from uuid import uuid4
 import wave
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 if urlparse(os.environ.get('DATABASE_URL', '')).hostname not in {'127.0.0.1', 'localhost', '::1'}:
@@ -62,13 +64,13 @@ def snapshot():
                 questions=list(MockQuestion.objects.filter(group__section__exam_id=exam_id).order_by('id').values()))
 
 
-def audio():
+def audio(seconds=30):
     stream = io.BytesIO()
     with wave.open(stream, 'wb') as file:
         file.setnchannels(1)
         file.setsampwidth(2)
         file.setframerate(8000)
-        file.writeframes(b'\0\0' * 8000)
+        file.writeframes(b'\0\0' * round(seconds * 8000))
     return SimpleUploadedFile('local-fixture.wav', stream.getvalue(), content_type='audio/wav')
 
 
@@ -140,10 +142,23 @@ try:
     check(not AssessmentJob.objects.filter(attempt_id=attempt_id).exists(), 'Incomplete submission creates no assessment jobs')
     for qid in qids['writing']:
         data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': qid, 'response': 'Original local fixture essay response.'}, format='json'), 201)
-    for qid in qids['speaking']:
-        data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}/start', {}, format='json'), 201)
-        data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}', {'audio': audio()}, format='multipart'), 201)
     from apps.legacy_schema.models import MockAnswer
+    task_clock = timezone.now() - timedelta(seconds=95)
+    for qid in qids['speaking']:
+        with patch('django.utils.timezone.now', return_value=task_clock):
+            phase = data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}/start', {}, format='json'), 201)
+            repeated = data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}/start', {}, format='json'), 201)
+            check(phase['startedAt'] == repeated['startedAt'] and phase['expiresAt'] == repeated['expiresAt'],
+                  'Practice speaking start keeps one authoritative active response window')
+            data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}', {'audio': audio()}, format='multipart'), 400, 'SPEAKING_RESPONSE_ACTIVE')
+        task_clock += timedelta(seconds=30)
+        with patch('django.utils.timezone.now', return_value=task_clock):
+            data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}', {'audio': audio(3), 'durationMs': 30000}, format='multipart'), 400, 'SPEAKING_AUDIO_DURATION_INVALID')
+            check(not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=qid).exists(),
+                  'Three-second upload never creates a student answer despite claimed duration metadata')
+            accepted = data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{qid}', {'audio': audio()}, format='multipart'), 201)
+            check(accepted['audioDurationMs'] == 30000, 'Accepted audio duration comes from decoded sample count')
+        task_clock += timedelta(seconds=1)
     media_keys.extend(MockAnswer.objects.filter(attempt_id=attempt_id).exclude(audio_key=None).values_list('audio_key', flat=True))
     submitted = data(client.post(f'/v1/mock/attempts/{attempt_id}/submit', {}, format='json'), 201)
     check(submitted['status'] == 'grading' and set(submitted['rawScores']) == {'writing', 'speaking'}

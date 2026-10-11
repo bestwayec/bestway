@@ -290,6 +290,8 @@ def advance(actor, attempt_id):
 
 
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
+    from .mock_speaking_policy import strict
+    from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         if not versioned(attempt):
@@ -320,7 +322,19 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         ordered = [q for part in grouped for q in part
                    if selected is None or q.id in selected['questionIds']]
         index = next((i for i, q in enumerate(ordered) if q.id == entity_id), -1)
-        if not phase or attempt.mode == 'practice':
+        strict_speaking = kind == 'speaking' and strict(attempt)
+        # Current practice starts are idempotent while a grant is active.
+        # An expired practice grant can be restarted for an explicit retake.
+        phase_end = None
+        if strict_speaking and phase:
+            try:
+                phase_end = aware(parse_datetime(phase['expiresAt']))
+                if phase_end is None:
+                    raise ValueError()
+            except (KeyError, TypeError, ValueError):
+                fail('RECORDING_NOT_STARTED', 'Restart the speaking task: its saved response window is invalid')
+        expired_practice = attempt.mode == 'practice' and strict_speaking and phase_end is not None and at >= phase_end
+        if not phase or attempt.mode == 'practice' and (not strict_speaking or expired_practice):
             if attempt.mode == 'timed':
                 previous = state.get(groups[gi-1].id) if kind == 'listening' and gi > 0 else state.get(ordered[index-1].id) if kind == 'speaking' and index > 0 else None
                 needs_previous = gi > 0 if kind == 'listening' else index > 0
@@ -334,7 +348,17 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
             duration = group.audio_duration_sec if kind == 'listening' else (guidance or {}).get('responseSeconds')
             if not duration:
                 fail('MEDIA_DURATION_REQUIRED', 'Media duration required')
+            if strict_speaking:
+                end = at + timedelta(seconds=prep+duration)
+                raw_section = (attempt.section_deadlines or {}).get(attempt.current_skill)
+                limits = [aware(attempt.overall_deadline_at or attempt.deadline_at) if attempt.mode == 'timed' else None,
+                    aware(parse_datetime(raw_section)) if raw_section else None]
+                if any(limit is not None and end > limit for limit in limits):
+                    fail('SPEAKING_TIME_INSUFFICIENT', 'There is not enough time for the complete preparation and speaking response')
             phase = dict(startedAt=iso(at), prepEndsAt=iso(at+timedelta(seconds=prep)), expiresAt=iso(at+timedelta(seconds=prep+duration)), plays=0)
+            if strict_speaking:
+                phase.update(timingPolicy=POLICY, responseSeconds=duration,
+                    minDurationMs=round((duration-TOLERANCE_SECONDS)*1000), maxDurationMs=round((duration+TOLERANCE_SECONDS)*1000))
         if kind == 'listening' and play:
             if at < parse_datetime(phase['prepEndsAt']) or (phase['plays'] > 0 and at < parse_datetime(phase['expiresAt'])):
                 fail('PREVIEW_ACTIVE', 'Wait for the preview/current playback to finish', 403)
@@ -427,6 +451,9 @@ def detail(actor, attempt_id):
                     score=a.score if a else None, isCorrect=a.is_correct if a else None,
                     isGraded=a.is_graded if a else False, feedback=a.feedback if a else None,
                     rubricScores=a.rubric_scores if a else None)
+                verified = (attempt.media_state or {}).get(q.id) or {}
+                if a and a.audio_key and verified.get('durationVerifiedKey') == a.audio_key:
+                    item['audioDurationMs'] = verified.get('audioDurationMs')
                 if versioned(attempt):
                     guidance = task_guidance(section.skill, gi, qi, attempt.speaking_profile_version, attempt.specification_version)
                     if guidance is not None:
@@ -473,6 +500,7 @@ def validate_audio_container(upload):
 
 def upload_speaking(actor, attempt_id, question_id, upload):
     from .mock_media import store_upload, delete_created, delete_unreferenced, validate_upload
+    from . import mock_speaking_policy as speaking
     if upload is None:
         fail('NO_FILE', 'Audio fayl yuklanmadi')
     validate_upload(upload, 'audio')
@@ -494,22 +522,33 @@ def upload_speaking(actor, attempt_id, question_id, upload):
             if versioned(attempt):
                 validate_audio_container(upload)
                 assert_program(actor, attempt)
-                if attempt.mode == 'timed':
+                if speaking.strict(attempt):
+                    speaking.phase_window(attempt, question_id, speaking.expected(attempt, q))
+                elif attempt.mode == 'timed':
                     phase = (attempt.media_state or {}).get(question_id)
                     if not phase or timezone.now() < parse_datetime(phase['prepEndsAt']):
                         fail('RECORDING_NOT_STARTED', 'Start the speaking task first')
                     if timezone.now() > parse_datetime(phase['expiresAt']) + timedelta(minutes=5):
                         fail('UPLOAD_WINDOW_EXPIRED', 'The recording upload recovery window has expired')
             prior = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
-            if prior and prior.audio_key and versioned(attempt) and attempt.mode == 'timed':
+            if prior and prior.audio_key and versioned(attempt) and attempt.mode == 'timed' and not speaking.strict(attempt):
                 return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id))
             created_key = store_upload(upload, 'audio')
+            duration = speaking.verify_stored(attempt, q, created_key) if speaking.strict(attempt) else None
+            if prior and prior.audio_key and speaking.strict(attempt) and attempt.mode == 'timed':
+                # Validate even a retry's bytes, but preserve the first accepted
+                # timed recording and its original verification receipt.
+                speaking.verify_stored(attempt, q, prior.audio_key)
+                delete_created(created_key)
+                created_key = None
+                return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id),
+                    audioDurationMs=(attempt.media_state or {}).get(question_id, {}).get('audioDurationMs'))
             MockAnswer.objects.update_or_create(attempt_id=attempt_id, question_id=question_id,
                 defaults=dict(audio_key=created_key, updated_at=timezone.now()),
                 create_defaults=dict(id=new_id(), audio_key=created_key, response='', is_graded=False, updated_at=timezone.now()))
             if prior and prior.audio_key:
                 transaction.on_commit(lambda: delete_unreferenced(prior.audio_key), robust=True)
-        return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id))
+        return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id), **({'audioDurationMs': duration} if duration is not None else {}))
     except Exception:
         if created_key:
             delete_created(created_key)

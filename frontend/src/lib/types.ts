@@ -869,6 +869,7 @@ export interface MockAttemptQuestion {
   guidance?: TaskGuidance;
   response: string | null;
   hasAudio: boolean;
+  audioDurationMs?: number | null;
   audioUrl: string | null;
   score: number | null;
   isCorrect: boolean | null;

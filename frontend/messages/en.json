@@ -1514,7 +1514,7 @@
     "numberingNote": "Question numbers run across the whole exam without repeats — new questions continue automatically.",
     "emptyGroupHint": "Questions belong to this part and are numbered across the whole exam. Add them one by one, or paste a whole batch with Import — numbering continues automatically.",
     "examsSubtitle": "Drafts and published exams in one place — create, edit, preview, duplicate.",
-    "deleteExamConfirm": "Permanently deletes this exam, its content, and its audio and images. This is not archiving and cannot be undone.",
+        "deleteExamConfirm": "Permanently deletes this exam, its content, audio and images, learner attempts, results, recordings, purchase records and exam access. This cannot be undone.",
     "uploadAudioHint": "One audio file per part. Students hear it during the exam; the replay limit below controls how many times.",
     "record": "record",
     "addPart": "Add Part",

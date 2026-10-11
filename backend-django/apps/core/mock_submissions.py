@@ -91,6 +91,8 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     now = timezone.now()
     if versioned and not force:
         assert_complete(attempt, sections, answers, now)
+        from .mock_speaking_policy import assert_submission
+        assert_submission(attempt, sections, answers)
     elif skills:
         sections = [s for s in sections if s['skill'] in skills]
         if not sections:

@@ -88,19 +88,22 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const initial = React.useMemo(() => {
     const ans: Record<string, string> = {};
     const audio = new Set<string>();
+    const durations: Record<string, number> = {};
     for (const s of attempt.sections)
       for (const g of s.groups)
         for (const q of g.questions) {
           ans[q.id] = q.response ?? "";
           if (q.hasAudio) audio.add(q.id);
+          if (q.hasAudio && q.audioDurationMs != null) durations[q.id] = q.audioDurationMs;
         }
-    return { ans, audio };
+    return { ans, audio, durations };
   }, [attempt]);
 
   // Server answers are the authoritative resume state. Edits stay in memory only
   // until autosave persists them, so a reload cannot manufacture a second attempt.
   const [answers, setAnswers] = React.useState<Record<string, string>>(() => initial.ans);
   const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
+  const [audioDurations, setAudioDurations] = React.useState(initial.durations);
   const [selectedSection, setActiveSection] = React.useState(0);
   const [activeTaskBySkill, setActiveTaskBySkill] = React.useState<Partial<Record<"writing" | "speaking", number>>>({});
   // The exam query can resolve after mount. Full-test navigation always follows
@@ -124,7 +127,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [saveRevision, setSaveRevision] = React.useState(0);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
   React.useEffect(() => {
-    const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string}>).detail; if (detail?.attemptId === attempt.id) setAudioSet((previous) => new Set([...previous,detail.questionId])); };
+    const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string;audioDurationMs?:number}>).detail; if (detail?.attemptId === attempt.id) { setAudioSet((previous) => new Set([...previous,detail.questionId])); if (detail.audioDurationMs != null) setAudioDurations((previous) => ({ ...previous, [detail.questionId]: detail.audioDurationMs! })); } };
     window.addEventListener('multilevel:recording-uploaded', saved);
     return () => window.removeEventListener('multilevel:recording-uploaded', saved);
   }, [attempt.id]);
@@ -434,6 +437,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             attemptId={attempt.id}
             answers={answers}
             audioSet={audioSet}
+            audioDurations={audioDurations}
             onAnswer={setAnswer}
             practice={partialPractice}
           /> : section.groups.map((g) => (
@@ -446,6 +450,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               attemptId={attempt.id}
               answers={answers}
               audioSet={audioSet}
+              audioDurations={audioDurations}
               onAnswer={setAnswer}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
             />
@@ -506,6 +511,7 @@ export function GuidedMultilevelGroups({
   attemptId,
   answers,
   audioSet,
+  audioDurations,
   onAnswer,
   practice = false,
 }: {
@@ -518,6 +524,7 @@ export function GuidedMultilevelGroups({
   attemptId: string;
   answers: Record<string, string>;
   audioSet: Set<string>;
+  audioDurations?: Record<string, number>;
   onAnswer: (qid: string, value: string) => void;
   practice?: boolean;
 }) {
@@ -542,6 +549,7 @@ export function GuidedMultilevelGroups({
       attemptId={attemptId}
       answers={answers}
       audioSet={audioSet}
+      audioDurations={audioDurations}
       onAnswer={onAnswer}
       sharedWritingStimulus={sharedWritingStimulus}
     />
@@ -560,6 +568,7 @@ function GroupBlock({
   attemptId,
   answers,
   audioSet,
+  audioDurations,
   onAnswer,
   onReviewComplete,
   sharedWritingStimulus,
@@ -571,6 +580,7 @@ function GroupBlock({
   attemptId: string;
   answers: Record<string, string>;
   audioSet: Set<string>;
+  audioDurations?: Record<string, number>;
   onAnswer: (qid: string, val: string) => void;
   onReviewComplete?: () => void;
   sharedWritingStimulus?: string;
@@ -678,6 +688,7 @@ function GroupBlock({
                 attemptId={attemptId}
                 value={answers[q.id] ?? ""}
                 hasAudio={audioSet.has(q.id)}
+                audioDurationMs={audioDurations?.[q.id]}
                 timed={timed}
                 unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                 onChange={(v) => onAnswer(q.id, v)}
@@ -696,6 +707,7 @@ function QuestionInput({
   attemptId,
   value,
   hasAudio,
+  audioDurationMs,
   timed,
   onChange,
   unavailableOptions,
@@ -706,6 +718,7 @@ function QuestionInput({
   attemptId: string;
   value: string;
   hasAudio: boolean;
+  audioDurationMs?: number;
   timed: boolean;
   onChange: (v: string) => void;
   unavailableOptions?: string[];
@@ -727,7 +740,7 @@ function QuestionInput({
     return (
       <div className="space-y-2">
         {header}
-        {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio}
+        {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio} initialAudioDurationMs={audioDurationMs} responseSeconds={q.guidance.responseSeconds}
           startPhase={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/speaking/${q.id}/start`)}
           upload={async (blob) => { const form = new FormData(); form.append('audio', blob, recordingFileName(blob)); return api.post(`/mock/attempts/${attemptId}/speaking/${q.id}`, form); }}
         /> : <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} />}

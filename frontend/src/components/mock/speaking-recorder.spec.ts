@@ -18,6 +18,7 @@ vi.mock('@/lib/durable-recordings', () => ({
 }));
 import { SpeakingRecorder } from './speaking-recorder';
 import { MultilevelRecorder, type MediaPhase } from './multilevel-media';
+import { ApiError } from '@/lib/api-client';
 
 class FakeRecorder {
   static instances: FakeRecorder[] = [];
@@ -60,6 +61,9 @@ async function click(label: string) {
   const button = [...host.querySelectorAll('button')].find((element) => element.textContent?.includes(label));
   expect(button, `button ${label}`).toBeDefined();
   await act(async () => button!.click());
+}
+async function finishResponse(ms = 10000) {
+  await act(async () => vi.advanceTimersByTimeAsync(ms));
 }
 
 beforeEach(() => {
@@ -141,10 +145,52 @@ describe('legacy speaking recording lifecycle', () => {
 });
 
 describe('Multilevel microphone preflight and server timing', () => {
+  it('keeps a completed take on transport failure but permits a fresh take after verified duration rejection', async () => {
+    services.upload.mockRejectedValueOnce(new Error('offline'));
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
+    expect(services.release).not.toHaveBeenCalled(); expect(host.textContent).toContain('preserved');
+    services.upload.mockRejectedValueOnce(new ApiError('SPEAKING_AUDIO_DURATION_INVALID', 'Invalid decoded duration', 400));
+    await click('Retry upload');
+    expect(services.release).toHaveBeenCalledTimes(1); expect(host.textContent).toContain('Start a new response');
+    expect(host.textContent).not.toContain('Retry upload of saved recording');
+    expect(host.textContent).toContain('Test microphone'); expect(host.querySelector('audio')).toBeNull();
+  });
+  it.each([30, 45, 120])('captures the full %ss practice response and offers no early stop/upload shortcut', async (duration) => {
+    startPhase.mockResolvedValue({ ...await startPhase(), responseSeconds: duration, timingPolicy: 'FULL_RESPONSE_WINDOW_V1', expiresAt: new Date(Date.now() + duration * 1000).toISOString() });
+    await render('multilevel'); await click('Test microphone'); await click('Start response');
+    expect(host.textContent).toContain(`${duration}s`);
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Stop recording'))).toBe(false);
+    await finishResponse(3000);
+    expect(services.upload).not.toHaveBeenCalled(); expect(services.retain).not.toHaveBeenCalled();
+    expect(FakeRecorder.instances[0].state).toBe('recording');
+    await finishResponse(duration * 1000 - 3001);
+    expect(services.upload).not.toHaveBeenCalled();
+    await finishResponse(1);
+    expect(FakeRecorder.instances[0].state).toBe('inactive'); expect(services.upload).toHaveBeenCalledTimes(1);
+    expect(host.querySelector('audio')?.getAttribute('preload')).toBe('metadata');
+    expect(host.textContent).toContain(`${duration}s`);
+  });
+
+  it.each(['unmount', 'native stop', 'device error'])('never retains or uploads a 3-second take interrupted by %s', async (reason) => {
+    startPhase.mockResolvedValue({ ...await startPhase(), responseSeconds: 30, expiresAt: new Date(Date.now() + 30000).toISOString() });
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse(3000);
+    if (reason === 'unmount') { await act(async () => root.unmount()); mounted = false; }
+    else await act(async () => reason === 'native stop' ? FakeRecorder.instances[0].stop() : FakeRecorder.instances[0].onerror?.());
+    expect(services.upload).not.toHaveBeenCalled(); expect(services.retain).not.toHaveBeenCalled();
+    expect(stopTrack).toHaveBeenCalled();
+  });
+
+  it('uses the actual capture window rather than truncating the response by start-request latency', async () => {
+    const grant = { ...await startPhase(), responseSeconds: 30, expiresAt: new Date(Date.now() + 30000).toISOString() };
+    startPhase.mockImplementation(async () => { await vi.advanceTimersByTimeAsync(800); return { ...grant, serverTime: new Date().toISOString() }; });
+    await render('multilevel'); await click('Test microphone'); await click('Start response');
+    await finishResponse(29999); expect(services.upload).not.toHaveBeenCalled();
+    await finishResponse(1); expect(services.upload).toHaveBeenCalledTimes(1);
+  });
   it('offers playback only after the server acknowledges upload', async () => {
     let acknowledge!: (value: unknown) => void;
     services.upload.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
-    await render('multilevel'); await click('Test microphone'); await click('Start response'); await click('Stop recording');
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
     expect(host.querySelector('audio')).toBeNull(); expect(host.textContent).toContain('Uploading');
     await act(async () => acknowledge({ saved: true }));
     expect(host.querySelector('audio')?.getAttribute('src')).toBe('/api/backend/mock/attempts/attempt/answers/question/audio?v=1');
@@ -152,7 +198,7 @@ describe('Multilevel microphone preflight and server timing', () => {
     await click('Test microphone'); await click('Start response');
     expect(host.textContent).toContain('Recording'); expect(host.textContent).not.toContain('Uploaded');
     expect(host.querySelector('audio')).toBeNull();
-    await click('Stop recording'); await act(async () => acknowledge({ saved: true }));
+    await finishResponse(); await act(async () => acknowledge({ saved: true }));
   });
 
   it('closes a microphone granted after preflight unmounts without starting a response', async () => {
@@ -185,7 +231,7 @@ describe('Multilevel microphone preflight and server timing', () => {
     expect(host.textContent).toContain('you can still record'); expect(host.querySelector('meter')).toBeNull();
     expect(stopTrack).not.toHaveBeenCalled(); expect(startPhase).not.toHaveBeenCalled();
     await click('Start response'); expect(FakeRecorder.instances[0].state).toBe('recording');
-    await click('Stop recording'); expect(services.upload).toHaveBeenCalledTimes(1);
+    await finishResponse(); expect(services.upload).toHaveBeenCalledTimes(1);
   });
 
   it('resumes a suspended input meter and releases it with the microphone', async () => {
@@ -200,7 +246,7 @@ describe('Multilevel microphone preflight and server timing', () => {
     vi.stubGlobal('AudioContext', Context);
     await render('multilevel'); await click('Test microphone');
     expect(resume).toHaveBeenCalledTimes(1); expect(host.querySelector('meter')?.getAttribute('value')).toBe('0.5');
-    await click('Start response'); await click('Stop recording');
+    await click('Start response'); await finishResponse();
     expect(close).toHaveBeenCalledTimes(1); expect(stopTrack).toHaveBeenCalled();
   });
 
@@ -217,13 +263,13 @@ describe('Multilevel microphone preflight and server timing', () => {
     expect(host.querySelector('[role="alert"]')).not.toBeNull(); expect(startPhase).not.toHaveBeenCalled();
     await click('Test microphone');
     expect(host.querySelector('[role="alert"]')).toBeNull(); expect(getUserMedia).toHaveBeenCalledTimes(2);
-    await click('Start response'); await click('Stop recording');
+    await click('Start response'); await finishResponse();
     expect(services.upload).toHaveBeenCalledTimes(1); expect(host.querySelector('audio')).not.toBeNull();
   });
 
   it('supports a browser default format even when explicit WebM and MP4 hints are unsupported', async () => {
     FakeRecorder.formats.clear();
-    await render('multilevel'); await click('Test microphone'); await click('Start response'); await click('Stop recording');
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
     expect((services.upload.mock.calls[0][0] as Blob).type).toBe('audio/ogg');
   });
 
