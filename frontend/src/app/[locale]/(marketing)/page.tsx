@@ -44,7 +44,7 @@ const FEATURES = [
 
 const STATS = [
   { num: 500, suffix: "+", key: "statsStudents" },
-  { num: 20, suffix: "+", key: "statsTeachers" },
+  { num: 7, suffix: "+", key: "statsTeachers" },
   { num: 17, suffix: "+", key: "statsYears" },
 ] as const;
 
@@ -308,7 +308,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 tone="brand"
                 lines={[
                   { text: formatPhone(CENTER.phone), href: `tel:${CENTER.phone.replace(/\s/g, "")}` },
-                  { text: formatPhone(CENTER.phone2), href: `tel:${CENTER.phone2.replace(/\s/g, "")}` },
                 ]}
               />
             </Reveal>
