@@ -8,7 +8,7 @@ import time
 from urllib.parse import urlsplit,urlunsplit,urlencode
 from urllib.request import Request,build_opener,HTTPRedirectHandler
 from urllib.error import HTTPError,URLError
-from .assessment_results import ProviderError,validate,schema
+from .assessment_results import ProviderError,validate,schema,keys as rubric_keys
 from .assessment_prompts import system_prompt
 from .assessment_quality import enabled
 from .mock_scoring import js_round
@@ -32,6 +32,7 @@ class NoRedirect(HTTPRedirectHandler):
 
 def provider_json(url,body,headers,timeout_ms):
     try:
+        headers={'User-Agent':'BestwayAssessment/1.0',**headers}
         with build_opener(NoRedirect()).open(Request(url,data=body,headers=headers,method='POST'),timeout=timeout_ms/1000) as response:
             limit=2*1024*1024
             length=response.headers.get('Content-Length')
@@ -57,11 +58,24 @@ def record(value):
     if not isinstance(value,dict):raise ProviderError('PROVIDER_RESPONSE_INVALID')
     return value
 
+def assessment_identity(role):
+    provider=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
+    prefix='XKIRO' if provider=='xkiro' else 'DEEPSEEK'
+    model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL','').strip()
+    if provider=='xkiro' and role=='ADJUDICATOR' and not model:model=os.environ.get('XKIRO_MODEL','').strip()
+    return provider,model
+
 def assess(input,role):
-    key=os.environ.get('DEEPSEEK_API_KEY','').strip();model=os.environ.get('DEEPSEEK_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else 'DEEPSEEK_MODEL','').strip()
+    provider,model=assessment_identity(role)
+    if provider not in ('deepseek','xkiro'):raise ProviderError('PROVIDER_CONFIG_INVALID')
+    prefix='XKIRO' if provider=='xkiro' else 'DEEPSEEK'
+    key=os.environ.get(prefix+'_API_KEY','').strip()
     if not key or not model:raise ProviderError('PROVIDER_NOT_CONFIGURED')
-    base=os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com'
-    api_format=os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
+    base='https://api.xkiro.com/v1' if provider=='xkiro' else os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com'
+    # This integration explicitly opts into free Qwen routes only. Never fall
+    # back to a paid model or send the xKiro credential to a configurable host.
+    if provider=='xkiro' and not re.fullmatch(r'qwen/[a-z0-9][a-z0-9.-]*:free',model):raise ProviderError('PROVIDER_CONFIG_INVALID')
+    api_format='chat_completions' if provider=='xkiro' else os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
     if api_format not in ('responses','chat_completions'):raise ProviderError('PROVIDER_CONFIG_INVALID')
     url=provider_url(base,'chat/completions' if api_format=='chat_completions' else 'responses')
     payload={k:input[k] for k in ('program','skill','rubricVersion','specificationVersion','speakingProfileVersion','pronunciationEvidence')}
@@ -78,11 +92,18 @@ def assess(input,role):
     body=encoded(dict(model=model,instructions=system_prompt(input),input=[dict(role='user',content=[dict(type='input_text',text=encoded(payload).decode())])],
         text=dict(format=dict(type='json_schema',name='bestway_assessment',schema=schema(input))),reasoning=dict(effort='none'),temperature=.2,stream=False,tool_choice='none',max_output_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
     if api_format=='chat_completions':
-        # DeepSeek documents JSON-object mode; local validation still enforces
+        # Both chat providers support JSON-object mode; local validation enforces
         # the entire rubric schema and source evidence after that transport.
         body=encoded(dict(model=model,messages=[dict(role='system',content=system_prompt(input)+'\nRequired JSON schema:\n'+encoded(schema(input)).decode()),
             dict(role='user',content=encoded(payload).decode())],response_format=dict(type='json_object'),
             temperature=.2,stream=False,max_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
+        if provider=='xkiro':
+            chat=json.loads(body);chat['reasoning_effort']='none'
+            chat['messages'][0]['content']+='\nKeep feedback concise and include every required JSON field. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
+            if enabled(input):
+                diagnostics=', '.join(k for k in rubric_keys(input) if k!='pronunciation')
+                chat['messages'][0]['content']+='\nFor EACH part, evidenceQuotes must cover EVERY positive diagnostic: '+diagnostics+'. Do not stop after two or three criteria. Before returning, check every nonzero criterion has its own matching evidenceQuotes entry. Reusing a short excerpt is allowed when relevant. Copy ONE contiguous excerpt from ONE candidate response verbatim; never paraphrase, correct its grammar, add ellipses, or join separated excerpts.'
+            body=encoded(chat)
     if len(body)>512*1024:raise ProviderError('ASSESSMENT_INPUT_TOO_LARGE')
     started=time.monotonic();response=record(provider_json(url,body,{'Authorization':'Bearer '+key,'Content-Type':'application/json'},bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS',90000,1000,180000)))
     if api_format=='chat_completions':
@@ -112,10 +133,13 @@ def assess(input,role):
         else:result['confidence']=min(result['confidence'],*confidences)
     usage=record(response['usage']) if response.get('usage') is not None and response['usage'] is not False and response['usage']!=0 and response['usage']!='' else {}
     def token(value):return value if type(value) in (int,float) and math.isfinite(value) and 0<=value<=9007199254740991 and int(value)==value else None
-    return dict(result=result,provider='deepseek',model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
+    return dict(result=result,provider=provider,model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
 
 def transcribe(path,mime,language='en',duration_ms=None):
     provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()
+    if provider in ('faster_whisper','faster-whisper'):
+        from .assessment_local_stt import transcribe as local_transcribe
+        return local_transcribe(path,mime,language,duration_ms)
     if provider!='deepgram' or not key or not model:raise ProviderError('STT_NOT_CONFIGURED')
     url=provider_url(os.environ.get('STT_BASE_URL') or 'https://api.deepgram.com/v1','listen')
     if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.I) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.I):raise ProviderError('STT_INPUT_INVALID')

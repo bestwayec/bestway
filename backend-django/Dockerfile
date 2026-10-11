@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=config.settings.production
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements/ ./requirements/
 RUN pip install --no-cache-dir -r requirements/prod.txt \
     && groupadd --gid 1001 bestway \
@@ -9,7 +11,7 @@ COPY --chown=bestway:bestway apps/ ./apps/
 COPY --chown=bestway:bestway common/ ./common/
 COPY --chown=bestway:bestway config/ ./config/
 COPY --chown=bestway:bestway manage.py ./
-RUN mkdir -p /app/storage && chown bestway:bestway /app/storage \
+RUN mkdir -p /app/storage /app/model-cache && chown bestway:bestway /app/storage /app/model-cache \
     && chmod 755 /app/config/docker-entrypoint.sh
 USER bestway
 EXPOSE 8000

@@ -58,8 +58,9 @@ def rate(job,input,role,grader):
     if cached:return cached.id,results.validate(cached.result,input)
     with transaction.atomic():
         service.require_lease(job)
-        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider='deepseek',
-            model=os.environ.get('DEEPSEEK_MODEL' if role=='PRIMARY' else 'DEEPSEEK_ADJUDICATOR_MODEL','UNCONFIGURED'),status='STARTED',uncertain=False,started_at=timezone.now())
+        provider,model=providers.assessment_identity(role)
+        evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
+            model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
         output=grader(input,role);result=results.validate(output['result'],input)
         AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='SUCCEEDED',result=result,provider=output['provider'],model=output['model'],confidence=result['confidence'],input_tokens=output['inputTokens'],output_tokens=output['outputTokens'],latency_ms=output['latencyMs'],completed_at=timezone.now())
