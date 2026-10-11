@@ -220,6 +220,7 @@ export function useGradeMock(attemptId: string) {
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
       qc.invalidateQueries({ queryKey: ["attempt-assessments", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
+      qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
     },
   });
 }

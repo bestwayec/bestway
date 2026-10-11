@@ -162,7 +162,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-fg">{t(`skills.${sec.skill}`)}</p>
                   <p className="text-xs text-fg-muted">
-                    {multilevel && sec.skill === "writing" ? `${sec.groups.length} authored tasks · ${qCount} questions` : multilevel && sec.skill === "speaking" ? `${sec.groups.length} authored parts · ${qCount} questions` : `${qCount} ${t("questions")}${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds) ? ` · ${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds)} ${t("minutes")}` : ""}`}
+                    {multilevel && (sec.skill === "writing" || sec.skill === "speaking") ? t(sec.skill === "writing" ? "authoredWritingTasks" : "authoredSpeakingParts", { count: sec.groups.length, questions: qCount }) : `${qCount} ${t("questions")}${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds) ? ` · ${sectionMinutes(sec.durationMinutes, exam.specification?.[sec.skill]?.durationSeconds)} ${t("minutes")}` : ""}`}
                   </p>
                 </div>
               </div>

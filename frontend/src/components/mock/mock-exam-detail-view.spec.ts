@@ -3,9 +3,15 @@ import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockExamDetail } from "@/lib/types";
+import en from "../../../messages/en.json";
+import uz from "../../../messages/uz.json";
 
-const fixture = vi.hoisted(() => ({ exam: {} as MockExamDetail, role: "student", start: vi.fn(), push: vi.fn() }));
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+const fixture = vi.hoisted(() => ({ exam: {} as MockExamDetail, role: "student", locale: "en", start: vi.fn(), push: vi.fn() }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+  if (!["practiceSelectionHint", "authoredWritingTasks", "authoredSpeakingParts"].includes(key)) return key;
+  const messages = fixture.locale === "uz" ? uz.mock : en.mock;
+  return (messages[key as keyof typeof messages] as string).replace(/\{(\w+)\}/g, (_, name: string) => String(values?.[name] ?? name));
+} }));
 vi.mock("@/hooks/use-me", () => ({ useMe: () => ({ data: { user: { role: fixture.role } } }) }));
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: fixture.push }),
@@ -24,6 +30,7 @@ let root: Root;
 beforeEach(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   fixture.role = "student";
+  fixture.locale = "en";
   fixture.start.mockClear();
   fixture.exam = {
     id: "partial", type: "multilevel", title: "cefr c1", ready: false, practiceReady: true,
@@ -40,6 +47,22 @@ afterEach(async () => {
 });
 
 describe("practice start on an incomplete Multilevel definition", () => {
+  it.each(["uz", "en"])("explains internal AI assessment and localizes authored task counts (%s)", async (locale) => {
+    fixture.locale = locale;
+    fixture.exam.sections = ["writing", "speaking"].map((skill) => ({ id: skill, skill, groups: [{ id: `${skill}-group`, questions: [{ id: `${skill}-question` }] }] })) as MockExamDetail["sections"];
+    await React.act(async () => root.render(React.createElement(MockExamDetailView, { examId: "partial" })));
+    expect(container.textContent).toContain(locale === "uz" ? "AI ichki mashq bahosini beradi, zarur hollarda o‘qituvchi tekshiradi" : "AI provides an internal practice assessment, with teacher review when needed");
+    expect(container.textContent).toContain(locale === "uz" ? "Rasmiy umumiy Multilevel bali yoki CEFR darajasi berilmaydi" : "No official overall Multilevel score or CEFR level is issued");
+    expect(container.textContent).toContain(locale === "uz" ? "1 ta yozma topshiriq · 1 ta savol" : "Writing tasks: 1 · Questions: 1");
+    expect(container.textContent).toContain(locale === "uz" ? "1 ta og‘zaki bo‘lim · 1 ta savol" : "Speaking parts: 1 · Questions: 1");
+    expect(container.textContent).not.toContain("authored tasks");
+    expect(container.textContent).not.toContain("authored parts");
+    for (const messages of [uz.mock, en.mock]) {
+      expect(messages.practiceRunnerNotice).toContain("AI");
+      expect(messages.practiceRunnerNotice).not.toContain("Teacher graded");
+      expect(messages.practiceRunnerNotice).not.toContain("O‘qituvchi baholaydi");
+    }
+  });
   it("starts only explicitly selected authored skills while keeping the full start disabled", async () => {
     await React.act(async () => root.render(React.createElement(MockExamDetailView, { examId: "partial" })));
     const buttons = Array.from(container.querySelectorAll("button"));
