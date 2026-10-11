@@ -33,7 +33,7 @@ export function GroupAiRankingTable({ rows, cohort, t }: {
               <td className="whitespace-nowrap px-3 py-3 text-fg-muted">{rankingScoreLabel(row.aiRawScore, cohort?.rawMax)}</td>
               <td className="whitespace-nowrap px-3 py-3 text-fg-muted">{rankingScoreLabel(row.teacherScore, row.finalScoreScaleMax)}</td>
               <td className="whitespace-nowrap px-3 py-3 text-fg">
-                {rankingScoreLabel(row.finalPracticeGrade?.score ?? row.finalScore,
+                {rankingScoreLabel(row.finalScore == null ? null : row.finalPracticeGrade?.score ?? row.finalScore,
                   row.finalPracticeGrade?.scaleMax ?? row.finalScoreScaleMax)}
                 {row.finalScoreSource && <span className="block text-xs text-fg-muted">{t(row.finalScoreSource === "TEACHER" ? "sourceTeacher" : row.finalScoreSource === "ADJUDICATED" ? "sourceAdjudicated" : "sourceAi")}</span>}
               </td>

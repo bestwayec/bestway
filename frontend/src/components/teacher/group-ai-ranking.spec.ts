@@ -42,4 +42,14 @@ describe("teacher AI ranking", () => {
     const html = renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [final], cohort, t }));
     expect(html).toContain("47 / 75"); expect(html).toContain("4 / 5"); expect(html).toContain("44 / 75");
   });
+  it("keeps a retained Speaking proposal out of the final score cell", () => {
+    const review: GroupAiRankingRow = { ...row, aiScore: 41, aiRawScore: 2, teacherScore: null,
+      finalScore: null, finalScoreSource: null, status: "NEEDS_REVIEW", eligible: false,
+      rank: null, reviewRequired: true,
+      finalPracticeGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 41,
+        scaleMax: 75, rawScore: 2, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } };
+    const html = renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [review], cohort, t }));
+    expect(html.match(/41 \/ 75/g)).toHaveLength(1);
+    expect(html).toContain("proposalOnly");
+  });
 });
