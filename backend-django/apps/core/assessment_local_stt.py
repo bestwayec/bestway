@@ -57,11 +57,14 @@ def _decode_audio(path,max_seconds):
         def collect(frame):
             nonlocal count
             for output in resampler.resample(frame):
+                # PyAV can return [None] when a passthrough resampler flushes.
+                if output is None:continue
                 data=output.to_ndarray().reshape(-1)
                 count+=data.size
                 if count>SAMPLE_RATE*max_seconds:raise ProviderError('STT_AUDIO_TOO_LONG')
                 chunks.append(data)
-        with av.open(path,mode='r',metadata_errors='ignore') as source:
+        # PyAV 19 removed metadata_errors; the supported mode works across versions.
+        with av.open(path,mode='r') as source:
             for frame in source.decode(audio=0):
                 frame.pts=None
                 collect(frame)

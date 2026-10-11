@@ -123,6 +123,39 @@ class LocalInputTests(SimpleTestCase):
             with self.assertRaisesRegex(ProviderError,'STT_AUDIO_TOO_LONG'):stt._decode_audio('compressed.ogg',1)
         numpy.concatenate.assert_not_called()
 
+    def test_modern_pyav_open_and_passthrough_flush_decode_valid_audio(self):
+        data=Mock(size=8000);data.reshape.return_value=data
+        output=Mock();output.to_ndarray.return_value=data
+        resampler=Mock();resampler.resample.side_effect=[[output],[None]]
+        source=Mock();source.__enter__=Mock(return_value=source);source.__exit__=Mock(return_value=False)
+        source.decode.return_value=iter([SimpleNamespace(pts=0)])
+        opened=[]
+        # Match PyAV 19's strict keyword signature, rather than accepting any kwargs.
+        def open_audio(path,mode='r'):
+            opened.append((path,mode));return source
+        av=SimpleNamespace(open=open_audio,audio=SimpleNamespace(resampler=SimpleNamespace(AudioResampler=Mock(return_value=resampler))))
+        numpy=Mock();audio=Mock()
+        numpy.concatenate.return_value.astype.return_value=audio
+        numpy.isfinite.return_value.all.return_value=True;numpy.sqrt.return_value=.2
+        with patch.dict(sys.modules,dict(av=av,numpy=numpy)):
+            decoded,duration=stt._decode_audio('valid.webm',600)
+        self.assertIs(decoded,audio);self.assertEqual(duration,.5)
+        self.assertEqual(opened,[('valid.webm','r')])
+        source.decode.assert_called_once_with(audio=0)
+        self.assertIsNone(resampler.resample.call_args_list[-1].args[0])
+        numpy.concatenate.assert_called_once_with([data])
+
+    def test_empty_passthrough_flush_returns_ungraded_empty_audio(self):
+        resampler=Mock();resampler.resample.return_value=[None]
+        source=Mock();source.__enter__=Mock(return_value=source);source.__exit__=Mock(return_value=False)
+        source.decode.return_value=iter([])
+        av=SimpleNamespace(open=Mock(return_value=source),audio=SimpleNamespace(resampler=SimpleNamespace(AudioResampler=Mock(return_value=resampler))))
+        numpy=Mock()
+        with patch.dict(sys.modules,dict(av=av,numpy=numpy)):
+            with self.assertRaisesRegex(ProviderError,'STT_EMPTY_TRANSCRIPT'):
+                stt._decode_audio('empty.wav',600)
+        numpy.concatenate.assert_not_called()
+
 
 class LocalProcessTests(SimpleTestCase):
     def config(self):
