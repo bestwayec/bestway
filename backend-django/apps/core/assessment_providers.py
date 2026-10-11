@@ -10,6 +10,7 @@ from urllib.request import Request,build_opener,HTTPRedirectHandler
 from urllib.error import HTTPError,URLError
 from .assessment_results import ProviderError,validate,schema
 from .assessment_prompts import system_prompt
+from .assessment_quality import enabled
 from .mock_scoring import js_round
 
 def provider_url(base,endpoint):
@@ -59,33 +60,59 @@ def record(value):
 def assess(input,role):
     key=os.environ.get('DEEPSEEK_API_KEY','').strip();model=os.environ.get('DEEPSEEK_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else 'DEEPSEEK_MODEL','').strip()
     if not key or not model:raise ProviderError('PROVIDER_NOT_CONFIGURED')
-    url=provider_url(os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com','responses')
+    base=os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com'
+    api_format=os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
+    if api_format not in ('responses','chat_completions'):raise ProviderError('PROVIDER_CONFIG_INVALID')
+    url=provider_url(base,'chat/completions' if api_format=='chat_completions' else 'responses')
     payload={k:input[k] for k in ('program','skill','rubricVersion','specificationVersion','speakingProfileVersion','pronunciationEvidence')}
+    if enabled(input):payload.update({k:input[k] for k in ('practiceMode','evaluationPolicy') if k in input})
     payload['parts']=[]
     for part in input['parts']:
         projected={k:part[k] for k in ('id','max','task','context')}
         projected['imageEvidence']='UNAVAILABLE_USE_ONLY_SUPPLIED_TEXT_DESCRIPTION' if part.get('imageKeys') else 'NOT_REQUIRED'
         projected.update({k:part[k] for k in ('prepSeconds','responseSeconds') if k in part})
-        projected['responses']=[dict(prompt=r['prompt'],partNumber=r['partNumber'],response=(r.get('transcript') or '') if input['skill']=='speaking' else r['originalResponse'],**({ 'durationMs':r['durationMs']} if 'durationMs' in r else {})) for r in part['responses']]
+        projected['responses']=[dict(prompt=r['prompt'],partNumber=r['partNumber'],response=(r.get('transcript') or '') if input['skill']=='speaking' else r['originalResponse'],**({ 'durationMs':r['durationMs']} if 'durationMs' in r else {}),
+            **({k:r[k] for k in ('wordMin','wordMax','responseLimitMs','audioDurationMs','transcriptConfidence') if k in r} if enabled(input) else {})) for r in part['responses']]
         payload['parts'].append(projected)
     encoded=lambda value:json.dumps(value,ensure_ascii=False,separators=(',',':')).encode()
     body=encoded(dict(model=model,instructions=system_prompt(input),input=[dict(role='user',content=[dict(type='input_text',text=encoded(payload).decode())])],
         text=dict(format=dict(type='json_schema',name='bestway_assessment',schema=schema(input))),reasoning=dict(effort='none'),temperature=.2,stream=False,tool_choice='none',max_output_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
+    if api_format=='chat_completions':
+        # DeepSeek documents JSON-object mode; local validation still enforces
+        # the entire rubric schema and source evidence after that transport.
+        body=encoded(dict(model=model,messages=[dict(role='system',content=system_prompt(input)+'\nRequired JSON schema:\n'+encoded(schema(input)).decode()),
+            dict(role='user',content=encoded(payload).decode())],response_format=dict(type='json_object'),
+            temperature=.2,stream=False,max_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
     if len(body)>512*1024:raise ProviderError('ASSESSMENT_INPUT_TOO_LARGE')
     started=time.monotonic();response=record(provider_json(url,body,{'Authorization':'Bearer '+key,'Content-Type':'application/json'},bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS',90000,1000,180000)))
-    if response.get('status')!='completed':raise ProviderError('PROVIDER_TRUNCATED_RESULT')
-    if not isinstance(response.get('output'),list):raise ProviderError('PROVIDER_RESPONSE_INVALID')
-    messages=[record(v) for v in response['output'] if record(v).get('type')=='message']
-    if len(messages)!=1 or messages[0].get('status')!='completed' or messages[0].get('role')!='assistant' or not isinstance(messages[0].get('content'),list):raise ProviderError('PROVIDER_RESPONSE_INVALID')
-    content=[record(v) for v in messages[0]['content']]
-    if len(content)!=1 or content[0].get('type')!='output_text' or not isinstance(content[0].get('text'),str) or not content[0]['text'].strip():raise ProviderError('PROVIDER_EMPTY_RESPONSE')
-    try:parsed=json.loads(content[0]['text'])
+    if api_format=='chat_completions':
+        choices=response.get('choices')
+        if not isinstance(choices,list) or len(choices)!=1:raise ProviderError('PROVIDER_RESPONSE_INVALID')
+        choice=record(choices[0])
+        if choice.get('finish_reason')!='stop':raise ProviderError('PROVIDER_TRUNCATED_RESULT')
+        message=record(choice.get('message'))
+        if message.get('role')!='assistant' or message.get('tool_calls'):raise ProviderError('PROVIDER_RESPONSE_INVALID')
+        result_text=message.get('content')
+        if not isinstance(result_text,str) or not result_text.strip():raise ProviderError('PROVIDER_EMPTY_RESPONSE')
+    else:
+        if response.get('status')!='completed':raise ProviderError('PROVIDER_TRUNCATED_RESULT')
+        if not isinstance(response.get('output'),list):raise ProviderError('PROVIDER_RESPONSE_INVALID')
+        messages=[record(v) for v in response['output'] if record(v).get('type')=='message']
+        if len(messages)!=1 or messages[0].get('status')!='completed' or messages[0].get('role')!='assistant' or not isinstance(messages[0].get('content'),list):raise ProviderError('PROVIDER_RESPONSE_INVALID')
+        content=[record(v) for v in messages[0]['content']]
+        if len(content)!=1 or content[0].get('type')!='output_text' or not isinstance(content[0]['text'],str) or not content[0]['text'].strip():raise ProviderError('PROVIDER_EMPTY_RESPONSE')
+        result_text=content[0]['text']
+    try:parsed=json.loads(result_text)
     except ValueError:raise ProviderError('PROVIDER_MALFORMED_JSON') from None
     result=validate(parsed,input)
     if any(p.get('imageKeys') for p in input['parts']):result['confidence']=min(result['confidence'],.79)
+    if enabled(input) and input['skill']=='speaking':
+        confidences=[r.get('transcriptConfidence') for p in input['parts'] for r in p['responses']]
+        if any(type(c) not in (int,float) or not math.isfinite(c) for c in confidences):result['confidence']=min(result['confidence'],.79)
+        else:result['confidence']=min(result['confidence'],*confidences)
     usage=record(response['usage']) if response.get('usage') is not None and response['usage'] is not False and response['usage']!=0 and response['usage']!='' else {}
     def token(value):return value if type(value) in (int,float) and math.isfinite(value) and 0<=value<=9007199254740991 and int(value)==value else None
-    return dict(result=result,provider='deepseek',model=model,inputTokens=token(usage.get('input_tokens')),outputTokens=token(usage.get('output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
+    return dict(result=result,provider='deepseek',model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
 
 def transcribe(path,mime,language='en',duration_ms=None):
     provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()

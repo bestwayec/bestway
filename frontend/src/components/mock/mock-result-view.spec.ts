@@ -51,4 +51,26 @@ describe("partial teacher result presentation", () => {
     expect(html).toContain("/mock/attempts/attempt-1/certificate");
     expect(html).toContain("Estimated Multilevel Result");
   });
+  it("shows the same persisted website practice grade in the result and breakdown", () => {
+    const value = attempt();
+    value.rawScores = { speaking: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } } };
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
+    expect(html).toContain("35–50");
+    expect(html).not.toContain("75 /75");
+    expect(html).not.toContain("/certificate");
+  });
+  it("keeps new internal full-attempt grades separate from derived CEFR and certificates", () => {
+    const value = attempt(false);
+    value.flowMode = "full_test";
+    value.overallScore = 75;
+    value.cefrLevel = "C1";
+    value.rawScores = { speaking: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } } };
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain("47 /75");
+    expect(html).not.toContain("Estimated Multilevel Result");
+    expect(html).not.toContain("75 /75");
+    expect(html).not.toContain("C1");
+    expect(html).not.toContain("/certificate");
+  });
 });

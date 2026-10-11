@@ -13,6 +13,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   attemptId: string; questionId: string; initialHasAudio: boolean;
 }) {
   const t = useTranslations('mock');
+  const tx = useTranslations('mock.runnerUx');
   const tc = useTranslations('common');
   const upload = useUploadMockSpeaking(attemptId);
   const key = recordingKey(attemptId, questionId);
@@ -119,6 +120,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   }
 
   return <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
+    <p className="w-full text-xs text-fg-muted">{tx(recording ? 'recordingHint' : sending || pending ? 'uploadHint' : hasAudio ? 'uploadedHint' : 'microphoneHint')}</p>
     {recording ? <Button size="sm" variant="danger" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
       : pending ? <Button size="sm" variant="outline" loading={sending} onClick={() => void send(pending)}>Retry upload of saved recording</Button>
       : <Button size="sm" variant="outline" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}

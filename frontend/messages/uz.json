@@ -127,7 +127,9 @@
     "teacherPronunciation": "Talaffuz bandini qo‘yishdan oldin asl audioni tinglang. Faqat transkriptga asoslangan AI tahlili bu bandni bermaydi.",
     "waitForWorker": "Baholash davom etmoqda. AI tekshiruvini yuborishdan oldin kuting yoki yangilang; quyida qo‘lda baholash mavjud.",
     "saveReview": "Tekshiruvni saqlash",
-    "openFeedback": "Tahlilni ochish"
+    "openFeedback": "Tahlilni ochish",
+    "internalPracticeNotice": "Saytning amaliy bahosi {scale} ballik shkalada {min}–{max} oralig‘ida beriladi. Asl rubrika dalillari saqlanadi; bu guruhdagi mashq bahosi, rasmiy CEFR natijasi emas.",
+    "rubricRawScore": "Asl rubrika bahosi"
   },
   "examTrack": {
     "title": "Yo'nalish",
@@ -618,10 +620,10 @@
     "more": "Yana"
   },
   "brand": {
-      "best": "Best",
-      "way": "Way"
-    },
-"roles": {
+    "best": "Best",
+    "way": "Way"
+  },
+  "roles": {
     "super_admin": "Super admin",
     "admin": "Administrator",
     "teacher": "O'qituvchi",
@@ -853,6 +855,54 @@
     "sun": "Ya"
   },
   "mock": {
+    "runnerUx": {
+      "responseProgress": "Javob berish jarayoni",
+      "responseProgressHint": "Yozma javoblar qoralama sifatida sanaladi. Speaking yozuvi yuklangandan keyin hisoblanadi.",
+      "wordCount": "{count} ta so‘z",
+      "wordTarget": "Maqsad: {target} ta so‘z",
+      "wordTargetProgress": "Writing so‘z maqsadi jarayoni",
+      "aboveTarget": "Tavsiya etilgan hajmdan oshdingiz. Javobni qayta o‘qib, asosiy fikrlarga e’tibor bering.",
+      "targetReached": "So‘z maqsadiga yetdingiz. Endi savolning barcha qismlariga javob berganingizni tekshiring.",
+      "wordsRemaining": "Maqsadga yetish uchun taxminan yana {count} ta so‘z kerak.",
+      "writingStartHint": "Javobni savol va kimga yozayotganingizga moslab boshlang.",
+      "writingReviewHint": "Fikrlar, tuzilish va tilni tekshiring. So‘z sonining o‘zi baho emas.",
+      "writingPlaceholder": "Javobingizni shu yerga yozing…",
+      "writingResponseLabel": "{number}-savolga yozma javob",
+      "responseEntered": "Javob kiritildi",
+      "recordingUploaded": "Yozuv yuklandi",
+      "notAnswered": "Hali javob berilmadi",
+      "taskLabel": "{label}-topshiriq: {state}",
+      "taskResponses": "{done} / {total} ta topshiriqning barcha javoblari mavjud",
+      "answerSelected": "Javob tanlandi",
+      "choicesSelected": "{count} ta javob tanlandi",
+      "answerEntered": "Javob kiritildi",
+      "clearAnswer": "Javobni tozalash",
+      "microphoneStep": "Mikrofon",
+      "recordStep": "Javob",
+      "uploadStep": "Yuklash",
+      "microphoneHint": "Mikrofonga ruxsat bering, ovozingizni tekshiring va javobni boshlang.",
+      "preparationHint": "Tayyorgarlik vaqtida fikrlaringizni tartiblang. Vaqt tugagach yozuv avtomatik boshlanadi.",
+      "recordingHint": "Ravon gapiring va savolga javob bering. Hozir ovozingiz yozilmoqda.",
+      "uploadHint": "Yozuv yuklanib bo‘lguncha bu sahifani ochiq qoldiring.",
+      "uploadedHint": "Yozuvingiz yuklandi. Javobni tinglab tekshirishingiz mumkin.",
+      "playRecording": "Yuklangan javobni tinglash",
+      "preparationTime": "Tayyorgarlik vaqti",
+      "responseTime": "Javob vaqti",
+      "testMicrophone": "Mikrofonni tekshirish",
+      "startResponse": "Javobni boshlash",
+      "stopResponse": "Yozuvni to‘xtatish",
+      "retryUpload": "Saqlangan yozuvni qayta yuklash",
+      "meterHint": "Gapiring va ovoz ko‘rsatkichi harakatlanishini tekshiring.",
+      "meterUnavailable": "Mikrofon tayyor. Bu brauzerda ovoz ko‘rsatkichi mavjud emas, ammo yozuvni boshlashingiz mumkin.",
+      "micRequiredStatus": "Mikrofon kerak",
+      "preparingStatus": "Tayyorlanmoqda",
+      "readyStatus": "Tayyor",
+      "recordingStatus": "Yozilmoqda",
+      "finalizingStatus": "Yuklashga tayyorlanmoqda",
+      "uploadingStatus": "Yuklanmoqda",
+      "uploadedStatus": "Yuklandi",
+      "retryStatus": "Qayta urinish kerak"
+    },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
     "partialPracticeNotice": "Faqat tanlangan Writing va Speaking topshiriqlari topshirilgan. Ballar shu ishga tegishli; umumiy Multilevel bali, CEFR darajasi va sertifikat berilmaydi.",
@@ -941,7 +991,9 @@
       "in_progress": "Jarayonda",
       "grading": "Baholanmoqda",
       "completed": "Yakunlangan"
-    }
+    },
+    "internalPracticeScore": "Saytdagi amaliy baho",
+    "internalPracticeNotice": "Saytning amaliy bahosi 75 ballik shkalada 35–50 oralig‘ida beriladi. Asl rubrika natijasi saqlanadi. Bu baho rasmiy CEFR darajasini bermaydi."
   },
   "wizard": {
     "title": "Imtihon yaratish",
@@ -1543,5 +1595,44 @@
     "open": "Open",
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
     "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions."
+  },
+  "teacherAiRanking": {
+    "title": "Writing va Speaking AI reytingi",
+    "description": "Guruhning bir xil imtihon va topshiriqlar bo‘yicha haqiqiy AI baholarini solishtiring.",
+    "exam": "Imtihon",
+    "skill": "Ko‘nikma",
+    "writing": "Writing",
+    "speaking": "Speaking",
+    "rank": "O‘rin",
+    "student": "O‘quvchi",
+    "aiScore": "Saytdagi AI bahosi",
+    "rawScore": "AI mezon bali",
+    "teacherScore": "Ustoz mezon bali",
+    "finalScore": "Yakuniy baho",
+    "status": "Holat",
+    "proposalOnly": "Taklif; reytingga kiritilmagan",
+    "sourceTeacher": "Ustoz",
+    "sourceAi": "AI",
+    "sourceAdjudicated": "AI qayta tekshiruvi",
+    "notAttempted": "Topshirilmagan",
+    "inProgress": "Bajarilmoqda",
+    "pending": "AI baholashi kutilmoqda",
+    "failed": "Baholashda xato",
+    "notAssessed": "Baholanmagan",
+    "invalidScope": "Topshiriqlarni tekshirish kerak",
+    "reviewRequired": "Ustoz tekshiruvi kerak",
+    "graded": "AI baholagan",
+    "error": "AI reytingini yuklab bo‘lmadi",
+    "retry": "Qayta urinish",
+    "noExams": "Guruhda hali Multilevel topshirishlari yo‘q",
+    "cohort": "Taqqoslash guruhi {number}",
+    "tasks": "{count} ta topshiriq",
+    "historical": "Oldingi baholash mezoni",
+    "internalPolicy": "Ichki mashq qoidasi: 35–50 / 75",
+    "practiceEstimate": "Mashq ko‘nikmasi bahosi / 75",
+    "rubricScore": "Multilevel ko‘nikma mezoni / 75",
+    "unranked": "Taqqoslanadigan AI bahosi kutilmoqda",
+    "noScores": "Hali AI baholari yo‘q",
+    "comparisonNote": "Reyting faqat AI baholariga asoslanadi. Turli topshiriq, mezon versiyasi va baholash qoidalari alohida solishtiriladi. Yo‘q yoki tasdiqlanmagan javobga baho berilmaydi. Ichki mashq bahosi CEFR darajasi yoki sertifikat bermaydi."
   }
 }

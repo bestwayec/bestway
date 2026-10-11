@@ -35,13 +35,15 @@ def objects(value,required):return [{k:text(exact(v,required)[k]) for k in requi
 def half(value,maximum):return type(value) in (int,float) and math.isfinite(value) and 0<=value<=maximum and value*2==int(value*2)
 
 def validate(value,input):
-    row=exact(value,RESULT)
+    from . import assessment_quality as quality
+    required=RESULT+(['practiceGrade'] if quality.enabled(input) and isinstance(value,dict) and 'practiceGrade' in value else [])
+    row=exact(value,required)
     if row['pronunciationEvidence']!=input['pronunciationEvidence']:invalid()
     rows=array(row['parts'],20)
     if len(rows)!=len(input['parts']):invalid()
     seen=set();parts=[];criteria_keys=keys(input)
     for p in rows:
-        exact(p,['id','rawScore','criteria','evidence','feedback']);identifier=text(p['id'])
+        exact(p,['id','rawScore','criteria','evidence','feedback']+(['evidenceQuotes'] if quality.enabled(input) else []));identifier=text(p['id'])
         spec=next((s for s in input['parts'] if s['id']==identifier),None)
         if spec is None or identifier in seen:invalid()
         seen.add(identifier);criteria=exact(p['criteria'],criteria_keys);evidence=exact(p['evidence'],criteria_keys)
@@ -61,12 +63,17 @@ def validate(value,input):
             if fb[k] is not None and type(fb[k]) is not bool:invalid()
             feedback[k]=fb[k]
         if input['program']=='MULTILEVEL' and input['skill']=='speaking' and identifier=='3' and raw==6 and (feedback['forCovered'] is not True or feedback['againstCovered'] is not True):invalid()
-        parts.append(dict(id=identifier,rawScore=raw,criteria=normalized,evidence=explanations,feedback=feedback))
+        rated=dict(id=identifier,rawScore=raw,criteria=normalized,evidence=explanations,feedback=feedback)
+        if quality.enabled(input):
+            rated['evidenceQuotes']=copy.deepcopy(p['evidenceQuotes'])
+            quality.check(input,spec,rated)
+        parts.append(rated)
     examples=objects(row['improvedExamples'],['partId','text'])
     if any(e['partId'] not in seen for e in examples):invalid()
-    return dict(parts=parts,**{k:texts(row[k]) for k in TOP},grammarCorrections=objects(row['grammarCorrections'],['original','corrected','explanation']),
+    result=dict(parts=parts,**{k:texts(row[k]) for k in TOP},grammarCorrections=objects(row['grammarCorrections'],['original','corrected','explanation']),
         vocabularyUpgrades=objects(row['vocabularyUpgrades'],['original','alternative','explanation']),improvedExamples=examples,
         confidence=number(row['confidence'],1),pronunciationEvidence=input['pronunciationEvidence'])
+    return quality.attach_grade(input,result)
 
 def fail(message):raise ContractAPIException('ASSESSMENT_INVALID_SCORE',message,400)
 def score(input,result):
@@ -112,11 +119,14 @@ def empty(input):
 
 def feedback_edit(value,base):
     """Validate editable feedback without manufacturing manual rubric evidence."""
-    row=exact(value,RESULT);parts=array(row['parts'],20)
+    row=exact(value,RESULT+(['practiceGrade'] if 'practiceGrade' in base else []));parts=array(row['parts'],20)
+    if row.get('practiceGrade')!=base.get('practiceGrade'):invalid()
     if len(parts)!=len(base['parts']):invalid()
     seen=set();rated=[]
     for part in parts:
-        exact(part,['id','rawScore','criteria','evidence','feedback']);identifier=text(part['id'])
+        original=next((p for p in base['parts'] if p['id']==part.get('id')),None) if isinstance(part,dict) else None
+        exact(part,['id','rawScore','criteria','evidence','feedback']+(['evidenceQuotes'] if original and 'evidenceQuotes' in original else []));identifier=text(part['id'])
+        if original and part.get('evidenceQuotes')!=original.get('evidenceQuotes'):invalid()
         if identifier in seen or not any(p['id']==identifier for p in base['parts']):invalid()
         seen.add(identifier);fb=exact(part['feedback'],[*TEXT,*LISTS,'forCovered','againstCovered'])
         feedback={k:text(fb[k]) for k in TEXT};feedback.update({k:texts(fb[k]) for k in LISTS})
@@ -140,7 +150,8 @@ def teacher_result(input,base,parts):
     result['parts']=rated
     if input['program']!='MULTILEVEL' and input['skill']=='speaking':result['pronunciationEvidence']='ACOUSTIC'
     if score(input,result)['score'] is None:fail('A complete teacher score is required')
-    return result
+    from .assessment_quality import attach_grade
+    return attach_grade(input,result)
 
 def adjudicate(input,result,threshold=.85):
     if result['confidence']<threshold:return True
@@ -153,8 +164,10 @@ def schema(input):
     def rows(required):return dict(type='array',maxItems=30,items=obj({k:string for k in required}))
     maximum=6 if input['program']=='MULTILEVEL' else 9
     criteria={k:dict(type='null') if k=='pronunciation' and input['pronunciationEvidence']=='UNAVAILABLE' else dict(type='number',minimum=0,maximum=maximum,multipleOf=.5) for k in keys(input)}
-    return obj(dict(parts=dict(type='array',minItems=len(input['parts']),maxItems=len(input['parts']),items=obj(dict(
-        id=dict(type='string',enum=[p['id'] for p in input['parts']]),rawScore=dict(type=['number','null'],minimum=0,maximum=maximum),
-        criteria=obj(criteria),evidence=obj({k:string for k in keys(input)}),feedback=obj(dict(**{k:string for k in TEXT},**{k:strings for k in LISTS},forCovered=dict(type=['boolean','null']),againstCovered=dict(type=['boolean','null'])))))),
+    from .assessment_quality import enabled
+    anchors=dict(evidenceQuotes=dict(type='array',maxItems=50,items=obj(dict(criterion=dict(type='string',enum=keys(input)),responseIndex=dict(type='integer',minimum=0),quote=dict(type='string',minLength=1,maxLength=500))))) if enabled(input) else {}
+    part_schema=dict(id=dict(type='string',enum=[p['id'] for p in input['parts']]),rawScore=dict(type=['number','null'],minimum=0,maximum=maximum),
+        criteria=obj(criteria),evidence=obj({k:string for k in keys(input)}),feedback=obj(dict(**{k:string for k in TEXT},**{k:strings for k in LISTS},forCovered=dict(type=['boolean','null']),againstCovered=dict(type=['boolean','null']))),**anchors)
+    return obj(dict(parts=dict(type='array',minItems=len(input['parts']),maxItems=len(input['parts']),items=obj(part_schema)),
         **{k:strings for k in TOP},grammarCorrections=rows(['original','corrected','explanation']),vocabularyUpgrades=rows(['original','alternative','explanation']),
         improvedExamples=rows(['partId','text']),confidence=dict(type='number',minimum=0,maximum=1),pronunciationEvidence=dict(type='string',enum=[input['pronunciationEvidence']])))

@@ -4,6 +4,8 @@
  * Bu yerdagi nomlar backenddagi javob maydonlariga bir milimetr aniqlikda mos.
  */
 
+import type { PracticeGrade } from "./assessment-types";
+
 export type Role = "super_admin" | "admin" | "teacher" | "student" | "parent";
 export type AttendanceState = "present" | "absent" | "late" | "empty" | "blank";
 /**
@@ -815,6 +817,7 @@ export interface StartMockResult {
 export interface MockSectionScore {
   score: number;
   max: number;
+  practiceGrade?: PracticeGrade | null;
 }
 
 export type MockPracticeSkill = "writing" | "speaking";
@@ -896,6 +899,7 @@ export interface MockAttemptSection {
   max: number | null;
   band: number | null;
   standardScore?: number | null;
+  practiceGrade?: PracticeGrade | null;
   groups: MockAttemptGroup[];
 }
 

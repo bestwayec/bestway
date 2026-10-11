@@ -14,6 +14,7 @@ from . import telegram_views as telegram
 from . import legacy_test_views as legacy
 from . import legacy_authoring_views as legacy_admin
 from . import assessment_views as assessment
+from . import assessment_ranking_views as assessment_rankings
 from . import mock_support_views as support
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
@@ -73,6 +74,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/force-submit',support.force_view),
     path('mock/attempts/<str:attempt_id>/grade',assessment.grade),
     path('assessment/attempts/<str:attempt_id>',assessment.attempt),
+    path('assessment/groups/<str:group_id>/rankings',assessment_rankings.rankings),
     path('assessment/jobs/<str:job_id>/review',assessment.review),
     path('assessment/jobs/<str:job_id>/audio/<str:question_id>',assessment.audio),
     path('mock/attempts/<str:attempt_id>/extend',support.extend_view),

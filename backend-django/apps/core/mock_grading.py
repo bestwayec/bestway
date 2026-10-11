@@ -2,7 +2,7 @@
 import math
 from django.db import transaction
 from django.utils import timezone
-from apps.legacy_schema.models import MockAttempt,MockAnswer,MockQuestion
+from apps.legacy_schema.models import MockAttempt,MockAnswer,MockQuestion,AssessmentJob
 from .mock_attempts import fail,versioned
 from .mock_authoring import new_id
 from .mock_catalog import shape_exam
@@ -10,6 +10,20 @@ from .mock_submissions import band_tables
 from . import mock_scoring as scoring
 from .points import assert_can_view
 from .mock_practice import is_partial,scope,scope_sections
+
+def annotate_practice_grades(attempt,result):
+    """Keep the native raw score and attach the same persisted display grade."""
+    if attempt.exam.type!='multilevel':return result
+    seen=set()
+    for job in AssessmentJob.objects.filter(attempt_id=attempt.id).order_by('-generation','-created_at'):
+        if job.skill in seen:continue
+        seen.add(job.skill)
+        if job.final_score is None or not job.final_result:continue
+        grade=job.final_result.get('practiceGrade')
+        raw=result['rawScores'].get(job.skill)
+        if grade is not None and raw is not None and grade['rawScore']==raw['score'] and grade['rawMax']==raw['max']:
+            raw['practiceGrade']=grade
+    return result
 
 def save_projection(attempt,result):
     names=dict(status='status',raw_scores='rawScores',section_bands='sectionBands',overall_band='overallBand',cefr_level='cefrLevel')
@@ -28,9 +42,11 @@ def recompute(attempt_id):
     result,_=scoring.calculate(attempt.exam.type,sections,values,versioned=versioned(attempt),
         full_test=attempt.flow_mode=='full_test',tables=band_tables())
     if is_partial(attempt):result=scoring.partial_result(result)
+    result=annotate_practice_grades(attempt,result)
     was_completed=attempt.status=='completed'
     save_projection(attempt,result)
-    if is_partial(attempt) and result['status']=='completed' and not was_completed:
+    from .assessment_quality import attempt_practice_grades
+    if (is_partial(attempt) or attempt_practice_grades(attempt)) and result['status']=='completed' and not was_completed:
         from .mock_submission_snapshots import notify
         notify(attempt)
     return result
@@ -75,9 +91,10 @@ def grade(actor,attempt_id,data):
         for row in rows:
             if row.question_id in projections:
                 p=projections[row.question_id];MockAnswer.objects.filter(id=row.id).update(score=p['score'],is_correct=p['isCorrect'],is_graded=True,updated_at=timezone.now())
-        save_projection(attempt,result)
         from .assessment import record_legacy_grade
         record_legacy_grade(attempt_id,question.id)
+        result=annotate_practice_grades(attempt,result)
+        save_projection(attempt,result)
     from .system_settings import audit
     audit(actor,'mock.answer.grade','mockAnswer',question.id,old=dict(score=before.score if before else None,gradedById=before.graded_by_id if before else None,feedback=before.feedback if before else None),new=dict(attemptId=attempt_id,score=final,status=result['status']))
     if result['status']=='completed':

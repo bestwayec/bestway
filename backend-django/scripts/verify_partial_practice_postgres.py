@@ -3,6 +3,7 @@
 No external providers, production mutations, or browser E2E are involved.
 """
 import io
+from decimal import Decimal, ROUND_HALF_UP
 import os
 from pathlib import Path
 import sys
@@ -156,8 +157,14 @@ try:
     for qid in [*qids['writing'], *qids['speaking']]:
         data(client.post(f'/v1/mock/attempts/{attempt_id}/grade', {'questionId': qid, 'score': 4, 'feedback': 'Local teacher feedback.'}, format='json'), 201)
     result = data(client.get(f'/v1/mock/attempts/{attempt_id}'))
-    check(result['status'] == 'completed' and result['rawScores'] == {'writing': {'score': 12, 'max': 16}, 'speaking': {'score': 4, 'max': 5}},
+    check(result['status'] == 'completed' and
+          {skill: {key: raw[key] for key in ('score', 'max')} for skill, raw in result['rawScores'].items()} ==
+          {'writing': {'score': 12, 'max': 16}, 'speaking': {'score': 4, 'max': 5}},
           'Teacher grades complete only the selected tasks with the authored rubric maxima')
+    check(all(raw['practiceGrade']['score'] == float((Decimal(35) + Decimal(15) * Decimal(str(raw['score'])) / Decimal(str(raw['max']))).quantize(Decimal('.1'), rounding=ROUND_HALF_UP))
+              and raw['practiceGrade']['rawScore'] == raw['score'] and raw['practiceGrade']['rawMax'] == raw['max']
+              and raw['practiceGrade']['isOfficial'] is False for raw in result['rawScores'].values()),
+          'New internal practice grades preserve teacher raw evidence without an official level')
     check(result['overallScore'] is None and result['cefrLevel'] is None and not result['standardScores'],
           'Partial practice never claims a full Multilevel estimate')
     jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))

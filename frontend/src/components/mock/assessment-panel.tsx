@@ -46,6 +46,9 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
   const active = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
   const variant = job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
   const pronunciationUnavailable = job.skill === "speaking" && result?.pronunciationEvidence !== "ACOUSTIC";
+  const internalPractice = job.aiPracticeGrade ?? job.practiceGrade ?? job.teacherPracticeGrade;
+  const internalPolicy = job.gradingPolicy?.id === "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
+  const gradePolicy = job.gradingPolicy ?? internalPractice;
   return (
     <Card className="overflow-hidden">
       <div className="space-y-3 border-b border-border p-5">
@@ -54,11 +57,15 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           <Badge variant={variant}>{t(`status.${assessmentStatusKey(job)}`)}</Badge>
         </div>
         <p className="text-xs text-fg-subtle">{t(partial ? "partialPracticeNotice" : "estimated")}</p>
+        {gradePolicy && <p className="rounded-[8px] bg-brand-subtle p-3 text-sm text-brand-subtle-fg">{t("internalPracticeNotice", { min: gradePolicy.rangeMin, max: gradePolicy.rangeMax, scale: gradePolicy.scaleMax })}</p>}
         <dl className="grid gap-2 sm:grid-cols-3">
-          {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => <div key={key} className="rounded-[8px] bg-bg-subtle p-3">
+          {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => {
+            const practiceGrade = key === "aiScore" ? job.aiPracticeGrade : key === "teacherScore" ? job.teacherPracticeGrade : job.practiceGrade;
+            return <div key={key} className="rounded-[8px] bg-bg-subtle p-3">
             <dt className="text-xs text-fg-muted">{t(key)}</dt>
-            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{job[key] ?? t("pending")}{job[key] != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : job[key] != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
-          </div>)}
+            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{practiceGrade ? `${practiceGrade.score} /${practiceGrade.scaleMax}` : internalPolicy ? t("pending") : <>{job[key] ?? t("pending")}{job[key] != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : job[key] != null && job.program === "MULTILEVEL" ? " /75" : ""}</>}</dd>
+            {practiceGrade && <p className="mt-1 text-xs text-fg-subtle">{t("rubricRawScore")}: {practiceGrade.rawScore}/{practiceGrade.rawMax}</p>}
+          </div>;})}
         </dl>
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">
           <span>{t("source")}: {job.finalScoreSource ? t(`sources.${job.finalScoreSource}`) : t("pending")}</span>

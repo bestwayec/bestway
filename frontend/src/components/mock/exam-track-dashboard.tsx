@@ -5,6 +5,7 @@ import { useMockExams, useMyMockAttempts } from '@/hooks/use-mock';
 import type { MockSkill } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
+import { AttemptScoreSummary } from './attempt-score-summary';
 
 export function ExamTrackDashboard() {
   const t = useTranslations('examTrack');
@@ -22,6 +23,6 @@ export function ExamTrackDashboard() {
     <h3 className="font-medium">{t('history')}</h3>{history.isError && <p role="alert">{t('loadError')}</p>}
     {history.isPending && <p role="status">{t('loading')}</p>}
     {!history.isPending && !history.isError && !history.data?.length && <p>{t('noHistory')}</p>}
-    {history.data?.filter((a) => matches(a.examType)).map((a) => <Link className="block text-sm" key={a.id} href={`/mock/attempt/${a.id}${a.status !== 'in_progress' ? '#assessment-feedback' : ''}`}>{a.examTitle} · {tm(`status.${a.status}`)} · {program === 'MULTILEVEL' ? a.overallScore != null ? `${a.overallScore}/75` : '—' : a.overallBand?.toFixed(1) ?? '—'} {program === 'MULTILEVEL' ? a.cefrLevel ?? '' : ''}</Link>)}
+    {history.data?.filter((a) => matches(a.examType)).map((a) => <Link className="block text-sm" key={a.id} href={`/mock/attempt/${a.id}${a.status !== 'in_progress' ? '#assessment-feedback' : ''}`}>{a.examTitle} · {tm(`status.${a.status}`)} · <AttemptScoreSummary attempt={a} /></Link>)}
   </Card>;
 }

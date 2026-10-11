@@ -48,6 +48,12 @@ def for_attempt(actor,identifier):
         value.update(teacherReviewed=job.final_score_source=='TEACHER' or job.approved_feedback is not None,
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
+        if input.get('gradingPolicy'):
+            from .assessment_ranking_scores import ranking_ai_projection
+            ai=ranking_ai_projection(job,evaluations,transcripts)
+            final=job.final_result.get('practiceGrade') if job.final_result and job.final_score is not None else None
+            value.update(gradingPolicy=input['gradingPolicy'],aiPracticeGrade=ai.get('practiceGrade'),practiceGrade=final,
+                teacherPracticeGrade=final if job.final_score_source=='TEACHER' and job.teacher_score is not None else None)
         if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
         for part in input['parts']:
             for r in part['responses']:
@@ -78,7 +84,7 @@ def project(job,result,actor_id):
                 create_defaults=dict(values,id=str(uuid4()),response=r['originalResponse'],audio_key=r.get('audioKey')))
 
 def feedback_only(next,previous):
-    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')} for p in value['parts']],key=lambda p:p['id']))
+    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],practiceGrade=value.get('practiceGrade'),parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')}|({'evidenceQuotes':p['evidenceQuotes']} if 'evidenceQuotes' in p else {}) for p in value['parts']],key=lambda p:p['id']))
     from .mock_import_validate import canonical_checksum
     return canonical_checksum(facts(next))==canonical_checksum(facts(previous))
 
@@ -95,13 +101,16 @@ def review(actor,identifier,data):
         if latest.id!=job.id:fail('ASSESSMENT_STALE_VERSION','A newer assessment exists',409)
         evaluations=list(AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluated=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
-        input=job.input_snapshot;base=job.final_result if job.final_result is not None else evaluated.result if evaluated else None;action=data['action']
+        input=job.input_snapshot
+        from .assessment_quality import enabled,evidence_input
+        if enabled(input) and input['skill']=='speaking':input=evidence_input(input,list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at')))
+        base=job.final_result if job.final_result is not None else evaluated.result if evaluated else None;action=data['action']
         old=dict(finalScore=job.final_score,teacherScore=job.teacher_score,source=job.final_score_source,version=job.version,status=job.status)
         if action=='REGRADE':
             if job.policy_mode=='MANUAL_ONLY':fail('ASSESSMENT_MANUAL_POLICY','Enable an AI policy before requesting a regrade')
             if AssessmentJob.objects.filter(attempt_id=job.attempt_id,skill=job.skill,status__in=('PENDING','PROCESSING','RETRY')).exists():fail('ASSESSMENT_ALREADY_RUNNING','An assessment is already queued',409)
             now=timezone.now()
-            updated=AssessmentJob.objects.create(id=str(uuid4()),attempt_id=job.attempt_id,student_id=job.student_id,program=job.program,skill=job.skill,input_hash=job.input_hash,input_snapshot=input,
+            updated=AssessmentJob.objects.create(id=str(uuid4()),attempt_id=job.attempt_id,student_id=job.student_id,program=job.program,skill=job.skill,input_hash=job.input_hash,input_snapshot=job.input_snapshot,
                 generation=job.generation+1,rubric_version=job.rubric_version,prompt_version=job.prompt_version,policy_mode=job.policy_mode,status='PENDING',version=1,attempt_count=0,
                 teacher_score=job.teacher_score,final_score=job.final_score,final_score_source=job.final_score_source,final_result=job.final_result,created_at=now,updated_at=now)
             update(job,version=F('version')+1)
@@ -211,5 +220,7 @@ def record_legacy_grade(attempt_id,question_id):
         mean=sum(a.score or 0 for a in selected)/len(selected)
         criteria={k:round_half(sum((a.rubric_scores or {}).get(k,a.score or 0) for a in selected)/len(selected)) for k in required}
         parts.append(dict(previous,rawScore=round_half(mean) if input['program']=='MULTILEVEL' else None,criteria=previous['criteria'] if input['program']=='MULTILEVEL' else criteria))
-    result['parts']=parts;score=results.score(input,result)['score']
+    result['parts']=parts
+    from .assessment_quality import attach_grade
+    result=attach_grade(input,result);score=results.score(input,result)['score']
     update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,approved_feedback=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)

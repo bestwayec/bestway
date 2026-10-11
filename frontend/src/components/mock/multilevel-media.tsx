@@ -2,12 +2,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
 import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, recordedAudioBlob } from '@/lib/microphone';
+import { CheckCircle2, Circle, Mic, Square } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
-function recorderStatus(status: string, recorded: boolean) {
-  if (recorded) return 'Uploaded';
-  return ({ idle: 'Microphone required', checking: 'Preparing', starting: 'Preparing', ready: 'Ready', preparing: 'Preparing', recording: 'Recording', finalizing: 'Preparing upload', uploading: 'Uploading', saved: 'Complete', retry: 'Retry required' } as Record<string, string>)[status] ?? 'Preparing';
+function recorderStatus(status: string, recorded: boolean, translate: (key: string) => string) {
+  if (recorded && ['idle', 'saved'].includes(status)) return translate('uploadedStatus');
+  return translate(({ idle: 'micRequiredStatus', checking: 'preparingStatus', starting: 'preparingStatus', ready: 'readyStatus', preparing: 'preparingStatus', recording: 'recordingStatus', finalizing: 'finalizingStatus', uploading: 'uploadingStatus', saved: 'uploadedStatus', retry: 'retryStatus' } as Record<string, string>)[status] ?? 'preparingStatus');
 }
 
 /** Server grants each play; only volume is adjustable during timed playback. */
@@ -62,11 +66,13 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   attemptId: string; questionId: string; timed: boolean; initialHasAudio: boolean;
   startPhase: () => Promise<MediaPhase>; upload: (blob: Blob) => Promise<unknown>; onUploaded?: () => void;
 }) {
+  const t = useTranslations('mock.runnerUx');
   const key = recordingKey(attemptId, questionId);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Blob | null>(null);
   const [recorded, setRecorded] = useState(initialHasAudio);
+  const [audioVersion, setAudioVersion] = useState(0);
   const [phase, setPhase] = useState<MediaPhase | null>(null);
   const [left, setLeft] = useState(0);
   const [level, setLevel] = useState(0);
@@ -103,7 +109,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   async function send(blob: Blob) {
     if (uploading.current) return;
     uploading.current = true; stage('uploading'); setError(null);
-    try { await uploadRef.current(blob); await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId } })); }
+    try { await uploadRef.current(blob); await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); setAudioVersion((version) => version + 1); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId } })); }
     catch { stage('retry'); setError('Audio upload failed. Your recording has been preserved.'); }
     finally { uploading.current = false; }
   }
@@ -198,22 +204,33 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try { const next = await startPhase();
       if (!aliveRef.current || captureGeneration.current !== current) return;
       offset.current = Date.parse(next.serverTime)-Date.now(); setPhase(next);
+      setLeft(seconds(timed ? next.prepEndsAt : next.expiresAt, offset.current));
       if (timed && seconds(next.expiresAt, offset.current) <= 0) throw new Error('This speaking response has expired.');
       if (timed) stage('preparing'); else beginRecording();
     } catch { if (aliveRef.current && captureGeneration.current === current) { closeMicrophone(); stage('idle'); setError('Speaking response could not be started. Please try again.'); } }
   }
-  return <div className="my-3 space-y-3 rounded-[10px] border border-current/20 bg-bg-subtle p-4">
+  const uploaded = recorded && ['idle', 'saved'].includes(status);
+  const activeStep = uploaded ? 3 : ['finalizing', 'uploading', 'retry'].includes(status) ? 2 : ['ready', 'starting', 'preparing', 'recording'].includes(status) ? 1 : 0;
+  const hint = uploaded ? 'uploadedHint' : status === 'preparing' ? 'preparationHint' : status === 'recording' ? 'recordingHint' : ['finalizing', 'uploading', 'retry'].includes(status) ? 'uploadHint' : 'microphoneHint';
+  return <div className="my-3 space-y-3 rounded-[12px] border border-brand/25 bg-bg-subtle p-4">
+    <ol aria-label="Speaking response steps" className="grid grid-cols-3 gap-2">
+      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex items-center gap-1.5 rounded-[8px] px-2 py-2 text-xs font-medium', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
+        {index < activeStep ? <CheckCircle2 aria-hidden className="size-3.5 shrink-0" /> : <Circle aria-hidden className="size-3.5 shrink-0" />}<span>{t(label)}</span>
+      </li>)}
+    </ol>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p role="status" className="font-semibold text-fg">{recorderStatus(status, recorded)}</p>
-      {phase && <p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={`${left} seconds remaining`}>{left}s</p>}
+      <p role="status" className="font-semibold text-fg">{recorderStatus(status, recorded, t)}</p>
+      {phase && timed && ['preparing', 'recording'].includes(status) && <div className="text-right"><p className="text-xs text-fg-muted">{t(status === 'preparing' ? 'preparationTime' : 'responseTime')}</p><p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={`${left} seconds remaining`}>{left}s</p></div>}
     </div>
-    {status === 'recording' && <p className="flex items-center gap-2 text-sm font-medium text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />Recording in progress</p>}
+    <p className="text-sm text-fg-muted">{t(hint)}</p>
+    {status === 'recording' && <p className="flex items-center gap-2 text-sm font-medium text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recordingStatus')}</p>}
     {!pending && !(timed && recorded) && <>
-      <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}>Test microphone</button>
-      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">Speak and check that the meter responds.</p></> : <p className="text-sm text-fg-muted">Microphone access is ready. The input meter is unavailable in this browser; you can still record.</p>}<button className="rounded-[8px] bg-brand px-3 py-2 text-sm font-semibold text-white" type="button" onClick={() => void start()}>Start response</button></>}
-      {status === 'recording' && !timed && <button className="rounded-[8px] bg-danger px-3 py-2 text-sm font-semibold text-white" type="button" onClick={() => recorder.current?.stop()}>Stop recording</button>}
+      <Button size="sm" variant="outline" type="button" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
+      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
+      {status === 'recording' && !timed && <Button size="sm" variant="danger" type="button" onClick={() => recorder.current?.stop()}><Square aria-hidden />{t('stopResponse')}</Button>}
     </>}
-    {pending && <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>Retry upload of saved recording</button>}
+    {pending && <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
+    {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-10 w-full" preload="none"><track kind="captions" /></audio></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
   </div>;
 }

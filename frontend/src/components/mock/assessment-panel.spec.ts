@@ -121,6 +121,23 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain('max="9"');
     expect(html).toContain('value="OVERRIDE"');
   });
+  it("shows the saved internal AI and teacher grades while retaining original rubric evidence", () => {
+    const aiPracticeGrade = { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false as const };
+    const teacherPracticeGrade = { ...aiPracticeGrade, score: 47, rawScore: 4 };
+    const html = render({ ...speakingJob, status: "SUCCEEDED", practiceMode: "PARTIAL", rawMax: 5, aiScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER", aiPracticeGrade, teacherPracticeGrade, practiceGrade: teacherPracticeGrade }, true);
+    expect(html).toContain("44 /75");
+    expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
+    expect(html).toContain("3/5");
+    expect(html).toContain("4/5");
+    expect(html).toContain("35–50");
+    expect(html).not.toContain("75 /75");
+  });
+  it("keeps intermediate provider scores pending until the new policy grade is validated", () => {
+    const html = render({ ...speakingJob, status: "PROCESSING", aiScore: 75, gradingPolicy: { id: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", scaleMax: 75, rangeMin: 35, rangeMax: 50 }, aiPracticeGrade: null, teacherPracticeGrade: null, practiceGrade: null });
+    expect(html).toContain("35–50");
+    expect(html).not.toContain("75 /75");
+    expect(html).toContain("Pending");
+  });
 });
 
 describe("assessment status resilience", () => {

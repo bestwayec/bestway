@@ -8,7 +8,7 @@ const services = vi.hoisted(() => ({
   upload: vi.fn(), recover: vi.fn(), retain: vi.fn(), release: vi.fn(), active: vi.fn(),
   toastError: vi.fn(), toastSuccess: vi.fn(),
 }));
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => ({ testMicrophone: 'Test microphone', startResponse: 'Start response', stopResponse: 'Stop recording', retryUpload: 'Retry upload of saved recording', meterUnavailable: 'you can still record', uploadedStatus: 'Uploaded', recordingStatus: 'Recording', uploadingStatus: 'Uploading' } as Record<string, string>)[key] ?? key }));
 vi.mock('sonner', () => ({ toast: { error: services.toastError, success: services.toastSuccess } }));
 vi.mock('@/hooks/use-mock', () => ({ useUploadMockSpeaking: () => ({ isPending: false, mutateAsync: services.upload }) }));
 vi.mock('@/lib/durable-recordings', () => ({
@@ -141,6 +141,20 @@ describe('legacy speaking recording lifecycle', () => {
 });
 
 describe('Multilevel microphone preflight and server timing', () => {
+  it('offers playback only after the server acknowledges upload', async () => {
+    let acknowledge!: (value: unknown) => void;
+    services.upload.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await click('Stop recording');
+    expect(host.querySelector('audio')).toBeNull(); expect(host.textContent).toContain('Uploading');
+    await act(async () => acknowledge({ saved: true }));
+    expect(host.querySelector('audio')?.getAttribute('src')).toBe('/api/backend/mock/attempts/attempt/answers/question/audio?v=1');
+    expect(host.textContent).toContain('Uploaded');
+    await click('Test microphone'); await click('Start response');
+    expect(host.textContent).toContain('Recording'); expect(host.textContent).not.toContain('Uploaded');
+    expect(host.querySelector('audio')).toBeNull();
+    await click('Stop recording'); await act(async () => acknowledge({ saved: true }));
+  });
+
   it('closes a microphone granted after preflight unmounts without starting a response', async () => {
     let grant!: (stream: MediaStream) => void;
     getUserMedia.mockImplementation(() => new Promise((resolve) => { grant = resolve; }));
@@ -195,6 +209,16 @@ describe('Multilevel microphone preflight and server timing', () => {
     await render('multilevel'); await click('Test microphone');
     expect(host.querySelector('[role="alert"]')).not.toBeNull(); expect(startPhase).not.toHaveBeenCalled();
     expect(FakeRecorder.instances).toHaveLength(0); expect(host.textContent).not.toContain('Start response');
+  });
+
+  it('allows a microphone retry after permission is corrected without losing the task', async () => {
+    getUserMedia.mockRejectedValueOnce(new DOMException('permission blocked', 'NotAllowedError'));
+    await render('multilevel'); await click('Test microphone');
+    expect(host.querySelector('[role="alert"]')).not.toBeNull(); expect(startPhase).not.toHaveBeenCalled();
+    await click('Test microphone');
+    expect(host.querySelector('[role="alert"]')).toBeNull(); expect(getUserMedia).toHaveBeenCalledTimes(2);
+    await click('Start response'); await click('Stop recording');
+    expect(services.upload).toHaveBeenCalledTimes(1); expect(host.querySelector('audio')).not.toBeNull();
   });
 
   it('supports a browser default format even when explicit WebM and MP4 hints are unsupported', async () => {

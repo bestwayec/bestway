@@ -116,6 +116,7 @@ export function MultilevelTaskProgress({
   onSelect,
   practice = false,
   rawMaximum,
+  completed = [],
 }: {
   skill: "writing" | "speaking";
   current: number;
@@ -124,19 +125,24 @@ export function MultilevelTaskProgress({
   onSelect?: (index: number) => void;
   practice?: boolean;
   rawMaximum?: number;
+  completed?: number[];
 }) {
+  const t = useTranslations("mock.runnerUx");
   const sectionName = SKILL_NAMES[skill];
   return <div className="space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="font-semibold text-fg">{sectionName}</p>
         <p className="text-sm text-fg-muted">{skill === "writing" ? "Task" : "Part"} {current + 1} of {total} · {practice ? `Practice${rawMaximum != null ? ` /${rawMaximum}` : ""}` : skill === "writing" ? "Writing total /16" : "Speaking total /21"}</p>
+        <p className="mt-1 text-xs text-fg-subtle">{t("taskResponses", { done: completed.length, total })}</p>
       </div>
       <div className="flex flex-wrap gap-1.5" aria-label={`${sectionName} task progress`}>
         {labels.map((label, index) => {
           const active = current === index;
-          const control = <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", active ? "bg-brand text-white" : "bg-surface text-fg-muted")}>{label}</span>;
-          return onSelect ? <button key={label} type="button" onClick={() => onSelect(index)} aria-current={active ? "step" : undefined}>{control}</button> : <React.Fragment key={label}>{control}</React.Fragment>;
+          const done = completed.includes(index);
+          const state = done ? t(skill === "speaking" ? "recordingUploaded" : "responseEntered") : t("notAnswered");
+          const control = <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors", active ? "bg-brand text-white" : done ? "bg-success/10 text-success" : "bg-surface text-fg-muted")}>{done && <CheckCircle2 aria-hidden className="size-3.5" />}{label}</span>;
+          return onSelect ? <button key={`${index}-${label}`} type="button" onClick={() => onSelect(index)} aria-label={t("taskLabel", { label, state })} aria-current={active ? "step" : undefined} className="rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand">{control}</button> : <React.Fragment key={`${index}-${label}`}>{control}</React.Fragment>;
         })}
       </div>
     </div>

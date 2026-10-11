@@ -34,6 +34,7 @@ import { displayTotalMinutes } from "@/lib/mock-timing";
 import { formatMoney } from "@/lib/utils";
 import { MultilevelReadiness, studentStartMessage } from "./multilevel-student-ui";
 import { useMe } from "@/hooks/use-me";
+import { AttemptScoreSummary } from "./attempt-score-summary";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -275,15 +276,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                       </span>
                     </div>
                     <div className="text-right">
-                      {a.overallBand != null ? (
-                        <span className="font-bold text-brand tabular-nums">
-                          {t("overallBand")}: {a.overallBand.toFixed(1)}
-                        </span>
-                      ) : a.cefrLevel ? (
-                        <span className="font-bold text-brand">{a.cefrLevel}</span>
-                      ) : (
-                        <span className="text-sm text-fg-subtle">—</span>
-                      )}
+                      <AttemptScoreSummary attempt={a} />
                     </div>
                   </Card>
                 </Link>

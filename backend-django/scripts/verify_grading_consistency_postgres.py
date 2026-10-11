@@ -27,7 +27,7 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from psycopg import sql
-from apps.core import mock_submission_snapshots
+from apps.core import mock_submission_snapshots,assessment_worker,assessment,assessment_results
 from apps.core.multilevel import CURRENT_SPEC
 from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation,MockAttempt,MockAnswer,MockExam
 
@@ -89,16 +89,18 @@ try:
         request('student',grade_path,dict(questionId=writing[0],score=3),403)
         for qid,value in zip(writing,[3,4,5]):request('teacher',grade_path,dict(questionId=qid,score=value,feedback='Teacher comments'),201)
         attempt.refresh_from_db();jobs['writing'].refresh_from_db()
-        check(attempt.status=='grading' and attempt.raw_scores['writing']==dict(score=12,max=16),'completed Writing stays visible while Speaking is pending')
+        check(attempt.status=='grading' and {k:attempt.raw_scores['writing'][k] for k in ('score','max')}==dict(score=12,max=16),'completed Writing stays visible while Speaking is pending')
         check(jobs['writing'].final_score==12 and jobs['writing'].final_score_source=='TEACHER','legacy teacher grading reconciles the Writing assessment ledger')
         for qid,value in zip(speaking,[3,4,5]):request('teacher',grade_path,dict(questionId=qid,score=value),201)
         attempt.refresh_from_db();jobs['speaking'].refresh_from_db()
-        check(attempt.status=='completed' and attempt.raw_scores['speaking']==dict(score=4,max=5),'three Speaking responses produce one mean part score /5')
+        check(attempt.status=='completed' and {k:attempt.raw_scores['speaking'][k] for k in ('score','max')}==dict(score=4,max=5),'three Speaking responses produce one mean part score /5')
         check(attempt.overall_score is None and attempt.cefr_level is None and attempt.standard_scores=={},'partial practice has no invented overall or CEFR result')
         student=request('student','/v1/assessment/attempts/'+attempt.id)
         teacher=request('teacher','/v1/assessment/attempts/'+attempt.id)
         check(student==teacher,'teacher and student receive identical authorized final score projections')
         check({j['skill']:j['finalScore'] for j in student['assessments']}==dict(writing=12,speaking=4),'both assessment panels expose the saved teacher raw scores')
+        check({j['skill']:j['practiceGrade']['score'] for j in student['assessments']}==dict(writing=46.3,speaking=47),
+            'both panels expose the same explicit internal 35-50 policy with native raw marks retained')
         request('teacher','/v1/mock/attempts/'+attempt.id+'/certificate',None,400)
         jobs['writing'].refresh_from_db();job=jobs['writing']
         approved=copy.deepcopy(job.final_result);approved['priorityImprovements']=['Develop each reason with an example.']
@@ -122,6 +124,68 @@ try:
             'failed ledger reconciliation rolls back the teacher answer and result atomically')
         check(before==MockExam.objects.filter(id=ids['exam']).values().get(),'grading does not rewrite the historical exam definition')
         check(not AssessmentEvaluation.objects.filter(job__attempt_id=attempt.id).exists(),'manual grades never fabricate an AI provider evaluation')
+        ai.assert_not_called();speech.assert_not_called()
+        # New configured AI practice uses real ledger/worker paths, with only
+        # the two external providers replaced by local deterministic stubs.
+        MockExam.objects.filter(id=ids['exam']).update(assessment_policy='PRACTICE_AUTO_AI')
+        ai_id=prefix+'-ai-attempt'
+        insert('MockAttempt',id=ai_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['writing','speaking'],questionIds=question_ids)}))
+        original='I enjoy studying English because it helps me communicate with people and understand different cultures.'
+        for qid in question_ids:
+            insert('MockAnswer',id=str(uuid4()),attemptId=ai_id,questionId=qid,response=original if qid in writing else '',audioKey=qid+'.wav' if qid in speaking else None,updatedAt=stamp)
+        ai_attempt=MockAttempt.objects.select_related('exam').get(id=ai_id)
+        mock_submission_snapshots.enqueue(ai_attempt)
+        ai_jobs={j.skill:j for j in AssessmentJob.objects.filter(attempt_id=ai_id)}
+        check(all(j.policy_mode=='PRACTICE_AUTO_AI' and j.status=='PENDING' for j in ai_jobs.values()),'configured scoped practice queues actual AI assessments')
+        def grader(input,role):
+            rated=assessment_results.empty(input);rated['confidence']=.95
+            for part in rated['parts']:
+                source=next(p for p in input['parts'] if p['id']==part['id'])
+                excerpt=source['responses'][0].get('transcript') or source['responses'][0]['originalResponse']
+                part.update(rawScore=2.5,criteria={k:2.5 for k in assessment_results.keys(input)},
+                    evidence={k:'The actual response shows limited development: '+excerpt for k in assessment_results.keys(input)},
+                    evidenceQuotes=[dict(criterion=k,responseIndex=0,quote=excerpt) for k in assessment_results.keys(input)])
+            return dict(result=rated,provider='local-deepseek-stub',model='local-fixture-model',inputTokens=12,outputTokens=13,latencyMs=1)
+        def transcript(*args):return dict(text=original,segments=[],confidence=.95,provider='local-deepgram-stub',model='local-fixture-stt',durationMs=12000,pronunciationEvidence='UNAVAILABLE')
+        def run_fixture(job,speech_stub=transcript):
+            claimed=assessment.update(job,status='PROCESSING',lease_token=str(uuid4()),lease_expires_at=timezone.now()+__import__('datetime').timedelta(minutes=10),attempt_count=1)
+            with patch.object(assessment_worker.service,'claim',return_value=claimed),patch.dict(os.environ,dict(ASSESSMENT_ADJUDICATION_ENABLED='false')):
+                assessment_worker.run_once(grader=grader,speech=speech_stub)
+            job.refresh_from_db()
+        for job in ai_jobs.values():run_fixture(job)
+        ai_attempt.refresh_from_db()
+        check(ai_attempt.status=='completed' and all(j.final_score_source=='AI' and j.status=='SUCCEEDED' for j in ai_jobs.values()),'mocked providers finish scoped AI jobs through the real worker and answer projection')
+        check(ai_attempt.raw_scores['writing']['score']==7.5 and ai_attempt.raw_scores['speaking']['score']==2.5,'native evidence scores remain distinct from displayed internal policy')
+        check(ai_attempt.raw_scores['writing']['practiceGrade']['score']==42 and ai_attempt.raw_scores['speaking']['practiceGrade']['score']==42.5,'student main result stores the same internal grade as the AI ledger')
+        check(ai_attempt.overall_score is None and ai_attempt.cefr_level is None,'AI scoped practice never invents overall or CEFR certification')
+        ai_student=request('student','/v1/assessment/attempts/'+ai_id)
+        ai_teacher=request('teacher','/v1/assessment/attempts/'+ai_id)
+        check(ai_student==ai_teacher and all(j['aiPracticeGrade']==j['practiceGrade'] for j in ai_student['assessments']), 'teacher and student see identical persisted AI practice grades')
+        check(MockAnswer.objects.get(attempt_id=ai_id,question_id=writing[0]).response==original,'AI grading preserves the original candidate response')
+        ai_job=ai_jobs['writing'];review='/v1/assessment/jobs/'+ai_job.id+'/review'
+        request('teacher',review,dict(action='OVERRIDE',expectedVersion=ai_job.version,reason='Teacher heard and reviewed the work',parts=[dict(id=p['id'],rawScore=4) for p in ai_job.input_snapshot['parts']]),201)
+        ai_job.refresh_from_db();ai_attempt.refresh_from_db()
+        final=request('student','/v1/assessment/attempts/'+ai_id)['assessments']
+        writing_view=next(j for j in final if j['skill']=='writing')
+        check(writing_view['practiceGrade']['score']==46.3 and writing_view['teacherPracticeGrade']==writing_view['practiceGrade'] and writing_view['aiPracticeGrade']['score']==42,
+            'teacher native override updates final display policy while preserving the separate AI proposal')
+        check(ai_attempt.raw_scores['writing']['practiceGrade']==writing_view['practiceGrade'],'teacher override and student main result share exactly one persisted display grade')
+        request('teacher',review,dict(action='REGRADE',expectedVersion=ai_job.version,reason='Obtain an independent proposal without overwriting teacher work'),201)
+        later=AssessmentJob.objects.filter(attempt_id=ai_id,skill='writing').order_by('-generation').first()
+        run_fixture(later)
+        check(later.final_score_source=='TEACHER' and later.final_score==12 and later.final_result['practiceGrade']['score']==46.3,
+            'late AI regrade preserves teacher-approved native and practice grades')
+        silent_id=prefix+'-silent-attempt'
+        insert('MockAttempt',id=silent_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['speaking'],questionIds=speaking)}))
+        for qid in speaking:insert('MockAnswer',id=str(uuid4()),attemptId=silent_id,questionId=qid,response='',audioKey=qid+'.wav',updatedAt=stamp)
+        silent_attempt=MockAttempt.objects.select_related('exam').get(id=silent_id);mock_submission_snapshots.enqueue(silent_attempt)
+        silent=AssessmentJob.objects.get(attempt_id=silent_id)
+        run_fixture(silent,lambda *args:dict(transcript(*args),text=''))
+        check(silent.status=='NEEDS_REVIEW' and silent.final_score is None and silent.failure_code=='ASSESSMENT_RESPONSE_EVIDENCE_MISSING',
+            'empty speech evidence stays ungraded for human review instead of receiving a fake minimum or maximum')
+        check(not MockAnswer.objects.filter(attempt_id=silent_id,is_graded=True).exists(),'empty speech never projects invented marks into student answers')
         ai.assert_not_called();speech.assert_not_called()
         transaction.set_rollback(True)
     check(not MockExam.objects.filter(id=ids['exam']).exists(),'all local fixtures and grading changes rolled back')

@@ -35,6 +35,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const isIelts = attempt.examType !== "multilevel";
   const completed = attempt.status === "completed";
   const partialPractice = attempt.flowMode === "partial_practice";
+  const internalPractice = !isIelts && attempt.sections.some((section) =>
+    (section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade)?.policyId === "BESTWAY_INTERNAL_PRACTICE_35_50_V1");
   // IELTS: Overall Band faqat 4 bo'lim baholangach chiqadi — aks holda Pending.
   const gradedCount = attempt.sections.filter((s) => s.band != null).length;
 
@@ -61,7 +63,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
 
         {partialPractice && <div className="mt-4"><p className="font-semibold text-fg">{t("partialPracticeResult")}</p><p className="mt-2 text-sm text-fg-muted">{t("partialPracticeNotice")}</p></div>}
-        {completed && !partialPractice && (
+        {completed && !partialPractice && !internalPractice && (
           <div className="mt-4">
             {isIelts ? (
               <>
@@ -93,14 +95,16 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 
         {/* Bo'lim ballari — IELTS da har doim BAND (xom ball emas); baholanmagan bo'lim Pending */}
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
-          {attempt.sections.map((s) => (
+          {attempt.sections.map((s) => {
+            const practiceGrade = s.practiceGrade ?? attempt.rawScores?.[s.skill]?.practiceGrade;
+            return (
             <div
               key={s.id}
               className="flex items-center justify-between rounded-[8px] border border-border bg-bg-subtle px-3 py-2"
             >
-              <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}</span>
+              <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}{practiceGrade && <span className="mt-1 block text-xs font-normal text-fg-subtle">{t("internalPracticeScore")}</span>}</span>
               <span className="text-sm text-fg-muted tabular-nums">
-                {!isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
+                {practiceGrade ? <span className="font-bold text-brand">{practiceGrade.score} /{practiceGrade.scaleMax}</span> : !isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
                   <span className="font-bold text-brand">{isIelts ? s.band.toFixed(1) : s.band}</span>
                 ) : isIelts ? (
                   t("awaitingGrade")
@@ -111,10 +115,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                 )}
               </span>
             </div>
-          ))}
+          );})}
         </div>
+        {attempt.sections.some((s) => s.practiceGrade ?? attempt.rawScores?.[s.skill]?.practiceGrade) && <p className="mt-3 text-xs text-fg-muted">{t("internalPracticeNotice")}</p>}
 
-        {completed && !partialPractice && (
+        {completed && !partialPractice && !internalPractice && (
           <a
             href={media(`/mock/attempts/${attempt.id}/certificate`)}
             className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
@@ -164,10 +169,12 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
   const partialPractice = attempt.flowMode === "partial_practice";
   return <section aria-labelledby="multilevel-score-breakdown" className="mt-6 space-y-4">
     <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
-    {manualSections.map((section) => <Card key={section.id} className="p-4">
+    {manualSections.map((section) => {
+      const practiceGrade = section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade;
+      return <Card key={section.id} className="p-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold text-fg">{t(`skills.${section.skill}`)}</h3>
-        {section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
+        {practiceGrade ? <Badge variant="info">{t("internalPracticeScore")} {practiceGrade.score} /{practiceGrade.scaleMax}</Badge> : section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
       </div>
       <div className="mt-3 space-y-2">
         {section.groups.map((group, index) => {
@@ -182,9 +189,9 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
         <span>Raw <strong className="text-fg tabular-nums">{section.score ?? "—"} / {section.max ?? "—"}</strong></span>
-        {!partialPractice && <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>}
+        {!partialPractice && !practiceGrade && <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>}
       </div>
-    </Card>)}
+    </Card>;})}
   </section>;
 }
 

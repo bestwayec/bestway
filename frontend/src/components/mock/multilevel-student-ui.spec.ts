@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { MockAttemptDetail, MockExamListItem, MockGroup } from "@/lib/types";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string, values?: Record<string, string | number>) => values ? `${key} ${Object.values(values).join(" ")}` : key }));
 vi.mock("@/i18n/navigation", () => ({ Link: ({ href, children, ...props }: React.ComponentProps<"a">) => React.createElement("a", { href, ...props }, children) }));
 
 import { MockExamCard } from "./mock-exams-view";
@@ -92,6 +92,17 @@ describe("Multilevel student UX", () => {
     expect(html).toContain(">3<");
     expect(taskDuration({ taskKey: "1.1", responseSeconds: 30 })).toBe("30 sec each · no official prep");
     expect(taskDuration({ taskKey: "1.2", prepSeconds: 15, responseSeconds: 45 })).toBe("15 sec prep · 45 sec response");
+  });
+
+  it("marks Writing progress from entered responses and Speaking progress only from uploaded audio", () => {
+    const groups = [{ id: 'part', questions: [{ id: 'q', number: 1, type: 'speaking_task', prompt: 'Describe your home.', points: 5, guidance: { taskKey: '1.1', rawMax: 5 } }] }] as unknown as MockGroup[];
+    const props = { skill: 'speaking' as const, groups, activeTask: 0, setActiveTask: vi.fn(), strict: false, timed: false, attemptId: 'attempt', answers: { q: 'text cannot stand in for audio' }, audioSet: new Set<string>(), onAnswer: vi.fn() };
+    const pending = renderToStaticMarkup(h(GuidedMultilevelGroups, props));
+    expect(pending).toContain('taskLabel 1.1 notAnswered');
+    const uploaded = renderToStaticMarkup(h(GuidedMultilevelGroups, { ...props, audioSet: new Set(['q']) }));
+    expect(uploaded).toContain('taskLabel 1.1 recordingUploaded');
+    const writing = renderToStaticMarkup(h(GuidedMultilevelGroups, { ...props, skill: 'writing', groups: [{ ...groups[0], questions: [{ ...groups[0].questions[0], type: 'essay_task1' }] }] }));
+    expect(writing).toContain('taskLabel 1.1 responseEntered');
   });
 
   it("renders an explicit ready state and section navigation", () => {

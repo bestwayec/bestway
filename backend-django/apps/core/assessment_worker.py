@@ -11,6 +11,7 @@ from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation,SpeechT
 from . import assessment as service,assessment_results as results,assessment_providers as providers
 from .content_media import storage_path
 from .mock_import_validate import canonical_checksum
+from .assessment_quality import enabled
 
 _tick_lock=Lock()
 def failure(error):return error if isinstance(error,results.ProviderError) else results.ProviderError('ASSESSMENT_INTERNAL_FAILURE',False,True)
@@ -23,13 +24,18 @@ def transcribe(job,input,speech):
         if not all(response.get(k) for k in ('audioKey','audioHash','mimeType')):raise results.ProviderError('ASSESSMENT_AUDIO_MISSING')
         refresh(job)
         saved=SpeechTranscript.objects.filter(job_id=job.id,question_id=response['questionId'],audio_hash=response['audioHash'],status='SUCCEEDED').order_by('-completed_at').first()
-        if saved:response['transcript']=saved.text or '';continue
+        if saved:
+            response['transcript']=saved.text or ''
+            if enabled(input):response.update(transcriptConfidence=saved.confidence,audioDurationMs=saved.duration_ms)
+            continue
         cached=SpeechTranscript.objects.filter(job__attempt_id=job.attempt_id,job__student_id=job.student_id,question_id=response['questionId'],audio_hash=response['audioHash'],status='SUCCEEDED').order_by('-completed_at').first()
         now=timezone.now()
         if cached:
             values={k:getattr(cached,k) for k in ('text','segments','confidence','provider','model','duration_ms','pronunciation_evidence')}
             SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=response['audioHash'],attempt_number=job.attempt_count,status='SUCCEEDED',uncertain=False,started_at=now,completed_at=now,**values)
-            response['transcript']=cached.text or '';continue
+            response['transcript']=cached.text or ''
+            if enabled(input):response.update(transcriptConfidence=cached.confidence,audioDurationMs=cached.duration_ms)
+            continue
         path=storage_path(response['audioKey'])
         with path.open('rb') as audio:
             if hashlib.file_digest(audio,'sha256').hexdigest()!=response['audioHash']:raise results.ProviderError('ASSESSMENT_AUDIO_CHANGED')
@@ -41,6 +47,7 @@ def transcribe(job,input,speech):
             output=speech(path,response['mimeType'],'en',response.get('durationMs'))
             SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='SUCCEEDED',text=output['text'],segments=output['segments'],confidence=output['confidence'],provider=output['provider'],model=output['model'],duration_ms=output['durationMs'],pronunciation_evidence='UNAVAILABLE',completed_at=timezone.now())
             response['transcript']=output['text']
+            if enabled(input):response.update(transcriptConfidence=output['confidence'],audioDurationMs=output['durationMs'])
         except Exception as error:
             problem=failure(error);SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now());raise problem from None
     input['pronunciationEvidence']='UNAVAILABLE'

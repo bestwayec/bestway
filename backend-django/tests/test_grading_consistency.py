@@ -23,6 +23,7 @@ class TeacherProjectionTests(SimpleTestCase):
         with patch.object(mock_grading.MockAttempt,'objects') as attempts,patch.object(mock_grading.MockAnswer,'objects') as rows,\
                 patch.object(mock_grading,'shape_exam',return_value=dict(sections=sections)),\
                 patch.object(mock_grading,'band_tables',return_value={}),patch.object(mock_grading,'save_projection') as save,\
+                patch.object(mock_grading,'annotate_practice_grades',side_effect=lambda attempt,result:result),\
                 patch('apps.core.mock_submission_snapshots.notify'):
             attempts.select_related.return_value.filter.return_value.first.return_value=attempt
             rows.filter.return_value=[SimpleNamespace(question_id=q,response='Original response',is_graded=True,score=s) for q,s in answers.items()]
@@ -50,6 +51,7 @@ class TeacherProjectionTests(SimpleTestCase):
         with patch.object(mock_grading.MockAttempt,'objects') as attempts,patch.object(mock_grading.MockAnswer,'objects') as rows,\
                 patch.object(mock_grading,'shape_exam',return_value=dict(sections=sections)),\
                 patch.object(mock_grading,'band_tables',return_value={}),patch.object(mock_grading,'save_projection'),\
+                patch.object(mock_grading,'annotate_practice_grades',side_effect=lambda attempt,result:result),\
                 patch('apps.core.mock_submission_snapshots.notify'):
             attempts.select_related.return_value.filter.return_value.first.return_value=attempt
             rows.filter.return_value=[answer]
@@ -106,14 +108,14 @@ class ManualAssessmentTests(SimpleTestCase):
             with self.subTest(modification=modification),self.assertRaises(assessment_results.ProviderError):
                 assessment_results.feedback_edit(edited,base)
 
-    def test_partial_snapshot_retains_original_part_identity_and_manual_only_gate(self):
+    def test_partial_snapshot_retains_original_part_identity_and_audio_gate(self):
         attempt=SimpleNamespace(flow_mode='partial_practice',specification_version=CURRENT_SPEC,
             speaking_profile_version=None,media_state={})
         group=part('speaking','s')['groups'][0];group['sourcePartIndex']=2
         value=build_input(SimpleNamespace(type='multilevel'),attempt,'speaking',[group],{},Mock())
         self.assertEqual(value['parts'][0]['id'],'2')
         self.assertEqual(value['practiceMode'],'PARTIAL')
-        self.assertEqual(blueprint_failure(value),'PARTIAL_PRACTICE_MANUAL_REVIEW')
+        self.assertEqual(blueprint_failure(value),'ASSESSMENT_AUDIO_MISSING')
 
     def test_filtered_earlier_question_does_not_shift_snapshot_speaking_timing(self):
         profile='BESTWAY_MULTILEVEL_SPEAKING_2026_V2'

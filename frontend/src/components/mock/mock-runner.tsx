@@ -37,6 +37,8 @@ import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, 
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { practiceExam } from '@/lib/mock-practice';
+import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
+import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -373,6 +375,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
           {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
         </div>}
+        <ResponseProgress answered={answered} total={total} />
       </div>
 
       {/* Bo'lim tablari (full-test da faqat status — bosib bo'lmaydi) */}
@@ -411,7 +414,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       )}
 
       {partialPractice && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
-      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} /></div>}
+      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
+        const questions = item.groups.flatMap((group) => group.questions);
+        return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
+      }).map((item) => item.skill)} /></div>}
 
       {section && (
         <div className="space-y-4">
@@ -525,8 +531,9 @@ export function GuidedMultilevelGroups({
   const sharedWritingStimulus = skill === "writing"
     ? groups.slice(0, 2).map((candidate) => candidate.passageText || candidate.instructions).find((value) => !!value?.trim()) ?? undefined
     : undefined;
+  const completed = groups.flatMap((candidate, index) => candidate.questions.length > 0 && candidate.questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet)) ? [index] : []);
   return <div className="space-y-4">
-    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} practice={practice} rawMaximum={practice ? groups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} practice={practice} completed={completed} rawMaximum={practice ? groups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
     <GroupBlock
       group={group}
       skill={skill}
@@ -705,7 +712,7 @@ function QuestionInput({
   multilevelSkill?: MockSkill;
   groupTitle?: string;
 }) {
-  const t = useTranslations("mock");
+  const tx = useTranslations("mock.runnerUx");
 
   const header = (
     <div className="flex items-start gap-2">
@@ -729,10 +736,8 @@ function QuestionInput({
   }
 
   if (ESSAY.has(q.type)) {
-    const words = value.trim() ? value.trim().split(/\s+/).length : 0;
     // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
     const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
-    const underMin = minWords > 0 && words > 0 && words < minWords;
     return (
       <div className="space-y-2">
         {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
@@ -748,18 +753,15 @@ function QuestionInput({
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-48"
-          placeholder="..."
+          className="min-h-64 resize-y leading-relaxed focus-visible:border-brand"
+          aria-label={tx("writingResponseLabel", { number: q.number })}
+          placeholder={tx("writingPlaceholder")}
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
           autoComplete="off"
         />
-        <p className={cn("text-right text-xs tabular-nums", underMin ? "text-warning" : "text-fg-subtle")}>
-          {words} {t("words")}
-          {q.guidance?.wordMax ? ` / ${minWords === q.guidance.wordMax ? `~${minWords}` : `${minWords}–${q.guidance.wordMax}`} target` : minWords > 0 ? ` · min ${minWords}` : ''}
-          {underMin ? ` — keep writing to reach the target` : ""}
-        </p>
+        <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
       </div>
     );
   }
