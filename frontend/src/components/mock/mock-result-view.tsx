@@ -17,13 +17,20 @@ import {
   useReopenMock,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
-import type { MockAttemptDetail, MockAttemptQuestion, MockSkill } from "@/lib/types";
+import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
+
+// Raw aggregates include unanswered/ungraded work as zero. A manual section
+// becomes a result only when every selected response has a persisted grade.
+function hasCompleteManualGrade(section: MockAttemptSection): boolean {
+  const questions = section.groups.flatMap((group) => group.questions);
+  return questions.length > 0 && questions.every((question) => question.isGraded && question.score != null);
+}
 
 export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
@@ -97,6 +104,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
           {attempt.sections.map((s) => {
             const practiceGrade = s.practiceGrade ?? attempt.rawScores?.[s.skill]?.practiceGrade;
+            const pendingManual = MANUAL_SKILLS.has(s.skill) && !practiceGrade && !hasCompleteManualGrade(s);
             return (
             <div
               key={s.id}
@@ -104,7 +112,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             >
               <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}{practiceGrade && <span className="mt-1 block text-xs font-normal text-fg-subtle">{t("internalPracticeScore")}</span>}</span>
               <span className="text-sm text-fg-muted tabular-nums">
-                {practiceGrade ? <span className="font-bold text-brand">{practiceGrade.score} /{practiceGrade.scaleMax}</span> : !isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
+                {pendingManual ? t("awaitingGrade") : practiceGrade ? <span className="font-bold text-brand">{practiceGrade.score} /{practiceGrade.scaleMax}</span> : !isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
                   <span className="font-bold text-brand">{isIelts ? s.band.toFixed(1) : s.band}</span>
                 ) : isIelts ? (
                   t("awaitingGrade")
@@ -171,10 +179,11 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
     <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
     {manualSections.map((section) => {
       const practiceGrade = section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade;
+      const pendingManual = !practiceGrade && !hasCompleteManualGrade(section);
       return <Card key={section.id} className="p-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold text-fg">{t(`skills.${section.skill}`)}</h3>
-        {practiceGrade ? <Badge variant="info">{t("internalPracticeScore")} {practiceGrade.score} /{practiceGrade.scaleMax}</Badge> : section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
+        {practiceGrade ? <Badge variant="info">{t("internalPracticeScore")} {practiceGrade.score} /{practiceGrade.scaleMax}</Badge> : !pendingManual && section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
       </div>
       <div className="mt-3 space-y-2">
         {section.groups.map((group, index) => {
@@ -183,13 +192,13 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
           const max = scoreMaximum(question.guidance) ?? question.points;
           return <div key={group.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-bg-subtle px-3 py-2 text-sm">
             <span className="font-medium text-fg">{multilevelTaskName(question.guidance, `${section.skill === "writing" ? "Task" : "Part"} ${index + 1}`)}</span>
-            <span className="tabular-nums text-fg-muted">{section.skill === "speaking" ? group.questions.every((q) => q.isGraded && q.score != null) ? Math.round(group.questions.reduce((sum, q) => sum + (q.score ?? 0), 0) / group.questions.length * 2) / 2 : "—" : question.score ?? "—"} / {max}</span>
+            <span className="tabular-nums text-fg-muted">{section.skill === "speaking" ? group.questions.every((q) => q.isGraded && q.score != null) ? Math.round(group.questions.reduce((sum, q) => sum + (q.score ?? 0), 0) / group.questions.length * 2) / 2 : "—" : question.isGraded ? question.score ?? "—" : "—"} / {max}</span>
           </div>;
         })}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
-        <span>Raw <strong className="text-fg tabular-nums">{section.score ?? "—"} / {section.max ?? "—"}</strong></span>
-        {!partialPractice && !practiceGrade && <span>Standardized <strong className="text-fg tabular-nums">{section.standardScore ?? "—"} /75</strong></span>}
+        <span>Raw <strong className="text-fg tabular-nums">{pendingManual ? "—" : section.score ?? "—"} / {section.max ?? "—"}</strong></span>
+        {!partialPractice && !practiceGrade && <span>Standardized <strong className="text-fg tabular-nums">{pendingManual ? "—" : section.standardScore ?? "—"} /75</strong></span>}
       </div>
     </Card>;})}
   </section>;
@@ -336,7 +345,7 @@ function ReviewRow({  q,
           {/* Manual ball + izoh (o'quvchiga) */}
           {manual && !canGrade && (
             <p className="mt-1 text-sm text-fg-muted tabular-nums">
-              {t("score")}: <span className="font-semibold text-fg">{q.score ?? "—"}</span> / {q.points}
+              {t("score")}: <span className="font-semibold text-fg">{q.isGraded ? q.score ?? "—" : "—"}</span> / {scoreMaximum(q.guidance) ?? q.points}
             </p>
           )}
           {q.feedback && !canGrade && (
@@ -386,7 +395,7 @@ function GradeForm({
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
-  const [score, setScore] = React.useState(q.score != null ? String(q.score) : "");
+  const [score, setScore] = React.useState(q.isGraded && q.score != null ? String(q.score) : "");
   const [feedback, setFeedback] = React.useState(q.feedback ?? "");
   const [rubrics, setRubrics] = React.useState<Record<string, string>>(
     () => Object.fromEntries(Object.entries(q.rubricScores ?? {}).map(([k, v]) => [k, String(v)])),

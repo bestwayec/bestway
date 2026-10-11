@@ -28,7 +28,7 @@
     },
     "estimated": "Estimated practice assessment. This is not an official certificate result.",
     "partialPractice": "{skill} practice score",
-    "partialPracticeNotice": "Only the selected available tasks are graded. This practice has raw scores, without an overall Multilevel score, CEFR level or certificate.",
+    "partialPracticeNotice": "Only the selected available tasks are graded. Original rubric scores are retained; internal practice grades may also be shown on a /75 scale. These are not an official overall Multilevel score, CEFR level or certificate.",
     "teacherRawPart": "Teacher raw task/part score",
     "teacherRubric": "Teacher rubric scores",
     "aiScore": "AI estimate",

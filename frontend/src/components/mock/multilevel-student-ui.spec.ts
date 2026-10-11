@@ -120,9 +120,9 @@ describe("Multilevel student UX", () => {
     const attempt = {
       specificationVersion: "UZBMB_MULTILEVEL_EN_2026_V1",
       sections: [{ id: "writing", skill: "writing", score: 13, max: 16, standardScore: 55, groups: [
-        { id: "writing-1", questions: [{ id: "w1", points: 5, score: 4, guidance: { taskKey: "informal_email", displayLabel: "Task 1.1 — Informal Letter", rawMax: 5 } }] },
-        { id: "writing-2", questions: [{ id: "w2", points: 5, score: 4, guidance: { taskKey: "formal_email", displayLabel: "Task 1.2 — Formal Letter", rawMax: 5 } }] },
-        { id: "writing-3", questions: [{ id: "w3", points: 6, score: 5, guidance: { taskKey: "publication", displayLabel: "Task 2 — Publication", rawMax: 6 } }] },
+        { id: "writing-1", questions: [{ id: "w1", points: 5, score: 4, isGraded: true, guidance: { taskKey: "informal_email", displayLabel: "Task 1.1 — Informal Letter", rawMax: 5 } }] },
+        { id: "writing-2", questions: [{ id: "w2", points: 5, score: 4, isGraded: true, guidance: { taskKey: "formal_email", displayLabel: "Task 1.2 — Formal Letter", rawMax: 5 } }] },
+        { id: "writing-3", questions: [{ id: "w3", points: 6, score: 5, isGraded: true, guidance: { taskKey: "publication", displayLabel: "Task 2 — Publication", rawMax: 6 } }] },
       ] }],
     } as unknown as MockAttemptDetail;
     const html = renderToStaticMarkup(h(MultilevelResultBreakdown, { attempt }));

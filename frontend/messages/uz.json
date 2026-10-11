@@ -28,7 +28,7 @@
     },
     "estimated": "Bu mashq uchun taxminiy baho. Rasmiy sertifikat natijasi emas.",
     "partialPractice": "{skill} mashq bali",
-    "partialPracticeNotice": "Faqat tanlangan mavjud topshiriqlar baholanadi. Bu mashq xom ballarni ko‘rsatadi; umumiy Multilevel bali, CEFR darajasi va sertifikat berilmaydi.",
+    "partialPracticeNotice": "Faqat tanlangan mavjud topshiriqlar baholanadi. Asl rubrika ballari saqlanadi; ichki mashq baholari /75 shkalada ham ko‘rsatilishi mumkin. Ular rasmiy umumiy Multilevel bali, CEFR darajasi yoki sertifikat hisoblanmaydi.",
     "teacherRawPart": "O‘qituvchi vazifa / qism xom bali",
     "teacherRubric": "O‘qituvchi mezon baholari",
     "aiScore": "AI taxminiy bahosi",

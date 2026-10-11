@@ -107,8 +107,9 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain("Speaking practice score");
     expect(html).toContain("4.5 /5 raw");
     expect(html).toContain('value="4.5"');
-    expect(html).toContain("without an overall Multilevel score");
-    expect(html).not.toContain(" /75");
+    expect(html).toContain("internal practice grades may also be shown on a /75 scale");
+    expect(html).toContain("not an official overall Multilevel score");
+    expect(html).not.toMatch(/<dd[^>]*>[^<]*\/75/);
     expect(html).not.toContain("AI raw task/part estimate");
     expect(html).not.toContain("AI rubric estimates");
     expect((html.match(/<audio /g) ?? []).length).toBe(3);

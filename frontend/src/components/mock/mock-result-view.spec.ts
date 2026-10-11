@@ -1,6 +1,6 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../messages/en.json";
 import type { MockAttemptDetail } from "@/lib/types";
 
@@ -9,7 +9,8 @@ vi.mock("next-intl", () => ({ useTranslations: (namespace: string) => (key: stri
   return key.split(".").reduce<unknown>((value, field) => value && typeof value === "object" ? (value as Record<string, unknown>)[field] : undefined, source) ?? key;
 } }));
 vi.mock("@/i18n/navigation", () => ({ Link: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) }));
-vi.mock("@/hooks/use-me", () => ({ useMe: () => ({ data: { user: { role: "teacher" } } }) }));
+const viewer = vi.hoisted(() => ({ role: "teacher" }));
+vi.mock("@/hooks/use-me", () => ({ useMe: () => ({ data: { user: { role: viewer.role } } }) }));
 vi.mock("@/hooks/use-mock", () => {
   const useMutation = () => ({ isPending: false, mutate: vi.fn() });
   return Object.fromEntries(["useGradeMock", "useDeleteMockAttempt", "useExtendMockDeadline", "useForceSubmitMock", "useReopenMock"].map((name) => [name, useMutation]));
@@ -29,6 +30,63 @@ const attempt = (partial = true) => ({
 } as MockAttemptDetail);
 
 describe("partial teacher result presentation", () => {
+  beforeEach(() => { viewer.role = "teacher"; });
+  it("shows learner response marks as pending with their true rubric maximum until graded", () => {
+    viewer.role = "student";
+    const value = attempt(); value.status = "grading"; value.sections[0].score = 0;
+    value.sections[0].groups[0].questions.forEach((question) => { question.isGraded = false; question.score = 0; });
+    const pending = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(pending).toMatch(/Score: <span[^>]*>—<\/span> \/ 5/);
+    expect(pending).not.toMatch(/Score: <span[^>]*>0<\/span>/);
+    value.sections[0].groups[0].questions.forEach((question) => { question.isGraded = true; });
+    const graded = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(graded).toMatch(/Score: <span[^>]*>0<\/span> \/ 5/);
+  });
+  it.each(["writing", "speaking"] as const)("shows pending %s as awaiting/blank rather than the aggregate zero", (skill) => {
+    const value = attempt();
+    value.status = "grading";
+    const section = value.sections[0]; section.skill = skill; section.score = 0; section.standardScore = 0;
+    section.groups[0].questions.forEach((question) => {
+      question.type = skill === "writing" ? "essay_task1" : "speaking_task";
+      question.isGraded = false; question.score = 0;
+    });
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    const breakdown = renderToStaticMarkup(React.createElement(MultilevelResultBreakdown, { attempt: value }));
+    expect(html).toContain(en.mock.awaitingGrade);
+    expect(html).not.toContain(">0/5<");
+    expect(html).not.toContain("Standardized 0");
+    expect(breakdown).toContain("— / 5");
+    expect(breakdown).not.toContain("0 / 5");
+  });
+
+  it("preserves a genuine zero after the selected responses have been graded", () => {
+    const value = attempt(); value.sections[0].score = 0;
+    value.sections[0].groups[0].questions.forEach((question) => { question.isGraded = true; question.score = 0; });
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain(">0/5<");
+    expect(html).toContain("0 / 5");
+    expect(html).not.toContain(en.mock.awaitingGrade);
+  });
+
+  it("keeps graded skill and task scores visible while another response awaits review", () => {
+    const value = attempt(); value.status = "grading";
+    const writing = structuredClone(value.sections[0]); writing.id = "writing"; writing.skill = "writing";
+    writing.score = 3; writing.max = 10;
+    writing.groups = writing.groups.slice(0, 1);
+    writing.groups[0].questions = writing.groups[0].questions.slice(0, 2);
+    writing.groups[0].questions.forEach((question, index) => { question.type = "essay_task1"; question.isGraded = index === 0; question.score = index === 0 ? 3 : 0; });
+    writing.groups = writing.groups[0].questions.map((question, index) => ({ ...writing.groups[0], id: `writing-task-${index}`, questions: [{ ...question, id: `writing-q-${index}` }] }));
+    value.sections.push(writing);
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    const breakdown = renderToStaticMarkup(React.createElement(MultilevelResultBreakdown, { attempt: value }));
+    expect(html).toContain(">4/5<");
+    expect(html).toContain(en.mock.awaitingGrade);
+    expect(html).not.toContain(">3/10<");
+    expect(breakdown).toContain("3 / 5");
+    expect(breakdown).toContain("— / 5");
+    expect(breakdown).toContain("— / 10");
+    expect(breakdown).not.toContain("3 / 10");
+  });
   it("shows observed raw results without a fabricated overall, CEFR or certificate link", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: attempt() }));
     expect(html).toContain("Selected task practice result");
