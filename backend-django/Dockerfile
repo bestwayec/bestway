@@ -11,8 +11,13 @@ COPY --chown=bestway:bestway apps/ ./apps/
 COPY --chown=bestway:bestway common/ ./common/
 COPY --chown=bestway:bestway config/ ./config/
 COPY --chown=bestway:bestway manage.py ./
-RUN mkdir -p /app/storage /app/model-cache && chown bestway:bestway /app/storage /app/model-cache \
+RUN mkdir -p /app/storage /app/model-cache/huggingface/xet \
+    && chown bestway:bestway /app/storage /app/model-cache /app/model-cache/huggingface /app/model-cache/huggingface/xet \
     && chmod 755 /app/config/docker-entrypoint.sh
+ENV HF_HOME=/app/model-cache/huggingface \
+    HF_XET_CACHE=/app/model-cache/huggingface/xet \
+    HF_HUB_DISABLE_XET=1 \
+    HF_HUB_DISABLE_TELEMETRY=1
 USER bestway
 EXPOSE 8000
 ENTRYPOINT ["/bin/sh", "/app/config/docker-entrypoint.sh"]
