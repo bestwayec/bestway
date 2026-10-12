@@ -114,6 +114,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/play', play_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>/start', speaking_start_view),
     path('mock/attempts/<str:attempt_id>/flag-cheat', cheat_view),
+    path('mock/attempts/<str:attempt_id>/anomaly', cheat_view),
     path('mock/groups/<str:group_id>/media', group_media_view),
     path('mock/groups/<str:group_id>/audio', group_audio_view),
     path('mock/groups/<str:group_id>/image', group_image_view),

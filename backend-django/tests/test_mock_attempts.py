@@ -89,7 +89,8 @@ class AttemptBoundaryTests(SimpleTestCase):
             '/v1/mock/attempts/a/listening/g/prepare', '/v1/mock/attempts/a/listening/g/play',
             '/v1/mock/attempts/a/speaking/q/start', '/v1/mock/attempts/a/speaking/q',
             '/v1/mock/attempts/a/answers/q/audio', '/v1/mock/attempts/a/annotations',
-            '/v1/mock/attempts/a/flag-cheat', '/v1/mock/attempts/a', '/v1/mock/attempts/mine'):
+            '/v1/mock/attempts/a/flag-cheat', '/v1/mock/attempts/a/anomaly',
+            '/v1/mock/attempts/a', '/v1/mock/attempts/mine'):
             self.assertTrue(resolve(path))
 
     def test_role_denial_before_database(self):
@@ -105,3 +106,87 @@ class AttemptBoundaryTests(SimpleTestCase):
         own.return_value = attempt
         self.assertEqual(engine.annotations(SimpleNamespace(id='s'), 'a', ['note']), {'saved': True})
         self.assertEqual(attempt.annotations, ['note'])
+
+    def test_anomaly_endpoint_permissions(self):
+        for endpoint in ('/v1/mock/attempts/att-1/anomaly', '/v1/mock/attempts/att-1/flag-cheat'):
+            unauth_client = APIClient()
+            self.assertEqual(unauth_client.post(endpoint, {'event': 'tab_switch'}, format='json').status_code, 401)
+            teacher_client = APIClient()
+            teacher_client.force_authenticate(SimpleNamespace(role='teacher', id='t', is_authenticated=True))
+            self.assertEqual(teacher_client.post(endpoint, {'event': 'tab_switch'}, format='json').status_code, 403)
+
+    def test_anomaly_endpoint_validation(self):
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(role='student', id='s1', is_authenticated=True))
+        for bad_payload in ({}, {'event': ''}, {'event': 123}, {'event': 'x' * 51}, {'unexpected': 'foo'}):
+            response = client.post('/v1/mock/attempts/att-1/anomaly', bad_payload, format='json')
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.data['error']['code'], 'VALIDATION_ERROR')
+
+    @patch.object(engine, 'own')
+    @patch.object(engine.transaction, 'atomic')
+    @patch.object(engine.MockCheatEvent, 'objects')
+    def test_anomaly_endpoint_events_and_logging(self, mock_cheat_events, mock_atomic, mock_own):
+        client = APIClient()
+        student_user = SimpleNamespace(role='student', id='s1', is_authenticated=True)
+        client.force_authenticate(student_user)
+
+        sample_events = [
+            ({'event': 'tab_switch'}, 'tab_switch'),
+            ({'event': 'exit_fullscreen'}, 'exit_fullscreen'),
+            ({'event': 'devtools_attempt'}, 'devtools_attempt'),
+            ({'event': 'blur'}, 'blur'),
+            ({'event': 'TAB_SWITCH'}, 'TAB_SWITCH'),
+            ({'anomaly': 'tab_switch'}, 'tab_switch'),
+            ({'reason': 'exit_fullscreen'}, 'exit_fullscreen'),
+            ({'type': 'devtools_attempt'}, 'devtools_attempt'),
+            ({'event': 'tab_switch', 'details': 'switched tabs'}, 'tab_switch'),
+            ({'event': 'blur', 'timestamp': 1728756000}, 'blur'),
+        ]
+
+        for payload, expected_event in sample_events:
+            mock_cheat_events.reset_mock()
+            mock_cheat_events.filter.return_value.count.return_value = 0
+            attempt = SimpleNamespace(id='att-1', status='in_progress', anti_cheat_count=0, save=lambda **kwargs: None)
+            mock_own.return_value = attempt
+
+            response = client.post('/v1/mock/attempts/att-1/anomaly', payload, format='json')
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.data, {'success': True, 'data': {'saved': True}})
+            self.assertEqual(attempt.anti_cheat_count, 1)
+            mock_cheat_events.create.assert_called_once()
+            _, kwargs = mock_cheat_events.create.call_args
+            self.assertEqual(kwargs['attempt_id'], 'att-1')
+            self.assertEqual(kwargs['event'], expected_event)
+
+    @patch.object(engine, 'own')
+    @patch.object(engine.transaction, 'atomic')
+    @patch.object(engine.MockCheatEvent, 'objects')
+    def test_flag_cheat_engine_bounds(self, mock_cheat_events, mock_atomic, mock_own):
+        actor = SimpleNamespace(id='s1')
+        attempt = SimpleNamespace(id='att-1', status='in_progress', anti_cheat_count=5, save=lambda **kwargs: None)
+        mock_own.return_value = attempt
+
+        # When count < 50
+        mock_cheat_events.filter.return_value.count.return_value = 10
+        res = engine.flag_cheat(actor, 'att-1', 'tab_switch')
+        self.assertEqual(res, {'saved': True})
+        self.assertEqual(attempt.anti_cheat_count, 6)
+        mock_cheat_events.create.assert_called_once()
+
+        # When count >= 50
+        mock_cheat_events.reset_mock()
+        mock_cheat_events.filter.return_value.count.return_value = 50
+        res = engine.flag_cheat(actor, 'att-1', 'tab_switch')
+        self.assertEqual(res, {'saved': True})
+        self.assertEqual(attempt.anti_cheat_count, 6)
+        mock_cheat_events.create.assert_not_called()
+
+        # When status != 'in_progress'
+        mock_cheat_events.reset_mock()
+        attempt.status = 'submitted'
+        mock_cheat_events.filter.return_value.count.return_value = 0
+        res = engine.flag_cheat(actor, 'att-1', 'tab_switch')
+        self.assertEqual(res, {'saved': True})
+        mock_cheat_events.create.assert_not_called()
+

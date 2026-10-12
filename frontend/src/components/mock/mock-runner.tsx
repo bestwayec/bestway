@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Loader2, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
+import { ExamLocker } from "./exam-locker";
+import { MicCheckModal } from "./mic-check-modal";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -111,8 +113,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const activeSection = isFullTest && attempt.currentSkill
     ? Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0)
     : selectedSection;
-  const [cheatWarn, setCheatWarn] = React.useState(false);
-  const [cheatCount, setCheatCount] = React.useState(0);
+  const [micChecked, setMicChecked] = React.useState(false);
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
@@ -285,29 +286,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     setActiveSection(index);
   }, [exam, flush]);
 
-  // Anti-cheat: warn-only (qaror #5) — tab/blur ni qayd etadi, imtihonni to'xtatmaydi.
-  // Clipboard (copy/cut/paste) + contextmenu + drag ildizda bloklanadi (spec §7).
-  React.useEffect(() => {
-    if (attempt.mode !== "timed") return;
-    function report(event: string) {
-      flagMutate(event);
-      setCheatWarn(true);
-      setCheatCount((c) => c + 1);
-    }
-    function onHide() {
-      if (document.visibilityState === "hidden") report("tab_switch");
-    }
-    function onBlur() {
-      report("blur");
-    }
-    document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("blur", onBlur);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("blur", onBlur);
-    };
-  }, [attempt.mode, flagMutate]);
-
   function blockClipboard(e: React.ClipboardEvent | React.MouseEvent | React.DragEvent) {
     if (!strict) return;
     e.preventDefault();
@@ -336,8 +314,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
   return (
-    <div
-      className="mx-auto max-w-4xl pb-24"
+    <ExamLocker
+      active={strict}
+      attemptId={attempt.id}
+      onAnomaly={(event) => flagMutate(event)}
+      onForceSubmit={() => void doSubmit(true)}
+    >
+      <div
+        className="mx-auto max-w-4xl pb-24"
       onCopy={blockClipboard}
       onCut={blockClipboard}
       onPaste={blockClipboard}
@@ -367,13 +351,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             </Button>
           </div>
         </div>
-        {cheatWarn && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-warning">
-            <AlertTriangle className="size-3.5" />
-            {t("tabSwitchWarning")}
-            {cheatCount > 1 ? ` (${cheatCount})` : ""} — timer continues.
-          </p>
-        )}
         {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
           <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
           {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
@@ -475,8 +452,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           }}
         />
       )}
+
+      <MicCheckModal
+        open={section?.skill === "speaking" && !micChecked}
+        onConfirm={() => setMicChecked(true)}
+        onClose={!strict ? () => setMicChecked(true) : undefined}
+      />
     </div>
-  );
+  </ExamLocker>
+);
 }
 
 function Timer({ ms, label }: { ms: number; label: string }) {

@@ -152,7 +152,7 @@ export function useBulkMockAnswers(attemptId: string) {
 
 export function useFlagMockCheat(attemptId: string) {
   return useMutation({
-    mutationFn: (event: string) => api.post(`/mock/attempts/${attemptId}/flag-cheat`, { event }),
+    mutationFn: (event: string) => api.post(`/mock/attempts/${attemptId}/anomaly`, { event }),
   });
 }
 

@@ -134,8 +134,8 @@ def speaking_start_view(request, attempt_id, question_id):
 @permission_classes([AllowAny])
 def cheat_view(request, attempt_id):
     student(request)
-    data = body(request, {'event'})
-    event = data.get('event')
+    data = body(request, {'event', 'reason', 'type', 'anomaly', 'details', 'timestamp', 'time'})
+    event = data.get('event') or data.get('anomaly') or data.get('reason') or data.get('type')
     if not isinstance(event, str):
         engine.fail('VALIDATION_ERROR', 'event must be a string')
     if not event:
