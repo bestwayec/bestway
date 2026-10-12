@@ -17,9 +17,15 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 DATABASE_URL = env("DATABASE_URL")
 if not DATABASE_URL: raise RuntimeError("DATABASE_URL is required; Phase 1 never falls back to SQLite")
 DATABASES = {"default": database_from_url(DATABASE_URL)}
-INSTALLED_APPS = ["django.contrib.auth", "django.contrib.contenttypes", "django.contrib.staticfiles", "corsheaders", "rest_framework", "apps.core", "apps.legacy_schema"]
-MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", "django.middleware.security.SecurityMiddleware", "django.middleware.common.CommonMiddleware"]
-ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = []; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/")
+# django.contrib.admin needs its sessions/messages/CSRF stack; the API itself
+# stays JWT-only because every /v1 view is a DRF (csrf_exempt) view.
+INSTALLED_APPS = ["django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "corsheaders", "rest_framework", "apps.core", "apps.legacy_schema"]
+MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", "django.middleware.security.SecurityMiddleware", "django.middleware.common.CommonMiddleware", "django.contrib.sessions.middleware.SessionMiddleware", "django.middleware.csrf.CsrfViewMiddleware", "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware"]
+# Admin signs in against the Prisma-owned User table (bcrypt passwordHash);
+# the stock ModelBackend stays listed so the Django-managed auth tables keep
+# behaving normally for any future managed users.
+AUTHENTICATION_BACKENDS = ["common.auth.admin_backend.BestwayLegacyUserBackend", "django.contrib.auth.backends.ModelBackend"]
+ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [], "APP_DIRS": True, "OPTIONS": {"context_processors": ["django.template.context_processors.request", "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages"]}}]; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/")
 # Share the reference storage root by default so existing mock keys still resolve.
 MEDIA_ROOT = env("STORAGE_DIR", str(BASE_DIR.parent / "backend" / "storage"))
 if not Path(MEDIA_ROOT).is_absolute():

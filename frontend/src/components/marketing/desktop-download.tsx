@@ -20,6 +20,21 @@ import { cn } from "@/lib/utils";
 const REPO = "bestwayec/bw-tauri";
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
+const V052_WINDOWS_SETUP_URL = `https://github.com/${REPO}/releases/download/v0.5.2/Bestway.App_0.5.2_x64-setup.exe`;
+
+const FALLBACK_RELEASE: ReleaseInfo = {
+  version: "v0.5.2",
+  publishedAt: "2026-10-12T16:40:00Z",
+  windows: [
+    {
+      name: "Bestway App_0.5.2_x64-setup.exe",
+      url: V052_WINDOWS_SETUP_URL,
+      sizeMB: "3.4 MB",
+    },
+  ],
+  macos: [],
+  linux: [],
+};
 
 type Os = "windows" | "macos" | "linux" | "mobile" | "unknown";
 
@@ -66,6 +81,13 @@ function pickAssets(names: { name: string; url: string; size: number }[]): {
     .filter((a) => /\.exe$|\.msi$/i.test(a.name))
     .sort((a, b) => Number(/setup/i.test(b.name)) - Number(/setup/i.test(a.name)))
     .map((a) => ({ name: a.name, url: a.url, sizeMB: fmt(a.size) }));
+  if (windows.length === 0) {
+    windows.push({
+      name: "Bestway App_0.5.2_x64-setup.exe",
+      url: V052_WINDOWS_SETUP_URL,
+      sizeMB: "3.4 MB",
+    });
+  }
   const macos = names
     .filter((a) => /\.dmg$/i.test(a.name))
     .map((a) => {
@@ -89,9 +111,9 @@ const OS_META: Record<Exclude<Os, "mobile" | "unknown">, { icon: typeof Monitor;
 export function DesktopDownload() {
   const t = useTranslations("marketing");
   const [os] = React.useState<Os>(() => detectOs());
-  const [release, setRelease] = React.useState<ReleaseInfo | null>(null);
+  const [release, setRelease] = React.useState<ReleaseInfo | null>(FALLBACK_RELEASE);
   const [error, setError] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
 
   function applyRelease(json: {
     tag_name: string;
@@ -102,7 +124,7 @@ export function DesktopDownload() {
       (json.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
     );
     setRelease({
-      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v"),
+      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v") || "v0.5.2",
       publishedAt: json.published_at,
       ...picked,
     });
@@ -111,8 +133,8 @@ export function DesktopDownload() {
   }
 
   function failRelease() {
-    setRelease(null);
-    setError(true);
+    setRelease(FALLBACK_RELEASE);
+    setError(false);
     setLoading(false);
   }
 

@@ -1158,7 +1158,7 @@
     "desktopF3Title": "Imzoli avtoyangilanish",
     "desktopF3Text": "Har bir yangilanish o'rnatishdan oldin imzo orqali tekshiriladi — qo'lda qayta o'rnatish shart emas.",
     "desktopReqTitle": "Talablar",
-    "desktopReqText": "Windows 10+, macOS 12+ yoki zamonaviy 64-bit Linux. Taxminan 150 MB bo'sh disk.",
+    "desktopReqText": "Windows 10/11 (64-bit), yuklab olish hajmi ~3.4 MB (o'rnatilgandan so'ng ~150 MB disk). macOS 12+ yoki zamonaviy 64-bit Linux.",
     "desktopSignHint": "O'rnatgandan so'ng imtihonlaringizni ochish uchun BestWay o'quvchi hisobingiz bilan kiring.",
     "contactTitle": "Biz bilan bog'laning",
     "ctaTitle": "Bugun boshlang",

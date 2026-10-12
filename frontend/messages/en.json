@@ -1158,7 +1158,7 @@
     "desktopF3Title": "Signed auto-updates",
     "desktopF3Text": "Every update is signature-verified before it installs — no manual reinstalls.",
     "desktopReqTitle": "Requirements",
-    "desktopReqText": "Windows 10+, macOS 12+ or a modern 64-bit Linux. About 150 MB free disk space.",
+    "desktopReqText": "Windows 10/11 (64-bit), download size ~3.4 MB (~150 MB disk space installed). macOS 12+ or a modern 64-bit Linux.",
     "desktopSignHint": "After installing, sign in with your BestWay student account to unlock your exams.",
     "contactTitle": "Get in touch",
     "ctaTitle": "Start today",

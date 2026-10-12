@@ -22,6 +22,21 @@ const nextConfig: NextConfig = {
     '*.trycloudflare.com'
   ],
 
+  async redirects() {
+    return [
+      {
+        source: '/download',
+        destination: '/desktop',
+        permanent: false,
+      },
+      {
+        source: '/:locale/download',
+        destination: '/:locale/desktop',
+        permanent: false,
+      },
+    ];
+  },
+
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24,

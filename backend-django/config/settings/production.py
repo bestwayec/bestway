@@ -32,8 +32,9 @@ REST_FRAMEWORK = {**REST_FRAMEWORK,
 }
 DATABASES["default"]["CONN_MAX_AGE"] = 60
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
-MIDDLEWARE = [*MIDDLEWARE, "django.middleware.csrf.CsrfViewMiddleware",
-              "django.middleware.clickjacking.XFrameOptionsMiddleware"]
+# CsrfViewMiddleware already ships with the base stack (Django Admin);
+# production only adds the clickjacking guard.
+MIDDLEWARE = [*MIDDLEWARE, "django.middleware.clickjacking.XFrameOptionsMiddleware"]
 # Enable only behind a trusted proxy which strips/replaces incoming X-Forwarded-Proto.
 if env_bool("TRUST_PROXY_SSL_HEADER", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
