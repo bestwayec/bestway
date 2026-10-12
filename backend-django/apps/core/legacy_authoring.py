@@ -131,7 +131,7 @@ def grade(actor,identifier,data):
     question=Question.objects.filter(id=data['questionId'],test_id=attempt.test_id).first()
     if question is None:service.fail('QUESTION_NOT_IN_ATTEMPT','Savol bu urinishga tegishli emas')
     if question.section not in service.MANUAL:service.fail('NOT_MANUAL_QUESTION','Bu savol avtomatik baholanadi')
-    if data['score']>question.max_score:service.fail('SCORE_OUT_OF_RANGE',f"Ball 0 dan {question.max_score} gacha bo'lishi kerak")
+    if not 0<=data['score']<=question.max_score:service.fail('SCORE_OUT_OF_RANGE',f"Ball 0 dan {question.max_score} gacha bo'lishi kerak")
     Answer.objects.update_or_create(attempt_id=identifier,question_id=question.id,
         defaults=dict(score=data['score'],is_graded=True,graded_by_id=actor.id,comment=data.get('comment'),updated_at=timezone.now()),
         create_defaults=dict(id=str(uuid4()),attempt_id=identifier,question_id=question.id,answer='',score=data['score'],is_graded=True,graded_by_id=actor.id,comment=data.get('comment'),updated_at=timezone.now()))

@@ -54,8 +54,8 @@ ACADEMIC = [(39,9),(37,8.5),(35,8),(33,7.5),(30,7),(27,6.5),(23,6),(19,5.5),(15,
 GENERAL = [(40,9),(39,8.5),(37,8),(36,7.5),(34,7),(32,6.5),(30,6),(27,5.5),(23,5),(19,4.5),(15,4),(12,3.5),(9,3),(6,2.5),(3,2),(0,2)]
 WRITING = [0,10,14,17,21,25,28,31,33,35,37,38,40,41,43,45,47,48,50,51,53,55,57,59,61,62,63,64,65,67,69,72,75]
 SPEAKING = [0,10,11,13,15,17,19,21,23,24,26,27,29,30,32,33,35,37,38,39,40,42,43,45,46,47,49,50,51,52,54,56,57,59,61,63,64,65,67,69,71,73,75]
-NUMBER_WORDS = dict(zip('zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand first second third fifth eighth ninth twelfth'.split(),
-    list(map(str, range(21)))+['30','40','50','60','70','80','90','100','1000','1','2','3','5','8','9','12']))
+NUMBER_WORDS = dict(zip('zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred thousand first second third fourth fifth sixth seventh eighth ninth tenth twelfth'.split(),
+    list(map(str, range(21)))+['30','40','50','60','70','80','90','100','1000','1','2','3','4','5','6','7','8','9','10','12']))
 WORD_BY_NUMBER = {n:w for w,n in NUMBER_WORDS.items()}
 
 
