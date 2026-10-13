@@ -4,7 +4,7 @@ import re
 
 PROMPT_VERSION = 'BESTWAY_ASSESSMENT_PROMPT_2026_V2'
 EVIDENCE_POLICY = 'EVIDENCE_V2'
-GRADE_POLICY = 'BESTWAY_INTERNAL_PRACTICE_35_50_V1'
+GRADE_POLICY = 'BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1'
 
 
 def enabled(input):
@@ -84,7 +84,7 @@ def practice_grade(input, result):
     if input['program']!='MULTILEVEL' or (input.get('gradingPolicy') or {}).get('id') != GRADE_POLICY:
         return None
     from .assessment_results import score
-    from .mock_scoring import js_round
+    from .mock_scoring import convert_expert, js_round
     value = score(input, result)
     if value['score'] is None:
         return None
@@ -92,8 +92,10 @@ def practice_grade(input, result):
     maximum = sum(part['max'] for part in input['parts']) if input['program'] == 'MULTILEVEL' else 9
     if maximum <= 0:
         return None
-    return dict(policyId=GRADE_POLICY, score=js_round((35+15*raw/maximum)*10)/10, scaleMax=75,
-        rangeMin=35, rangeMax=50, rawScore=raw, rawMax=maximum, isOfficial=False)
+    standard = convert_expert(input['skill'], raw)
+    calibrated_score = min(55.0, float(standard))
+    return dict(policyId=GRADE_POLICY, score=js_round(calibrated_score * 10) / 10, scaleMax=75,
+        rangeMax=55, rawScore=raw, rawMax=maximum, isOfficial=False)
 
 
 def attach_grade(input, result):

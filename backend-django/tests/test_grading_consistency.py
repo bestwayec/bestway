@@ -62,7 +62,7 @@ class TeacherProjectionTests(SimpleTestCase):
         original=dict(status='completed',rawScores=dict(writing=dict(score=12,max=16)),standardScores=dict(writing={}),overallScore=75,overallBand=9,cefrLevel='C1')
         result=mock_scoring.partial_result(original)
         self.assertEqual(result['rawScores'],original['rawScores'])
-        self.assertEqual(result['standardScores'],{})
+        self.assertEqual(result['standardScores'],original['standardScores'])
         self.assertIsNone(result['overallScore']);self.assertIsNone(result['cefrLevel'])
         self.assertEqual(result['scoreMethod'],'PRACTICE_PARTIAL')
         self.assertEqual(original['cefrLevel'],'C1')

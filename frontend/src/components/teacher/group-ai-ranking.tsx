@@ -9,9 +9,41 @@ import { rankingScoreLabel, rankingStatusKey } from "@/lib/ai-ranking-types";
 import type { AiRankingSkill, GroupAiRankingCohort, GroupAiRankingRow } from "@/lib/ai-ranking-types";
 import { Button } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv-export";
-import { finalGradeLabel, groupGradeRows, groupGradesCsv, type GroupGradeSummary, type GroupSkillGrade } from "@/lib/group-grade-export";
+import { finalGradeLabel, groupGradeRows, groupGradesCsv, groupLeaderboardExcelCsv, type GroupGradeSummary, type GroupSkillGrade } from "@/lib/group-grade-export";
+import { useGroupDetail } from "@/hooks/use-groups";
+import { FileSpreadsheet } from "lucide-react";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+export function RankBadge({ rank }: { rank: number | null | undefined }) {
+  if (rank == null) return <span className="font-semibold text-fg-muted">—</span>;
+  if (rank === 1) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-500/30">
+        🥇 1-o&apos;rin
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-slate-400/15 px-2.5 py-0.5 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-400/30">
+        🥈 2-o&apos;rin
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-700/15 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-500 border border-amber-700/30">
+        🥉 3-o&apos;rin
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-2 py-0.5 text-xs font-medium text-fg-muted border border-border">
+      {rank}-o&apos;rin
+    </span>
+  );
+}
 
 export function GroupAiRankingTable({ rows, cohort, t }: {
   rows: GroupAiRankingRow[]; cohort?: GroupAiRankingCohort; t: Translate;
@@ -27,7 +59,7 @@ export function GroupAiRankingTable({ rows, cohort, t }: {
         <tbody className="divide-y divide-border">
           {rows.map(row => (
             <tr key={row.studentId}>
-              <td className="px-3 py-3 font-semibold text-fg">{row.rank ?? "—"}</td>
+              <td className="px-3 py-3 font-semibold text-fg"><RankBadge rank={row.rank} /></td>
               <th scope="row" className="px-3 py-3 font-medium text-fg">{row.name}</th>
               <td className="whitespace-nowrap px-3 py-3 text-fg">
                 {rankingScoreLabel(row.aiScore, cohort?.scaleMax)}
@@ -85,6 +117,9 @@ export function GroupAiRanking({ groupId }: { groupId: string }) {
   const [chosenExamId, setChosenExamId] = React.useState<string>();
   const [skill, setSkill] = React.useState<AiRankingSkill>("writing");
   const options = useGroupAiRanking(groupId);
+  const groupQ = useGroupDetail(groupId);
+  const phoneMap = new Map((groupQ.data?.students ?? []).map(s => [s.studentId, s.phone]));
+  const groupName = groupQ.data?.name ?? options.data?.group?.name ?? "group";
   const exams = options.data?.exams ?? [];
   const selectedExamId = exams.some(exam => exam.id === chosenExamId) ? chosenExamId : exams[0]?.id;
   const writing = useGroupAiRanking(groupId, selectedExamId, "writing");
@@ -113,11 +148,29 @@ export function GroupAiRanking({ groupId }: { groupId: string }) {
           <section className="space-y-2" aria-label={t("allResults")}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-semibold text-fg">{t("allResults")}</h4>
-              <Button type="button" variant="outline" size="sm" disabled={!summaryReady || summary.length === 0} onClick={() => {
-                if (!summaryReady || !writing.data || !speaking.data) return;
-                const suffix = `${groupId}-${selectedExamId}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 120);
-                downloadCsv(groupGradesCsv(writing.data, speaking.data, t), `bestway-group-results-${suffix}.csv`);
-              }}>{t("exportCsv")}</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex items-center gap-1.5 font-medium border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                  disabled={!summaryReady || summary.length === 0}
+                  onClick={() => {
+                    if (!summaryReady || !writing.data || !speaking.data) return;
+                    const safeName = groupName.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-");
+                    const filename = `bestway-group-${safeName}-results.csv`;
+                    downloadCsv(groupLeaderboardExcelCsv(writing.data, speaking.data, phoneMap, t), filename);
+                  }}
+                >
+                  <FileSpreadsheet className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Excelga yuklab olish
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={!summaryReady || summary.length === 0} onClick={() => {
+                  if (!summaryReady || !writing.data || !speaking.data) return;
+                  const suffix = `${groupId}-${selectedExamId}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 120);
+                  downloadCsv(groupGradesCsv(writing.data, speaking.data, t), `bestway-group-results-${suffix}.csv`);
+                }}>{t("exportCsv")}</Button>
+              </div>
             </div>
             <p className="text-xs text-fg-muted">{t("exportDescription")}</p>
             {summaryReady ? <GroupAllGradesTable rows={summary} t={t} /> : <p role="status" className="text-xs text-fg-muted">{t("exportUnavailable")}</p>}

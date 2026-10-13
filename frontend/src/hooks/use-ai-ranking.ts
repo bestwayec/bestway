@@ -14,3 +14,5 @@ export function useGroupAiRanking(groupId: string, examId?: string, skill: AiRan
     refetchInterval: examId ? 30_000 : false,
   });
 }
+
+export { useGroupLiveMonitoring } from "./use-group-monitoring";

@@ -239,7 +239,10 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
         for a in aggregates:
             if not a['max'] or a['pending']: continue
             skill = a['skill']
-            standards[skill] = estimate_objective(a['score'],a['max']) if skill in ('listening','reading') else dict(rawScore=a['score'],rawMax=a['max'],estimatedStandardScore=convert_expert(skill,a['score']),scoreMethod='ESTIMATED',scoreVersion=ESTIMATE_VERSION,isOfficial=False,gradingSource='HUMAN')
+            item = estimate_objective(a['score'],a['max']) if skill in ('listening','reading') else dict(rawScore=a['score'],rawMax=a['max'],estimatedStandardScore=convert_expert(skill,a['score']),scoreMethod='ESTIMATED',scoreVersion=ESTIMATE_VERSION,isOfficial=False,gradingSource='HUMAN')
+            item['level'] = multilevel_level(item['estimatedStandardScore'])
+            item['cefrLevel'] = item['level']
+            standards[skill] = item
         if all(s in standards for s in ('listening','reading','writing','speaking')):
             overall_score = sum(standards[s]['estimatedStandardScore'] for s in ('listening','reading','writing','speaking'))/4; cefr = multilevel_level(overall_score)
     elif not pending:
@@ -252,5 +255,6 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
 
 def partial_result(result):
     """A selected/incomplete practice is graded only on its observed work."""
-    return dict(result,standardScores={},overallScore=None,overallBand=None,cefrLevel=None,
-        scoreMethod='PRACTICE_PARTIAL',scoreVersion=None,isOfficial=False)
+    standards = result.get('standardScores') or {}
+    return dict(result, standardScores=standards, overallScore=None, overallBand=None, cefrLevel=None,
+        scoreMethod='PRACTICE_PARTIAL', scoreVersion=None, isOfficial=False)

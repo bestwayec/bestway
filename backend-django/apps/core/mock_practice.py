@@ -7,11 +7,11 @@ import re
 from types import SimpleNamespace
 
 from .multilevel import SPECS, authored
-from .mock_rules import objective_question_issues
+from .mock_rules import objective_question_issues, MANUAL_TYPES, QUESTION_TYPES
 from common.api.exceptions import ContractAPIException
 
 SCOPE_KEY = '__practice_scope'
-PRACTICE_SKILLS = ('writing', 'speaking')
+PRACTICE_SKILLS = ('listening', 'reading', 'writing', 'speaking')
 PLACEHOLDER = re.compile(r'\bREPLACE(?:\s+[—-]\s+|\s+WITH THE COMPLETE TEXT\b)')
 
 
@@ -61,22 +61,35 @@ def task_scope(tree, media_exists):
     An invalid or empty part is omitted rather than converted into fake content.
     Referenced media and the required picture part must still be available.
     """
-    spec = SPECS.get(tree.get('specificationVersion'))
-    if tree.get('type') != 'multilevel' or spec is None:
+    exam_type = tree.get('type')
+    if exam_type not in ('multilevel', 'ielts_academic', 'ielts_general'):
         return dict(skills=[], questionIds=[])
+    spec = None
+    if exam_type == 'multilevel':
+        spec = SPECS.get(tree.get('specificationVersion'))
+        if spec is None:
+            return dict(skills=[], questionIds=[])
+
     selected = {s: [] for s in PRACTICE_SKILLS}
     for section in tree.get('sections') or []:
         skill = section.get('skill')
         if skill not in selected:
             continue
         for index, group in enumerate(authored(section.get('groups') or [])):
-            if index >= len(spec[skill]['parts']):
+            if exam_type == 'multilevel':
+                if index >= len(spec[skill]['parts']):
+                    continue
+                part, _count, types, maximum = spec[skill]['parts'][index]
+                if skill in ('writing', 'speaking') and group.get('maxScore') != maximum:
+                    continue
+                if skill == 'speaking' and part == '1.2' and not group.get('imageKey'):
+                    continue
+            else:
+                types = None
+
+            if skill == 'listening' and not group.get('audioKey'):
                 continue
-            part, _count, types, maximum = spec[skill]['parts'][index]
-            if group.get('maxScore') != maximum:
-                continue
-            if skill == 'speaking' and part == '1.2' and not group.get('imageKey'):
-                continue
+
             keys = [group.get('audioKey'), group.get('imageKey')]
             if any(key and not media_exists(key) for key in keys):
                 continue
@@ -84,14 +97,43 @@ def task_scope(tree, media_exists):
             if any(isinstance(v, str) and PLACEHOLDER.search(v) for v in text):
                 continue
             questions = authored(group.get('questions') or [])
-            if skill == 'writing' and len(questions) != 1:
+            if exam_type == 'multilevel' and skill == 'writing' and len(questions) != 1:
                 continue
+
+            is_auto = skill in ('listening', 'reading')
             for question in questions:
+                qtype = question.get('type')
                 prompt = question.get('prompt')
-                if (question.get('type') not in types or not isinstance(prompt, str) or not prompt.strip()
-                        or PLACEHOLDER.search(prompt) or objective_question_issues(question, False)
-                        or type(question.get('points')) is not int or not 1 <= question['points'] <= 9):
-                    continue
+                points = question.get('points')
+
+                if exam_type == 'multilevel':
+                    if types is not None and qtype not in types:
+                        continue
+                else:
+                    if skill == 'writing' and qtype not in ('essay_task1', 'essay_task2'):
+                        continue
+                    elif skill == 'speaking' and qtype != 'speaking_task':
+                        continue
+                    elif is_auto and (qtype in MANUAL_TYPES or qtype not in QUESTION_TYPES):
+                        continue
+
+                if is_auto:
+                    if isinstance(prompt, str) and prompt and PLACEHOLDER.search(prompt):
+                        continue
+                    if objective_question_issues(question, True):
+                        continue
+                    if type(points) is not int or points < 1:
+                        continue
+                else:
+                    if not isinstance(prompt, str) or not prompt.strip():
+                        continue
+                    if PLACEHOLDER.search(prompt):
+                        continue
+                    if objective_question_issues(question, False):
+                        continue
+                    if type(points) is not int or not 1 <= points <= 9:
+                        continue
+
                 if isinstance(question.get('id'), str) and question['id']:
                     selected[skill].append(question['id'])
     skills = [skill for skill in PRACTICE_SKILLS if selected[skill]]
@@ -102,7 +144,7 @@ def practice_plan(exam):
     from apps.legacy_schema.models import MockQuestion, MockQuestionGroup, MockSection, MockImportReviewIssue
     from .mock_authoring import group_payload, question_payload
     from .mock_media import resolve_key
-    if exam.type != 'multilevel':
+    if exam.type not in ('multilevel', 'ielts_academic', 'ielts_general'):
         return dict(skills=[], questionIds=[])
     # Unresolved import validation is not an authorisation to use sample content.
     if MockImportReviewIssue.objects.filter(import_record__exam_id=exam.id, status='open').exists():

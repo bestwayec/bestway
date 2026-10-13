@@ -820,7 +820,7 @@ export interface MockSectionScore {
   practiceGrade?: PracticeGrade | null;
 }
 
-export type MockPracticeSkill = "writing" | "speaking";
+export type MockPracticeSkill = "listening" | "reading" | "writing" | "speaking";
 export interface MockPracticeScope {
   skills: MockPracticeSkill[];
   questionIds: string[];

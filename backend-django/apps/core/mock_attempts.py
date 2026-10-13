@@ -19,7 +19,7 @@ from common.api.exceptions import ContractAPIException
 from . import exam_programs, mock_catalog
 from .mock_authoring import _exam_tree, multilevel_readiness, new_id
 from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, speaking_profile, task_guidance
-from .mock_practice import is_partial, scope, scope_sections, selected_scope, SCOPE_KEY
+from .mock_practice import is_partial, scope, scope_sections, selected_scope, SCOPE_KEY, PRACTICE_SKILLS
 
 SKILLS = ('listening', 'reading', 'writing', 'speaking')
 
@@ -90,6 +90,24 @@ def assert_question(attempt, question_id):
     return q
 
 
+def partial_skill_seconds(skill, section, exam_type):
+    if exam_type == 'multilevel':
+        return SPECS[CURRENT_SPEC][skill]['duration'] * 60
+    if skill == 'reading':
+        minutes = (section or {}).get('durationMinutes')
+        return (60 if minutes is None else minutes) * 60
+    if skill == 'listening':
+        minutes = (section or {}).get('durationMinutes')
+        return (40 if minutes is None else minutes) * 60
+    if skill == 'writing':
+        minutes = (section or {}).get('durationMinutes')
+        return (60 if minutes is None else minutes) * 60
+    if skill == 'speaking':
+        minutes = (section or {}).get('durationMinutes')
+        return (15 if minutes is None else minutes) * 60
+    return 60 * 60
+
+
 def skill_seconds(skill, section, exam_type):
     if exam_type == 'multilevel':
         return SPECS[CURRENT_SPEC][skill]['duration'] * 60 if section is not None else None
@@ -102,11 +120,22 @@ def skill_seconds(skill, section, exam_type):
     return (60 if minutes is None else minutes) * 60
 
 
-def timing(exam_type, sections, mode, flow, at):
+def timing(exam_type, sections, mode, flow, at, selected_skills=None):
     by_skill = {s['skill']: s for s in sections}
     deadlines = {}
     last = None
     cursor = at
+    if flow == 'partial_practice':
+        active_skills = [s for s in (selected_skills or SKILLS) if s in by_skill]
+        if mode == 'timed':
+            for skill in active_skills:
+                seconds = partial_skill_seconds(skill, by_skill.get(skill), exam_type)
+                last = (cursor if len(active_skills) > 1 else at) + timedelta(seconds=seconds)
+                deadlines[skill] = iso(last)
+                cursor = last
+        overall = last
+        return deadlines or None, overall, last
+
     if mode == 'timed':
         for skill in SKILLS:
             if flow != 'full_test' and skill not in by_skill:
@@ -152,8 +181,16 @@ def start(actor, exam_id, data):
     if not exam:
         fail('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404)
     partial = 'skills' in data
-    if partial and (exam.type != 'multilevel' or data.get('mode') != 'practice' or data.get('flow') == 'full_test'):
-        fail('VALIDATION_ERROR', 'Selected task practice is only available for Multilevel practice mode')
+    if partial:
+        if exam.type not in ('multilevel', 'ielts_academic', 'ielts_general'):
+            fail('VALIDATION_ERROR', 'Selected task practice is only available for Multilevel and IELTS exams')
+        if data.get('flow') == 'full_test':
+            fail('VALIDATION_ERROR', 'Selected task practice cannot be run with full_test flow')
+        skills = data.get('skills')
+        if not isinstance(skills, list) or not skills or len(set(skills)) != len(skills) or any(s not in PRACTICE_SKILLS for s in skills):
+            fail('VALIDATION_ERROR', 'skills must be a non-empty list of unique valid skills')
+        if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
+            fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
     if not exam.is_published and not exam.is_demo:
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
@@ -196,16 +233,17 @@ def start(actor, exam_id, data):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow == 'full_test' else data.get('mode') or 'practice'
         at = timezone.now()
-        deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at)
+        deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         attempt = MockAttempt.objects.create(id=new_id(), exam_id=exam_id, student_id=actor.id,
             specification_version=exam.specification_version, speaking_profile_version=exam.speaking_profile_version,
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
-            flow_mode=flow if flow in ('full_test', 'partial_practice') else None, current_skill='listening' if flow == 'full_test' else None,
+            flow_mode=flow if flow in ('full_test', 'partial_practice') else None,
+            current_skill=data['skills'][0] if partial else ('listening' if flow == 'full_test' else None),
             media_state={SCOPE_KEY: practice} if partial else None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,
             submitted_sections=[] if flow == 'full_test' else None)
-        duration = int((last-at).total_seconds()/60 + .5) if flow == 'full_test' else None
+        duration = int((last-at).total_seconds()/60 + .5) if last else None
         return start_response(attempt, exam, False, duration)
 
 

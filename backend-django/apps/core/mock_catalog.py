@@ -141,9 +141,11 @@ def total_duration(exam, sections):
     for section in sections:
         if section['skill'] == 'listening':
             duration = sum(g['audioDurationSec'] or 0 for g in section['groups'])
-            total += math.ceil(((duration if duration > 0 else 1800) + 120) / 60)
-        elif section['skill'] != 'speaking':
-            total += section['durationMinutes'] if section['durationMinutes'] is not None else 60
+            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else (math.ceil(((duration + 120) / 60)) if duration > 0 else 40)
+        elif section['skill'] == 'speaking':
+            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else 15
+        else:
+            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else 60
     return total or None
 
 
@@ -162,7 +164,7 @@ def list_exams(user, *, program=None, exam_type=None, practice_level=None):
         latest = MockExamImport.objects.filter(exam_id=exam.id).order_by('-revision').first()
         data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": total_duration(exam, data['sections']), "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": start_ready(exam), "imported": dict(packageId=latest.package_id, revision=latest.revision, importedAt=latest.created_at) if latest else None})
         data = {k: data[k] for k in ('id', 'type', 'profile', 'title', 'description', 'level', 'practiceLevel', 'isDemo', 'isPublished', 'ready', 'canEdit', 'skills', 'questionCount', 'durationMinutes', 'price', 'access', 'imported')}
-        if exam.type == 'multilevel':
+        if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
             data.update(metadata(exam))
         items.append(data)
     return items
@@ -182,6 +184,6 @@ def get_exam(user, exam_id: str):
         output = {k: output[k] for k in ('id', 'type', 'title', 'description', 'level', 'practiceLevel', 'isPublished', 'isDemo', 'createdAt', 'updatedAt', 'contentVersion', 'questionCount')}
         output.update(sections=[], durationMinutes=duration)
     output.update({"ready": start_ready(exam), "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
-    if exam.type == 'multilevel':
+    if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
         output.update(metadata(exam))
     return output

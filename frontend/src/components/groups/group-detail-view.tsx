@@ -33,6 +33,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
 import { GroupAiRanking } from "@/components/teacher/group-ai-ranking";
+import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
 
 export function GroupDetailView({ groupId }: { groupId: string }) {
   const t = useTranslations("groups");
@@ -134,7 +135,12 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         </div>
       </Card>
 
-      {canSeePhones && <GroupAiRanking groupId={groupId} />}
+      {canSeePhones && (
+        <>
+          <GroupLiveMonitoring groupId={groupId} />
+          <GroupAiRanking groupId={groupId} />
+        </>
+      )}
 
       {/* O'quvchi qo'shish */}
       <Card className="mb-4">

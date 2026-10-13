@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GroupAiRankingData, GroupAiRankingRow } from "./ai-ranking-types";
-import { finalGradeLabel, groupGradeRows, groupGradesCsv } from "./group-grade-export";
+import { finalGradeLabel, groupGradeRows, groupGradesCsv, groupLeaderboardExcelCsv } from "./group-grade-export";
 
 const row: GroupAiRankingRow = { studentId: "student", name: "=unsafe;Name", attemptId: "writing-attempt", jobId: "j", aiScore: 44,
   aiRawScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER", finalScoreScaleMax: 5, confidence: .9,
@@ -48,5 +48,31 @@ describe("group Writing and Speaking export", () => {
     expect(groupGradeRows(writing, { ...speaking, selectedExamId: "other" })).toEqual([]);
     expect(groupGradeRows(writing, { ...speaking, group: { id: "foreign", name: "Foreign" } })).toEqual([]);
     expect(groupGradeRows(writing, { ...speaking, skill: "writing" })).toEqual([]);
+  });
+
+  it("exports formatted leaderboard CSV with ranks, student names, phones, all skills, overall, CEFR and status", () => {
+    const writing = data("writing", [row]);
+    const speaking = data("speaking", [{ ...row, finalScore: 50, finalPracticeGrade: { policyId: "policy", score: 50, scaleMax: 75, rawScore: 4, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } }]);
+    const phoneMap = new Map([["student", "+998901234567"]]);
+    const csv = groupLeaderboardExcelCsv(writing, speaking, phoneMap, t);
+
+    // Headers check
+    expect(csv).toContain("O'rin");
+    expect(csv).toContain("O'quvchi ismi");
+    expect(csv).toContain("Telefon raqam");
+    expect(csv).toContain("Writing balli");
+    expect(csv).toContain("Speaking balli");
+    expect(csv).toContain("Listening balli");
+    expect(csv).toContain("Reading balli");
+    expect(csv).toContain("Umumiy ball");
+    expect(csv).toContain("CEFR darajasi");
+    expect(csv).toContain("Holati");
+
+    // Row values check
+    expect(csv).toContain("+998901234567");
+    expect(csv).toContain("47 / 75");
+    expect(csv).toContain("50 / 75");
+    expect(csv).toContain("B2"); // (47 + 50) / 2 = 48.5 -> B2
+    expect(csv).toContain("Baholangan");
   });
 });

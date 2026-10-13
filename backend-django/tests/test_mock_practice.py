@@ -57,7 +57,12 @@ class PartialPracticeTests(SimpleTestCase):
             definition = tree()
             definition['specificationVersion'] = version
             self.assertTrue(task_scope(definition, lambda key: True)['questionIds'])
-        for key, value in [('type', 'ielts_academic'), ('specificationVersion', 'unsupported')]:
+        # IELTS is supported for authored tasks
+        definition = tree()
+        definition['type'] = 'ielts_academic'
+        self.assertTrue(task_scope(definition, lambda key: True)['questionIds'])
+        # Unsupported specification or type fails closed
+        for key, value in [('type', 'unsupported_type'), ('specificationVersion', 'unsupported')]:
             definition = tree()
             definition[key] = value
             self.assertEqual(task_scope(definition, lambda key: True), dict(skills=[], questionIds=[]))
@@ -88,9 +93,16 @@ class PartialPracticeTests(SimpleTestCase):
     def test_start_boundary_rejects_timed_duplicate_or_objective_skill_scope(self):
         client = APIClient()
         client.force_authenticate(SimpleNamespace(role='student', id='s', is_authenticated=True))
-        for payload in [dict(mode='timed', skills=['writing']), dict(mode='practice', skills=['writing', 'writing']),
-                        dict(mode='practice', skills=['listening']), dict(mode='practice', skills=[]),
+        for payload in [dict(mode='practice', skills=['writing', 'writing']),
+                        dict(mode='practice', skills=[]),
+                        dict(mode='practice', skills=['unknown_skill']),
                         dict(mode='practice', flow='full_test', skills=['speaking'])]:
             response = client.post('/v1/mock/exams/e/start', payload, format='json')
             self.assertEqual(response.status_code, 400)
             self.assertEqual(response.data['error']['code'], 'VALIDATION_ERROR')
+        with patch.object(mock_attempts, 'start', return_value=dict(attemptId='a', flowMode='partial_practice')) as starter:
+            for payload in [dict(mode='timed', skills=['writing']), dict(mode='practice', skills=['listening']),
+                            dict(mode='timed', skills=['reading', 'listening'])]:
+                response = client.post('/v1/mock/exams/e/start', payload, format='json')
+                self.assertEqual(response.status_code, 201)
+                self.assertTrue(response.data['success'])

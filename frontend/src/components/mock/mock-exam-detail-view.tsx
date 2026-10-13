@@ -62,7 +62,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const inProgress = attempts.find((a) => a.status === "in_progress");
 
   function onStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
-    if (exam?.ready === false && !(mode === "practice" && skills?.length && practiceSkills.length)) {
+    if (exam?.ready === false && !(skills?.length && practiceSkills.length)) {
       toast.error("Exam is not ready yet.");
       return;
     }
@@ -171,22 +171,93 @@ export function MockExamDetailView({ examId }: { examId: string }) {
         </div>
 
         {!staff && !inProgress && exam.access === "granted" && practiceSkills.length > 0 && (
-          <div className="mt-5 space-y-3 rounded-[10px] border border-brand bg-brand-subtle p-4">
-            <p className="font-semibold text-fg">{t("practiceSelectionTitle")}</p>
-            <p className="text-sm text-fg-muted">{t("practiceSelectionHint")}</p>
-            <fieldset className="flex flex-wrap gap-4">
+          <div className="mt-5 space-y-4 rounded-xl border border-brand/30 bg-brand-subtle/30 p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="flex items-center gap-2 text-base font-semibold text-fg">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">1</span>
+                  Alohida bo&apos;lim topshirish (Single Skill)
+                </h3>
+                <p className="mt-1 text-xs text-fg-muted">{t("practiceSelectionHint")}</p>
+              </div>
+              <Badge variant="brand" className="text-xs">{t("practiceSelectionTitle")}</Badge>
+            </div>
+
+            <fieldset className="mt-2">
               <legend className="sr-only">{t("choosePracticeSkills")}</legend>
-              {practiceSkills.map((skill) => (
-                <label key={skill} className="flex items-center gap-2 text-sm font-medium">
-                  <input type="checkbox" checked={selectedSkills.includes(skill)} onChange={(event) => setSelectedPractice(event.target.checked ? [...selectedSkills, skill] : selectedSkills.filter((item) => item !== skill))} />
-                  {t(`skills.${skill}`)}
-                </label>
-              ))}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {practiceSkills.map((skill) => {
+                  const isSelected = selectedSkills.includes(skill);
+                  const sec = exam.sections.find((s) => s.skill === skill);
+                  const qCount = sec ? sec.groups.reduce((g, grp) => g + grp.questions.length, 0) : null;
+                  const emoji = skill === "listening" ? "🎧" : skill === "reading" ? "📖" : skill === "writing" ? "✍️" : "🎤";
+                  return (
+                    <div
+                      key={skill}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedPractice([skill])}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setSelectedPractice([skill]); } }}
+                      className={`group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-3.5 text-center transition-all ${
+                        isSelected
+                          ? "border-brand bg-brand/10 text-brand shadow-xs ring-2 ring-brand/30"
+                          : "border-border bg-surface text-fg hover:border-brand/40 hover:bg-surface-hover"
+                      }`}
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <span className="text-lg">{emoji}</span>
+                        <label className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                setSelectedPractice([...selectedSkills, skill]);
+                              } else {
+                                setSelectedPractice(selectedSkills.filter((item) => item !== skill));
+                              }
+                            }}
+                            className="size-4 rounded accent-brand"
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-semibold capitalize">{t(`skills.${skill}`)}</span>
+                        {qCount != null && (
+                          <span className="text-xs text-fg-muted">{qCount} {t("questions")}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </fieldset>
-            {exam.practiceQuestionCount != null && <p className="text-xs text-fg-muted">{t("availablePracticeTasks", { count: exam.practiceQuestionCount })}</p>}
-            <Button className="w-full" disabled={selectedSkills.length === 0} loading={start.isPending} onClick={() => onStart("practice", selectedSkills)}>
-              <Play className="fill-current" />{t("startSelectedPractice")}
-            </Button>
+
+            {exam.practiceQuestionCount != null && (
+              <p className="text-xs text-fg-muted">{t("availablePracticeTasks", { count: exam.practiceQuestionCount })}</p>
+            )}
+
+            <div className="flex flex-col gap-2.5 sm:flex-row">
+              <Button
+                variant="outline"
+                className="flex-1 font-medium bg-surface hover:bg-surface-hover"
+                disabled={selectedSkills.length === 0}
+                loading={start.isPending && start.variables?.mode === "practice"}
+                onClick={() => onStart("practice", selectedSkills)}
+              >
+                <Play className="fill-current text-brand" />
+                {t("startSelectedPractice")} (Mashq)
+              </Button>
+              <Button
+                className="flex-1 font-medium"
+                disabled={selectedSkills.length === 0}
+                loading={start.isPending && start.variables?.mode === "timed"}
+                onClick={() => onStart("timed", selectedSkills)}
+              >
+                <Timer />
+                {t("timed")} rejimida boshlash
+              </Button>
+            </div>
           </div>
         )}
 
@@ -228,7 +299,17 @@ export function MockExamDetailView({ examId }: { examId: string }) {
               <Clock /> {t("pending")}
             </Badge>
           ) : (
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="space-y-3 rounded-xl border border-border bg-bg-subtle/40 p-4">
+              <div>
+                <h3 className="flex items-center gap-2 text-base font-semibold text-fg">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-fg-muted/20 text-[11px] font-bold text-fg">2</span>
+                  To&apos;liq imtihon (Full Mock)
+                </h3>
+                <p className="mt-0.5 text-xs text-fg-muted">
+                  Barcha bo&apos;limlarni rasmiy formatda ketma-ket topshirish
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 className="flex-1"
                 variant="outline"
@@ -246,6 +327,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                 <Timer />
                 {t("timed")}
               </Button>
+              </div>
             </div>
           )}
         </div>

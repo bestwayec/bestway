@@ -32,6 +32,8 @@ def ranking_ai_projection(job,evaluations,transcripts=None):
     practice=value.get('practiceGrade')
     if practice is not None:score=practice['score']
     elif input.get('practiceMode')=='PARTIAL' and score is not None:score=round(75*raw/maximum,1)
+    if job.program == 'MULTILEVEL' and score is not None:
+        score = min(55.0, float(score))
     confidence=value['confidence']
     if type(job.confidence) in (int,float) and math.isfinite(job.confidence):confidence=min(confidence,job.confidence)
     from .assessment import threshold

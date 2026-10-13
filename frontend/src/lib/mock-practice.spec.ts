@@ -13,7 +13,7 @@ const exam = {
 
 describe("explicit authored-task practice", () => {
   it("uses separate authoritative availability while full readiness stays false", () => {
-    expect(availablePracticeSkills(exam)).toEqual(["writing", "speaking"]);
+    expect(availablePracticeSkills(exam)).toEqual(["listening", "writing", "speaking"]);
     expect(availablePracticeSkills({ ...exam, practiceReady: false })).toEqual([]);
     expect(availablePracticeSkills({ ...exam, type: "ielts_academic" })).toEqual([]);
     expect(exam.ready).toBe(false);

@@ -5,7 +5,7 @@ import { rankingScoreLabel, rankingStatusKey } from "@/lib/ai-ranking-types";
 import type { GroupAiRankingCohort, GroupAiRankingRow } from "@/lib/ai-ranking-types";
 
 vi.mock("@/hooks/use-ai-ranking", () => ({ useGroupAiRanking: () => ({ data: null }) }));
-import { GroupAiRankingTable, GroupAllGradesTable } from "./group-ai-ranking";
+import { GroupAiRankingTable, GroupAllGradesTable, RankBadge } from "./group-ai-ranking";
 
 const row: GroupAiRankingRow = { studentId: "s", name: "Komiljon", attemptId: "a", jobId: "j",
   aiScore: 44, aiRawScore: 3, teacherScore: 4, finalScore: 4, finalScoreScaleMax: 5,
@@ -61,5 +61,17 @@ describe("teacher AI ranking", () => {
     expect(html).toContain("writing"); expect(html).toContain("speaking");
     expect(html).toContain("44 / 75"); expect(html.match(/41 \/ 75/g)).toHaveLength(1);
     expect(html).toContain("sourceTeacher"); expect(html).toContain("reviewRequired");
+  });
+  it("renders gold, silver, bronze and normal rank badges correctly", () => {
+    const gold = renderToStaticMarkup(React.createElement(RankBadge, { rank: 1 }));
+    expect(gold).toContain("🥇 1-o&#x27;rin");
+    const silver = renderToStaticMarkup(React.createElement(RankBadge, { rank: 2 }));
+    expect(silver).toContain("🥈 2-o&#x27;rin");
+    const bronze = renderToStaticMarkup(React.createElement(RankBadge, { rank: 3 }));
+    expect(bronze).toContain("🥉 3-o&#x27;rin");
+    const fourth = renderToStaticMarkup(React.createElement(RankBadge, { rank: 4 }));
+    expect(fourth).toContain("4-o&#x27;rin");
+    const none = renderToStaticMarkup(React.createElement(RankBadge, { rank: null }));
+    expect(none).toContain("—");
   });
 });

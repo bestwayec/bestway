@@ -74,7 +74,7 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
     result=dict(program=program,skill=skill,specificationVersion=attempt.specification_version,
         speakingProfileVersion=attempt.speaking_profile_version, rubricVersion=f"{'MULTILEVEL' if program=='MULTILEVEL' else 'IELTS'}_{skill.upper()}_RUBRIC_V1",
         promptVersion=PROMPT_VERSION,evaluationPolicy=EVIDENCE_POLICY,pronunciationEvidence='UNAVAILABLE',parts=parts)
-    if program=='MULTILEVEL':result['gradingPolicy']=dict(id=GRADE_POLICY,scaleMax=75,rangeMin=35,rangeMax=50)
+    if program=='MULTILEVEL':result['gradingPolicy']=dict(id=GRADE_POLICY,scaleMax=75,rangeMax=55)
     if is_partial(attempt):result['practiceMode']='PARTIAL'
     return result
 

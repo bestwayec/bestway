@@ -75,6 +75,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/grade',assessment.grade),
     path('assessment/attempts/<str:attempt_id>',assessment.attempt),
     path('assessment/groups/<str:group_id>/rankings',assessment_rankings.rankings),
+    path('assessment/groups/<str:group_id>/live-monitoring',assessment.live_monitoring),
     path('assessment/jobs/<str:job_id>/review',assessment.review),
     path('assessment/jobs/<str:job_id>/audio/<str:question_id>',assessment.audio),
     path('mock/attempts/<str:attempt_id>/extend',support.extend_view),
