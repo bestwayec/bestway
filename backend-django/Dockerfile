@@ -1,12 +1,14 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=config.settings.production
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 curl \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements/ ./requirements/
 RUN pip install --no-cache-dir -r requirements/prod.txt \
     && groupadd --gid 1001 bestway \
-    && useradd --uid 1001 --gid bestway --no-create-home bestway
+    && useradd --uid 1001 --gid bestway --create-home bestway \
+    && mkdir -p /home/bestway/.gunicorn \
+    && chown -R bestway:bestway /home/bestway
 COPY --chown=bestway:bestway apps/ ./apps/
 COPY --chown=bestway:bestway common/ ./common/
 COPY --chown=bestway:bestway config/ ./config/
