@@ -68,7 +68,7 @@ class BestwayLegacyUserBackend(BaseBackend):
         is_active, role = row[2], row[3]
         if not is_active or role not in ADMIN_ROLES:
             return None
-        superuser = role == "super_admin"
+        superuser = role in ADMIN_ROLES
         if not user.is_staff or user.is_superuser != superuser:
             user.is_staff = True
             user.is_superuser = superuser
@@ -84,7 +84,7 @@ class BestwayLegacyUserBackend(BaseBackend):
             username=username,
             defaults={
                 "is_staff": True,
-                "is_superuser": role == "super_admin",
+                "is_superuser": role in ADMIN_ROLES,
                 "is_active": True,
                 "first_name": (phone or "")[:150],
                 "last_name": (name or "")[:150],
@@ -93,7 +93,7 @@ class BestwayLegacyUserBackend(BaseBackend):
         )
         changed: list[str] = []
         for field, value in (("is_staff", True),
-                             ("is_superuser", role == "super_admin"),
+                             ("is_superuser", role in ADMIN_ROLES),
                              ("is_active", True)):
             if getattr(user, field) != value:
                 setattr(user, field, value)
@@ -111,8 +111,8 @@ class BestwayLegacyUserBackend(BaseBackend):
         with connection.cursor() as cursor:
             cursor.execute(
                 'SELECT "id", "passwordHash", "isActive", "role", "name", "phone", "email" '
-                'FROM "User" WHERE "phone" = %s OR lower("email") = lower(%s) OR "id" = %s',
-                [identifier, identifier, identifier],
+                'FROM "User" WHERE "phone" = %s OR lower("email") = lower(%s) OR lower(split_part("email", \'@\', 1)) = lower(%s) OR "id" = %s',
+                [identifier, identifier, identifier, identifier],
             )
             return cursor.fetchone()
 

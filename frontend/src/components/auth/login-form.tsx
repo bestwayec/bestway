@@ -15,12 +15,16 @@ import { authApi, ApiError } from "@/lib/api-client";
 import { routing } from "@/i18n/routing";
 import { homePathForRole } from "@/lib/role-routing";
 
+const LOGIN_IDENTIFIER_RE =
+  /^(?:\+?\d[\d\s]{8,14}|[^\s@]+@[^\s@]+\.[^\s@]+|[a-zA-Z0-9_.-]{3,64})$/;
+
 function makeSchema(t: (k: string) => string) {
   return z.object({
     phone: z
       .string()
+      .trim()
       .min(1, t("phoneRequired"))
-      .regex(/^\+?\d[\d\s]{8,14}$/, t("phoneInvalid")),
+      .regex(LOGIN_IDENTIFIER_RE, t("phoneInvalid")),
     password: z.string().min(1, t("passwordRequired")),
   });
 }
@@ -81,9 +85,8 @@ export function LoginForm() {
       <Field label={t("phone")} error={errors.phone?.message} htmlFor="phone">
         <Input
           id="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
+          type="text"
+          autoComplete="username"
           placeholder={t("phonePlaceholder")}
           aria-invalid={!!errors.phone}
           {...register("phone")}

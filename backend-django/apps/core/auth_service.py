@@ -31,9 +31,21 @@ def public(row):
 
 
 def fetch_user(*, phone: str | None = None, user_id: str | None = None):
-    clause, value = (('\"phone\"=%s', phone) if phone is not None else ('\"id\"=%s', user_id))
     with connection.cursor() as cursor:
-        cursor.execute(f'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" FROM "User" WHERE {clause}', [value])
+        if phone is not None:
+            ident = phone.strip()
+            cursor.execute(
+                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
+                'FROM "User" WHERE "phone"=%s OR lower("email")=lower(%s) OR lower(split_part("email", \'@\', 1))=lower(%s) '
+                'ORDER BY CASE WHEN "phone"=%s THEN 0 WHEN lower("email")=lower(%s) THEN 1 ELSE 2 END LIMIT 1',
+                [ident, ident, ident, ident, ident],
+            )
+        else:
+            cursor.execute(
+                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
+                'FROM "User" WHERE "id"=%s',
+                [user_id],
+            )
         return cursor.fetchone()
 
 
