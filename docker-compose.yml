@@ -182,6 +182,38 @@ services:
     networks:
       - education-net
 
+  telegram-bot:
+    build:
+      context: ./backend-django
+    image: bestway-django:local
+    restart: unless-stopped
+    init: true
+    command: ["python", "manage.py", "run_telegram_bot"]
+    mem_limit: 256m
+    cpus: 0.25
+    env_file:
+      - ./backend-django/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      STORAGE_DIR: /app/storage
+      BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+      REDIS_URL: redis://django-cache:6379/0
+      SECURE_SSL_REDIRECT: "false"
+      TRUST_PROXY_SSL_HEADER: "true"
+      TELEGRAM_MODE: "polling"
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      django-cache:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - education-net
+
   frontend:
     build:
       context: ./frontend
