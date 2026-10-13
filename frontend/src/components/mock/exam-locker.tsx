@@ -38,7 +38,6 @@ function getFullscreenElement(): Element | null {
 
 export function ExamLocker({
   active,
-  attemptId: _attemptId,
   onAnomaly,
   onForceSubmit,
   children,
@@ -114,8 +113,20 @@ export function ExamLocker({
   // 1. Initial fullscreen request on engage
   React.useEffect(() => {
     if (!active) return;
-    void requestFullscreenSafe();
-  }, [active, requestFullscreenSafe]);
+    const enterFullscreen = async () => {
+      try {
+        const el = document.documentElement as FullscreenElement;
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) {
+          await el.webkitRequestFullscreen();
+        }
+      } catch {
+        // Direct user interaction may be required
+      }
+    };
+    void enterFullscreen();
+  }, [active]);
 
   // 2. Fullscreen tracking & enforcement
   React.useEffect(() => {

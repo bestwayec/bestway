@@ -1,6 +1,6 @@
 # Microservices architecture for Education Center System
-# Services: postgres (db) + backend (NestJS) + frontend (Next.js)
-# Root compose orchestrates all — each service is independent, communicates via internal network.
+# Services: postgres + db-migrator + backend (Django) + frontend (Next.js) + cache + workers
+name: bestway-prod
 
 services:
   postgres:
@@ -30,14 +30,48 @@ services:
     networks:
       - education-net
 
-  backend:
+  django-cache:
+    image: redis:8.2.10-alpine
+    container_name: education-cache
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "96mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - education-net
+
+  db-migrator:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+    container_name: education-db-migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - education-net
+
+  backend:
+    build:
+      context: ./backend-django
+    image: bestway-django:local
     container_name: education-backend
     restart: unless-stopped
+    init: true
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:3001", "--workers", "2", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
     mem_limit: 1g
     cpus: 1.0
     logging:
@@ -48,33 +82,103 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      django-cache:
+        condition: service_healthy
+      db-migrator:
+        condition: service_completed_successfully
+    env_file:
+      - ./backend-django/.env
     environment:
-      # Override DB host to use compose service name 'postgres' instead of localhost
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      HEALTHCHECK_PORT: "3001"
+      STORAGE_DIR: /app/storage
+      BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+      REDIS_URL: redis://django-cache:6379/0
+      SECURE_SSL_REDIRECT: "false"
+      TRUST_PROXY_SSL_HEADER: "true"
       PORT: 3001
-      # Production domains (fresh VPS: bestwayec.uz).
       CORS_ORIGIN: https://bestwayec.uz,https://www.bestwayec.uz
       PUBLIC_URL: https://api.bestwayec.uz
-      NODE_ENV: production
-      # Versioned public release metadata overrides stale values in the
-      # persistent backend/.env without introducing any secret configuration.
-      DESKTOP_LATEST_VERSION: 0.5.1-rc.1
-      DESKTOP_DOWNLOAD_URL: https://github.com/bestwayec/bw-tauri/releases/download/v0.5.1-rc.1/Bestway.App_0.5.1-rc.1_x64-setup.exe
-      DESKTOP_PRERELEASE: "true"
-    env_file:
-      - ./backend/.env
+      DESKTOP_LATEST_VERSION: 0.5.2
+      DESKTOP_DOWNLOAD_URL: https://github.com/bestwayec/bw-tauri/releases/download/v0.5.2/Bestway.App_0.5.2_x64-setup.exe
+      DESKTOP_PRERELEASE: "false"
     ports:
       - "127.0.0.1:3001:3001"
+      - "127.0.0.1:8001:3001"
     volumes:
       - backend_storage:/app/storage
-      # Mount storage locally as well for dev inspection (optional)
-      # - ./backend/storage:/app/storage
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/v1/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 30s
+    networks:
+      education-net:
+        aliases:
+          - django-api
+
+  assessment-worker:
+    build:
+      context: ./backend-django
+    image: bestway-django:local
+    restart: unless-stopped
+    init: true
+    command: ["python", "manage.py", "run_assessment_worker"]
+    mem_limit: 2g
+    cpus: 1.0
+    env_file:
+      - ./backend-django/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      STORAGE_DIR: /app/storage
+      BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+      REDIS_URL: redis://django-cache:6379/0
+      SECURE_SSL_REDIRECT: "false"
+      TRUST_PROXY_SSL_HEADER: "true"
+    volumes:
+      - backend_storage:/app/storage
+      - assessment_models:/app/model-cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      django-cache:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - education-net
+
+  game-scheduler:
+    build:
+      context: ./backend-django
+    image: bestway-django:local
+    restart: unless-stopped
+    init: true
+    command: ["python", "manage.py", "run_game_scheduler"]
+    mem_limit: 256m
+    cpus: 0.25
+    env_file:
+      - ./backend-django/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      STORAGE_DIR: /app/storage
+      BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
+      REDIS_URL: redis://django-cache:6379/0
+      SECURE_SSL_REDIRECT: "false"
+      TRUST_PROXY_SSL_HEADER: "true"
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      django-cache:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - education-net
 
@@ -97,9 +201,7 @@ services:
       backend:
         condition: service_healthy
     environment:
-      # Frontend server must reach backend via internal Docker DNS
       API_URL: http://backend:3001/v1
-      # No NEXT_PUBLIC_ secrets — API_URL is server-only
       PORT: 3000
       HOSTNAME: 0.0.0.0
       NODE_ENV: production
@@ -119,6 +221,7 @@ volumes:
     name: education_pgdata
   backend_storage:
     name: education_backend_storage
+  assessment_models:
 
 networks:
   education-net:

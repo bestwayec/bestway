@@ -21,18 +21,8 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
   const streamRef = React.useRef<MediaStream | null>(null);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
   const audioElemRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = React.useRef<string | null>(null);
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  const cleanupAudio = React.useCallback(() => {
-    if (audioElemRef.current) {
-      audioElemRef.current.pause();
-      audioElemRef.current.src = "";
-    }
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
-    }
-  }, [audioUrl]);
 
   const stopStream = React.useCallback(() => {
     if (streamRef.current) {
@@ -41,15 +31,22 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
     }
   }, []);
 
+  const cleanupAudio = React.useCallback(() => {
+    if (audioElemRef.current) {
+      audioElemRef.current.pause();
+      audioElemRef.current.src = "";
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }, []);
+
   React.useEffect(() => {
     if (!open) {
       if (timerRef.current) clearInterval(timerRef.current);
       stopStream();
       cleanupAudio();
-      setStep("idle");
-      setCountdown(5);
-      setIsPlaying(false);
-      setErrorMsg(null);
     }
   }, [open, stopStream, cleanupAudio]);
 
@@ -91,6 +88,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
         try {
           const blob = recordedAudioBlob(mr, chunks);
           const url = URL.createObjectURL(blob);
+          audioUrlRef.current = url;
           setAudioUrl(url);
           setStep("review");
         } catch (err) {
@@ -128,6 +126,30 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
       audioElemRef.current.play();
       setIsPlaying(true);
     }
+  };
+
+  const handleConfirm = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    stopStream();
+    cleanupAudio();
+    setStep("idle");
+    setCountdown(5);
+    setIsPlaying(false);
+    setAudioUrl(null);
+    setErrorMsg(null);
+    onConfirm();
+  };
+
+  const handleClose = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    stopStream();
+    cleanupAudio();
+    setStep("idle");
+    setCountdown(5);
+    setIsPlaying(false);
+    setAudioUrl(null);
+    setErrorMsg(null);
+    onClose?.();
   };
 
   if (!open) return null;
@@ -201,7 +223,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
               )}
 
               <div className="flex flex-col gap-2 pt-2">
-                <Button onClick={onConfirm} className="w-full">
+                <Button onClick={handleConfirm} className="w-full">
                   <CheckCircle2 className="mr-2 size-4" />
                   Ovoz eshitildi — Speakingni boshlash
                 </Button>
@@ -231,7 +253,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="text-xs text-fg-muted hover:text-fg underline-offset-4 hover:underline"
             >
               Yopish
