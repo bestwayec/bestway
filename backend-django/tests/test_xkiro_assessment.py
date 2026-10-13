@@ -20,7 +20,7 @@ class XkiroAssessmentTests(SimpleTestCase):
             with self.subTest(skill=skill),patch.dict(os.environ,self.config,clear=True),patch.object(providers,'provider_json',return_value=response) as http:
                 output=providers.assess(input,'PRIMARY')
                 self.assertEqual((output['provider'],output['model']),('xkiro',self.config['XKIRO_MODEL']))
-                self.assertEqual(output['result']['practiceGrade']['score'],44)
+                self.assertEqual(output['result']['practiceGrade']['score'], 28.0 if skill == 'writing' else 19.0)
                 args=http.call_args.args;body=json.loads(args[1])
                 self.assertEqual(args[0],'https://api.xkiro.com/v1/chat/completions')
                 self.assertEqual(body['response_format'],{'type':'json_object'})

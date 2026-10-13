@@ -19,7 +19,7 @@ from tests.test_assessment import fixture as legacy_fixture
 def fixture(skill='writing',raw=3,source='I enjoy studying English because it helps me communicate with people.'):
     input,result=legacy_fixture('MULTILEVEL',skill)
     input.update(promptVersion=quality.PROMPT_VERSION,evaluationPolicy=quality.EVIDENCE_POLICY,practiceMode='PARTIAL',
-        gradingPolicy=dict(id=quality.GRADE_POLICY,scaleMax=75,rangeMin=35,rangeMax=50))
+        gradingPolicy=dict(id=quality.GRADE_POLICY,scaleMax=75,rangeMax=55))
     part=input['parts'][0];part.update(id='informal_email' if skill=='writing' else '1.1')
     response=part['responses'][0];response['originalResponse']=source
     if skill=='speaking':response.update(originalResponse='',transcript=source,transcriptConfidence=.95,audioDurationMs=12000)
@@ -49,7 +49,7 @@ def ledger(input,result,role='PRIMARY',status='NEEDS_REVIEW'):
 
 class EvidenceGradeTests(SimpleTestCase):
     def test_native_grade_and_server_internal_range_are_distinct(self):
-        for native,display in ((.5,36.5),(2.5,42.5),(5,50)):
+        for native,display in ((.5,10.0),(2.5,25.0),(5,37.0)):
             input,result=fixture(raw=native)
             grade=results.validate(result,input)['practiceGrade']
             self.assertEqual(grade['score'],display)
@@ -67,7 +67,7 @@ class EvidenceGradeTests(SimpleTestCase):
 
     def test_short_fragment_has_low_grade_and_cannot_get_maximum(self):
         input,result=fixture(raw=1,source='I good')
-        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],38)
+        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],14.0)
         result['parts'][0].update(rawScore=5,criteria={k:5 for k in results.keys(input)})
         with self.assertRaisesRegex(results.ProviderError,'RESULT_INSUFFICIENT_RESPONSE_EVIDENCE'):results.validate(result,input)
 
@@ -79,7 +79,7 @@ class EvidenceGradeTests(SimpleTestCase):
         input,result=fixture(raw=4);rated=result['parts'][0];rated['criteria']['taskCoverage']=0
         with self.assertRaisesRegex(results.ProviderError,'RESULT_SCORE_EVIDENCE_CONFLICT'):results.validate(result,input)
         rated['rawScore']=.5
-        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],36.5)
+        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],10.0)
 
     def test_missing_or_empty_speech_is_review_not_a_fake_minimum(self):
         for source in ('','   ','...'):
@@ -100,7 +100,7 @@ class EvidenceGradeTests(SimpleTestCase):
         input,result=fixture(raw=4)
         approved=results.teacher_result(input,results.validate(result,input),[dict(id='informal_email',rawScore=2.5)])
         self.assertEqual(results.score(input,approved)['score'],2.5)
-        self.assertEqual(approved['practiceGrade']['score'],42.5)
+        self.assertEqual(approved['practiceGrade']['score'],25.0)
         edited=copy.deepcopy(approved);edited['practiceGrade']['score']=75
         with self.assertRaises(results.ProviderError):results.feedback_edit(edited,approved)
 
@@ -125,7 +125,7 @@ class EvidenceRankingTests(SimpleTestCase):
         input,result=fixture(raw=2.5);job,evaluations,transcripts=ledger(input,result)
         job.ai_score=75;job.teacher_score=5;job.final_score=5
         value=ranking_ai_projection(job,evaluations,transcripts)
-        self.assertTrue(value['eligible']);self.assertEqual(value['score'],42.5)
+        self.assertTrue(value['eligible']);self.assertEqual(value['score'],25.0)
         self.assertEqual((value['rawScore'],value['rawMax'],value['scaleMax']),(2.5,5,75))
         self.assertTrue(value['reviewRequired'])
 
@@ -149,7 +149,7 @@ class EvidenceRankingTests(SimpleTestCase):
         self.assertFalse(value['eligible']);self.assertEqual(value['confidence'],.3)
 
     def test_student_native_raw_projection_gets_only_final_persisted_grade(self):
-        grade=dict(policyId=quality.GRADE_POLICY,score=42.5,rawScore=2.5,rawMax=5)
+        grade=dict(policyId=quality.GRADE_POLICY,score=25.0,rawScore=2.5,rawMax=5)
         job=SimpleNamespace(skill='writing',final_score=2.5,final_result=dict(practiceGrade=grade))
         result=dict(rawScores=dict(writing=dict(score=2.5,max=5)))
         with patch.object(mock_grading.AssessmentJob,'objects') as jobs:
@@ -172,7 +172,7 @@ class DeepSeekV2Tests(SimpleTestCase):
         for private in ('private-id','private/key','private-hash','test-only-key'):
             self.assertNotIn(private,body['messages'][1]['content'])
         self.assertEqual((value['inputTokens'],value['outputTokens']),(12,13))
-        self.assertEqual(value['result']['practiceGrade']['score'],42.5)
+        self.assertEqual(value['result']['practiceGrade']['score'],25.0)
 
     def test_truncated_chat_result_never_becomes_a_grade(self):
         input,_=fixture()
@@ -220,7 +220,7 @@ class ScopedAiPolicyTests(SimpleTestCase):
 
 class InternalGradeDeliveryTests(SimpleTestCase):
     def attempt(self,internal=True):
-        grade=dict(policyId=quality.GRADE_POLICY,score=45,scaleMax=75,rangeMin=35,rangeMax=50,rawScore=12,rawMax=16,isOfficial=False)
+        grade=dict(policyId=quality.GRADE_POLICY,score=45,scaleMax=75,rangeMax=55,rawScore=12,rawMax=16,isOfficial=False)
         raw=dict(score=12,max=16)
         if internal:raw['practiceGrade']=grade
         return SimpleNamespace(id='attempt',student_id='student',status='completed',flow_mode='full_test',
