@@ -117,5 +117,118 @@ class TelegramLifecycleTests(SimpleTestCase):
 
     def test_role_menus_are_exact_and_html_is_escaped(self):
         self.assertEqual(telegram_menu.menu_for('teacher')['keyboard'][0],[{'text':'👥 Guruhlarim'},{'text':'✍️ Baholash navbati'}])
+        for role in ('student','parent','teacher','admin','super_admin'):
+            labels=[btn['text'] for row in telegram_menu.menu_for(role)['keyboard'] for btn in row]
+            self.assertIn('📱 Android ilovani yuklab olish (.apk)',labels)
+        self.assertEqual(
+            telegram_menu.apk_inline_keyboard(),
+            {'inline_keyboard':[[{'text':'📱 Android ilovani yuklab olish (.apk)','callback_data':'download_apk'}]]},
+        )
         from apps.core.telegram_links import escape
         self.assertEqual(escape('<student&>'),'&lt;student&amp;&gt;')
+
+    def test_apk_caption_matches_installation_guide(self):
+        caption=telegram_menu.apk_caption()
+        self.assertEqual(
+            caption,
+            '📲 <b>BestWay Mobile (CBT Exam)</b>\n'
+            'Versiya: v0.5.2\n'
+            '<i>Qo\'llanma:</i> Faylni yuklab oling, oching va "O\'rnatish" tugmasini bosing ("Noma\'lum manbalar"ga ruxsat bering).',
+        )
+
+    def test_local_apk_file_sent_via_send_document_on_button_and_commands(self):
+        apk_bytes=b'PK\x03\x04bestway-local-apk-payload'
+        with TemporaryDirectory() as directory:
+            local_apk=Path(directory)/'media'/'downloads'/'bestway-app.apk'
+            local_apk.parent.mkdir(parents=True,exist_ok=True)
+            local_apk.write_bytes(apk_bytes)
+            requests_made=[]
+
+            class FakeResponse:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return b'{"ok":true,"result":{"message_id":77}}'
+
+            def fake_urlopen(req,timeout=None):
+                requests_made.append(req)
+                return FakeResponse()
+
+            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':directory,'ANDROID_APK_PATH':'media/downloads/bestway-app.apk'}), \
+                 patch.object(telegram_delivery,'urlopen',side_effect=fake_urlopen), \
+                 patch.object(telegram_menu,'urlopen',side_effect=AssertionError('Remote fallback should not be called when local APK exists')):
+                resolved=telegram_menu.resolve_apk_path()
+                self.assertEqual(resolved,local_apk.resolve())
+                for trigger in ('📱 Android ilovani yuklab olish (.apk)','/apk','/android','/app'):
+                    requests_made.clear()
+                    telegram_bot.handle({'message':{'chat':{'id':555},'text':trigger}})
+                    self.assertEqual(len(requests_made),1)
+                    req=requests_made[0]
+                    self.assertTrue(req.full_url.endswith('/bottest-bot-token/sendDocument'))
+                    self.assertIn(b'filename="bestway-app.apk"',req.data)
+                    self.assertIn(b'name="chat_id"\r\n\r\n555',req.data)
+                    self.assertIn(b'BestWay Mobile (CBT Exam)',req.data)
+                    self.assertIn(b'Versiya: v0.5.2',req.data)
+                    self.assertIn(apk_bytes,req.data)
+
+    def test_github_releases_stream_fallback_when_local_apk_missing(self):
+        remote_apk_bytes=b'PK\x03\x04bestway-github-release-apk'
+        release_url='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.2/bestway-app.apk'
+        with TemporaryDirectory() as empty_dir:
+            calls=[]
+
+            class RemoteStream:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return remote_apk_bytes
+
+            class TelegramOk:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return b'{"ok":true,"result":{"message_id":88}}'
+
+            def fake_remote_open(req,timeout=None):
+                calls.append(('remote',req.full_url,timeout))
+                return RemoteStream()
+
+            def fake_tg_open(req,timeout=None):
+                calls.append(('telegram',req.full_url,req.data))
+                return TelegramOk()
+
+            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':empty_dir,'ANDROID_APK_PATH':str(Path(empty_dir)/'missing.apk'),'ANDROID_APK_URL':release_url}), \
+                 patch.object(telegram_menu,'urlopen',side_effect=fake_remote_open), \
+                 patch.object(telegram_delivery,'urlopen',side_effect=fake_tg_open):
+                self.assertIsNone(telegram_menu.resolve_apk_path())
+                telegram_bot.handle({'message':{'chat':{'id':777},'text':'/apk'}})
+                self.assertEqual(len(calls),2)
+                self.assertEqual(calls[0][0],'remote')
+                self.assertEqual(calls[0][1],release_url)
+                self.assertEqual(calls[1][0],'telegram')
+                self.assertTrue(calls[1][1].endswith('/bottest-bot-token/sendDocument'))
+                self.assertIn(remote_apk_bytes,calls[1][2])
+                self.assertIn(b'filename="bestway-app.apk"',calls[1][2])
+
+    def test_callback_query_handler_answers_and_delivers_apk(self):
+        with patch.object(telegram_delivery,'answer_callback') as answer_cb, \
+             patch.object(telegram_menu,'send_apk',return_value=True) as send_apk:
+            telegram_bot.handle({
+                'update_id':99,
+                'callback_query':{
+                    'id':'cb-123',
+                    'from':{'id':321},
+                    'message':{'chat':{'id':321}},
+                    'data':'download_apk',
+                },
+            })
+            answer_cb.assert_called_once_with('cb-123')
+            send_apk.assert_called_once_with(321)
+
+    def test_apk_delivery_failure_sends_friendly_error_message(self):
+        with TemporaryDirectory() as empty_dir, \
+             patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':empty_dir,'ANDROID_APK_PATH':str(Path(empty_dir)/'missing.apk')}), \
+             patch.object(telegram_menu,'urlopen',side_effect=OSError('GitHub unreachable')), \
+             patch.object(telegram_delivery,'send') as send_msg, \
+             self.assertLogs(telegram_menu.__name__,level='WARNING'):
+            result=telegram_menu.send_apk(999)
+            self.assertFalse(result)
+            send_msg.assert_called_once_with(999,telegram_menu.APK_ERROR_TEXT)
+

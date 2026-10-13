@@ -1,10 +1,21 @@
+import logging
+import os
+from pathlib import Path
+import urllib.request
+from urllib.request import Request, urlopen as _stdlib_urlopen
+from django.conf import settings
 from django.utils import timezone
 from apps.legacy_schema import models as m
 from .telegram_links import escape,find
 from . import telegram_delivery as api
 
+urlopen=_stdlib_urlopen
+APK_FILENAME='bestway-app.apk'
+DEFAULT_APK_REL_PATH='media/downloads/bestway-app.apk'
+DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.2/bestway-app.apk'
+APK_ERROR_TEXT="❌ Kechirasiz, hozircha Android ilova faylini yuklab bo'lmadi. Iltimos, keyinroq qayta urinib ko'ring."
 MONTHS=['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr']
-BTN=dict(points='🏆 Ballarim',attendance='📅 Davomatim',payment="💰 To'lovlarim",results='📝 Natijalarim',children='👨‍👩‍👦 Farzandlarim',groups='👥 Guruhlarim',grading='✍️ Baholash navbati',today='📊 Bugungi holat',debtors='💸 Qarzdorlar',help='ℹ️ Yordam')
+BTN=dict(points='🏆 Ballarim',attendance='📅 Davomatim',payment="💰 To'lovlarim",results='📝 Natijalarim',children='👨‍👩‍👦 Farzandlarim',groups='👥 Guruhlarim',grading='✍️ Baholash navbati',today='📊 Bugungi holat',debtors='💸 Qarzdorlar',apk='📱 Android ilovani yuklab olish (.apk)',help='ℹ️ Yordam')
 LABEL=dict(present='✅ Keldi',absent='❌ Kelmadi',late='⏰ Kechikdi',paid="✅ To'langan",unpaid="❌ To'lanmagan",partial="🟡 Qisman to'langan",in_progress='⏳ Topshirilmoqda',grading='✍️ Baholanmoqda',completed='✅ Tayyor')
 def label(value):return LABEL.get(value,value)
 def money(number):return f'{number:,}'.replace(',',' ')+" so'm"
@@ -12,8 +23,68 @@ def date_uz(value):
     if hasattr(value,'tzinfo') and value.tzinfo:value=timezone.localtime(value)
     return f'{value.day}-{MONTHS[value.month-1]}'
 def menu_for(role):
-    rows=[['points','attendance'],['payment','results'],['help']] if role=='student' else [['children'],['attendance','payment'],['points','results'],['help']] if role=='parent' else [['groups','grading'],['help']] if role=='teacher' else [['today','debtors'],['help']]
+    rows=[['points','attendance'],['payment','results'],['apk'],['help']] if role=='student' else [['children'],['attendance','payment'],['points','results'],['apk'],['help']] if role=='parent' else [['groups','grading'],['apk'],['help']] if role=='teacher' else [['today','debtors'],['apk'],['help']]
     return dict(keyboard=[[dict(text=BTN[key]) for key in row] for row in rows],resize_keyboard=True)
+def apk_inline_keyboard():
+    return dict(inline_keyboard=[[dict(text=BTN['apk'],callback_data='download_apk')]])
+def apk_caption():
+    version=(os.environ.get('ANDROID_LATEST_VERSION') or getattr(settings,'ANDROID_LATEST_VERSION','0.5.2') or '0.5.2').strip()
+    if not version.startswith('v'):version=f'v{version}'
+    return (
+        '📲 <b>BestWay Mobile (CBT Exam)</b>\n'
+        f'Versiya: {version}\n'
+        '<i>Qo\'llanma:</i> Faylni yuklab oling, oching va "O\'rnatish" tugmasini bosing ("Noma\'lum manbalar"ga ruxsat bering).'
+    )
+def resolve_apk_path():
+    configured=(os.environ.get('ANDROID_APK_PATH') or getattr(settings,'ANDROID_APK_PATH','') or DEFAULT_APK_REL_PATH).strip()
+    candidates=[]
+    if configured:
+        path=Path(configured)
+        if path.is_absolute():candidates.append(path)
+    roots=[]
+    for raw_root in (os.environ.get('STORAGE_DIR'),getattr(settings,'MEDIA_ROOT',None),getattr(settings,'BASE_DIR',None)):
+        if raw_root:
+            root=Path(raw_root)
+            if not root.is_absolute():root=(Path(settings.BASE_DIR).parent/'backend'/root).resolve()
+            if root not in roots:roots.append(root)
+    rel_paths=[]
+    if configured and not Path(configured).is_absolute():
+        rel=Path(configured);rel_paths.append(rel)
+        parts=rel.parts
+        if parts and parts[0].lower()=='media' and len(parts)>1:rel_paths.append(Path(*parts[1:]))
+    for fallback in (Path('downloads')/APK_FILENAME,Path('media')/'downloads'/APK_FILENAME):
+        if fallback not in rel_paths:rel_paths.append(fallback)
+    for root in roots:
+        for rel in rel_paths:
+            candidate=root/rel
+            if candidate not in candidates:candidates.append(candidate)
+    for candidate in candidates:
+        try:
+            if candidate.is_file():return candidate
+        except OSError:continue
+    return None
+def apk_release_url():
+    return (os.environ.get('ANDROID_APK_URL') or os.environ.get('ANDROID_DOWNLOAD_URL') or getattr(settings,'ANDROID_APK_URL','') or DEFAULT_APK_URL).strip()
+def send_apk(chat_id):
+    caption=apk_caption()
+    local_path=resolve_apk_path()
+    if local_path is not None:
+        try:
+            with local_path.open('rb') as stream:
+                if api.send_document(chat_id,stream,caption=caption,filename=APK_FILENAME):return True
+        except Exception as error:
+            logging.getLogger(__name__).warning('Local APK delivery failed: %r',error)
+    url=apk_release_url()
+    if url:
+        try:
+            opener=urlopen if urlopen is not _stdlib_urlopen else api.urlopen if api.urlopen is not _stdlib_urlopen else urllib.request.urlopen
+            request=Request(url,headers={'User-Agent':'BestWay-TelegramBot/1.0','Accept':'application/octet-stream,*/*'},method='GET')
+            with opener(request,timeout=60) as remote_stream:
+                if api.send_document(chat_id,remote_stream,caption=caption,filename=APK_FILENAME):return True
+        except Exception as error:
+            logging.getLogger(__name__).warning('GitHub Releases APK fallback failed: %r',error)
+    api.send(chat_id,APK_ERROR_TEXT)
+    return False
 def show(chat_id,role,name):api.menu(chat_id,f'👋 Xush kelibsiz, <b>{escape(name)}</b>!\n\nQuyidagi tugmalardan foydalaning:',menu_for(role))
 def no_children(role):return "👨‍👩‍👦 Sizga hali farzand bog'lanmagan.\n\nSaytga kiring → <b>Farzandni ulash</b> → o'quvchining 8 belgili kodini kiriting." if role=='parent' else "ℹ️ Bu bo'lim faqat o'quvchi va ota-onalar uchun."
 def targets(user):
@@ -79,12 +150,16 @@ def text_for(user,key):
         lines='\n'.join(f'   • {escape(s.user.name)} — {escape(s.user.phone)} {label(p.state if p else "unpaid")}' for s,p in rows[:20]);more=f'\n\n<i>…va yana {len(rows)-20} ta</i>' if len(rows)>20 else ''
         return f'💸 <b>Qarzdorlar — {MONTHS[now.month-1]}</b> ({len(rows)} ta)\n\n{lines}{more}\n\n<i>Eslatma yuborish: admin panel → To\'lovlar → "Eslatma yuborish".</i>'
     per_role=dict(student="Tugmalar orqali ballaringiz, davomatingiz, to'lovlaringiz va test natijalaringizni ko'rasiz.",parent="Tugmalar orqali farzandingiz ballari, davomati, to'lovlari va test natijalarini kuzatasiz.",teacher="Guruhlaringiz va baholash navbatini ko'rasiz. Baholash saytdagi panelda bajariladi.",admin="Markazning bugungi holati va qarzdorlar ro'yxatini ko'rasiz. To'liq boshqaruv — admin panelda.",super_admin="Markazning bugungi holati va qarzdorlar. To'liq boshqaruv — admin panelda.")
-    return 'ℹ️ <b>Yordam</b>\n\nBu bot orqali markaz yangiliklari va shaxsiy xabarlar keladi.\n\n<u>Buyruqlar:</u>\n/menu — menyuni ko\'rsatish\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n\n'+per_role.get(user.role,'')+"\n\nSavollar bo'lsa administratsiyaga murojaat qiling."
+    return 'ℹ️ <b>Yordam</b>\n\nBu bot orqali markaz yangiliklari va shaxsiy xabarlar keladi.\n\n<u>Buyruqlar:</u>\n/menu — menyuni ko\'rsatish\n/apk — Android ilovani yuklab olish (.apk)\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n\n'+per_role.get(user.role,'')+"\n\nSavollar bo'lsa administratsiyaga murojaat qiling."
 
 
 def handle(chat_id,text):
+    if text==BTN['apk']:
+        send_apk(chat_id);return True
     user=find(chat_id,True)
     if not user:return False
     key=next((key for key,value in BTN.items() if value==text),None)
     if key is None:return False
+    if key=='help':
+        api.send(chat_id,text_for(user,key),reply_markup=apk_inline_keyboard());return True
     api.send(chat_id,text_for(user,key));return True
