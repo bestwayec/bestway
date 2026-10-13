@@ -5,7 +5,7 @@ from django.db import close_old_connections
 from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu
 
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/apk — Android ilovani yuklab olish (.apk)\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/download — Android ilovani yuklab olish (.apk)\n/apk — Android ilovani yuklab olish (.apk)\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 
 
 def welcome():
@@ -47,7 +47,7 @@ def handle(update):
         if text.startswith('/menu'):
             if not show(chat_id):api.contact_request(chat_id,welcome())
             return
-        if text.startswith(('/apk','/android','/app')):
+        if text.startswith(('/apk', '/download', '/android', '/app')):
             menu.send_apk(chat_id);return
         if text.startswith(('/unlink','/stop')):links.unlink_chat(chat_id);return
         if text.startswith('/status'):
@@ -61,10 +61,12 @@ def handle(update):
 
 
 def initialize():
-    if not os.environ.get('TELEGRAM_BOT_TOKEN'):return 'off'
+    if not os.environ.get('TELEGRAM_BOT_TOKEN'):
+        logging.getLogger(__name__).info('Telegram bot is OFF: TELEGRAM_BOT_TOKEN is not set in environment. System is ready to activate immediately once token is supplied.')
+        return 'off'
     mode=os.environ.get('TELEGRAM_MODE','polling').lower()
     if mode=='off':return mode
-    api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [('start',"Akkauntni bog'lash"),('menu',"Menyuni ko'rsatish"),('apk','Android ilovani yuklab olish (.apk)'),('status',"Bog'lanish holati"),('unlink','Akkauntni uzish'),('help','Yordam')]]))
+    api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [('start',"Akkauntni bog'lash"),('menu',"Menyuni ko'rsatish"),('download','Android ilovani yuklab olish (.apk)'),('apk','Android ilovani yuklab olish (.apk)'),('status',"Bog'lanish holati"),('unlink','Akkauntni uzish'),('help','Yordam')]]))
     if mode=='webhook':
         url=os.environ.get('TELEGRAM_WEBHOOK_URL');secret=os.environ.get('TELEGRAM_WEBHOOK_SECRET')
         if url and secret:api.call('setWebhook',dict(url=url,secret_token=secret,allowed_updates=['message','callback_query'],drop_pending_updates=True))

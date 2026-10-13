@@ -12,7 +12,7 @@ from . import telegram_delivery as api
 urlopen=_stdlib_urlopen
 APK_FILENAME='bestway-app.apk'
 DEFAULT_APK_REL_PATH='media/downloads/bestway-app.apk'
-DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.2/bestway-app.apk'
+DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
 APK_ERROR_TEXT="❌ Kechirasiz, hozircha Android ilova faylini yuklab bo'lmadi. Iltimos, keyinroq qayta urinib ko'ring."
 MONTHS=['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr']
 BTN=dict(points='🏆 Ballarim',attendance='📅 Davomatim',payment="💰 To'lovlarim",results='📝 Natijalarim',children='👨‍👩‍👦 Farzandlarim',groups='👥 Guruhlarim',grading='✍️ Baholash navbati',today='📊 Bugungi holat',debtors='💸 Qarzdorlar',apk='📱 Android ilovani yuklab olish (.apk)',help='ℹ️ Yordam')
@@ -28,7 +28,7 @@ def menu_for(role):
 def apk_inline_keyboard():
     return dict(inline_keyboard=[[dict(text=BTN['apk'],callback_data='download_apk')]])
 def apk_caption():
-    version=(os.environ.get('ANDROID_LATEST_VERSION') or getattr(settings,'ANDROID_LATEST_VERSION','0.5.2') or '0.5.2').strip()
+    version=(os.environ.get('ANDROID_LATEST_VERSION') or getattr(settings,'ANDROID_LATEST_VERSION','0.5.3') or '0.5.3').strip()
     if not version.startswith('v'):version=f'v{version}'
     return (
         '📲 <b>BestWay Mobile (CBT Exam)</b>\n'

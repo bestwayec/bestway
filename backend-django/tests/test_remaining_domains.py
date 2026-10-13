@@ -132,7 +132,7 @@ class TelegramLifecycleTests(SimpleTestCase):
         self.assertEqual(
             caption,
             '📲 <b>BestWay Mobile (CBT Exam)</b>\n'
-            'Versiya: v0.5.2\n'
+            'Versiya: v0.5.3\n'
             '<i>Qo\'llanma:</i> Faylni yuklab oling, oching va "O\'rnatish" tugmasini bosing ("Noma\'lum manbalar"ga ruxsat bering).',
         )
 
@@ -158,7 +158,7 @@ class TelegramLifecycleTests(SimpleTestCase):
                  patch.object(telegram_menu,'urlopen',side_effect=AssertionError('Remote fallback should not be called when local APK exists')):
                 resolved=telegram_menu.resolve_apk_path()
                 self.assertEqual(resolved,local_apk.resolve())
-                for trigger in ('📱 Android ilovani yuklab olish (.apk)','/apk','/android','/app'):
+                for trigger in ('📱 Android ilovani yuklab olish (.apk)','/apk','/download','/android','/app'):
                     requests_made.clear()
                     telegram_bot.handle({'message':{'chat':{'id':555},'text':trigger}})
                     self.assertEqual(len(requests_made),1)
@@ -167,12 +167,12 @@ class TelegramLifecycleTests(SimpleTestCase):
                     self.assertIn(b'filename="bestway-app.apk"',req.data)
                     self.assertIn(b'name="chat_id"\r\n\r\n555',req.data)
                     self.assertIn(b'BestWay Mobile (CBT Exam)',req.data)
-                    self.assertIn(b'Versiya: v0.5.2',req.data)
+                    self.assertIn(b'Versiya: v0.5.3',req.data)
                     self.assertIn(apk_bytes,req.data)
 
     def test_github_releases_stream_fallback_when_local_apk_missing(self):
         remote_apk_bytes=b'PK\x03\x04bestway-github-release-apk'
-        release_url='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.2/bestway-app.apk'
+        release_url='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
         with TemporaryDirectory() as empty_dir:
             calls=[]
 
