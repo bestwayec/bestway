@@ -58,24 +58,26 @@ def record(value):
     if not isinstance(value,dict):raise ProviderError('PROVIDER_RESPONSE_INVALID')
     return value
 
-def assessment_identity(role):
-    provider=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
-    prefix='XKIRO' if provider=='xkiro' else 'DEEPSEEK'
+def assessment_identity(role,provider=None):
+    if not provider:provider=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
+    prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
     model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL','').strip()
     if provider=='xkiro' and role=='ADJUDICATOR' and not model:model=os.environ.get('XKIRO_MODEL','').strip()
+    elif provider=='openrouter' and not model:model=os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-chat').strip()
     return provider,model
 
-def assess(input,role):
-    provider,model=assessment_identity(role)
-    if provider not in ('deepseek','xkiro'):raise ProviderError('PROVIDER_CONFIG_INVALID')
-    prefix='XKIRO' if provider=='xkiro' else 'DEEPSEEK'
+
+def _assess_single(input,role,provider=None):
+    provider,model=assessment_identity(role,provider)
+    if provider not in ('deepseek','xkiro','openrouter'):raise ProviderError('PROVIDER_CONFIG_INVALID')
+    prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
     key=os.environ.get(prefix+'_API_KEY','').strip()
     if not key or not model:raise ProviderError('PROVIDER_NOT_CONFIGURED')
-    base='https://api.xkiro.com/v1' if provider=='xkiro' else os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com'
-    # This integration explicitly opts into free Qwen routes only. Never fall
-    # back to a paid model or send the xKiro credential to a configurable host.
+    if provider=='openrouter':base=os.environ.get('OPENROUTER_BASE_URL') or 'https://openrouter.ai/api/v1'
+    elif provider=='xkiro':base='https://api.xkiro.com/v1'
+    else:base=os.environ.get('DEEPSEEK_BASE_URL') or 'https://api.deepseek.com'
     if provider=='xkiro' and not re.fullmatch(r'qwen/[a-z0-9][a-z0-9.-]*:free',model):raise ProviderError('PROVIDER_CONFIG_INVALID')
-    api_format='chat_completions' if provider=='xkiro' else os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
+    api_format='chat_completions' if provider in ('xkiro','openrouter') else os.environ.get('DEEPSEEK_API_FORMAT') or ('chat_completions' if enabled(input) and urlsplit(base).hostname=='api.deepseek.com' else 'responses')
     if api_format not in ('responses','chat_completions'):raise ProviderError('PROVIDER_CONFIG_INVALID')
     url=provider_url(base,'chat/completions' if api_format=='chat_completions' else 'responses')
     payload={k:input[k] for k in ('program','skill','rubricVersion','specificationVersion','speakingProfileVersion','pronunciationEvidence')}
@@ -92,20 +94,24 @@ def assess(input,role):
     body=encoded(dict(model=model,instructions=system_prompt(input),input=[dict(role='user',content=[dict(type='input_text',text=encoded(payload).decode())])],
         text=dict(format=dict(type='json_schema',name='bestway_assessment',schema=schema(input))),reasoning=dict(effort='none'),temperature=.2,stream=False,tool_choice='none',max_output_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
     if api_format=='chat_completions':
-        # Both chat providers support JSON-object mode; local validation enforces
-        # the entire rubric schema and source evidence after that transport.
         body=encoded(dict(model=model,messages=[dict(role='system',content=system_prompt(input)+'\nRequired JSON schema:\n'+encoded(schema(input)).decode()),
             dict(role='user',content=encoded(payload).decode())],response_format=dict(type='json_object'),
             temperature=.2,stream=False,max_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',8000,2000,16000)))
-        if provider=='xkiro':
-            chat=json.loads(body);chat['reasoning_effort']='none'
+        if provider in ('xkiro','openrouter'):
+            chat=json.loads(body)
+            if provider=='xkiro':chat['reasoning_effort']='none'
             chat['messages'][0]['content']+='\nKeep feedback concise and include every required JSON field. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
             if enabled(input):
                 diagnostics=', '.join(k for k in rubric_keys(input) if k!='pronunciation')
                 chat['messages'][0]['content']+='\nFor EACH part, evidenceQuotes must cover EVERY positive diagnostic: '+diagnostics+'. Do not stop after two or three criteria. Before returning, check every nonzero criterion has its own matching evidenceQuotes entry. Reusing a short excerpt is allowed when relevant. Copy ONE contiguous excerpt from ONE candidate response verbatim; never paraphrase, correct its grammar, add ellipses, or join separated excerpts.'
             body=encoded(chat)
     if len(body)>512*1024:raise ProviderError('ASSESSMENT_INPUT_TOO_LARGE')
-    started=time.monotonic();response=record(provider_json(url,body,{'Authorization':'Bearer '+key,'Content-Type':'application/json'},bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS',90000,1000,180000)))
+    started=time.monotonic()
+    req_headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'}
+    if provider=='openrouter':
+        req_headers['HTTP-Referer']='https://bestwayec.uz'
+        req_headers['X-Title']='BestWay Exam'
+    response=record(provider_json(url,body,req_headers,bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS',90000,1000,180000)))
     if api_format=='chat_completions':
         choices=response.get('choices')
         if not isinstance(choices,list) or len(choices)!=1:raise ProviderError('PROVIDER_RESPONSE_INVALID')
@@ -134,6 +140,23 @@ def assess(input,role):
     usage=record(response['usage']) if response.get('usage') is not None and response['usage'] is not False and response['usage']!=0 and response['usage']!='' else {}
     def token(value):return value if type(value) in (int,float) and math.isfinite(value) and 0<=value<=9007199254740991 and int(value)==value else None
     return dict(result=result,provider=provider,model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
+
+
+def assess(input,role):
+    try:return _assess_single(input,role)
+    except ProviderError as error:
+        primary=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
+        fallback=os.environ.get('ASSESSMENT_FALLBACK_PROVIDER','').strip().lower()
+        if not fallback:
+            if primary=='openrouter' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
+            elif primary=='xkiro' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
+        if fallback and fallback!=primary and error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE'):
+            try:
+                import logging
+                logging.getLogger(__name__).warning('Assessment primary provider %s failed (%s), attempting fallback %s',primary,error.code,fallback)
+                return _assess_single(input,role,provider=fallback)
+            except Exception:raise error
+        raise
 
 def transcribe(path,mime,language='en',duration_ms=None):
     provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()

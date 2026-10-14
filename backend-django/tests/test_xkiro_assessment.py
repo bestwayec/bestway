@@ -52,3 +52,45 @@ class XkiroAssessmentTests(SimpleTestCase):
             response={'choices':[{'finish_reason':reason,'message':{'role':'assistant','content':json.dumps(result)}}]}
             with self.subTest(reason=reason),patch.dict(os.environ,self.config,clear=True),patch.object(providers,'provider_json',return_value=response):
                 with self.assertRaisesRegex(ProviderError,code):providers.assess(input,'PRIMARY')
+
+    def test_openrouter_transport_evaluates_and_attaches_headers(self):
+        input,result=fixture('writing')
+        response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(result)}}],
+                  'usage':{'prompt_tokens':150,'completion_tokens':60}}
+        openrouter_config={
+            'ASSESSMENT_PROVIDER':'openrouter',
+            'OPENROUTER_API_KEY':'sk-or-v1-test',
+            'OPENROUTER_MODEL':'deepseek/deepseek-chat'
+        }
+        with patch.dict(os.environ,openrouter_config,clear=True),patch.object(providers,'provider_json',return_value=response) as http:
+            output=providers.assess(input,'PRIMARY')
+            self.assertEqual(output['provider'],'openrouter')
+            self.assertEqual(output['model'],'deepseek/deepseek-chat')
+            args=http.call_args.args
+            self.assertEqual(args[0],'https://openrouter.ai/api/v1/chat/completions')
+            headers=args[2]
+            self.assertEqual(headers['Authorization'],'Bearer sk-or-v1-test')
+            self.assertEqual(headers['HTTP-Referer'],'https://bestwayec.uz')
+            self.assertEqual(headers['X-Title'],'BestWay Exam')
+
+    def test_primary_openrouter_falls_back_to_xkiro_on_rate_limit(self):
+        input,result=fixture('writing')
+        xkiro_response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(result)}}],
+                        'usage':{'prompt_tokens':100,'completion_tokens':40}}
+        dual_config={
+            'ASSESSMENT_PROVIDER':'openrouter',
+            'OPENROUTER_API_KEY':'sk-or-v1-test',
+            'OPENROUTER_MODEL':'deepseek/deepseek-chat',
+            'XKIRO_API_KEY':'sk-xt-test',
+            'XKIRO_MODEL':'qwen/qwen3-max:free'
+        }
+        def fake_provider_json(url, body, headers, timeout):
+            if 'openrouter.ai' in url:
+                raise ProviderError('PROVIDER_RATE_LIMITED', True, True)
+            return xkiro_response
+
+        with patch.dict(os.environ,dual_config,clear=True),patch.object(providers,'provider_json',side_effect=fake_provider_json):
+            output=providers.assess(input,'PRIMARY')
+            self.assertEqual(output['provider'],'xkiro')
+            self.assertEqual(output['model'],'qwen/qwen3-max:free')
+
