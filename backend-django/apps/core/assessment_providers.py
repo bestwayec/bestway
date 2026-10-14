@@ -59,12 +59,25 @@ def record(value):
     return value
 
 def assessment_identity(role,provider=None):
-    if not provider:provider=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
+    if not provider:
+        provider=os.environ.get('ASSESSMENT_PROVIDER','').strip().lower()
+        if not provider:
+            if os.environ.get('OPENROUTER_API_KEY'):provider='openrouter'
+            elif os.environ.get('DEEPSEEK_API_KEY'):provider='deepseek'
+            elif os.environ.get('XKIRO_API_KEY'):provider='xkiro'
+            else:provider='openrouter'
     prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
-    model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL','').strip()
-    if provider=='xkiro' and role=='ADJUDICATOR' and not model:model=os.environ.get('XKIRO_MODEL','').strip()
-    elif provider=='openrouter' and not model:model=os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-chat').strip()
+    model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL')
+    if model is None and role=='ADJUDICATOR':
+        model=os.environ.get(prefix+'_MODEL')
+    if model is None:
+        if provider=='openrouter':model=os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-chat').strip() or 'deepseek/deepseek-chat'
+        elif provider=='xkiro':model=os.environ.get('XKIRO_MODEL','qwen/qwen3.8-max:free').strip() or 'qwen/qwen3.8-max:free'
+        else:model=''
+    else:
+        model=model.strip()
     return provider,model
+
 
 
 def _assess_single(input,role,provider=None):
@@ -145,16 +158,29 @@ def _assess_single(input,role,provider=None):
 def assess(input,role):
     try:return _assess_single(input,role)
     except ProviderError as error:
-        primary=os.environ.get('ASSESSMENT_PROVIDER','deepseek').strip().lower()
+        primary,_=assessment_identity(role)
         fallback=os.environ.get('ASSESSMENT_FALLBACK_PROVIDER','').strip().lower()
         if not fallback:
             if primary=='openrouter' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
             elif primary=='xkiro' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
-        if fallback and fallback!=primary and error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE'):
+            elif primary=='deepseek' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
+            elif primary=='deepseek' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
+        should_fallback = (
+            fallback and fallback!=primary and (
+                error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE')
+                or (error.code=='PROVIDER_REQUEST_REJECTED' and error.uncertain)
+                or error.transient
+            )
+        )
+        if should_fallback:
             try:
                 import logging
                 logging.getLogger(__name__).warning('Assessment primary provider %s failed (%s), attempting fallback %s',primary,error.code,fallback)
                 return _assess_single(input,role,provider=fallback)
+            except ProviderError as fallback_err:
+                if fallback_err.code.startswith('RESULT_'):
+                    raise fallback_err
+                raise error
             except Exception:raise error
         raise
 

@@ -1,4 +1,5 @@
 """Free Qwen transport must retain source evidence and honest provenance."""
+import copy
 import json
 import os
 from unittest.mock import patch
@@ -93,4 +94,94 @@ class XkiroAssessmentTests(SimpleTestCase):
             output=providers.assess(input,'PRIMARY')
             self.assertEqual(output['provider'],'xkiro')
             self.assertEqual(output['model'],'qwen/qwen3-max:free')
+
+    def test_primary_openrouter_falls_back_to_xkiro_on_server_and_network_errors(self):
+        input,result=fixture('speaking')
+        xkiro_response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(result)}}],
+                        'usage':{'prompt_tokens':110,'completion_tokens':45}}
+        dual_config={
+            'ASSESSMENT_PROVIDER':'openrouter',
+            'OPENROUTER_API_KEY':'sk-or-v1-test',
+            'OPENROUTER_MODEL':'deepseek/deepseek-chat',
+            'XKIRO_API_KEY':'sk-xt-test',
+            'XKIRO_MODEL':'qwen/qwen3.8-max:free'
+        }
+        error_cases = [
+            ProviderError('PROVIDER_REQUEST_REJECTED', False, True),  # HTTP 408 timeout
+            ProviderError('PROVIDER_UNAVAILABLE', True, False),       # HTTP 5xx
+            ProviderError('PROVIDER_NETWORK_FAILURE', True, True),     # Network error
+            ProviderError('PROVIDER_TIMEOUT', True, True),             # Socket/read timeout
+        ]
+        for error in error_cases:
+            def fake_provider_json(url, body, headers, timeout, err=error):
+                if 'openrouter.ai' in url:
+                    raise err
+                return xkiro_response
+
+            with self.subTest(error_code=error.code),patch.dict(os.environ,dual_config,clear=True),patch.object(providers,'provider_json',side_effect=fake_provider_json):
+                output=providers.assess(input,'PRIMARY')
+                self.assertEqual(output['provider'],'xkiro')
+                self.assertEqual(output['model'],'qwen/qwen3.8-max:free')
+                self.assertEqual(output['result']['practiceGrade']['score'], 19.0)
+
+    def test_fallback_defaults_to_qwen38_free_when_xkiro_model_omitted(self):
+        input,result=fixture('writing')
+        xkiro_response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(result)}}]}
+        dual_config_no_model={
+            'ASSESSMENT_PROVIDER':'openrouter',
+            'OPENROUTER_API_KEY':'sk-or-v1-test',
+            'OPENROUTER_MODEL':'deepseek/deepseek-chat',
+            'XKIRO_API_KEY':'sk-xt-test'
+        }
+        def fake_provider_json(url, body, headers, timeout):
+            if 'openrouter.ai' in url:
+                raise ProviderError('PROVIDER_RATE_LIMITED', True, False)
+            return xkiro_response
+
+        with patch.dict(os.environ,dual_config_no_model,clear=True),patch.object(providers,'provider_json',side_effect=fake_provider_json):
+            output=providers.assess(input,'PRIMARY')
+            self.assertEqual(output['provider'],'xkiro')
+            self.assertEqual(output['model'],'qwen/qwen3.8-max:free')
+
+    def test_fallback_preserves_multilevel_75_point_and_evidence_verification(self):
+        input,result=fixture('writing')
+        dual_config={
+            'ASSESSMENT_PROVIDER':'openrouter',
+            'OPENROUTER_API_KEY':'sk-or-v1-test',
+            'XKIRO_API_KEY':'sk-xt-test',
+        }
+        # 1. Valid response preserves Multi-Level 75-point system rules and 0.5 increments
+        valid_response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(result)}}]}
+        def fake_fallback_valid(url, body, headers, timeout):
+            if 'openrouter.ai' in url:
+                raise ProviderError('PROVIDER_RATE_LIMITED', True, False)
+            return valid_response
+
+        with patch.dict(os.environ,dual_config,clear=True),patch.object(providers,'provider_json',side_effect=fake_fallback_valid):
+            output=providers.assess(input,'PRIMARY')
+            self.assertEqual(output['provider'],'xkiro')
+            practice_grade=output['result']['practiceGrade']
+            self.assertEqual(practice_grade['scaleMax'],75)
+            self.assertEqual(practice_grade['rangeMax'],55)
+            self.assertLessEqual(practice_grade['score'],55.0)
+            self.assertEqual(practice_grade['score'],28.0)
+            # Verify 0.5 increments
+            for part in output['result']['parts']:
+                self.assertEqual(part['rawScore']*2, int(part['rawScore']*2))
+                for c_val in part['criteria'].values():
+                    self.assertEqual(c_val*2, int(c_val*2))
+
+        # 2. Fabricated evidence on fallback to xKiro must be strictly rejected
+        invalid_result=copy.deepcopy(result)
+        invalid_result['parts'][0]['evidenceQuotes'][0]['quote']='This was never said by candidate.'
+        invalid_response={'choices':[{'finish_reason':'stop','message':{'role':'assistant','content':json.dumps(invalid_result)}}]}
+        def fake_fallback_invalid(url, body, headers, timeout):
+            if 'openrouter.ai' in url:
+                raise ProviderError('PROVIDER_RATE_LIMITED', True, False)
+            return invalid_response
+
+        with patch.dict(os.environ,dual_config,clear=True),patch.object(providers,'provider_json',side_effect=fake_fallback_invalid):
+            with self.assertRaisesRegex(ProviderError,'RESULT_EVIDENCE_INVALID'):
+                providers.assess(input,'PRIMARY')
+
 

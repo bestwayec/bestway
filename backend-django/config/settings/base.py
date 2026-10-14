@@ -3,6 +3,15 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 BASE_DIR = Path(__file__).resolve().parents[2]
+def _load_env_file(path: Path) -> None:
+    if not path.is_file(): return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line: continue
+        k, _, v = line.partition("=")
+        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+if os.getenv("DJANGO_SETTINGS_MODULE") != "config.settings.test" and "PYTEST_CURRENT_TEST" not in os.environ:
+    _load_env_file(BASE_DIR / ".env")
 def env(name: str, default: str = "") -> str: return os.getenv(name, default).strip()
 def env_bool(name: str, default: bool = False) -> bool: return env(name, str(default)).lower() in {"1", "true", "yes", "on"}
 def env_list(name: str, default: str = "") -> list[str]: return [v.strip() for v in env(name, default).split(",") if v.strip()]
@@ -36,3 +45,5 @@ REST_FRAMEWORK = {"EXCEPTION_HANDLER": "common.api.exceptions.exception_handler"
 BUILD_COMMIT = env("BUILD_COMMIT") or None; DESKTOP_LATEST_VERSION = env("DESKTOP_LATEST_VERSION", "0.5.3"); DESKTOP_DOWNLOAD_URL = env("DESKTOP_DOWNLOAD_URL", "https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/Bestway.App_0.5.3_x64-setup.exe"); DESKTOP_PRERELEASE = env_bool("DESKTOP_PRERELEASE", False); DESKTOP_UPDATE_CHANNEL = "manual_installer"
 ANDROID_LATEST_VERSION = env("ANDROID_LATEST_VERSION", DESKTOP_LATEST_VERSION); ANDROID_APK_PATH = env("ANDROID_APK_PATH", "media/downloads/bestway-app.apk"); ANDROID_APK_URL = env("ANDROID_APK_URL", env("ANDROID_DOWNLOAD_URL", f"https://github.com/bestwayec/bw-tauri/releases/download/v{ANDROID_LATEST_VERSION}/bestway-app.apk"))
 JWT_SECRET = env("JWT_SECRET"); JWT_ACCESS_TTL_MINUTES = int(env("JWT_ACCESS_TTL", "15m").removesuffix("m") or "15"); JWT_REFRESH_TTL_DAYS = int(env("JWT_REFRESH_TTL_DAYS", "30") or "30"); DESKTOP_REDIRECT_URIS = env_list("DESKTOP_REDIRECT_URIS", "bestway-exam://auth/callback"); REDIS_URL = env("REDIS_URL"); DEEPSEEK_API_KEY = env("DEEPSEEK_API_KEY"); DEEPGRAM_API_KEY = env("DEEPGRAM_API_KEY")
+ASSESSMENT_PROVIDER = env("ASSESSMENT_PROVIDER", "openrouter"); ASSESSMENT_FALLBACK_PROVIDER = env("ASSESSMENT_FALLBACK_PROVIDER", "xkiro"); OPENROUTER_API_KEY = env("OPENROUTER_API_KEY"); OPENROUTER_BASE_URL = env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"); OPENROUTER_MODEL = env("OPENROUTER_MODEL", "deepseek/deepseek-chat"); OPENROUTER_ADJUDICATOR_MODEL = env("OPENROUTER_ADJUDICATOR_MODEL"); XKIRO_API_KEY = env("XKIRO_API_KEY"); XKIRO_BASE_URL = env("XKIRO_BASE_URL", "https://api.xkiro.com/v1"); XKIRO_MODEL = env("XKIRO_MODEL", "qwen/qwen3.8-max:free"); XKIRO_ADJUDICATOR_MODEL = env("XKIRO_ADJUDICATOR_MODEL")
+
