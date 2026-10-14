@@ -7,6 +7,8 @@ COPY . .
 # Build-time API_URL can be overridden; default will use runtime env (http://backend:3001/v1)
 ARG API_URL=http://backend:3001/v1
 ENV API_URL=${API_URL}
+ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=xabar_bestway_bot
+ENV NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
 RUN npm run build
 
 FROM node:24.20.0-alpine AS runner

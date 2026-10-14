@@ -47,7 +47,13 @@ def handle(update):
         if not text:return
         if text.startswith('/start'):
             payload=text[len('/start'):].strip()
-            if payload:links.consume(payload,chat_id);show(chat_id)
+            if payload:
+                if payload.lower() in ('login','auth','sso','signin'):
+                    user=links.find(chat_id,True)
+                    menu.send_web_login(chat_id,user)
+                else:
+                    links.consume(payload,chat_id)
+                    show(chat_id)
             elif not show(chat_id):api.contact_request(chat_id,welcome())
             return
         if text.startswith('/menu'):

@@ -68,6 +68,28 @@ export function RegisterForm() {
     }
   }
 
+  function handleTelegramLogin() {
+    setServerError(null);
+    const tg = typeof window !== "undefined" ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram : undefined;
+    const initData = tg?.WebApp?.initData;
+    if (initData) {
+      authApi.telegramLogin({ initData })
+        .then(() => {
+          toast.success(t("welcomeBack"));
+          const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+          window.location.assign(`${prefix}/dashboard`);
+        })
+        .catch((err) => {
+          const message = err instanceof ApiError ? err.message : tc("unknownError");
+          setServerError(message);
+        });
+      return;
+    }
+
+    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "xabar_bestway_bot";
+    window.open(`https://t.me/${botUsername}?start=login`, "_blank", "noopener,noreferrer");
+  }
+
   const roles = [
     { value: "student" as const, label: t("asStudent"), Icon: GraduationCap },
     { value: "parent" as const, label: t("asParent"), Icon: Users },
@@ -168,15 +190,28 @@ export function RegisterForm() {
         </div>
       </div>
 
-      <GoogleAuthButton
-        mode="signup"
-        role={role}
-        onSuccess={(user) => {
-          const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-          window.location.assign(`${prefix}/dashboard`);
-        }}
-        onError={(err) => setServerError(err)}
-      />
+      <div className="space-y-2.5">
+        <GoogleAuthButton
+          mode="signup"
+          role={role}
+          onSuccess={(user) => {
+            const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+            window.location.assign(`${prefix}/dashboard`);
+          }}
+          onError={(err) => setServerError(err)}
+        />
+
+        <button
+          type="button"
+          onClick={handleTelegramLogin}
+          className="flex w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#229ED9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E88E5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#229ED9]"
+        >
+          <svg className="size-5 fill-current" viewBox="0 0 24 24">
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
+          </svg>
+          {t("telegramLogin")}
+        </button>
+      </div>
 
       <p className="rounded-[8px] bg-bg-subtle px-3 py-2 text-center text-xs text-fg-muted">
         {t("staffNotice")}

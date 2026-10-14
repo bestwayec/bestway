@@ -120,7 +120,7 @@ export function LoginForm() {
       return;
     }
 
-    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "bestwayec_bot";
+    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "xabar_bestway_bot";
     window.open(`https://t.me/${botUsername}?start=login`, "_blank", "noopener,noreferrer");
   }
 
