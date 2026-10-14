@@ -327,4 +327,29 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('Ball: <b>68.5</b>', text)
             self.assertIn('L:70', text)
 
+    def test_articles_text_for_renders_announcements(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        article = SimpleNamespace(
+            title='Yangi o\'quv yili boshlanishi',
+            body='Barcha o\'quvchilar uchun yangi semestr darslari 15-sentabrdan boshlanadi.',
+            created_at=now
+        )
+        with patch.object(m.Article.objects, 'order_by') as art_order:
+            art_order.return_value = [article]
+            user = SimpleNamespace(id='u3', name='Jasur', role='student')
+            text = telegram_menu.text_for(user, 'articles')
+            self.assertIn('Yangi o\'quv yili boshlanishi', text)
+            self.assertIn('15-sentabrdan', text)
+            self.assertIn('Yangiliklar', text)
+
+    def test_resolve_apk_path_container_priority(self):
+        with patch.object(Path, 'is_file', autospec=True) as mock_is_file:
+            mock_is_file.side_effect = lambda path: path == telegram_menu.CONTAINER_APK_PATH
+            resolved = telegram_menu.resolve_apk_path()
+            self.assertEqual(resolved, telegram_menu.CONTAINER_APK_PATH)
+
+
+
 

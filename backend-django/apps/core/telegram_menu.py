@@ -13,6 +13,7 @@ urlopen=_stdlib_urlopen
 APK_FILENAME='bestway-app.apk'
 DEFAULT_APK_REL_PATH='media/downloads/bestway-app.apk'
 DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
+CONTAINER_APK_PATH=Path('/app/storage/media/downloads')/APK_FILENAME
 APK_ERROR_TEXT="❌ Kechirasiz, hozircha Android ilova faylini yuklab bo'lmadi. Iltimos, keyinroq qayta urinib ko'ring."
 MONTHS=['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr']
 BTN=dict(points='🏆 Ballarim',attendance='📅 Davomatim',payment="💰 To'lovlarim",results='📝 Natijalarim',mock_exams='🎯 Mock Imtihonlar',leaderboard='🥇 Reyting',monitoring='👁 Jonli Monitoring',articles='📰 Yangiliklar',children='👨‍👩‍👦 Farzandlarim',groups='👥 Guruhlarim',grading='✍️ Baholash navbati',today='📊 Bugungi holat',debtors='💸 Qarzdorlar',apk='📱 Android ilovani yuklab olish (.apk)',help='ℹ️ Yordam')
@@ -48,8 +49,13 @@ def resolve_apk_path():
     if configured:
         path=Path(configured)
         if path.is_absolute():candidates.append(path)
+    if CONTAINER_APK_PATH not in candidates:
+        candidates.append(CONTAINER_APK_PATH)
+    fallback_container=Path('/app/storage/downloads')/APK_FILENAME
+    if fallback_container not in candidates:
+        candidates.append(fallback_container)
     roots=[]
-    for raw_root in (os.environ.get('STORAGE_DIR'),getattr(settings,'MEDIA_ROOT',None),getattr(settings,'BASE_DIR',None)):
+    for raw_root in (os.environ.get('STORAGE_DIR'),getattr(settings,'MEDIA_ROOT',None),getattr(settings,'BASE_DIR',None),Path('/app/storage')):
         if raw_root:
             root=Path(raw_root)
             if not root.is_absolute():root=(Path(settings.BASE_DIR).parent/'backend'/root).resolve()
