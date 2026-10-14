@@ -49,17 +49,70 @@ class Command(BaseCommand):
             )
             self.stdout.write(self.style.SUCCESS(f"Created MockExam: {exam.id}"))
 
+        # Clean up any corrupt empty ID rows if present
+        MockQuestion.objects.filter(id="").delete()
+        MockQuestionGroup.objects.filter(id="").delete()
+        MockSection.objects.filter(id="").delete()
+
+        def upsert_section(skill, title, sort_order, duration_minutes, instructions):
+            sec = MockSection.objects.filter(exam=exam, skill=skill).first()
+            if not sec:
+                sec = MockSection.objects.create(
+                    id=str(uuid4()),
+                    exam=exam,
+                    skill=skill,
+                    title=title,
+                    sort_order=sort_order,
+                    duration_minutes=duration_minutes,
+                    instructions=instructions,
+                )
+            else:
+                sec.title = title
+                sec.sort_order = sort_order
+                sec.duration_minutes = duration_minutes
+                sec.instructions = instructions
+                sec.save()
+            return sec
+
+        def upsert_group(sec, sort_order, **kwargs):
+            grp = MockQuestionGroup.objects.filter(section=sec, sort_order=sort_order).first()
+            if not grp:
+                grp = MockQuestionGroup.objects.create(
+                    id=str(uuid4()),
+                    section=sec,
+                    sort_order=sort_order,
+                    **kwargs
+                )
+            else:
+                for k, v in kwargs.items():
+                    setattr(grp, k, v)
+                grp.save()
+            return grp
+
+        def upsert_question(grp, sort_order, **kwargs):
+            q = MockQuestion.objects.filter(group=grp, sort_order=sort_order).first()
+            if not q:
+                q = MockQuestion.objects.create(
+                    id=str(uuid4()),
+                    group=grp,
+                    sort_order=sort_order,
+                    **kwargs
+                )
+            else:
+                for k, v in kwargs.items():
+                    setattr(q, k, v)
+                q.save()
+            return q
+
         # 1. LISTENING SECTION (6 Parts, 35 Questions)
-        l_sec, _ = MockSection.objects.update_or_create(
-            exam=exam,
+        l_sec = upsert_section(
             skill="listening",
-            defaults=dict(
-                title="Listening",
-                sort_order=0,
-                duration_minutes=45,
-                instructions="The Listening section consists of 6 parts with 35 questions. You will hear each recording twice."
-            )
+            title="Listening",
+            sort_order=0,
+            duration_minutes=45,
+            instructions="The Listening section consists of 6 parts with 35 questions. You will hear each recording twice."
         )
+
         # Groups for Listening
         l_specs = [
             ("Part 1 — Short Conversations", 1, 8, "multiple_choice", ["At a library", "In a train station", "At a hotel reception"], "At a hotel reception"),
@@ -72,46 +125,39 @@ class Command(BaseCommand):
 
         q_num = 1
         for title, part_num, q_count, q_type, options, ans in l_specs:
-            grp, _ = MockQuestionGroup.objects.update_or_create(
-                section=l_sec,
+            grp = upsert_group(
+                sec=l_sec,
                 sort_order=part_num - 1,
-                defaults=dict(
-                    title=title,
-                    part_number=part_num,
-                    audio_play_limit=2,
-                    audio_duration_sec=180,
-                    audio_key=f"mock/cbt/listening_part_{part_num}.mp3",
-                    created_at=now
-                )
+                title=title,
+                part_number=part_num,
+                audio_play_limit=2,
+                audio_duration_sec=180,
+                audio_key=f"mock/cbt/listening_part_{part_num}.mp3",
+                created_at=now
             )
             for i in range(q_count):
-                MockQuestion.objects.update_or_create(
-                    group=grp,
+                upsert_question(
+                    grp=grp,
                     sort_order=i,
-                    defaults=dict(
-                        number=q_num,
-                        type=q_type,
-                        prompt=f"Listening question {q_num}: Choose or enter the correct response.",
-                        options=options,
-                        correct_answers=[ans],
-                        points=1,
-                        word_limit=1 if q_type == "short_answer" else None,
-                        answer_rule="ONE_WORD" if q_type == "short_answer" else None,
-                        created_at=now
-                    )
+                    number=q_num,
+                    type=q_type,
+                    prompt=f"Listening question {q_num}: Choose or enter the correct response.",
+                    options=options,
+                    correct_answers=[ans],
+                    points=1,
+                    word_limit=1 if q_type == "short_answer" else None,
+                    answer_rule="ONE_WORD" if q_type == "short_answer" else None,
+                    created_at=now
                 )
                 q_num += 1
 
         # 2. READING SECTION (5 Parts, 35 Questions)
-        r_sec, _ = MockSection.objects.update_or_create(
-            exam=exam,
+        r_sec = upsert_section(
             skill="reading",
-            defaults=dict(
-                title="Reading",
-                sort_order=1,
-                duration_minutes=60,
-                instructions="The Reading section consists of 5 parts with 35 questions. Total duration: 60 minutes."
-            )
+            title="Reading",
+            sort_order=1,
+            duration_minutes=60,
+            instructions="The Reading section consists of 5 parts with 35 questions. Total duration: 60 minutes."
         )
 
         r_specs = [
@@ -124,14 +170,12 @@ class Command(BaseCommand):
 
         q_num = 1
         for g_idx, (title, q_count, kind, default_ans, passage) in enumerate(r_specs):
-            grp, _ = MockQuestionGroup.objects.update_or_create(
-                section=r_sec,
+            grp = upsert_group(
+                sec=r_sec,
                 sort_order=g_idx,
-                defaults=dict(
-                    title=title,
-                    passage_text=passage,
-                    created_at=now
-                )
+                title=title,
+                passage_text=passage,
+                created_at=now
             )
             for i in range(q_count):
                 if kind == "short_answer":
@@ -165,33 +209,28 @@ class Command(BaseCommand):
                         opts = ["Substantial reduction in resource consumption", "Elimination of seasonal workforce requirements", "Universal compatibility with legacy designs", "Complete reliance on passive geothermal ventilation"]
                         ans = [opts[0]]
 
-                MockQuestion.objects.update_or_create(
-                    group=grp,
+                upsert_question(
+                    grp=grp,
                     sort_order=i,
-                    defaults=dict(
-                        number=q_num,
-                        type=q_type,
-                        prompt=f"Reading question {q_num}: Complete the question based on the passage text.",
-                        options=opts,
-                        correct_answers=ans,
-                        points=1,
-                        word_limit=1 if q_type == "short_answer" else None,
-                        answer_rule="ONE_WORD" if q_type == "short_answer" else None,
-                        created_at=now
-                    )
+                    number=q_num,
+                    type=q_type,
+                    prompt=f"Reading question {q_num}: Complete the question based on the passage text.",
+                    options=opts,
+                    correct_answers=ans,
+                    points=1,
+                    word_limit=1 if q_type == "short_answer" else None,
+                    answer_rule="ONE_WORD" if q_type == "short_answer" else None,
+                    created_at=now
                 )
                 q_num += 1
 
         # 3. WRITING SECTION (Task 1.1, Task 1.2, Task 2)
-        w_sec, _ = MockSection.objects.update_or_create(
-            exam=exam,
+        w_sec = upsert_section(
             skill="writing",
-            defaults=dict(
-                title="Writing",
-                sort_order=2,
-                duration_minutes=60,
-                instructions="The Writing section consists of Task 1 (Informal and Formal letters) and Task 2 (Publication essay). Total duration: 60 minutes."
-            )
+            title="Writing",
+            sort_order=2,
+            duration_minutes=60,
+            instructions="The Writing section consists of Task 1 (Informal and Formal letters) and Task 2 (Publication essay). Total duration: 60 minutes."
         )
         shared_stimulus = "You are planning a weekend trip to Samarkand with your study group, but you need to inform your friend and also coordinate with the hotel manager regarding the reservation details."
 
@@ -202,40 +241,33 @@ class Command(BaseCommand):
         ]
 
         for title, s_order, max_sc, q_type, s_ref, stim, prompt, w_limit in w_groups:
-            grp, _ = MockQuestionGroup.objects.update_or_create(
-                section=w_sec,
+            grp = upsert_group(
+                sec=w_sec,
                 sort_order=s_order,
-                defaults=dict(
-                    title=title,
-                    max_score=max_sc,
-                    stimulus_ref=s_ref,
-                    passage_text=stim,
-                    created_at=now
-                )
+                title=title,
+                max_score=max_sc,
+                stimulus_ref=s_ref,
+                passage_text=stim,
+                created_at=now
             )
-            MockQuestion.objects.update_or_create(
-                group=grp,
+            upsert_question(
+                grp=grp,
                 sort_order=0,
-                defaults=dict(
-                    number=s_order + 1,
-                    type=q_type,
-                    prompt=prompt,
-                    points=max_sc,
-                    word_limit=w_limit,
-                    created_at=now
-                )
+                number=s_order + 1,
+                type=q_type,
+                prompt=prompt,
+                points=max_sc,
+                word_limit=w_limit,
+                created_at=now
             )
 
         # 4. SPEAKING SECTION (Part 1.1, Part 1.2, Part 2, Part 3)
-        s_sec, _ = MockSection.objects.update_or_create(
-            exam=exam,
+        s_sec = upsert_section(
             skill="speaking",
-            defaults=dict(
-                title="Speaking",
-                sort_order=3,
-                duration_minutes=15,
-                instructions="The Speaking section consists of 3 parts with prompt-driven automated scoring. Ensure your microphone is calibrated."
-            )
+            title="Speaking",
+            sort_order=3,
+            duration_minutes=15,
+            instructions="The Speaking section consists of 3 parts with prompt-driven automated scoring. Ensure your microphone is calibrated."
         )
 
         s_groups = [
@@ -259,27 +291,23 @@ class Command(BaseCommand):
 
         q_num = 1
         for title, s_order, max_sc, prompts in s_groups:
-            grp, _ = MockQuestionGroup.objects.update_or_create(
-                section=s_sec,
+            grp = upsert_group(
+                sec=s_sec,
                 sort_order=s_order,
-                defaults=dict(
-                    title=title,
-                    max_score=max_sc,
-                    image_key="mock/cbt/speaking_p12_pictures.png" if s_order == 1 else None,
-                    created_at=now
-                )
+                title=title,
+                max_score=max_sc,
+                image_key="mock/cbt/speaking_p12_pictures.png" if s_order == 1 else None,
+                created_at=now
             )
             for i, prompt in enumerate(prompts):
-                MockQuestion.objects.update_or_create(
-                    group=grp,
+                upsert_question(
+                    grp=grp,
                     sort_order=i,
-                    defaults=dict(
-                        number=q_num,
-                        type="speaking_task",
-                        prompt=prompt,
-                        points=max_sc,
-                        created_at=now
-                    )
+                    number=q_num,
+                    type="speaking_task",
+                    prompt=prompt,
+                    points=max_sc,
+                    created_at=now
                 )
                 q_num += 1
 
