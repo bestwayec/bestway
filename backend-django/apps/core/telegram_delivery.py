@@ -107,4 +107,4 @@ def menu(chat_id,text,keyboard):
 
 
 def contact_request(chat_id,text):
-    call('sendMessage',dict(chat_id=chat_id,text=text,reply_markup=dict(keyboard=[[dict(text='📱 Telefon raqamimni yuborish',request_contact=True)]],resize_keyboard=True,one_time_keyboard=True)))
+    call('sendMessage',dict(chat_id=chat_id,text=text,parse_mode='HTML',reply_markup=dict(keyboard=[[dict(text='📱 Telefon raqamimni yuborish',request_contact=True)]],resize_keyboard=True,one_time_keyboard=True)))
