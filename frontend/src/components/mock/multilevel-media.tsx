@@ -274,10 +274,22 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       {phase && ['preparing', 'recording'].includes(status) && <div className="text-right"><p className="text-xs text-fg-muted">{t(status === 'preparing' ? 'preparationTime' : 'responseTime')}</p><p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={`${left} seconds remaining`}>{left}s</p></div>}
     </div>
     <p className="text-sm text-fg-muted">{t(hint)}</p>
-    {status === 'recording' && <p className="flex items-center gap-2 text-sm font-medium text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recordingStatus')}</p>}
+    {status === 'recording' && (
+      <div className="flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/10 p-3">
+        <span className="size-3 animate-ping rounded-full bg-danger" />
+        <div className="flex items-end gap-1 h-5">
+          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:0ms] h-2.5" />
+          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:150ms] h-5" />
+          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:300ms] h-3.5" />
+          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:450ms] h-4.5" />
+          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:200ms] h-2" />
+        </div>
+        <span className="text-sm font-semibold text-danger">{t('recordingStatus')}</span>
+      </div>
+    )}
     {!pending && !(timed && recorded) && <>
-      <Button size="sm" variant="outline" type="button" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
-      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
+      <Button size="sm" variant="outline" type="button" className="min-h-[48px] px-4 font-medium touch-manipulation" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
+      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[50px] min-w-[140px] px-6 text-sm font-bold bg-brand text-bg hover:bg-brand-hover shadow-md active:scale-95 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
     </>}
     {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
     {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}

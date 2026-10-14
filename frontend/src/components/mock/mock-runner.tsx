@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Send } from "lucide-react";
+import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
+  React.useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   React.useEffect(() => {
     const saved = (event: Event) => { const detail = (event as CustomEvent<{attemptId:string;questionId:string;audioDurationMs?:number}>).detail; if (detail?.attemptId === attempt.id) { setAudioSet((previous) => new Set([...previous,detail.questionId])); if (detail.audioDurationMs != null) setAudioDurations((previous) => ({ ...previous, [detail.questionId]: detail.audioDurationMs! })); } };
     window.addEventListener('multilevel:recording-uploaded', saved);
@@ -569,6 +578,7 @@ function GroupBlock({
   onReviewComplete?: () => void;
   sharedWritingStimulus?: string;
 }) {
+  const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
   const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
   const audioSrc = media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`);
@@ -576,15 +586,17 @@ function GroupBlock({
     <Card className="p-4 sm:p-5">
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {group.hasAudio && skill === "listening" ? (
-        group.questions[0]?.guidance && strict ? <MultilevelListening
-          prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
-          play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
-          load={async () => { const res = await fetch(audioSrc); if (!res.ok) throw new Error('Audio loading failed'); return res.blob(); }}
-        /> : <ListeningAudio
-          src={audioSrc}
-          strict={strict}
-          onReviewComplete={strict ? onReviewComplete : undefined}
-        />
+        <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 p-3 backdrop-blur-xl shadow-md sm:-mx-5 sm:-mt-5">
+          {group.questions[0]?.guidance && strict ? <MultilevelListening
+            prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
+            play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
+            load={async () => { const res = await fetch(audioSrc); if (!res.ok) throw new Error('Audio loading failed'); return res.blob(); }}
+          /> : <ListeningAudio
+            src={audioSrc}
+            strict={strict}
+            onReviewComplete={strict ? onReviewComplete : undefined}
+          />}
+        </div>
       ) : (
         group.hasAudio && (
           <audio
@@ -630,10 +642,56 @@ function GroupBlock({
         </section>
       )}
 
+      {/* Mobile Tab Switcher for Reading when passage exists */}
+      {hasPassage && !hasGappedContent && (
+        <div className="mt-3 flex rounded-xl border border-border/60 bg-bg-subtle p-1 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setReadingMobileTab("passage")}
+            className={cn(
+              "flex-1 rounded-lg py-2 text-xs font-semibold transition-all touch-manipulation",
+              readingMobileTab === "passage"
+                ? "bg-brand text-bg shadow-sm"
+                : "text-fg-muted hover:text-fg"
+            )}
+          >
+            📖 Matn (Passage)
+          </button>
+          <button
+            type="button"
+            onClick={() => setReadingMobileTab("questions")}
+            className={cn(
+              "flex-1 rounded-lg py-2 text-xs font-semibold transition-all touch-manipulation",
+              readingMobileTab === "questions"
+                ? "bg-brand text-bg shadow-sm"
+                : "text-fg-muted hover:text-fg"
+            )}
+          >
+            ❓ Savollar ({group.questions.length})
+          </button>
+        </div>
+      )}
+
       <div className={cn("mt-3", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start")}>
         {hasPassage && !hasGappedContent && (
-          <div className="mb-4 max-h-[70vh] overflow-y-auto whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg shadow-inner lg:mb-0 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)]">
+          <div
+            className={cn(
+              "whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg shadow-inner",
+              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto",
+              readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
+            )}
+          >
             {group.passageText}
+            <div className="mt-4 pt-3 border-t border-border/60 lg:hidden text-center">
+              <Button
+                type="button"
+                size="sm"
+                className="w-full bg-brand text-bg font-semibold touch-manipulation"
+                onClick={() => setReadingMobileTab("questions")}
+              >
+                Savollarga o&apos;tish →
+              </Button>
+            </div>
           </div>
         )}
         {hasGappedContent ? (
@@ -663,7 +721,25 @@ function GroupBlock({
             />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div
+            className={cn(
+              "space-y-4",
+              "lg:block",
+              hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
+            )}
+          >
+            {hasPassage && !hasGappedContent && (
+              <div className="mb-2 flex items-center justify-between pb-2 border-b border-border/60 lg:hidden">
+                <span className="text-xs font-medium text-fg-muted">{group.questions.length} ta savol</span>
+                <button
+                  type="button"
+                  onClick={() => setReadingMobileTab("passage")}
+                  className="text-xs font-semibold text-brand underline underline-offset-4 touch-manipulation"
+                >
+                  ← Matnni o&apos;qish
+                </button>
+              </div>
+            )}
             {group.questions.map((q) => (
               <QuestionInput
                 key={q.id}
@@ -735,6 +811,29 @@ function QuestionInput({
   if (ESSAY.has(q.type)) {
     // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
     const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
+    // Restore draft from localStorage on mount if current value is empty
+    React.useEffect(() => {
+      if (typeof window !== "undefined" && !value) {
+        try {
+          const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+          const cached = localStorage.getItem(draftKey);
+          if (cached && cached.trim()) {
+            onChange(cached);
+          }
+        } catch {}
+      }
+    }, [attemptId, q.id]);
+
+    const handleWritingChange = (text: string) => {
+      onChange(text);
+      if (typeof window !== "undefined") {
+        try {
+          const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+          localStorage.setItem(draftKey, text);
+        } catch {}
+      }
+    };
+
     return (
       <div className="space-y-2">
         {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
@@ -749,8 +848,8 @@ function QuestionInput({
         </div> : header}
         <Textarea
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="min-h-64 resize-y leading-relaxed focus-visible:border-brand"
+          onChange={(e) => handleWritingChange(e.target.value)}
+          className="min-h-72 resize-y leading-relaxed text-base sm:text-sm focus-visible:border-brand touch-manipulation font-mono sm:font-sans"
           aria-label={tx("writingResponseLabel", { number: q.number })}
           placeholder={tx("writingPlaceholder")}
           spellCheck={false}
@@ -758,7 +857,14 @@ function QuestionInput({
           autoCapitalize="off"
           autoComplete="off"
         />
-        <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+          <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+          {value.trim() && (
+            <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+              <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
+            </span>
+          )}
+        </div>
       </div>
     );
   }

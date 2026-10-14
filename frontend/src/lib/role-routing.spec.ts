@@ -13,7 +13,7 @@ describe("role home navigation", () => {
     const mobile = mobileNavForRole(role);
     expect(desktop.find((item) => item.key === "dashboard")?.href).toBe(home);
     expect(mobile[0].href).toBe(home);
-    expect(mobile).toHaveLength(role === "parent" || role === "student" ? 2 : 4);
+    expect(mobile).toHaveLength(role === "parent" ? 2 : 4);
     expect(desktop.every((item) => item.roles.includes(role))).toBe(true);
     expect(desktop.filter((item) => item.key === "dashboard")).toHaveLength(1);
   });

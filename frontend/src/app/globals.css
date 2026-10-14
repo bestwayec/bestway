@@ -769,3 +769,13 @@
     transform: none !important;
   }
 }
+
+/* Mobile App dedicated layout overrides */
+.is-mobile-app .mobile-app-hide {
+  display: none !important;
+}
+
+.is-mobile-app .mobile-app-only {
+  display: block !important;
+}
+

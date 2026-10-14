@@ -11,8 +11,8 @@ import { MobileNavMoreSheet } from "./mobile-nav-more-sheet";
 
 const tabClass = (active: boolean) =>
   cn(
-    "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors duration-200",
-    active ? "text-brand" : "text-fg-muted",
+    "relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-all duration-200 touch-manipulation active:scale-95",
+    active ? "text-brand font-semibold" : "text-fg-muted hover:text-fg",
   );
 
 /**
@@ -32,7 +32,7 @@ export function MobileNav({ role }: { role: Role }) {
 
   return (
     <>
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/90 backdrop-blur-lg lg:hidden">
+      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-surface/95 backdrop-blur-xl shadow-lg lg:hidden">
         <div className="flex items-stretch justify-around">
           {primary.map((item) => {
             const active = isActive(pathname, item.href);
