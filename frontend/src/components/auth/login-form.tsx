@@ -38,6 +38,7 @@ export function LoginForm() {
   const params = useSearchParams();
   const [showPass, setShowPass] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [isTelegramLoggingIn, setIsTelegramLoggingIn] = React.useState(false);
 
   const schema = React.useMemo(() => makeSchema((k) => t(`errors.${k}`)), [t]);
   const {
@@ -46,29 +47,89 @@ export function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({ resolver: zodResolver(schema) });
 
+  const redirectAfterLogin = React.useCallback((role: string) => {
+    const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+    let target = `${prefix}${homePathForRole(role as import("@/lib/types").Role)}`;
+    const next = params.get("next");
+    if (next) {
+      const normalized = next.replace(/\\/g, "/");
+      if (normalized.startsWith("/") && !normalized.startsWith("//")) {
+        const resolved = new URL(normalized, window.location.origin);
+        if (resolved.origin === window.location.origin) target = normalized;
+      }
+    }
+    window.location.assign(target);
+  }, [locale, params]);
+
+  // Handle Telegram SSO automatic login if params present (e.g. from bot link or widget redirect)
+  React.useEffect(() => {
+    const hash = params.get("hash");
+    const sso_token = params.get("sso_token");
+    const tgAuthResult = params.get("tgAuthResult");
+
+    if (hash || sso_token || tgAuthResult) {
+      const payload: Record<string, unknown> = {};
+      params.forEach((value, key) => {
+        payload[key] = value;
+      });
+
+      setIsTelegramLoggingIn(true);
+      authApi.telegramLogin(payload)
+        .then((user) => {
+          toast.success(t("welcomeBack"));
+          redirectAfterLogin(user.role);
+        })
+        .catch((err) => {
+          setIsTelegramLoggingIn(false);
+          const message = err instanceof ApiError ? err.message : tc("unknownError");
+          setServerError(message);
+        });
+    }
+  }, [params, redirectAfterLogin, t, tc]);
+
   async function onSubmit(values: Values) {
     setServerError(null);
     try {
       const user = await authApi.login(values.phone.replace(/\s/g, ""), values.password);
       toast.success(t("welcomeBack"));
-
-      // Cookie'lar o'rnatildi — to'liq yangilanish bilan o'tamiz, shunda
-      // middleware yangi rolni ko'radi va app qobig'i SSR'da to'g'ri render bo'ladi.
-      const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-      let target = `${prefix}${homePathForRole(user.role)}`;
-      const next = params.get("next");
-      if (next) {
-        const normalized = next.replace(/\\/g, "/");
-        if (normalized.startsWith("/") && !normalized.startsWith("//")) {
-          const resolved = new URL(normalized, window.location.origin);
-          if (resolved.origin === window.location.origin) target = normalized;
-        }
-      }
-      window.location.assign(target);
+      redirectAfterLogin(user.role);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : tc("unknownError");
       setServerError(message);
     }
+  }
+
+  function handleTelegramLogin() {
+    setServerError(null);
+    // Check if running inside Telegram WebApp
+    const tg = typeof window !== "undefined" ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram : undefined;
+    const initData = tg?.WebApp?.initData;
+    if (initData) {
+      setIsTelegramLoggingIn(true);
+      authApi.telegramLogin({ initData })
+        .then((user) => {
+          toast.success(t("welcomeBack"));
+          redirectAfterLogin(user.role);
+        })
+        .catch((err) => {
+          setIsTelegramLoggingIn(false);
+          const message = err instanceof ApiError ? err.message : tc("unknownError");
+          setServerError(message);
+        });
+      return;
+    }
+
+    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "bestwayec_bot";
+    window.open(`https://t.me/${botUsername}?start=login`, "_blank", "noopener,noreferrer");
+  }
+
+  if (isTelegramLoggingIn) {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-4 py-8">
+        <Loader2 className="size-8 animate-spin text-brand" />
+        <p className="text-sm font-medium text-fg">{t("telegramLoggingIn")}</p>
+      </div>
+    );
   }
 
   return (
@@ -143,7 +204,27 @@ export function LoginForm() {
         )}
       </SpecularButton>
 
-      <p className="text-center text-sm text-fg-muted">
+      <div className="relative my-3 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative bg-surface px-3 text-xs uppercase text-fg-muted">
+          {t("or")}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleTelegramLogin}
+        className="flex w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#229ED9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E88E5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#229ED9]"
+      >
+        <svg className="size-5 fill-current" viewBox="0 0 24 24">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
+        </svg>
+        {t("telegramLogin")}
+      </button>
+
+      <p className="text-center text-sm text-fg-muted pt-2">
         {t("noAccount")}{" "}
         <Link href="/register" className="font-medium text-brand hover:underline">
           {t("registerButton")}

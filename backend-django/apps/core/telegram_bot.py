@@ -5,7 +5,7 @@ from django.db import close_old_connections
 from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu
 
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 
 
 def welcome():
@@ -28,6 +28,12 @@ def handle(update):
             if cb.get('id'):api.answer_callback(cb['id'])
             if chat_id and data in ('download_apk','apk','android_apk',menu.BTN['apk']):
                 menu.send_apk(chat_id)
+            elif chat_id and data in ('web_login','login'):
+                user=links.find(chat_id,True)
+                menu.send_web_login(chat_id,user)
+            elif chat_id and (data.startswith('audio_') or data.startswith('play_audio:')):
+                payload=data.split(':',1)[-1] if ':' in data else data[len('audio_'):]
+                menu.handle_audio_request(chat_id,payload)
         except Exception as error:logging.getLogger(__name__).warning('Telegram callback processing failed: %r',error)
         return
     msg=update.get('message')
@@ -47,6 +53,12 @@ def handle(update):
         if text.startswith('/menu'):
             if not show(chat_id):api.contact_request(chat_id,welcome())
             return
+        if text.startswith('/login'):
+            user=links.find(chat_id,True)
+            menu.send_web_login(chat_id,user);return
+        if text.startswith('/audio_'):
+            payload=text[len('/audio_'):].strip()
+            menu.handle_audio_request(chat_id,payload);return
         if text.startswith(('/apk', '/download', '/android', '/app')):
             menu.send_apk(chat_id);return
         if text.startswith(('/unlink','/stop')):links.unlink_chat(chat_id);return
@@ -89,6 +101,7 @@ def initialize():
     api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [
         ('start',"Akkauntni bog'lash"),
         ('menu',"Menyuni ko'rsatish"),
+        ('login',"Web platformaga kirish (SSO)"),
         ('apk','Android ilovani yuklab olish (.apk)'),
         ('mock','Mock imtihonlar (Multi-Level / IELTS)'),
         ('leaderboard','Markaz reytingi'),

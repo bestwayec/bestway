@@ -650,6 +650,9 @@
     "haveAccount": "Akkauntingiz bormi?",
     "loggingIn": "Kirilmoqda...",
     "welcomeBack": "Xush kelibsiz!",
+    "telegramLogin": "Telegram orqali kirish",
+    "telegramLoggingIn": "Telegram orqali kirilmoqda...",
+    "or": "yoki",
     "staffNotice": "O'qituvchi va administratorlarni markaz adminstratsiyasi qo'shadi.",
     "errors": {
       "phoneRequired": "Telefon raqamni kiriting",

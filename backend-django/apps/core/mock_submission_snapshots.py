@@ -154,3 +154,66 @@ def notify(attempt):
     create(attempt.student_id,f'Mock imtihon natijangiz tayyor: "{title}" — {headline}.')
     for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
         create(parent,f'Farzandingizning "{title}" mock natijasi: {headline}.')
+    if attempt.status == 'completed':
+        announce_channel_mock_result(attempt)
+
+
+def announce_channel_mock_result(attempt):
+    from django.conf import settings
+    channel_id = os.environ.get('TELEGRAM_CHANNEL_ID') or getattr(settings, 'TELEGRAM_CHANNEL_ID', None)
+    if not channel_id:
+        return
+    try:
+        from apps.legacy_schema.models import MockAttempt
+        from . import telegram_delivery as tg_api
+        from .telegram_links import escape
+        att = MockAttempt.objects.select_related('student__user', 'exam').filter(id=attempt.id).first() or attempt
+        student_name = att.student.user.name if att.student and getattr(att.student, 'user', None) else "O'quvchi"
+        exam_title = att.exam.title if att.exam else "Mock Imtihon"
+        raw_type = (att.exam.type or '').lower() if att.exam else ''
+        type_str = "IELTS Academic" if 'academic' in raw_type else "IELTS General" if 'general' in raw_type else "IELTS" if 'ielts' in raw_type else "Multi-Level CEFR" if 'multilevel' in raw_type else "Mock Imtihon"
+
+        items = []
+        if att.cefr_level:
+            items.append(f"CEFR: <b>{escape(att.cefr_level)}</b>")
+        if att.overall_band is not None:
+            items.append(f"Band: <b>{att.overall_band}</b>")
+        elif att.overall_score is not None:
+            items.append(f"Ball: <b>{format(att.overall_score, 'g')}</b>")
+        overall_str = " | ".join(items) if items else "Muvaffaqiyatli topshirildi"
+
+        scores = att.standard_scores or {}
+        bands = att.section_bands or {}
+        raws = att.raw_scores or {}
+
+        def get_sec(s):
+            val = scores.get(s)
+            if val is None: val = bands.get(s)
+            if val is None and isinstance(raws.get(s), dict): val = raws.get(s, {}).get('score')
+            return str(val) if val is not None else "—"
+
+        l_val = get_sec('listening')
+        r_val = get_sec('reading')
+        w_val = get_sec('writing')
+        s_val = get_sec('speaking')
+
+        text = (
+            f"🎓 <b>RASMIY MOCK IMTIHON NATIJASI</b> 🎓\n"
+            f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            f"👤 <b>O'quvchi:</b> {escape(student_name)}\n"
+            f"🎯 <b>Imtihon:</b> {escape(exam_title)} ({escape(type_str)})\n"
+            f"⭐️ <b>Umumiy natija:</b> {overall_str}\n\n"
+            f"📊 <b>Bo'limlar kesimida:</b>\n"
+            f"   🎧 Listening: <b>{l_val}</b>\n"
+            f"   📖 Reading: <b>{r_val}</b>\n"
+            f"   ✍️ Writing: <b>{w_val}</b>\n"
+            f"   🗣 Speaking: <b>{s_val}</b>\n\n"
+            f"👏 O'quvchimizni ajoyib natija bilan tabriklaymiz! 🚀\n"
+            f"➖➖➖➖➖➖➖➖➖➖➖➖\n"
+            f"🌐 <i>BestWay Ta'lim Markazi</i>"
+        )
+        tg_api.send(channel_id, text)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Telegram channel delivery failed: %r", exc)
+

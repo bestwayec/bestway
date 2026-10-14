@@ -129,12 +129,9 @@ class TelegramLifecycleTests(SimpleTestCase):
 
     def test_apk_caption_matches_installation_guide(self):
         caption=telegram_menu.apk_caption()
-        self.assertEqual(
-            caption,
-            '📲 <b>BestWay Mobile (CBT Exam)</b>\n'
-            'Versiya: v0.5.3\n'
-            '<i>Qo\'llanma:</i> Faylni yuklab oling, oching va "O\'rnatish" tugmasini bosing ("Noma\'lum manbalar"ga ruxsat bering).',
-        )
+        self.assertIn('📲 <b>BestWay Mobile (CBT Exam)</b>', caption)
+        self.assertIn('Подробнее', caption)
+        self.assertIn('Все равно установить', caption)
 
     def test_local_apk_file_sent_via_send_document_on_button_and_commands(self):
         apk_bytes=b'PK\x03\x04bestway-local-apk-payload'

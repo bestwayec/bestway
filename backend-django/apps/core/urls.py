@@ -129,6 +129,7 @@ urlpatterns = [
     path('mock/groups/<str:group_id>/questions/import', mock_import_questions_view),
     path("health", health), path("desktop-version", desktop_version),
     path("auth/register", register_view), path("auth/login", login_view),
+    path("auth/telegram-login", telegram.telegram_login_view),
     path("auth/refresh", refresh_view), path("auth/logout", logout_view),
     path("auth/me", me_view), path("auth/link-child", link_child_view),
     path("auth/desktop/authorize", desktop_authorize_view),
