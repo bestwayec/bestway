@@ -75,6 +75,8 @@ class Command(BaseCommand):
             return sec
 
         def upsert_group(sec, sort_order, **kwargs):
+            if "audio_play_limit" not in kwargs:
+                kwargs["audio_play_limit"] = 0
             grp = MockQuestionGroup.objects.filter(section=sec, sort_order=sort_order).first()
             if not grp:
                 grp = MockQuestionGroup.objects.create(
