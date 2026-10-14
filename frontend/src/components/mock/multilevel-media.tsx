@@ -122,7 +122,11 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     if (ctx && ctx.state !== 'closed') void ctx.close().catch(() => undefined);
   }, []);
   const closeMicrophone = useCallback(() => {
-    stream.current?.getTracks().forEach((t) => t.stop());
+    try {
+      stream.current?.getTracks().forEach((t) => {
+        try { t.stop(); } catch {}
+      });
+    } catch {}
     stream.current = null;
     closeMeter();
   }, [closeMeter]);
@@ -272,11 +276,11 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     <p className="text-sm text-fg-muted">{t(hint)}</p>
     {status === 'recording' && <p className="flex items-center gap-2 text-sm font-medium text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recordingStatus')}</p>}
     {!pending && !(timed && recorded) && <>
-      <Button size="sm" variant="outline" type="button" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
-      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
+      <Button size="sm" variant="outline" type="button" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
+      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
     </>}
-    {pending && <button className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium text-fg disabled:opacity-50" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
-    {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-10 w-full" preload="metadata"><track kind="captions" /></audio></div>}
+    {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
+    {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
   </div>;
 }

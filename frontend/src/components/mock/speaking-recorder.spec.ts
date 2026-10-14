@@ -142,6 +142,16 @@ describe('legacy speaking recording lifecycle', () => {
     await click('Retry upload'); expect(services.upload).toHaveBeenCalledTimes(2);
     expect(services.release).toHaveBeenCalledTimes(1); expect(host.querySelector('audio')).not.toBeNull();
   });
+
+  it('handles Android WebView WebRTC permission denial without crashing', async () => {
+    getUserMedia.mockRejectedValueOnce(new DOMException('Permission denied', 'PermissionDeniedError'));
+    await render();
+    await click('record');
+    expect(stopTrack).not.toHaveBeenCalled();
+    expect(services.upload).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="alert"]')?.textContent?.toLowerCase()).toContain('permission denied');
+    expect(services.toastError).toHaveBeenCalled();
+  });
 });
 
 describe('Multilevel microphone preflight and server timing', () => {

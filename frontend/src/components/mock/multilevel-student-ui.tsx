@@ -141,8 +141,8 @@ export function MultilevelTaskProgress({
           const active = current === index;
           const done = completed.includes(index);
           const state = done ? t(skill === "speaking" ? "recordingUploaded" : "responseEntered") : t("notAnswered");
-          const control = <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors", active ? "bg-brand text-white" : done ? "bg-success/10 text-success" : "bg-surface text-fg-muted")}>{done && <CheckCircle2 aria-hidden className="size-3.5" />}{label}</span>;
-          return onSelect ? <button key={`${index}-${label}`} type="button" onClick={() => onSelect(index)} aria-label={t("taskLabel", { label, state })} aria-current={active ? "step" : undefined} className="rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand">{control}</button> : <React.Fragment key={`${index}-${label}`}>{control}</React.Fragment>;
+          const control = <span className={cn("inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition-colors touch-manipulation", active ? "bg-brand text-white" : done ? "bg-success/10 text-success" : "bg-surface text-fg-muted")}>{done && <CheckCircle2 aria-hidden className="size-3.5" />}{label}</span>;
+          return onSelect ? <button key={`${index}-${label}`} type="button" onClick={() => onSelect(index)} aria-label={t("taskLabel", { label, state })} aria-current={active ? "step" : undefined} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand touch-manipulation">{control}</button> : <React.Fragment key={`${index}-${label}`}>{control}</React.Fragment>;
         })}
       </div>
     </div>

@@ -5,17 +5,41 @@ export function assertMicrophoneAvailable() {
   if (typeof window !== 'undefined' && window.isSecureContext === false) {
     throw new Error('Microphone recording requires a secure HTTPS connection.');
   }
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.mediaDevices ||
+    typeof navigator.mediaDevices.getUserMedia !== 'function' ||
+    typeof MediaRecorder === 'undefined'
+  ) {
     throw new Error('Microphone recording is unavailable in this browser. Use a browser with microphone recording support.');
   }
 }
 
 export function microphoneErrorMessage(error: unknown) {
   const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : '';
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'Microphone permission denied. Allow microphone access in your browser and device settings, then retry.';
-  if (name === 'NotFoundError') return 'No microphone was found. Connect a microphone and retry.';
-  if (name === 'NotReadableError' || name === 'AbortError') return 'The microphone could not be opened. Check your device and close other apps using the microphone, then retry.';
-  return error instanceof Error ? error.message : 'Microphone recording failed. Check your device and retry.';
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const lowerMsg = message.toLowerCase();
+
+  if (
+    name === 'NotAllowedError' ||
+    name === 'SecurityError' ||
+    name === 'PermissionDeniedError' ||
+    name === 'PermissionDismissedError' ||
+    lowerMsg.includes('permission denied') ||
+    lowerMsg.includes('permission dismissed')
+  ) {
+    return 'Microphone permission denied. Allow microphone access in your browser and device settings, then retry.';
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No microphone was found. Connect a microphone and retry.';
+  }
+  if (name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError') {
+    return 'The microphone could not be opened. Check your device and close other apps using the microphone, then retry.';
+  }
+  if (name === 'NotSupportedError') {
+    return 'Microphone recording is not supported on this browser or device. Try another browser or app.';
+  }
+  return message || 'Microphone recording failed. Check your device and retry.';
 }
 
 export function createAudioRecorder(stream: MediaStream): MediaRecorder {

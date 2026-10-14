@@ -341,11 +341,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <div className="flex items-center gap-2">
             {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
             {isFullTest && activeSection < exam.sections.length - 1 ? (
-              <Button size="sm" variant="outline" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
+              <Button size="sm" variant="outline" className="min-h-[44px] px-3.5 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
                 Next section
               </Button>
             ) : null}
-            <Button size="sm" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+            <Button size="sm" className="min-h-[44px] px-3.5 touch-manipulation" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
               <Send />
               {t("submit")}
             </Button>
@@ -378,7 +378,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                 aria-current={i === activeSection}
                 title={isFullTest && locked ? "Locked — current section only" : undefined}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation",
                   i === activeSection
                     ? "bg-brand text-white"
                     : "bg-surface text-fg-muted hover:bg-surface-hover",
@@ -538,8 +538,8 @@ export function GuidedMultilevelGroups({
       sharedWritingStimulus={sharedWritingStimulus}
     />
     <div className="flex items-center justify-between gap-3">
-      <Button type="button" variant="outline" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
-      <Button type="button" variant="outline" disabled={activeTask === groups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === groups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
     </div>
   </div>;
 }

@@ -78,6 +78,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
       };
 
       mr.onerror = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
         stopStream();
         setErrorMsg("Ovoz yozishda xatolik yuz berdi.");
         setStep("error");
@@ -105,12 +106,18 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
         setCountdown(timeLeft);
         if (timeLeft <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
-          if (mr.state === "recording") {
-            mr.stop();
+          try {
+            if (mr.state === "recording") {
+              mr.stop();
+            }
+          } catch {
+            stopStream();
+            setStep("error");
           }
         }
       }, 1000);
     } catch (err) {
+      if (timerRef.current) clearInterval(timerRef.current);
       stopStream();
       setErrorMsg(microphoneErrorMessage(err));
       setStep("error");
@@ -177,7 +184,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
               <p className="text-sm text-fg-muted">
                 Tugmani bosing va 5 soniya davomida mikrofonga biror narsa gapiring.
               </p>
-              <Button onClick={startTest} className="w-full">
+              <Button onClick={startTest} className="w-full min-h-[44px] touch-manipulation">
                 <Mic className="mr-2 size-4" />
                 Sinovni boshlash (5 soniya)
               </Button>
@@ -215,7 +222,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
                     onEnded={() => setIsPlaying(false)}
                     onPause={() => setIsPlaying(false)}
                   />
-                  <Button variant="outline" size="sm" onClick={togglePlayback}>
+                  <Button variant="outline" size="sm" className="min-h-[44px] px-4 touch-manipulation" onClick={togglePlayback}>
                     {isPlaying ? <Pause className="mr-1.5 size-4" /> : <Play className="mr-1.5 size-4" />}
                     {isPlaying ? "To'xtatish" : "Eshitib ko'rish"}
                   </Button>
@@ -223,11 +230,11 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
               )}
 
               <div className="flex flex-col gap-2 pt-2">
-                <Button onClick={handleConfirm} className="w-full">
+                <Button onClick={handleConfirm} className="w-full min-h-[44px] touch-manipulation">
                   <CheckCircle2 className="mr-2 size-4" />
                   Ovoz eshitildi — Speakingni boshlash
                 </Button>
-                <Button variant="ghost" size="sm" onClick={startTest}>
+                <Button variant="ghost" size="sm" className="min-h-[44px] px-4 touch-manipulation" onClick={startTest}>
                   <RefreshCw className="mr-1.5 size-3.5" />
                   Qayta sinab ko&apos;rish
                 </Button>
@@ -241,7 +248,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
                 <AlertTriangle className="size-5 shrink-0 mt-0.5" />
                 <p className="text-sm">{errorMsg || "Mikrofon bilan bog'lanishda xatolik yuz berdi."}</p>
               </div>
-              <Button onClick={startTest} variant="outline" className="w-full mt-2">
+              <Button onClick={startTest} variant="outline" className="w-full min-h-[44px] mt-2 touch-manipulation">
                 <RefreshCw className="mr-2 size-4" />
                 Qayta urinish
               </Button>
@@ -254,7 +261,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
             <button
               type="button"
               onClick={handleClose}
-              className="text-xs text-fg-muted hover:text-fg underline-offset-4 hover:underline"
+              className="inline-flex min-h-[44px] items-center justify-center px-4 text-xs text-fg-muted hover:text-fg underline-offset-4 hover:underline touch-manipulation"
             >
               Yopish
             </button>

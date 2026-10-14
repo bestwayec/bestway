@@ -63,8 +63,16 @@ describe('browser microphone formats', () => {
 
   it.each([
     ['NotAllowedError', 'permission denied'], ['SecurityError', 'permission denied'],
-    ['NotFoundError', 'No microphone'], ['NotReadableError', 'close other apps'],
+    ['PermissionDeniedError', 'permission denied'], ['PermissionDismissedError', 'permission denied'],
+    ['NotFoundError', 'No microphone'], ['DevicesNotFoundError', 'No microphone'],
+    ['NotReadableError', 'close other apps'], ['TrackStartError', 'close other apps'],
+    ['NotSupportedError', 'not supported'],
   ])('explains %s so a student can resolve microphone access', (name, message) => {
-    expect(microphoneErrorMessage(new DOMException('failure', name))).toContain(message);
+    expect(microphoneErrorMessage(new DOMException('failure', name)).toLowerCase()).toContain(message.toLowerCase());
+  });
+
+  it('handles permission denied errors delivered as plain error objects or strings', () => {
+    expect(microphoneErrorMessage(new Error('Permission denied by system')).toLowerCase()).toContain('permission denied');
+    expect(microphoneErrorMessage('User permission dismissed').toLowerCase()).toContain('permission denied');
   });
 });

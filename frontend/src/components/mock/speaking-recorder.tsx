@@ -36,7 +36,11 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   const invalidateCapture = useCallback(() => { generation.current++; }, []);
 
   const closeMicrophone = useCallback(() => {
-    stream.current?.getTracks().forEach((track) => track.stop());
+    try {
+      stream.current?.getTracks().forEach((track) => {
+        try { track.stop(); } catch {}
+      });
+    } catch {}
     stream.current = null;
   }, []);
 
@@ -60,8 +64,17 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   const sendRef = useRef(send);
   useEffect(() => { sendRef.current = send; });
   const halt = useCallback(() => {
-    if (recorder.current?.state === 'recording') recorder.current.stop();
-  }, []);
+    try {
+      if (recorder.current && recorder.current.state !== 'inactive') {
+        recorder.current.stop();
+      }
+    } catch {
+      closeMicrophone();
+      busy.current = false;
+      markActiveRecording(key, false);
+      if (alive.current) setRecording(false);
+    }
+  }, [closeMicrophone, key]);
 
   useEffect(() => {
     alive.current = true;
@@ -88,12 +101,23 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
     try {
       assertMicrophoneAvailable();
       const input = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (!alive.current || generation.current !== current) { input.getTracks().forEach((track) => track.stop()); return; }
+      if (!alive.current || generation.current !== current) {
+        input.getTracks().forEach((track) => { try { track.stop(); } catch {} });
+        return;
+      }
       stream.current = input;
       const mr = createAudioRecorder(input); recorder.current = mr;
       const chunks: Blob[] = [];
       mr.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-      mr.onerror = () => { if (alive.current) setError('Recording failed. Check your microphone.'); halt(); };
+      mr.onerror = () => {
+        if (alive.current) setError('Recording failed. Check your microphone.');
+        try {
+          if (mr.state !== 'inactive') mr.stop();
+          else { closeMicrophone(); busy.current = false; markActiveRecording(key, false); if (alive.current) setRecording(false); }
+        } catch {
+          closeMicrophone(); busy.current = false; markActiveRecording(key, false); if (alive.current) setRecording(false);
+        }
+      };
       mr.onstop = () => {
         closeMicrophone();
         if (alive.current) setRecording(false);
@@ -121,10 +145,10 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
 
   return <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
     <p className="w-full text-xs text-fg-muted">{tx(recording ? 'recordingHint' : sending || pending ? 'uploadHint' : hasAudio ? 'uploadedHint' : 'microphoneHint')}</p>
-    {recording ? <Button size="sm" variant="danger" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
-      : pending ? <Button size="sm" variant="outline" loading={sending} onClick={() => void send(pending)}>Retry upload of saved recording</Button>
-      : <Button size="sm" variant="outline" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}
-    {hasAudio && !recording && <audio key={audioVersion} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio`} className="h-9" preload="none"><track kind="captions" /></audio>}
+    {recording ? <Button size="sm" variant="danger" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
+      : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>Retry upload of saved recording</Button>
+      : <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}
+    {hasAudio && !recording && <audio key={audioVersion} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio`} className="h-11 min-h-[44px]" preload="none"><track kind="captions" /></audio>}
     {recording && <span className="flex items-center gap-1.5 text-sm text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recording')}</span>}
     {error && <p role="alert" className="w-full text-sm text-danger">{error}</p>}
   </div>;
