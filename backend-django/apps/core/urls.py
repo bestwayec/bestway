@@ -13,6 +13,7 @@ from . import video_views as videos
 from . import telegram_views as telegram
 from . import legacy_test_views as legacy
 from . import legacy_authoring_views as legacy_admin
+from . import auth_views
 from . import assessment_views as assessment
 from . import assessment_ranking_views as assessment_rankings
 from . import mock_support_views as support
@@ -129,6 +130,8 @@ urlpatterns = [
     path('mock/groups/<str:group_id>/questions/import', mock_import_questions_view),
     path("health", health), path("desktop-version", desktop_version),
     path("auth/register", register_view), path("auth/login", login_view),
+    path("auth/google", auth_views.google_auth_view),
+    path("auth/google/", auth_views.google_auth_view),
     path("auth/telegram-login", telegram.telegram_login_view),
     path("auth/refresh", refresh_view), path("auth/logout", logout_view),
     path("auth/me", me_view), path("auth/link-child", link_child_view),

@@ -147,6 +147,20 @@ export const authApi = {
     return json.data.user;
   },
 
+  async googleAuth(credential: string, role: "student" | "parent" = "student") {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ credential, role }),
+    });
+    const json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
+    if (!res.ok || !json.success) {
+      const error = "error" in json ? json.error : undefined;
+      throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Google orqali kirishda xatolik", res.status);
+    }
+    return json.data.user;
+  },
+
   async register(input: { name: string; phone: string; password: string; role: "student" | "parent" }) {
     const res = await fetch("/api/auth/register", {
       method: "POST",

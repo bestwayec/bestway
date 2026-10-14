@@ -13,6 +13,7 @@ import { Field, Input } from "@/components/ui/input";
 import { authApi, ApiError } from "@/lib/api-client";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { GoogleAuthButton } from "./google-auth-button";
 
 function makeSchema(t: (k: string) => string) {
   return z.object({
@@ -157,6 +158,25 @@ export function RegisterForm() {
       <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
         {t("registerButton")}
       </Button>
+
+      <div className="relative my-3 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative bg-surface px-3 text-xs uppercase text-fg-muted">
+          {t("or")}
+        </div>
+      </div>
+
+      <GoogleAuthButton
+        mode="signup"
+        role={role}
+        onSuccess={(user) => {
+          const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+          window.location.assign(`${prefix}/dashboard`);
+        }}
+        onError={(err) => setServerError(err)}
+      />
 
       <p className="rounded-[8px] bg-bg-subtle px-3 py-2 text-center text-xs text-fg-muted">
         {t("staffNotice")}

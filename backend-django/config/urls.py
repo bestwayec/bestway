@@ -37,6 +37,7 @@ urlpatterns = [
     # super-admin dashboard; it is a separate product surface.
     path("admin/", admin.site.urls),
     path("v1/", include("apps.core.urls")),
+    path("api/v1/", include("apps.core.urls")),
     re_path(r"^media/(?P<path>.*)$", serve_media),
 ]
 

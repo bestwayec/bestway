@@ -652,6 +652,9 @@
     "welcomeBack": "Xush kelibsiz!",
     "telegramLogin": "Telegram orqali kirish",
     "telegramLoggingIn": "Telegram orqali kirilmoqda...",
+    "googleLogin": "Google orqali kirish",
+    "googleSignUp": "Google orqali ro'yxatdan o'tish",
+    "googleLoggingIn": "Google orqali ulanmoqda...",
     "or": "yoki",
     "staffNotice": "O'qituvchi va administratorlarni markaz adminstratsiyasi qo'shadi.",
     "errors": {

@@ -650,6 +650,12 @@
     "haveAccount": "Already have an account?",
     "loggingIn": "Signing in...",
     "welcomeBack": "Welcome back!",
+    "telegramLogin": "Continue with Telegram",
+    "telegramLoggingIn": "Connecting with Telegram...",
+    "googleLogin": "Continue with Google",
+    "googleSignUp": "Sign up with Google",
+    "googleLoggingIn": "Connecting with Google...",
+    "or": "or",
     "staffNotice": "Teachers and administrators are added by the center's administration.",
     "errors": {
       "phoneRequired": "Enter your phone number",
