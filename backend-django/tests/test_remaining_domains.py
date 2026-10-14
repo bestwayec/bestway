@@ -344,11 +344,57 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('15-sentabrdan', text)
             self.assertIn('Yangiliklar', text)
 
-    def test_resolve_apk_path_container_priority(self):
-        with patch.object(Path, 'is_file', autospec=True) as mock_is_file:
-            mock_is_file.side_effect = lambda path: path == telegram_menu.CONTAINER_APK_PATH
-            resolved = telegram_menu.resolve_apk_path()
-            self.assertEqual(resolved, telegram_menu.CONTAINER_APK_PATH)
+    def test_media_serving_endpoint(self):
+        from config.urls import serve_media
+        from django.test import RequestFactory
+        from django.http import Http404
+        rf = RequestFactory()
+        with TemporaryDirectory() as temp_dir:
+            downloads_dir = Path(temp_dir) / 'media' / 'downloads'
+            downloads_dir.mkdir(parents=True, exist_ok=True)
+            apk_file = downloads_dir / 'bestway-app.apk'
+            apk_file.write_bytes(b'PK0304-apk-binary-content')
+
+            with patch.dict(os.environ, {'STORAGE_DIR': temp_dir}):
+                # Test with downloads/bestway-app.apk
+                req = rf.get('/media/downloads/bestway-app.apk')
+                resp = serve_media(req, 'downloads/bestway-app.apk')
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(b''.join(resp.streaming_content), b'PK0304-apk-binary-content')
+                resp.close()
+
+                # Test with missing file
+                with self.assertRaises(Http404):
+                    serve_media(rf.get('/media/missing.txt'), 'missing.txt')
+
+    def test_telegram_bot_commands_dispatch_without_error(self):
+        from apps.core import telegram_links
+        user = SimpleNamespace(id='u-test', name='Test User', role='student')
+        messages_sent = []
+
+        def fake_send(chat_id, text, reply_markup=None):
+            messages_sent.append((chat_id, text, reply_markup))
+            return True
+
+        with patch.object(telegram_links, 'find', return_value=user), \
+             patch.object(telegram_delivery, 'send', side_effect=fake_send), \
+             patch.object(telegram_menu, 'text_for', side_effect=lambda u, key: f'RESPONSE_FOR_{key}'):
+            for cmd in ('/mock', '/leaderboard', '/ranking', '/reyting', '/monitoring', '/news', '/articles', '/yangiliklar'):
+                messages_sent.clear()
+                telegram_bot.handle({'message': {'chat': {'id': 12345}, 'text': cmd}})
+                self.assertEqual(len(messages_sent), 1, f'Command {cmd} did not trigger send')
+                self.assertEqual(messages_sent[0][0], 12345)
+                self.assertTrue(messages_sent[0][1].startswith('RESPONSE_FOR_'))
+
+        # Also test unlinked user trigger
+        contact_requests = []
+        with patch.object(telegram_links, 'find', return_value=None), \
+             patch.object(telegram_delivery, 'contact_request', side_effect=lambda cid, msg: contact_requests.append((cid, msg))):
+            for cmd in ('/mock', '/leaderboard', '/monitoring', '/news'):
+                contact_requests.clear()
+                telegram_bot.handle({'message': {'chat': {'id': 99999}, 'text': cmd}})
+                self.assertEqual(len(contact_requests), 1, f'Unlinked {cmd} did not trigger contact request')
+
 
 
 
