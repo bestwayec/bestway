@@ -232,3 +232,99 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertFalse(result)
             send_msg.assert_called_once_with(999,telegram_menu.APK_ERROR_TEXT)
 
+    def test_help_and_commands_promote_single_apk_and_native_features(self):
+        self.assertNotIn('/download', telegram_bot.HELP)
+        self.assertIn('/apk', telegram_bot.HELP)
+        self.assertIn('/mock', telegram_bot.HELP)
+        self.assertIn('/leaderboard', telegram_bot.HELP)
+        with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'token','TELEGRAM_MODE':'polling'}), \
+             patch.object(telegram_delivery,'call') as api_call:
+            telegram_bot.initialize()
+            set_cmd_call = next(call for call in api_call.call_args_list if call.args[0]=='setMyCommands')
+            commands = [c['command'] for c in set_cmd_call.args[1]['commands']]
+            self.assertIn('apk', commands)
+            self.assertNotIn('download', commands)
+            self.assertIn('mock', commands)
+            self.assertIn('leaderboard', commands)
+
+    def test_mock_exams_text_for_renders_catalog_items(self):
+        from apps.legacy_schema import models as m
+        mock_exam = SimpleNamespace(
+            id='mock-1', title='CEFR Multi-Level Mock 1', type='multilevel',
+            level='B2-C1', price=0, is_free_for_approved=True
+        )
+        with patch.object(m.MockExam.objects, 'filter') as mock_filter:
+            mock_filter.return_value.order_by.return_value = [mock_exam]
+            user = SimpleNamespace(id='u1', name='Jasur', role='student')
+            text = telegram_menu.text_for(user, 'mock_exams')
+            self.assertIn('CEFR Multi-Level Mock 1', text)
+            self.assertIn('Multi-Level CEFR', text)
+            self.assertIn('Bepul', text)
+            self.assertIn('https://bestwayec.uz/mock/mock-1', text)
+
+    def test_leaderboard_text_for_renders_medals_and_student_rank(self):
+        from apps.legacy_schema import models as m
+        p1 = SimpleNamespace(user=SimpleNamespace(name='Komiljon'), group=SimpleNamespace(name='IELTS 7.5'), current_points=200)
+        p2 = SimpleNamespace(user=SimpleNamespace(name='Jasur'), group=SimpleNamespace(name='CEFR B2'), current_points=150)
+        user = SimpleNamespace(id='u2', name='Jasur', role='student')
+        with patch.object(m.StudentProfile.objects, 'filter') as prof_filter:
+            prof_filter.return_value.select_related.return_value.order_by.return_value = [p1, p2]
+            prof_filter.return_value.first.return_value = SimpleNamespace(current_points=150)
+            prof_filter.return_value.count.return_value = 1
+            text = telegram_menu.text_for(user, 'leaderboard')
+            self.assertIn('🥇 Komiljon', text)
+            self.assertIn('🥈 Jasur', text)
+            self.assertIn('2-o\'rin', text)
+
+    def test_monitoring_for_teacher_shows_active_attempts_and_anomalies(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        teacher = SimpleNamespace(id='t1', name='Ustoz', role='teacher')
+        attempt = SimpleNamespace(
+            id='att-1',
+            student=SimpleNamespace(user=SimpleNamespace(name='Dilshod'), group=SimpleNamespace(name='Guruh A')),
+            exam=SimpleNamespace(title='IELTS Timed Mock'),
+            current_skill='speaking',
+            status='in_progress',
+            anti_cheat_count=2,
+            started_at=now
+        )
+        with patch.object(m.Group.objects, 'filter') as group_filter, \
+             patch.object(m.StudentProfile.objects, 'all') as prof_all, \
+             patch.object(m.MockAttempt.objects, 'filter') as att_filter:
+            group_filter.return_value.values_list.return_value = ['g1']
+            prof_all.return_value.filter.return_value.values_list.return_value = ['s1']
+            att_filter.return_value.select_related.return_value.order_by.return_value = [attempt]
+            text = telegram_menu.text_for(teacher, 'monitoring')
+            self.assertIn('Dilshod', text)
+            self.assertIn('IELTS Timed Mock', text)
+            self.assertIn('Speaking', text)
+            self.assertIn('Qoidabuzarlik: 2 ta!', text)
+
+    def test_results_renders_mock_attempt_with_cefr_and_bands(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        student = SimpleNamespace(id='s1', name='Jasur', role='student')
+        mock_att = SimpleNamespace(
+            exam=SimpleNamespace(title='Milliy Sertifikat Mock'),
+            status='completed',
+            cefr_level='C1',
+            overall_band=None,
+            overall_score=68.5,
+            standard_scores={'listening': 70, 'reading': 68, 'writing': 65, 'speaking': 71},
+            anti_cheat_count=0,
+            started_at=now
+        )
+        with patch.object(m.MockAttempt.objects, 'filter') as mock_filter, \
+             patch.object(m.TestAttempt.objects, 'filter') as legacy_filter:
+            mock_filter.return_value.select_related.return_value.order_by.return_value = [mock_att]
+            legacy_filter.return_value.select_related.return_value.order_by.return_value = []
+            text = telegram_menu.text_for(student, 'results')
+            self.assertIn('Milliy Sertifikat Mock', text)
+            self.assertIn('CEFR: <b>C1</b>', text)
+            self.assertIn('Ball: <b>68.5</b>', text)
+            self.assertIn('L:70', text)
+
+

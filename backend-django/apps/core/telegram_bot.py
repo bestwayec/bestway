@@ -5,12 +5,12 @@ from django.db import close_old_connections
 from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu
 
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/download — Android ilovani yuklab olish (.apk)\n/apk — Android ilovani yuklab olish (.apk)\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 
 
 def welcome():
     center=os.environ.get('CENTER_NAME',"O'quv markaz")
-    return f'🎓 <b>{center}</b>\n{LINE}\n\nAssalomu alaykum! Bu — markazning rasmiy xabarchi boti.\n\nBu yerga quyidagilar keladi:\n   🏆 ball o\'zgarishlari\n   📅 davomat xabarlari\n   💰 to\'lov eslatmalari\n   📝 test natijalari\n\n<b>Akkauntingizni bog\'lang:</b>\n1️⃣ Saytga kiring → profil → <b>"Telegramni ulash"</b>\n2️⃣ Yoki pastdagi tugma bilan telefon raqamingizni yuboring 👇'
+    return f'🎓 <b>{center}</b>\n{LINE}\n\nAssalomu alaykum! Bu — markazning rasmiy xabarchi boti.\n\nBu yerga quyidagilar keladi:\n   🏆 ball o\'zgarishlari\n   📅 davomat xabarlari\n   💰 to\'lov eslatmalari\n   📝 test va mock imtihon natijalari\n\n<b>Akkauntingizni bog\'lang:</b>\n1️⃣ Saytga kiring → profil → <b>"Telegramni ulash"</b>\n2️⃣ Yoki pastdagi tugma bilan telefon raqamingizni yuboring 👇'
 
 
 def show(chat_id):
@@ -54,6 +54,26 @@ def handle(update):
             linked=links.find(chat_id)
             text=f'✅ <b>Bog\'langan</b>\n{LINE}\n\nAkkaunt: <b>{links.escape(linked.name)}</b>\n\nUzish uchun: /unlink' if linked else f'❌ <b>Bog\'lanmagan</b>\n{LINE}\n\nSaytdagi "Telegramni ulash" tugmasidan foydalaning yoki /start bosing.'
             api.send(chat_id,text);return
+        if text.startswith('/mock'):
+            user=links.find(chat_id,True)
+            if user:api.send(chat_id,menu.text_for(user,'mock_exams'));return
+            if not show(chat_id):api.contact_request(chat_id,welcome())
+            return
+        if text.startswith(('/leaderboard','/ranking','/reyting')):
+            user=links.find(chat_id,True)
+            if user:api.send(chat_id,menu.text_for(user,'leaderboard'));return
+            if not show(chat_id):api.contact_request(chat_id,welcome())
+            return
+        if text.startswith('/monitoring'):
+            user=links.find(chat_id,True)
+            if user:api.send(chat_id,menu.text_for(user,'monitoring'));return
+            if not show(chat_id):api.contact_request(chat_id,welcome())
+            return
+        if text.startswith(('/news','/articles','/yangiliklar')):
+            user=links.find(chat_id,True)
+            if user:api.send(chat_id,menu.text_for(user,'articles'));return
+            if not show(chat_id):api.contact_request(chat_id,welcome())
+            return
         if text.startswith('/help'):api.send(chat_id,HELP,reply_markup=menu.apk_inline_keyboard());return
         if menu.handle(chat_id,text) or show(chat_id):return
         api.contact_request(chat_id,welcome())
@@ -66,7 +86,16 @@ def initialize():
         return 'off'
     mode=os.environ.get('TELEGRAM_MODE','polling').lower()
     if mode=='off':return mode
-    api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [('start',"Akkauntni bog'lash"),('menu',"Menyuni ko'rsatish"),('download','Android ilovani yuklab olish (.apk)'),('apk','Android ilovani yuklab olish (.apk)'),('status',"Bog'lanish holati"),('unlink','Akkauntni uzish'),('help','Yordam')]]))
+    api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [
+        ('start',"Akkauntni bog'lash"),
+        ('menu',"Menyuni ko'rsatish"),
+        ('apk','Android ilovani yuklab olish (.apk)'),
+        ('mock','Mock imtihonlar (Multi-Level / IELTS)'),
+        ('leaderboard','Markaz reytingi'),
+        ('status',"Bog'lanish holati"),
+        ('unlink','Akkauntni uzish'),
+        ('help','Yordam'),
+    ]]))
     if mode=='webhook':
         url=os.environ.get('TELEGRAM_WEBHOOK_URL');secret=os.environ.get('TELEGRAM_WEBHOOK_SECRET')
         if url and secret:api.call('setWebhook',dict(url=url,secret_token=secret,allowed_updates=['message','callback_query'],drop_pending_updates=True))
