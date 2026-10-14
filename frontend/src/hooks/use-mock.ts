@@ -60,6 +60,18 @@ export function useUpdateMockExam(id: string) {
   });
 }
 
+export function useUpdateMockExamAny() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateMockExamInput }) =>
+      api.patch<MockExamDetail>(`/mock/exams/${id}`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+    },
+  });
+}
+
 export function useDeleteMockExam() {
   const qc = useQueryClient();
   return useMutation({

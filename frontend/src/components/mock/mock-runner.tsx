@@ -630,9 +630,9 @@ function GroupBlock({
         </section>
       )}
 
-      <div className={cn("mt-3", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6")}>
+      <div className={cn("mt-3", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start")}>
         {hasPassage && !hasGappedContent && (
-          <div className="mb-4 max-h-[70vh] overflow-y-auto whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg lg:mb-0">
+          <div className="mb-4 max-h-[70vh] overflow-y-auto whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg shadow-inner lg:mb-0 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)]">
             {group.passageText}
           </div>
         )}

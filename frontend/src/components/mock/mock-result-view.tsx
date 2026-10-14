@@ -20,6 +20,7 @@ import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
+import { CefrResultInfographic } from "./cefr-result-infographic";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
 const media = (path: string) => `/api/backend${path}`;
@@ -58,6 +59,25 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       </Link>
 
       {isStaff && !completed && <AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} />}
+
+      {completed && !partialPractice && !internalPractice && (
+        <CefrResultInfographic
+          className="mb-4"
+          cefrLevel={attempt.cefrLevel}
+          overallScore={attempt.overallScore}
+          overallBand={attempt.overallBand}
+          isIelts={isIelts}
+          examTitle={attempt.examTitle}
+          sections={attempt.sections.map((s) => ({
+            skill: s.skill,
+            title: t(`skills.${s.skill}`),
+            score: s.score,
+            max: s.max,
+            standardScore: s.standardScore,
+            band: s.band,
+          }))}
+        />
+      )}
 
       {/* Natija sarlavhasi */}
       <Card className="p-6 text-center">
