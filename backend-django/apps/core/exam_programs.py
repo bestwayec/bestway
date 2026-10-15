@@ -33,7 +33,21 @@ def access_policy(cursor) -> str:
 def state(cursor, student_id: str):
     cursor.execute('SELECT "availablePrograms","activeProgram" FROM "StudentProfile" WHERE "userId"=%s', [student_id])
     row = cursor.fetchone()
-    if not row: raise ContractAPIException("STUDENT_NOT_FOUND", "Student not found", 404)
+    if not row:
+        import uuid
+        try:
+            cursor.execute(
+                'INSERT INTO "StudentProfile" ("id","userId","availablePrograms","activeProgram","isApproved","currentPoints","createdAt","updatedAt") '
+                'VALUES (%s, %s, ARRAY[\'IELTS\'::"ExamProgram", \'MULTILEVEL\'::"ExamProgram"], \'IELTS\'::"ExamProgram", true, 0, NOW(), NOW()) '
+                'ON CONFLICT ("userId") DO NOTHING',
+                [str(uuid.uuid4()), student_id],
+            )
+            cursor.execute('SELECT "availablePrograms","activeProgram" FROM "StudentProfile" WHERE "userId"=%s', [student_id])
+            row = cursor.fetchone()
+        except Exception:
+            row = None
+    if not row:
+        return {"availablePrograms": ["IELTS", "MULTILEVEL"], "activeProgram": "IELTS", "accessPolicy": access_policy(cursor)}
     return {"availablePrograms": programs_value(row[0]), "activeProgram": row[1], "accessPolicy": access_policy(cursor)}
 
 

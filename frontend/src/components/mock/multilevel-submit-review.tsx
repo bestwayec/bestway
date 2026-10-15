@@ -33,6 +33,7 @@ export function MultilevelSubmitReview({
   onConfirm,
   busy,
   advance = false,
+  allowIncomplete = false,
 }: {
   work: MultilevelMissingWork;
   onJump?: (skill: MockSkill) => void;
@@ -40,8 +41,9 @@ export function MultilevelSubmitReview({
   onConfirm: () => void;
   busy?: boolean;
   advance?: boolean;
+  allowIncomplete?: boolean;
 }) {
-  const blocked = !advance && !work.complete;
+  const blocked = !advance && !work.complete && !allowIncomplete;
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-black/50 p-3 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={advance ? "Before you move on" : "Before you submit"}>

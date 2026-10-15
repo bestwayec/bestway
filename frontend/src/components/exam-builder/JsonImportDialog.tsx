@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpenText, Clipboard, Download, FileJson, FileUp, Headphones, Loader2, Plug, TriangleAlert } from "lucide-react";
+import { BookOpenText, Clipboard, Download, FileJson, FileUp, Headphones, Loader2, Mic, PenLine, Plug, Sparkles, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -408,14 +408,26 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
                   </p>
                 </div>
                 <Tabs value={templateSkill} onValueChange={changeTemplateSkill}>
-                  <TabsList className="grid w-full grid-cols-2" aria-label={tx(t, "jsonTemplateSkill", "Template skill")}>
-                    <TabsTrigger value="reading" className="flex items-center justify-center gap-2">
-                      <BookOpenText className="size-4" aria-hidden />
+                  <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5" aria-label={tx(t, "jsonTemplateSkill", "Template skill")}>
+                    <TabsTrigger value="multilevel" className="flex items-center justify-center gap-1.5 text-xs">
+                      <Sparkles className="size-3.5 text-brand" aria-hidden />
+                      Full CBT
+                    </TabsTrigger>
+                    <TabsTrigger value="listening" className="flex items-center justify-center gap-1.5 text-xs">
+                      <Headphones className="size-3.5" aria-hidden />
+                      {tx(t, "templateListening", "Listening")}
+                    </TabsTrigger>
+                    <TabsTrigger value="reading" className="flex items-center justify-center gap-1.5 text-xs">
+                      <BookOpenText className="size-3.5" aria-hidden />
                       {tx(t, "templateReading", "Reading")}
                     </TabsTrigger>
-                    <TabsTrigger value="listening" className="flex items-center justify-center gap-2">
-                      <Headphones className="size-4" aria-hidden />
-                      {tx(t, "templateListening", "Listening")}
+                    <TabsTrigger value="writing" className="flex items-center justify-center gap-1.5 text-xs">
+                      <PenLine className="size-3.5" aria-hidden />
+                      Writing
+                    </TabsTrigger>
+                    <TabsTrigger value="speaking" className="flex items-center justify-center gap-1.5 text-xs">
+                      <Mic className="size-3.5" aria-hidden />
+                      Speaking
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import { useTeachers } from "@/hooks/use-users";
+import { useMe } from "@/hooks/use-me";
 import type { GroupDetail, GroupListItem, WeekDay } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -37,18 +38,23 @@ export function GroupFormDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("groups");
+  const { data: me } = useMe();
+  const isTeacher = me?.user.role === "teacher";
   const isEdit = !!group;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("edit") : t("create")}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? (isTeacher ? "Guruh nomini tahrirlash" : t("edit")) : t("create")}
+          </DialogTitle>
         </DialogHeader>
         {open && (
           <GroupFormFields
             key={group?.id ?? "new"}
             group={group}
+            isTeacher={isTeacher}
             onClose={onClose}
           />
         )}
@@ -59,9 +65,11 @@ export function GroupFormDialog({
 
 function GroupFormFields({
   group,
+  isTeacher,
   onClose,
 }: {
   group: GroupListItem | GroupDetail | null;
+  isTeacher?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("groups");
@@ -105,10 +113,14 @@ function GroupFormFields({
     };
 
     if (isEdit) {
-      update.mutate(
-        { name: trimmed, teacherId: teacherId === "none" ? null : teacherId, schedule },
-        onSettled,
-      );
+      if (isTeacher) {
+        update.mutate({ name: trimmed, schedule }, onSettled);
+      } else {
+        update.mutate(
+          { name: trimmed, teacherId: teacherId === "none" ? null : teacherId, schedule },
+          onSettled,
+        );
+      }
     } else {
       create.mutate(
         { name: trimmed, ...(teacherId !== "none" ? { teacherId } : {}), schedule },
@@ -130,21 +142,23 @@ function GroupFormFields({
           />
         </Field>
 
-        <Field label={t("teacher")}>
-          <Select value={teacherId} onValueChange={setTeacherId}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("noTeacher")}</SelectItem>
-              {(teachersQ.data ?? []).map((tch) => (
-                <SelectItem key={tch.id} value={tch.id}>
-                  {tch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {!isTeacher && (
+          <Field label={t("teacher")}>
+            <Select value={teacherId} onValueChange={setTeacherId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("noTeacher")}</SelectItem>
+                {(teachersQ.data ?? []).map((tch) => (
+                  <SelectItem key={tch.id} value={tch.id}>
+                    {tch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
 
         <Field label={t("schedule")}>
           <div className="flex flex-wrap gap-1.5">

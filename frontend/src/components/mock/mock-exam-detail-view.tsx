@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,9 +55,16 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const start = useStartMock();
   const purchase = usePurchaseMock();
 
+  const searchParams = useSearchParams();
+  const initialSkill = (searchParams?.get("section") || searchParams?.get("skill")) as MockPracticeSkill | null;
   const exam = examQ.data;
   const practiceSkills = exam ? availablePracticeSkills(exam) : [];
-  const [selectedPractice, setSelectedPractice] = React.useState<MockPracticeSkill[] | null>(null);
+  const [selectedPractice, setSelectedPractice] = React.useState<MockPracticeSkill[] | null>(() =>
+    initialSkill ? [initialSkill] : null
+  );
+  React.useEffect(() => {
+    if (initialSkill) setSelectedPractice([initialSkill]);
+  }, [initialSkill]);
   const selectedSkills = practiceSkills.filter((skill) => selectedPractice === null || selectedPractice.includes(skill));
   const attempts = (attemptsQ.data ?? []).filter((a) => a.examId === examId);
   const inProgress = attempts.find((a) => a.status === "in_progress");

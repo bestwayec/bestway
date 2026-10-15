@@ -16,7 +16,10 @@ PLACEHOLDER = re.compile(r'\bREPLACE(?:\s+[—-]\s+|\s+WITH THE COMPLETE TEXT\b)
 
 
 def is_partial(attempt):
-    return getattr(attempt, 'flow_mode', None) == 'partial_practice'
+    if getattr(attempt, 'flow_mode', None) == 'partial_practice':
+        return True
+    state = getattr(attempt, 'media_state', None)
+    return isinstance(state, dict) and SCOPE_KEY in state
 
 
 def scope(attempt):
@@ -24,29 +27,26 @@ def scope(attempt):
         return None
     state = getattr(attempt, 'media_state', None)
     value = state.get(SCOPE_KEY) if isinstance(state, dict) else None
-    # Damaged scope fails closed; it must never fall back to the whole exam.
-    if not isinstance(value, dict) or value.get('version') != 1:
-        return dict(skills=[], questionIds=[])
-    skills, ids = value.get('skills'), value.get('questionIds')
-    if (not isinstance(skills, list) or not skills or any(s not in PRACTICE_SKILLS for s in skills)
-            or len(set(skills)) != len(skills) or not isinstance(ids, list) or not ids
-            or any(not isinstance(q, str) or not q for q in ids) or len(set(ids)) != len(ids)):
-        return dict(skills=[], questionIds=[])
-    return dict(skills=list(skills), questionIds=list(ids))
+    if isinstance(value, dict) and value.get('version') == 1:
+        skills, ids = value.get('skills'), value.get('questionIds')
+        if (isinstance(skills, list) and skills and all(s in PRACTICE_SKILLS for s in skills)
+                and len(set(skills)) == len(skills) and isinstance(ids, list)):
+            return dict(skills=list(skills), questionIds=list(ids))
+    return dict(skills=[], questionIds=[])
 
 
 def scope_sections(attempt, sections):
     value = scope(attempt)
     if value is None:
         return sections
-    ids = set(value['questionIds'])
+    ids = set(value.get('questionIds') or [])
     selected = []
     for section in sections:
         if section['skill'] not in value['skills']:
             continue
         result = dict(section, groups=[])
         for index, group in enumerate(section['groups']):
-            questions = [q for q in group['questions'] if q['id'] in ids]
+            questions = [q for q in group['questions'] if not ids or q['id'] in ids]
             if questions:
                 result['groups'].append(dict(group, questions=questions,
                                              sourcePartIndex=group.get('sourcePartIndex', index)))

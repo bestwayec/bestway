@@ -703,6 +703,41 @@
     padding: 0 1px;
   }
 
+  /* CBT Highlight & Underline Tools */
+  mark.cbt-highlight {
+    background: rgba(250, 204, 21, 0.45);
+    color: inherit;
+    border-radius: 3px;
+    padding: 1px 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  mark.cbt-highlight:hover {
+    background: rgba(250, 204, 21, 0.7);
+  }
+  mark.cbt-highlight-green {
+    background: rgba(34, 197, 94, 0.4);
+    color: inherit;
+    border-radius: 3px;
+    padding: 1px 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  mark.cbt-highlight-green:hover {
+    background: rgba(34, 197, 94, 0.65);
+  }
+  span.cbt-underline {
+    text-decoration: underline;
+    text-decoration-color: #0284c7;
+    text-decoration-thickness: 2.5px;
+    text-underline-offset: 3.5px;
+    cursor: pointer;
+    transition: text-decoration-color 0.15s ease;
+  }
+  span.cbt-underline:hover {
+    text-decoration-color: #0369a1;
+  }
+
   /* OGL particle backdrop — fills its fixed wrapper, canvas never blocks */
   .particles-container {
     position: relative;
@@ -769,3 +804,13 @@
     transform: none !important;
   }
 }
+
+/* Mobile App dedicated layout overrides */
+.is-mobile-app .mobile-app-hide {
+  display: none !important;
+}
+
+.is-mobile-app .mobile-app-only {
+  display: block !important;
+}
+

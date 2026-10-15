@@ -24,12 +24,61 @@ export function availablePracticeSkills(
   return [];
 }
 
+export function isPartialPractice(
+  attempt: Pick<MockAttemptDetail, "flowMode" | "practiceScope"> & { isSingleSection?: boolean; singleSection?: string }
+): boolean {
+  return (
+    attempt.flowMode === "partial_practice" ||
+    attempt.flowMode === "single_skill" ||
+    Boolean(attempt.isSingleSection) ||
+    Boolean(attempt.singleSection) ||
+    Boolean(attempt.practiceScope?.skills?.length)
+  );
+}
+
 /** An explicit practice attempt never renders or submits tasks outside its frozen scope. */
 export function practiceExam(
   exam: MockExamDetail | undefined,
-  attempt: Pick<MockAttemptDetail, "flowMode" | "practiceScope">
+  attempt: Pick<MockAttemptDetail, "flowMode" | "practiceScope"> & {
+    isSingleSection?: boolean;
+    singleSection?: string;
+    sections?: Array<{ skill: MockSkill | string }>;
+  }
 ): MockExamDetail | undefined {
-  if (!exam || attempt.flowMode !== "partial_practice") return exam;
+  if (!exam) return undefined;
+  if (!isPartialPractice(attempt)) return exam;
+
+  // Single section practice takes precedence:
+  const targetSkill =
+    attempt.singleSection ||
+    (attempt.practiceScope?.skills?.length === 1 ? attempt.practiceScope.skills[0] : null) ||
+    (attempt.sections?.length === 1 ? attempt.sections[0].skill : null);
+
+  if (targetSkill) {
+    const ids = new Set(attempt.practiceScope?.questionIds ?? []);
+    const sections = exam.sections
+      .filter((section) => section.skill === targetSkill)
+      .map((section) => ({
+        ...section,
+        groups: section.groups
+          .map((group) => ({
+            ...group,
+            questions: ids.size > 0 ? group.questions.filter((q) => ids.has(q.id)) : group.questions,
+          }))
+          .filter((group) => group.questions.length > 0),
+      }))
+      .filter((section) => section.groups.length > 0);
+
+    return {
+      ...exam,
+      sections,
+      questionCount: sections.reduce(
+        (count, section) => count + section.groups.reduce((n, group) => n + group.questions.length, 0),
+        0
+      ),
+    };
+  }
+
   const skills = new Set(attempt.practiceScope?.skills ?? []);
   const ids = new Set(attempt.practiceScope?.questionIds ?? []);
   const sections = exam.sections

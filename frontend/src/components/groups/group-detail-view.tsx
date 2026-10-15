@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowLeft,
   CalendarClock,
+  Download,
   Pencil,
   Plus,
   Search,
@@ -128,10 +129,18 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/api/backend/assessment/groups/${groupId}/export`} download>
+                <Download className="size-4" />
+                Vedomost (.csv)
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <Pencil />
             {t("edit")}
           </Button>
+          </div>
         </div>
       </Card>
 

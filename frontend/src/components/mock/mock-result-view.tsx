@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Check, Download, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Download, Loader2, Sparkles, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -20,6 +20,7 @@ import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
+import { CefrResultInfographic } from "./cefr-result-infographic";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
 const media = (path: string) => `/api/backend${path}`;
@@ -59,6 +60,25 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 
       {isStaff && !completed && <AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} />}
 
+      {completed && !partialPractice && !internalPractice && (
+        <CefrResultInfographic
+          className="mb-4"
+          cefrLevel={attempt.cefrLevel}
+          overallScore={attempt.overallScore}
+          overallBand={attempt.overallBand}
+          isIelts={isIelts}
+          examTitle={attempt.examTitle}
+          sections={attempt.sections.map((s) => ({
+            skill: s.skill,
+            title: t(`skills.${s.skill}`),
+            score: s.score,
+            max: s.max,
+            standardScore: s.standardScore,
+            band: s.band,
+          }))}
+        />
+      )}
+
       {/* Natija sarlavhasi */}
       <Card className="p-6 text-center">
         <p className="text-sm text-fg-muted">
@@ -68,6 +88,21 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         <div className="mt-2 flex items-center justify-center">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
         </div>
+
+        {attempt.status === "grading" && (
+          <div className="mt-4 flex items-center justify-center gap-3 rounded-xl border border-brand/20 bg-brand/5 p-4 text-brand">
+            <Loader2 className="size-5 animate-spin shrink-0 text-brand" />
+            <div className="text-left">
+              <p className="flex items-center gap-1.5 font-semibold text-sm text-fg">
+                <Sparkles className="size-4 text-brand" />
+                Natijalar sun&apos;iy intellekt tomonidan tekshirilmoqda...
+              </p>
+              <p className="mt-0.5 text-xs text-fg-muted">
+                Writing va Speaking javoblari CEFR/IELTS mezonlari bo&apos;yicha tekshirilmoqda. Sahifa avtomatik yangilanadi.
+              </p>
+            </div>
+          </div>
+        )}
 
         {partialPractice && <p className="mt-4 font-semibold text-fg">{t("partialPracticeResult")}</p>}
         {completed && !partialPractice && !internalPractice && (

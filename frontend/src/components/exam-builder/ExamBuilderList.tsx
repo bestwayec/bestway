@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Eye, FilePlus2, FileUp, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Copy, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -25,6 +25,7 @@ import {
   useCloneMockExam,
   useDeleteMockExam,
   useMockExams,
+  useUpdateMockExamAny,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
 import { ApiError } from "@/lib/api-client";
@@ -64,6 +65,28 @@ export function ExamBuilderList() {
   const examsQ = useMockExams();
   const clone = useCloneMockExam();
   const del = useDeleteMockExam();
+  const updateExam = useUpdateMockExamAny();
+
+  function handleTogglePublish(e: MockExamListItem) {
+    const nextState = !e.isPublished;
+    updateExam.mutate(
+      { id: e.id, input: { isPublished: nextState } },
+      {
+        onSuccess: () => {
+          toast.success(
+            nextState
+              ? "Exam published — now visible on Dashboard and Exams"
+              : "Exam unpublished — moved to Drafts",
+          );
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof ApiError ? err.message : "Failed to update publish status",
+          );
+        },
+      },
+    );
+  }
   const { data: me } = useMe();
   const canDelete = me?.user.role === "super_admin";
 
@@ -284,6 +307,17 @@ export function ExamBuilderList() {
                 <span> · {e.price > 0 ? formatMoney(e.price) : tx(t, "free", "Free")}</span>
               </p>
               <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                <Button
+                  size="sm"
+                  variant={e.isPublished ? "outline" : "primary"}
+                  className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
+                  loading={updateExam.isPending && updateExam.variables?.id === e.id}
+                  onClick={() => handleTogglePublish(e)}
+                  title={e.isPublished ? "Unpublish exam" : "Publish exam to make it live"}
+                >
+                  <Globe className="size-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{e.isPublished ? "Unpublish" : "Publish"}</span>
+                </Button>
                 <Link href={`/exam-builder/${e.id}`} className="min-w-0">
                   <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`} className="min-h-9 w-full justify-center">
                     <Pencil className="size-3.5 shrink-0" aria-hidden />
@@ -393,6 +427,17 @@ export function ExamBuilderList() {
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <span className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant={e.isPublished ? "outline" : "primary"}
+                        className={e.isPublished ? "text-xs" : "text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
+                        loading={updateExam.isPending && updateExam.variables?.id === e.id}
+                        onClick={() => handleTogglePublish(e)}
+                        title={e.isPublished ? "Unpublish exam" : "Publish exam to make it live for students"}
+                      >
+                        <Globe className="size-3.5 shrink-0" aria-hidden />
+                        <span>{e.isPublished ? "Unpublish" : "Publish"}</span>
+                      </Button>
                       <Link href={`/exam-builder/${e.id}`}>
                         <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}>
                           <Pencil className="size-3.5" aria-hidden />

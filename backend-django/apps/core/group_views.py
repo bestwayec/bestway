@@ -1,4 +1,5 @@
 import re
+from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from common.auth.permissions import Authenticated
 from . import groups as service
@@ -39,8 +40,32 @@ def groups_view(request):
 @permission_classes([Authenticated])
 def group_view(request, group_id):
     if request.method == 'GET': return success(service.detail(request.user, group_id))
+    actor = request.user
+    if actor.role == 'teacher':
+        group = service.get_group(group_id)
+        if group.teacher_id != actor.id:
+            service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+        return success(service.update(actor, group_id, validate(payload(request, {'name', 'schedule'}))))
     require_role(request, 'admin', 'super_admin')
-    return success(service.update(request.user, group_id, validate(payload(request, {'name', 'teacherId', 'schedule'}))))
+    return success(service.update(actor, group_id, validate(payload(request, {'name', 'teacherId', 'schedule'}))))
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def export_group_results_view(request, group_id):
+    actor = request.user
+    group = service.get_group(group_id)
+    if actor.role == 'teacher' and group.teacher_id != actor.id:
+        service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+    elif actor.role not in ('admin', 'super_admin', 'teacher'):
+        service.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
+
+    from . import statistics
+    body = statistics.students_csv(group_id)
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]+', '_', group.name)
+    response = HttpResponse(body, content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="guruh-{safe_name}-vedomost.csv"'
+    return response
 
 
 @api_view(['POST'])

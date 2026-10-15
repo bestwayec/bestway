@@ -28,6 +28,7 @@ BTN=dict(
     mock_exams='🎯 Mock Imtihonlar',
     leaderboard='🥇 Reyting',
     web_login='🌐 Web Saytga Kirish',
+    code='🔑 Ilovaga kirish kodi',
     monitoring='👁 Jonli Monitoring',
     articles='📰 Yangiliklar',
     children='👨‍👩‍👦 Farzandlarim',
@@ -46,13 +47,13 @@ def date_uz(value):
     return f'{value.day}-{MONTHS[value.month-1]}'
 def menu_for(role):
     if role=='student':
-        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['web_login','apk'],['articles','help']]
+        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['web_login','code'],['apk','help']]
     elif role=='parent':
-        rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['web_login','apk'],['articles','help']]
+        rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['web_login','code'],['apk','help']]
     elif role=='teacher':
-        rows=[['groups','grading'],['monitoring','leaderboard'],['mock_exams','web_login'],['apk','help']]
+        rows=[['groups','grading'],['monitoring','leaderboard'],['mock_exams','web_login'],['code','apk'],['help']]
     else:
-        rows=[['today','debtors'],['monitoring','leaderboard'],['mock_exams','web_login'],['articles','apk'],['help']]
+        rows=[['today','debtors'],['monitoring','leaderboard'],['mock_exams','web_login'],['code','apk'],['help']]
     return dict(keyboard=[[dict(text=BTN[key]) for key in row] for row in rows],resize_keyboard=True)
 def apk_inline_keyboard():
     return dict(inline_keyboard=[[dict(text=BTN['apk'],callback_data='download_apk')]])
@@ -455,12 +456,49 @@ def text_for(user,key):
     return 'ℹ️ <b>Yordam</b>\n\nBu bot orqali markaz yangiliklari va shaxsiy xabarlar keladi.\n\n<u>Buyruqlar:</u>\n/menu — menyuni ko\'rsatish\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar ro\'yxati\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n\n'+per_role.get(user.role,'')+"\n\nSavollar bo'lsa administratsiyaga murojaat qiling."
 
 
+def send_otp_code(chat_id, from_user=None):
+    from django.core.cache import cache
+    import secrets
+    code = f"{secrets.randbelow(900000) + 100000}"
+    cache_key = f"telegram_otp:{code}"
+
+    telegram_id = chat_id
+    first_name = ""
+    last_name = ""
+    username = ""
+    if from_user:
+        if hasattr(from_user, "name"):
+            first_name = from_user.name
+        elif isinstance(from_user, dict):
+            telegram_id = from_user.get("id") or chat_id
+            first_name = from_user.get("first_name", "")
+            last_name = from_user.get("last_name", "")
+            username = from_user.get("username", "")
+
+    cache_data = {
+        "telegram_id": telegram_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "username": username,
+    }
+    cache.set(cache_key, cache_data, timeout=300)
+
+    text = (
+        f"🔑 <b>Sizning kirish kodingiz:</b> <code>{code}</code>\n\n"
+        f"⏳ Ushbu kod 5 daqiqa davomida amal qiladi. BestWay mobil ilovasida ushbu kodni kiriting."
+    )
+    api.send(chat_id, text)
+
+
 def handle(chat_id,text):
     if text==BTN['apk']:
         send_apk(chat_id);return True
     if text==BTN.get('web_login'):
         user=find(chat_id,True)
         send_web_login(chat_id,user);return True
+    if text==BTN.get('code'):
+        user=find(chat_id,True)
+        send_otp_code(chat_id,user);return True
     user=find(chat_id,True)
     if not user:return False
     key=next((key for key,value in BTN.items() if value==text),None)
@@ -468,3 +506,4 @@ def handle(chat_id,text):
     if key=='help':
         api.send(chat_id,text_for(user,key),reply_markup=apk_inline_keyboard());return True
     api.send(chat_id,text_for(user,key));return True
+

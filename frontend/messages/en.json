@@ -617,6 +617,7 @@
     "examTrack": "Exam Track",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
+    "profile": "Profile",
     "more": "More"
   },
   "brand": {
@@ -652,6 +653,14 @@
     "welcomeBack": "Welcome back!",
     "telegramLogin": "Continue with Telegram",
     "telegramLoggingIn": "Connecting with Telegram...",
+    "telegramOtpTab": "Telegram Code (OTP)",
+    "passwordTab": "Phone & Password",
+    "telegramOtpTitle": "Sign in with 6-digit Telegram Code",
+    "telegramOtpHint": "Get a 6-digit code from our Telegram bot and enter it below",
+    "getTelegramCode": "Get Code from Bot",
+    "verifyAndLogin": "Verify & Sign In",
+    "verifyingOtp": "Verifying...",
+    "otpCodeRequired": "Please enter the complete 6-digit code",
     "googleLogin": "Continue with Google",
     "googleSignUp": "Sign up with Google",
     "googleLoggingIn": "Connecting with Google...",

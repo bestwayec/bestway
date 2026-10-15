@@ -131,9 +131,12 @@ describe("exam import templates", () => {
   });
 
   it("exposes every template and serializes valid JSON", () => {
-    expect(EXAM_IMPORT_TEMPLATES).toHaveLength(9);
+    expect(EXAM_IMPORT_TEMPLATES).toHaveLength(12);
     expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "reading")).toHaveLength(4);
     expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "listening")).toHaveLength(5);
+    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "multilevel")).toHaveLength(1);
+    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "writing")).toHaveLength(1);
+    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "speaking")).toHaveLength(1);
     for (const template of EXAM_IMPORT_TEMPLATES) {
       expect(() => JSON.parse(serializeExamImportTemplate(template.id))).not.toThrow();
     }

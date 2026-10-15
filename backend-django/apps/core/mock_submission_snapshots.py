@@ -115,13 +115,13 @@ def enqueue(attempt, wanted=None):
                 missing.append(key)
                 return 'UNAVAILABLE'
         value = build_input(exam,attempt,skill,section['groups'],answers,hash_audio)
-        policy = exam.assessment_policy if exam.assessment_policy is not None else os.environ.get('ASSESSMENT_POLICY','MANUAL_ONLY')
+        policy = exam.assessment_policy if exam.assessment_policy is not None else os.environ.get('ASSESSMENT_POLICY', 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'MANUAL_ONLY')
         if policy not in ('MANUAL_ONLY','PRACTICE_AUTO_AI','FULL_MOCK_AI_WITH_REVIEW'):
-            policy = 'MANUAL_ONLY'
+            policy = 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'MANUAL_ONLY'
         if (exam.profile=='full_mock' or attempt.flow_mode=='full_test') and policy=='PRACTICE_AUTO_AI':
             policy = 'FULL_MOCK_AI_WITH_REVIEW'
-        manual_failure='PARTIAL_PRACTICE_MANUAL_REVIEW' if is_partial(attempt) else 'MANUAL_POLICY'
-        failure = 'ASSESSMENT_AUDIO_MISSING' if missing else blueprint_failure(value) or (manual_failure if policy=='MANUAL_ONLY' else None)
+        manual_failure='PARTIAL_PRACTICE_MANUAL_REVIEW' if is_partial(attempt) and policy=='MANUAL_ONLY' else ('MANUAL_POLICY' if policy=='MANUAL_ONLY' else None)
+        failure = 'ASSESSMENT_AUDIO_MISSING' if missing else blueprint_failure(value) or manual_failure
         now = timezone.now()
         AssessmentJob.objects.get_or_create(attempt_id=attempt.id,skill=skill,input_hash=canonical_checksum(value),generation=0,
             defaults=dict(id=new_id(),student_id=attempt.student_id,program=value['program'], input_snapshot=value,

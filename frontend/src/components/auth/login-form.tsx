@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { SpecularButton } from "@/components/ui/specular-button";
@@ -15,6 +15,7 @@ import { authApi, ApiError } from "@/lib/api-client";
 import { routing } from "@/i18n/routing";
 import { homePathForRole } from "@/lib/role-routing";
 import { GoogleAuthButton } from "./google-auth-button";
+import { cn } from "@/lib/utils";
 
 const LOGIN_IDENTIFIER_RE =
   /^(?:\+?\d[\d\s]{8,14}|[^\s@]+@[^\s@]+\.[^\s@]+|[a-zA-Z0-9_.-]{3,64})$/;
@@ -37,9 +38,16 @@ export function LoginForm() {
   const tc = useTranslations("common");
   const locale = useLocale();
   const params = useSearchParams();
+
+  const [loginMethod, setLoginMethod] = React.useState<"password" | "otp">("password");
   const [showPass, setShowPass] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [isTelegramLoggingIn, setIsTelegramLoggingIn] = React.useState(false);
+
+  // 6-digit OTP states
+  const [otpDigits, setOtpDigits] = React.useState<string[]>(["", "", "", "", "", ""]);
+  const [isVerifyingOtp, setIsVerifyingOtp] = React.useState(false);
+  const otpInputsRef = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const schema = React.useMemo(() => makeSchema((k) => t(`errors.${k}`)), [t]);
   const {
@@ -48,19 +56,22 @@ export function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({ resolver: zodResolver(schema) });
 
-  const redirectAfterLogin = React.useCallback((role: string) => {
-    const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-    let target = `${prefix}${homePathForRole(role as import("@/lib/types").Role)}`;
-    const next = params.get("next");
-    if (next) {
-      const normalized = next.replace(/\\/g, "/");
-      if (normalized.startsWith("/") && !normalized.startsWith("//")) {
-        const resolved = new URL(normalized, window.location.origin);
-        if (resolved.origin === window.location.origin) target = normalized;
+  const redirectAfterLogin = React.useCallback(
+    (role: string) => {
+      const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+      let target = `${prefix}${homePathForRole(role as import("@/lib/types").Role)}`;
+      const next = params.get("next");
+      if (next) {
+        const normalized = next.replace(/\\/g, "/");
+        if (normalized.startsWith("/") && !normalized.startsWith("//")) {
+          const resolved = new URL(normalized, window.location.origin);
+          if (resolved.origin === window.location.origin) target = normalized;
+        }
       }
-    }
-    window.location.assign(target);
-  }, [locale, params]);
+      window.location.assign(target);
+    },
+    [locale, params],
+  );
 
   // Handle Telegram SSO automatic login if params present (e.g. from bot link or widget redirect)
   React.useEffect(() => {
@@ -75,7 +86,8 @@ export function LoginForm() {
       });
 
       setIsTelegramLoggingIn(true);
-      authApi.telegramLogin(payload)
+      authApi
+        .telegramLogin(payload)
         .then((user) => {
           toast.success(t("welcomeBack"));
           redirectAfterLogin(user.role);
@@ -88,7 +100,7 @@ export function LoginForm() {
     }
   }, [params, redirectAfterLogin, t, tc]);
 
-  async function onSubmit(values: Values) {
+  async function onPasswordSubmit(values: Values) {
     setServerError(null);
     try {
       const user = await authApi.login(values.phone.replace(/\s/g, ""), values.password);
@@ -100,14 +112,80 @@ export function LoginForm() {
     }
   }
 
+  function handleOtpDigitChange(index: number, val: string) {
+    const cleaned = val.replace(/\D/g, "");
+    if (!cleaned) {
+      setOtpDigits((prev) => {
+        const copy = [...prev];
+        copy[index] = "";
+        return copy;
+      });
+      return;
+    }
+
+    if (cleaned.length > 1) {
+      const digits = cleaned.slice(0, 6).split("");
+      setOtpDigits((prev) => {
+        const copy = [...prev];
+        digits.forEach((d, i) => {
+          if (index + i < 6) copy[index + i] = d;
+        });
+        return copy;
+      });
+      const nextIdx = Math.min(index + digits.length, 5);
+      otpInputsRef.current[nextIdx]?.focus();
+      return;
+    }
+
+    setOtpDigits((prev) => {
+      const copy = [...prev];
+      copy[index] = cleaned[0];
+      return copy;
+    });
+
+    if (index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  }
+
+  function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    }
+  }
+
+  async function handleOtpSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = otpDigits.join("");
+    if (code.length !== 6) {
+      setServerError(t("otpCodeRequired"));
+      return;
+    }
+
+    setServerError(null);
+    setIsVerifyingOtp(true);
+    try {
+      const user = await authApi.telegramOtpLogin(code);
+      toast.success(t("welcomeBack"));
+      redirectAfterLogin(user.role);
+    } catch (err) {
+      setIsVerifyingOtp(false);
+      const message = err instanceof ApiError ? err.message : tc("unknownError");
+      setServerError(message);
+    }
+  }
+
   function handleTelegramLogin() {
     setServerError(null);
-    // Check if running inside Telegram WebApp
-    const tg = typeof window !== "undefined" ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram : undefined;
+    const tg =
+      typeof window !== "undefined"
+        ? (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram
+        : undefined;
     const initData = tg?.WebApp?.initData;
     if (initData) {
       setIsTelegramLoggingIn(true);
-      authApi.telegramLogin({ initData })
+      authApi
+        .telegramLogin({ initData })
         .then((user) => {
           toast.success(t("welcomeBack"));
           redirectAfterLogin(user.role);
@@ -134,7 +212,43 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <div className="space-y-4">
+      {/* Switcher: Password vs Telegram OTP */}
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface-raised p-1 border border-border">
+        <button
+          type="button"
+          onClick={() => {
+            setLoginMethod("password");
+            setServerError(null);
+          }}
+          className={cn(
+            "flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
+            loginMethod === "password"
+              ? "bg-surface text-fg shadow-sm border border-border/60"
+              : "text-fg-muted hover:text-fg",
+          )}
+        >
+          <Smartphone className="size-3.5" />
+          {t("passwordTab")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setLoginMethod("otp");
+            setServerError(null);
+          }}
+          className={cn(
+            "flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
+            loginMethod === "otp"
+              ? "bg-surface text-fg shadow-sm border border-border/60"
+              : "text-fg-muted hover:text-fg",
+          )}
+        >
+          <KeyRound className="size-3.5 text-brand" />
+          {t("telegramOtpTab")}
+        </button>
+      </div>
+
       {serverError && (
         <div
           role="alert"
@@ -144,66 +258,148 @@ export function LoginForm() {
         </div>
       )}
 
-      <Field label={t("phone")} error={errors.phone?.message} htmlFor="phone">
-        <Input
-          id="phone"
-          type="text"
-          autoComplete="username"
-          placeholder={t("phonePlaceholder")}
-          aria-invalid={!!errors.phone}
-          {...register("phone")}
-        />
-      </Field>
+      {loginMethod === "password" ? (
+        <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4" noValidate>
+          <Field label={t("phone")} error={errors.phone?.message} htmlFor="phone">
+            <Input
+              id="phone"
+              type="text"
+              autoComplete="username"
+              placeholder={t("phonePlaceholder")}
+              aria-invalid={!!errors.phone}
+              {...register("phone")}
+            />
+          </Field>
 
-      <Field label={t("password")} error={errors.password?.message} htmlFor="password">
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPass ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder={t("passwordPlaceholder")}
-            aria-invalid={!!errors.password}
-            className="pr-10"
-            {...register("password")}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPass((v) => !v)}
-            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-fg-subtle hover:text-fg"
-            aria-label={showPass ? "Hide password" : "Show password"}
-            title={showPass ? "Hide password" : "Show password"}
-            tabIndex={-1}
+          <Field label={t("password")} error={errors.password?.message} htmlFor="password">
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPass ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder={t("passwordPlaceholder")}
+                aria-invalid={!!errors.password}
+                className="pr-10"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass((v) => !v)}
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-fg-subtle hover:text-fg"
+                aria-label={showPass ? "Hide password" : "Show password"}
+                title={showPass ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </Field>
+
+          <SpecularButton
+            type="submit"
+            size="lg"
+            radius={12}
+            tint="#89F336"
+            tintOpacity={1}
+            textColor="#101704"
+            lineColor="#FFED29"
+            baseColor="#4E9F1E"
+            intensity={1.15}
+            shineSize={10}
+            shineFade={40}
+            thickness={1.5}
+            disabled={isSubmitting}
+            className="w-full"
           >
-            {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          </button>
-        </div>
-      </Field>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                {t("loggingIn")}
+              </>
+            ) : (
+              t("loginButton")
+            )}
+          </SpecularButton>
+        </form>
+      ) : (
+        /* Telegram 6-Digit OTP Form */
+        <form onSubmit={handleOtpSubmit} className="space-y-4" noValidate>
+          <div className="text-center space-y-1">
+            <h3 className="text-sm font-semibold text-fg">{t("telegramOtpTitle")}</h3>
+            <p className="text-xs text-fg-muted">{t("telegramOtpHint")}</p>
+          </div>
 
-      <SpecularButton
-        type="submit"
-        size="lg"
-        radius={12}
-        tint="#89F336"
-        tintOpacity={1}
-        textColor="#101704"
-        lineColor="#FFED29"
-        baseColor="#4E9F1E"
-        intensity={1.15}
-        shineSize={10}
-        shineFade={40}
-        thickness={1.5}
-        disabled={isSubmitting}
-        className="w-full"
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            {t("loggingIn")}
-          </>
-        ) : (
-          t("loginButton")
-        )}
-      </SpecularButton>
+          {/* 6-Digit SMS-style inputs */}
+          <div className="flex justify-center items-center gap-2 sm:gap-2.5 py-2">
+            {otpDigits.map((digit, idx) => (
+              <input
+                key={idx}
+                ref={(el) => {
+                  otpInputsRef.current[idx] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={digit}
+                onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                  if (pasted) {
+                    const next = ["", "", "", "", "", ""];
+                    for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
+                    setOtpDigits(next);
+                    otpInputsRef.current[Math.min(pasted.length, 5)]?.focus();
+                  }
+                }}
+                className="size-11 sm:size-12 rounded-xl border border-border bg-surface text-center text-xl sm:text-2xl font-bold text-fg shadow-inner focus:border-brand focus:ring-2 focus:ring-brand/30 focus:outline-none transition-all"
+                autoFocus={idx === 0}
+              />
+            ))}
+          </div>
+
+          <SpecularButton
+            type="submit"
+            size="lg"
+            radius={12}
+            tint="#89F336"
+            tintOpacity={1}
+            textColor="#101704"
+            lineColor="#FFED29"
+            baseColor="#4E9F1E"
+            intensity={1.15}
+            shineSize={10}
+            shineFade={40}
+            thickness={1.5}
+            disabled={isVerifyingOtp || otpDigits.join("").length !== 6}
+            className="w-full"
+          >
+            {isVerifyingOtp ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                {t("verifyingOtp")}
+              </>
+            ) : (
+              t("verifyAndLogin")
+            )}
+          </SpecularButton>
+
+          {/* Direct link to Telegram bot to get code */}
+          <a
+            href="https://t.me/xabar_bestway_bot?start=code"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[#229ED9]/40 bg-[#229ED9]/10 px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#229ED9] hover:bg-[#229ED9]/20 transition"
+          >
+            <svg className="size-4 fill-current shrink-0" viewBox="0 0 24 24">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
+            </svg>
+            {t("getTelegramCode")}
+          </a>
+        </form>
+      )}
 
       <div className="relative my-3 flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
@@ -239,6 +435,6 @@ export function LoginForm() {
           {t("registerButton")}
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

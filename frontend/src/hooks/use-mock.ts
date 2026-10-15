@@ -60,6 +60,18 @@ export function useUpdateMockExam(id: string) {
   });
 }
 
+export function useUpdateMockExamAny() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateMockExamInput }) =>
+      api.patch<MockExamDetail>(`/mock/exams/${id}`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+    },
+  });
+}
+
 export function useDeleteMockExam() {
   const qc = useQueryClient();
   return useMutation({
@@ -132,6 +144,7 @@ export function useMockAttempt(attemptId: string) {
     queryKey: ["mock-attempt", attemptId],
     queryFn: () => api.get<MockAttemptDetail>(`/mock/attempts/${attemptId}`),
     enabled: !!attemptId,
+    refetchInterval: (query) => (query.state.data?.status === "grading" ? 5000 : false),
   });
 }
 
@@ -166,8 +179,11 @@ export function useSaveMockAnnotations(attemptId: string) {
 export function useSubmitMock(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
-      api.post<{ status: MockAttemptStatus }>(`/mock/attempts/${attemptId}/submit`),
+    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[] }) =>
+      api.post<{ status: MockAttemptStatus }>(
+        `/mock/attempts/${attemptId}/submit`,
+        payload ?? { confirm: true },
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
