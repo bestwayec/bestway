@@ -199,9 +199,16 @@ def desktop_exchange_view(request):
 @api_view(["GET", "PATCH"])
 @permission_classes([Authenticated])
 def my_exam_programs_view(request):
-    require_role(request, "student")
     if request.method == "GET":
-        with connection.cursor() as cursor: return success(exam_programs.state(cursor, request.user.id))
+        if getattr(request.user, "role", None) in {"teacher", "admin", "super_admin"}:
+            return success({
+                "availablePrograms": ["IELTS", "MULTILEVEL"],
+                "activeProgram": "IELTS",
+                "accessPolicy": "SELF_SELECT",
+            })
+        with connection.cursor() as cursor:
+            return success(exam_programs.state(cursor, request.user.id))
+    require_role(request, "student")
     data = body(request, {"program"}); required(data, "program")
     return success(exam_programs.select(request.user.id, data["program"]))
 

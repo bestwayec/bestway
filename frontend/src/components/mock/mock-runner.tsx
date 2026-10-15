@@ -41,6 +41,8 @@ import { ResponseProgress, WritingResponseGuide } from './exam-response-progress
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
 import { MicCheckModal } from "./mic-check-modal";
+import { CbtSectionStepper } from "./cbt-section-stepper";
+import { SectionTransitionModal } from "./section-transition-modal";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -117,6 +119,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
+  const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
   React.useEffect(() => {
@@ -271,12 +274,18 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         await bulkMutateAsync(ids.map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
         ids.forEach((id) => dirty.current.delete(id));
       } else flush();
+      const currentSkill = attempt.currentSkill;
       await advanceMutateAsync();
+      const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
+      const nextSkill = exam?.sections[currentIdx + 1]?.skill;
+      if (currentSkill && nextSkill) {
+        setTransitionModal({ completedSkill: currentSkill, nextSkill });
+      }
       toast.success("Next section");
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { if (versioned) submittingRef.current = false; }
-  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync]);
+  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam?.sections]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -426,21 +435,39 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             audioDurations={audioDurations}
             onAnswer={setAnswer}
             practice={partialPractice}
-          /> : section.groups.map((g) => (
-            <GroupBlock
-              key={g.id}
-              group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
-              skill={section.skill}
-              strict={strict && section.skill === "listening"}
-              timed={strict}
-              attemptId={attempt.id}
-              answers={answers}
-              audioSet={audioSet}
-              audioDurations={audioDurations}
-              onAnswer={setAnswer}
-              onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
-            />
-          ))}
+          /> : <CbtSectionStepper
+            skill={section.skill}
+            groups={section.groups}
+            answers={answers}
+            audioSet={audioSet}
+            audioDurations={audioDurations}
+            renderGroupBlock={(g, reviewComplete) => (
+              <GroupBlock
+                key={g.id}
+                group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
+                skill={section.skill}
+                strict={strict && section.skill === "listening"}
+                timed={strict}
+                attemptId={attempt.id}
+                answers={answers}
+                audioSet={audioSet}
+                audioDurations={audioDurations}
+                onAnswer={setAnswer}
+                onReviewComplete={section.skill === "listening" ? reviewComplete ?? onListeningReviewComplete : undefined}
+              />
+            )}
+            onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
+            onNextSection={() => {
+              if (multilevelReview && missingWork) setReview("advance");
+              else void goNextSection();
+            }}
+            onSubmitSection={() => {
+              if (multilevelReview && missingWork) setReview("submit");
+              else void doSubmit(false);
+            }}
+            isLastSection={activeSection >= exam.sections.length - 1}
+            isFullTest={isFullTest}
+          />}
         </div>
       )}
 
@@ -466,6 +493,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         open={section?.skill === "speaking" && !micChecked}
         onConfirm={() => setMicChecked(true)}
         onClose={!strict ? () => setMicChecked(true) : undefined}
+      />
+
+      <SectionTransitionModal
+        open={transitionModal !== null}
+        completedSkill={transitionModal?.completedSkill ?? "listening"}
+        nextSkill={transitionModal?.nextSkill ?? "reading"}
+        onStartNext={() => setTransitionModal(null)}
       />
     </div>
   </ExamLocker>
@@ -741,19 +775,21 @@ function GroupBlock({
               </div>
             )}
             {group.questions.map((q) => (
-              <QuestionInput
-                key={q.id}
-                question={q}
-                groupTitle={group.title ?? undefined}
-                attemptId={attemptId}
-                value={answers[q.id] ?? ""}
-                hasAudio={audioSet.has(q.id)}
-                audioDurationMs={audioDurations?.[q.id]}
-                timed={timed}
-                unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
-                onChange={(v) => onAnswer(q.id, v)}
-                multilevelSkill={skill}
-              />
+              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28">
+                <QuestionInput
+                  key={q.id}
+                  question={q}
+                  groupTitle={group.title ?? undefined}
+                  attemptId={attemptId}
+                  value={answers[q.id] ?? ""}
+                  hasAudio={audioSet.has(q.id)}
+                  audioDurationMs={audioDurations?.[q.id]}
+                  timed={timed}
+                  unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
+                  onChange={(v) => onAnswer(q.id, v)}
+                  multilevelSkill={skill}
+                />
+              </div>
             ))}
           </div>
         )}
