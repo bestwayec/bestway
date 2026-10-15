@@ -907,10 +907,19 @@ export interface MockAttemptSection {
   groups: MockAttemptGroup[];
 }
 
+export interface DiagnosticFeedback {
+  criteria_scores: { criterion: string; score: number; comment?: string }[];
+  mistakes_and_fixes: { original: string; corrected: string; explanation?: string }[];
+  vocabulary_upgrades: { original: string; alternative: string; explanation?: string }[];
+  action_plan: string[];
+  band_8_rewrite: string;
+}
+
 export interface MockAttemptDetail extends MockAttemptSummary {
   annotations: unknown[];
   sections: MockAttemptSection[];
   cheatEvents?: { event: string; date: string }[];
+  diagnosticFeedback?: Record<string, DiagnosticFeedback>;
 }
 
 export interface MockPurchaseItem {

@@ -150,7 +150,7 @@ class TelegramLifecycleTests(SimpleTestCase):
                 requests_made.append(req)
                 return FakeResponse()
 
-            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':directory,'ANDROID_APK_PATH':'media/downloads/bestway-app.apk'}), \
+            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':directory,'ANDROID_APK_PATH':'media/downloads/bestway-app.apk','ANDROID_LATEST_VERSION':'0.5.3'}), \
                  patch.object(telegram_delivery,'urlopen',side_effect=fake_urlopen), \
                  patch.object(telegram_menu,'urlopen',side_effect=AssertionError('Remote fallback should not be called when local APK exists')):
                 resolved=telegram_menu.resolve_apk_path()

@@ -47,13 +47,20 @@ def validate_answer(data):
 @permission_classes([AllowAny])
 def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills', 'section', 'section_filter', 'examId', 'exam_id'})
-    target_exam_id = exam_id or data.get('examId') or data.get('exam_id')
+    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id'})
+    target_exam_id = exam_id or data.get('examId') or data.get('exam_id') or request.query_params.get('examId') or request.query_params.get('exam_id')
     if not target_exam_id:
         engine.fail('VALIDATION_ERROR', 'examId should not be empty')
 
-    # Support section / section_filter for single section practice mode
-    sec = data.get('section') or data.get('section_filter')
+    # Support section / section_filter / skill from body or query params
+    sec = (
+        data.get('skill')
+        or data.get('section')
+        or data.get('section_filter')
+        or request.query_params.get('skill')
+        or request.query_params.get('section')
+        or request.query_params.get('section_filter')
+    )
     if sec:
         if not isinstance(sec, str):
             engine.fail('VALIDATION_ERROR', 'section_filter must be a string')
@@ -61,8 +68,12 @@ def start_view(request, exam_id=None):
         if sec_str not in engine.SKILLS:
             engine.fail('VALIDATION_ERROR', f'section_filter must be one of: {", ".join(engine.SKILLS)}')
         data['skills'] = [sec_str]
-        if not data.get('flow'):
-            data['flow'] = 'single_skill'
+        data['flow'] = 'single_skill'
+
+    if not data.get('mode') and request.query_params.get('mode'):
+        data['mode'] = request.query_params.get('mode')
+    if not data.get('flow') and request.query_params.get('flow'):
+        data['flow'] = request.query_params.get('flow')
 
     if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
         engine.fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
@@ -110,14 +121,34 @@ def answers_view(request, attempt_id):
 def submit_view(request, attempt_id):
     from .mock_submissions import submit
     student(request)
-    data = body(request, {'skills', 'confirm', 'confirmed', 'force'})
+    data = body(request, {'skills', 'skill', 'section', 'section_filter', 'confirm', 'confirmed', 'force', 'reason', 'autoSubmit', 'timeUp', 'timeout', 'answers'})
     skills = data.get('skills')
+    sec = (
+        data.get('skill')
+        or data.get('section')
+        or data.get('section_filter')
+        or request.query_params.get('skill')
+        or request.query_params.get('section')
+        or request.query_params.get('section_filter')
+    )
+    if not skills and sec and isinstance(sec, str):
+        sec_str = sec.strip().lower()
+        if sec_str in engine.SKILLS:
+            skills = [sec_str]
     if skills is not None:
         if not isinstance(skills, list):
             engine.fail('VALIDATION_ERROR', 'skills must be an array')
         if any(skill not in engine.SKILLS for skill in skills):
             engine.fail('VALIDATION_ERROR', 'each value in skills must be one of the following values: listening, reading, writing, speaking')
-    force = bool(data.get('confirm') or data.get('confirmed') or data.get('force'))
+    force = bool(
+        data.get('confirm')
+        or data.get('confirmed')
+        or data.get('force')
+        or data.get('autoSubmit')
+        or data.get('timeUp')
+        or data.get('timeout')
+        or request.query_params.get('force')
+    )
     return success(submit(request.user, attempt_id, skills, force=force), 200)
 
 

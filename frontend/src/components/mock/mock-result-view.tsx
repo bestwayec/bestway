@@ -20,6 +20,7 @@ import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
+import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
 import { CefrResultInfographic } from "./cefr-result-infographic";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
@@ -175,6 +176,14 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
 
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
+
+      {attempt.status !== "in_progress" && attempt.diagnosticFeedback && Object.keys(attempt.diagnosticFeedback).length > 0 && (
+        <div className="mt-6 space-y-4">
+          {Object.entries(attempt.diagnosticFeedback).map(([skill, fb]) => (
+            <AiDiagnosticCoach key={skill} skill={skill} feedback={fb} />
+          ))}
+        </div>
+      )}
 
       {/* Savollar tahlili */}
       <div className="mt-6 space-y-4">

@@ -55,6 +55,9 @@ def for_attempt(actor,identifier):
             value.update(gradingPolicy=input['gradingPolicy'],aiPracticeGrade=ai.get('practiceGrade'),practiceGrade=final,
                 teacherPracticeGrade=final if job.final_score_source=='TEACHER' and job.teacher_score is not None else None)
         if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
+        active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
+        if active_res:
+            value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
         for part in input['parts']:
             for r in part['responses']:
                 transcript=next((t for t in transcripts if t.question_id==r['questionId'] and t.audio_hash==r.get('audioHash')),None)

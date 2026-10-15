@@ -36,6 +36,8 @@ def half(value,maximum):return type(value) in (int,float) and math.isfinite(valu
 
 def validate(value,input):
     from . import assessment_quality as quality
+    if isinstance(value, dict) and 'diagnostic_feedback' in value:
+        value = {k: v for k, v in value.items() if k != 'diagnostic_feedback'}
     required=RESULT+(['practiceGrade'] if quality.enabled(input) and isinstance(value,dict) and 'practiceGrade' in value else [])
     row=exact(value,required)
     if row['pronunciationEvidence']!=input['pronunciationEvidence']:invalid()
@@ -73,7 +75,86 @@ def validate(value,input):
     result=dict(parts=parts,**{k:texts(row[k]) for k in TOP},grammarCorrections=objects(row['grammarCorrections'],['original','corrected','explanation']),
         vocabularyUpgrades=objects(row['vocabularyUpgrades'],['original','alternative','explanation']),improvedExamples=examples,
         confidence=number(row['confidence'],1),pronunciationEvidence=input['pronunciationEvidence'])
+    result['diagnostic_feedback'] = format_diagnostic_feedback(result, input)
     return quality.attach_grade(input,result)
+
+
+def format_diagnostic_feedback(result, input=None):
+    if not isinstance(result, dict):
+        return None
+    CRIT_NAMES = {
+        'ta': 'Task Achievement / Response',
+        'cc': 'Coherence & Cohesion',
+        'lr': 'Lexical Resource',
+        'gra': 'Grammatical Range & Accuracy',
+        'taskCoverage': 'Task Coverage & Content',
+        'grammar': 'Grammatical Accuracy & Range',
+        'vocabulary': 'Lexical Resource & Vocabulary',
+        'cohesion': 'Coherence & Organization',
+        'ideaDevelopment': 'Idea Development & Relevance',
+        'fluency': 'Fluency & Spontaneous Speech',
+        'lexical': 'Lexical Variety & Phrasing',
+        'pronunciation': 'Pronunciation & Intonation'
+    }
+    criteria_scores = []
+    parts = result.get('parts') or []
+    seen_crit = set()
+    for p in parts:
+        crit = p.get('criteria') or {}
+        evid = p.get('evidence') or {}
+        for k, score in crit.items():
+            if score is not None and k not in seen_crit:
+                seen_crit.add(k)
+                criteria_scores.append({
+                    'criterion': CRIT_NAMES.get(k, k.replace('_', ' ').title()),
+                    'score': score,
+                    'comment': evid.get(k, '')
+                })
+    if not criteria_scores and parts:
+        p = parts[0]
+        if p.get('rawScore') is not None:
+            criteria_scores.append({
+                'criterion': 'Overall Demonstrated Score',
+                'score': p.get('rawScore'),
+                'comment': p.get('feedback', {}).get('taskCoverage', '')
+            })
+
+    mistakes_and_fixes = []
+    for item in result.get('grammarCorrections') or []:
+        mistakes_and_fixes.append({
+            'original': item.get('original', ''),
+            'corrected': item.get('corrected', ''),
+            'explanation': item.get('explanation', '')
+        })
+
+    vocabulary_upgrades = []
+    for item in result.get('vocabularyUpgrades') or []:
+        vocabulary_upgrades.append({
+            'original': item.get('original', ''),
+            'alternative': item.get('alternative', ''),
+            'explanation': item.get('explanation', '')
+        })
+
+    action_plan = []
+    for item in result.get('priorityImprovements') or []:
+        if item and item not in action_plan:
+            action_plan.append(item)
+    for item in result.get('recommendedPractice') or []:
+        if item and item not in action_plan:
+            action_plan.append(item)
+
+    improved = result.get('improvedExamples') or []
+    band_8_rewrite = "\n\n".join(e.get('text', '') for e in improved if e.get('text'))
+    if not band_8_rewrite and parts:
+        band_8_rewrite = parts[0].get('feedback', {}).get('register', '')
+
+    return {
+        'criteria_scores': criteria_scores,
+        'mistakes_and_fixes': mistakes_and_fixes,
+        'vocabulary_upgrades': vocabulary_upgrades,
+        'action_plan': action_plan,
+        'band_8_rewrite': band_8_rewrite
+    }
 
 def fail(message):raise ContractAPIException('ASSESSMENT_INVALID_SCORE',message,400)
 def score(input,result):

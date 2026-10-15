@@ -228,7 +228,7 @@ def start(actor, exam_id, data):
                     existing.status = 'completed'
                     existing.save(update_fields=['status'])
                 existing = None
-            elif partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
+            elif partial != is_partial(existing) or (partial and set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
                 from .mock_submissions import submit
                 try:
                     submit(actor, existing.id, force=True)
@@ -541,6 +541,24 @@ def detail(actor, attempt_id):
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
     result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections))
+    try:
+        from apps.legacy_schema.models import AssessmentJob, AssessmentEvaluation
+        from .assessment_results import format_diagnostic_feedback
+        jobs = AssessmentJob.objects.filter(attempt_id=attempt_id).order_by('-generation', '-created_at')
+        diagnostic = {}
+        for job in jobs:
+            if job.skill not in diagnostic:
+                res = job.approved_feedback or job.final_result
+                if not res and job.selected_evaluation_id:
+                    ev = AssessmentEvaluation.objects.filter(id=job.selected_evaluation_id, status='SUCCEEDED').first()
+                    if ev and ev.result:
+                        res = ev.result
+                if res:
+                    diagnostic[job.skill] = format_diagnostic_feedback(res)
+        if diagnostic:
+            result['diagnosticFeedback'] = diagnostic
+    except Exception:
+        pass
     return result
 
 
