@@ -5,7 +5,7 @@ from django.db import close_old_connections
 from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu
 
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 
 
 def welcome():
@@ -59,6 +59,9 @@ def handle(update):
         if text.startswith('/menu'):
             if not show(chat_id):api.contact_request(chat_id,welcome())
             return
+        if text.startswith(('/code', '/otp')):
+            menu.send_otp_code(chat_id, msg.get('from', {}))
+            return
         if text.startswith('/login'):
             user=links.find(chat_id,True)
             menu.send_web_login(chat_id,user);return
@@ -107,6 +110,7 @@ def initialize():
     api.call('setMyCommands',dict(commands=[dict(command=key,description=value) for key,value in [
         ('start',"Akkauntni bog'lash"),
         ('menu',"Menyuni ko'rsatish"),
+        ('code',"Ilovaga kirish kodi (6 xonali)"),
         ('login',"Web platformaga kirish (SSO)"),
         ('apk','Android ilovani yuklab olish (.apk)'),
         ('mock','Mock imtihonlar (Multi-Level / IELTS)'),
