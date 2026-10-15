@@ -216,6 +216,9 @@ def start(actor, exam_id, data):
                 fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
             return start_response(existing, exam, True)
         practice = selected_scope(exam, data['skills']) if partial else None
+        if practice is not None and len(data['skills']) == 1:
+            practice['single_section'] = data['skills'][0]
+            practice['section_filter'] = data['skills'][0]
         if exam.type == 'multilevel' and not partial:
             readiness = multilevel_readiness(_exam_tree(exam))
             if not readiness['supported']:
@@ -442,6 +445,13 @@ def summary(attempt, *, detail=False):
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
+        skills = (result['practiceScope'] or {}).get('skills') or []
+        if len(skills) == 1:
+            result['singleSection'] = skills[0]
+            result['isSingleSection'] = True
+            result['attemptTypeLabel'] = f"Single Section: {skills[0].capitalize()}"
+    if not result.get('attemptTypeLabel'):
+        result['attemptTypeLabel'] = "Full Mock" if attempt.flow_mode == 'full_test' else "Section Practice"
     return result
 
 

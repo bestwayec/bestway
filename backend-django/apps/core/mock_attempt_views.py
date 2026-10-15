@@ -45,9 +45,25 @@ def validate_answer(data):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def start_view(request, exam_id):
+def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills'})
+    data = body(request, {'mode', 'flow', 'skills', 'section', 'section_filter', 'examId', 'exam_id'})
+    target_exam_id = exam_id or data.get('examId') or data.get('exam_id')
+    if not target_exam_id:
+        engine.fail('VALIDATION_ERROR', 'examId should not be empty')
+
+    # Support section / section_filter for single section practice mode
+    sec = data.get('section') or data.get('section_filter')
+    if sec:
+        if not isinstance(sec, str):
+            engine.fail('VALIDATION_ERROR', 'section_filter must be a string')
+        sec_str = sec.strip().lower()
+        if sec_str not in engine.SKILLS:
+            engine.fail('VALIDATION_ERROR', f'section_filter must be one of: {", ".join(engine.SKILLS)}')
+        data['skills'] = [sec_str]
+        if not data.get('flow'):
+            data['flow'] = 'single_skill'
+
     if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
         engine.fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
     if data.get('flow') is not None and not isinstance(data['flow'], str):
@@ -60,7 +76,7 @@ def start_view(request, exam_id):
             engine.fail('VALIDATION_ERROR', 'skills must contain unique skill selections')
         if data.get('flow') == 'full_test':
             engine.fail('VALIDATION_ERROR', 'Selected task practice requires flow other than full_test')
-    return success(engine.start(request.user, exam_id, data), 201)
+    return success(engine.start(request.user, target_exam_id, data), 201)
 
 
 @api_view(['POST'])

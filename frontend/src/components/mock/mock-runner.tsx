@@ -43,6 +43,7 @@ import { ExamLocker } from "./exam-locker";
 import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
+import { CbtAnnotatedText } from "./cbt-annotated-text";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -654,7 +655,12 @@ function GroupBlock({
         />
       )}
       {group.instructions && (
-        <p className="mt-3 text-sm font-medium text-fg-muted">{group.instructions}</p>
+        <div className="mt-3 text-sm font-medium text-fg-muted">
+          <CbtAnnotatedText
+            text={group.instructions}
+            storageKey={`${attemptId}.${group.id}.instructions`}
+          />
+        </div>
       )}
       {skill === "speaking" && group.questions[0]?.guidance && (
         <section className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-brand/20 bg-brand-subtle p-3">
@@ -715,7 +721,10 @@ function GroupBlock({
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
           >
-            {group.passageText}
+            <CbtAnnotatedText
+              text={group.passageText!}
+              storageKey={`${attemptId}.${group.id}.passage`}
+            />
             <div className="mt-4 pt-3 border-t border-border/60 lg:hidden text-center">
               <Button
                 type="button"

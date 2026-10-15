@@ -300,7 +300,20 @@ export function ExamTrackDashboard() {
                     {a.examTitle}
                   </p>
                   <p className="mt-0.5 text-xs text-fg-muted">
-                    {tm(`status.${a.status}`)} · Mode: {a.flowMode === "full_test" ? "Full CBT" : "Practice"}
+                    {tm(`status.${a.status}`)} ·{" "}
+                    {(a as unknown as { isSingleSection?: boolean; singleSection?: string }).isSingleSection ||
+                    (a as unknown as { singleSection?: string }).singleSection ||
+                    a.practiceScope?.skills?.length === 1 ? (
+                      <span className="font-semibold text-brand">
+                        Single Section (
+                        {(a as unknown as { singleSection?: string }).singleSection ||
+                          a.practiceScope?.skills?.[0] ||
+                          "Skill"}
+                        )
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-sky-500">Full Mock</span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

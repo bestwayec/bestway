@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { MockAttemptDetail, MockExamListItem, MockGroup } from "@/lib/types";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string, values?: Record<string, string | number>) => values ? `${key} ${Object.values(values).join(" ")}` : key }));
-vi.mock("@/i18n/navigation", () => ({ Link: ({ href, children, ...props }: React.ComponentProps<"a">) => React.createElement("a", { href, ...props }, children) }));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, children, ...props }: React.ComponentProps<"a">) => React.createElement("a", { href, ...props }, children),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 
 import { MockExamCard } from "./mock-exams-view";
 import { GuidedMultilevelGroups } from "./mock-runner";

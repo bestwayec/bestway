@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -32,7 +32,10 @@ import {
   useMyMockAttempts,
   useMockPurchases,
   usePurchaseMock,
+  useStartMock,
 } from "@/hooks/use-mock";
+import type { MockAttemptMode, MockPracticeSkill } from "@/lib/types";
+import { ExamLauncherModal } from "./exam-launcher-modal";
 import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from '@/hooks/use-exam-programs';
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
@@ -67,6 +70,19 @@ export function MockExamsView() {
   const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
   const attemptsQ = useMyMockAttempts();
   const purchase = usePurchaseMock();
+
+  const start = useStartMock();
+  const router = useRouter();
+
+  function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+    start.mutate(
+      { examId, mode, ...(skills ? { skills } : {}) },
+      {
+        onSuccess: (res) => router.push(`/mock/attempt/${res.attemptId}`),
+        onError: (e) => toast.error(e instanceof Error ? e.message : tc("unknownError")),
+      }
+    );
+  }
 
   function onBuy(id: string) {
     purchase.mutate(id, {
@@ -138,6 +154,7 @@ export function MockExamsView() {
               attempts={attemptsQ.data ?? []}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
+              onStart={(mode, skills) => onStart(e.id, mode, skills)}
             />
           ))}
         </div>
@@ -161,6 +178,7 @@ export function MockExamCard({
   attempts,
   buying,
   onBuy,
+  onStart,
 }: {
   exam: MockExamListItem;
   isStaff: boolean;
@@ -168,9 +186,11 @@ export function MockExamCard({
   attempts: MockAttemptSummary[];
   buying: boolean;
   onBuy: () => void;
+  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[]) => void;
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
+  const [launcherOpen, setLauncherOpen] = React.useState(false);
   const multilevel = exam.type === "multilevel";
   const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
   const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
@@ -243,13 +263,31 @@ export function MockExamCard({
             {t("resume")}
           </Link>
         ) : exam.access === "granted" ? (
-          <Link
-            href={`/mock/${exam.id}`}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            <Play className="size-4 fill-current" />
-            {t("start")}
-          </Link>
+          onStart ? (
+            <>
+              <Button
+                className="w-full bg-brand font-semibold text-white transition-colors hover:bg-brand-hover"
+                onClick={() => setLauncherOpen(true)}
+              >
+                <Play className="size-4 fill-current mr-1.5" />
+                {t("start")}
+              </Button>
+              <ExamLauncherModal
+                open={launcherOpen}
+                onOpenChange={setLauncherOpen}
+                exam={exam}
+                onStart={onStart}
+              />
+            </>
+          ) : (
+            <Link
+              href={`/mock/${exam.id}`}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+            >
+              <Play className="size-4 fill-current mr-1.5" />
+              {t("start")}
+            </Link>
+          )
         ) : exam.access === "pending" ? (
           <Badge variant="warning" className="w-full justify-center py-1.5">
             <Clock /> {t("pending")}

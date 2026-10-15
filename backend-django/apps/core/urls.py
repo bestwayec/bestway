@@ -103,6 +103,8 @@ urlpatterns = [
     path('tests/<str:test_id>/start',legacy.start_view),
     path('tests/<str:test_id>',legacy_admin.test),
     path('mock/exams/<str:exam_id>/start', start_view),
+    path('mock/attempts/start', start_view),
+    path('mock/attempts/start/', start_view),
     path('mock/attempts/mine', mine_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
     path('mock/attempts/<str:attempt_id>/annotations', annotations_view),
