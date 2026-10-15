@@ -42,16 +42,24 @@ export function microphoneErrorMessage(error: unknown) {
   return message || 'Microphone recording failed. Check your device and retry.';
 }
 
-export function createAudioRecorder(stream: MediaStream): MediaRecorder {
+export const OPTIMAL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  channelCount: 1,
+  sampleRate: 16000,
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+};
+
+export function createAudioRecorder(stream: MediaStream, options?: MediaRecorderOptions): MediaRecorder {
   for (const mimeType of AUDIO_TYPES) {
     if (typeof MediaRecorder.isTypeSupported !== 'function' || !MediaRecorder.isTypeSupported(mimeType)) continue;
-    try { return new MediaRecorder(stream, { mimeType }); }
+    try { return new MediaRecorder(stream, options ? { mimeType, ...options } : { mimeType }); }
     catch (error) {
       if (!(error && typeof error === 'object' && 'name' in error && error.name === 'NotSupportedError')) throw error;
     }
   }
   // Some browsers can record their default format without supporting our hints.
-  return new MediaRecorder(stream);
+  return new MediaRecorder(stream, options);
 }
 
 export function recordingFileName(audio: Pick<Blob, 'type'>) {

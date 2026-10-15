@@ -90,10 +90,10 @@ def export_group_results_view(request, group_id):
         service.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
 
     from . import statistics
-    body = statistics.students_csv(group_id)
+    body = statistics.group_results_csv(group_id)
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]+', '_', group.name)
     response = HttpResponse(body, content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="guruh-{safe_name}-vedomost.csv"'
+    response['Content-Disposition'] = f'attachment; filename="guruh-{safe_name}-natijalar.csv"'
     return response
 
 

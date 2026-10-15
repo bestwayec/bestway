@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Check, Download, Loader2, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Download, Loader2, Printer, Sparkles, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -27,6 +27,77 @@ import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
 
+function SteppedGradingProgress() {
+  const [activeStep, setActiveStep] = React.useState(1);
+
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setActiveStep(2), 2500);
+    const t2 = setTimeout(() => setActiveStep(3), 6000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
+  const steps = [
+    { num: 1, label: "Ovoz matnga aylantirilmoqda", desc: "Deepgram STT nutq transkripsiyasi" },
+    { num: 2, label: "Grammatika va lug'at tahlili", desc: "Lexical resource & grammar range" },
+    { num: 3, label: "CEFR ballari va tavsiyalar", desc: "Band scoring & diagnostic feedback" },
+  ];
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl border border-brand/20 bg-brand/[0.03] p-5 text-left">
+      <div className="flex items-center gap-2.5 font-semibold text-sm text-fg">
+        <Sparkles className="size-4 text-brand animate-pulse" />
+        Natijalar sun&apos;iy intellekt tomonidan tekshirilmoqda
+        <span className="ml-auto flex items-center gap-1.5 text-xs text-brand font-medium">
+          <Loader2 className="size-3.5 animate-spin" />
+          Ultra-tezkor tahlil
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {steps.map((s) => {
+          const isDone = activeStep > s.num;
+          const isCurrent = activeStep === s.num;
+          return (
+            <div
+              key={s.num}
+              className={cn(
+                "flex items-center gap-3 rounded-xl p-2.5 transition-all duration-300",
+                isCurrent && "bg-brand/10 border border-brand/30 shadow-sm",
+                isDone && "opacity-85",
+                !isDone && !isCurrent && "opacity-40"
+              )}
+            >
+              <div
+                className={cn(
+                  "grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-all",
+                  isDone && "bg-brand text-white",
+                  isCurrent && "bg-brand/20 text-brand ring-2 ring-brand animate-pulse",
+                  !isDone && !isCurrent && "bg-surface text-fg-subtle border border-border"
+                )}
+              >
+                {isDone ? <Check className="size-3.5" /> : isCurrent ? <Loader2 className="size-3.5 animate-spin" /> : s.num}
+              </div>
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="text-sm font-medium text-fg">{s.label}</p>
+                <p className="text-[11px] text-fg-subtle truncate">{s.desc}</p>
+              </div>
+              {isDone && <span className="text-[11px] font-semibold text-brand">Tayyor</span>}
+              {isCurrent && <span className="text-[11px] font-semibold text-brand animate-pulse">Tekshirilmoqda...</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-center text-[11px] text-fg-subtle">
+        Sahifa har 3 soniyada avtomatik yangilanadi. Oynani yopmasdan kuting.
+      </p>
+    </div>
+  );
+}
+
 // Raw aggregates include unanswered/ungraded work as zero. A manual section
 // becomes a result only when every selected response has a persisted grade.
 function hasCompleteManualGrade(section: MockAttemptSection): boolean {
@@ -50,16 +121,16 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const gradedCount = attempt.sections.filter((s) => s.band != null).length;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl print:max-w-none print:m-0">
       <Link
         href="/mock"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg print:hidden"
       >
         <ArrowLeft className="size-4" />
         {t("title")}
       </Link>
 
-      {isStaff && !completed && <AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} />}
+      {isStaff && !completed && <div className="print:hidden"><AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} /></div>}
 
       {completed && !partialPractice && !internalPractice && (
         <CefrResultInfographic
@@ -81,29 +152,16 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       )}
 
       {/* Natija sarlavhasi */}
-      <Card className="p-6 text-center">
+      <Card className="p-6 text-center print:border-none print:shadow-none">
         <p className="text-sm text-fg-muted">
           {attempt.examTitle}
           {isStaff && attempt.studentName ? ` · ${attempt.studentName}` : ""}
         </p>
-        <div className="mt-2 flex items-center justify-center">
+        <div className="mt-2 flex items-center justify-center print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
         </div>
 
-        {attempt.status === "grading" && (
-          <div className="mt-4 flex items-center justify-center gap-3 rounded-xl border border-brand/20 bg-brand/5 p-4 text-brand">
-            <Loader2 className="size-5 animate-spin shrink-0 text-brand" />
-            <div className="text-left">
-              <p className="flex items-center gap-1.5 font-semibold text-sm text-fg">
-                <Sparkles className="size-4 text-brand" />
-                Natijalar sun&apos;iy intellekt tomonidan tekshirilmoqda...
-              </p>
-              <p className="mt-0.5 text-xs text-fg-muted">
-                Writing va Speaking javoblari CEFR/IELTS mezonlari bo&apos;yicha tekshirilmoqda. Sahifa avtomatik yangilanadi.
-              </p>
-            </div>
-          </div>
-        )}
+        {attempt.status === "grading" && <SteppedGradingProgress />}
 
         {partialPractice && <p className="mt-4 font-semibold text-fg">{t("partialPracticeResult")}</p>}
         {completed && !partialPractice && !internalPractice && (
@@ -163,13 +221,25 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
 
         {completed && !partialPractice && !internalPractice && (
-          <a
-            href={media(`/mock/attempts/${attempt.id}/certificate`)}
-            className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            <Download className="size-4" />
-            {t("certificate")}
-          </a>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 print:hidden">
+            <a
+              href={media(`/mock/attempts/${attempt.id}/certificate`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
+            >
+              <Download className="size-4" />
+              {t("certificate")} (PDF)
+            </a>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-fg transition-all hover:bg-surface-hover hover:scale-[1.02]"
+            >
+              <Printer className="size-4 text-brand" />
+              Sertifikatni Chop Etish / PDF
+            </button>
+          </div>
         )}
       </Card>
 

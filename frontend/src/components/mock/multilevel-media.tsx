@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, recordedAudioBlob } from '@/lib/microphone';
-import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob } from '@/lib/microphone';
+import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api-client';
@@ -171,11 +171,11 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try {
       closeMicrophone();
       assertMicrophoneAvailable();
-      input = await navigator.mediaDevices.getUserMedia({ audio: true });
+      input = await navigator.mediaDevices.getUserMedia({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
       if (!aliveRef.current || captureGeneration.current !== current) { input.getTracks().forEach((track) => track.stop()); return; }
       stream.current = input;
       // Verify capture support before the server starts a timed response.
-      recorder.current = createAudioRecorder(stream.current);
+      recorder.current = createAudioRecorder(stream.current, { audioBitsPerSecond: 28000 });
       stage('ready');
     } catch (e) {
       if (!aliveRef.current || captureGeneration.current !== current) return;

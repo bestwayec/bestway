@@ -144,7 +144,7 @@ export function useMockAttempt(attemptId: string) {
     queryKey: ["mock-attempt", attemptId],
     queryFn: () => api.get<MockAttemptDetail>(`/mock/attempts/${attemptId}`),
     enabled: !!attemptId,
-    refetchInterval: (query) => (query.state.data?.status === "grading" ? 5000 : false),
+    refetchInterval: (query) => (query.state.data?.status === "grading" ? 3000 : false),
   });
 }
 

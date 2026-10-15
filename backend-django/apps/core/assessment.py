@@ -312,13 +312,14 @@ def finish(job,result,selected,adjudicated):
     attempt=MockAttempt.objects.select_for_update().get(id=job.attempt_id);current=require_lease(job);input=job.input_snapshot;score=results.score(input,result)['score']
     teacher_touched=MockAnswer.objects.filter(attempt_id=job.attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']],graded_by_id__isnull=False).exists()
     auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode in ('PRACTICE_AUTO_AI', 'FULL_MOCK_AI_WITH_REVIEW') and result['confidence']>=threshold() and score is not None
-    if auto:project(current,result,None)
+    can_project=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and score is not None
+    if can_project:project(current,result,None)
     values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
         lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
     if current.final_score_source!='TEACHER':values['final_result']=result
-    if auto:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
+    if can_project:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
     update(current,**values)
-    if auto:
+    if can_project:
         from .mock_grading import recompute
         recompute(job.attempt_id)
 

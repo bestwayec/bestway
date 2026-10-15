@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useUploadMockSpeaking } from '@/hooks/use-mock';
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
 import { markActiveRecording, recordingKey, recoverRecording, releaseRecording, retainRecording } from '@/lib/durable-recordings';
 
 export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
@@ -100,13 +100,13 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
     const current = generation.current;
     try {
       assertMicrophoneAvailable();
-      const input = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const input = await navigator.mediaDevices.getUserMedia({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
       if (!alive.current || generation.current !== current) {
         input.getTracks().forEach((track) => { try { track.stop(); } catch {} });
         return;
       }
       stream.current = input;
-      const mr = createAudioRecorder(input); recorder.current = mr;
+      const mr = createAudioRecorder(input, { audioBitsPerSecond: 28000 }); recorder.current = mr;
       const chunks: Blob[] = [];
       mr.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       mr.onerror = () => {
