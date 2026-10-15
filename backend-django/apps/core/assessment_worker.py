@@ -57,6 +57,7 @@ def transcribe(job,input,speech):
         now=timezone.now()
         with transaction.atomic():
             service.require_lease(job)
+            SpeechTranscript.objects.filter(job_id=job.id,question_id=response['questionId'],attempt_number=job.attempt_count).delete()
             transcript=SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash or 'nohash',attempt_number=job.attempt_count,status='STARTED',
                 provider=os.environ.get('STT_PROVIDER','deepgram'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
         try:
@@ -77,6 +78,7 @@ def rate(job,input,role,grader):
     with transaction.atomic():
         service.require_lease(job)
         provider,model=providers.assessment_identity(role)
+        AssessmentEvaluation.objects.filter(job_id=job.id,role=role,attempt_number=job.attempt_count).delete()
         evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
             model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
