@@ -8,12 +8,12 @@ from apps.core import mock_attempts
 
 
 class SingleSkillAndDesktopVersionTests(SimpleTestCase):
-    def test_desktop_version_returns_0_5_8(self):
+    def test_desktop_version_returns_0_5_9(self):
         client = APIClient()
         response = client.get('/v1/desktop-version')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['data']['version'], '0.5.8')
-        self.assertIn('0.5.8', response.data['data']['downloadUrl'])
+        self.assertEqual(response.data['data']['version'], '0.5.9')
+        self.assertIn('0.5.9', response.data['data']['downloadUrl'])
 
     def test_format_diagnostic_feedback_structures_all_fields(self):
         raw_result = {

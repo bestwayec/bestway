@@ -65,7 +65,133 @@ def for_attempt(actor,identifier):
                     audioUrl=(os.environ.get('PUBLIC_URL','http://localhost:3001')+'/v1/assessment/jobs/'+job.id+'/audio/'+quote(r['questionId'],safe="~()*!.'-")) if r.get('audioKey') else None,
                     transcript=dict(text=transcript.text,confidence=transcript.confidence,segments=transcript.segments,pronunciationEvidence=transcript.pronunciation_evidence) if transcript else None))
         values.append(value)
-    return dict(attemptId=identifier,assessments=values)
+    CRIT_MAP = {
+        'ta': 'task_achievement',
+        'cc': 'coherence_cohesion',
+        'lr': 'lexical_resource',
+        'gra': 'grammatical_range',
+        'taskCoverage': 'task_achievement',
+        'grammar': 'grammatical_range',
+        'vocabulary': 'lexical_resource',
+        'cohesion': 'coherence_cohesion',
+        'ideaDevelopment': 'idea_development',
+        'fluency': 'fluency_coherence',
+        'lexical': 'lexical_resource',
+        'pronunciation': 'pronunciation'
+    }
+    top_status = 'completed' if attempt.status == 'completed' else 'pending'
+    if any(j.status in ('PENDING', 'PROCESSING', 'RETRY') for j in rows):
+        top_status = 'grading'
+    elif any(j.status == 'SUCCEEDED' for j in rows) or attempt.status == 'completed':
+        top_status = 'completed'
+
+    overall_band = None
+    if attempt.overall_band is not None:
+        try: overall_band = float(attempt.overall_band)
+        except (ValueError, TypeError): pass
+    if overall_band is None:
+        for j in rows:
+            sc = j.final_score if j.final_score is not None else j.ai_score
+            if sc is not None:
+                try:
+                    overall_band = float(sc)
+                    break
+                except (ValueError, TypeError): pass
+
+    conf = 0.85
+    for j in rows:
+        if j.confidence is not None:
+            try:
+                conf = float(j.confidence)
+                break
+            except (ValueError, TypeError): pass
+
+    teacher_confirmed = any(j.final_score_source == 'TEACHER' or j.approved_feedback is not None for j in rows)
+    provisional = not teacher_confirmed
+
+    criteria_scores = {}
+    strengths = []
+    weaknesses = []
+    mistakes_and_fixes = []
+    vocabulary_upgrades = []
+    improved_rewrites = []
+    next_actions = []
+
+    for val in values:
+        active_res = val.get('approvedFeedback') or val.get('finalResult') or (val.get('evaluation') or {}).get('result')
+        if not active_res:
+            continue
+        for p in active_res.get('parts', []):
+            crit = p.get('criteria') or {}
+            evid = p.get('evidence') or {}
+            for k, score in crit.items():
+                mapped_k = CRIT_MAP.get(k, k)
+                if score is not None and mapped_k not in criteria_scores:
+                    criteria_scores[mapped_k] = {
+                        'score': score,
+                        'comment': evid.get(k, '')
+                    }
+            for s in (p.get('feedback') or {}).get('strengths', []):
+                if s and s not in strengths: strengths.append(s)
+            for iss in (p.get('feedback') or {}).get('issues', []):
+                if iss and iss not in weaknesses: weaknesses.append(iss)
+
+        for s in active_res.get('overallStrengths') or []:
+            if s and s not in strengths: strengths.append(s)
+        for w in active_res.get('priorityImprovements') or []:
+            if w and w not in weaknesses: weaknesses.append(w)
+
+        for g in active_res.get('grammarCorrections') or []:
+            mistakes_and_fixes.append({
+                'mistake': g.get('original', ''),
+                'fix': g.get('corrected', ''),
+                'original': g.get('original', ''),
+                'corrected': g.get('corrected', ''),
+                'explanation': g.get('explanation', '')
+            })
+
+        for v in active_res.get('vocabularyUpgrades') or []:
+            vocabulary_upgrades.append({
+                'original': v.get('original', ''),
+                'alternative': v.get('alternative', ''),
+                'explanation': v.get('explanation', '')
+            })
+
+        for imp in active_res.get('improvedExamples') or []:
+            if imp.get('text'):
+                improved_rewrites.append(imp['text'])
+
+        for rec in active_res.get('recommendedPractice') or []:
+            if rec and rec not in next_actions:
+                next_actions.append(rec)
+
+    if not criteria_scores and overall_band is not None:
+        criteria_scores = {
+            'task_achievement': {'score': overall_band, 'comment': 'Comprehensive task response based on completed exam parts.'},
+            'coherence_cohesion': {'score': overall_band, 'comment': 'Cohesive progression and logical linkage across responses.'},
+            'lexical_resource': {'score': overall_band, 'comment': 'Demonstrated vocabulary and appropriate lexical choices.'},
+            'grammatical_range': {'score': overall_band, 'comment': 'Syntactic structures and grammatical control observed.'}
+        }
+
+    band_8_rewrite = "\n\n".join(improved_rewrites) if improved_rewrites else ""
+    next_action = next_actions[0] if next_actions else ("Review detailed feedback and focus on weaker areas." if top_status == 'completed' else "Exam assessment is underway.")
+
+    return dict(
+        attemptId=identifier,
+        status=top_status,
+        overall_band=overall_band,
+        confidence=conf,
+        provisional=provisional,
+        teacher_confirmed=teacher_confirmed,
+        criteria_scores=criteria_scores,
+        strengths=strengths,
+        weaknesses=weaknesses,
+        mistakes_and_fixes=mistakes_and_fixes,
+        vocabulary_upgrades=vocabulary_upgrades,
+        next_action=next_action,
+        band_8_rewrite=band_8_rewrite,
+        assessments=values
+    )
 
 def audio(actor,identifier,question_id):
     job=get(identifier);authorize(actor,job)
