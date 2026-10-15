@@ -20,17 +20,27 @@ def validate(data, create=False):
         cleaned_schedule = []
         for item in schedule:
             if not isinstance(item, dict): invalid('each value in nested property schedule must be either object or array')
-            day = item.get('day')
+            raw_day = item.get('day')
+            day = str(raw_day).strip().lower()[:3] if raw_day else ''
             if day not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
                 invalid('day must be one of the following values: mon, tue, wed, thu, fri, sat, sun')
             start = item.get('startTime')
             end = item.get('endTime')
-            if (not start or not end) and isinstance(item.get('time'), str) and '-' in item['time']:
-                parts = item['time'].split('-')
-                start = start or parts[0].strip()
-                end = end or parts[1].strip()
+            time_val = item.get('time')
+            if isinstance(time_val, str):
+                if '-' in time_val:
+                    parts = time_val.split('-')
+                    start = start or parts[0].strip()
+                    end = end or parts[1].strip()
+                else:
+                    start = start or time_val.strip()
+                    end = end or start
+            if not start:
+                start = '09:00'
+            if not end:
+                end = start
             for key, val in [('startTime', start), ('endTime', end)]:
-                if isinstance(val, str) and len(val) == 8 and val.count(':') == 2:
+                if isinstance(val, str) and len(val) >= 5:
                     val = val[:5]
                 if not isinstance(val, str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val or ''):
                     invalid("Vaqt HH:MM formatida bo'lsin")

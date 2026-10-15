@@ -85,9 +85,9 @@ function GroupFormFields({
   const sched = group?.schedule ?? [];
   const [name, setName] = React.useState(group?.name ?? "");
   const [teacherId, setTeacherId] = React.useState(group?.teacherId ?? "none");
-  const [days, setDays] = React.useState<Set<string>>(new Set(sched.map((s) => s.day)));
-  const [start, setStart] = React.useState(sched[0]?.startTime ?? "");
-  const [end, setEnd] = React.useState(sched[0]?.endTime ?? "");
+  const [days, setDays] = React.useState<Set<string>>(new Set(sched.map((s) => s.day?.toLowerCase())));
+  const [start, setStart] = React.useState(sched[0]?.startTime ?? (sched[0] as any)?.time ?? "");
+  const [end, setEnd] = React.useState(sched[0]?.endTime ?? (sched[0] as any)?.time ?? "");
 
   function toggleDay(d: string) {
     setDays((prev) => {
