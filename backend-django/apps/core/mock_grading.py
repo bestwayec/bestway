@@ -45,8 +45,7 @@ def recompute(attempt_id):
     result=annotate_practice_grades(attempt,result)
     was_completed=attempt.status=='completed'
     save_projection(attempt,result)
-    from .assessment_quality import attempt_practice_grades
-    if (is_partial(attempt) or attempt_practice_grades(attempt)) and result['status']=='completed' and not was_completed:
+    if result['status']=='completed' and not was_completed:
         from .mock_submission_snapshots import notify
         notify(attempt)
     return result

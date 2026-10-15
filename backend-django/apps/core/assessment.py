@@ -16,7 +16,7 @@ def setting(name,fallback,low,high):
     try:value=float(os.environ.get(name,'nan'))
     except ValueError:return fallback
     return value if low<=value<=high else fallback
-def threshold():return setting('ASSESSMENT_CONFIDENCE_THRESHOLD',.85,.5,1)
+def threshold():return setting('ASSESSMENT_CONFIDENCE_THRESHOLD',.70,.5,1)
 def max_attempts():return setting('ASSESSMENT_MAX_ATTEMPTS',3,1,3)
 def get(identifier):
     job=AssessmentJob.objects.filter(id=identifier).first()
@@ -185,7 +185,7 @@ def require_lease(job):
 def finish(job,result,selected,adjudicated):
     attempt=MockAttempt.objects.select_for_update().get(id=job.attempt_id);current=require_lease(job);input=job.input_snapshot;score=results.score(input,result)['score']
     teacher_touched=MockAnswer.objects.filter(attempt_id=job.attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']],graded_by_id__isnull=False).exists()
-    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode=='PRACTICE_AUTO_AI' and result['confidence']>=threshold() and score is not None
+    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode in ('PRACTICE_AUTO_AI', 'FULL_MOCK_AI_WITH_REVIEW') and result['confidence']>=threshold() and score is not None
     if auto:project(current,result,None)
     values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
         lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)

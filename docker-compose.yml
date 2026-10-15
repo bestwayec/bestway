@@ -100,6 +100,10 @@ services:
       PORT: 3001
       CORS_ORIGIN: https://bestwayec.uz,https://www.bestwayec.uz
       PUBLIC_URL: https://api.bestwayec.uz
+      ASSESSMENT_POLICY: FULL_MOCK_AI_WITH_REVIEW
+      ASSESSMENT_PROVIDER: openrouter
+      ASSESSMENT_FALLBACK_PROVIDER: xkiro
+      ASSESSMENT_CONFIDENCE_THRESHOLD: "0.70"
       DESKTOP_LATEST_VERSION: ${DESKTOP_LATEST_VERSION:-0.5.8}
       DESKTOP_DOWNLOAD_URL: ${DESKTOP_DOWNLOAD_URL:-https://github.com/bestwayec/bw-tauri/releases/download/bestway-app-v0.5.8/Bestway.App_0.5.8_x64-setup.exe}
       DESKTOP_PRERELEASE: "false"
@@ -136,6 +140,11 @@ services:
       BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in environment or .env file}@postgres:5432/education_center?schema=public
       REDIS_URL: redis://django-cache:6379/0
+      ASSESSMENT_POLICY: FULL_MOCK_AI_WITH_REVIEW
+      ASSESSMENT_PROVIDER: openrouter
+      ASSESSMENT_FALLBACK_PROVIDER: xkiro
+      ASSESSMENT_CONFIDENCE_THRESHOLD: "0.70"
+      ASSESSMENT_WORKER_POLL_INTERVAL: "2"
       SECURE_SSL_REDIRECT: "false"
       TRUST_PROXY_SSL_HEADER: "true"
     volumes:

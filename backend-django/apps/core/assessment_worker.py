@@ -95,13 +95,15 @@ def run_once(grader=None,speech=None):
 
 def tick():
     if os.environ.get('ASSESSMENT_WORKER_ENABLED')=='false' or not _tick_lock.acquire(blocking=False):return
-    try:run_once()
+    try:
+        while run_once():pass
     except Exception:pass # Durable lease recovery owns operational failures.
     finally:_tick_lock.release()
 
 def run(stop,once=False):
     try:
         if once:tick();return
-        while not stop.wait(20):
+        poll_interval=float(os.environ.get('ASSESSMENT_WORKER_POLL_INTERVAL','2'))
+        while not stop.wait(poll_interval):
             close_old_connections();tick()
     finally:close_old_connections()

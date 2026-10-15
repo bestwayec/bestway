@@ -115,9 +115,9 @@ def enqueue(attempt, wanted=None):
                 missing.append(key)
                 return 'UNAVAILABLE'
         value = build_input(exam,attempt,skill,section['groups'],answers,hash_audio)
-        policy = exam.assessment_policy if exam.assessment_policy is not None else os.environ.get('ASSESSMENT_POLICY', 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'MANUAL_ONLY')
+        policy = exam.assessment_policy if exam.assessment_policy is not None else os.environ.get('ASSESSMENT_POLICY', 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'FULL_MOCK_AI_WITH_REVIEW')
         if policy not in ('MANUAL_ONLY','PRACTICE_AUTO_AI','FULL_MOCK_AI_WITH_REVIEW'):
-            policy = 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'MANUAL_ONLY'
+            policy = 'PRACTICE_AUTO_AI' if is_partial(attempt) else 'FULL_MOCK_AI_WITH_REVIEW'
         if (exam.profile=='full_mock' or attempt.flow_mode=='full_test') and policy=='PRACTICE_AUTO_AI':
             policy = 'FULL_MOCK_AI_WITH_REVIEW'
         manual_failure='PARTIAL_PRACTICE_MANUAL_REVIEW' if is_partial(attempt) and policy=='MANUAL_ONLY' else ('MANUAL_POLICY' if policy=='MANUAL_ONLY' else None)

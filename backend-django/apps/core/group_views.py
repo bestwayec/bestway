@@ -24,7 +24,12 @@ def validate(data, create=False):
             if item.get('day') not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
                 invalid('day must be one of the following values: mon, tue, wed, thu, fri, sat, sun')
             for key in ('startTime', 'endTime'):
-                if not isinstance(item.get(key), str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', item[key]): invalid("Vaqt HH:MM formatida bo'lsin")
+                val = item.get(key)
+                if isinstance(val, str) and len(val) == 8 and val.count(':') == 2:
+                    val = val[:5]
+                    item[key] = val
+                if not isinstance(val, str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val or ''):
+                    invalid("Vaqt HH:MM formatida bo'lsin")
     return data
 
 
@@ -45,9 +50,15 @@ def group_view(request, group_id):
         group = service.get_group(group_id)
         if group.teacher_id != actor.id:
             service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
-        return success(service.update(actor, group_id, validate(payload(request, {'name', 'schedule'}))))
+        allowed = {'name', 'schedule', 'teacherId', 'description', 'groupId', 'id'}
+        data = payload(request, allowed)
+        clean_data = {k: v for k, v in data.items() if k in ('name', 'schedule')}
+        return success(service.update(actor, group_id, validate(clean_data)))
     require_role(request, 'admin', 'super_admin')
-    return success(service.update(actor, group_id, validate(payload(request, {'name', 'teacherId', 'schedule'}))))
+    allowed = {'name', 'teacherId', 'schedule', 'description', 'groupId', 'id'}
+    data = payload(request, allowed)
+    clean_data = {k: v for k, v in data.items() if k in ('name', 'teacherId', 'schedule')}
+    return success(service.update(actor, group_id, validate(clean_data)))
 
 
 @api_view(['GET'])

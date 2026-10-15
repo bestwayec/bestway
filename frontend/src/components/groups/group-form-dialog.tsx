@@ -102,14 +102,27 @@ function GroupFormFields({
     const trimmed = name.trim();
     if (trimmed.length < 2) return;
     const schedule =
-      start && end ? [...days].map((day) => ({ day: day as WeekDay, startTime: start, endTime: end })) : [];
+      start && end
+        ? [...days].map((day) => ({
+            day: day as WeekDay,
+            startTime: start.slice(0, 5),
+            endTime: end.slice(0, 5),
+          }))
+        : (group?.schedule ?? []);
 
     const onSettled = {
       onSuccess: () => {
-        toast.success(isEdit ? t("updated") : t("created"));
+        toast.success(isEdit ? (isTeacher ? "Guruh nomi muvaffaqiyatli saqlandi" : t("updated")) : t("created"));
         onClose();
       },
-      onError: () => toast.error(tc("unknownError")),
+      onError: (err: any) => {
+        const msg =
+          err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
+          tc("unknownError");
+        toast.error(msg);
+      },
     };
 
     if (isEdit) {
