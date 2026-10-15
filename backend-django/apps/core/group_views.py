@@ -17,19 +17,27 @@ def validate(data, create=False):
     schedule = data.get('schedule')
     if schedule is not None:
         if not isinstance(schedule, list): invalid('schedule must be an array')
+        cleaned_schedule = []
         for item in schedule:
             if not isinstance(item, dict): invalid('each value in nested property schedule must be either object or array')
-            for key in item:
-                if key not in ('day', 'startTime', 'endTime'): invalid(f'property {key} should not exist')
-            if item.get('day') not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
+            day = item.get('day')
+            if day not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
                 invalid('day must be one of the following values: mon, tue, wed, thu, fri, sat, sun')
-            for key in ('startTime', 'endTime'):
-                val = item.get(key)
+            start = item.get('startTime')
+            end = item.get('endTime')
+            if (not start or not end) and isinstance(item.get('time'), str) and '-' in item['time']:
+                parts = item['time'].split('-')
+                start = start or parts[0].strip()
+                end = end or parts[1].strip()
+            for key, val in [('startTime', start), ('endTime', end)]:
                 if isinstance(val, str) and len(val) == 8 and val.count(':') == 2:
                     val = val[:5]
-                    item[key] = val
                 if not isinstance(val, str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val or ''):
                     invalid("Vaqt HH:MM formatida bo'lsin")
+                if key == 'startTime': start = val
+                else: end = val
+            cleaned_schedule.append({'day': day, 'startTime': start, 'endTime': end})
+        data['schedule'] = cleaned_schedule
     return data
 
 
