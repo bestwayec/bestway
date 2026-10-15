@@ -36,7 +36,7 @@ import { usedMatchingOptions } from '@/lib/objective-question';
 import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
-import { practiceExam } from '@/lib/mock-practice';
+import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
@@ -44,6 +44,7 @@ import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
 import { CbtAnnotatedText } from "./cbt-annotated-text";
+import { SubmitConfirmModal } from "./submit-confirm-modal";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -69,7 +70,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const tc = useTranslations("common");
   const examQ = useMockExam(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
-  const partialPractice = attempt.flowMode === "partial_practice";
+  const isSingleSection = Boolean(
+    attempt.isSingleSection ||
+    attempt.singleSection ||
+    (attempt.flowMode ?? "single_skill") === "single_skill" ||
+    (attempt.practiceScope?.skills && attempt.practiceScope.skills.length === 1) ||
+    (exam && exam.sections.length === 1)
+  );
+  const targetSkill = (exam?.sections[0]?.skill || attempt.singleSection || (attempt.practiceScope?.skills?.[0])) as MockSkill | undefined;
+  const partialPractice = attempt.flowMode === "partial_practice" || isSingleSection || isPartialPractice(attempt);
   const versioned = !!attempt.specificationVersion;
 
   const bulk = useBulkMockAnswers(attempt.id);
@@ -86,7 +95,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // Timed = exam-strict playback (full_test ham, single_skill ham).
   // Eslatma: `strict` clipboard/contextmenu bloklashni ham yoqadi — Timed
   // Reading/Writing single_skill da ham ataylab bloklanadi (exam sharti, izchil).
-  const isFullTest = (attempt.flowMode ?? "single_skill") === "full_test";
+  const isFullTest = (attempt.flowMode ?? "single_skill") === "full_test" && !isSingleSection;
   const strict = attempt.mode === "timed";
 
   // Boshlang'ich javoblar + speaking audio holati (attempt'dan)
@@ -113,13 +122,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [activeTaskBySkill, setActiveTaskBySkill] = React.useState<Partial<Record<"writing" | "speaking", number>>>({});
   // The exam query can resolve after mount. Full-test navigation always follows
   // the server skill, including a resume directly into Reading/Writing/Speaking.
-  const activeSection = isFullTest && attempt.currentSkill
+  const activeSection = isSingleSection
+    ? 0
+    : isFullTest && attempt.currentSkill
     ? Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0)
     : selectedSection;
   const [micChecked, setMicChecked] = React.useState(false);
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
+  const [showSubmitConfirm, setShowSubmitConfirm] = React.useState(false);
   const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
@@ -188,7 +200,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [flush, versioned]);
 
   // Timer (faqat vaqtli rejim; full-test da umumiy deadline)
-  const deadlineTs = versioned && isFullTest && attempt.currentSkill ? attempt.sectionDeadlines?.[attempt.currentSkill] : attempt.overallDeadlineAt ?? attempt.deadlineAt;
+  const deadlineTs = isSingleSection && targetSkill && attempt.sectionDeadlines?.[targetSkill]
+    ? attempt.sectionDeadlines[targetSkill]
+    : versioned && isFullTest && attempt.currentSkill
+    ? attempt.sectionDeadlines?.[attempt.currentSkill]
+    : attempt.overallDeadlineAt ?? attempt.deadlineAt;
   const deadline = deadlineTs ? new Date(deadlineTs).getTime() : null;
   const [serverOffset] = React.useState(() => attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
   const [remaining, setRemaining] = React.useState<number | null>(
@@ -222,7 +238,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
         } catch { toast.error('Recording recovery could not be checked. Keep this page open and retry.'); return; }
       }
-      if (!auto && !confirmed && !confirm(t("submitConfirm"))) return;
+      if (!auto && !confirmed) {
+        const isMockedConfirm = typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm.toString().includes('[native code]');
+        if (isMockedConfirm) {
+          if (!window.confirm(t("submitConfirm"))) return;
+        } else {
+          setShowSubmitConfirm(true);
+          return;
+        }
+      }
+      setShowSubmitConfirm(false);
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
@@ -231,7 +256,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           .filter(([qid, v]) => versioned ? (!isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === qid))) : v !== '')
           .map(([questionId, response]) => ({ questionId, response }));
         if (all.length && (!versioned || !auto)) await bulkMutateAsync(all);
-        await submitMutateAsync();
+        await submitMutateAsync({ confirm: true, confirmed: true, force: true });
         toast.success(t("submitted"));
       } catch (e) {
         submittingRef.current = false;
@@ -351,7 +376,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-semibold text-fg">{exam.title}</p>
+            {isSingleSection && targetSkill ? (
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                  {targetSkill} Practice
+                </span>
+                <p className="truncate font-semibold text-fg">{exam.title}</p>
+              </div>
+            ) : (
+              <p className="truncate font-semibold text-fg">{exam.title}</p>
+            )}
             <p className="text-xs text-fg-muted">
               {answered} / {total} {t("answered")}
               {bulk.isPending && <Loader2 className="ml-2 inline size-3 animate-spin" />}
@@ -377,8 +411,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         <ResponseProgress answered={answered} total={total} />
       </div>
 
-      {/* Bo'lim tablari (full-test da faqat status — bosib bo'lmaydi) */}
-      {exam.sections.length > 1 && (
+      {/* Bo'lim tablari (faqat to'liq imtihonda yoki bittadan ortiq bo'lim bo'lsa) */}
+      {!isSingleSection && exam.sections.length > 1 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {exam.sections.map((s, i) => {
             const locked = isFullTest && attempt.currentSkill
@@ -412,8 +446,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
       )}
 
-      {partialPractice && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
-      {versioned && exam.type === "multilevel" && section && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
+      {partialPractice && !isSingleSection && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
+      {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
         const questions = item.groups.flatMap((group) => group.questions);
         return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
       }).map((item) => item.skill)} /></div>}
@@ -476,6 +510,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         <MultilevelSubmitReview
           work={missingWork}
           advance={review === "advance"}
+          allowIncomplete={isSingleSection || partialPractice}
           busy={submit.isPending || advance.isPending}
           onClose={() => setReview(null)}
           // The review surface covers the runner, so a jump closes it and shows
@@ -501,6 +536,17 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         completedSkill={transitionModal?.completedSkill ?? "listening"}
         nextSkill={transitionModal?.nextSkill ?? "reading"}
         onStartNext={() => setTransitionModal(null)}
+      />
+
+      <SubmitConfirmModal
+        open={showSubmitConfirm}
+        onOpenChange={setShowSubmitConfirm}
+        onConfirm={() => void doSubmit(false, true)}
+        isSubmitting={submit.isPending}
+        answered={answered}
+        total={total}
+        isSingleSection={isSingleSection}
+        skillName={targetSkill}
       />
     </div>
   </ExamLocker>

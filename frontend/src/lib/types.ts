@@ -838,6 +838,9 @@ export interface MockAttemptSummary {
   deadlineAt: string | null;
   flowMode: string;
   practiceScope?: MockPracticeScope | null;
+  attemptTypeLabel?: string;
+  singleSection?: MockSkill | string;
+  isSingleSection?: boolean;
   currentSkill: MockSkill | null;
   sectionDeadlines: Partial<Record<string, string>> | null;
   overallDeadlineAt: string | null;

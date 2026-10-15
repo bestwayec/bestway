@@ -83,13 +83,11 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     if is_partial(attempt):
         if not sections:
             attempts.fail('MOCK_PRACTICE_NOT_READY', 'The stored practice scope contains no tasks')
-        if skills is not None and set(skills) != set(scope(attempt)['skills']):
-            attempts.fail('VALIDATION_ERROR', 'Submit the complete selected practice scope')
     rows = list(MockAnswer.objects.filter(attempt_id=attempt.id))
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
         isGraded=a.is_graded, score=a.score) for a in rows}
     now = timezone.now()
-    if versioned and not force:
+    if versioned and not force and not is_partial(attempt):
         assert_complete(attempt, sections, answers, now)
         from .mock_speaking_policy import assert_submission
         assert_submission(attempt, sections, answers)

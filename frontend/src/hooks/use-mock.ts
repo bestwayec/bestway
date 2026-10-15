@@ -144,6 +144,7 @@ export function useMockAttempt(attemptId: string) {
     queryKey: ["mock-attempt", attemptId],
     queryFn: () => api.get<MockAttemptDetail>(`/mock/attempts/${attemptId}`),
     enabled: !!attemptId,
+    refetchInterval: (query) => (query.state.data?.status === "grading" ? 5000 : false),
   });
 }
 
@@ -178,8 +179,11 @@ export function useSaveMockAnnotations(attemptId: string) {
 export function useSubmitMock(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
-      api.post<{ status: MockAttemptStatus }>(`/mock/attempts/${attemptId}/submit`),
+    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[] }) =>
+      api.post<{ status: MockAttemptStatus }>(
+        `/mock/attempts/${attemptId}/submit`,
+        payload ?? { confirm: true },
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });

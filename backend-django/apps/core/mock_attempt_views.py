@@ -76,6 +76,8 @@ def start_view(request, exam_id=None):
             engine.fail('VALIDATION_ERROR', 'skills must contain unique skill selections')
         if data.get('flow') == 'full_test':
             engine.fail('VALIDATION_ERROR', 'Selected task practice requires flow other than full_test')
+        if not data.get('flow'):
+            data['flow'] = 'single_skill' if len(skills) == 1 else 'partial_practice'
     return success(engine.start(request.user, target_exam_id, data), 201)
 
 
@@ -108,14 +110,15 @@ def answers_view(request, attempt_id):
 def submit_view(request, attempt_id):
     from .mock_submissions import submit
     student(request)
-    data = body(request, {'skills'})
+    data = body(request, {'skills', 'confirm', 'confirmed', 'force'})
     skills = data.get('skills')
     if skills is not None:
         if not isinstance(skills, list):
             engine.fail('VALIDATION_ERROR', 'skills must be an array')
         if any(skill not in engine.SKILLS for skill in skills):
             engine.fail('VALIDATION_ERROR', 'each value in skills must be one of the following values: listening, reading, writing, speaking')
-    return success(submit(request.user, attempt_id, skills), 201)
+    force = bool(data.get('confirm') or data.get('confirmed') or data.get('force'))
+    return success(submit(request.user, attempt_id, skills, force=force), 200)
 
 
 @api_view(['POST'])

@@ -74,7 +74,7 @@ def assert_program(actor, attempt):
 
 def questions(attempt, ids):
     selected = scope(attempt)
-    if selected is not None:
+    if selected is not None and selected.get('questionIds'):
         ids = [qid for qid in ids if qid in selected['questionIds']]
     return list(MockQuestion.objects.filter(id__in=ids,
         group__section__exam_id=attempt.exam_id).select_related('group__section'))
@@ -125,7 +125,7 @@ def timing(exam_type, sections, mode, flow, at, selected_skills=None):
     deadlines = {}
     last = None
     cursor = at
-    if flow == 'partial_practice':
+    if flow == 'partial_practice' or (flow == 'single_skill' and selected_skills):
         active_skills = [s for s in (selected_skills or SKILLS) if s in by_skill]
         if mode == 'timed':
             for skill in active_skills:
@@ -163,14 +163,20 @@ def start_response(attempt, exam, resumed, full_duration=None):
         startedAt=attempt.started_at,
         deadlineAt=(attempt.overall_deadline_at or attempt.deadline_at) if resumed else attempt.deadline_at,
         serverTime=timezone.now(), durationMinutes=full_duration if full_duration is not None else mock_catalog.total_duration(exam, shaped['sections']),
-        flowMode=attempt.flow_mode or 'single_skill', currentSkill=attempt.current_skill,
+        flowMode=attempt.flow_mode or ('single_skill' if is_partial(attempt) else 'full_test'),
+        currentSkill=attempt.current_skill,
         sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
         exam=shaped, annotations=attempt.annotations or [] if resumed else [],
         savedAnswers={a.question_id: '[audio]' if a.audio_key else a.response
             for a in MockAnswer.objects.filter(attempt_id=attempt.id)
-            if not is_partial(attempt) or a.question_id in scope(attempt)['questionIds']} if resumed else {})
+            if not is_partial(attempt) or not scope(attempt)['questionIds'] or a.question_id in scope(attempt)['questionIds']} if resumed else {})
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
+        skills = (result['practiceScope'] or {}).get('skills') or []
+        if len(skills) == 1:
+            result['singleSection'] = skills[0]
+            result['isSingleSection'] = True
+            result['attemptTypeLabel'] = f"Single Section: {skills[0].capitalize()}"
     return result
 
 
@@ -212,9 +218,26 @@ def start(actor, exam_id, data):
             fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
         existing = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').first()
         if existing:
-            if partial and (not is_partial(existing) or set(scope(existing)['skills']) != set(data['skills'])):
-                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
-            return start_response(existing, exam, True)
+            now = timezone.now()
+            exp = existing.overall_deadline_at or existing.deadline_at
+            if exp and aware(exp) <= now:
+                from .mock_submissions import submit
+                try:
+                    submit(actor, existing.id, force=True)
+                except Exception:
+                    existing.status = 'completed'
+                    existing.save(update_fields=['status'])
+                existing = None
+            elif partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
+                from .mock_submissions import submit
+                try:
+                    submit(actor, existing.id, force=True)
+                except Exception:
+                    existing.status = 'completed'
+                    existing.save(update_fields=['status'])
+                existing = None
+            else:
+                return start_response(existing, exam, True)
         practice = selected_scope(exam, data['skills']) if partial else None
         if practice is not None and len(data['skills']) == 1:
             practice['single_section'] = data['skills'][0]
@@ -231,17 +254,18 @@ def start(actor, exam_id, data):
         shaped = mock_catalog.shape_exam(exam, False)
         if shaped['questionCount'] == 0:
             fail('MOCK_EXAM_EMPTY', "Bu imtihonda hali savollar yo'q")
-        flow = 'partial_practice' if partial else 'full_test' if data.get('flow') == 'full_test' else 'single_skill'
+        is_single = partial and len(data['skills']) == 1
+        flow = 'single_skill' if is_single else ('partial_practice' if partial else ('full_test' if data.get('flow') == 'full_test' else 'single_skill'))
         if flow == 'full_test' and exam.profile != 'full_mock':
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
-        mode = 'timed' if flow == 'full_test' else data.get('mode') or 'practice'
+        mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
         at = timezone.now()
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         attempt = MockAttempt.objects.create(id=new_id(), exam_id=exam_id, student_id=actor.id,
             specification_version=exam.specification_version, speaking_profile_version=exam.speaking_profile_version,
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
-            flow_mode=flow if flow in ('full_test', 'partial_practice') else None,
+            flow_mode=flow,
             current_skill=data['skills'][0] if partial else ('listening' if flow == 'full_test' else None),
             media_state={SCOPE_KEY: practice} if partial else None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,

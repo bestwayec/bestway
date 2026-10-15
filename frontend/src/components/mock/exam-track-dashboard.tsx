@@ -221,15 +221,15 @@ export function ExamTrackDashboard() {
                         asChild
                         size="sm"
                         variant="outline"
-                        className="w-full justify-center group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all"
+                        className="w-full justify-center font-semibold group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all"
                       >
-                        <Link href={`/mock/${skillExams[0].id}`}>
-                          Practice Section
+                        <Link href={`/mock/${skillExams[0].id}?section=${skill}`}>
+                          Boshlash
                         </Link>
                       </Button>
                     ) : (
                       <Button size="sm" variant="outline" disabled className="w-full justify-center text-xs">
-                        Practice Section
+                        Boshlash
                       </Button>
                     )}
                   </div>
@@ -275,58 +275,109 @@ export function ExamTrackDashboard() {
         </div>
       )}
 
-      {/* Exam History */}
+      {/* Oxirgi topshirilgan natijalar */}
       <div className="space-y-3">
-        <h3 className="text-base font-bold text-fg flex items-center gap-2">
-          <History className="size-4 text-fg-muted" />
-          {t("history")}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-fg flex items-center gap-2">
+            <History className="size-4 text-brand" />
+            Oxirgi topshirilgan natijalar
+          </h3>
+          <Link
+            href="/mock"
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            {t("history")} →
+          </Link>
+        </div>
+
         {history.isError && <p role="alert" className="text-sm text-danger">{t("loadError")}</p>}
         {history.isPending && <p role="status" className="text-sm text-fg-muted">{t("loading")}</p>}
         {!history.isPending && !history.isError && (history.data?.length ?? 0) === 0 && (
           <p className="text-sm text-fg-muted">{t("noHistory")}</p>
         )}
-        <div className="space-y-2">
-          {history.data
-            ?.filter((a) => matches(a.examType))
-            .slice(0, 5)
-            .map((a) => (
-              <Card
-                key={a.id}
-                className="flex flex-wrap items-center justify-between gap-3 p-3.5 hover:bg-surface-hover transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-sm text-fg">
-                    {a.examTitle}
-                  </p>
-                  <p className="mt-0.5 text-xs text-fg-muted">
-                    {tm(`status.${a.status}`)} ·{" "}
-                    {(a as unknown as { isSingleSection?: boolean; singleSection?: string }).isSingleSection ||
-                    (a as unknown as { singleSection?: string }).singleSection ||
-                    a.practiceScope?.skills?.length === 1 ? (
-                      <span className="font-semibold text-brand">
-                        Single Section (
-                        {(a as unknown as { singleSection?: string }).singleSection ||
-                          a.practiceScope?.skills?.[0] ||
-                          "Skill"}
-                        )
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-sky-500">Full Mock</span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <AttemptScoreSummary attempt={a} />
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/mock/attempt/${a.id}${a.status !== "in_progress" ? "#assessment-feedback" : ""}`}>
-                      {a.status === "in_progress" ? "Resume" : "Details"}
-                    </Link>
-                  </Button>
-                </div>
-              </Card>
-            ))}
-        </div>
+
+        {(() => {
+          const list = (history.data ?? []).filter((a) => matches(a.examType)).slice(0, 5);
+          if (list.length === 0) return null;
+
+          return (
+            <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="border-b border-border bg-bg-subtle/50 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+                  <tr>
+                    <th className="px-4 py-3">Sana</th>
+                    <th className="px-4 py-3">Imtihon / Bo&apos;lim</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-center">Ball / Band</th>
+                    <th className="px-4 py-3 text-right">Amal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {list.map((a) => {
+                    const dateStr = a.startedAt
+                      ? new Date(a.startedAt).toLocaleDateString("uz-UZ", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "—";
+                    const isSingle =
+                      (a as unknown as { isSingleSection?: boolean; singleSection?: string }).isSingleSection ||
+                      (a as unknown as { singleSection?: string }).singleSection ||
+                      a.practiceScope?.skills?.length === 1;
+                    const singleSkill =
+                      (a as unknown as { singleSection?: string }).singleSection ||
+                      a.practiceScope?.skills?.[0];
+
+                    return (
+                      <tr key={a.id} className="hover:bg-surface-hover/70 transition-colors">
+                        <td className="whitespace-nowrap px-4 py-3 font-medium text-fg-muted">
+                          {dateStr}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-fg line-clamp-1">{a.examTitle}</p>
+                          <p className="text-[11px] text-fg-muted">
+                            {isSingle ? (
+                              <span className="font-semibold text-brand">
+                                {singleSkill ? `${singleSkill.toUpperCase()} Practice` : "Section Practice"}
+                              </span>
+                            ) : (
+                              <span className="font-semibold text-sky-500">Full Mock</span>
+                            )}
+                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <Badge
+                            variant={
+                              a.status === "completed"
+                                ? "success"
+                                : a.status === "grading"
+                                ? "warning"
+                                : "neutral"
+                            }
+                            className="text-[11px] capitalize"
+                          >
+                            {a.status === "grading" ? "AI Tekshiruvda" : tm(`status.${a.status}`)}
+                          </Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                          <AttemptScoreSummary attempt={a} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <Button asChild size="sm" variant="outline" className="h-8 px-3 text-xs">
+                            <Link href={`/mock/attempt/${a.id}${a.status !== "in_progress" ? "#assessment-feedback" : ""}`}>
+                              {a.status === "in_progress" ? "Davom ettirish" : "Details"}
+                            </Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
