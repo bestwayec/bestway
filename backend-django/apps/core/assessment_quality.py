@@ -42,8 +42,12 @@ def check(input, part, rated):
     """Reject fabricated support; never silently replace an inflated grade."""
     from .assessment_results import ProviderError
     sources = [response_text(input, response) for response in part['responses']]
-    if not sources or any(not normalized(source) for source in sources):
-        raise ProviderError('ASSESSMENT_RESPONSE_EVIDENCE_MISSING')
+    has_any = any(bool(normalized(source)) for source in sources)
+    if not has_any:
+        if (rated.get('rawScore') or 0) > 0 or any((v or 0) > 0 for v in (rated.get('criteria') or {}).values()):
+            raise ProviderError('ASSESSMENT_RESPONSE_EVIDENCE_MISSING')
+        return
+
     anchors = rated.get('evidenceQuotes')
     if not isinstance(anchors, list) or len(anchors) > 50:
         raise ProviderError('RESULT_EVIDENCE_INVALID')
@@ -55,23 +59,22 @@ def check(input, part, rated):
         if type(index) is not int or not 0 <= index < len(sources) or not isinstance(criterion,str) or criterion not in rated['criteria'] or not isinstance(quote, str):
             raise ProviderError('RESULT_EVIDENCE_INVALID')
         excerpt = normalized(quote)
-        if not excerpt or len(quote) > 500 or (' '+excerpt+' ') not in (' '+normalized(sources[index])+' '):
+        source_normalized = normalized(sources[index])
+        if not excerpt or len(quote) > 500 or not source_normalized or (' '+excerpt+' ') not in (' '+source_normalized+' '):
             raise ProviderError('RESULT_EVIDENCE_INVALID')
         supported.add(criterion)
     if any(value is not None and value > 0 and key not in supported for key, value in rated['criteria'].items()):
         raise ProviderError('RESULT_EVIDENCE_INVALID')
     if input['program'] == 'MULTILEVEL':
         values = [value for value in rated['criteria'].values() if value is not None]
-        mean = sum(values)/len(values)
-        # Holistic marks may differ by half a point, but cannot contradict the
-        # diagnostic evidence or turn an off-task response into a top grade.
-        if rated['rawScore'] > mean+.5 or rated['rawScore'] > rated['criteria']['taskCoverage']+.5:
+        mean = sum(values)/len(values) if values else 0
+        if rated.get('rawScore') is not None and (rated['rawScore'] > mean+.5 or ('taskCoverage' in rated.get('criteria', {}) and rated['criteria']['taskCoverage'] is not None and rated['rawScore'] > rated['criteria']['taskCoverage']+.5)):
             raise ProviderError('RESULT_SCORE_EVIDENCE_CONFLICT')
     high = rated['rawScore'] is not None and rated['rawScore'] >= part['max']-.5
     if high:
-        # A sentence fragment cannot establish upper-band language range. These
-        # checks request review instead of inventing a lower numerical mark.
-        if any(len(normalized(source).split()) < 5 for source in sources):
+        # A sentence fragment cannot establish upper-band language range.
+        answered_sources = [s for s in sources if normalized(s)]
+        if any(len(normalized(source).split()) < 5 for source in answered_sources):
             raise ProviderError('RESULT_INSUFFICIENT_RESPONSE_EVIDENCE')
         if input['skill'] == 'writing':
             for response, source in zip(part['responses'], sources):

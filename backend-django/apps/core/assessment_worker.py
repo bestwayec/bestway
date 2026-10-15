@@ -80,7 +80,22 @@ def rate(job,input,role,grader):
         evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
             model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
-        output=grader(input,role);result=results.validate(output['result'],input)
+        output=grader(input,role)
+        from .assessment_quality import normalized, response_text
+        criteria_keys = results.keys(input)
+        for part in input['parts']:
+            sources = [response_text(input, r) for r in part['responses']]
+            if not any(bool(normalized(s)) for s in sources):
+                p_res = next((p for p in output.get('result', {}).get('parts', []) if p.get('id') == part['id']), None)
+                if p_res is not None:
+                    p_res['rawScore'] = 0.0
+                    for k in criteria_keys:
+                        if k in p_res.get('criteria', {}):
+                            p_res['criteria'][k] = 0.0
+                        if k in p_res.get('evidence', {}):
+                            p_res['evidence'][k] = 'No response was provided for this task.'
+                    p_res['evidenceQuotes'] = []
+        result=results.validate(output['result'],input)
         AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='SUCCEEDED',result=result,provider=output['provider'],model=output['model'],confidence=result['confidence'],input_tokens=output['inputTokens'],output_tokens=output['outputTokens'],latency_ms=output['latencyMs'],completed_at=timezone.now())
         if role=='PRIMARY':AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(ai_score=results.score(input,result)['score'],confidence=result['confidence'],selected_evaluation_id=evaluation.id,updated_at=timezone.now())
         return evaluation.id,result
