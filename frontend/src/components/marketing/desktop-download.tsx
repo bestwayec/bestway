@@ -18,44 +18,44 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const REPO = "bestwayec/bw-tauri";
-const RELEASES_URL = `https://github.com/${REPO}/releases/tag/v0.5.6`;
+const RELEASES_URL = `https://github.com/${REPO}/releases/tag/bestway-app-v0.5.8`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
-const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/v0.5.6`;
-const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_0.5.6_x64-setup.exe`;
+const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/bestway-app-v0.5.8`;
+const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_0.5.8_x64-setup.exe`;
 const FALLBACK_SERVER_WINDOWS_SETUP_URL =
-  "https://bestwayec.uz/media/downloads/Bestway.App_0.5.6_x64-setup.exe";
+  "https://bestwayec.uz/media/downloads/Bestway.App_0.5.8_x64-setup.exe";
 
 const FALLBACK_RELEASE: ReleaseInfo = {
-  version: "v0.5.6",
+  version: "v0.5.8",
   publishedAt: "2026-10-15T00:00:00Z",
   windows: [
     {
-      name: "Bestway.App_0.5.6_x64-setup.exe",
+      name: "Bestway.App_0.5.8_x64-setup.exe",
       url: LATEST_WINDOWS_SETUP_URL,
       sizeMB: "3.5 MB",
     },
   ],
   macos: [
     {
-      name: "Bestway.App_0.5.6_aarch64.dmg · Apple Silicon",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.6_aarch64.dmg`,
+      name: "Bestway.App_0.5.8_aarch64.dmg · Apple Silicon",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.8_aarch64.dmg`,
       sizeMB: "6.6 MB",
     },
     {
-      name: "Bestway.App_0.5.6_x64.dmg · Intel",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.6_x64.dmg`,
+      name: "Bestway.App_0.5.8_x64.dmg · Intel",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.8_x64.dmg`,
       sizeMB: "6.9 MB",
     },
   ],
   linux: [
     {
-      name: "Bestway.App_0.5.6_amd64.deb · Debian / Ubuntu",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.6_amd64.deb`,
+      name: "Bestway.App_0.5.8_amd64.deb · Debian / Ubuntu",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.8_amd64.deb`,
       sizeMB: "5.7 MB",
     },
     {
-      name: "Bestway.App_0.5.6_amd64.AppImage · Standalone",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.6_amd64.AppImage`,
+      name: "Bestway.App_0.5.8_amd64.AppImage · Standalone",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.8_amd64.AppImage`,
       sizeMB: "84.0 MB",
     },
   ],
@@ -105,7 +105,7 @@ function pickAssets(names: { name: string; url: string; size: number }[]): {
   const windowsSeen = new Set<string>();
   const windows: ReleaseAsset[] = [];
   const rawWindows = names
-    .filter((a) => /\.exe$|\.msi$/i.test(a.name) && !/0\.5\.[0-4]/i.test(a.name))
+    .filter((a) => /\.exe$|\.msi$/i.test(a.name) && !/0\.5\.[0-7]/i.test(a.name))
     .sort((a, b) => Number(/setup/i.test(b.name)) - Number(/setup/i.test(a.name)));
   for (const a of rawWindows) {
     if (!windowsSeen.has(a.name)) {
@@ -115,11 +115,16 @@ function pickAssets(names: { name: string; url: string; size: number }[]): {
     }
   }
   if (windows.length === 0) {
-    windows.push({
-      name: "Bestway.App_0.5.6_x64-setup.exe",
-      url: LATEST_WINDOWS_SETUP_URL,
-      sizeMB: "3.5 MB",
-    });
+    const anyExe = names.find((a) => /\.exe$/i.test(a.name));
+    windows.push(
+      anyExe
+        ? { name: anyExe.name, url: anyExe.url, sizeMB: fmt(anyExe.size) }
+        : {
+            name: "Bestway.App_0.5.8_x64-setup.exe",
+            url: LATEST_WINDOWS_SETUP_URL,
+            sizeMB: "3.5 MB",
+          }
+    );
   }
   const macos = names
     .filter((a) => /\.dmg$/i.test(a.name))
@@ -163,7 +168,7 @@ export function DesktopDownload() {
       (json.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
     );
     setRelease({
-      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v") || "v0.5.6",
+      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v") || "v0.5.8",
       publishedAt: json.published_at,
       ...picked,
     });

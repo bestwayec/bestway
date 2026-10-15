@@ -23,18 +23,16 @@ import { useGroupLiveMonitoring } from "@/hooks/use-group-monitoring";
 import type { CheatAnomalyEvent, LiveMonitoringStudent } from "@/lib/group-monitoring-types";
 
 function formatAnomalyName(event: string): string {
-  switch (event) {
-    case "exit_fullscreen":
-      return "Ekrandan chiqdi (exit_fullscreen)";
-    case "tab_switch":
-      return "Boshqa tabga o'tdi (tab_switch)";
-    case "blur":
-      return "Oyna nofaol bo'ldi (blur)";
-    case "copy_paste":
-      return "Nusxalash aniqlandi (copy_paste)";
-    default:
-      return event;
-  }
+  const norm = (event || "").toLowerCase();
+  if (norm.includes("fullscreen")) return "Ekrandan chiqdi (exit_fullscreen)";
+  if (norm.includes("tab_switch") || norm.includes("tab")) return "Boshqa tabga o'tdi (tab_switch)";
+  if (norm.includes("blur") || norm.includes("focus") || norm.includes("window_loss"))
+    return "Oynadan chiqib ketish (Window Blur / Focus Lost)";
+  if (norm.includes("webcam") || norm.includes("camera")) return "Veb-kamera to'sildi yoki o'chirildi";
+  if (norm.includes("copy") || norm.includes("paste")) return "Nusxalash aniqlandi (copy_paste)";
+  if (norm.includes("cheat")) return "Taqiqlangan harakat (cheat_attempt)";
+  if (norm.includes("monitor")) return "Ikkinchi monitor ulandi";
+  return event;
 }
 
 function SectionBadge({ skill }: { skill: string }) {
@@ -193,7 +191,7 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                     {!hasAnomaly ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         <ShieldCheck className="size-3.5" />
-                        Xavfsiz rejimda
+                        🟢 Xavfsiz rejimda
                       </span>
                     ) : (
                       <button
@@ -203,7 +201,7 @@ export function GroupLiveMonitoring({ groupId }: { groupId: string }) {
                         title="Batafsil ma'lumotni ko'rish"
                       >
                         <ShieldAlert className="size-3.5 text-rose-600" />
-                        <span>Qoidabuzarlik: {st.antiCheatCount} marta!</span>
+                        <span>🔴 Qoidabuzarlik: {st.antiCheatCount} marta!{st.anomalies?.[0]?.event?.toLowerCase().includes("blur") ? ` (${st.antiCheatCount} ta blur)` : st.anomalies?.[0]?.event ? ` (${st.anomalies[0].event})` : ""}</span>
                       </button>
                     )}
                   </div>

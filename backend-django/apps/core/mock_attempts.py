@@ -304,6 +304,90 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
         return {'saved': len(selected) if bulk else True}
 
 
+def notify_teacher_proctoring_alert(attempt, actor, event):
+    import os
+    import logging
+    from django.core.cache import cache
+    from apps.legacy_schema.models import StudentProfile, User
+    from . import telegram_delivery
+
+    attempt_id = getattr(attempt, 'id', 'unknown')
+    cache_key = f"proctoring_alert_throttle:{attempt_id}"
+    if cache.get(cache_key):
+        return
+    cache.set(cache_key, True, timeout=10)
+
+    try:
+        student_id = getattr(attempt, 'student_id', None) or getattr(actor, 'id', None)
+        if not student_id:
+            return
+
+        profile = StudentProfile.objects.filter(user_id=student_id).select_related('group__teacher', 'user').first()
+        teacher = profile.group.teacher if (profile and profile.group and profile.group.teacher) else None
+
+        chat_id = getattr(teacher, 'telegram_chat_id', None) if teacher else None
+        if not chat_id:
+            chat_id = os.environ.get('TELEGRAM_CHANNEL_ID')
+
+        if not chat_id:
+            return
+
+        desc_map = {
+            'blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
+            'window_blur': 'Oynadan chiqib ketish (Window Blur / Focus Lost)',
+            'window_loss': 'Oyna yo‘qolishi / minimallashtirish (Window Loss)',
+            'focus_lost': 'Oynadan fokus yo‘qoldi (Focus Lost)',
+            'exit_fullscreen': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
+            'fullscreen_exit': 'To‘liq ekran rejimidan chiqish (Exit Fullscreen)',
+            'tab_switch': 'Boshqa oynaga/tabga o‘tish (Tab Switch)',
+            'webcam_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
+            'camera_blocked': 'Veb-kamera to‘sildi yoki o‘chirildi (Webcam Blocked)',
+            'camera_error': 'Veb-kamera uzilishi (Camera Error)',
+            'cheat_attempt': 'Taqiqlangan harakat yoki dastur (Cheat Attempt)',
+            'copy_paste': 'Matn nusxalash yoki qo‘yish (Copy/Paste)',
+            'devtools_open': 'Dasturchi asboblari ochildi (DevTools)',
+            'multiple_monitors': 'Ikkinchi monitor aniqlandi (Multiple Monitors)',
+        }
+        event_lower = (event or '').lower().strip()
+        violation_desc = desc_map.get(event_lower, f"{event} (Xavfsizlik ogohlantirishi)")
+
+        student_name = ""
+        if profile and profile.user and profile.user.name:
+            student_name = profile.user.name
+        elif hasattr(actor, 'name') and actor.name:
+            student_name = actor.name
+        else:
+            student_user = User.objects.filter(id=student_id).first()
+            student_name = student_user.name if student_user else "Noma'lum o'quvchi"
+
+        exam_title = "Mock Imtihon"
+        if hasattr(attempt, 'exam') and attempt.exam:
+            exam_title = getattr(attempt.exam, 'title', None) or "Mock Imtihon"
+        elif getattr(attempt, 'exam_id', None):
+            from apps.legacy_schema.models import MockExam
+            ex = MockExam.objects.filter(id=attempt.exam_id).first()
+            if ex and ex.title:
+                exam_title = ex.title
+
+        count = getattr(attempt, 'anti_cheat_count', 1)
+        now_str = timezone.now().strftime("%H:%M:%S")
+
+        text = (
+            "⚠️ <b>DIQQAT! Imtihon xavfsizligi buzildi:</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👤 <b>O'quvchi:</b> {student_name}\n"
+            f"💻 <b>Imtihon:</b> {exam_title}\n"
+            f"🚨 <b>Qoidabuzarlik:</b> {violation_desc}\n"
+            f"🔢 <b>Jami ogohlantirishlar:</b> {count} ta\n"
+            f"🕒 <b>Vaqt:</b> {now_str}\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            "<i>BestWay Teacher Live Monitoring panelida jarayonni kuzatishingiz mumkin.</i>"
+        )
+        telegram_delivery.send(chat_id, text)
+    except Exception as e:
+        logging.getLogger(__name__).warning("notify_teacher_proctoring_alert failed: %s", e)
+
+
 def flag_cheat(actor, attempt_id, event):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
@@ -311,6 +395,13 @@ def flag_cheat(actor, attempt_id, event):
             MockCheatEvent.objects.create(id=new_id(), attempt_id=attempt_id, event=event, created_at=timezone.now())
             attempt.anti_cheat_count += 1
             attempt.save(update_fields=['anti_cheat_count'])
+            try:
+                if connection.in_atomic_block:
+                    transaction.on_commit(lambda: notify_teacher_proctoring_alert(attempt, actor, event), robust=True)
+                else:
+                    notify_teacher_proctoring_alert(attempt, actor, event)
+            except Exception:
+                pass
     return {'saved': True}
 
 

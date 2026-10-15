@@ -100,8 +100,8 @@ services:
       PORT: 3001
       CORS_ORIGIN: https://bestwayec.uz,https://www.bestwayec.uz
       PUBLIC_URL: https://api.bestwayec.uz
-      DESKTOP_LATEST_VERSION: ${DESKTOP_LATEST_VERSION:-0.5.6}
-      DESKTOP_DOWNLOAD_URL: ${DESKTOP_DOWNLOAD_URL:-https://github.com/bestwayec/bw-tauri/releases/download/v0.5.6/Bestway.App_0.5.6_x64-setup.exe}
+      DESKTOP_LATEST_VERSION: ${DESKTOP_LATEST_VERSION:-0.5.8}
+      DESKTOP_DOWNLOAD_URL: ${DESKTOP_DOWNLOAD_URL:-https://github.com/bestwayec/bw-tauri/releases/download/bestway-app-v0.5.8/Bestway.App_0.5.8_x64-setup.exe}
       DESKTOP_PRERELEASE: "false"
     ports:
       - "127.0.0.1:3001:3001"

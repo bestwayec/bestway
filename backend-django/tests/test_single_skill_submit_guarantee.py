@@ -8,12 +8,12 @@ from apps.core import mock_attempts
 
 
 class SingleSkillAndDesktopVersionTests(SimpleTestCase):
-    def test_desktop_version_returns_0_5_6(self):
+    def test_desktop_version_returns_0_5_8(self):
         client = APIClient()
         response = client.get('/v1/desktop-version')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['data']['version'], '0.5.6')
-        self.assertIn('0.5.6', response.data['data']['downloadUrl'])
+        self.assertEqual(response.data['data']['version'], '0.5.8')
+        self.assertIn('0.5.8', response.data['data']['downloadUrl'])
 
     def test_format_diagnostic_feedback_structures_all_fields(self):
         raw_result = {
@@ -81,3 +81,15 @@ class SingleSkillAndDesktopVersionTests(SimpleTestCase):
             self.assertEqual(resp2.status_code, 201)
             self.assertEqual(mock_start.call_args.args[2]['skills'], ['reading'])
             self.assertEqual(mock_start.call_args.args[2]['flow'], 'single_skill')
+
+    def test_flag_cheat_routes_and_notification(self):
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(role='student', id='s1', name='Test Student', is_authenticated=True))
+        with patch.object(mock_attempts, 'flag_cheat', return_value={'saved': True}) as mock_flag:
+            resp1 = client.post('/v1/mock/attempts/att-1/flag-cheat', {'event': 'blur'}, format='json')
+            self.assertEqual(resp1.status_code, 201)
+            mock_flag.assert_called_with(client.handler._force_user, 'att-1', 'blur')
+
+            resp2 = client.post('/v1/assessment/attempts/att-2/flag-cheat/', {'event': 'window_loss'}, format='json')
+            self.assertEqual(resp2.status_code, 201)
+            mock_flag.assert_called_with(client.handler._force_user, 'att-2', 'window_loss')

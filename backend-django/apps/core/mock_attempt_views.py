@@ -184,10 +184,16 @@ def speaking_start_view(request, attempt_id, question_id):
 @permission_classes([AllowAny])
 def cheat_view(request, attempt_id):
     student(request)
-    data = body(request, {'event', 'reason', 'type', 'anomaly', 'details', 'timestamp', 'time'})
-    event = data.get('event') or data.get('anomaly') or data.get('reason') or data.get('type')
+    allowed = {
+        'event', 'reason', 'type', 'anomaly', 'details', 'timestamp', 'time',
+        'description', 'detail', 'meta', 'payload', 'window', 'count',
+        'app_version', 'version', 'source', 'platform'
+    }
+    data = body(request, allowed)
+    event = data.get('event') or data.get('anomaly') or data.get('reason') or data.get('type') or data.get('details')
     if not isinstance(event, str):
         engine.fail('VALIDATION_ERROR', 'event must be a string')
+    event = event.strip()
     if not event:
         engine.fail('VALIDATION_ERROR', 'event should not be empty')
     if len(event) > 50:
