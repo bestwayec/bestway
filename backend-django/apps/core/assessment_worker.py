@@ -104,6 +104,23 @@ def rate(job,input,role,grader):
     except Exception as error:
         problem=failure(error);AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now());raise problem from None
 
+def _notify_assessment_finished(job):
+    try:
+        from apps.core import telegram_delivery
+        if hasattr(telegram_delivery, 'notify_submission_result'):
+            telegram_delivery.notify_submission_result(job)
+    except Exception:
+        pass
+
+def finish(job_or_id, result=None, selected=None, adjudicated=False):
+    job = job_or_id if hasattr(job_or_id, 'id') else AssessmentJob.objects.filter(id=job_or_id).first()
+    if job is not None and result is not None:
+        service.finish(job, result, selected, adjudicated)
+        job.refresh_from_db()
+    if job is not None:
+        _notify_assessment_finished(job)
+    return job
+
 def run_once(grader=None,speech=None):
     grader=grader or providers.assess;speech=speech or providers.transcribe;job=service.claim()
     if job is None:return False
@@ -124,6 +141,11 @@ def run_once(grader=None,speech=None):
             if disagreement:result['confidence']=min(result['confidence'],service.threshold()-.01)
             adjudicated=True
         service.finish(job,result,selected,adjudicated)
+        try:
+            job.refresh_from_db()
+        except Exception:
+            pass
+        _notify_assessment_finished(job)
     except Exception as error:
         problem=failure(error);service.fail_job(job,problem.code,problem.transient,problem.uncertain)
     return True

@@ -47,6 +47,7 @@ import { CbtAnnotatedText } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
+import { WritingImageOcr } from "./writing-image-ocr";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -932,7 +933,7 @@ function QuestionInput({
     };
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             {/* The task name is already the group heading when the two agree. */}
@@ -943,6 +944,18 @@ function QuestionInput({
           </div>
           <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
         </div> : header}
+        <WritingImageOcr
+          attemptId={attemptId}
+          questionId={q.id}
+          currentText={value}
+          onExtractedText={(ocrText, mode) => {
+            const nextText =
+              mode === "append" && value.trim()
+                ? `${value.trim()}\n\n${ocrText}`
+                : ocrText;
+            handleWritingChange(nextText);
+          }}
+        />
         <Textarea
           value={value}
           onChange={(e) => handleWritingChange(e.target.value)}

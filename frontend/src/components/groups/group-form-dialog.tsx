@@ -47,7 +47,13 @@ export function GroupFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? (isTeacher ? "Guruh nomini tahrirlash" : t("edit")) : t("create")}
+            {isEdit
+              ? isTeacher
+                ? "Guruh nomini tahrirlash"
+                : t("edit")
+              : isTeacher
+                ? "Yangi guruh yaratish"
+                : t("create")}
           </DialogTitle>
         </DialogHeader>
         {open && (
@@ -77,7 +83,7 @@ function GroupFormFields({
   const tw = useTranslations("weekdaysShort");
   const isEdit = !!group;
 
-  const teachersQ = useTeachers();
+  const teachersQ = useTeachers(!isTeacher);
   const create = useCreateGroup();
   const update = useUpdateGroup(group?.id ?? "");
   const pending = create.isPending || update.isPending;
@@ -136,7 +142,11 @@ function GroupFormFields({
       }
     } else {
       create.mutate(
-        { name: trimmed, ...(teacherId !== "none" ? { teacherId } : {}), schedule },
+        {
+          name: trimmed,
+          ...(!isTeacher && teacherId !== "none" ? { teacherId } : {}),
+          schedule,
+        },
         onSettled,
       );
     }

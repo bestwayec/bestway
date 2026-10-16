@@ -14,6 +14,7 @@ from .telegram_links import escape,find
 from . import telegram_delivery as api
 
 urlopen=_stdlib_urlopen
+SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
 APK_FILENAME='bestway-app.apk'
 DEFAULT_APK_REL_PATH='media/downloads/bestway-app.apk'
 DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
@@ -27,6 +28,7 @@ BTN=dict(
     results='📝 Natijalarim',
     mock_exams='🎯 Mock Imtihonlar',
     leaderboard='🥇 Reyting',
+    writing_ocr='✍️ Writing Rasm Tekshirish (AI)',
     web_login='🌐 Web Saytga Kirish',
     code='🔑 Ilovaga kirish kodi',
     monitoring='👁 Jonli Monitoring',
@@ -36,6 +38,11 @@ BTN=dict(
     grading='✍️ Baholash navbati',
     today='📊 Bugungi holat',
     debtors='💸 Qarzdorlar',
+    superadmin_panel='👑 Superadmin Panel',
+    platform_stats='📊 Platforma statistikasi',
+    active_students='👨‍🎓 Faol talabalar',
+    today_tests='📝 Bugungi testlar',
+    web_admin_sso='🔐 Web Admin (1-Click Kirish)',
     apk='📱 Android ilovani yuklab olish (.apk)',
     help='ℹ️ Yordam',
 )
@@ -45,16 +52,174 @@ def money(number):return f'{number:,}'.replace(',',' ')+" so'm"
 def date_uz(value):
     if hasattr(value,'tzinfo') and value.tzinfo:value=timezone.localtime(value)
     return f'{value.day}-{MONTHS[value.month-1]}'
-def menu_for(role):
-    if role=='student':
-        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['web_login','code'],['apk','help']]
-    elif role=='parent':
-        rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['web_login','code'],['apk','help']]
-    elif role=='teacher':
-        rows=[['groups','grading'],['monitoring','leaderboard'],['mock_exams','web_login'],['code','apk'],['help']]
+
+
+def get_superadmin_id() -> str:
+    return str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', SUPERADMIN_TELEGRAM_ID)))
+
+
+def is_superadmin(chat_id=None, user=None) -> bool:
+    if chat_id is not None and str(chat_id) == get_superadmin_id():
+        return True
+    if user is not None and getattr(user, 'role', None) == 'super_admin':
+        return True
+    return False
+
+
+def ensure_superadmin_user(chat_id, from_user=None):
+    """
+    Ensures Telegram user 5582178765 has an active, approved super_admin User record
+    linked to telegram_chat_id=5582178765.
+    """
+    from types import SimpleNamespace
+    from uuid import uuid4
+    chat_str = str(chat_id)
+    user = None
+    try:
+        user = find(chat_str)
+    except Exception:
+        user = None
+
+    if user is None:
+        try:
+            user = m.User.objects.filter(telegram_chat_id=chat_str).first()
+        except Exception:
+            user = None
+
+    name_candidate = "BestWay Superadmin"
+    if isinstance(from_user, dict):
+        fn = (from_user.get('first_name') or '').strip()
+        ln = (from_user.get('last_name') or '').strip()
+        full = f"{fn} {ln}".strip() or (from_user.get('username') or '').strip()
+        if full:
+            name_candidate = full
+    elif hasattr(from_user, 'name') and getattr(from_user, 'name', None):
+        name_candidate = from_user.name
+
+    now = timezone.now()
+    if user is not None:
+        needs_update = (
+            getattr(user, 'role', None) != 'super_admin'
+            or not getattr(user, 'is_active', False)
+            or str(getattr(user, 'telegram_chat_id', '')) != chat_str
+        )
+        user.role = 'super_admin'
+        user.is_active = True
+        user.is_approved = True
+        user.telegram_chat_id = chat_str
+        if needs_update and getattr(user, 'id', None):
+            try:
+                m.User.objects.filter(id=user.id).update(
+                    role='super_admin',
+                    is_active=True,
+                    telegram_chat_id=chat_str,
+                    updated_at=now,
+                )
+            except Exception:
+                pass
     else:
-        rows=[['today','debtors'],['monitoring','leaderboard'],['mock_exams','web_login'],['code','apk'],['help']]
+        try:
+            from common.auth.passwords import hash_password
+            import secrets
+            pwd_hash = hash_password(secrets.token_urlsafe(16))
+        except Exception:
+            pwd_hash = 'superadmin_sso_hash'
+        uid = f"superadmin-{chat_str}"
+        try:
+            existing_sa = m.User.objects.filter(id=uid).first()
+            if existing_sa:
+                m.User.objects.filter(id=uid).update(
+                    role='super_admin',
+                    is_active=True,
+                    telegram_chat_id=chat_str,
+                    updated_at=now,
+                )
+                user = m.User.objects.filter(id=uid).first()
+            else:
+                user = m.User.objects.create(
+                    id=uid,
+                    name=name_candidate,
+                    phone=f"tg_{chat_str}",
+                    password_hash=pwd_hash,
+                    role='super_admin',
+                    is_active=True,
+                    telegram_chat_id=chat_str,
+                    created_at=now,
+                    updated_at=now,
+                )
+        except Exception:
+            user = SimpleNamespace(
+                id=uid,
+                name=name_candidate,
+                phone=f"tg_{chat_str}",
+                role='super_admin',
+                is_active=True,
+                is_approved=True,
+                telegram_chat_id=chat_str,
+            )
+
+    if user is not None:
+        user.role = 'super_admin'
+        user.is_active = True
+        user.is_approved = True
+        user.telegram_chat_id = chat_str
+        try:
+            if getattr(user, 'id', None):
+                m.StudentProfile.objects.filter(user_id=user.id).update(is_approved=True)
+        except Exception:
+            pass
+    return user
+
+
+def resolve_user(chat_id, active=True, from_user=None):
+    if is_superadmin(chat_id=chat_id):
+        return ensure_superadmin_user(chat_id, from_user=from_user)
+    user = find(chat_id, active)
+    if user and getattr(user, 'role', None) == 'super_admin':
+        user.is_approved = True
+    return user
+
+
+def menu_for(role, chat_id=None):
+    if role == 'super_admin' or is_superadmin(chat_id=chat_id):
+        rows = [
+            ['superadmin_panel'],
+            ['platform_stats', 'active_students'],
+            ['today_tests', 'web_admin_sso'],
+            ['writing_ocr'],
+            ['today', 'debtors'],
+            ['monitoring', 'leaderboard'],
+            ['mock_exams', 'web_login'],
+            ['code', 'apk'],
+            ['help'],
+        ]
+    elif role=='student':
+        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
+    elif role=='parent':
+        rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
+    elif role=='teacher':
+        rows=[['groups','grading'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
+    else:
+        rows=[['today','debtors'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
     return dict(keyboard=[[dict(text=BTN[key]) for key in row] for row in rows],resize_keyboard=True)
+
+
+def superadmin_inline_keyboard(chat_id, user=None):
+    sso_url = generate_sso_url(chat_id, user)
+    return dict(inline_keyboard=[
+        [
+            dict(text=BTN['platform_stats'], callback_data='sa_platform_stats'),
+            dict(text=BTN['active_students'], callback_data='sa_active_students'),
+        ],
+        [
+            dict(text=BTN['today_tests'], callback_data='sa_today_tests'),
+        ],
+        [
+            dict(text=BTN['web_admin_sso'], url=sso_url),
+        ],
+    ])
+
+
 def apk_inline_keyboard():
     return dict(inline_keyboard=[[dict(text=BTN['apk'],callback_data='download_apk')]])
 def apk_caption():
@@ -142,6 +307,8 @@ def generate_sso_url(chat_id, user=None):
     return f"{base_url}/login?id={chat_id}&first_name={enc_name}&auth_date={auth_date}&hash={auth_hash}"
 
 def send_web_login(chat_id, user=None):
+    if is_superadmin(chat_id=chat_id, user=user):
+        user = ensure_superadmin_user(chat_id, from_user=user)
     url = generate_sso_url(chat_id, user)
     reply_markup = dict(inline_keyboard=[[dict(text="🌐 Web Platformaga Kirish", url=url)]])
     text = (
@@ -152,6 +319,20 @@ def send_web_login(chat_id, user=None):
         "⏱ <i>Havola xavfsizlik sababli cheklangan muddat amal qiladi.</i>"
     )
     api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_web_admin_login(chat_id, user=None):
+    user = ensure_superadmin_user(chat_id, from_user=user)
+    url = generate_sso_url(chat_id, user)
+    reply_markup = dict(inline_keyboard=[[dict(text=BTN['web_admin_sso'], url=url)]])
+    text = (
+        "👑 <b>BestWay Web Admin Paneliga 1-Click Kirish (Superadmin SSO)</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Hisob: <b>" + escape(getattr(user, 'name', 'Superadmin')) + "</b> (<code>super_admin</code>)\n"
+        "To'g'ridan-to'g'ri Web Admin boshqaruv paneliga kirish uchun pastdagi tugmani bosing 👇"
+    )
+    api.send(chat_id, text, reply_markup=reply_markup)
+
 
 def handle_audio_request(chat_id, payload):
     parts = (payload or '').strip().split('_')
@@ -187,7 +368,10 @@ def handle_audio_request(chat_id, payload):
             api.send(chat_id, f"{caption}\n\n🔗 <b>Audio havola:</b> {direct_url}")
     return True
 
-def show(chat_id,role,name):api.menu(chat_id,f'👋 Xush kelibsiz, <b>{escape(name)}</b>!\n\nQuyidagi tugmalardan foydalaning:',menu_for(role))
+def show(chat_id,role,name):
+    effective_role = 'super_admin' if is_superadmin(chat_id=chat_id) else role
+    greeting = f'👑 Xush kelibsiz, <b>{escape(name)}</b> (Superadmin)!\n\nQuyidagi boshqaruv tugmalaridan foydalaning:' if effective_role == 'super_admin' else f'👋 Xush kelibsiz, <b>{escape(name)}</b>!\n\nQuyidagi tugmalardan foydalaning:'
+    api.menu(chat_id, greeting, menu_for(effective_role, chat_id=chat_id))
 def no_children(role):return "👨‍👩‍👦 Sizga hali farzand bog'lanmagan.\n\nSaytga kiring → <b>Farzandni ulash</b> → o'quvchining 8 belgili kodini kiriting." if role=='parent' else "ℹ️ Bu bo'lim faqat o'quvchi va ota-onalar uchun."
 def targets(user):
     if user.role=='student':return [user]
@@ -446,6 +630,137 @@ def text_for(user,key):
         if not rows:return f"✅ {MONTHS[now.month-1]} oyida qarzdor yo'q. Ajoyib!"
         lines='\n'.join(f'   • {escape(s.user.name)} — {escape(s.user.phone)} {label(p.state if p else "unpaid")}' for s,p in rows[:20]);more=f'\n\n<i>…va yana {len(rows)-20} ta</i>' if len(rows)>20 else ''
         return f'💸 <b>Qarzdorlar — {MONTHS[now.month-1]}</b> ({len(rows)} ta)\n\n{lines}{more}\n\n<i>Eslatma yuborish: admin panel → To\'lovlar → "Eslatma yuborish".</i>'
+    if key == 'writing_ocr':
+        return (
+            "✍️ <b>Writing Rasm Tekshirish (AI)</b>\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "IELTS Writing insho rasmini (qo'lyozma yoki bosma) shu yerga yuboring. "
+            "AI matnni o'qib (OCR), 4 ta mezon bo'yicha baholab beradi!\n\n"
+            "📌 <i>Izoh sifatida (caption) insho mavzusini (Task prompt) ham yozib yuborishingiz mumkin.</i>"
+        )
+    if key in ('superadmin_panel', 'platform_stats', 'active_students', 'today_tests'):
+        if not is_superadmin(chat_id=getattr(user, 'telegram_chat_id', None), user=user):
+            return "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan."
+        if key == 'superadmin_panel':
+            return (
+                f"👑 <b>BestWay Superadmin Paneli</b>\n"
+                f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+                f"👤 Hisob: <b>{escape(getattr(user, 'name', 'Superadmin'))}</b> (<code>super_admin</code>)\n"
+                f"🆔 Telegram ID: <code>{escape(str(getattr(user, 'telegram_chat_id', get_superadmin_id())))}</code>\n\n"
+                f"Quyidagi bo'limlardan birini tanlang:\n"
+                f"• 📊 <b>Platforma statistikasi</b> — umumiy ko'rsatkichlar\n"
+                f"• 👨‍🎓 <b>Faol talabalar</b> — o'quvchilar va guruhlar kesimi\n"
+                f"• 📝 <b>Bugungi testlar</b> — bugun topshirilgan imtihonlar\n"
+                f"• 🔐 <b>Web Admin (1-Click Kirish)</b> — saytga to'g'ridan-to'g'ri kirish"
+            )
+        if key == 'platform_stats':
+            try:
+                total_users = m.User.objects.count()
+            except Exception:
+                total_users = 0
+            try:
+                active_students_cnt = m.StudentProfile.objects.filter(user__is_active=True).count()
+            except Exception:
+                active_students_cnt = 0
+            try:
+                teachers_cnt = m.User.objects.filter(role='teacher', is_active=True).count()
+            except Exception:
+                teachers_cnt = 0
+            try:
+                groups_cnt = m.Group.objects.count()
+            except Exception:
+                groups_cnt = 0
+            try:
+                completed_mocks = m.MockAttempt.objects.filter(status='completed').count()
+            except Exception:
+                completed_mocks = 0
+            try:
+                completed_tests = m.TestAttempt.objects.filter(status='completed').count()
+            except Exception:
+                completed_tests = 0
+            total_attempts = completed_mocks + completed_tests
+            return (
+                f"📊 <b>Platforma statistikasi</b> — {date_uz(now)}\n"
+                f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+                f"👥 Jami foydalanuvchilar: <b>{total_users}</b>\n"
+                f"👨‍🎓 Faol talabalar: <b>{active_students_cnt}</b>\n"
+                f"👨‍🏫 O'qituvchilar: <b>{teachers_cnt}</b>\n"
+                f"🏫 Guruhlar: <b>{groups_cnt}</b>\n"
+                f"🎯 Yakunlangan Mock imtihonlar: <b>{completed_mocks}</b>\n"
+                f"📝 Yakunlangan mavzuli testlar: <b>{completed_tests}</b>\n"
+                f"✅ Jami topshirilgan urinishlar: <b>{total_attempts}</b>"
+            )
+        if key == 'active_students':
+            group_lines = []
+            try:
+                for grp in m.Group.objects.all()[:15]:
+                    cnt = m.StudentProfile.objects.filter(group_id=grp.id, user__is_active=True).count()
+                    group_lines.append(f"   • <b>{escape(grp.name)}</b>: {cnt} ta talaba")
+            except Exception:
+                pass
+            student_lines = []
+            try:
+                recent_profiles = list(
+                    m.StudentProfile.objects.filter(user__is_active=True)
+                    .select_related('user', 'group')
+                    .order_by('-created_at')[:12]
+                )
+                for sp in recent_profiles:
+                    u_name = escape(sp.user.name if getattr(sp, 'user', None) else "Talaba")
+                    g_name = escape(sp.group.name if getattr(sp, 'group', None) else "Guruhsiz")
+                    pts = getattr(sp, 'current_points', 0)
+                    student_lines.append(f"   👤 <b>{u_name}</b> ({g_name}) — <b>{pts}</b> ball")
+            except Exception:
+                pass
+            grp_block = "\n".join(group_lines) if group_lines else "   — guruhlar topilmadi"
+            std_block = "\n".join(student_lines) if student_lines else "   — faol talabalar topilmadi"
+            return (
+                f"👨‍🎓 <b>Faol talabalar va guruhlar</b>\n"
+                f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+                f"<b>🏫 Guruhlar kesimida:</b>\n{grp_block}\n\n"
+                f"<b>🆕 Oxirgi faol talabalar:</b>\n{std_block}"
+            )
+        if key == 'today_tests':
+            today_date = now.date()
+            attempt_lines = []
+            try:
+                mock_today = list(
+                    m.MockAttempt.objects.filter(started_at__date=today_date)
+                    .select_related('student__user', 'exam')
+                    .order_by('-started_at')[:15]
+                )
+                for ma in mock_today:
+                    s_name = escape(ma.student.user.name if getattr(ma, 'student', None) and getattr(ma.student, 'user', None) else "Talaba")
+                    e_title = escape(ma.exam.title if getattr(ma, 'exam', None) else "Mock Imtihon")
+                    st_lbl = label(getattr(ma, 'status', 'in_progress'))
+                    sc_val = (
+                        f"Band {ma.overall_band}" if getattr(ma, 'overall_band', None) is not None
+                        else f"{ma.overall_score:g} ball" if getattr(ma, 'overall_score', None) is not None
+                        else "—"
+                    )
+                    attempt_lines.append(f"   🎯 <b>{s_name}</b> — {e_title}\n      Holat: {st_lbl} | Natija: <b>{sc_val}</b>")
+            except Exception:
+                pass
+            try:
+                test_today = list(
+                    m.TestAttempt.objects.filter(started_at__date=today_date)
+                    .select_related('student__user', 'test')
+                    .order_by('-started_at')[:10]
+                )
+                for ta in test_today:
+                    s_name = escape(ta.student.user.name if getattr(ta, 'student', None) and getattr(ta.student, 'user', None) else "Talaba")
+                    t_title = escape(ta.test.title if getattr(ta, 'test', None) else "Test")
+                    st_lbl = label(getattr(ta, 'status', 'in_progress'))
+                    sc_val = f"{ta.total_score:g} ball" if getattr(ta, 'total_score', None) is not None else "—"
+                    attempt_lines.append(f"   📝 <b>{s_name}</b> — {t_title}\n      Holat: {st_lbl} | Natija: <b>{sc_val}</b>")
+            except Exception:
+                pass
+            body = "\n".join(attempt_lines) if attempt_lines else "   — Bugun hali testlar topshirilmagan."
+            return (
+                f"📝 <b>Bugungi testlar ({date_uz(now)})</b> — {len(attempt_lines)} ta\n"
+                f"➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+                f"{body}"
+            )
     per_role=dict(
         student="Tugmalar orqali ballaringiz, davomatingiz, to'lovlaringiz, mock/test natijalaringiz va reytingingizni ko'rasiz.",
         parent="Tugmalar orqali farzandingiz ballari, davomati, to'lovlari, mock/test natijalari va reytingini kuzatasiz.",
@@ -490,20 +805,40 @@ def send_otp_code(chat_id, from_user=None):
     api.send(chat_id, text)
 
 
-def handle(chat_id,text):
-    if text==BTN['apk']:
-        send_apk(chat_id);return True
-    if text==BTN.get('web_login'):
-        user=find(chat_id,True)
-        send_web_login(chat_id,user);return True
-    if text==BTN.get('code'):
-        user=find(chat_id,True)
-        send_otp_code(chat_id,user);return True
-    user=find(chat_id,True)
-    if not user:return False
-    key=next((key for key,value in BTN.items() if value==text),None)
-    if key is None:return False
-    if key=='help':
-        api.send(chat_id,text_for(user,key),reply_markup=apk_inline_keyboard());return True
-    api.send(chat_id,text_for(user,key));return True
+def handle(chat_id, text, from_user=None):
+    user = resolve_user(chat_id, True, from_user=from_user)
+    if text == BTN['apk']:
+        send_apk(chat_id)
+        return True
+    if text == BTN.get('web_login'):
+        send_web_login(chat_id, user)
+        return True
+    if text == BTN.get('web_admin_sso'):
+        if not is_superadmin(chat_id=chat_id, user=user):
+            api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+            return True
+        send_web_admin_login(chat_id, user)
+        return True
+    if text == BTN.get('code'):
+        send_otp_code(chat_id, user or from_user)
+        return True
+    if text == BTN.get('writing_ocr'):
+        from types import SimpleNamespace
+        dummy_user = user or SimpleNamespace(role='student', name='Talaba', telegram_chat_id=str(chat_id))
+        api.send(chat_id, text_for(dummy_user, 'writing_ocr'))
+        return True
+    if not user:
+        return False
+    key = next((key for key, value in BTN.items() if value == text), None)
+    if key is None:
+        return False
+    if key == 'help':
+        api.send(chat_id, text_for(user, key), reply_markup=apk_inline_keyboard())
+        return True
+    if key == 'superadmin_panel':
+        api.send(chat_id, text_for(user, key), reply_markup=superadmin_inline_keyboard(chat_id, user))
+        return True
+    api.send(chat_id, text_for(user, key))
+    return True
+
 

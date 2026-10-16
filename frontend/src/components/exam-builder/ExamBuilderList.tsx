@@ -88,7 +88,10 @@ export function ExamBuilderList() {
     );
   }
   const { data: me } = useMe();
-  const canDelete = me?.user.role === "super_admin";
+  const canDelete =
+    me?.user.role === "teacher" ||
+    me?.user.role === "admin" ||
+    me?.user.role === "super_admin";
 
   const all = React.useMemo(() => examsQ.data ?? [], [examsQ.data]);
 

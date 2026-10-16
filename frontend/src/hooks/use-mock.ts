@@ -221,6 +221,27 @@ export function useUploadMockSpeaking(attemptId: string) {
   });
 }
 
+/** Writing qo'lyozma/rasm javobini OCR orqali matnga aylantirish va saqlash (multipart) */
+export interface WritingOcrResponse {
+  saved?: boolean;
+  ocrText: string;
+  imageUrls?: string[];
+  pages?: Array<{ page: number; imageUrl?: string; text?: string }>;
+  wordCount?: number;
+}
+
+export function useUploadMockWritingOcr(attemptId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { questionId: string; form: FormData }) =>
+      api.post<WritingOcrResponse>(
+        `/api/v1/mock/attempts/${attemptId}/writing/${v.questionId}/ocr`,
+        v.form,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] }),
+  });
+}
+
 /* ── Grading (staff) ───────────────────────────────────────────────────── */
 
 export function useGradeMock(attemptId: string) {

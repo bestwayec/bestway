@@ -276,3 +276,211 @@ def speaking_audio_view(request, attempt_id, question_id):
     if answer is None or not answer.audio_key or not resolve_key(answer.audio_key).is_file():
         engine.fail('FILE_NOT_FOUND', 'Audio topilmadi', 404)
     return stream_audio(request, resolve_key(answer.audio_key))
+
+
+def _extract_uploaded_images(request, max_size=10 * 1024 * 1024):
+    import base64
+    from pathlib import Path
+    from . import writing_ocr
+
+    allowed_exts = {'.jpg', '.jpeg', '.png', '.webp'}
+    allowed_mimes = {'image/jpeg', 'image/jpg', 'image/png', 'image/webp'}
+    extracted = []
+
+    files = []
+    if hasattr(request, 'FILES') and request.FILES:
+        for key in ('images', 'image', 'files', 'file'):
+            if key in request.FILES:
+                files.extend(request.FILES.getlist(key))
+        if not files:
+            for key in request.FILES:
+                files.extend(request.FILES.getlist(key))
+
+    for upload in files:
+        ext = Path(getattr(upload, 'name', '') or 'page.jpg').suffix.lower() or '.jpg'
+        mime = (getattr(upload, 'content_type', '') or 'image/jpeg').lower().split(';')[0].strip()
+        if ext not in allowed_exts and mime not in allowed_mimes:
+            engine.fail('INVALID_FILE_TYPE', 'Rasm formati faqat JPG, PNG yoki WEBP bo‘lishi kerak', 400)
+        if getattr(upload, 'size', 0) > max_size:
+            engine.fail('FILE_TOO_LARGE', 'Har bir rasm hajmi 10 MB dan oshmasligi kerak', 400)
+        upload.seek(0)
+        raw_bytes = upload.read()
+        if len(raw_bytes) > max_size:
+            engine.fail('FILE_TOO_LARGE', 'Har bir rasm hajmi 10 MB dan oshmasligi kerak', 400)
+        if not raw_bytes:
+            engine.fail('INVALID_FILE', 'Yuklangan rasm bo‘sh', 400)
+        if ext not in allowed_exts:
+            ext = {
+                'image/png': '.png',
+                'image/webp': '.webp',
+            }.get(mime, '.jpg')
+        if mime not in allowed_mimes:
+            mime = {
+                '.png': 'image/png',
+                '.webp': 'image/webp',
+            }.get(ext, 'image/jpeg')
+        extracted.append((raw_bytes, mime, ext))
+
+    if not extracted and isinstance(getattr(request, 'data', None), dict):
+        raw_list = request.data.get('images') or (
+            [request.data['image']] if request.data.get('image') else []
+        )
+        if isinstance(raw_list, list):
+            for item in raw_list:
+                if not isinstance(item, str) or not item.strip():
+                    continue
+                mime = 'image/jpeg'
+                ext = '.jpg'
+                b64_part = item.strip()
+                if b64_part.startswith('data:'):
+                    header, _, b64_part = b64_part.partition(',')
+                    if 'image/png' in header:
+                        mime, ext = 'image/png', '.png'
+                    elif 'image/webp' in header:
+                        mime, ext = 'image/webp', '.webp'
+                    elif 'image/jpeg' in header or 'image/jpg' in header:
+                        mime, ext = 'image/jpeg', '.jpg'
+                    else:
+                        engine.fail('INVALID_FILE_TYPE', 'Rasm formati faqat JPG, PNG yoki WEBP bo‘lishi kerak', 400)
+                try:
+                    raw_bytes = base64.b64decode(b64_part)
+                except Exception:
+                    engine.fail('INVALID_FILE_TYPE', 'Base64 rasm formati noto‘g‘ri', 400)
+                if len(raw_bytes) > max_size:
+                    engine.fail('FILE_TOO_LARGE', 'Har bir rasm hajmi 10 MB dan oshmasligi kerak', 400)
+                extracted.append((raw_bytes, mime, ext))
+
+    if not extracted:
+        engine.fail('NO_FILE', 'Kamida bitta rasm yuklang (JPG, PNG, WEBP)', 400)
+    return extracted
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def writing_ocr_view(request, attempt_id, question_id=None):
+    from uuid import uuid4
+    from django.utils import timezone
+    from apps.legacy_schema.models import MockAttempt, MockAnswer, MockQuestion
+    from .content_media import storage_path
+    from . import writing_ocr
+
+    require_authenticated(request)
+    if request.user.role not in ('student', 'teacher', 'admin', 'super_admin'):
+        engine.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
+
+    if not question_id and isinstance(getattr(request, 'data', None), dict):
+        question_id = request.data.get('questionId') or request.data.get('question_id')
+    if not question_id:
+        question_id = request.query_params.get('questionId') or request.query_params.get('question_id')
+
+    attempt = MockAttempt.objects.filter(id=attempt_id).first()
+    if attempt is None:
+        engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
+    if request.user.role == 'student' and attempt.student_id != request.user.id:
+        engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
+
+    if not question_id:
+        first_q = MockQuestion.objects.filter(
+            group__section__exam_id=attempt.exam_id,
+            group__section__skill='writing',
+        ).order_by('sort_order', 'number').first()
+        if first_q:
+            question_id = first_q.id
+        else:
+            engine.fail('VALIDATION_ERROR', 'questionId should not be empty', 400)
+
+    uploaded_items = _extract_uploaded_images(request)
+    image_keys = []
+    image_urls = []
+    ocr_inputs = []
+
+    for raw_bytes, mime, ext in uploaded_items:
+        key = f"writing-ocr/{attempt_id}/{uuid4()}{ext}"
+        target = storage_path(key)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw_bytes)
+        image_keys.append(key)
+        image_urls.append(f"/media/{key}")
+        ocr_inputs.append((raw_bytes, mime))
+
+    ocr_result = writing_ocr.extract_text_from_images(ocr_inputs)
+    ocr_text = ocr_result.get('ocrText', '')
+
+    existing = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
+    existing_rubric = dict(existing.rubric_scores) if (existing and isinstance(existing.rubric_scores, dict)) else {}
+    prev_keys = list(existing_rubric.get('imageKeys') or [])
+    merged_keys = prev_keys + [k for k in image_keys if k not in prev_keys]
+
+    append_flag = False
+    if isinstance(getattr(request, 'data', None), dict):
+        append_flag = str(request.data.get('append', '')).lower() in ('1', 'true', 'yes')
+    if not append_flag:
+        append_flag = str(request.query_params.get('append', '')).lower() in ('1', 'true', 'yes')
+
+    if append_flag and existing and existing.response and existing.response.strip():
+        final_text = f"{existing.response.strip()}\n\n{ocr_text}".strip()
+    else:
+        final_text = ocr_text
+
+    word_count = writing_ocr._count_words(final_text)
+    rubric_payload = {
+        **existing_rubric,
+        'imageKeys': merged_keys,
+        'ocrText': final_text,
+        'wordCount': word_count,
+    }
+    now = timezone.now()
+    MockAnswer.objects.update_or_create(
+        attempt_id=attempt_id,
+        question_id=question_id,
+        defaults=dict(
+            response=final_text,
+            rubric_scores=rubric_payload,
+            updated_at=now,
+        ),
+        create_defaults=dict(
+            id=str(uuid4()),
+            response=final_text,
+            rubric_scores=rubric_payload,
+            is_graded=False,
+            updated_at=now,
+        ),
+    )
+
+    return success({
+        'ocrText': final_text,
+        'pages': ocr_result.get('pages', []),
+        'imageKeys': merged_keys,
+        'imageUrls': [f"/media/{k}" for k in merged_keys],
+        'wordCount': word_count,
+        'questionId': question_id,
+        'provider': ocr_result.get('provider', 'gemini'),
+    }, 200)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def standalone_writing_ocr_view(request):
+    from . import writing_ocr
+
+    require_authenticated(request)
+    uploaded_items = _extract_uploaded_images(request)
+    ocr_inputs = [(raw_bytes, mime) for raw_bytes, mime, _ext in uploaded_items]
+
+    evaluate_flag = False
+    task_prompt = ''
+    task_type = 'task2'
+    if isinstance(getattr(request, 'data', None), dict):
+        evaluate_flag = str(request.data.get('evaluate', '')).lower() in ('1', 'true', 'yes')
+        task_prompt = str(request.data.get('prompt') or request.data.get('taskPrompt') or '')
+        task_type = str(request.data.get('taskType') or request.data.get('task_type') or 'task2')
+    if not evaluate_flag:
+        evaluate_flag = str(request.query_params.get('evaluate', '')).lower() in ('1', 'true', 'yes')
+
+    if evaluate_flag:
+        result = writing_ocr.extract_and_evaluate_images(ocr_inputs, task_prompt=task_prompt, task_type=task_type)
+        return success(result, 200)
+
+    ocr_result = writing_ocr.extract_text_from_images(ocr_inputs)
+    return success(ocr_result, 200)
+

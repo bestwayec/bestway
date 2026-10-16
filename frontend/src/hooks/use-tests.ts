@@ -127,6 +127,17 @@ export function useUpdateTest(id: string) {
   });
 }
 
+export function useDeleteTest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/tests/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tests"] });
+      qc.invalidateQueries({ queryKey: ["test"] });
+    },
+  });
+}
+
 export function useAddQuestion(testId: string) {
   const qc = useQueryClient();
   return useMutation({

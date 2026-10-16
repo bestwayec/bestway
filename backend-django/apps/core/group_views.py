@@ -54,15 +54,19 @@ def validate(data, create=False):
 @api_view(['GET', 'POST'])
 @permission_classes([Authenticated])
 def groups_view(request):
-    if request.method == 'GET': return success(service.list_groups(request.user))
-    require_role(request, 'admin', 'super_admin')
-    return success(service.create(request.user, validate(payload(request, {'name', 'teacherId', 'schedule'}), True)), 201)
+    if request.method == 'GET':
+        return success(service.list_groups(request.user))
+    require_role(request, 'teacher', 'admin', 'super_admin')
+    raw = payload(request, {'name', 'teacherId', 'schedule', 'description'})
+    clean = {k: v for k, v in raw.items() if k in ('name', 'teacherId', 'schedule')}
+    return success(service.create(request.user, validate(clean, True)), 201)
 
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([Authenticated])
 def group_view(request, group_id):
-    if request.method == 'GET': return success(service.detail(request.user, group_id))
+    if request.method == 'GET':
+        return success(service.detail(request.user, group_id))
     actor = request.user
     if actor.role == 'teacher':
         group = service.get_group(group_id)
@@ -79,9 +83,29 @@ def group_view(request, group_id):
     return success(service.update(actor, group_id, validate(clean_data)))
 
 
+def _build_excel_response(actor, group_id):
+    xlsx_bytes, filename = service.export_group_xlsx(actor, group_id)
+    response = HttpResponse(
+        xlsx_bytes,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def export_group_excel_view(request, group_id):
+    return _build_excel_response(request.user, group_id)
+
+
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def export_group_results_view(request, group_id):
+    fmt = (request.query_params.get('format') or '').strip().lower()
+    if fmt in ('xlsx', 'excel'):
+        return _build_excel_response(request.user, group_id)
+
     actor = request.user
     group = service.get_group(group_id)
     if actor.role == 'teacher' and group.teacher_id != actor.id:
@@ -100,15 +124,18 @@ def export_group_results_view(request, group_id):
 @api_view(['POST'])
 @permission_classes([Authenticated])
 def add_student_view(request, group_id):
-    require_role(request, 'admin', 'super_admin')
+    require_role(request, 'teacher', 'admin', 'super_admin')
     data = payload(request, {'studentId'})
-    if data.get('studentId') in ('', None): invalid('studentId should not be empty')
-    if not isinstance(data['studentId'], str): invalid('studentId must be a string')
+    if data.get('studentId') in ('', None):
+        invalid('studentId should not be empty')
+    if not isinstance(data['studentId'], str):
+        invalid('studentId must be a string')
     return success(service.add_student(request.user, group_id, data['studentId']), 201)
 
 
 @api_view(['DELETE'])
 @permission_classes([Authenticated])
 def remove_student_view(request, group_id, student_id):
-    require_role(request, 'admin', 'super_admin')
+    require_role(request, 'teacher', 'admin', 'super_admin')
     return success(service.remove_student(request.user, group_id, student_id))
+

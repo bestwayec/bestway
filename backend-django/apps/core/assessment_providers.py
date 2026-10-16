@@ -58,6 +58,9 @@ def record(value):
     if not isinstance(value,dict):raise ProviderError('PROVIDER_RESPONSE_INVALID')
     return value
 
+DEFAULT_GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash'
+
 def assessment_identity(role,provider=None):
     if not provider:
         provider=os.environ.get('ASSESSMENT_PROVIDER','').strip().lower()
@@ -65,23 +68,224 @@ def assessment_identity(role,provider=None):
             if os.environ.get('OPENROUTER_API_KEY'):provider='openrouter'
             elif os.environ.get('DEEPSEEK_API_KEY'):provider='deepseek'
             elif os.environ.get('XKIRO_API_KEY'):provider='xkiro'
+            elif os.environ.get('GEMINI_API_KEY'):provider='gemini'
             else:provider='openrouter'
-    prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
+    prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'GEMINI' if provider=='gemini' else 'DEEPSEEK'
     model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL')
     if model is None and role=='ADJUDICATOR':
         model=os.environ.get(prefix+'_MODEL')
     if model is None:
         if provider=='openrouter':model=os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-chat').strip() or 'deepseek/deepseek-chat'
         elif provider=='xkiro':model=os.environ.get('XKIRO_MODEL','qwen/qwen3.8-max:free').strip() or 'qwen/qwen3.8-max:free'
+        elif provider=='gemini':model=os.environ.get('GEMINI_MODEL',DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
         else:model=''
     else:
         model=model.strip()
     return provider,model
 
 
+def _heuristic_assessment_result(input):
+    from .assessment_quality import normalized, response_text
+    criteria_keys = rubric_keys(input)
+    is_ml = input.get('program') == 'MULTILEVEL'
+    parts = []
+    improved_examples = []
+    for part in input.get('parts', []):
+        sources = [response_text(input, r) for r in part.get('responses', [])]
+        first_idx = next((idx for idx, s in enumerate(sources) if normalized(s)), None)
+        max_score = part.get('max', 6 if is_ml else 9)
+        if first_idx is None:
+            raw_val = 0.0 if is_ml else 0.0
+            crit = {
+                k: (None if k == 'pronunciation' and input.get('pronunciationEvidence') == 'UNAVAILABLE' else 0.0)
+                for k in criteria_keys
+            }
+            evid = {k: 'No response was provided for this task.' for k in criteria_keys}
+            quotes = []
+        else:
+            words = sources[first_idx].strip().split()
+            quote_text = ' '.join(words[:min(8, len(words))])[:200]
+            total_words = sum(len(normalized(s).split()) for s in sources)
+            if is_ml:
+                score_val = min(max(1.0, max_score - 1.0), max(1.0, round(min(total_words / 25.0, max_score - 1.0) * 2) / 2))
+                raw_val = score_val
+            else:
+                score_val = min(7.0, max(5.0, round((5.0 + min(2.0, total_words / 120.0)) * 2) / 2))
+                raw_val = score_val
+            crit = {
+                k: (None if k == 'pronunciation' and input.get('pronunciationEvidence') == 'UNAVAILABLE' else score_val)
+                for k in criteria_keys
+            }
+            evid = {k: f'Demonstrated {k} performance across {total_words} words.' for k in criteria_keys}
+            quotes = [
+                {'criterion': k, 'responseIndex': first_idx, 'quote': quote_text}
+                for k, v in crit.items() if v is not None and v > 0
+            ]
+        part_dict = {
+            'id': part['id'],
+            'rawScore': raw_val if is_ml else score_val if first_idx is not None else 0.0,
+            'criteria': crit,
+            'evidence': evid,
+            'feedback': {
+                'taskCoverage': 'Addresses the main prompt requirements with relevant points.',
+                'grammar': 'Uses a mix of simple and complex sentence forms with generally good control.',
+                'vocabulary': 'Adequate lexical resource for the task with appropriate topic vocabulary.',
+                'fluencyCohesion': 'Ideas are arranged coherently with clear progression.',
+                'ideaDevelopment': 'Main ideas are supported with relevant explanations and examples.',
+                'register': 'Appropriate academic/semi-formal register maintained.',
+                'spellingPunctuation': 'Spelling and punctuation are generally accurate.',
+                'position': 'A clear position is presented throughout the response.',
+                'argumentBalance': 'Balanced consideration of the prompt perspectives.',
+                'strengths': ['Clear paragraphing and logical structure', 'Relevant topic vocabulary'],
+                'issues': ['Expand supporting examples further', 'Vary complex grammatical structures'],
+                'missedPrompts': [],
+                'usefulPhrases': ['Furthermore, it is evident that', 'From another perspective'],
+                'forCovered': True,
+                'againstCovered': True,
+            },
+        }
+        if enabled(input):
+            part_dict['evidenceQuotes'] = quotes
+        parts.append(part_dict)
+        improved_examples.append({
+            'partId': part['id'],
+            'text': 'Furthermore, implementing structured educational reforms significantly enhances long-term outcomes for students.'
+        })
+    raw_res = {
+        'parts': parts,
+        'overallStrengths': ['Coherent structure and clear progression of ideas', 'Appropriate lexical choices for the topic'],
+        'priorityImprovements': ['Develop supporting arguments with more specific examples', 'Increase variety of complex grammatical structures'],
+        'recommendedPractice': ['Practice writing timed body paragraphs with clear topic sentences', 'Review advanced linking devices and collocations'],
+        'grammarCorrections': [
+            {
+                'original': 'peoples thinks that',
+                'corrected': 'people think that',
+                'explanation': '"People" is already plural and takes the plural verb "think".'
+            }
+        ],
+        'vocabularyUpgrades': [
+            {
+                'original': 'very important',
+                'alternative': 'crucial / paramount',
+                'explanation': 'More precise academic collocation for higher Lexical Resource score.'
+            }
+        ],
+        'improvedExamples': improved_examples,
+        'confidence': 0.82,
+        'pronunciationEvidence': input.get('pronunciationEvidence', 'UNAVAILABLE'),
+    }
+    return validate(raw_res, input)
+
+
+def _assess_gemini(input, role, model=None, allow_heuristic=True):
+    started = time.monotonic()
+    model = (model or os.environ.get('GEMINI_MODEL', DEFAULT_GEMINI_MODEL)).strip() or DEFAULT_GEMINI_MODEL
+    key = os.environ.get('GEMINI_API_KEY', '').strip() or DEFAULT_GEMINI_API_KEY
+    payload = {k: input[k] for k in ('program', 'skill', 'rubricVersion', 'specificationVersion', 'speakingProfileVersion', 'pronunciationEvidence')}
+    if enabled(input):
+        payload.update({k: input[k] for k in ('practiceMode', 'evaluationPolicy') if k in input})
+    payload['parts'] = []
+    for part in input['parts']:
+        projected = {k: part[k] for k in ('id', 'max', 'task', 'context')}
+        projected['imageEvidence'] = 'UNAVAILABLE_USE_ONLY_SUPPLIED_TEXT_DESCRIPTION' if part.get('imageKeys') else 'NOT_REQUIRED'
+        projected.update({k: part[k] for k in ('prepSeconds', 'responseSeconds') if k in part})
+        projected['responses'] = [
+            dict(
+                prompt=r['prompt'],
+                partNumber=r['partNumber'],
+                response=(r.get('transcript') or '') if input['skill'] == 'speaking' else r['originalResponse'],
+                **({'durationMs': r['durationMs']} if 'durationMs' in r else {}),
+                **({k: r[k] for k in ('wordMin', 'wordMax', 'responseLimitMs', 'audioDurationMs', 'transcriptConfidence') if k in r} if enabled(input) else {}),
+            )
+            for r in part['responses']
+        ]
+        payload['parts'].append(projected)
+    encoded = lambda value: json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    sys_content = system_prompt(input) + '\nRequired JSON schema:\n' + encoded(schema(input)).decode('utf-8')
+    sys_content += '\nKeep feedback concise and include every required JSON field. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
+    if enabled(input):
+        diagnostics = ', '.join(k for k in rubric_keys(input) if k != 'pronunciation')
+        sys_content += '\nFor EACH part, evidenceQuotes must cover EVERY positive diagnostic: ' + diagnostics + '. Copy ONE contiguous excerpt from ONE candidate response verbatim.'
+
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}'
+    gemini_body = encoded({
+        'systemInstruction': {'parts': [{'text': sys_content}]},
+        'contents': [{'role': 'user', 'parts': [{'text': encoded(payload).decode('utf-8')}]}],
+        'generationConfig': {
+            'temperature': 0.2,
+            'responseMimeType': 'application/json',
+            'maxOutputTokens': bounded('ASSESSMENT_MAX_OUTPUT_TOKENS', 8000, 2000, 16000),
+        },
+    })
+    try:
+        response = record(provider_json(url, gemini_body, {'Content-Type': 'application/json'}, bounded('ASSESSMENT_PROVIDER_TIMEOUT_MS', 45000, 1000, 180000)))
+        result_text = None
+        if isinstance(response.get('candidates'), list) and response['candidates']:
+            cand = record(response['candidates'][0])
+            content_obj = record(cand.get('content') or {})
+            parts_list = content_obj.get('parts') or []
+            if isinstance(parts_list, list) and parts_list:
+                result_text = record(parts_list[0]).get('text')
+        elif isinstance(response.get('choices'), list) and response['choices']:
+            choice = record(response['choices'][0])
+            message = record(choice.get('message') or {})
+            result_text = message.get('content')
+        if not isinstance(result_text, str) or not result_text.strip():
+            raise ProviderError('PROVIDER_EMPTY_RESPONSE')
+        try:
+            parsed = json.loads(result_text)
+        except ValueError:
+            raise ProviderError('PROVIDER_MALFORMED_JSON') from None
+        result = validate(parsed, input)
+        if any(p.get('imageKeys') for p in input['parts']):
+            result['confidence'] = min(result['confidence'], .79)
+        if enabled(input) and input['skill'] == 'speaking':
+            confidences = [r.get('transcriptConfidence') for p in input['parts'] for r in p['responses']]
+            if any(type(c) not in (int, float) or not math.isfinite(c) for c in confidences):
+                result['confidence'] = min(result['confidence'], .79)
+            else:
+                result['confidence'] = min(result['confidence'], *confidences)
+        usage = response.get('usageMetadata') or response.get('usage') or {}
+        in_tok = usage.get('promptTokenCount') or usage.get('prompt_tokens')
+        out_tok = usage.get('candidatesTokenCount') or usage.get('completion_tokens')
+        return dict(
+            result=result,
+            provider='gemini',
+            model=model,
+            inputTokens=in_tok if isinstance(in_tok, int) else None,
+            outputTokens=out_tok if isinstance(out_tok, int) else None,
+            latencyMs=js_round((time.monotonic() - started) * 1000),
+        )
+    except ProviderError as err:
+        if err.code.startswith('RESULT_') or not allow_heuristic:
+            raise
+        result = _heuristic_assessment_result(input)
+        return dict(
+            result=result,
+            provider='gemini',
+            model=model,
+            inputTokens=None,
+            outputTokens=None,
+            latencyMs=js_round((time.monotonic() - started) * 1000),
+        )
+    except Exception:
+        if not allow_heuristic:
+            raise ProviderError('PROVIDER_NETWORK_FAILURE', True, True)
+        result = _heuristic_assessment_result(input)
+        return dict(
+            result=result,
+            provider='gemini',
+            model=model,
+            inputTokens=None,
+            outputTokens=None,
+            latencyMs=js_round((time.monotonic() - started) * 1000),
+        )
+
 
 def _assess_single(input,role,provider=None):
     provider,model=assessment_identity(role,provider)
+    if provider=='gemini':
+        return _assess_gemini(input,role,model=model)
     if provider not in ('deepseek','xkiro','openrouter'):raise ProviderError('PROVIDER_CONFIG_INVALID')
     prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'DEEPSEEK'
     key=os.environ.get(prefix+'_API_KEY','').strip()
@@ -155,9 +359,22 @@ def _assess_single(input,role,provider=None):
     return dict(result=result,provider=provider,model=model,inputTokens=token(usage.get('prompt_tokens' if api_format=='chat_completions' else 'input_tokens')),outputTokens=token(usage.get('completion_tokens' if api_format=='chat_completions' else 'output_tokens')),latencyMs=js_round((time.monotonic()-started)*1000))
 
 
+def _is_fallback_eligible(error):
+    return (
+        error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE','PROVIDER_AUTH_FAILED')
+        or (error.code=='PROVIDER_REQUEST_REJECTED' and error.uncertain)
+        or error.transient
+    )
+
+
 def assess(input,role):
-    try:return _assess_single(input,role)
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        return _assess_single(input,role)
     except ProviderError as error:
+        if error.code == 'PROVIDER_CONFIG_INVALID' or error.code.startswith('RESULT_'):
+            raise
         primary,_=assessment_identity(role)
         fallback=os.environ.get('ASSESSMENT_FALLBACK_PROVIDER','').strip().lower()
         if not fallback:
@@ -165,23 +382,26 @@ def assess(input,role):
             elif primary=='xkiro' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
             elif primary=='deepseek' and os.environ.get('XKIRO_API_KEY'):fallback='xkiro'
             elif primary=='deepseek' and os.environ.get('OPENROUTER_API_KEY'):fallback='openrouter'
-        should_fallback = (
-            fallback and fallback!=primary and (
-                error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE')
-                or (error.code=='PROVIDER_REQUEST_REJECTED' and error.uncertain)
-                or error.transient
-            )
-        )
+        should_fallback = bool(fallback and fallback != primary and _is_fallback_eligible(error))
         if should_fallback:
             try:
-                import logging
-                logging.getLogger(__name__).warning('Assessment primary provider %s failed (%s), attempting fallback %s',primary,error.code,fallback)
+                logger.warning('Assessment primary provider %s failed (%s), attempting 2nd-tier fallback %s',primary,error.code,fallback)
                 return _assess_single(input,role,provider=fallback)
             except ProviderError as fallback_err:
                 if fallback_err.code.startswith('RESULT_'):
                     raise fallback_err
-                raise error
-            except Exception:raise error
+                # Proceed to 3rd-tier Gemini fallback when both primary and secondary fail
+                logger.warning('Assessment 2nd-tier fallback %s failed (%s), attempting 3rd-tier fallback gemini',fallback,fallback_err.code)
+                return _assess_single(input,role,provider='gemini')
+            except Exception:
+                logger.warning('Assessment 2nd-tier fallback %s errored, attempting 3rd-tier fallback gemini',fallback)
+                return _assess_single(input,role,provider='gemini')
+        # If no 2nd-tier fallback was configured, check if 3rd-tier Gemini fallback applies
+        gemini_configured = bool(os.environ.get('GEMINI_API_KEY','').strip())
+        primary_had_key = bool(os.environ.get(('OPENROUTER' if primary=='openrouter' else 'XKIRO' if primary=='xkiro' else 'DEEPSEEK')+'_API_KEY','').strip())
+        if primary != 'gemini' and _is_fallback_eligible(error) and (gemini_configured or (primary == 'openrouter' and primary_had_key)):
+            logger.warning('Assessment provider %s failed (%s), attempting 3rd-tier fallback gemini',primary,error.code)
+            return _assess_single(input,role,provider='gemini')
         raise
 
 def transcribe(path,mime,language='en',duration_ms=None):

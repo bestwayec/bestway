@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   ShoppingCart,
+  Trash2,
   BookOpenText,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -22,11 +23,20 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import {
   useConfirmMockPurchase,
+  useDeleteMockExam,
   useMockAttempts,
   useMockExams,
   useMyMockAttempts,
@@ -70,6 +80,7 @@ export function MockExamsView() {
   const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
   const attemptsQ = useMyMockAttempts();
   const purchase = usePurchaseMock();
+  const deleteExam = useDeleteMockExam();
 
   const start = useStartMock();
   const router = useRouter();
@@ -155,6 +166,9 @@ export function MockExamsView() {
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
               onStart={(mode, skills) => onStart(e.id, mode, skills)}
+              onDelete={async () => {
+                await deleteExam.mutateAsync(e.id);
+              }}
             />
           ))}
         </div>
@@ -179,6 +193,7 @@ export function MockExamCard({
   buying,
   onBuy,
   onStart,
+  onDelete,
 }: {
   exam: MockExamListItem;
   isStaff: boolean;
@@ -187,13 +202,30 @@ export function MockExamCard({
   buying: boolean;
   onBuy: () => void;
   onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[]) => void;
+  onDelete?: () => Promise<unknown> | void;
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const [launcherOpen, setLauncherOpen] = React.useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const multilevel = exam.type === "multilevel";
   const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
   const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
+
+  async function handleConfirmDelete() {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      toast.success("Imtihon muvaffaqiyatli o'chirildi");
+      setConfirmDeleteOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : tc("unknownError"));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <Card className="flex h-full flex-col p-5">
@@ -242,13 +274,52 @@ export function MockExamCard({
 
       <div className="mt-4">
         {isStaff ? (
-          <Link
-            href={`/mock/${exam.id}`}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover"
-          >
-            <ClipboardCheck className="size-4" />
-            {t("manage")}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/mock/${exam.id}`}
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover"
+            >
+              <ClipboardCheck className="size-4" />
+              {t("manage")}
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Imtihonni o'chirish"
+              title="Imtihonni o'chirish"
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="h-9 w-9 border-danger/30 text-danger hover:bg-danger/10"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+            <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Imtihonni o&apos;chirishni tasdiqlang</DialogTitle>
+                  <DialogDescription>
+                    &ldquo;{exam.title}&rdquo; imtihonini butunlay o&apos;chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo&apos;lmaydi.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDeleteOpen(false)}
+                    disabled={deleting}
+                  >
+                    {tc("cancel")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    loading={deleting}
+                    onClick={() => void handleConfirmDelete()}
+                  >
+                    O&apos;chirish
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         ) : multilevel && exam.ready === false && availablePracticeSkills(exam).length === 0 && !inProgress ? (
           <Button className="w-full" disabled>
             <Play className="fill-current" />

@@ -22,6 +22,7 @@ import type { AttemptDetail, AttemptQuestion, TestSection } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AudioPlayer, AudioscriptDetails, extractAudio } from "./audio-player";
 import { QuestionNav } from "./question-nav";
+import { WritingImageOcr } from "@/components/mock/writing-image-ocr";
 
 const SECTION_ORDER: TestSection[] = ["listening", "reading", "writing", "speaking"];
 
@@ -410,7 +411,23 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                   </div>
                 )
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                  {(q.type === "essay" || q.section === "writing") && (
+                    <WritingImageOcr
+                      attemptId={attempt.id}
+                      questionId={q.questionId}
+                      currentText={answers[q.questionId] ?? ""}
+                      onExtractedText={(ocrText, mode) => {
+                        const prev = answers[q.questionId] ?? "";
+                        const nextText =
+                          mode === "append" && prev.trim()
+                            ? `${prev.trim()}\n\n${ocrText}`
+                            : ocrText;
+                        setAnswer(q, nextText);
+                        persist(q, nextText);
+                      }}
+                    />
+                  )}
                   <Textarea
                     value={answers[q.questionId] ?? ""}
                     onChange={(e) => setAnswer(q, e.target.value)}

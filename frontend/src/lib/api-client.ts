@@ -23,7 +23,14 @@ const BASE = "/api/backend";
  * Echoed back on answer/submit calls so forged or replayed requests are rejected.
  */
 const attemptSignatures = new Map<string, string>();
-const ATTEMPT_MUTATION = /^\/mock\/attempts\/([^/]+)\/(?:answers?|submit|advance)(?:\/|$)/;
+const ATTEMPT_MUTATION = /^\/mock\/attempts\/([^/]+)\/(?:answers?|submit|advance|writing)(?:\/|$)/;
+
+function normalizePath(path: string): string {
+  if (path.startsWith("/api/backend/")) return path.slice("/api/backend".length);
+  if (path.startsWith("/api/v1/")) return path.slice("/api/v1".length);
+  if (path.startsWith("/v1/")) return path.slice("/v1".length);
+  return path.startsWith("/") ? path : `/${path}`;
+}
 
 function rememberAttemptSignature(data: unknown): void {
   if (!data || typeof data !== "object") return;
@@ -32,7 +39,8 @@ function rememberAttemptSignature(data: unknown): void {
 }
 
 function signatureHeader(path: string): Record<string, string> {
-  const id = ATTEMPT_MUTATION.exec(path)?.[1];
+  const normalized = normalizePath(path);
+  const id = ATTEMPT_MUTATION.exec(normalized)?.[1];
   const signature = id ? attemptSignatures.get(id) : undefined;
   return signature ? { "x-attempt-signature": signature } : {};
 }
@@ -58,12 +66,13 @@ function buildQuery(query?: RequestOptions["query"]): string {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, query, headers, ...rest } = options;
   const isFormData = body instanceof FormData;
+  const cleanPath = normalizePath(path);
 
-  const res = await fetch(`${BASE}${path}${buildQuery(query)}`, {
+  const res = await fetch(`${BASE}${cleanPath}${buildQuery(query)}`, {
     ...rest,
     headers: {
       ...(isFormData ? {} : body !== undefined ? { "content-type": "application/json" } : {}),
-      ...signatureHeader(path),
+      ...signatureHeader(cleanPath),
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
@@ -101,7 +110,8 @@ async function requestPaged<T>(
   options: RequestOptions = {},
 ): Promise<{ data: T; meta?: PageMeta }> {
   const { body, query, headers, ...rest } = options;
-  const res = await fetch(`${BASE}${path}${buildQuery(query)}`, {
+  const cleanPath = normalizePath(path);
+  const res = await fetch(`${BASE}${cleanPath}${buildQuery(query)}`, {
     ...rest,
     headers: {
       ...(body !== undefined ? { "content-type": "application/json" } : {}),
@@ -136,6 +146,36 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
 
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  downloadBlob: async (
+    path: string,
+    query?: RequestOptions["query"],
+  ): Promise<{ blob: Blob; filename?: string }> => {
+    const cleanPath = normalizePath(path);
+    const res = await fetch(`${BASE}${cleanPath}${buildQuery(query)}`, {
+      method: "GET",
+      headers: {
+        ...signatureHeader(cleanPath),
+      },
+    });
+    if (!res.ok) {
+      let errMsg = `Yuklab olishda xatolik (${res.status})`;
+      let errCode = "EXPORT_FAILED";
+      try {
+        const json = (await res.json()) as { error?: { code?: string; message?: string } };
+        if (json?.error?.message) errMsg = json.error.message;
+        if (json?.error?.code) errCode = json.error.code;
+      } catch {
+        // non-json error response
+      }
+      throw new ApiError(errCode, errMsg, res.status);
+    }
+    const cd = res.headers.get("content-disposition") ?? "";
+    const match = /filename\*?=(?:UTF-8'')?["']?([^"';\n]+)["']?/i.exec(cd);
+    const filename = match?.[1] ? decodeURIComponent(match[1]) : undefined;
+    const blob = await res.blob();
+    return { blob, filename };
+  },
 };
 
 /** Auth route'lari proxy orqali emas, alohida handler'lar orqali ketadi */
