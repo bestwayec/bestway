@@ -16,7 +16,7 @@ from django.utils.dateparse import parse_datetime
 from apps.legacy_schema.models import (MockAnswer, MockAttempt, MockCheatEvent,
     MockExam, MockQuestion, MockQuestionGroup, MockSection, StudentProfile)
 from common.api.exceptions import ContractAPIException
-from . import exam_programs, mock_catalog
+from . import attempt_signature, exam_programs, mock_catalog
 from .mock_authoring import _exam_tree, multilevel_readiness, new_id
 from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, speaking_profile, task_guidance
 from .mock_practice import is_partial, scope, scope_sections, selected_scope, SCOPE_KEY, PRACTICE_SKILLS
@@ -159,7 +159,7 @@ def start_response(attempt, exam, resumed, full_duration=None):
     shaped = mock_catalog.shape_exam(definition, False)
     shaped['sections'] = scope_sections(attempt, shaped['sections'])
     shaped['questionCount'] = sum(len(g['questions']) for s in shaped['sections'] for g in s['groups'])
-    result = dict(attemptId=attempt.id, resumed=resumed, mode=attempt.mode,
+    result = dict(attemptId=attempt.id, sessionSignature=attempt_signature.sign(attempt), resumed=resumed, mode=attempt.mode,
         startedAt=attempt.started_at,
         deadlineAt=(attempt.overall_deadline_at or attempt.deadline_at) if resumed else attempt.deadline_at,
         serverTime=timezone.now(), durationMinutes=full_duration if full_duration is not None else mock_catalog.total_duration(exam, shaped['sections']),

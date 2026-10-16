@@ -45,6 +45,8 @@ import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
 import { CbtAnnotatedText } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
+import { NetworkBanner } from "@/components/common/network-banner";
+import { installHaptics } from "@/lib/haptics";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -198,6 +200,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const id = window.setInterval(flush, 10000);
     return () => { window.removeEventListener('online', flush); window.clearInterval(id); };
   }, [flush, versioned]);
+
+  // Native-feeling tap feedback on answer options and buttons (touch devices only).
+  React.useEffect(() => installHaptics(), []);
 
   // Timer (faqat vaqtli rejim; full-test da umumiy deadline)
   const deadlineTs = isSingleSection && targetSkill && attempt.sectionDeadlines?.[targetSkill]
@@ -364,6 +369,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       onAnomaly={(event) => flagMutate(event)}
       onForceSubmit={() => void doSubmit(true)}
     >
+      <NetworkBanner />
       <div
         className="mx-auto max-w-4xl pb-24"
       onCopy={blockClipboard}

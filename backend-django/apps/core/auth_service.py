@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from common.api.exceptions import ContractAPIException
 from common.auth.jwt import base64url_random, issue_access, new_family, new_refresh, token_hash
-from common.auth.passwords import verify_password
+from common.auth.passwords import hash_password, needs_rehash, verify_password
 
 DUMMY_HASH = b"$2a$10$S0DkiNylcFUhAIuwhOeOz.jS/i48bFSlu6E0mrcE/jVrZ9Ph9i6Zy"
 LINK_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -105,6 +105,9 @@ def login(phone: str, password: str):
         raise ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
     if not verify(password, user[5]):
         raise ContractAPIException("INVALID_CREDENTIALS", "Telefon raqam yoki parol noto'g'ri", 401)
+    if needs_rehash(user[5]):
+        with connection.cursor() as cursor:
+            cursor.execute('UPDATE "User" SET "passwordHash"=%s WHERE "id"=%s', [hash_password(password), user[0]])
     return {"user": public(user), **issue_tokens(user)}
 
 

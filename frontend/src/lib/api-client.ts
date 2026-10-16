@@ -18,6 +18,25 @@ export class ApiError extends Error {
  */
 const BASE = "/api/backend";
 
+/**
+ * Exam session signature issued by the server when an attempt starts/resumes.
+ * Echoed back on answer/submit calls so forged or replayed requests are rejected.
+ */
+const attemptSignatures = new Map<string, string>();
+const ATTEMPT_MUTATION = /^\/mock\/attempts\/([^/]+)\/(?:answers?|submit|advance)(?:\/|$)/;
+
+function rememberAttemptSignature(data: unknown): void {
+  if (!data || typeof data !== "object") return;
+  const { attemptId, sessionSignature } = data as { attemptId?: unknown; sessionSignature?: unknown };
+  if (typeof attemptId === "string" && typeof sessionSignature === "string") attemptSignatures.set(attemptId, sessionSignature);
+}
+
+function signatureHeader(path: string): Record<string, string> {
+  const id = ATTEMPT_MUTATION.exec(path)?.[1];
+  const signature = id ? attemptSignatures.get(id) : undefined;
+  return signature ? { "x-attempt-signature": signature } : {};
+}
+
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Query parametrlari — undefined/null qiymatlar tashlab yuboriladi */
@@ -44,6 +63,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     ...rest,
     headers: {
       ...(isFormData ? {} : body !== undefined ? { "content-type": "application/json" } : {}),
+      ...signatureHeader(path),
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
@@ -71,6 +91,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     );
   }
 
+  rememberAttemptSignature(json.data);
   return json.data;
 }
 

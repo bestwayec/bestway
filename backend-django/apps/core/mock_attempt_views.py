@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from . import mock_attempts as engine
+from . import attempt_signature, mock_attempts as engine
 from .views import body, require_authenticated, require_role, success as envelope
 
 
@@ -96,6 +96,7 @@ def start_view(request, exam_id=None):
 @permission_classes([AllowAny])
 def answer_view(request, attempt_id):
     student(request)
+    attempt_signature.verify_request(request, attempt_id)
     data = body(request, {'questionId', 'response'})
     validate_answer(data)
     return success(engine.save_answers(request.user, attempt_id, [data]), 201)
@@ -105,6 +106,7 @@ def answer_view(request, attempt_id):
 @permission_classes([AllowAny])
 def answers_view(request, attempt_id):
     student(request)
+    attempt_signature.verify_request(request, attempt_id)
     data = body(request, {'answers'})
     items = data.get('answers')
     if not isinstance(items, list):
@@ -121,6 +123,7 @@ def answers_view(request, attempt_id):
 def submit_view(request, attempt_id):
     from .mock_submissions import submit
     student(request)
+    attempt_signature.verify_request(request, attempt_id)
     data = body(request, {'skills', 'skill', 'section', 'section_filter', 'confirm', 'confirmed', 'force', 'reason', 'autoSubmit', 'timeUp', 'timeout', 'answers'})
     skills = data.get('skills')
     sec = (

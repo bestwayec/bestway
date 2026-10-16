@@ -814,3 +814,36 @@
   display: block !important;
 }
 
+
+/* Touch ripple: Android-style press wave on coarse pointers (phones / WebView). */
+@media (pointer: coarse) {
+  button:not(:disabled),
+  [role="button"],
+  [role="radio"],
+  [role="tab"] {
+    position: relative;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+  button:not(:disabled)::after,
+  [role="button"]::after,
+  [role="radio"]::after,
+  [role="tab"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgb(16 185 129 / 0.28) 0%, transparent 70%);
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.35s ease, transform 0.45s ease;
+  }
+  button:not(:disabled):active::after,
+  [role="button"]:active::after,
+  [role="radio"]:active::after,
+  [role="tab"]:active::after {
+    opacity: 1;
+    transform: scale(1.6);
+    transition-duration: 0s;
+  }
+}

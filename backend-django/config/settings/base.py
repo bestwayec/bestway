@@ -50,3 +50,16 @@ GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", ""); GOOGLE_CLIENT_SECRET = env("GOOG
 
 
 
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
+
+from corsheaders.defaults import default_headers as _cors_default_headers
+CORS_ALLOW_HEADERS = (*_cors_default_headers, 'x-attempt-signature')
+ATTEMPT_SIGNATURE_REQUIRED = env_bool('ATTEMPT_SIGNATURE_REQUIRED', False)
+ANDROID_LATEST_VERSION = env('ANDROID_LATEST_VERSION', '0.6.0')
+

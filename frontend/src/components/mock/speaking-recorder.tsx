@@ -5,6 +5,7 @@ import { Mic, Square } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { AudioWaveform } from './audio-waveform';
 import { useUploadMockSpeaking } from '@/hooks/use-mock';
 import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
 import { markActiveRecording, recordingKey, recoverRecording, releaseRecording, retainRecording } from '@/lib/durable-recordings';
@@ -26,6 +27,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   const [error, setError] = useState<string | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
+  const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
   const busy = useRef(false);
   const uploading = useRef(false);
   const alive = useRef(true);
@@ -42,6 +44,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
       });
     } catch {}
     stream.current = null;
+    setLiveStream(null);
   }, []);
 
   async function send(blob: Blob) {
@@ -105,7 +108,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
         input.getTracks().forEach((track) => { try { track.stop(); } catch {} });
         return;
       }
-      stream.current = input;
+      stream.current = input; setLiveStream(input);
       const mr = createAudioRecorder(input, { audioBitsPerSecond: 28000 }); recorder.current = mr;
       const chunks: Blob[] = [];
       mr.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
@@ -149,6 +152,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
       : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>Retry upload of saved recording</Button>
       : <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}
     {hasAudio && !recording && <audio key={audioVersion} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio`} className="h-11 min-h-[44px]" preload="none"><track kind="captions" /></audio>}
+    {recording && <AudioWaveform stream={liveStream} active={recording} />}
     {recording && <span className="flex items-center gap-1.5 text-sm text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recording')}</span>}
     {error && <p role="alert" className="w-full text-sm text-danger">{error}</p>}
   </div>;
