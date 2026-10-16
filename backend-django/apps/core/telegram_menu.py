@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.legacy_schema import models as m
 from .telegram_links import escape,find
 from . import telegram_delivery as api
+from . import telegram_fsm as fsm
 
 urlopen=_stdlib_urlopen
 SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
@@ -39,6 +40,7 @@ BTN=dict(
     today='📊 Bugungi holat',
     debtors='💸 Qarzdorlar',
     superadmin_panel='👑 Superadmin Panel',
+    topic_management='📚 Mavzular Boshqaruvi',
     platform_stats='📊 Platforma statistikasi',
     active_students='👨‍🎓 Faol talabalar',
     today_tests='📝 Bugungi testlar',
@@ -183,7 +185,7 @@ def resolve_user(chat_id, active=True, from_user=None):
 def menu_for(role, chat_id=None):
     if role == 'super_admin' or is_superadmin(chat_id=chat_id):
         rows = [
-            ['superadmin_panel'],
+            ['superadmin_panel', 'topic_management'],
             ['platform_stats', 'active_students'],
             ['today_tests', 'web_admin_sso'],
             ['writing_ocr'],
@@ -207,6 +209,9 @@ def menu_for(role, chat_id=None):
 def superadmin_inline_keyboard(chat_id, user=None):
     sso_url = generate_sso_url(chat_id, user)
     return dict(inline_keyboard=[
+        [
+            dict(text=BTN['topic_management'], callback_data='btn:topic_menu'),
+        ],
         [
             dict(text=BTN['platform_stats'], callback_data='sa_platform_stats'),
             dict(text=BTN['active_students'], callback_data='sa_active_students'),
@@ -648,6 +653,7 @@ def text_for(user,key):
                 f"👤 Hisob: <b>{escape(getattr(user, 'name', 'Superadmin'))}</b> (<code>super_admin</code>)\n"
                 f"🆔 Telegram ID: <code>{escape(str(getattr(user, 'telegram_chat_id', get_superadmin_id())))}</code>\n\n"
                 f"Quyidagi bo'limlardan birini tanlang:\n"
+                f"• 📚 <b>Mavzular Boshqaruvi</b> — Writing va Speaking mavzularini qo'shish va boshqarish\n"
                 f"• 📊 <b>Platforma statistikasi</b> — umumiy ko'rsatkichlar\n"
                 f"• 👨‍🎓 <b>Faol talabalar</b> — o'quvchilar va guruhlar kesimi\n"
                 f"• 📝 <b>Bugungi testlar</b> — bugun topshirilgan imtihonlar\n"
@@ -805,10 +811,740 @@ def send_otp_code(chat_id, from_user=None):
     api.send(chat_id, text)
 
 
+# -------------------------------------------------------------------------
+# Topic Management & Dialog Engine Bridge (v0.7.1)
+# -------------------------------------------------------------------------
+
+def _get_topic_service():
+    try:
+        from . import topic_service
+        return topic_service
+    except ImportError:
+        return None
+
+
+def _topic_field(topic, key, default=''):
+    if isinstance(topic, dict):
+        return topic.get(key, default)
+    return getattr(topic, key, default)
+
+
+def save_topic_image_helper(photo_bytes: bytes, mime: str = 'image/jpeg') -> str:
+    ts = _get_topic_service()
+    if ts and hasattr(ts, 'save_topic_image'):
+        try:
+            res = ts.save_topic_image(photo_bytes, mime)
+            if isinstance(res, (tuple, list)) and len(res) > 0:
+                return res[0]
+            if isinstance(res, str):
+                return res
+        except Exception as err:
+            logging.getLogger(__name__).warning('topic_service.save_topic_image failed: %r', err)
+
+    import uuid
+    from pathlib import Path
+    ext = '.png' if 'png' in mime else '.webp' if 'webp' in mime else '.jpg'
+    rel_path = f"topics/{uuid.uuid4().hex}{ext}"
+    media_root = Path(getattr(settings, 'MEDIA_ROOT', '/app/storage/media'))
+    full_path = media_root / rel_path
+    try:
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_bytes(photo_bytes)
+        return rel_path
+    except Exception as err:
+        logging.getLogger(__name__).warning('Fallback image save failed: %r', err)
+        return rel_path
+
+
+def create_writing_topic_helper(title: str, prompt: str, task_type: str, image_key: str = None, created_by: str = None):
+    ts = _get_topic_service()
+    if ts and hasattr(ts, 'create_writing_topic'):
+        try:
+            return ts.create_writing_topic(
+                title=title,
+                prompt_text=prompt,
+                task_type=task_type,
+                image_key=image_key,
+                created_by_id=created_by,
+            )
+        except TypeError:
+            try:
+                return ts.create_writing_topic(
+                    title=title,
+                    prompt=prompt,
+                    task_type=task_type,
+                    image_key=image_key,
+                    created_by=created_by,
+                )
+            except TypeError:
+                try:
+                    return ts.create_writing_topic(title, prompt, task_type, image_key)
+                except Exception as err:
+                    logging.getLogger(__name__).warning('topic_service.create_writing_topic call failed: %r', err)
+        except Exception as err:
+            logging.getLogger(__name__).warning('topic_service.create_writing_topic failed: %r', err)
+
+    import uuid, time
+    return {
+        'id': str(uuid.uuid4())[:8],
+        'skill': 'writing',
+        'type': task_type,
+        'title': title,
+        'prompt': prompt,
+        'prompt_text': prompt,
+        'task_type': task_type,
+        'image_key': image_key,
+        'created_by_id': created_by,
+        'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'is_active': True,
+    }
+
+
+def create_speaking_topic_helper(title: str, part: str, cue_card: list = None, questions: list = None, created_by: str = None):
+    ts = _get_topic_service()
+    if ts and hasattr(ts, 'create_speaking_topic'):
+        try:
+            return ts.create_speaking_topic(
+                title=title,
+                part=part,
+                bullet_points=cue_card,
+                followup_questions=questions,
+                created_by_id=created_by,
+            )
+        except TypeError:
+            try:
+                return ts.create_speaking_topic(
+                    title=title,
+                    part=part,
+                    cue_card=cue_card,
+                    questions=questions,
+                    created_by=created_by,
+                )
+            except TypeError:
+                try:
+                    return ts.create_speaking_topic(title, part, cue_card, questions)
+                except Exception as err:
+                    logging.getLogger(__name__).warning('topic_service.create_speaking_topic call failed: %r', err)
+        except Exception as err:
+            logging.getLogger(__name__).warning('topic_service.create_speaking_topic failed: %r', err)
+
+    import uuid, time
+    return {
+        'id': str(uuid.uuid4())[:8],
+        'skill': 'speaking',
+        'type': part,
+        'title': title,
+        'part': part,
+        'cue_card': cue_card or [],
+        'bullet_points': cue_card or [],
+        'questions': questions or [],
+        'followup_questions': questions or [],
+        'created_by_id': created_by,
+        'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'is_active': True,
+    }
+
+
+def list_recent_topics_helper(limit: int = 10):
+    ts = _get_topic_service()
+    if ts:
+        for fn_name in ('list_recent_topics', 'get_recent_topics', 'list_topics'):
+            if hasattr(ts, fn_name):
+                try:
+                    return list(getattr(ts, fn_name)(limit=limit))
+                except TypeError:
+                    try:
+                        return list(getattr(ts, fn_name)())
+                    except Exception:
+                        pass
+    return []
+
+
+def get_topic_helper(topic_id: str | int):
+    ts = _get_topic_service()
+    if ts:
+        for fn_name in ('get_topic', 'get_topic_by_id', 'find_topic'):
+            if hasattr(ts, fn_name):
+                try:
+                    return getattr(ts, fn_name)(topic_id)
+                except Exception:
+                    pass
+    return None
+
+
+def delete_topic_helper(topic_id: str | int):
+    ts = _get_topic_service()
+    if ts:
+        for fn_name in ('delete_topic', 'remove_topic', 'deactivate_topic', 'soft_delete_topic'):
+            if hasattr(ts, fn_name):
+                try:
+                    return getattr(ts, fn_name)(topic_id)
+                except Exception:
+                    pass
+    return True
+
+
+def topic_management_inline_keyboard():
+    return dict(inline_keyboard=[
+        [
+            dict(text="✍️ Writing Mavzu Qo'shish", callback_data="btn:topic_add_writing"),
+        ],
+        [
+            dict(text="🗣 Speaking Mavzu Qo'shish", callback_data="btn:topic_add_speaking"),
+        ],
+        [
+            dict(text="📋 Oxirgi Mavzular", callback_data="btn:topic_list_recent"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:superadmin_back"),
+        ],
+    ])
+
+
+def send_topic_management_menu(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    text = (
+        "📚 <b>Mavzular Boshqaruvi (Superadmin)</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Ushbu bo'lim orqali IELTS va Multi-Level uchun yangi Writing va Speaking "
+        "mavzularini tizimga kiritishingiz va mavjudlarini boshqarishingiz mumkin.\n\n"
+        "Kerakli bo'limni tanlang 👇"
+    )
+    api.send(chat_id, text, reply_markup=topic_management_inline_keyboard())
+
+
+def cancel_topic_dialog(chat_id):
+    fsm.clear_state(chat_id)
+    text = "❌ <b>Amal bekor qilindi.</b> Superadmin boshqaruv paneliga qaytdingiz."
+    api.send(chat_id, text, reply_markup=superadmin_inline_keyboard(chat_id))
+
+
+# --- Writing FSM Dialog Handlers ---
+
+def send_writing_type_selection(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    fsm.set_state(chat_id, fsm.STATE_WRITING_TYPE, {'skill': 'writing'})
+    text = (
+        "✍️ <b>Writing Mavzu Qo'shish</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Qaysi vazifa turi uchun mavzu qo'shmoqchisiz? Tanlang 👇"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="📊 Task 1 (Report/Chart)", callback_data="btn:topic_w_type:task1"),
+            dict(text="📝 Task 2 (Essay)", callback_data="btn:topic_w_type:task2"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_menu"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_writing_prompt_request(chat_id, task_type='task1'):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    task_label = "Task 1 (Report/Chart)" if task_type == 'task1' else "Task 2 (Essay)"
+    fsm.set_state(chat_id, fsm.STATE_WRITING_PROMPT, {'skill': 'writing', 'task_type': task_type, 'task_label': task_label})
+    example = (
+        "<i>Masalan: The charts below show the percentage of household food waste in five countries in 2020...</i>"
+        if task_type == 'task1'
+        else "<i>Masalan: Some people think that universities should provide graduates with the knowledge and skills needed in the workplace. Others think that the true function of a university should be to give access to knowledge for its own sake. Discuss both views and give your opinion.</i>"
+    )
+    text = (
+        f"✍️ <b>Writing {task_label}</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Mavzu yoki savol matnini (Task prompt) xabar sifatida yuboring:\n\n"
+        f"{example}"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_add_writing"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_writing_image_prompt(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    fsm.set_state(chat_id, fsm.STATE_WRITING_IMAGE, state_obj.get('data'))
+    text = (
+        "🖼 <b>Task 1: Grafik / Diagramma rasmi</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Grafik, jadval yoki diagramma rasmini shu yerga <b>foto</b> ko'rinishida yuboring.\n\n"
+        "Agar mavzu rasm talab qilmasa yoki rasmsiz kiritmoqchi bo'lsangiz, "
+        "«⏭ Rasmsiz davom etish» tugmasini bosing 👇"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="⏭ Rasmsiz davom etish", callback_data="btn:topic_w_skip_image"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_w_back_prompt"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_writing_confirm_screen(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    data = state_obj.get('data') or {}
+    fsm.set_state(chat_id, fsm.STATE_WRITING_CONFIRM, data)
+
+    task_type = data.get('task_type', 'task1')
+    task_label = "Task 1 (Report/Chart)" if task_type == 'task1' else "Task 2 (Essay)"
+    prompt_text = data.get('prompt_text', '')
+    image_key = data.get('image_key')
+    image_status = "✅ Rasm biriktirildi" if image_key else "❌ Rasmsiz"
+
+    back_cb = "btn:topic_w_back_image" if task_type == 'task1' else "btn:topic_w_back_prompt"
+    text = (
+        "📋 <b>Writing Mavzu Xulosasi</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        f"📌 <b>Vazifa turi:</b> {task_label}\n"
+        f"📝 <b>Savol matni (Prompt):</b>\n<blockquote>{escape(prompt_text)}</blockquote>\n"
+        f"🖼 <b>Rasm holati:</b> {image_status}\n\n"
+        "Ushbu mavzuni tasdiqlaysizmi?"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="✅ Tasdiqlash va Saqlash", callback_data="btn:topic_confirm_save_writing"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data=back_cb),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def save_writing_topic_and_confirm(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    data = state_obj.get('data') or {}
+
+    task_type = data.get('task_type', 'task1')
+    task_label = "Task 1" if task_type == 'task1' else "Task 2"
+    prompt_text = data.get('prompt_text', '').strip()
+    title = data.get('title') or (prompt_text[:70] + ('...' if len(prompt_text) > 70 else ''))
+    image_key = data.get('image_key')
+
+    saved = create_writing_topic_helper(
+        title=title,
+        prompt=prompt_text,
+        task_type=task_type,
+        image_key=image_key,
+        created_by=str(chat_id),
+    )
+    topic_id = _topic_field(saved, 'id', 'new')
+    fsm.clear_state(chat_id)
+
+    reply_text = (
+        f"✅ <b>Yangi Writing {task_label} mavzusi muvaffaqiyatli saqlandi!</b>\n\n"
+        f"📌 <b>Mavzu:</b> {escape(title)}\n"
+        f"🆔 ID: <code>{topic_id}</code>"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="➕ Yana Writing qo'shish", callback_data="btn:topic_add_writing"),
+            dict(text="📋 Mavzular ro'yxati", callback_data="btn:topic_list_recent"),
+        ],
+        [
+            dict(text="⬅️ Boshqaruv menyusi", callback_data="btn:topic_menu"),
+        ]
+    ])
+    api.send(chat_id, reply_text, reply_markup=reply_markup)
+
+
+# --- Speaking FSM Dialog Handlers ---
+
+def send_speaking_part_selection(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    fsm.set_state(chat_id, fsm.STATE_SPEAKING_PART, {'skill': 'speaking'})
+    text = (
+        "🗣 <b>Speaking Mavzu Qo'shish</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Qaysi bo'lim (Part) uchun mavzu qo'shmoqchisiz? Tanlang 👇"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="🗣 Part 1 (Interview)", callback_data="btn:topic_s_part:part1"),
+        ],
+        [
+            dict(text="📋 Part 2 (Cue Card)", callback_data="btn:topic_s_part:part2"),
+        ],
+        [
+            dict(text="💬 Part 3 (Discussion)", callback_data="btn:topic_s_part:part3"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_menu"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_speaking_title_request(chat_id, part='part1'):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    part_label = "Part 1 (Interview)" if part == 'part1' else "Part 2 (Cue Card)" if part == 'part2' else "Part 3 (Discussion)"
+    fsm.set_state(chat_id, fsm.STATE_SPEAKING_TITLE, {'skill': 'speaking', 'part': part, 'part_label': part_label})
+    example = (
+        "<i>Masalan: Hometown / Work or Studies / Daily Routine</i>"
+        if part == 'part1'
+        else "<i>Masalan: Describe a memorable journey you have been on</i>"
+        if part == 'part2'
+        else "<i>Masalan: Tourism, Environmental Impact and Cultural Exchange</i>"
+    )
+    text = (
+        f"🗣 <b>Speaking {part_label}</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Mavzu sarlavhasini (Title) xabar sifatida yuboring:\n\n"
+        f"{example}"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_add_speaking"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_speaking_cues_prompt(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    fsm.set_state(chat_id, fsm.STATE_SPEAKING_CUES, state_obj.get('data'))
+    text = (
+        "📋 <b>Part 2: Cue Card punktlari</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Karta punktlarini (bullet points) yuboring — har bir punktni yangi qatordan yozing:\n\n"
+        "<i>Masalan:\n"
+        "• Where you went\n"
+        "• Who you went with\n"
+        "• What you did there\n"
+        "• And explain why it was memorable</i>"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_s_back_title"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_speaking_questions_prompt(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    data = state_obj.get('data') or {}
+    part_label = data.get('part_label', 'Part 1 / Part 3')
+    fsm.set_state(chat_id, fsm.STATE_SPEAKING_QUESTIONS, data)
+    text = (
+        f"💬 <b>Speaking {part_label}: Savollar</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        "Savollarni yuboring — har bir savolni yangi qatordan yozing:\n\n"
+        "<i>Masalan:\n"
+        "1. Do you prefer traveling alone or in a group?\n"
+        "2. What makes a place attractive to tourists?\n"
+        "3. How does tourism contribute to local economy?</i>"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_s_back_title"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def send_speaking_confirm_screen(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    data = state_obj.get('data') or {}
+    fsm.set_state(chat_id, fsm.STATE_SPEAKING_CONFIRM, data)
+
+    part = data.get('part', 'part1')
+    part_label = data.get('part_label') or ("Part 1 (Interview)" if part == 'part1' else "Part 2 (Cue Card)" if part == 'part2' else "Part 3 (Discussion)")
+    title = data.get('title', '')
+    cue_card = data.get('cue_card') or []
+    questions = data.get('questions') or []
+
+    content_preview = ""
+    if part == 'part2' and cue_card:
+        cue_lines = "\n".join(f"   • {escape(c)}" for c in cue_card)
+        content_preview = f"📋 <b>Cue Card punktlari:</b>\n{cue_lines}"
+    elif questions:
+        q_lines = "\n".join(f"   {i}. {escape(q)}" for i, q in enumerate(questions, 1))
+        content_preview = f"💬 <b>Savollar:</b>\n{q_lines}"
+
+    text = (
+        "📋 <b>Speaking Mavzu Xulosasi</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        f"📌 <b>Bo'lim:</b> {part_label}\n"
+        f"🏷 <b>Mavzu sarlavhasi:</b> <b>{escape(title)}</b>\n\n"
+        f"{content_preview}\n\n"
+        "Ushbu mavzuni tasdiqlaysizmi?"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="✅ Tasdiqlash va Saqlash", callback_data="btn:topic_confirm_save_speaking"),
+        ],
+        [
+            dict(text="⬅️ Orqaga", callback_data="btn:topic_s_back_content"),
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def save_speaking_topic_and_confirm(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    state_obj = fsm.get_state(chat_id)
+    data = state_obj.get('data') or {}
+
+    part = data.get('part', 'part1')
+    part_label = "Part 1" if part == 'part1' else "Part 2" if part == 'part2' else "Part 3"
+    title = data.get('title', 'Speaking Topic').strip()
+    cue_card = data.get('cue_card') or []
+    questions = data.get('questions') or []
+
+    saved = create_speaking_topic_helper(
+        title=title,
+        part=part,
+        cue_card=cue_card,
+        questions=questions,
+        created_by=str(chat_id),
+    )
+    topic_id = _topic_field(saved, 'id', 'new')
+    fsm.clear_state(chat_id)
+
+    reply_text = (
+        f"✅ <b>Yangi Speaking {part_label} mavzusi muvaffaqiyatli saqlandi!</b>\n\n"
+        f"📌 <b>Mavzu:</b> {escape(title)}\n"
+        f"🆔 ID: <code>{topic_id}</code>"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="➕ Yana Speaking qo'shish", callback_data="btn:topic_add_speaking"),
+            dict(text="📋 Mavzular ro'yxati", callback_data="btn:topic_list_recent"),
+        ],
+        [
+            dict(text="⬅️ Boshqaruv menyusi", callback_data="btn:topic_menu"),
+        ]
+    ])
+    api.send(chat_id, reply_text, reply_markup=reply_markup)
+
+
+# --- Recent Topics Management ---
+
+def show_recent_topics(chat_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    topics = list_recent_topics_helper(limit=10)
+    if not topics:
+        reply_markup = dict(inline_keyboard=[
+            [
+                dict(text="✍️ Writing Mavzu Qo'shish", callback_data="btn:topic_add_writing"),
+                dict(text="🗣 Speaking Mavzu Qo'shish", callback_data="btn:topic_add_speaking"),
+            ],
+            [
+                dict(text="⬅️ Orqaga", callback_data="btn:topic_menu"),
+            ]
+        ])
+        api.send(
+            chat_id,
+            "📋 <b>Oxirgi Mavzular</b>\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "Hozircha tizimda birorta ham mavzu kiritilmagan.\n"
+            "Yangi mavzu qo'shish uchun quyidagi tugmalardan birini tanlang 👇",
+            reply_markup=reply_markup,
+        )
+        return
+
+    lines = []
+    keyboard_rows = []
+    for idx, t in enumerate(topics, 1):
+        tid = _topic_field(t, 'id', str(idx))
+        skill = str(_topic_field(t, 'skill', 'topic')).lower()
+        title = _topic_field(t, 'title', '') or _topic_field(t, 'prompt', '') or "Mavzu"
+        ttype = _topic_field(t, 'task_type', '') or _topic_field(t, 'part', '') or ''
+        created_at = _topic_field(t, 'created_at', None)
+        date_str = ""
+        if created_at:
+            if hasattr(created_at, 'strftime'):
+                date_str = f" <i>({date_uz(created_at)})</i>"
+            else:
+                date_str = f" <i>({str(created_at)[:10]})</i>"
+
+        if 'writ' in skill:
+            skill_tag = f"✍️ [W:{ttype.upper() if ttype else 'Task'}]"
+        elif 'speak' in skill:
+            skill_tag = f"🗣 [S:{ttype.upper() if ttype else 'Part'}]"
+        else:
+            skill_tag = f"📌 [{skill.capitalize()}]"
+
+        title_preview = title[:35] + ('...' if len(title) > 35 else '')
+        lines.append(f"<b>{idx}.</b> {skill_tag} <b>{escape(title_preview)}</b>{date_str}")
+
+        row = [
+            dict(text=f"👁 {idx}-mavzu", callback_data=f"btn:topic_view_{tid}"),
+            dict(text="🗑 O'chirish", callback_data=f"btn:topic_del_{tid}"),
+        ]
+        keyboard_rows.append(row)
+
+    keyboard_rows.append([
+        dict(text="✍️ Writing qo'shish", callback_data="btn:topic_add_writing"),
+        dict(text="🗣 Speaking qo'shish", callback_data="btn:topic_add_speaking"),
+    ])
+    keyboard_rows.append([
+        dict(text="⬅️ Boshqaruv menyusi", callback_data="btn:topic_menu"),
+    ])
+
+    text = (
+        "📋 <b>Oxirgi Mavzular (Top 10)</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        + "\n\n".join(lines)
+        + "\n\n<i>Mavzuni to'liq ko'rish yoki o'chirish uchun mos tugmani bosing 👇</i>"
+    )
+    api.send(chat_id, text, reply_markup=dict(inline_keyboard=keyboard_rows))
+
+
+def prompt_delete_topic(chat_id, topic_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    topic = get_topic_helper(topic_id)
+    title = _topic_field(topic, 'title', f"ID: {topic_id}") if topic else f"ID: {topic_id}"
+    text = (
+        "🗑 <b>Haqiqatdan ham ushbu mavzuni o'chirmoqchimisiz?</b>\n"
+        "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+        f"📌 <b>Mavzu:</b> {escape(title)}\n"
+        f"🆔 ID: <code>{topic_id}</code>\n\n"
+        "⚠️ <i>O'chirilgandan so'ng mavzu talabalar va testlarda ko'rinmaydi.</i>"
+    )
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="🔴 Ha, o'chirish", callback_data=f"btn:topic_del_confirm_{topic_id}"),
+        ],
+        [
+            dict(text="❌ Bekor qilish", callback_data="btn:topic_list_recent"),
+        ]
+    ])
+    api.send(chat_id, text, reply_markup=reply_markup)
+
+
+def confirm_delete_topic(chat_id, topic_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    delete_topic_helper(topic_id)
+    api.send(chat_id, f"✅ <b>Mavzu muvaffaqiyatli o'chirildi!</b> (ID: <code>{topic_id}</code>)")
+    show_recent_topics(chat_id)
+
+
+def show_topic_details(chat_id, topic_id):
+    if not is_superadmin(chat_id=chat_id):
+        api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+        return
+    topic = get_topic_helper(topic_id)
+    if not topic:
+        api.send(chat_id, "❌ Mavzu topilmadi yoki allaqachon o'chirilgan.", reply_markup=dict(inline_keyboard=[
+            [dict(text="⬅️ Ro'yxatga qaytish", callback_data="btn:topic_list_recent")]
+        ]))
+        return
+
+    skill = str(_topic_field(topic, 'skill', 'topic')).lower()
+    title = _topic_field(topic, 'title', '')
+    prompt = _topic_field(topic, 'prompt_text', '') or _topic_field(topic, 'prompt', '')
+    task_type = _topic_field(topic, 'type', '') or _topic_field(topic, 'task_type', '')
+    part = _topic_field(topic, 'type', '') or _topic_field(topic, 'part', '')
+    image_key = _topic_field(topic, 'image_key', '')
+    cues = _topic_field(topic, 'bullet_points', []) or _topic_field(topic, 'cue_card', [])
+    questions = _topic_field(topic, 'followup_questions', []) or _topic_field(topic, 'questions', [])
+
+    lines = [
+        "📖 <b>Mavzu Ma'lumotlari</b>",
+        "➖➖➖➖➖➖➖➖➖➖➖➖",
+    ]
+    if 'writ' in skill:
+        t_label = "Task 1 (Report/Chart)" if '1' in str(task_type) else "Task 2 (Essay)"
+        lines.append(f"✍️ <b>Ko'nikma:</b> IELTS Writing ({t_label})")
+        if title:
+            lines.append(f"🏷 <b>Sarlavha:</b> {escape(title)}")
+        if prompt:
+            lines.append(f"📝 <b>Savol matni (Prompt):</b>\n<blockquote>{escape(prompt)}</blockquote>")
+        if image_key:
+            lines.append(f"🖼 <b>Grafik rasm:</b> <code>{escape(image_key)}</code>")
+        else:
+            lines.append("🖼 <b>Grafik rasm:</b> <i>Mavjud emas</i>")
+    elif 'speak' in skill:
+        p_label = "Part 1 (Interview)" if '1' in str(part) else "Part 2 (Cue Card)" if '2' in str(part) else "Part 3 (Discussion)"
+        lines.append(f"🗣 <b>Ko'nikma:</b> IELTS Speaking ({p_label})")
+        lines.append(f"🏷 <b>Mavzu:</b> {escape(title or 'Nomsiz')}")
+        if cues:
+            cue_text = "\n".join(f"   • {escape(c)}" for c in cues) if isinstance(cues, list) else escape(str(cues))
+            lines.append(f"📋 <b>Cue Card punktlari:</b>\n{cue_text}")
+        if questions:
+            q_text = "\n".join(f"   {i}. {escape(q)}" for i, q in enumerate(questions, 1)) if isinstance(questions, list) else escape(str(questions))
+            lines.append(f"💬 <b>Savollar:</b>\n{q_text}")
+    else:
+        lines.append(f"📌 <b>Ko'nikma:</b> {escape(skill.capitalize())}")
+        lines.append(f"🏷 <b>Mavzu:</b> {escape(title)}")
+        if prompt:
+            lines.append(f"📝 <b>Matn:</b>\n<blockquote>{escape(prompt)}</blockquote>")
+
+    lines.append(f"\n🆔 ID: <code>{topic_id}</code>")
+
+    reply_markup = dict(inline_keyboard=[
+        [
+            dict(text="🗑 O'chirish", callback_data=f"btn:topic_del_{topic_id}"),
+        ],
+        [
+            dict(text="⬅️ Ro'yxatga qaytish", callback_data="btn:topic_list_recent"),
+        ]
+    ])
+    api.send(chat_id, "\n\n".join(lines), reply_markup=reply_markup)
+
+
 def handle(chat_id, text, from_user=None):
     user = resolve_user(chat_id, True, from_user=from_user)
     if text == BTN['apk']:
         send_apk(chat_id)
+        return True
+    if text == BTN.get('topic_management'):
+        if not is_superadmin(chat_id=chat_id, user=user):
+            api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+            return True
+        send_topic_management_menu(chat_id)
         return True
     if text == BTN.get('web_login'):
         send_web_login(chat_id, user)

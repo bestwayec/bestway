@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from urllib.request import Request, urlopen
 from django.conf import settings
 from django.db import close_old_connections
-from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu
+from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu,telegram_fsm as fsm
 
 try:
     from . import writing_ocr
@@ -261,6 +261,69 @@ def handle(update):
             elif chat_id and data == 'superadmin_panel':
                 user=_find_user(chat_id,True,from_user=from_user)
                 if user:api.send(chat_id,menu.text_for(user,'superadmin_panel'),reply_markup=menu.superadmin_inline_keyboard(chat_id,user))
+            elif chat_id and (data.startswith(('btn:topic_', 'topic_')) or data in ('btn:superadmin_back', 'superadmin_back')):
+                if not menu.is_superadmin(chat_id=chat_id):
+                    api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+                    return
+                if data in ('btn:topic_menu', 'topic_menu'):
+                    menu.send_topic_management_menu(chat_id)
+                elif data in ('btn:superadmin_back', 'superadmin_back'):
+                    user = _find_user(chat_id, True, from_user=from_user)
+                    if user:
+                        api.send(chat_id, menu.text_for(user, 'superadmin_panel'), reply_markup=menu.superadmin_inline_keyboard(chat_id, user))
+                elif data in ('btn:topic_cancel', 'topic_cancel'):
+                    menu.cancel_topic_dialog(chat_id)
+                elif data in ('btn:topic_add_writing', 'topic_add_writing'):
+                    menu.send_writing_type_selection(chat_id)
+                elif data.startswith(('btn:topic_w_type:', 'topic_w_type:')):
+                    task_type = data.split(':', 2)[-1]
+                    menu.send_writing_prompt_request(chat_id, task_type=task_type)
+                elif data in ('btn:topic_w_back_type', 'topic_w_back_type'):
+                    menu.send_writing_type_selection(chat_id)
+                elif data in ('btn:topic_w_skip_image', 'topic_w_skip_image'):
+                    fsm.update_state_data(chat_id, image_key=None)
+                    menu.send_writing_confirm_screen(chat_id)
+                elif data in ('btn:topic_w_back_prompt', 'topic_w_back_prompt'):
+                    st = fsm.get_state(chat_id)
+                    t_type = (st.get('data') or {}).get('task_type', 'task1')
+                    menu.send_writing_prompt_request(chat_id, task_type=t_type)
+                elif data in ('btn:topic_w_back_image', 'topic_w_back_image'):
+                    menu.send_writing_image_prompt(chat_id)
+                elif data in ('btn:topic_confirm_save_writing', 'topic_confirm_save_writing'):
+                    menu.save_writing_topic_and_confirm(chat_id)
+                elif data in ('btn:topic_add_speaking', 'topic_add_speaking'):
+                    menu.send_speaking_part_selection(chat_id)
+                elif data.startswith(('btn:topic_s_part:', 'topic_s_part:')):
+                    part = data.split(':', 2)[-1]
+                    menu.send_speaking_title_request(chat_id, part=part)
+                elif data in ('btn:topic_s_back_part', 'topic_s_back_part'):
+                    menu.send_speaking_part_selection(chat_id)
+                elif data in ('btn:topic_s_back_title', 'topic_s_back_title'):
+                    st = fsm.get_state(chat_id)
+                    p_val = (st.get('data') or {}).get('part', 'part1')
+                    menu.send_speaking_title_request(chat_id, part=p_val)
+                elif data in ('btn:topic_s_back_content', 'topic_s_back_content'):
+                    st = fsm.get_state(chat_id)
+                    p_val = (st.get('data') or {}).get('part', 'part1')
+                    if p_val == 'part2':
+                        menu.send_speaking_cues_prompt(chat_id)
+                    else:
+                        menu.send_speaking_questions_prompt(chat_id)
+                elif data in ('btn:topic_confirm_save_speaking', 'topic_confirm_save_speaking'):
+                    menu.save_speaking_topic_and_confirm(chat_id)
+                elif data in ('btn:topic_list_recent', 'topic_list_recent'):
+                    menu.show_recent_topics(chat_id)
+                elif data.startswith(('btn:topic_del_confirm_', 'topic_del_confirm_')):
+                    topic_id = data.split('confirm_', 1)[-1]
+                    menu.confirm_delete_topic(chat_id, topic_id)
+                elif data.startswith(('btn:topic_del_', 'topic_del_')):
+                    prefix = 'btn:topic_del_' if data.startswith('btn:topic_del_') else 'topic_del_'
+                    topic_id = data[len(prefix):]
+                    menu.prompt_delete_topic(chat_id, topic_id)
+                elif data.startswith(('btn:topic_view_', 'topic_view_')):
+                    prefix = 'btn:topic_view_' if data.startswith('btn:topic_view_') else 'topic_view_'
+                    topic_id = data[len(prefix):]
+                    menu.show_topic_details(chat_id, topic_id)
             elif chat_id and (data.startswith('audio_') or data.startswith('play_audio:')):
                 payload=data.split(':',1)[-1] if ':' in data else data[len('audio_'):]
                 menu.handle_audio_request(chat_id,payload)
@@ -272,6 +335,89 @@ def handle(update):
     from_user=msg.get('from',{})
     try:
         user_pre = menu.ensure_superadmin_user(chat_id, from_user=from_user) if menu.is_superadmin(chat_id=chat_id) else None
+        text = (msg.get('text') or '').strip()
+
+        # FSM State Interception for Multi-Step Topic Dialogs
+        fsm_session = fsm.get_state(chat_id)
+        fsm_state = fsm_session.get('state') if isinstance(fsm_session, dict) else None
+
+        if fsm_state:
+            if text == '/cancel':
+                fsm.clear_state(chat_id)
+                menu.cancel_topic_dialog(chat_id)
+                return
+
+            if fsm.is_topic_state(fsm_state):
+                if not menu.is_superadmin(chat_id=chat_id):
+                    fsm.clear_state(chat_id)
+                    api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+                    return
+
+                if fsm_state == fsm.STATE_WRITING_IMAGE:
+                    if msg.get('photo') or (msg.get('document') and (msg['document'].get('mime_type') or '').lower().startswith('image/')):
+                        file_id = None
+                        mime_type = 'image/jpeg'
+                        if msg.get('photo'):
+                            photos = msg['photo']
+                            if isinstance(photos, list) and photos:
+                                file_id = photos[-1].get('file_id')
+                        elif msg.get('document'):
+                            doc = msg['document']
+                            file_id = doc.get('file_id')
+                            mime_type = (doc.get('mime_type') or 'image/jpeg').lower()
+                        photo_bytes = _download_telegram_photo(file_id) if file_id else None
+                        if photo_bytes:
+                            img_key = menu.save_topic_image_helper(photo_bytes, mime_type)
+                            fsm.update_state_data(chat_id, image_key=img_key)
+                            menu.send_writing_confirm_screen(chat_id)
+                            return
+                        else:
+                            api.send(chat_id, "❌ Rasmni yuklab bo'lmadi. Iltimos, qayta yuboring yoki «⏭ Rasmsiz davom etish» tugmasini bosing.")
+                            return
+                    elif text:
+                        api.send(chat_id, "🖼 Iltimos, grafik/diagramma rasmini yuboring yoki «⏭ Rasmsiz davom etish» tugmasini bosing.", reply_markup=dict(inline_keyboard=[
+                            [dict(text="⏭ Rasmsiz davom etish", callback_data="btn:topic_w_skip_image")],
+                            [dict(text="⬅️ Orqaga", callback_data="btn:topic_w_back_prompt"), dict(text="❌ Bekor qilish", callback_data="btn:topic_cancel")]
+                        ]))
+                        return
+
+                elif fsm_state == fsm.STATE_WRITING_PROMPT:
+                    if text:
+                        data = fsm_session.get('data') or {}
+                        task_type = data.get('task_type', 'task1')
+                        title = text[:70] + ('...' if len(text) > 70 else '')
+                        fsm.update_state_data(chat_id, prompt_text=text, title=title)
+                        if task_type == 'task1':
+                            menu.send_writing_image_prompt(chat_id)
+                        else:
+                            menu.send_writing_confirm_screen(chat_id)
+                        return
+
+                elif fsm_state == fsm.STATE_SPEAKING_TITLE:
+                    if text:
+                        data = fsm_session.get('data') or {}
+                        part = data.get('part', 'part1')
+                        fsm.update_state_data(chat_id, title=text)
+                        if part == 'part2':
+                            menu.send_speaking_cues_prompt(chat_id)
+                        else:
+                            menu.send_speaking_questions_prompt(chat_id)
+                        return
+
+                elif fsm_state == fsm.STATE_SPEAKING_CUES:
+                    if text:
+                        cues = [line.strip().lstrip('•-*0123456789. ') for line in text.splitlines() if line.strip()]
+                        fsm.update_state_data(chat_id, cue_card=cues, raw_cues=text)
+                        menu.send_speaking_confirm_screen(chat_id)
+                        return
+
+                elif fsm_state == fsm.STATE_SPEAKING_QUESTIONS:
+                    if text:
+                        questions = [line.strip().lstrip('•-*0123456789. ') for line in text.splitlines() if line.strip()]
+                        fsm.update_state_data(chat_id, questions=questions, raw_questions=text)
+                        menu.send_speaking_confirm_screen(chat_id)
+                        return
+
         if msg.get('photo') or (msg.get('document') and (msg['document'].get('mime_type') or '').lower().startswith('image/')):
             user = user_pre or _find_user(chat_id, True, from_user=from_user)
             _handle_writing_image(chat_id, msg, user=user)
@@ -279,8 +425,17 @@ def handle(update):
         if msg.get('contact'):
             contact=msg['contact'];own='user_id' in contact and contact['user_id']==from_user.get('id')
             links.contact(contact['phone_number'],chat_id,own);show(chat_id,from_user=from_user);return
-        text=(msg.get('text') or '').strip()
         if not text:return
+        if text.startswith(('/topics', '/mavzular')):
+            if menu.is_superadmin(chat_id=chat_id):
+                menu.send_topic_management_menu(chat_id)
+            else:
+                api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")
+            return
+        if text == '/cancel':
+            fsm.clear_state(chat_id)
+            api.send(chat_id, "❌ Faol jarayon mavjud emas.")
+            return
         if text.startswith('/start'):
             payload=text[len('/start'):].strip()
             if payload:

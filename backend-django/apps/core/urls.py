@@ -17,6 +17,7 @@ from . import auth_views
 from . import assessment_views as assessment
 from . import assessment_ranking_views as assessment_rankings
 from . import mock_support_views as support
+from . import topic_views
 from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
     prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
     mine_view, detail_view, speaking_upload_view, speaking_audio_view, submit_view,
@@ -215,4 +216,12 @@ urlpatterns = [
     path('teachers', content.cards, {'teacher':True}), path('teachers/all', content.all_cards, {'teacher':True}),
     path('teachers/<str:identifier>/photo', content.card_image, {'teacher':True}), path('teachers/<str:identifier>', content.card, {'teacher':True}),
     path("users", user_admin.users), path("users/<str:user_id>", user_admin.user),
+    path("topics", topic_views.topics_view),
+    path("topics/", topic_views.topics_view),
+    path("topics/<str:topic_id>", topic_views.topic_detail_view),
+    path("topics/<str:topic_id>/", topic_views.topic_detail_view),
+    path("v1/topics", topic_views.topics_view),
+    path("v1/topics/", topic_views.topics_view),
+    path("v1/topics/<str:topic_id>", topic_views.topic_detail_view),
+    path("v1/topics/<str:topic_id>/", topic_views.topic_detail_view),
 ]
