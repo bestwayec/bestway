@@ -63,7 +63,6 @@ class Command(BaseCommand):
             update_fields = {
                 "role": "super_admin",
                 "is_active": True,
-                "is_approved": True,
                 "telegram_chat_id": telegram_id,
                 "updated_at": now,
             }
@@ -74,7 +73,6 @@ class Command(BaseCommand):
             User.objects.filter(id=user.id).update(**update_fields)
             user.role = "super_admin"
             user.is_active = True
-            user.is_approved = True
             user.telegram_chat_id = telegram_id
             action = "Updated"
         else:
@@ -87,7 +85,6 @@ class Command(BaseCommand):
                 password_hash=hash_password("BestWaySuperAdmin2026!"),
                 role="super_admin",
                 is_active=True,
-                is_approved=True,
                 telegram_chat_id=telegram_id,
                 created_at=now,
                 updated_at=now,
