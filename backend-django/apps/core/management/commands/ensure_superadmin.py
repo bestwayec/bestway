@@ -49,22 +49,29 @@ class Command(BaseCommand):
         name = str(options.get("name") or "Komiljon Roziyev (SuperAdmin)").strip()
         now = timezone.now()
 
-        user = (
-            User.objects.filter(Q(telegram_chat_id=telegram_id) | Q(email=email))
-            .order_by("created_at")
-            .first()
-        )
+        # Priority 1: User already linked to this telegram_id
+        user = User.objects.filter(telegram_chat_id=telegram_id).first()
         if user is None:
-            user = User.objects.filter(role="super_admin").order_by("created_at").first()
+            # Priority 2: User with the specified email
+            user = User.objects.filter(email=email).first()
+        if user is None:
+            # Priority 3: Existing super_admin without conflicting telegram_id
+            user = User.objects.filter(role="super_admin", telegram_chat_id__isnull=True).order_by("created_at").first()
 
         if user is not None:
-            User.objects.filter(id=user.id).update(
-                role="super_admin",
-                is_active=True,
-                telegram_chat_id=telegram_id,
-                email=user.email or email,
-                updated_at=now,
-            )
+            # Ensure telegram_chat_id is set to target telegram_id
+            update_fields = {
+                "role": "super_admin",
+                "is_active": True,
+                "is_approved": True,
+                "telegram_chat_id": telegram_id,
+                "updated_at": now,
+            }
+            if not user.email:
+                update_fields["email"] = email
+            if not user.password_hash:
+                update_fields["password_hash"] = hash_password("BestWaySuperAdmin2026!")
+            User.objects.filter(id=user.id).update(**update_fields)
             user.role = "super_admin"
             user.is_active = True
             user.is_approved = True
@@ -80,15 +87,26 @@ class Command(BaseCommand):
                 password_hash=hash_password("BestWaySuperAdmin2026!"),
                 role="super_admin",
                 is_active=True,
+                is_approved=True,
                 telegram_chat_id=telegram_id,
                 created_at=now,
                 updated_at=now,
             )
-            user.is_approved = True
             action = "Created"
 
         try:
-            StudentProfile.objects.filter(user_id=user.id).update(is_approved=True)
+            profile = StudentProfile.objects.filter(user_id=user.id).first()
+            if profile is None:
+                StudentProfile.objects.create(
+                    id=str(uuid4()),
+                    user_id=user.id,
+                    is_approved=True,
+                    target_score=8.5,
+                    created_at=now,
+                    updated_at=now,
+                )
+            else:
+                StudentProfile.objects.filter(id=profile.id).update(is_approved=True, updated_at=now)
         except Exception:
             pass
 
