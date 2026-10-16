@@ -8,12 +8,22 @@ from apps.core import mock_attempts
 
 
 class SingleSkillAndDesktopVersionTests(SimpleTestCase):
-    def test_desktop_version_returns_0_5_9(self):
+    def test_desktop_version_returns_current_version(self):
         client = APIClient()
         response = client.get('/v1/desktop-version')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['data']['version'], '0.5.9')
-        self.assertIn('0.5.9', response.data['data']['downloadUrl'])
+        from django.conf import settings
+        self.assertEqual(response.data['data']['version'], settings.DESKTOP_LATEST_VERSION)
+        self.assertIn(settings.DESKTOP_LATEST_VERSION, response.data['data']['downloadUrl'])
+
+    def test_desktop_update_json_returns_tauri_manifest(self):
+        client = APIClient()
+        response = client.get('/v1/desktop/update.json')
+        self.assertEqual(response.status_code, 200)
+        from django.conf import settings
+        self.assertEqual(response.data['version'], settings.DESKTOP_LATEST_VERSION)
+        self.assertIn('windows-x86_64', response.data['platforms'])
+        self.assertIn(settings.DESKTOP_LATEST_VERSION, response.data['platforms']['windows-x86_64']['url'])
 
     def test_format_diagnostic_feedback_structures_all_fields(self):
         raw_result = {

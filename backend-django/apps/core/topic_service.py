@@ -221,8 +221,8 @@ def create_speaking_topic(
         else:
             prompt_clean = title_clean
 
-    bp_json = json.dumps(bullet_points) if bullet_points is not None else None
-    fq_json = json.dumps(followup_questions) if followup_questions is not None else None
+    bp_json = json.dumps(bullet_points or [])
+    fq_json = json.dumps(followup_questions or [])
 
     topic_id = str(uuid.uuid4())
 
@@ -387,6 +387,17 @@ def sync_topic_to_mock_exam(topic_dict: dict):
         bullet_points = topic_dict.get("bullet_points") or topic_dict.get("bulletPoints")
         followup_questions = topic_dict.get("followup_questions") or topic_dict.get("followupQuestions")
         created_by_id = topic_dict.get("created_by_id") or topic_dict.get("createdById")
+        author_user_id = None
+        if created_by_id:
+            try:
+                from apps.legacy_schema.models import User
+                u = User.objects.filter(id=str(created_by_id)).first()
+                if not u:
+                    u = User.objects.filter(telegram_chat_id=str(created_by_id)).first()
+                if u:
+                    author_user_id = u.id
+            except Exception:
+                author_user_id = None
 
         exam_id = f"topic-exam-{topic_id}"
         section_id = f"topic-sec-{topic_id}"
@@ -405,7 +416,7 @@ def sync_topic_to_mock_exam(topic_dict: dict):
                     "is_demo": True,
                     "price": 0,
                     "is_free_for_approved": True,
-                    "created_by_id": created_by_id,
+                    "created_by_id": author_user_id,
                     "content_version": 1,
                     "assessment_policy": "PRACTICE_AUTO_AI",
                     "blueprint_ref": f"topic:{topic_id}",

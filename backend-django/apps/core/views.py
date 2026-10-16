@@ -70,6 +70,41 @@ def desktop_version(request):
     return success({"version": settings.DESKTOP_LATEST_VERSION, "downloadUrl": settings.DESKTOP_DOWNLOAD_URL, "prerelease": settings.DESKTOP_PRERELEASE, "updateChannel": settings.DESKTOP_UPDATE_CHANNEL})
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def desktop_update_json(request):
+    """
+    Tauri v2 updater manifest endpoint (e.g. /v1/desktop/update.json).
+    Returns updater manifest compatible with @tauri-apps/plugin-updater.
+    """
+    manifest = {
+        "version": settings.DESKTOP_LATEST_VERSION,
+        "notes": f"BestWay Exam Platform v{settings.DESKTOP_LATEST_VERSION}",
+        "pub_date": now().isoformat().replace("+00:00", "Z"),
+        "platforms": {
+            "windows-x86_64": {
+                "signature": "",
+                "url": settings.DESKTOP_DOWNLOAD_URL,
+            },
+            "darwin-x86_64": {
+                "signature": "",
+                "url": settings.DESKTOP_DOWNLOAD_URL,
+            },
+            "darwin-aarch64": {
+                "signature": "",
+                "url": settings.DESKTOP_DOWNLOAD_URL,
+            },
+            "linux-x86_64": {
+                "signature": "",
+                "url": settings.DESKTOP_DOWNLOAD_URL,
+            },
+        },
+    }
+    response = Response(manifest, status=200)
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([PublicAuthThrottle])

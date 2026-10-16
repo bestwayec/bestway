@@ -27,7 +27,7 @@ from .mock_import_views import (validate_import_view, commit_import_view, stage_
                                import_by_package_view, import_by_exam_view, resolve_import_issue_view)
 from .views import mock_parse_questions_view, mock_import_questions_view
 
-from .views import (desktop_authorize_view, desktop_exchange_view, desktop_version,
+from .views import (desktop_authorize_view, desktop_exchange_view, desktop_version, desktop_update_json,
                     health, legacy_test_detail_view, link_child_view, login_view, logout_view, me_view,
                     mock_exam_clone_view, mock_exam_corrected_clone_view,
                     mock_exam_detail_view, mock_exam_preview_view,
@@ -173,6 +173,12 @@ urlpatterns = [
     path('mock/parse-questions', mock_parse_questions_view),
     path('mock/groups/<str:group_id>/questions/import', mock_import_questions_view),
     path("health", health), path("desktop-version", desktop_version),
+    path("desktop/version", desktop_version),
+    path("desktop/update.json", desktop_update_json),
+    path("desktop/update.json/", desktop_update_json),
+    path("desktop-update.json", desktop_update_json),
+    path("desktop/update", desktop_update_json),
+    path("desktop/update/", desktop_update_json),
     path("auth/register", register_view), path("auth/login", login_view),
     path("auth/google", auth_views.google_auth_view),
     path("auth/google/", auth_views.google_auth_view),

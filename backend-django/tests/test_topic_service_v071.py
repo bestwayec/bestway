@@ -83,6 +83,27 @@ class TopicServiceAndViewsTestCase(TransactionTestCase):
             topic_service.create_writing_topic(title="Valid Title", prompt_text="   ")
         self.assertEqual(ctx.exception.status_code, 400)
 
+    def test_create_topic_with_telegram_chat_id_author(self):
+        """Passing telegram chat id as created_by_id must safely succeed without FK errors."""
+        topic = topic_service.create_writing_topic(
+            title="Chat ID Author Test",
+            prompt_text="Some prompt for testing",
+            task_type="task1",
+            created_by_id="5582178765",
+        )
+        self.assertIsNotNone(topic)
+        self.assertEqual(topic["title"], "Chat ID Author Test")
+
+        speaking = topic_service.create_speaking_topic(
+            title="Chat ID Speaking Test",
+            part="part2",
+            prompt_text="Describe something",
+            bullet_points=["Point 1", "Point 2"],
+            created_by_id="5582178765",
+        )
+        self.assertIsNotNone(speaking)
+        self.assertEqual(speaking["title"], "Chat ID Speaking Test")
+
     def test_create_speaking_part1_topic(self):
         """Test creating a Speaking Part 1 topic."""
         topic = topic_service.create_speaking_topic(
