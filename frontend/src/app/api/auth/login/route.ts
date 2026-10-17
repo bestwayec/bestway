@@ -15,7 +15,10 @@ export async function POST(req: NextRequest) {
     upstream = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phone: body.phone, password: body.password }),
+      body: JSON.stringify({
+        phone: body.phone || body.username || body.email || body.id,
+        password: body.password,
+      }),
       cache: "no-store",
     });
   } catch {
@@ -25,7 +28,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const json = (await upstream.json()) as ApiResponse<AuthTokens>;
+  let json: ApiResponse<AuthTokens>;
+  try {
+    json = (await upstream.json()) as ApiResponse<AuthTokens>;
+  } catch {
+    return NextResponse.json(
+      { success: false, error: { code: "UPSTREAM_ERROR", message: "Serverdan noto'g'ri javob qaytdi" } },
+      { status: upstream.status || 500 },
+    );
+  }
+
   if (!upstream.ok || !json.success) {
     return NextResponse.json(json, { status: upstream.status });
   }

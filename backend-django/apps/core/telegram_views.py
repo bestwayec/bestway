@@ -210,7 +210,12 @@ def telegram_login(data: dict):
 @permission_classes([AllowAny])
 def telegram_login_view(request):
     data = request.data if isinstance(request.data, dict) else {}
-    return success(telegram_login(data))
+    try:
+        return success(telegram_login(data))
+    except ContractAPIException:
+        raise
+    except Exception as e:
+        raise ContractAPIException('TELEGRAM_AUTH_FAILED', f"Telegram orqali kirishda xatolik: {str(e)}", 400)
 
 
 def telegram_otp_verify(code: str):

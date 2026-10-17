@@ -79,7 +79,7 @@ export function Brand({
         />
         {showText && (
           <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
-            <span className="bg-gradient-to-r from-emerald-400 to-[#89F336] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent font-extrabold">
               {t("best")}
             </span>
             <span className="text-white ml-0.5">{t("way")}</span>
@@ -93,7 +93,7 @@ export function Brand({
       <BrandMark className={cn(s.mark, "drop-shadow-sm")} animated={animated} />
       {showText && (
         <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
-          <span className="bg-gradient-to-r from-emerald-400 to-[#89F336] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent font-extrabold">
             {t("best")}
           </span>
           <span className="text-white ml-0.5">{t("way")}</span>

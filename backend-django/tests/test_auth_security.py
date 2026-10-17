@@ -38,6 +38,12 @@ class PasswordCompatibilityTests(SimpleTestCase):
                 auth_service.login(user[2], "x" * 100)
         self.assertEqual(caught.exception.status_code, 403)
 
+    def test_login_view_accepts_telegram_id_payload_without_validation_crash(self):
+        with patch.object(auth_service, "fetch_user", return_value=None):
+            response = APIClient().post("/v1/auth/login", {"id": "5582178765", "phone": "5582178765", "password": "SamplePassword123!"}, format="json")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.data["error"]["code"], "INVALID_CREDENTIALS")
+
 
 @override_settings(JWT_SECRET="regression-only-secret-longer-than-32-chars")
 class AccessTokenTests(SimpleTestCase):

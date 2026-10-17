@@ -143,7 +143,7 @@ export function GoogleAuthButton({
       <button
         type="button"
         disabled={isLoading}
-        className={`relative flex w-full items-center justify-center gap-3 rounded-[12px] border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-fg shadow-sm transition hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-70 ${className}`}
+        className={`relative flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/80 bg-slate-950/50 px-4 py-2.5 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-slate-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:opacity-70 ${className}`}
       >
         {isLoading ? (
           <>

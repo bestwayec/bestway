@@ -111,8 +111,8 @@ class BestwayLegacyUserBackend(BaseBackend):
         with connection.cursor() as cursor:
             cursor.execute(
                 'SELECT "id", "passwordHash", "isActive", "role", "name", "phone", "email" '
-                'FROM "User" WHERE "phone" = %s OR lower("email") = lower(%s) OR lower(split_part("email", \'@\', 1)) = lower(%s) OR "id" = %s',
-                [identifier, identifier, identifier, identifier],
+                'FROM "User" WHERE "phone" = %s OR lower("email") = lower(%s) OR lower(split_part("email", \'@\', 1)) = lower(%s) OR "telegramChatId" = %s OR "id" = %s',
+                [identifier, identifier, identifier, identifier, identifier],
             )
             return cursor.fetchone()
 

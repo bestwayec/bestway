@@ -212,10 +212,15 @@ export const authApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ phone, password }),
     });
-    const json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
-    if (!res.ok || !json.success) {
-      const error = "error" in json ? json.error : undefined;
-      throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Kirishda xatolik", res.status);
+    let json: ApiResponse<{ user: import("./types").PublicUser }> | undefined;
+    try {
+      json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
+    } catch {
+      throw new ApiError("SERVER_ERROR", "Serverdan noto'g'ri javob keldi", res.status);
+    }
+    if (!res.ok || !json?.success) {
+      const error = json && "error" in json ? json.error : undefined;
+      throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telefon raqam yoki parol noto'g'ri", res.status);
     }
     return json.data.user;
   },
@@ -226,9 +231,14 @@ export const authApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(data),
     });
-    const json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
-    if (!res.ok || !json.success) {
-      const error = "error" in json ? json.error : undefined;
+    let json: ApiResponse<{ user: import("./types").PublicUser }> | undefined;
+    try {
+      json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
+    } catch {
+      throw new ApiError("SERVER_ERROR", "Serverdan noto'g'ri javob keldi", res.status);
+    }
+    if (!res.ok || !json?.success) {
+      const error = json && "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram orqali kirishda xatolik", res.status);
     }
     return json.data.user;
@@ -240,10 +250,15 @@ export const authApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code }),
     });
-    const json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
-    if (!res.ok || !json.success) {
-      const error = "error" in json ? json.error : undefined;
-      throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram kod orqali kirishda xatolik", res.status);
+    let json: ApiResponse<{ user: import("./types").PublicUser }> | undefined;
+    try {
+      json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
+    } catch {
+      throw new ApiError("SERVER_ERROR", "Serverdan noto'g'ri javob keldi", res.status);
+    }
+    if (!res.ok || !json?.success) {
+      const error = json && "error" in json ? json.error : undefined;
+      throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram kod noto'g'ri yoki eskirgan", res.status);
     }
     return json.data.user;
   },

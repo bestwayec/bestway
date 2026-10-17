@@ -47,7 +47,7 @@ export function WingedEmblem({
       <defs>
         <linearGradient id="bw_grad_emerald" x1="4" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#10B981" />
-          <stop offset="55%" stopColor="#89F336" />
+          <stop offset="55%" stopColor="#34D399" />
           <stop offset="100%" stopColor="#059669" />
         </linearGradient>
         <linearGradient id="bw_wing_glow" x1="0" y1="0" x2="1" y2="1">
@@ -139,7 +139,7 @@ export function Logo({
 
       {showText && (
         <span className={cn("font-black tracking-tight leading-none flex items-center", s.text)}>
-          <span className="bg-gradient-to-r from-emerald-400 via-[#89F336] to-emerald-300 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent font-extrabold">
             Best
           </span>
           <span className="text-white ml-0.5">Way</span>

@@ -109,8 +109,12 @@ def desktop_update_json(request):
 @permission_classes([AllowAny])
 @throttle_classes([PublicAuthThrottle])
 def login_view(request):
-    data = body(request, {"phone", "password"}); required(data, "phone", "password")
-    return success(auth_service.login(data["phone"], data["password"]))
+    data = body(request, {"phone", "password", "id", "telegram_id", "telegramId", "username", "email"})
+    phone_val = str(data.get("phone") or data.get("username") or data.get("email") or data.get("id") or data.get("telegram_id") or data.get("telegramId") or "").strip()
+    password_val = str(data.get("password") or "").strip()
+    if not phone_val or not password_val:
+        raise ContractAPIException("VALIDATION_ERROR", "Telefon raqam (yoki email/ID) va parol kiritilishi shart", 400)
+    return success(auth_service.login(phone_val, password_val))
 
 
 @api_view(["POST"])

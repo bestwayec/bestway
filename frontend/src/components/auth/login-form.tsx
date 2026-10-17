@@ -9,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, KeyRound, Loader2, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
-import { SpecularButton } from "@/components/ui/specular-button";
 import { Field, Input } from "@/components/ui/input";
 import { authApi, ApiError } from "@/lib/api-client";
 import { routing } from "@/i18n/routing";
@@ -50,17 +49,32 @@ export function LoginForm() {
   const otpInputsRef = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const schema = React.useMemo(() => makeSchema((k) => t(`errors.${k}`)), [t]);
+  const defaultPhone = params?.get("id") || params?.get("phone") || params?.get("identifier") || "";
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  } = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      phone: defaultPhone,
+      password: "",
+    },
+  });
+
+  React.useEffect(() => {
+    const idParam = params?.get("id") || params?.get("phone") || params?.get("identifier");
+    if (idParam) {
+      setValue("phone", idParam);
+    }
+  }, [params, setValue]);
 
   const redirectAfterLogin = React.useCallback(
     (role: string) => {
       const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
       let target = `${prefix}${homePathForRole(role as import("@/lib/types").Role)}`;
-      const next = params.get("next");
+      const next = params?.get("next");
       if (next) {
         const normalized = next.replace(/\\/g, "/");
         if (normalized.startsWith("/") && !normalized.startsWith("//")) {
@@ -75,9 +89,9 @@ export function LoginForm() {
 
   // Handle Telegram SSO automatic login if params present (e.g. from bot link or widget redirect)
   React.useEffect(() => {
-    const hash = params.get("hash");
-    const sso_token = params.get("sso_token");
-    const tgAuthResult = params.get("tgAuthResult");
+    const hash = params?.get("hash");
+    const sso_token = params?.get("sso_token");
+    const tgAuthResult = params?.get("tgAuthResult");
 
     if (hash || sso_token || tgAuthResult) {
       const payload: Record<string, unknown> = {};
@@ -94,7 +108,7 @@ export function LoginForm() {
         })
         .catch((err) => {
           setIsTelegramLoggingIn(false);
-          const message = err instanceof ApiError ? err.message : tc("unknownError");
+          const message = (err as any)?.message || (err instanceof Error ? err.message : null) || tc("unknownError");
           setServerError(message);
         });
     }
@@ -107,7 +121,7 @@ export function LoginForm() {
       toast.success(t("welcomeBack"));
       redirectAfterLogin(user.role);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : tc("unknownError");
+      const message = (err as any)?.message || (err instanceof Error ? err.message : null) || tc("unknownError");
       setServerError(message);
     }
   }
@@ -205,16 +219,16 @@ export function LoginForm() {
   if (isTelegramLoggingIn) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <Loader2 className="size-8 animate-spin text-brand" />
-        <p className="text-sm font-medium text-fg">{t("telegramLoggingIn")}</p>
+        <Loader2 className="size-8 animate-spin text-emerald-400" />
+        <p className="text-sm font-medium text-slate-200">{t("telegramLoggingIn")}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Switcher: Password vs Telegram OTP */}
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface-raised p-1 border border-border">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-950/60 p-1 border border-slate-800/80">
         <button
           type="button"
           onClick={() => {
@@ -222,10 +236,10 @@ export function LoginForm() {
             setServerError(null);
           }}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
+            "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
             loginMethod === "password"
-              ? "bg-surface text-fg shadow-sm border border-border/60"
-              : "text-fg-muted hover:text-fg",
+              ? "bg-emerald-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
           )}
         >
           <Smartphone className="size-3.5" />
@@ -238,13 +252,13 @@ export function LoginForm() {
             setServerError(null);
           }}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all",
+            "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
             loginMethod === "otp"
-              ? "bg-surface text-fg shadow-sm border border-border/60"
-              : "text-fg-muted hover:text-fg",
+              ? "bg-emerald-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
           )}
         >
-          <KeyRound className="size-3.5 text-brand" />
+          <KeyRound className="size-3.5" />
           {t("telegramOtpTab")}
         </button>
       </div>
@@ -252,7 +266,7 @@ export function LoginForm() {
       {serverError && (
         <div
           role="alert"
-          className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger"
+          className="rounded-xl border border-red-800/60 bg-red-950/40 px-3.5 py-3 text-sm text-red-300"
         >
           {serverError}
         </div>
@@ -267,6 +281,7 @@ export function LoginForm() {
               autoComplete="username"
               placeholder={t("phonePlaceholder")}
               aria-invalid={!!errors.phone}
+              className="bg-slate-950/60 border-slate-700/60 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white placeholder-slate-500 rounded-xl transition-all"
               {...register("phone")}
             />
           </Field>
@@ -279,13 +294,13 @@ export function LoginForm() {
                 autoComplete="current-password"
                 placeholder={t("passwordPlaceholder")}
                 aria-invalid={!!errors.password}
-                className="pr-10"
+                className="pr-10 bg-slate-950/60 border-slate-700/60 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white placeholder-slate-500 rounded-xl transition-all"
                 {...register("password")}
               />
               <button
                 type="button"
                 onClick={() => setShowPass((v) => !v)}
-                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-fg-subtle hover:text-fg"
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-200"
                 aria-label={showPass ? "Hide password" : "Show password"}
                 title={showPass ? "Hide password" : "Show password"}
                 tabIndex={-1}
@@ -295,21 +310,10 @@ export function LoginForm() {
             </div>
           </Field>
 
-          <SpecularButton
+          <button
             type="submit"
-            size="lg"
-            radius={12}
-            tint="#89F336"
-            tintOpacity={1}
-            textColor="#101704"
-            lineColor="#FFED29"
-            baseColor="#4E9F1E"
-            intensity={1.15}
-            shineSize={10}
-            shineFade={40}
-            thickness={1.5}
             disabled={isSubmitting}
-            className="w-full"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
@@ -319,14 +323,14 @@ export function LoginForm() {
             ) : (
               t("loginButton")
             )}
-          </SpecularButton>
+          </button>
         </form>
       ) : (
         /* Telegram 6-Digit OTP Form */
         <form onSubmit={handleOtpSubmit} className="space-y-4" noValidate>
           <div className="text-center space-y-1">
-            <h3 className="text-sm font-semibold text-fg">{t("telegramOtpTitle")}</h3>
-            <p className="text-xs text-fg-muted">{t("telegramOtpHint")}</p>
+            <h3 className="text-sm font-semibold text-slate-200">{t("telegramOtpTitle")}</h3>
+            <p className="text-xs text-slate-400">{t("telegramOtpHint")}</p>
           </div>
 
           {/* 6-Digit SMS-style inputs */}
@@ -354,27 +358,16 @@ export function LoginForm() {
                     otpInputsRef.current[Math.min(pasted.length, 5)]?.focus();
                   }
                 }}
-                className="size-11 sm:size-12 rounded-xl border border-border bg-surface text-center text-xl sm:text-2xl font-bold text-fg shadow-inner focus:border-brand focus:ring-2 focus:ring-brand/30 focus:outline-none transition-all"
+                className="size-11 sm:size-12 rounded-xl border border-slate-700/60 bg-slate-950/60 text-center text-xl sm:text-2xl font-bold text-white shadow-inner focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none transition-all"
                 autoFocus={idx === 0}
               />
             ))}
           </div>
 
-          <SpecularButton
+          <button
             type="submit"
-            size="lg"
-            radius={12}
-            tint="#89F336"
-            tintOpacity={1}
-            textColor="#101704"
-            lineColor="#FFED29"
-            baseColor="#4E9F1E"
-            intensity={1.15}
-            shineSize={10}
-            shineFade={40}
-            thickness={1.5}
             disabled={isVerifyingOtp || otpDigits.join("").length !== 6}
-            className="w-full"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-50"
           >
             {isVerifyingOtp ? (
               <>
@@ -384,14 +377,14 @@ export function LoginForm() {
             ) : (
               t("verifyAndLogin")
             )}
-          </SpecularButton>
+          </button>
 
           {/* Direct link to Telegram bot to get code */}
           <a
             href="https://t.me/xabar_bestway_bot?start=code"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] border border-[#229ED9]/40 bg-[#229ED9]/10 px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#229ED9] hover:bg-[#229ED9]/20 transition"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#229ED9]/40 bg-[#229ED9]/10 px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#38bdf8] hover:bg-[#229ED9]/20 transition"
           >
             <svg className="size-4 fill-current shrink-0" viewBox="0 0 24 24">
               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
@@ -401,16 +394,16 @@ export function LoginForm() {
         </form>
       )}
 
-      <div className="relative my-3 flex items-center justify-center">
+      <div className="relative my-4 flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
+          <div className="w-full border-t border-slate-800" />
         </div>
-        <div className="relative bg-surface px-3 text-xs uppercase text-fg-muted">
+        <div className="relative bg-slate-900 px-3 text-xs uppercase text-slate-400">
           {t("or")}
         </div>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <GoogleAuthButton
           mode="signin"
           onSuccess={(user) => redirectAfterLogin(user.role)}
@@ -420,7 +413,7 @@ export function LoginForm() {
         <button
           type="button"
           onClick={handleTelegramLogin}
-          className="flex w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#229ED9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E88E5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#229ED9]"
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-[#229ED9]/60 bg-[#229ED9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E88E5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#229ED9]"
         >
           <svg className="size-5 fill-current" viewBox="0 0 24 24">
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
@@ -429,9 +422,9 @@ export function LoginForm() {
         </button>
       </div>
 
-      <p className="text-center text-sm text-fg-muted pt-2">
+      <p className="text-center text-sm text-slate-400 pt-2">
         {t("noAccount")}{" "}
-        <Link href="/register" className="font-medium text-brand hover:underline">
+        <Link href="/register" className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
           {t("registerButton")}
         </Link>
       </p>

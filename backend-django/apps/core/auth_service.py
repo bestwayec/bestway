@@ -36,9 +36,9 @@ def fetch_user(*, phone: str | None = None, user_id: str | None = None):
             ident = phone.strip()
             cursor.execute(
                 'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
-                'FROM "User" WHERE "phone"=%s OR lower("email")=lower(%s) OR lower(split_part("email", \'@\', 1))=lower(%s) '
-                'ORDER BY CASE WHEN "phone"=%s THEN 0 WHEN lower("email")=lower(%s) THEN 1 ELSE 2 END LIMIT 1',
-                [ident, ident, ident, ident, ident],
+                'FROM "User" WHERE "phone"=%s OR lower("email")=lower(%s) OR lower(split_part("email", \'@\', 1))=lower(%s) OR "telegramChatId"=%s OR "id"=%s '
+                'ORDER BY CASE WHEN "phone"=%s THEN 0 WHEN lower("email")=lower(%s) THEN 1 WHEN "telegramChatId"=%s THEN 2 ELSE 3 END LIMIT 1',
+                [ident, ident, ident, ident, ident, ident, ident, ident],
             )
         else:
             cursor.execute(
