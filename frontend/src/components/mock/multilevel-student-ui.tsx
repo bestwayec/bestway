@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Clock3, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { MockQuestion, MockSkill, TaskGuidance } from "@/lib/types";
+import { useTranslations } from "next-intl";
 
 export const MULTILEVEL_SKILLS: MockSkill[] = ["listening", "reading", "writing", "speaking"];
 
@@ -77,20 +78,22 @@ export function taskDuration(guidance: TaskGuidance | undefined): string | null 
   return `${prep} sec prep · ${response} sec response`;
 }
 
-export function MultilevelReadiness({ ready }: { ready: boolean | undefined }) {
+export function MultilevelReadiness({ ready, practiceReady }: { ready: boolean | undefined; practiceReady?: boolean }) {
+  const t = useTranslations("mock");
   const available = ready !== false;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge variant={available ? "success" : "warning"}>{available ? "Ready" : "Not ready"}</Badge>
-      {!available && <span className="text-xs text-fg-muted">This exam is still being prepared.</span>}
+      {!available && <span className="text-xs text-fg-muted">{practiceReady ? t("completeExamPreparing") : "This exam is still being prepared."}</span>}
+      {practiceReady && <Badge variant="info">{t("practiceAvailable")}</Badge>}
     </div>
   );
 }
 
-export function MultilevelSectionProgress({ current, complete = [] }: { current: MockSkill; complete?: MockSkill[] }) {
+export function MultilevelSectionProgress({ current, complete = [], skills = MULTILEVEL_SKILLS }: { current: MockSkill; complete?: MockSkill[]; skills?: MockSkill[] }) {
   return (
     <nav aria-label="Exam sections" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {MULTILEVEL_SKILLS.map((skill) => {
+      {skills.map((skill) => {
         const active = skill === current;
         const done = complete.includes(skill);
         return <div key={skill} aria-current={active ? "step" : undefined} className={cn(
@@ -111,25 +114,35 @@ export function MultilevelTaskProgress({
   total,
   labels,
   onSelect,
+  practice = false,
+  rawMaximum,
+  completed = [],
 }: {
   skill: "writing" | "speaking";
   current: number;
   total: number;
   labels: string[];
   onSelect?: (index: number) => void;
+  practice?: boolean;
+  rawMaximum?: number;
+  completed?: number[];
 }) {
+  const t = useTranslations("mock.runnerUx");
   const sectionName = SKILL_NAMES[skill];
   return <div className="space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="font-semibold text-fg">{sectionName}</p>
-        <p className="text-sm text-fg-muted">{skill === "writing" ? "Task" : "Part"} {current + 1} of {total} · {skill === "writing" ? "Writing total /16" : "Speaking total /21"}</p>
+        <p className="text-sm text-fg-muted">{skill === "writing" ? "Task" : "Part"} {current + 1} of {total} · {practice ? `Practice${rawMaximum != null ? ` /${rawMaximum}` : ""}` : skill === "writing" ? "Writing total /16" : "Speaking total /21"}</p>
+        <p className="mt-1 text-xs text-fg-subtle">{t("taskResponses", { done: completed.length, total })}</p>
       </div>
       <div className="flex flex-wrap gap-1.5" aria-label={`${sectionName} task progress`}>
         {labels.map((label, index) => {
           const active = current === index;
-          const control = <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", active ? "bg-brand text-white" : "bg-surface text-fg-muted")}>{label}</span>;
-          return onSelect ? <button key={label} type="button" onClick={() => onSelect(index)} aria-current={active ? "step" : undefined}>{control}</button> : <React.Fragment key={label}>{control}</React.Fragment>;
+          const done = completed.includes(index);
+          const state = done ? t(skill === "speaking" ? "recordingUploaded" : "responseEntered") : t("notAnswered");
+          const control = <span className={cn("inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold transition-colors touch-manipulation", active ? "bg-brand text-white" : done ? "bg-success/10 text-success" : "bg-surface text-fg-muted")}>{done && <CheckCircle2 aria-hidden className="size-3.5" />}{label}</span>;
+          return onSelect ? <button key={`${index}-${label}`} type="button" onClick={() => onSelect(index)} aria-label={t("taskLabel", { label, state })} aria-current={active ? "step" : undefined} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand touch-manipulation">{control}</button> : <React.Fragment key={`${index}-${label}`}>{control}</React.Fragment>;
         })}
       </div>
     </div>

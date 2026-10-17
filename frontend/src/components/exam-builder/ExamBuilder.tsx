@@ -10,6 +10,7 @@ import {
   Loader2,
   Rocket,
   Save,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -28,10 +29,12 @@ import {
 } from "@/components/ui/dialog";
 import { PreviewDialog } from "@/components/exam-builder/PreviewDialog";
 import { ImportProvenanceDialog } from "@/components/exam-builder/ImportProvenanceDialog";
+import { SmartBulkImportModal } from "@/components/exam-builder/SmartBulkImportModal";
 import {
   useCloneMockExam,
   useExamImportProvenance,
   useMockExam,
+  useMockReadiness,
   useResolveImportIssue,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
@@ -47,6 +50,7 @@ import { SpeakingTaskEditor } from "./SpeakingTaskEditor";
 import { WritingSectionPanel } from "./WritingSectionPanel";
 import { WritingTaskEditor } from "./WritingTaskEditor";
 import { OverviewPanel } from "./OverviewPanel";
+import { reviewBlockerCount } from "./review-blockers";
 import { ReviewPanel } from "./ReviewPanel";
 import { SectionPanel } from "./SectionPanel";
 import { Sidebar } from "./Sidebar";
@@ -191,6 +195,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const [selection, setSelection] = React.useState<Selection>({ kind: "overview" });
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [provenanceOpen, setProvenanceOpen] = React.useState(false);
+  const [smartImportOpen, setSmartImportOpen] = React.useState(false);
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
@@ -206,7 +211,13 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const router = useRouter();
   const clone = useCloneMockExam();
   const provQ = useExamImportProvenance(examId, true);
+  const readinessQ = useMockReadiness(examId);
   const resolveMut = useResolveImportIssue(examId);
+  // Same open-issue source the Review panel and the Publish gate use, so the
+  // toolbar/sidebar badge and the panel always show one number.
+  const openImportIssues = provQ.data
+    ? provQ.data.issues.filter((issue) => issue.status !== "resolved").length
+    : null;
 
   function handleResolveIssue(issueId: string) {
     if (resolveMut.isPending) return;
@@ -224,10 +235,15 @@ export function ExamBuilder({ examId }: { examId: string }) {
   }
   const blockers = React.useMemo(
     () =>
-      examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice", detail?.type).filter(
-        (c) => c.level === "error",
-      ).length + (provQ.data?.openIssues ?? 0),
-    [detail, provQ.data?.openIssues],
+      reviewBlockerCount(
+        examClientChecks(detail?.sections ?? [], detail?.profile ?? "practice", detail?.type).filter(
+          (c) => c.level === "error",
+        ).length,
+        readinessQ.data?.items ?? [],
+        openImportIssues,
+        readinessQ.isError,
+      ),
+    [detail, openImportIssues, readinessQ.data, readinessQ.isError],
   );
 
   // Clone is the only manage-view action missing here (ported during the
@@ -458,6 +474,15 @@ export function ExamBuilder({ examId }: { examId: string }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:shrink-0 sm:flex-wrap sm:items-center">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSmartImportOpen(true)}
+              className="min-h-9 justify-center border-brand/50 bg-brand/10 text-brand hover:bg-brand/20 max-sm:w-full sm:min-h-0"
+            >
+              <Sparkles className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">Tezkor Kiritish (Smart / Excel / Audio)</span>
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)} className="min-h-9 justify-center max-sm:w-full sm:min-h-0">
               <Eye className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "preview", "Preview")}</span>
@@ -716,6 +741,22 @@ export function ExamBuilder({ examId }: { examId: string }) {
           onSelect={requestSelect}
           onResolve={handleResolveIssue}
           resolvingId={resolvingId}
+        />
+      )}
+
+      {detail && (
+        <SmartBulkImportModal
+          open={smartImportOpen}
+          onOpenChange={setSmartImportOpen}
+          examId={examId}
+          examType={detail.type}
+          groupId={activeGroup?.g.id}
+          groupLabel={activeGroup?.g.title || undefined}
+          defaultSkill={activeGroup?.s.skill ?? activeSection?.skill ?? "reading"}
+          listeningGroups={detail.sections.find((s) => s.skill === "listening")?.groups ?? []}
+          onImported={() => {
+            void examQ.refetch();
+          }}
         />
       )}
 

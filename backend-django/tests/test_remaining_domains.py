@@ -117,5 +117,282 @@ class TelegramLifecycleTests(SimpleTestCase):
 
     def test_role_menus_are_exact_and_html_is_escaped(self):
         self.assertEqual(telegram_menu.menu_for('teacher')['keyboard'][0],[{'text':'👥 Guruhlarim'},{'text':'✍️ Baholash navbati'}])
+        for role in ('student','parent','teacher','admin','super_admin'):
+            labels=[btn['text'] for row in telegram_menu.menu_for(role)['keyboard'] for btn in row]
+            self.assertIn('📱 Android ilovani yuklab olish (.apk)',labels)
+        self.assertEqual(
+            telegram_menu.apk_inline_keyboard(),
+            {'inline_keyboard':[[{'text':'📱 Android ilovani yuklab olish (.apk)','callback_data':'download_apk'}]]},
+        )
         from apps.core.telegram_links import escape
         self.assertEqual(escape('<student&>'),'&lt;student&amp;&gt;')
+
+    def test_apk_caption_matches_installation_guide(self):
+        caption=telegram_menu.apk_caption()
+        self.assertIn('📲 <b>BestWay Mobile (CBT Exam)</b>', caption)
+        self.assertIn('Подробнее', caption)
+        self.assertIn('Все равно установить', caption)
+
+    def test_local_apk_file_sent_via_send_document_on_button_and_commands(self):
+        apk_bytes=b'PK\x03\x04bestway-local-apk-payload'
+        with TemporaryDirectory() as directory:
+            local_apk=Path(directory)/'media'/'downloads'/'bestway-app.apk'
+            local_apk.parent.mkdir(parents=True,exist_ok=True)
+            local_apk.write_bytes(apk_bytes)
+            requests_made=[]
+
+            class FakeResponse:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return b'{"ok":true,"result":{"message_id":77}}'
+
+            def fake_urlopen(req,timeout=None):
+                requests_made.append(req)
+                return FakeResponse()
+
+            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':directory,'ANDROID_APK_PATH':'media/downloads/bestway-app.apk','ANDROID_LATEST_VERSION':'0.5.3'}), \
+                 patch.object(telegram_delivery,'urlopen',side_effect=fake_urlopen), \
+                 patch.object(telegram_menu,'urlopen',side_effect=AssertionError('Remote fallback should not be called when local APK exists')):
+                resolved=telegram_menu.resolve_apk_path()
+                self.assertEqual(resolved,local_apk.resolve())
+                for trigger in ('📱 Android ilovani yuklab olish (.apk)','/apk','/download','/android','/app'):
+                    requests_made.clear()
+                    telegram_bot.handle({'message':{'chat':{'id':555},'text':trigger}})
+                    self.assertEqual(len(requests_made),1)
+                    req=requests_made[0]
+                    self.assertTrue(req.full_url.endswith('/bottest-bot-token/sendDocument'))
+                    self.assertIn(b'filename="bestway-app.apk"',req.data)
+                    self.assertIn(b'name="chat_id"\r\n\r\n555',req.data)
+                    self.assertIn(b'BestWay Mobile (CBT Exam)',req.data)
+                    self.assertIn(b'Versiya: v0.5.3',req.data)
+                    self.assertIn(apk_bytes,req.data)
+
+    def test_github_releases_stream_fallback_when_local_apk_missing(self):
+        remote_apk_bytes=b'PK\x03\x04bestway-github-release-apk'
+        release_url='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
+        with TemporaryDirectory() as empty_dir:
+            calls=[]
+
+            class RemoteStream:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return remote_apk_bytes
+
+            class TelegramOk:
+                def __enter__(self):return self
+                def __exit__(self,*_):return False
+                def read(self):return b'{"ok":true,"result":{"message_id":88}}'
+
+            def fake_remote_open(req,timeout=None):
+                calls.append(('remote',req.full_url,timeout))
+                return RemoteStream()
+
+            def fake_tg_open(req,timeout=None):
+                calls.append(('telegram',req.full_url,req.data))
+                return TelegramOk()
+
+            with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':empty_dir,'ANDROID_APK_PATH':str(Path(empty_dir)/'missing.apk'),'ANDROID_APK_URL':release_url}), \
+                 patch.object(telegram_menu,'urlopen',side_effect=fake_remote_open), \
+                 patch.object(telegram_delivery,'urlopen',side_effect=fake_tg_open):
+                self.assertIsNone(telegram_menu.resolve_apk_path())
+                telegram_bot.handle({'message':{'chat':{'id':777},'text':'/apk'}})
+                self.assertEqual(len(calls),2)
+                self.assertEqual(calls[0][0],'remote')
+                self.assertEqual(calls[0][1],release_url)
+                self.assertEqual(calls[1][0],'telegram')
+                self.assertTrue(calls[1][1].endswith('/bottest-bot-token/sendDocument'))
+                self.assertIn(remote_apk_bytes,calls[1][2])
+                self.assertIn(b'filename="bestway-app.apk"',calls[1][2])
+
+    def test_callback_query_handler_answers_and_delivers_apk(self):
+        with patch.object(telegram_delivery,'answer_callback') as answer_cb, \
+             patch.object(telegram_menu,'send_apk',return_value=True) as send_apk:
+            telegram_bot.handle({
+                'update_id':99,
+                'callback_query':{
+                    'id':'cb-123',
+                    'from':{'id':321},
+                    'message':{'chat':{'id':321}},
+                    'data':'download_apk',
+                },
+            })
+            answer_cb.assert_called_once_with('cb-123')
+            send_apk.assert_called_once_with(321)
+
+    def test_apk_delivery_failure_sends_friendly_error_message(self):
+        with TemporaryDirectory() as empty_dir, \
+             patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'test-bot-token','STORAGE_DIR':empty_dir,'ANDROID_APK_PATH':str(Path(empty_dir)/'missing.apk')}), \
+             patch.object(telegram_menu,'urlopen',side_effect=OSError('GitHub unreachable')), \
+             patch.object(telegram_delivery,'send') as send_msg, \
+             self.assertLogs(telegram_menu.__name__,level='WARNING'):
+            result=telegram_menu.send_apk(999)
+            self.assertFalse(result)
+            send_msg.assert_called_once_with(999,telegram_menu.APK_ERROR_TEXT)
+
+    def test_help_and_commands_promote_single_apk_and_native_features(self):
+        self.assertNotIn('/download', telegram_bot.HELP)
+        self.assertIn('/apk', telegram_bot.HELP)
+        self.assertIn('/mock', telegram_bot.HELP)
+        self.assertIn('/leaderboard', telegram_bot.HELP)
+        with patch.dict(os.environ,{'TELEGRAM_BOT_TOKEN':'token','TELEGRAM_MODE':'polling'}), \
+             patch.object(telegram_delivery,'call') as api_call:
+            telegram_bot.initialize()
+            set_cmd_call = next(call for call in api_call.call_args_list if call.args[0]=='setMyCommands')
+            commands = [c['command'] for c in set_cmd_call.args[1]['commands']]
+            self.assertIn('apk', commands)
+            self.assertNotIn('download', commands)
+            self.assertIn('mock', commands)
+            self.assertIn('leaderboard', commands)
+
+    def test_mock_exams_text_for_renders_catalog_items(self):
+        from apps.legacy_schema import models as m
+        mock_exam = SimpleNamespace(
+            id='mock-1', title='CEFR Multi-Level Mock 1', type='multilevel',
+            level='B2-C1', price=0, is_free_for_approved=True
+        )
+        with patch.object(m.MockExam.objects, 'filter') as mock_filter:
+            mock_filter.return_value.order_by.return_value = [mock_exam]
+            user = SimpleNamespace(id='u1', name='Jasur', role='student')
+            text = telegram_menu.text_for(user, 'mock_exams')
+            self.assertIn('CEFR Multi-Level Mock 1', text)
+            self.assertIn('Multi-Level CEFR', text)
+            self.assertIn('Bepul', text)
+            self.assertIn('https://bestwayec.uz/mock/mock-1', text)
+
+    def test_leaderboard_text_for_renders_medals_and_student_rank(self):
+        from apps.legacy_schema import models as m
+        p1 = SimpleNamespace(user=SimpleNamespace(name='Komiljon'), group=SimpleNamespace(name='IELTS 7.5'), current_points=200)
+        p2 = SimpleNamespace(user=SimpleNamespace(name='Jasur'), group=SimpleNamespace(name='CEFR B2'), current_points=150)
+        user = SimpleNamespace(id='u2', name='Jasur', role='student')
+        with patch.object(m.StudentProfile.objects, 'filter') as prof_filter:
+            prof_filter.return_value.select_related.return_value.order_by.return_value = [p1, p2]
+            prof_filter.return_value.first.return_value = SimpleNamespace(current_points=150)
+            prof_filter.return_value.count.return_value = 1
+            text = telegram_menu.text_for(user, 'leaderboard')
+            self.assertIn('🥇 Komiljon', text)
+            self.assertIn('🥈 Jasur', text)
+            self.assertIn('2-o\'rin', text)
+
+    def test_monitoring_for_teacher_shows_active_attempts_and_anomalies(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        teacher = SimpleNamespace(id='t1', name='Ustoz', role='teacher')
+        attempt = SimpleNamespace(
+            id='att-1',
+            student=SimpleNamespace(user=SimpleNamespace(name='Dilshod'), group=SimpleNamespace(name='Guruh A')),
+            exam=SimpleNamespace(title='IELTS Timed Mock'),
+            current_skill='speaking',
+            status='in_progress',
+            anti_cheat_count=2,
+            started_at=now
+        )
+        with patch.object(m.Group.objects, 'filter') as group_filter, \
+             patch.object(m.StudentProfile.objects, 'all') as prof_all, \
+             patch.object(m.MockAttempt.objects, 'filter') as att_filter:
+            group_filter.return_value.values_list.return_value = ['g1']
+            prof_all.return_value.filter.return_value.values_list.return_value = ['s1']
+            att_filter.return_value.select_related.return_value.order_by.return_value = [attempt]
+            text = telegram_menu.text_for(teacher, 'monitoring')
+            self.assertIn('Dilshod', text)
+            self.assertIn('IELTS Timed Mock', text)
+            self.assertIn('Speaking', text)
+            self.assertIn('Qoidabuzarlik: 2 ta!', text)
+
+    def test_results_renders_mock_attempt_with_cefr_and_bands(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        student = SimpleNamespace(id='s1', name='Jasur', role='student')
+        mock_att = SimpleNamespace(
+            exam=SimpleNamespace(title='Milliy Sertifikat Mock'),
+            status='completed',
+            cefr_level='C1',
+            overall_band=None,
+            overall_score=68.5,
+            standard_scores={'listening': 70, 'reading': 68, 'writing': 65, 'speaking': 71},
+            anti_cheat_count=0,
+            started_at=now
+        )
+        with patch.object(m.MockAttempt.objects, 'filter') as mock_filter, \
+             patch.object(m.TestAttempt.objects, 'filter') as legacy_filter:
+            mock_filter.return_value.select_related.return_value.order_by.return_value = [mock_att]
+            legacy_filter.return_value.select_related.return_value.order_by.return_value = []
+            text = telegram_menu.text_for(student, 'results')
+            self.assertIn('Milliy Sertifikat Mock', text)
+            self.assertIn('CEFR: <b>C1</b>', text)
+            self.assertIn('Ball: <b>68.5</b>', text)
+            self.assertIn('L:70', text)
+
+    def test_articles_text_for_renders_announcements(self):
+        from apps.legacy_schema import models as m
+        from django.utils import timezone
+        now = timezone.now()
+        article = SimpleNamespace(
+            title='Yangi o\'quv yili boshlanishi',
+            body='Barcha o\'quvchilar uchun yangi semestr darslari 15-sentabrdan boshlanadi.',
+            created_at=now
+        )
+        with patch.object(m.Article.objects, 'order_by') as art_order:
+            art_order.return_value = [article]
+            user = SimpleNamespace(id='u3', name='Jasur', role='student')
+            text = telegram_menu.text_for(user, 'articles')
+            self.assertIn('Yangi o\'quv yili boshlanishi', text)
+            self.assertIn('15-sentabrdan', text)
+            self.assertIn('Yangiliklar', text)
+
+    def test_media_serving_endpoint(self):
+        from config.urls import serve_media
+        from django.test import RequestFactory
+        from django.http import Http404
+        rf = RequestFactory()
+        with TemporaryDirectory() as temp_dir:
+            downloads_dir = Path(temp_dir) / 'media' / 'downloads'
+            downloads_dir.mkdir(parents=True, exist_ok=True)
+            apk_file = downloads_dir / 'bestway-app.apk'
+            apk_file.write_bytes(b'PK0304-apk-binary-content')
+
+            with patch.dict(os.environ, {'STORAGE_DIR': temp_dir}):
+                # Test with downloads/bestway-app.apk
+                req = rf.get('/media/downloads/bestway-app.apk')
+                resp = serve_media(req, 'downloads/bestway-app.apk')
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(b''.join(resp.streaming_content), b'PK0304-apk-binary-content')
+                resp.close()
+
+                # Test with missing file
+                with self.assertRaises(Http404):
+                    serve_media(rf.get('/media/missing.txt'), 'missing.txt')
+
+    def test_telegram_bot_commands_dispatch_without_error(self):
+        from apps.core import telegram_links
+        user = SimpleNamespace(id='u-test', name='Test User', role='student')
+        messages_sent = []
+
+        def fake_send(chat_id, text, reply_markup=None):
+            messages_sent.append((chat_id, text, reply_markup))
+            return True
+
+        with patch.object(telegram_links, 'find', return_value=user), \
+             patch.object(telegram_delivery, 'send', side_effect=fake_send), \
+             patch.object(telegram_menu, 'text_for', side_effect=lambda u, key: f'RESPONSE_FOR_{key}'):
+            for cmd in ('/mock', '/leaderboard', '/ranking', '/reyting', '/monitoring', '/news', '/articles', '/yangiliklar'):
+                messages_sent.clear()
+                telegram_bot.handle({'message': {'chat': {'id': 12345}, 'text': cmd}})
+                self.assertEqual(len(messages_sent), 1, f'Command {cmd} did not trigger send')
+                self.assertEqual(messages_sent[0][0], 12345)
+                self.assertTrue(messages_sent[0][1].startswith('RESPONSE_FOR_'))
+
+        # Also test unlinked user trigger
+        contact_requests = []
+        with patch.object(telegram_links, 'find', return_value=None), \
+             patch.object(telegram_delivery, 'contact_request', side_effect=lambda cid, msg: contact_requests.append((cid, msg))):
+            for cmd in ('/mock', '/leaderboard', '/monitoring', '/news'):
+                contact_requests.clear()
+                telegram_bot.handle({'message': {'chat': {'id': 99999}, 'text': cmd}})
+                self.assertEqual(len(contact_requests), 1, f'Unlinked {cmd} did not trigger contact request')
+
+
+
+
+

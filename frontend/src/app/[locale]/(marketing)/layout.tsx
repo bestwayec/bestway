@@ -23,9 +23,13 @@ export default async function MarketingLayout({
       >
         <ParticleBackdrop />
       </div>
-      <SiteHeader />
+      <div className="mobile-app-hide">
+        <SiteHeader />
+      </div>
       <main className="flex-1 overflow-x-clip">{children}</main>
-      <SiteFooter />
+      <div className="mobile-app-hide">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

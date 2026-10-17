@@ -3,8 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { MockAttemptDetail, MockExamListItem, MockGroup } from "@/lib/types";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("@/i18n/navigation", () => ({ Link: ({ href, children, ...props }: React.ComponentProps<"a">) => React.createElement("a", { href, ...props }, children) }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string, values?: Record<string, string | number>) => values ? `${key} ${Object.values(values).join(" ")}` : key }));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, children, ...props }: React.ComponentProps<"a">) => React.createElement("a", { href, ...props }, children),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 
 import { MockExamCard } from "./mock-exams-view";
 import { GuidedMultilevelGroups } from "./mock-runner";
@@ -94,6 +97,17 @@ describe("Multilevel student UX", () => {
     expect(taskDuration({ taskKey: "1.2", prepSeconds: 15, responseSeconds: 45 })).toBe("15 sec prep · 45 sec response");
   });
 
+  it("marks Writing progress from entered responses and Speaking progress only from uploaded audio", () => {
+    const groups = [{ id: 'part', questions: [{ id: 'q', number: 1, type: 'speaking_task', prompt: 'Describe your home.', points: 5, guidance: { taskKey: '1.1', rawMax: 5 } }] }] as unknown as MockGroup[];
+    const props = { skill: 'speaking' as const, groups, activeTask: 0, setActiveTask: vi.fn(), strict: false, timed: false, attemptId: 'attempt', answers: { q: 'text cannot stand in for audio' }, audioSet: new Set<string>(), onAnswer: vi.fn() };
+    const pending = renderToStaticMarkup(h(GuidedMultilevelGroups, props));
+    expect(pending).toContain('taskLabel 1.1 notAnswered');
+    const uploaded = renderToStaticMarkup(h(GuidedMultilevelGroups, { ...props, audioSet: new Set(['q']) }));
+    expect(uploaded).toContain('taskLabel 1.1 recordingUploaded');
+    const writing = renderToStaticMarkup(h(GuidedMultilevelGroups, { ...props, skill: 'writing', groups: [{ ...groups[0], questions: [{ ...groups[0].questions[0], type: 'essay_task1' }] }] }));
+    expect(writing).toContain('taskLabel 1.1 responseEntered');
+  });
+
   it("renders an explicit ready state and section navigation", () => {
     const html = renderToStaticMarkup(h(React.Fragment, null, h(MultilevelReadiness, { ready: true }), h(MultilevelSectionProgress, { current: "writing" })));
     expect(html).toContain("Ready");
@@ -109,9 +123,9 @@ describe("Multilevel student UX", () => {
     const attempt = {
       specificationVersion: "UZBMB_MULTILEVEL_EN_2026_V1",
       sections: [{ id: "writing", skill: "writing", score: 13, max: 16, standardScore: 55, groups: [
-        { id: "writing-1", questions: [{ id: "w1", points: 5, score: 4, guidance: { taskKey: "informal_email", displayLabel: "Task 1.1 — Informal Letter", rawMax: 5 } }] },
-        { id: "writing-2", questions: [{ id: "w2", points: 5, score: 4, guidance: { taskKey: "formal_email", displayLabel: "Task 1.2 — Formal Letter", rawMax: 5 } }] },
-        { id: "writing-3", questions: [{ id: "w3", points: 6, score: 5, guidance: { taskKey: "publication", displayLabel: "Task 2 — Publication", rawMax: 6 } }] },
+        { id: "writing-1", questions: [{ id: "w1", points: 5, score: 4, isGraded: true, guidance: { taskKey: "informal_email", displayLabel: "Task 1.1 — Informal Letter", rawMax: 5 } }] },
+        { id: "writing-2", questions: [{ id: "w2", points: 5, score: 4, isGraded: true, guidance: { taskKey: "formal_email", displayLabel: "Task 1.2 — Formal Letter", rawMax: 5 } }] },
+        { id: "writing-3", questions: [{ id: "w3", points: 6, score: 5, isGraded: true, guidance: { taskKey: "publication", displayLabel: "Task 2 — Publication", rawMax: 6 } }] },
       ] }],
     } as unknown as MockAttemptDetail;
     const html = renderToStaticMarkup(h(MultilevelResultBreakdown, { attempt }));

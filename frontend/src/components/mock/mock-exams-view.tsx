@@ -14,25 +14,40 @@ import {
   Plus,
   RefreshCw,
   ShoppingCart,
+  Trash2,
   BookOpenText,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import {
   useConfirmMockPurchase,
+  useDeleteMockExam,
   useMockAttempts,
   useMockExams,
   useMyMockAttempts,
   useMockPurchases,
   usePurchaseMock,
+  useStartMock,
 } from "@/hooks/use-mock";
+import type { ExamSimulatorMode, MockAttemptMode, MockPracticeSkill } from "@/lib/types";
+import { ExamLauncherModal } from "./exam-launcher-modal";
+import { LiveExamPinCard } from "./live-exam-pin-card";
+import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from '@/hooks/use-exam-programs';
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
@@ -40,6 +55,7 @@ import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
 import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
 import { formatMoney, formatPhone } from "@/lib/utils";
 import { MultilevelReadiness } from "./multilevel-student-ui";
+import { availablePracticeSkills } from "@/lib/mock-practice";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -48,7 +64,7 @@ const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   speaking: Mic,
 };
 
-type Tab = "exams" | "grading" | "purchases";
+type Tab = "exams" | "live" | "grading" | "purchases";
 
 export function MockExamsView() {
   const t = useTranslations("mock");
@@ -66,6 +82,23 @@ export function MockExamsView() {
   const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
   const attemptsQ = useMyMockAttempts();
   const purchase = usePurchaseMock();
+  const deleteExam = useDeleteMockExam();
+
+  const start = useStartMock();
+  const router = useRouter();
+
+  function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) {
+    start.mutate(
+      { examId, mode, ...(skills ? { skills } : {}) },
+      {
+        onSuccess: (res) =>
+          router.push(
+            `/mock/attempt/${res.attemptId}${simulatorMode ? `?simulator=${simulatorMode}` : ""}`
+          ),
+        onError: (e) => toast.error(e instanceof Error ? e.message : tc("unknownError")),
+      }
+    );
+  }
 
   function onBuy(id: string) {
     purchase.mutate(id, {
@@ -91,19 +124,27 @@ export function MockExamsView() {
         }
       />
 
+      {isStudent && (
+        <div className="mb-5">
+          <LiveExamPinCard />
+        </div>
+      )}
       {isStudent && <ExamTrackSelector />}
       {isStudent && scope.program === 'MULTILEVEL' && <label className="mb-4 block text-sm">{tt('practiceLevel')} <select aria-label={tt('practiceLevel')} value={practiceLevel} onChange={(e) => setPracticeLevel(e.target.value as typeof practiceLevel)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">{tt('allLevels')}</option>{(['A1','A2','B1','B2','C1'] as const).map((level) => <option key={level} value={level}>{level}</option>)}</select></label>}
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
             <TabsTrigger value="exams">{t("title")}</TabsTrigger>
+            <TabsTrigger value="live">Live Exam Room (PIN)</TabsTrigger>
             <TabsTrigger value="grading">{t("grading")}</TabsTrigger>
             {isOffice && <TabsTrigger value="purchases">{t("purchases")}</TabsTrigger>}
           </TabsList>
         </Tabs>
       )}
 
-      {tab === "grading" && isStaff ? (
+      {tab === "live" && isStaff ? (
+        <LiveExamRoomPanel />
+      ) : tab === "grading" && isStaff ? (
         <GradingPanel />
       ) : tab === "purchases" && isOffice ? (
         <PurchasesPanel />
@@ -137,6 +178,10 @@ export function MockExamsView() {
               attempts={attemptsQ.data ?? []}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
+              onStart={(mode, skills, simulatorMode) => onStart(e.id, mode, skills, simulatorMode)}
+              onDelete={async () => {
+                await deleteExam.mutateAsync(e.id);
+              }}
             />
           ))}
         </div>
@@ -160,6 +205,8 @@ export function MockExamCard({
   attempts,
   buying,
   onBuy,
+  onStart,
+  onDelete,
 }: {
   exam: MockExamListItem;
   isStaff: boolean;
@@ -167,19 +214,38 @@ export function MockExamCard({
   attempts: MockAttemptSummary[];
   buying: boolean;
   onBuy: () => void;
+  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) => void;
+  onDelete?: () => Promise<unknown> | void;
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
+  const [launcherOpen, setLauncherOpen] = React.useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const multilevel = exam.type === "multilevel";
   const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
   const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
+
+  async function handleConfirmDelete() {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      toast.success("Imtihon muvaffaqiyatli o'chirildi");
+      setConfirmDeleteOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : tc("unknownError"));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <Card className="flex h-full flex-col p-5">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
         {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
-        {multilevel && <MultilevelReadiness ready={exam.ready} />}
+        {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
         {isStaff && (
           <Badge variant={exam.isPublished ? "success" : "warning"}>
             {exam.isPublished ? t("published") : t("draft")}
@@ -221,14 +287,53 @@ export function MockExamCard({
 
       <div className="mt-4">
         {isStaff ? (
-          <Link
-            href={`/mock/${exam.id}`}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover"
-          >
-            <ClipboardCheck className="size-4" />
-            {t("manage")}
-          </Link>
-        ) : multilevel && exam.ready === false ? (
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/mock/${exam.id}`}
+              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover"
+            >
+              <ClipboardCheck className="size-4" />
+              {t("manage")}
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Imtihonni o'chirish"
+              title="Imtihonni o'chirish"
+              onClick={() => setConfirmDeleteOpen(true)}
+              className="h-9 w-9 border-danger/30 text-danger hover:bg-danger/10"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+            <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Imtihonni o&apos;chirishni tasdiqlang</DialogTitle>
+                  <DialogDescription>
+                    &ldquo;{exam.title}&rdquo; imtihonini butunlay o&apos;chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo&apos;lmaydi.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDeleteOpen(false)}
+                    disabled={deleting}
+                  >
+                    {tc("cancel")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    loading={deleting}
+                    onClick={() => void handleConfirmDelete()}
+                  >
+                    O&apos;chirish
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        ) : multilevel && exam.ready === false && availablePracticeSkills(exam).length === 0 && !inProgress ? (
           <Button className="w-full" disabled>
             <Play className="fill-current" />
             Start Exam
@@ -242,13 +347,31 @@ export function MockExamCard({
             {t("resume")}
           </Link>
         ) : exam.access === "granted" ? (
-          <Link
-            href={`/mock/${exam.id}`}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            <Play className="size-4 fill-current" />
-            {t("start")}
-          </Link>
+          onStart ? (
+            <>
+              <Button
+                className="w-full bg-brand font-semibold text-white transition-colors hover:bg-brand-hover"
+                onClick={() => setLauncherOpen(true)}
+              >
+                <Play className="size-4 fill-current mr-1.5" />
+                {t("start")}
+              </Button>
+              <ExamLauncherModal
+                open={launcherOpen}
+                onOpenChange={setLauncherOpen}
+                exam={exam}
+                onStart={onStart}
+              />
+            </>
+          ) : (
+            <Link
+              href={`/mock/${exam.id}`}
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+            >
+              <Play className="size-4 fill-current mr-1.5" />
+              {t("start")}
+            </Link>
+          )
         ) : exam.access === "pending" ? (
           <Badge variant="warning" className="w-full justify-center py-1.5">
             <Clock /> {t("pending")}

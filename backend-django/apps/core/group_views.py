@@ -1,4 +1,5 @@
 import re
+from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from common.auth.permissions import Authenticated
 from . import groups as service
@@ -16,45 +17,125 @@ def validate(data, create=False):
     schedule = data.get('schedule')
     if schedule is not None:
         if not isinstance(schedule, list): invalid('schedule must be an array')
+        cleaned_schedule = []
         for item in schedule:
             if not isinstance(item, dict): invalid('each value in nested property schedule must be either object or array')
-            for key in item:
-                if key not in ('day', 'startTime', 'endTime'): invalid(f'property {key} should not exist')
-            if item.get('day') not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
+            raw_day = item.get('day')
+            day = str(raw_day).strip().lower()[:3] if raw_day else ''
+            if day not in ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'):
                 invalid('day must be one of the following values: mon, tue, wed, thu, fri, sat, sun')
-            for key in ('startTime', 'endTime'):
-                if not isinstance(item.get(key), str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', item[key]): invalid("Vaqt HH:MM formatida bo'lsin")
+            start = item.get('startTime')
+            end = item.get('endTime')
+            time_val = item.get('time')
+            if isinstance(time_val, str):
+                if '-' in time_val:
+                    parts = time_val.split('-')
+                    start = start or parts[0].strip()
+                    end = end or parts[1].strip()
+                else:
+                    start = start or time_val.strip()
+                    end = end or start
+            if not start:
+                start = '09:00'
+            if not end:
+                end = start
+            for key, val in [('startTime', start), ('endTime', end)]:
+                if isinstance(val, str) and len(val) >= 5:
+                    val = val[:5]
+                if not isinstance(val, str) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d', val or ''):
+                    invalid("Vaqt HH:MM formatida bo'lsin")
+                if key == 'startTime': start = val
+                else: end = val
+            cleaned_schedule.append({'day': day, 'startTime': start, 'endTime': end})
+        data['schedule'] = cleaned_schedule
     return data
 
 
 @api_view(['GET', 'POST'])
 @permission_classes([Authenticated])
 def groups_view(request):
-    if request.method == 'GET': return success(service.list_groups(request.user))
-    require_role(request, 'admin', 'super_admin')
-    return success(service.create(request.user, validate(payload(request, {'name', 'teacherId', 'schedule'}), True)), 201)
+    if request.method == 'GET':
+        return success(service.list_groups(request.user))
+    require_role(request, 'teacher', 'admin', 'super_admin')
+    raw = payload(request, {'name', 'teacherId', 'schedule', 'description'})
+    clean = {k: v for k, v in raw.items() if k in ('name', 'teacherId', 'schedule')}
+    return success(service.create(request.user, validate(clean, True)), 201)
 
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([Authenticated])
 def group_view(request, group_id):
-    if request.method == 'GET': return success(service.detail(request.user, group_id))
+    if request.method == 'GET':
+        return success(service.detail(request.user, group_id))
+    actor = request.user
+    if actor.role == 'teacher':
+        group = service.get_group(group_id)
+        if group.teacher_id != actor.id:
+            service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+        allowed = {'name', 'schedule', 'teacherId', 'description', 'groupId', 'id'}
+        data = payload(request, allowed)
+        clean_data = {k: v for k, v in data.items() if k in ('name', 'schedule')}
+        return success(service.update(actor, group_id, validate(clean_data)))
     require_role(request, 'admin', 'super_admin')
-    return success(service.update(request.user, group_id, validate(payload(request, {'name', 'teacherId', 'schedule'}))))
+    allowed = {'name', 'teacherId', 'schedule', 'description', 'groupId', 'id'}
+    data = payload(request, allowed)
+    clean_data = {k: v for k, v in data.items() if k in ('name', 'teacherId', 'schedule')}
+    return success(service.update(actor, group_id, validate(clean_data)))
+
+
+def _build_excel_response(actor, group_id):
+    xlsx_bytes, filename = service.export_group_xlsx(actor, group_id)
+    response = HttpResponse(
+        xlsx_bytes,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def export_group_excel_view(request, group_id):
+    return _build_excel_response(request.user, group_id)
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def export_group_results_view(request, group_id):
+    fmt = (request.query_params.get('format') or '').strip().lower()
+    if fmt in ('xlsx', 'excel'):
+        return _build_excel_response(request.user, group_id)
+
+    actor = request.user
+    group = service.get_group(group_id)
+    if actor.role == 'teacher' and group.teacher_id != actor.id:
+        service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+    elif actor.role not in ('admin', 'super_admin', 'teacher'):
+        service.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
+
+    from . import statistics
+    body = statistics.group_results_csv(group_id)
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]+', '_', group.name)
+    response = HttpResponse(body, content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="guruh-{safe_name}-natijalar.csv"'
+    return response
 
 
 @api_view(['POST'])
 @permission_classes([Authenticated])
 def add_student_view(request, group_id):
-    require_role(request, 'admin', 'super_admin')
+    require_role(request, 'teacher', 'admin', 'super_admin')
     data = payload(request, {'studentId'})
-    if data.get('studentId') in ('', None): invalid('studentId should not be empty')
-    if not isinstance(data['studentId'], str): invalid('studentId must be a string')
+    if data.get('studentId') in ('', None):
+        invalid('studentId should not be empty')
+    if not isinstance(data['studentId'], str):
+        invalid('studentId must be a string')
     return success(service.add_student(request.user, group_id, data['studentId']), 201)
 
 
 @api_view(['DELETE'])
 @permission_classes([Authenticated])
 def remove_student_view(request, group_id, student_id):
-    require_role(request, 'admin', 'super_admin')
+    require_role(request, 'teacher', 'admin', 'super_admin')
     return success(service.remove_student(request.user, group_id, student_id))
+

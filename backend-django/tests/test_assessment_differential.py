@@ -14,6 +14,8 @@ from tests.test_assessment import fixture
 class AssessmentDifferentialTests(SimpleTestCase):
     def compare(self,cases):
         root=Path(__file__).resolve().parents[1]
+        if not (Path(__file__).resolve().parents[2] / 'backend' / 'dist').exists():
+            self.skipTest("Legacy NestJS dist not present")
         reference=subprocess.run(['node',str(root/'scripts/assessment_reference.cjs')],input=json.dumps(cases),capture_output=True,text=True,encoding='utf-8',timeout=30,check=True)
         expected=json.loads(reference.stdout)
         for row,wanted in zip(cases,expected):

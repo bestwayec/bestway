@@ -34,7 +34,8 @@ const ACCESS_MAX_AGE = 15 * 60;
 const REFRESH_MAX_AGE = 60 * 60 * 24 * 30;
 
 function buildTargetUrl(path: string[], search: string): string {
-  const suffix = path.map(encodeURIComponent).join("/");
+  const normalized = path[0] === "v1" ? path.slice(1) : path;
+  const suffix = normalized.map(encodeURIComponent).join("/");
   return `${API_URL}/${suffix}${search}`;
 }
 

@@ -11,7 +11,7 @@ from django.db import IntegrityError, connection, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import AssessmentJob, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection
+from apps.legacy_schema.models import AssessmentJob, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection
 from common.api.exceptions import ContractAPIException
 from .auth_service import audit
 from .mock_rules import MANUAL_TYPES, QUESTION_TYPES, objective_group_issues, objective_question_issues
@@ -339,7 +339,7 @@ def update_exam(actor, exam_id: str, data: dict):
 
 
 def delete_exam(actor, exam_id: str):
-    """Delete an unused draft definition.
+    """Permanently delete a definition and its dependent attempt history.
 
     The HTTP contract restricts this operation to super-admins. Keeping the
     same guard here prevents accidental privilege expansion from non-HTTP
@@ -350,12 +350,23 @@ def delete_exam(actor, exam_id: str):
     with transaction.atomic():
         exam = locked_exam(exam_id)
         assert_author(actor, exam)
-        assert_mutable(exam)
-        old = {"title": exam.title}
+        # Editing historical content stays forbidden, but the separately
+        # confirmed super-admin delete deliberately removes that history.
+        # Serialize with uploads/reviews before collecting recording keys.
+        attempts = list(MockAttempt.objects.select_for_update().filter(exam_id=exam.id).order_by('id').values_list('id', flat=True))
+        jobs = AssessmentJob.objects.select_for_update().filter(attempt_id__in=attempts).order_by('id')
+        job_ids = list(jobs.values_list('id', flat=True))
+        # A running provider call may finish later; invalidating its lease
+        # prevents it from projecting results after the exam is deleted.
+        AssessmentJob.objects.filter(id__in=job_ids).update(lease_token=None, lease_expires_at=None)
+        old = {"title": exam.title, "attemptCount": len(attempts), "assessmentCount": len(job_ids)}
         keys = list(MockQuestionGroup.objects.filter(section__exam_id=exam.id).values_list('audio_key', 'image_key'))
+        keys.extend((key, None) for key in MockAnswer.objects.filter(attempt_id__in=attempts).values_list('audio_key', flat=True) if key)
+        # Prisma-owned foreign keys cascade sections, questions, attempts,
+        # answers, purchases and assessment jobs/evaluations/transcripts.
         exam.delete()
+        audit_event(actor, "mock.exam.delete", "mockExam", exam_id, old=old)
         _cleanup_media_after_commit(keys)
-    audit_event(actor, "mock.exam.delete", "mockExam", exam_id, old=old)
     return {"deleted": True}
 
 
@@ -705,7 +716,11 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
     item('template_placeholders', placeholders == 0, f'{placeholders} content block(s) still contain generated template placeholders' if placeholders else 'no generated template placeholders')
     open_issues = sum(i.status == 'open' for i in review)
     item('import_issues', open_issues == 0, f'{open_issues} open import issue(s) — resolve in Exam Builder' if open_issues else 'no open import issues')
-    return {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
+    output = {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
+    if exam.type == 'multilevel':
+        from .mock_practice import metadata
+        output.update(metadata(exam))
+    return output
 
 
 def preview(actor, exam_id: str) -> dict:

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { assessmentPollingInterval } from "@/lib/assessment-model";
 import type { AssessmentReviewInput, AttemptAssessments } from "@/lib/assessment-types";
 
 export function useAttemptAssessments(attemptId: string, enabled = true) {
+  const qc = useQueryClient();
+  const previousProjection = useRef<string | null>(null);
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [requests, setRequests] = useState(0);
   const query = useQuery({
@@ -22,6 +24,22 @@ export function useAttemptAssessments(attemptId: string, enabled = true) {
     refetchIntervalInBackground: false,
     refetchInterval: (current) => assessmentPollingInterval(current.state.data, requests, Date.now() - startedAt, !!current.state.error),
   });
+  useEffect(() => {
+    if (!query.data?.assessments.length) return;
+    const projection = JSON.stringify([attemptId, query.data.assessments.map((job) =>
+      [job.id, job.version, job.status, job.finalScore, job.finalScoreSource])]);
+    if (projection === previousProjection.current) return;
+    const firstProjection = previousProjection.current === null;
+    previousProjection.current = projection;
+    // The worker updates the attempt separately from its assessment ledger.
+    // Refresh the saved score summary when a polled result changes, including
+    // a result that completed before this page's first assessment request.
+    if (firstProjection && query.data.assessments.every((job) => ["PENDING", "PROCESSING", "RETRY"].includes(job.status))) return;
+    void qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
+    void qc.invalidateQueries({ queryKey: ["mock-attempts"] });
+    void qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
+    void qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
+  }, [attemptId, qc, query.data]);
   return {
     ...query,
     refresh: () => {
@@ -44,6 +62,7 @@ export function useReviewAssessment(attemptId: string, jobId: string) {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
+      qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
     },
   });
 }

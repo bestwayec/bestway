@@ -8,8 +8,9 @@ vi.mock('@/hooks/use-mock', () => {
   const mutation = () => ({ isPending: false, mutate: vi.fn(), mutateAsync: vi.fn() });
   return {
     useMockExam: () => ({ data: { title: 'Resume fixture', type: 'multilevel', questionCount: 0, sections: ['listening','reading','writing','speaking'].map((skill) => ({ id: skill, skill, instructions: `Current ${skill} content`, groups: [] })) } }),
+    useAudioTimestamps: () => ({ data: null }),
     useBulkMockAnswers: mutation, useSubmitMock: mutation, useFlagMockCheat: mutation,
-    useAdvanceMockSection: mutation, useUploadMockSpeaking: mutation,
+    useAdvanceMockSection: mutation, useReportLiveRoomProgress: mutation, useUploadMockSpeaking: mutation,
   };
 });
 import { MockRunner } from './mock-runner';

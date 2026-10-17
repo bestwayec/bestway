@@ -3,6 +3,15 @@ import os
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 BASE_DIR = Path(__file__).resolve().parents[2]
+def _load_env_file(path: Path) -> None:
+    if not path.is_file(): return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line: continue
+        k, _, v = line.partition("=")
+        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+if os.getenv("DJANGO_SETTINGS_MODULE") != "config.settings.test" and "PYTEST_CURRENT_TEST" not in os.environ:
+    _load_env_file(BASE_DIR / ".env")
 def env(name: str, default: str = "") -> str: return os.getenv(name, default).strip()
 def env_bool(name: str, default: bool = False) -> bool: return env(name, str(default)).lower() in {"1", "true", "yes", "on"}
 def env_list(name: str, default: str = "") -> list[str]: return [v.strip() for v in env(name, default).split(",") if v.strip()]
@@ -17,9 +26,15 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 DATABASE_URL = env("DATABASE_URL")
 if not DATABASE_URL: raise RuntimeError("DATABASE_URL is required; Phase 1 never falls back to SQLite")
 DATABASES = {"default": database_from_url(DATABASE_URL)}
-INSTALLED_APPS = ["django.contrib.auth", "django.contrib.contenttypes", "django.contrib.staticfiles", "corsheaders", "rest_framework", "apps.core", "apps.legacy_schema"]
-MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", "django.middleware.security.SecurityMiddleware", "django.middleware.common.CommonMiddleware"]
-ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = []; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/")
+# django.contrib.admin needs its sessions/messages/CSRF stack; the API itself
+# stays JWT-only because every /v1 view is a DRF (csrf_exempt) view.
+INSTALLED_APPS = ["django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "corsheaders", "rest_framework", "apps.core", "apps.legacy_schema"]
+MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", "django.middleware.security.SecurityMiddleware", "django.middleware.common.CommonMiddleware", "django.contrib.sessions.middleware.SessionMiddleware", "django.middleware.csrf.CsrfViewMiddleware", "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware"]
+# Admin signs in against the Prisma-owned User table (bcrypt passwordHash);
+# the stock ModelBackend stays listed so the Django-managed auth tables keep
+# behaving normally for any future managed users.
+AUTHENTICATION_BACKENDS = ["common.auth.admin_backend.BestwayLegacyUserBackend", "django.contrib.auth.backends.ModelBackend"]
+ROOT_URLCONF = "config.urls"; TEMPLATES: list[dict[str, object]] = [{"BACKEND": "django.template.backends.django.DjangoTemplates", "DIRS": [], "APP_DIRS": True, "OPTIONS": {"context_processors": ["django.template.context_processors.request", "django.contrib.auth.context_processors.auth", "django.contrib.messages.context_processors.messages"]}}]; WSGI_APPLICATION = "config.wsgi.application"; ASGI_APPLICATION = "config.asgi.application"; DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"; USE_TZ = True; TIME_ZONE = "Asia/Tashkent"; LANGUAGE_CODE = "en-us"; STATIC_URL = "/static/"; MEDIA_URL = env("MEDIA_URL", "/media/")
 # Share the reference storage root by default so existing mock keys still resolve.
 MEDIA_ROOT = env("STORAGE_DIR", str(BASE_DIR.parent / "backend" / "storage"))
 if not Path(MEDIA_ROOT).is_absolute():
@@ -27,5 +42,27 @@ if not Path(MEDIA_ROOT).is_absolute():
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", env("FRONTEND_ORIGIN", "http://localhost:3000")); CORS_ALLOW_CREDENTIALS = True
 REST_FRAMEWORK = {"EXCEPTION_HANDLER": "common.api.exceptions.exception_handler", "DEFAULT_AUTHENTICATION_CLASSES": ["common.auth.authentication.BestwayJWTAuthentication"], "DEFAULT_THROTTLE_RATES": {"auth_public": "30/min", "auth_sensitive": "10/min"}}
-BUILD_COMMIT = env("BUILD_COMMIT") or None; DESKTOP_LATEST_VERSION = env("DESKTOP_LATEST_VERSION", "0.5.1-rc.1"); DESKTOP_DOWNLOAD_URL = env("DESKTOP_DOWNLOAD_URL", "https://github.com/bestwayec/bw-tauri/releases/download/v0.5.1-rc.1/Bestway.App_0.5.1-rc.1_x64-setup.exe"); DESKTOP_PRERELEASE = env_bool("DESKTOP_PRERELEASE", True); DESKTOP_UPDATE_CHANNEL = "manual_installer"
+BUILD_COMMIT = env("BUILD_COMMIT") or None; DESKTOP_LATEST_VERSION = env("DESKTOP_LATEST_VERSION", "0.8.0"); DESKTOP_DOWNLOAD_URL = env("DESKTOP_DOWNLOAD_URL", "https://bestwayec.uz/media/downloads/Bestway.App_0.8.0_x64-setup.exe"); DESKTOP_PRERELEASE = env_bool("DESKTOP_PRERELEASE", False); DESKTOP_UPDATE_CHANNEL = "manual_installer"
+ANDROID_LATEST_VERSION = env("ANDROID_LATEST_VERSION", DESKTOP_LATEST_VERSION); ANDROID_APK_PATH = env("ANDROID_APK_PATH", "media/downloads/bestway-app.apk"); ANDROID_APK_URL = env("ANDROID_APK_URL", env("ANDROID_DOWNLOAD_URL", f"https://bestwayec.uz/media/downloads/bestway-app.apk"))
 JWT_SECRET = env("JWT_SECRET"); JWT_ACCESS_TTL_MINUTES = int(env("JWT_ACCESS_TTL", "15m").removesuffix("m") or "15"); JWT_REFRESH_TTL_DAYS = int(env("JWT_REFRESH_TTL_DAYS", "30") or "30"); DESKTOP_REDIRECT_URIS = env_list("DESKTOP_REDIRECT_URIS", "bestway-exam://auth/callback"); REDIS_URL = env("REDIS_URL"); DEEPSEEK_API_KEY = env("DEEPSEEK_API_KEY"); DEEPGRAM_API_KEY = env("DEEPGRAM_API_KEY")
+ASSESSMENT_PROVIDER = env("ASSESSMENT_PROVIDER", "openrouter"); ASSESSMENT_FALLBACK_PROVIDER = env("ASSESSMENT_FALLBACK_PROVIDER", "xkiro"); OPENROUTER_API_KEY = env("OPENROUTER_API_KEY"); OPENROUTER_BASE_URL = env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"); OPENROUTER_MODEL = env("OPENROUTER_MODEL", "deepseek/deepseek-chat"); OPENROUTER_ADJUDICATOR_MODEL = env("OPENROUTER_ADJUDICATOR_MODEL"); XKIRO_API_KEY = env("XKIRO_API_KEY"); XKIRO_BASE_URL = env("XKIRO_BASE_URL", "https://api.xkiro.com/v1"); XKIRO_MODEL = env("XKIRO_MODEL", "qwen/qwen3.8-max:free"); XKIRO_ADJUDICATOR_MODEL = env("XKIRO_ADJUDICATOR_MODEL")
+GOOGLE_CLIENT_ID = env("GOOGLE_CLIENT_ID", ""); GOOGLE_CLIENT_SECRET = env("GOOGLE_CLIENT_SECRET", "")
+
+
+
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
+
+from corsheaders.defaults import default_headers as _cors_default_headers
+CORS_ALLOW_HEADERS = (*_cors_default_headers, 'x-attempt-signature')
+ATTEMPT_SIGNATURE_REQUIRED = env_bool('ATTEMPT_SIGNATURE_REQUIRED', False)
+ANDROID_LATEST_VERSION = env('ANDROID_LATEST_VERSION', '0.8.0')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
+SUPERADMIN_TELEGRAM_ID = os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')
+

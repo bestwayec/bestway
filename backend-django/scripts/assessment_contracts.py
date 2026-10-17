@@ -11,7 +11,7 @@ def verify_assessment(call,db,schemas,ids,state,control,normalize,checks,media_r
     from apps.core import assessment,assessment_results as rubric,assessment_worker as worker
     from apps.core.mock_import_validate import canonical_checksum
     from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation
-    shared={label:str(uuid4()) for label in ('assessment_exam','assessment_section','assessment_group','assessment_question','assessment_attempt','assessment_job')}
+    shared={label:str(uuid4()) for label in ('assessment_exam','assessment_section','assessment_group','assessment_question','assessment_attempt','assessment_legacy_attempt','assessment_job')}
     for side in (0,1):
         ids[side].update(shared)
         schema=sql.Identifier(schemas[side])
@@ -21,6 +21,7 @@ def verify_assessment(call,db,schemas,ids,state,control,normalize,checks,media_r
         execute('INSERT INTO {}."MockQuestionGroup" (id,"sectionId",title) VALUES (%s,%s,\'Task 1\')',[shared['assessment_group'],shared['assessment_section']])
         execute('INSERT INTO {}."MockQuestion" (id,"groupId",number,type,prompt,points) VALUES (%s,%s,1,\'essay_task1\',\'Describe the task\',9)',[shared['assessment_question'],shared['assessment_group']])
         execute('INSERT INTO {}."MockAttempt" (id,"examId","studentId",status,"submittedAt") VALUES (%s,%s,%s,\'grading\',NOW())',[shared['assessment_attempt'],shared['assessment_exam'],ids[side]['student']])
+        execute('INSERT INTO {}."MockAttempt" (id,"examId","studentId",status,"submittedAt") VALUES (%s,%s,%s,\'grading\',NOW())',[shared['assessment_legacy_attempt'],shared['assessment_exam'],ids[side]['student']])
         execute('UPDATE {}."StudentProfile" SET "groupId"=%s WHERE "userId"=%s',[ids[side]['group'],ids[side]['student']])
     input=dict(program='IELTS_ACADEMIC',skill='writing',specificationVersion=None,speakingProfileVersion=None,rubricVersion='IELTS_WRITING_RUBRIC_V1',promptVersion='BESTWAY_ASSESSMENT_PROMPT_2026_V1',pronunciationEvidence='UNAVAILABLE',
         parts=[dict(id='task1:'+shared['assessment_question'],max=9,weight=1,task='Describe the task',context='',responses=[dict(questionId=shared['assessment_question'],prompt='Describe the task',originalResponse='Original candidate essay',partNumber=1)])])
@@ -82,9 +83,14 @@ def verify_assessment(call,db,schemas,ids,state,control,normalize,checks,media_r
     call('POST','/v1/assessment/jobs/{assessment_job}/review',dict(action='REGRADE',expectedVersion=6,reason='Independent regrade'))
     run_worker()
     call('GET','/v1/assessment/attempts/{assessment_attempt}')
-    # Legacy grading is deliberately the existing non-atomic teacher endpoint.
+    # Validate the retained legacy payload/result contract on a separate attempt
+    # without an assessment job. Django now atomically reconciles a job when one
+    # exists; that deliberate behavior upgrade is verified independently by
+    # verify_grading_consistency_postgres.py, rather than asserted equal to the
+    # unchanged Nest implementation's stale assessment ledger.
     for changes in [dict(score=10),dict(rubricScores={'unknown':6}),dict(rubricScores={'ta':6.1}),dict(rubricScores={}),dict(rubricScores=None),dict(score=None),dict(score=6.5,feedback='Teacher feedback')]:
-        call('POST','/v1/mock/attempts/{assessment_attempt}/grade',dict(questionId='{assessment_question}',**changes),role='teacher')
+        call('POST','/v1/mock/attempts/{assessment_legacy_attempt}/grade',dict(questionId='{assessment_question}',**changes),role='teacher')
+    checks.append('Assessment: legacy grade payload/scoring parity uses a job-free fixture; atomic teacher ledger reconciliation is the intentional new contract covered by verify_grading_consistency_postgres.py')
     # Leave no earlier pending jobs before testing the durable retry decisions.
     seed_job('assessment_retry',generation=10)
     run_worker(error=dict(code='PROVIDER_RATE_LIMITED',transient=True,uncertain=False))

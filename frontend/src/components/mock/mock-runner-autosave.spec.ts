@@ -13,19 +13,21 @@ const hooks = vi.hoisted(() => {
   });
   const other = vi.fn(async () => ({}));
   const translate = (key: string) => key;
-  return { save, mutate, other, translate, exam: undefined as MockExamDetail | undefined };
+  return { save, mutate, other, translate, activeRecording: false, pendingRecording: false, exam: undefined as MockExamDetail | undefined };
 });
 vi.mock('next-intl', () => ({ useTranslations: () => hooks.translate }));
 vi.mock('@/hooks/use-mock', () => ({
   useMockExam: () => ({ data: hooks.exam }),
+  useAudioTimestamps: () => ({ data: null }),
   // React Query returns a NEW wrapper each render, but stable callbacks.
   useBulkMockAnswers: () => ({ isPending: false, mutate: hooks.mutate, mutateAsync: hooks.save }),
   useSubmitMock: () => ({ isPending: false, mutateAsync: hooks.other }),
   useAdvanceMockSection: () => ({ isPending: false, mutateAsync: hooks.other }),
   useFlagMockCheat: () => ({ mutate: hooks.other }),
+  useReportLiveRoomProgress: () => ({ isPending: false, mutate: hooks.other }),
   useUploadMockSpeaking: () => ({ isPending: false, mutate: hooks.other }),
 }));
-vi.mock('@/lib/durable-recordings', () => ({ hasPendingRecordings: async () => false, hasActiveRecording: () => false }));
+vi.mock('@/lib/durable-recordings', () => ({ hasPendingRecordings: async () => hooks.pendingRecording, hasActiveRecording: () => hooks.activeRecording }));
 import { MockRunner } from './mock-runner';
 
 let host: HTMLDivElement;
@@ -61,6 +63,7 @@ async function mount(versioned = false, initialResponse = '') {
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-08T10:00:00Z'));
   hooks.save.mockReset().mockResolvedValue({ saved: 1 }); hooks.mutate.mockClear(); hooks.other.mockClear();
+  hooks.activeRecording = false; hooks.pendingRecording = false;
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
 });
@@ -69,6 +72,15 @@ afterEach(async () => {
 });
 
 describe('timed runner autosave with unstable mutation wrappers', () => {
+  it.each(['active', 'pending'])('refuses Finish even through the review confirmation while a recording is %s', async (state) => {
+    await mount(true, 'persisted');
+    hooks.activeRecording = state === 'active'; hooks.pendingRecording = state === 'pending';
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => finish.click());
+    const confirmSubmission = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Submit exam')!;
+    await act(async () => confirmSubmission.click());
+    expect(hooks.other).not.toHaveBeenCalled(); expect(hooks.save).not.toHaveBeenCalled();
+  });
   it.each([false, true])('restores server answers without treating them as dirty edits (versioned=%s)', async (versioned) => {
     await mount(versioned, 'persisted');
     expect(host.querySelector<HTMLInputElement>('input')!.value).toBe('persisted');

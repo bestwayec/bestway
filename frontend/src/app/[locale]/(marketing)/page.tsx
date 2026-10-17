@@ -25,6 +25,8 @@ import type { TeacherProfile } from "@/components/marketing/teacher-card";
 import PixelCard from "@/components/ui/pixel-card-dynamic";
 import { HeroTitle } from "@/components/marketing/hero-title";
 import CenterMap from "@/components/marketing/center-map-dynamic";
+import { getSessionRole } from "@/lib/auth";
+import { MobileLandingGate } from "@/components/mobile/mobile-landing-gate";
 import { getGalleryImages, getLatestArticles, getTeachersPublic } from "@/lib/public-api";
 import { CENTER } from "@/lib/config";
 import { cn, formatPhone } from "@/lib/utils";
@@ -44,7 +46,7 @@ const FEATURES = [
 
 const STATS = [
   { num: 500, suffix: "+", key: "statsStudents" },
-  { num: 20, suffix: "+", key: "statsTeachers" },
+  { num: 7, suffix: "+", key: "statsTeachers" },
   { num: 17, suffix: "+", key: "statsYears" },
 ] as const;
 
@@ -72,12 +74,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   setRequestLocale(locale);
 
   // Parallel fetch — avoids sequential waterfall that added 600ms+ to TTFB
-  const [t, format, articles, galleryImages] = await Promise.all([
+  const [t, format, articles, galleryImages, role] = await Promise.all([
     getTranslations("marketing"),
     getFormatter(),
     getLatestArticles(3),
     getGalleryImages(),
+    getSessionRole(),
   ]);
+  const isAuthenticated = !!role;
   const teachersFallback = galleryImages.length === 0 ? await getTeachersPublic() : [];
   // Teacher cards render from real CMS data: gallery labels ("Name — IELTS 8.5")
   // or `/teachers` records (name / specialty / achievement / photo).
@@ -103,7 +107,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         }));
 
   return (
-    <>
+    <MobileLandingGate locale={locale} isAuthenticated={isAuthenticated}>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="marketing-section relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -308,7 +312,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 tone="brand"
                 lines={[
                   { text: formatPhone(CENTER.phone), href: `tel:${CENTER.phone.replace(/\s/g, "")}` },
-                  { text: formatPhone(CENTER.phone2), href: `tel:${CENTER.phone2.replace(/\s/g, "")}` },
                 ]}
               />
             </Reveal>
@@ -369,7 +372,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </Reveal>
         </div>
       </section>
-    </>
+    </MobileLandingGate>
   );
 }
 

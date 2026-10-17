@@ -60,6 +60,18 @@ export function useUpdateMockExam(id: string) {
   });
 }
 
+export function useUpdateMockExamAny() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateMockExamInput }) =>
+      api.patch<MockExamDetail>(`/mock/exams/${id}`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+    },
+  });
+}
+
 export function useDeleteMockExam() {
   const qc = useQueryClient();
   return useMutation({
@@ -102,10 +114,11 @@ export function useConfirmMockPurchase() {
 
 export function useStartMock() {
   return useMutation({
-    mutationFn: (v: { examId: string; mode?: "practice" | "timed"; flow?: "full_test" | "single_skill" }) =>
+    mutationFn: (v: { examId: string; mode?: "practice" | "timed"; flow?: "full_test" | "single_skill"; skills?: import("@/lib/types").MockPracticeSkill[] }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
         ...(v.flow ? { flow: v.flow } : {}),
+        ...(v.skills ? { skills: v.skills } : {}),
       }),
   });
 }
@@ -131,6 +144,7 @@ export function useMockAttempt(attemptId: string) {
     queryKey: ["mock-attempt", attemptId],
     queryFn: () => api.get<MockAttemptDetail>(`/mock/attempts/${attemptId}`),
     enabled: !!attemptId,
+    refetchInterval: (query) => (query.state.data?.status === "grading" ? 3000 : false),
   });
 }
 
@@ -151,7 +165,7 @@ export function useBulkMockAnswers(attemptId: string) {
 
 export function useFlagMockCheat(attemptId: string) {
   return useMutation({
-    mutationFn: (event: string) => api.post(`/mock/attempts/${attemptId}/flag-cheat`, { event }),
+    mutationFn: (event: string) => api.post(`/mock/attempts/${attemptId}/anomaly`, { event }),
   });
 }
 
@@ -165,8 +179,11 @@ export function useSaveMockAnnotations(attemptId: string) {
 export function useSubmitMock(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
-      api.post<{ status: MockAttemptStatus }>(`/mock/attempts/${attemptId}/submit`),
+    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[] }) =>
+      api.post<{ status: MockAttemptStatus }>(
+        `/mock/attempts/${attemptId}/submit`,
+        payload ?? { confirm: true },
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
@@ -204,6 +221,27 @@ export function useUploadMockSpeaking(attemptId: string) {
   });
 }
 
+/** Writing qo'lyozma/rasm javobini OCR orqali matnga aylantirish va saqlash (multipart) */
+export interface WritingOcrResponse {
+  saved?: boolean;
+  ocrText: string;
+  imageUrls?: string[];
+  pages?: Array<{ page: number; imageUrl?: string; text?: string }>;
+  wordCount?: number;
+}
+
+export function useUploadMockWritingOcr(attemptId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { questionId: string; form: FormData }) =>
+      api.post<WritingOcrResponse>(
+        `/api/v1/mock/attempts/${attemptId}/writing/${v.questionId}/ocr`,
+        v.form,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] }),
+  });
+}
+
 /* ── Grading (staff) ───────────────────────────────────────────────────── */
 
 export function useGradeMock(attemptId: string) {
@@ -219,6 +257,7 @@ export function useGradeMock(attemptId: string) {
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
       qc.invalidateQueries({ queryKey: ["attempt-assessments", attemptId] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
+      qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
     },
   });
 }
@@ -452,7 +491,7 @@ export function useMockReadiness(examId: string) {
   return useQuery({
     queryKey: ["mock-readiness", examId],
     queryFn: () =>
-      api.get<{ examId: string; ready: boolean; items: MockReadinessItem[] }>(
+      api.get<{ examId: string; ready: boolean; items: MockReadinessItem[]; practiceReady?: boolean; practiceSkills?: import("@/lib/types").MockPracticeSkill[]; practiceQuestionCount?: number }>(
         `/mock/exams/${examId}/readiness`,
       ),
     enabled: !!examId,
@@ -577,3 +616,229 @@ export function useResolveImportIssue(examId: string) {
     },
   });
 }
+
+/* ── Smart Bulk Import, Excel Import & Single Audio Timestamps ──────────── */
+
+export function useSmartParseQuestions() {
+  return useMutation({
+    mutationFn: (body: {
+      text: string;
+      defaultSkill?: "reading" | "listening";
+      examType?: string;
+    }) => api.post<import("@/lib/types").SmartParseResult>("/mock/smart-parse", body),
+  });
+}
+
+export function useExamBulkImport(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      skill: "reading" | "listening";
+      text?: string;
+      questions?: unknown[];
+      answers?: Record<string, string>;
+      passageText?: string;
+      instructions?: string;
+      replaceExisting?: boolean;
+    }) =>
+      api.post<{ added: number; questions?: unknown[] }>(
+        `/mock/exams/${examId}/bulk-import`,
+        body,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+      qc.invalidateQueries({ queryKey: ["mock-readiness", examId] });
+    },
+  });
+}
+
+export function useGroupBulkImport(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      groupId: string;
+      text?: string;
+      questions?: unknown[];
+      answers?: Record<string, string>;
+      passageText?: string;
+      instructions?: string;
+      replaceExisting?: boolean;
+    }) => {
+      const { groupId, ...body } = v;
+      return api.post<{ added: number; questions?: unknown[] }>(
+        `/mock/groups/${groupId}/bulk-import`,
+        body,
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+      qc.invalidateQueries({ queryKey: ["mock-readiness", examId] });
+    },
+  });
+}
+
+export function useImportExamExcel(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (form: FormData) =>
+      api.post<{ added: number; questions?: unknown[] }>(
+        `/mock/exams/${examId}/import-excel`,
+        form,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      qc.invalidateQueries({ queryKey: ["mock-exams"] });
+      qc.invalidateQueries({ queryKey: ["mock-readiness", examId] });
+    },
+  });
+}
+
+export function useAudioTimestamps(examId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["mock-audio-timestamps", examId],
+    queryFn: () =>
+      api.get<import("@/lib/types").AudioTimestampsResponse>(
+        `/mock/exams/${examId}/audio-timestamps`,
+      ),
+    enabled: !!examId && enabled,
+    retry: false,
+  });
+}
+
+export function useSaveAudioTimestamps(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      payload:
+        | FormData
+        | {
+            audioKey?: string;
+            audioUrl?: string;
+            durationSec?: number;
+            timestamps: import("@/lib/types").AudioTimestampItem[];
+          },
+    ) =>
+      api.post<import("@/lib/types").AudioTimestampsResponse>(
+        `/mock/exams/${examId}/audio-timestamps`,
+        payload,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-audio-timestamps", examId] });
+      qc.invalidateQueries({ queryKey: ["mock-exam"] });
+    },
+  });
+}
+
+/* ── Score Prediction Engine (IELTS 0–9.0 & Multi-Level 0–75 CEFR) ─────── */
+
+export function useMyScorePrediction(enabled = true) {
+  return useQuery({
+    queryKey: ["score-prediction", "me"],
+    queryFn: () => api.get<import("@/lib/types").ScorePredictionResponse>("/mock/prediction/me"),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useStudentScorePrediction(studentId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["score-prediction", studentId ?? "me"],
+    queryFn: () =>
+      studentId
+        ? api.get<import("@/lib/types").ScorePredictionResponse>(`/students/${studentId}/prediction`)
+        : api.get<import("@/lib/types").ScorePredictionResponse>("/mock/prediction/me"),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useUpdatePredictionTarget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      targetIeltsBand?: number;
+      targetMultilevelScore?: number;
+      targetCefr?: string;
+    }) => api.patch<import("@/lib/types").ScorePredictionResponse>("/mock/prediction/me", body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["score-prediction"] });
+    },
+  });
+}
+
+/* ── Live Exam Rooms (PIN Mode & Teacher Live Monitor) ─────────────────── */
+
+export function useLiveExamRooms(groupId?: string) {
+  return useQuery({
+    queryKey: ["mock-live-rooms", groupId ?? "all"],
+    queryFn: () =>
+      api.get<import("@/lib/types").LiveExamRoom[]>("/mock/live-rooms", groupId ? { groupId } : undefined),
+    retry: false,
+  });
+}
+
+export function useCreateLiveExamRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      examId: string;
+      groupId?: string;
+      simulatorMode: import("@/lib/types").ExamSimulatorMode;
+      title?: string;
+      durationMinutes?: number;
+    }) => api.post<import("@/lib/types").LiveExamRoom>("/mock/live-rooms", body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mock-live-rooms"] });
+    },
+  });
+}
+
+export function useJoinLiveExamRoom() {
+  return useMutation({
+    mutationFn: (body: { pin: string }) =>
+      api.post<import("@/lib/types").LiveRoomJoinResult>("/mock/live-rooms/join", body),
+  });
+}
+
+export function useLiveExamRoomMonitor(roomId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["mock-live-room-monitor", roomId],
+    queryFn: () =>
+      api.get<import("@/lib/types").LiveRoomMonitorResponse>(
+        `/mock/live-rooms/${roomId}/monitor`,
+      ),
+    enabled: !!roomId && enabled,
+    refetchInterval: 4000,
+    retry: false,
+  });
+}
+
+export function useReportLiveRoomProgress(roomId: string | null) {
+  return useMutation({
+    mutationFn: (body: {
+      attemptId?: string;
+      currentSkill?: string;
+      currentQuestionNumber?: number;
+      answeredCount?: number;
+      flaggedCount?: number;
+      status?: string;
+    }) => {
+      if (!roomId) return Promise.resolve(null);
+      return api.post(`/mock/live-rooms/${roomId}/progress`, body);
+    },
+  });
+}
+
+export function useCloseLiveExamRoom() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (roomId: string) => api.post(`/mock/live-rooms/${roomId}/close`),
+    onSuccess: (_data, roomId) => {
+      qc.invalidateQueries({ queryKey: ["mock-live-rooms"] });
+      qc.invalidateQueries({ queryKey: ["mock-live-room-monitor", roomId] });
+    },
+  });
+}
+

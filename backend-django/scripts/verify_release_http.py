@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 from threading import Thread
 from urllib.error import HTTPError
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse, unquote
@@ -168,6 +169,61 @@ try:
     assert db.execute('SELECT response,score FROM "MockAnswer" WHERE "attemptId"=%s', (attempt_id,)).fetchone() == ('original', 1)
     report['databaseChecks'] = ['payment amount/state persisted', 'attendance present persisted', 'parent/student link persisted',
         'mock completed attempt/cheat count persisted', 'mock answer graded correctly', 'student start omits answer keys', 'resume keeps attempt and original mode']
+    # Delete is a separately confirmed super-admin operation; history prevents
+    # edits, not deletion. Exercise real Prisma cascades in this empty schema.
+    from django.test import override_settings
+    from apps.core import mock_authoring
+    from types import SimpleNamespace
+    from unittest.mock import patch
+    with TemporaryDirectory(prefix='bestway-delete-fixture-') as media_root, override_settings(MEDIA_ROOT=media_root):
+        keys = [f'mock/{uuid4()}.{extension}' for extension in ('webm', 'mp3', 'png')]
+        for key in keys:
+            target = Path(media_root) / key
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b'owned deletion fixture')
+        db.execute('UPDATE "MockAnswer" SET "audioKey"=%s WHERE "attemptId"=%s', (keys[0], attempt_id))
+        db.execute('UPDATE "MockQuestionGroup" SET "audioKey"=%s,"imageKey"=%s WHERE id=%s', (keys[1], keys[2], question_group['id']))
+        db.execute('UPDATE "MockExam" SET "isPublished"=true WHERE id=%s', (demo['id'],))
+        shared = call('POST', f'/v1/mock/exams/{demo["id"]}/clone', {}, role='super_admin', status=201)
+        # Keep only the clone's shared image; the original audio is orphaned
+        # after deletion and must be removed, while the image must survive.
+        db.execute('UPDATE "MockQuestionGroup" SET "audioKey"=NULL WHERE "sectionId" IN (SELECT id FROM "MockSection" WHERE "examId"=%s)', (shared['id'],))
+        job_id = str(uuid4())
+        db.execute('INSERT INTO "AssessmentJob" (id,"attemptId","studentId",program,skill,"inputHash","inputSnapshot","rubricVersion","promptVersion","policyMode",status,"leaseToken","leaseExpiresAt","updatedAt") VALUES (%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,NOW()+interval \'10 minutes\',NOW())',
+            (job_id, attempt_id, ids['student'], 'MULTILEVEL', 'speaking', 'delete-fixture', '{}', 'fixture', 'fixture', 'MANUAL_ONLY', 'PROCESSING', 'fixture-lease'))
+        db.execute('INSERT INTO "AssessmentEvaluation" (id,"jobId",role,"attemptNumber","inputHash",provider,model) VALUES (%s,%s,%s,1,%s,%s,%s)',
+            (str(uuid4()), job_id, 'PRIMARY', 'delete-fixture', 'fixture', 'fixture'))
+        db.execute('INSERT INTO "SpeechTranscript" (id,"jobId","questionId","audioHash",provider,model) VALUES (%s,%s,%s,%s,%s,%s)',
+            (str(uuid4()), job_id, question_id, 'fixture', 'fixture', 'fixture'))
+        db.execute('INSERT INTO "MockPurchase" (id,"userId","examId",status,"updatedAt") VALUES (%s,%s,%s,%s,NOW())',
+            (str(uuid4()), ids['student'], demo['id'], 'purchased'))
+        call('DELETE', f'/v1/mock/exams/{demo["id"]}', role='admin', status=403)
+        assert all((Path(media_root)/key).exists() for key in keys)
+        # Even an audit failure must restore all cascaded rows and keep files.
+        with patch.object(mock_authoring, 'audit_event', side_effect=RuntimeError('delete audit rollback')):
+            try:
+                mock_authoring.delete_exam(SimpleNamespace(id=ids['super_admin'], role='super_admin'), demo['id'])
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError('Delete audit failure did not roll back')
+        assert db.execute('SELECT COUNT(*) FROM "MockExam" WHERE id=%s', (demo['id'],)).fetchone()[0] == 1
+        assert db.execute('SELECT "leaseToken" FROM "AssessmentJob" WHERE id=%s', (job_id,)).fetchone()[0] == 'fixture-lease'
+        assert all((Path(media_root)/key).exists() for key in keys)
+        assert call('DELETE', f'/v1/mock/exams/{demo["id"]}', role='super_admin') == {'deleted': True}
+        for table, column, value in [('MockExam', 'id', demo['id']), ('MockSection', 'examId', demo['id']),
+                ('MockQuestionGroup', 'id', question_group['id']), ('MockQuestion', 'id', question_id),
+                ('MockAttempt', 'id', attempt_id), ('MockAnswer', 'attemptId', attempt_id),
+                ('MockCheatEvent', 'attemptId', attempt_id), ('MockPurchase', 'examId', demo['id']),
+                ('AssessmentJob', 'id', job_id), ('AssessmentEvaluation', 'jobId', job_id), ('SpeechTranscript', 'jobId', job_id)]:
+            assert db.execute(sql.SQL('SELECT COUNT(*) FROM {} WHERE {}=%s').format(sql.Identifier(table), sql.Identifier(column)), (value,)).fetchone()[0] == 0, table
+        assert not (Path(media_root)/keys[0]).exists() and not (Path(media_root)/keys[1]).exists()
+        assert (Path(media_root)/keys[2]).exists(), 'Shared clone image must survive'
+        assert db.execute('SELECT COUNT(*) FROM "AuditLog" WHERE action=%s AND "entityId"=%s', ('mock.exam.delete', demo['id'])).fetchone()[0] == 1
+        call('DELETE', f'/v1/mock/exams/{demo["id"]}', role='super_admin', status=404)
+        report['databaseChecks'].extend(['used published exam deletes with complete dependent cascades',
+            'delete revokes processing job and records audit', 'delete failure rolls back rows, lease and files',
+            'delete removes orphan recordings and preserves shared clone media', 'admin cannot delete used exam'])
 except Exception as error:
     report['error'] = type(error).__name__ + ': ' + str(error)
 finally:

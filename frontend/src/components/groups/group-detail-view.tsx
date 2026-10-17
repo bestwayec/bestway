@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowLeft,
   CalendarClock,
+  Download,
   Pencil,
   Plus,
   Search,
@@ -26,23 +27,34 @@ import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
 import {
   useAddStudentToGroup,
   useGroupDetail,
+  useGroups,
   useRemoveStudentFromGroup,
+  downloadGroupExcel,
 } from "@/hooks/use-groups";
 import { useStudents, useDebouncedValue } from "@/hooks/use-users";
 import { useSettings } from "@/hooks/use-settings";
 import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
+import { GroupAiRanking } from "@/components/teacher/group-ai-ranking";
+import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
+import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
+import { GroupAnalyticsPanel } from "@/components/groups/groups-view";
+import { useRouter } from "@/i18n/navigation";
 
 export function GroupDetailView({ groupId }: { groupId: string }) {
   const t = useTranslations("groups");
   const tc = useTranslations("common");
   const tw = useTranslations("weekdaysShort");
+  const router = useRouter();
   const { data: group, isLoading, isError, refetch } = useGroupDetail(groupId);
+  const { data: allGroups } = useGroups();
   const removeStudent = useRemoveStudentFromGroup(groupId);
   const addStudent = useAddStudentToGroup(groupId);
   const { data: me } = useMe();
   const settingsQ = useSettings();
   const [editOpen, setEditOpen] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = React.useState("");
   const debounced = useDebouncedValue(search);
@@ -55,6 +67,18 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
 
   const memberIds = new Set((group?.students ?? []).map((s) => s.studentId));
   const candidates = (picker.data ?? []).filter((u) => !memberIds.has(u.id)).slice(0, 6);
+
+  async function handleDownloadExcel() {
+    setExcelBusy(true);
+    try {
+      await downloadGroupExcel(groupId, group?.name ?? "group");
+      toast.success("Excel (.xlsx) yuklab olindi");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Excel yuklab olishda xatolik");
+    } finally {
+      setExcelBusy(false);
+    }
+  }
 
   function onAdd(studentId: string) {
     addStudent.mutate(studentId, {
@@ -75,7 +99,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-4xl">
         <ErrorState
           title={tc("error")}
           action={
@@ -90,7 +114,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
 
   if (isLoading || !group) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-4xl space-y-4">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-24" />
         <Skeleton className="h-64" />
@@ -102,17 +126,26 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const time = group.schedule?.[0] ? `${group.schedule[0].startTime}–${group.schedule[0].endTime}` : "";
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link
-        href="/groups"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
-      >
-        <ArrowLeft className="size-4" />
-        {t("title")}
-      </Link>
+    <div className="mx-auto max-w-4xl">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <Link
+          href="/groups"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
+        >
+          <ArrowLeft className="size-4" />
+          {t("title")}
+        </Link>
+
+        {canSeePhones && (
+          <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" />
+            <span>+ Yangi guruh yaratish</span>
+          </Button>
+        )}
+      </div>
 
       <Card className="mb-4 p-5">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-fg">{group.name}</h1>
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-fg-muted">
@@ -126,12 +159,47 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil />
-            {t("edit")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleDownloadExcel}
+              loading={excelBusy}
+              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <Download className="size-4" />
+              <span>📊 Excel (.xlsx) yuklab olish</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/api/backend/assessment/groups/${groupId}/export`} download>
+                <Download className="size-4" />
+                Vedomost (.csv)
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil />
+              {t("edit")}
+            </Button>
+          </div>
         </div>
       </Card>
+
+      {canSeePhones && (
+        <>
+          <LiveExamRoomPanel defaultGroupId={groupId} />
+          <GroupAnalyticsPanel
+            groups={allGroups}
+            selectedGroupId={groupId}
+            onSelectGroup={(nextId) => {
+              if (nextId && nextId !== groupId) {
+                router.push(`/groups/${nextId}`);
+              }
+            }}
+            showGroupSelector={Boolean(allGroups && allGroups.length > 1)}
+          />
+          <GroupLiveMonitoring groupId={groupId} />
+          <GroupAiRanking groupId={groupId} />
+        </>
+      )}
 
       {/* O'quvchi qo'shish */}
       <Card className="mb-4">
@@ -255,6 +323,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
       </Card>
 
       <GroupFormDialog open={editOpen} group={group} onClose={() => setEditOpen(false)} />
+      <GroupFormDialog open={createOpen} group={null} onClose={() => setCreateOpen(false)} />
       <AdjustPointsDialog
         open={!!pointsTarget}
         onClose={() => setPointsTarget(null)}

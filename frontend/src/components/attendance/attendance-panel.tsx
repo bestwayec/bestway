@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronLeft, ChevronRight, Clock, Minus, Users, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clock, Download, Minus, Users, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -16,7 +16,8 @@ import {
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/app/page-header";
-import { ExportButton } from "@/components/app/export-button";
+import { attendanceCsv } from "@/lib/attendance-export";
+import { downloadCsv } from "@/lib/csv-export";
 import { DataGrid, type DataGridColumn } from "@/components/data-grid/data-grid";
 import { StateCell, type CellTone } from "@/components/data-grid/state-cell";
 import { useGroups, useGroupDetail } from "@/hooks/use-groups";
@@ -88,7 +89,7 @@ export function AttendancePanel() {
   const attendanceQ = useAttendance(activeGroupId || undefined, month);
   const save = useSaveAttendanceCell(activeGroupId, month);
 
-  const students = detailQ.data?.students ?? [];
+  const students = React.useMemo(() => detailQ.data?.students ?? [], [detailQ.data?.students]);
 
   const columns: DataGridColumn[] = React.useMemo(() => {
     const days = scheduleDaySet(detailQ.data?.schedule ?? null);
@@ -213,7 +214,17 @@ export function AttendancePanel() {
         actions={
           <>
             {activeGroupId && (
-              <ExportButton path={`/stats/export/attendance?groupId=${activeGroupId}&month=${month}`} />
+              <Button variant="outline" size="sm"
+                disabled={!detailQ.data || !attendanceQ.data || detailQ.isFetching || attendanceQ.isFetching || detailQ.isError || attendanceQ.isError || save.isPending}
+                onClick={() => {
+                  if (!detailQ.data || !attendanceQ.data) return;
+                  downloadCsv(attendanceCsv(detailQ.data.name, month, students, attendanceQ.data, {
+                    group: tc("group"), month: tc("month"), student: tc("student"),
+                    present: t("present"), absent: t("absent"), late: t("late"), notMarked: t("notMarked"),
+                  }), `davomat-${activeGroupId.replace(/[^a-zA-Z0-9_-]/g, "_")}-${month}.csv`);
+                }}>
+                <Download />{tc("export")}
+              </Button>
             )}
             {groupsQ.data && groupsQ.data.length > 0 && (
               <Select value={activeGroupId} onValueChange={setGroupId}>

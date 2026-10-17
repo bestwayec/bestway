@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/feedback";
 import {
   useExamImportProvenance,
+  useMockExam,
   useMockReadiness,
   useResolveImportIssue,
   useUpdateMockExam,
@@ -432,7 +433,9 @@ function PublishRelease({
   const router = useRouter();
   const qc = useQueryClient();
   const update = useUpdateMockExam(examId);
+  const examQ = useMockExam(examId);
   const readinessQ = useMockReadiness(examId);
+  const provenanceQ = useExamImportProvenance(examId, true);
 
   const [checking, setChecking] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -451,20 +454,27 @@ function PublishRelease({
     setChecking(true);
     try {
       await qc.invalidateQueries({ queryKey: ["mock-exam"] });
-      const fresh = await readinessQ.refetch();
-      if (fresh.isError || !fresh.data) {
+      await qc.invalidateQueries({ queryKey: ["mock-import-provenance", examId] });
+      const [fresh, provenance, examSnapshot] = await Promise.all([
+        readinessQ.refetch(), provenanceQ.refetch(), examQ.refetch(),
+      ]);
+      if (fresh.isError || !fresh.data || examSnapshot.isError || !examSnapshot.data) {
         setPublishError(tx(t, "readinessCheckFailed", "Could not check exam readiness."));
         return;
       }
       const items = fresh.data?.items ?? [];
-      const serverBad = items.filter((i) => !i.ok).length;
-      const examData = qc.getQueryData<MockExamDetail>(["mock-exam"]);
+      const examData = examSnapshot.data;
       const clientBad = examClientChecks(
         examData?.sections ?? detail.sections,
         examData?.profile ?? detail.profile,
         examData?.type ?? detail.type,
       ).filter((c) => c.level === "error").length;
-      const total = serverBad + clientBad;
+      // Exactly the number this panel shows — one contract for Review, the
+      // toolbar badge and the Publish gate.
+      const openNow = provenance.data
+        ? provenance.data.issues.filter((issue) => issue.status !== "resolved").length
+        : null;
+      const total = reviewBlockerCount(clientBad, items, openNow);
       if (total > 0) {
         setStaleBlockers(total);
         return;

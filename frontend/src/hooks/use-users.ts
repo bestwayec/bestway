@@ -35,11 +35,12 @@ export function useStudents(search: string) {
 }
 
 /** O'qituvchilar ro'yxati (guruhga biriktirish uchun) */
-export function useTeachers() {
+export function useTeachers(enabled = true) {
   return useQuery({
     queryKey: ["users", "teacher", "", null],
     queryFn: () => api.get<UserListItem[]>("/users", { role: "teacher", limit: 100 }),
     staleTime: 60_000,
+    enabled,
   });
 }
 

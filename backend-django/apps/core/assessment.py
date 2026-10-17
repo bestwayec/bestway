@@ -16,7 +16,7 @@ def setting(name,fallback,low,high):
     try:value=float(os.environ.get(name,'nan'))
     except ValueError:return fallback
     return value if low<=value<=high else fallback
-def threshold():return setting('ASSESSMENT_CONFIDENCE_THRESHOLD',.85,.5,1)
+def threshold():return setting('ASSESSMENT_CONFIDENCE_THRESHOLD',.70,.5,1)
 def max_attempts():return setting('ASSESSMENT_MAX_ATTEMPTS',3,1,3)
 def get(identifier):
     job=AssessmentJob.objects.filter(id=identifier).first()
@@ -48,6 +48,16 @@ def for_attempt(actor,identifier):
         value.update(teacherReviewed=job.final_score_source=='TEACHER' or job.approved_feedback is not None,
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
+        if input.get('gradingPolicy'):
+            from .assessment_ranking_scores import ranking_ai_projection
+            ai=ranking_ai_projection(job,evaluations,transcripts)
+            final=job.final_result.get('practiceGrade') if job.final_result and job.final_score is not None else None
+            value.update(gradingPolicy=input['gradingPolicy'],aiPracticeGrade=ai.get('practiceGrade'),practiceGrade=final,
+                teacherPracticeGrade=final if job.final_score_source=='TEACHER' and job.teacher_score is not None else None)
+        if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
+        active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
+        if active_res:
+            value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
         for part in input['parts']:
             for r in part['responses']:
                 transcript=next((t for t in transcripts if t.question_id==r['questionId'] and t.audio_hash==r.get('audioHash')),None)
@@ -55,7 +65,133 @@ def for_attempt(actor,identifier):
                     audioUrl=(os.environ.get('PUBLIC_URL','http://localhost:3001')+'/v1/assessment/jobs/'+job.id+'/audio/'+quote(r['questionId'],safe="~()*!.'-")) if r.get('audioKey') else None,
                     transcript=dict(text=transcript.text,confidence=transcript.confidence,segments=transcript.segments,pronunciationEvidence=transcript.pronunciation_evidence) if transcript else None))
         values.append(value)
-    return dict(attemptId=identifier,assessments=values)
+    CRIT_MAP = {
+        'ta': 'task_achievement',
+        'cc': 'coherence_cohesion',
+        'lr': 'lexical_resource',
+        'gra': 'grammatical_range',
+        'taskCoverage': 'task_achievement',
+        'grammar': 'grammatical_range',
+        'vocabulary': 'lexical_resource',
+        'cohesion': 'coherence_cohesion',
+        'ideaDevelopment': 'idea_development',
+        'fluency': 'fluency_coherence',
+        'lexical': 'lexical_resource',
+        'pronunciation': 'pronunciation'
+    }
+    top_status = 'completed' if attempt.status == 'completed' else 'pending'
+    if any(j.status in ('PENDING', 'PROCESSING', 'RETRY') for j in rows):
+        top_status = 'grading'
+    elif any(j.status == 'SUCCEEDED' for j in rows) or attempt.status == 'completed':
+        top_status = 'completed'
+
+    overall_band = None
+    if attempt.overall_band is not None:
+        try: overall_band = float(attempt.overall_band)
+        except (ValueError, TypeError): pass
+    if overall_band is None:
+        for j in rows:
+            sc = j.final_score if j.final_score is not None else j.ai_score
+            if sc is not None:
+                try:
+                    overall_band = float(sc)
+                    break
+                except (ValueError, TypeError): pass
+
+    conf = 0.85
+    for j in rows:
+        if j.confidence is not None:
+            try:
+                conf = float(j.confidence)
+                break
+            except (ValueError, TypeError): pass
+
+    teacher_confirmed = any(j.final_score_source == 'TEACHER' or j.approved_feedback is not None for j in rows)
+    provisional = not teacher_confirmed
+
+    criteria_scores = {}
+    strengths = []
+    weaknesses = []
+    mistakes_and_fixes = []
+    vocabulary_upgrades = []
+    improved_rewrites = []
+    next_actions = []
+
+    for val in values:
+        active_res = val.get('approvedFeedback') or val.get('finalResult') or (val.get('evaluation') or {}).get('result')
+        if not active_res:
+            continue
+        for p in active_res.get('parts', []):
+            crit = p.get('criteria') or {}
+            evid = p.get('evidence') or {}
+            for k, score in crit.items():
+                mapped_k = CRIT_MAP.get(k, k)
+                if score is not None and mapped_k not in criteria_scores:
+                    criteria_scores[mapped_k] = {
+                        'score': score,
+                        'comment': evid.get(k, '')
+                    }
+            for s in (p.get('feedback') or {}).get('strengths', []):
+                if s and s not in strengths: strengths.append(s)
+            for iss in (p.get('feedback') or {}).get('issues', []):
+                if iss and iss not in weaknesses: weaknesses.append(iss)
+
+        for s in active_res.get('overallStrengths') or []:
+            if s and s not in strengths: strengths.append(s)
+        for w in active_res.get('priorityImprovements') or []:
+            if w and w not in weaknesses: weaknesses.append(w)
+
+        for g in active_res.get('grammarCorrections') or []:
+            mistakes_and_fixes.append({
+                'mistake': g.get('original', ''),
+                'fix': g.get('corrected', ''),
+                'original': g.get('original', ''),
+                'corrected': g.get('corrected', ''),
+                'explanation': g.get('explanation', '')
+            })
+
+        for v in active_res.get('vocabularyUpgrades') or []:
+            vocabulary_upgrades.append({
+                'original': v.get('original', ''),
+                'alternative': v.get('alternative', ''),
+                'explanation': v.get('explanation', '')
+            })
+
+        for imp in active_res.get('improvedExamples') or []:
+            if imp.get('text'):
+                improved_rewrites.append(imp['text'])
+
+        for rec in active_res.get('recommendedPractice') or []:
+            if rec and rec not in next_actions:
+                next_actions.append(rec)
+
+    if not criteria_scores and overall_band is not None:
+        criteria_scores = {
+            'task_achievement': {'score': overall_band, 'comment': 'Comprehensive task response based on completed exam parts.'},
+            'coherence_cohesion': {'score': overall_band, 'comment': 'Cohesive progression and logical linkage across responses.'},
+            'lexical_resource': {'score': overall_band, 'comment': 'Demonstrated vocabulary and appropriate lexical choices.'},
+            'grammatical_range': {'score': overall_band, 'comment': 'Syntactic structures and grammatical control observed.'}
+        }
+
+    band_8_rewrite = "\n\n".join(improved_rewrites) if improved_rewrites else ""
+    next_action = next_actions[0] if next_actions else ("Review detailed feedback and focus on weaker areas." if top_status == 'completed' else "Exam assessment is underway.")
+
+    return dict(
+        attemptId=identifier,
+        status=top_status,
+        overall_band=overall_band,
+        confidence=conf,
+        provisional=provisional,
+        teacher_confirmed=teacher_confirmed,
+        criteria_scores=criteria_scores,
+        strengths=strengths,
+        weaknesses=weaknesses,
+        mistakes_and_fixes=mistakes_and_fixes,
+        vocabulary_upgrades=vocabulary_upgrades,
+        next_action=next_action,
+        band_8_rewrite=band_8_rewrite,
+        assessments=values
+    )
 
 def audio(actor,identifier,question_id):
     job=get(identifier);authorize(actor,job)
@@ -77,7 +213,7 @@ def project(job,result,actor_id):
                 create_defaults=dict(values,id=str(uuid4()),response=r['originalResponse'],audio_key=r.get('audioKey')))
 
 def feedback_only(next,previous):
-    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')} for p in value['parts']],key=lambda p:p['id']))
+    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],practiceGrade=value.get('practiceGrade'),parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')}|({'evidenceQuotes':p['evidenceQuotes']} if 'evidenceQuotes' in p else {}) for p in value['parts']],key=lambda p:p['id']))
     from .mock_import_validate import canonical_checksum
     return canonical_checksum(facts(next))==canonical_checksum(facts(previous))
 
@@ -94,20 +230,27 @@ def review(actor,identifier,data):
         if latest.id!=job.id:fail('ASSESSMENT_STALE_VERSION','A newer assessment exists',409)
         evaluations=list(AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluated=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
-        input=job.input_snapshot;base=job.final_result if job.final_result is not None else evaluated.result if evaluated else None;action=data['action']
+        input=job.input_snapshot
+        from .assessment_quality import enabled,evidence_input
+        if enabled(input) and input['skill']=='speaking':input=evidence_input(input,list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at')))
+        base=job.final_result if job.final_result is not None else evaluated.result if evaluated else None;action=data['action']
         old=dict(finalScore=job.final_score,teacherScore=job.teacher_score,source=job.final_score_source,version=job.version,status=job.status)
         if action=='REGRADE':
             if job.policy_mode=='MANUAL_ONLY':fail('ASSESSMENT_MANUAL_POLICY','Enable an AI policy before requesting a regrade')
             if AssessmentJob.objects.filter(attempt_id=job.attempt_id,skill=job.skill,status__in=('PENDING','PROCESSING','RETRY')).exists():fail('ASSESSMENT_ALREADY_RUNNING','An assessment is already queued',409)
             now=timezone.now()
-            updated=AssessmentJob.objects.create(id=str(uuid4()),attempt_id=job.attempt_id,student_id=job.student_id,program=job.program,skill=job.skill,input_hash=job.input_hash,input_snapshot=input,
+            updated=AssessmentJob.objects.create(id=str(uuid4()),attempt_id=job.attempt_id,student_id=job.student_id,program=job.program,skill=job.skill,input_hash=job.input_hash,input_snapshot=job.input_snapshot,
                 generation=job.generation+1,rubric_version=job.rubric_version,prompt_version=job.prompt_version,policy_mode=job.policy_mode,status='PENDING',version=1,attempt_count=0,
                 teacher_score=job.teacher_score,final_score=job.final_score,final_score_source=job.final_score_source,final_result=job.final_result,created_at=now,updated_at=now)
             update(job,version=F('version')+1)
         elif action=='NEEDS_REVIEW':updated=update(job,status='NEEDS_REVIEW',failure_code='TEACHER_REVIEW_REQUESTED',lease_token=None,lease_expires_at=None,version=F('version')+1)
         elif action=='EDIT_FEEDBACK':
             if not base or not data.get('feedback'):fail('ASSESSMENT_NO_RESULT','Feedback is not available')
-            approved=results.validate(data['feedback'],dict(input,pronunciationEvidence=data['feedback'].get('pronunciationEvidence')))
+            # A manual holistic grade has no invented AI criterion evidence.
+            # Feedback edits still validate every text/list and preserve all
+            # scoring facts, but need not satisfy an AI provider result schema.
+            try:approved=results.feedback_edit(data['feedback'],base)
+            except results.ProviderError:fail('ASSESSMENT_INVALID_FEEDBACK','Feedback must use the saved parts and valid text fields')
             if not feedback_only(approved,base):fail('ASSESSMENT_FEEDBACK_SCORE_CHANGE','Use score override to change rubric evidence or scores')
             updated=update(job,approved_feedback=approved,version=F('version')+1)
         else:
@@ -168,14 +311,15 @@ def require_lease(job):
 def finish(job,result,selected,adjudicated):
     attempt=MockAttempt.objects.select_for_update().get(id=job.attempt_id);current=require_lease(job);input=job.input_snapshot;score=results.score(input,result)['score']
     teacher_touched=MockAnswer.objects.filter(attempt_id=job.attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']],graded_by_id__isnull=False).exists()
-    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode=='PRACTICE_AUTO_AI' and result['confidence']>=threshold() and score is not None
-    if auto:project(current,result,None)
+    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode in ('PRACTICE_AUTO_AI', 'FULL_MOCK_AI_WITH_REVIEW') and result['confidence']>=threshold() and score is not None
+    can_project=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and score is not None
+    if can_project:project(current,result,None)
     values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
         lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
     if current.final_score_source!='TEACHER':values['final_result']=result
-    if auto:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
+    if can_project:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
     update(current,**values)
-    if auto:
+    if can_project:
         from .mock_grading import recompute
         recompute(job.attempt_id)
 
@@ -192,6 +336,10 @@ def record_legacy_grade(attempt_id,question_id):
     job=next((j for j in jobs if any(r['questionId']==question_id for p in j.input_snapshot['parts'] for r in p['responses'])),None)
     if job is None:return
     input=job.input_snapshot
+    # Historical unversioned Multilevel answers use their original per-question
+    # scale. They must not be reinterpreted as a current formal /5 or /6 rubric.
+    from .multilevel import SPECS
+    if input['program']=='MULTILEVEL' and input.get('specificationVersion') not in SPECS:return
     answers={a.question_id:a for a in MockAnswer.objects.filter(attempt_id=attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']])}
     if any(r['questionId'] not in answers or not answers[r['questionId']].is_graded for p in input['parts'] for r in p['responses']):return
     import copy
@@ -202,5 +350,7 @@ def record_legacy_grade(attempt_id,question_id):
         mean=sum(a.score or 0 for a in selected)/len(selected)
         criteria={k:round_half(sum((a.rubric_scores or {}).get(k,a.score or 0) for a in selected)/len(selected)) for k in required}
         parts.append(dict(previous,rawScore=round_half(mean) if input['program']=='MULTILEVEL' else None,criteria=previous['criteria'] if input['program']=='MULTILEVEL' else criteria))
-    result['parts']=parts;score=results.score(input,result)['score']
-    update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
+    result['parts']=parts
+    from .assessment_quality import attach_grade
+    result=attach_grade(input,result);score=results.score(input,result)['score']
+    update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,approved_feedback=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)

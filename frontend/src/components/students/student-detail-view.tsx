@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
+import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
 import { ArrowLeft, Ban, BookOpen, Check, Pencil, Sparkles, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -111,6 +112,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
 
       {/* Sarlavha */}
       <ExamTrackSelector studentId={studentId} />
+      <ScorePredictionCard studentId={studentId} readOnlyTarget />
       <Card className="mb-4 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">

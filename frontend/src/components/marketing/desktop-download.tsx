@@ -18,8 +18,48 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const REPO = "bestwayec/bw-tauri";
-const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
+const RELEASES_URL = `https://github.com/${REPO}/releases/tag/v0.8.0`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
+const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/v0.8.0`;
+const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_x64-setup.exe`;
+const FALLBACK_SERVER_WINDOWS_SETUP_URL =
+  "https://bestwayec.uz/media/downloads/Bestway.App_0.8.0_x64-setup.exe";
+
+const FALLBACK_RELEASE: ReleaseInfo = {
+  version: "v0.8.0",
+  publishedAt: "2026-10-17T00:00:00Z",
+  windows: [
+    {
+      name: "Bestway.App_0.8.0_x64-setup.exe",
+      url: LATEST_WINDOWS_SETUP_URL,
+      sizeMB: "3.5 MB",
+    },
+  ],
+  macos: [
+    {
+      name: "Bestway.App_0.8.0_aarch64.dmg · Apple Silicon",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_aarch64.dmg`,
+      sizeMB: "6.6 MB",
+    },
+    {
+      name: "Bestway.App_0.8.0_x64.dmg · Intel",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_x64.dmg`,
+      sizeMB: "6.9 MB",
+    },
+  ],
+  linux: [
+    {
+      name: "Bestway.App_0.8.0_amd64.deb · Debian / Ubuntu",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_amd64.deb`,
+      sizeMB: "5.7 MB",
+    },
+    {
+      name: "Bestway.App_0.8.0_amd64.AppImage · Standalone",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_amd64.AppImage`,
+      sizeMB: "84.0 MB",
+    },
+  ],
+};
 
 type Os = "windows" | "macos" | "linux" | "mobile" | "unknown";
 
@@ -62,10 +102,30 @@ function pickAssets(names: { name: string; url: string; size: number }[]): {
 } {
   const fmt = (size: number) => `${(size / 1024 / 1024).toFixed(1)} MB`;
   const lower = (n: string) => n.toLowerCase();
-  const windows = names
-    .filter((a) => /\.exe$|\.msi$/i.test(a.name))
-    .sort((a, b) => Number(/setup/i.test(b.name)) - Number(/setup/i.test(a.name)))
-    .map((a) => ({ name: a.name, url: a.url, sizeMB: fmt(a.size) }));
+  const windowsSeen = new Set<string>();
+  const windows: ReleaseAsset[] = [];
+  const rawWindows = names
+    .filter((a) => /\.exe$|\.msi$/i.test(a.name) && !/0\.5\.[0-7]/i.test(a.name))
+    .sort((a, b) => Number(/setup/i.test(b.name)) - Number(/setup/i.test(a.name)));
+  for (const a of rawWindows) {
+    if (!windowsSeen.has(a.name)) {
+      windowsSeen.add(a.name);
+      windows.push({ name: a.name, url: a.url, sizeMB: fmt(a.size) });
+      break;
+    }
+  }
+  if (windows.length === 0) {
+    const anyExe = names.find((a) => /\.exe$/i.test(a.name));
+    windows.push(
+      anyExe
+        ? { name: anyExe.name, url: anyExe.url, sizeMB: fmt(anyExe.size) }
+        : {
+            name: "Bestway.App_0.5.9_x64-setup.exe",
+            url: LATEST_WINDOWS_SETUP_URL,
+            sizeMB: "3.5 MB",
+          }
+    );
+  }
   const macos = names
     .filter((a) => /\.dmg$/i.test(a.name))
     .map((a) => {
@@ -73,10 +133,16 @@ function pickAssets(names: { name: string; url: string; size: number }[]): {
       const arch = /arm64|aarch64/.test(n) ? "Apple Silicon" : /x64|intel/.test(n) ? "Intel" : null;
       return { name: arch ? `${a.name} · ${arch}` : a.name, url: a.url, sizeMB: fmt(a.size) };
     });
+  if (macos.length === 0) {
+    macos.push(...FALLBACK_RELEASE.macos);
+  }
   const linux = names
     .filter((a) => /\.appimage$|\.deb$/i.test(a.name))
     .sort((a, b) => Number(/\.appimage$/i.test(a.name)) - Number(/\.appimage$/i.test(b.name)))
     .map((a) => ({ name: a.name, url: a.url, sizeMB: fmt(a.size) }));
+  if (linux.length === 0) {
+    linux.push(...FALLBACK_RELEASE.linux);
+  }
   return { windows, macos, linux };
 }
 
@@ -89,9 +155,9 @@ const OS_META: Record<Exclude<Os, "mobile" | "unknown">, { icon: typeof Monitor;
 export function DesktopDownload() {
   const t = useTranslations("marketing");
   const [os] = React.useState<Os>(() => detectOs());
-  const [release, setRelease] = React.useState<ReleaseInfo | null>(null);
+  const [release, setRelease] = React.useState<ReleaseInfo | null>(FALLBACK_RELEASE);
   const [error, setError] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
 
   function applyRelease(json: {
     tag_name: string;
@@ -102,7 +168,7 @@ export function DesktopDownload() {
       (json.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
     );
     setRelease({
-      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v"),
+      version: String(json.tag_name ?? "").replace(/^bestway-app-v/, "v") || "v0.5.9",
       publishedAt: json.published_at,
       ...picked,
     });
@@ -111,8 +177,8 @@ export function DesktopDownload() {
   }
 
   function failRelease() {
-    setRelease(null);
-    setError(true);
+    setRelease(FALLBACK_RELEASE);
+    setError(false);
     setLoading(false);
   }
 
@@ -229,22 +295,19 @@ export function DesktopDownload() {
                 )}
               </p>
               {recommended && recommendedAssets.length > 0 ? (
-                <div className="mt-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  {recommendedAssets.slice(0, 2).map((a) => (
-                    <Button
-                      key={a.url}
-                      size="lg"
-                      asChild
-                      className="min-h-13 w-full max-w-full min-w-0 justify-center px-4 sm:w-auto sm:px-8"
-                    >
-                      <a href={a.url} rel="noopener noreferrer" className="min-w-0">
-                        <Download className="size-5 shrink-0" aria-hidden />
-                        <span className="min-w-0 truncate">
-                          {t("desktopDownload")} · {a.sizeMB}
-                        </span>
-                      </a>
-                    </Button>
-                  ))}
+                <div className="mt-4 flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button
+                    size="lg"
+                    asChild
+                    className="min-h-13 w-full max-w-full min-w-0 justify-center px-4 sm:w-auto sm:px-8"
+                  >
+                    <a href={recommendedAssets[0].url} rel="noopener noreferrer" className="min-w-0">
+                      <Download className="size-5 shrink-0" aria-hidden />
+                      <span className="min-w-0 truncate">
+                        {t("desktopDownload")} · {recommendedAssets[0].sizeMB}
+                      </span>
+                    </a>
+                  </Button>
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-fg-muted">

@@ -17,13 +17,23 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Trash2,
   X,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -36,7 +46,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { TestFormDialog } from "@/components/tests/test-form-dialog";
-import { useTests, useAttempts } from "@/hooks/use-tests";
+import { useTests, useAttempts, useDeleteTest } from "@/hooks/use-tests";
 import { useMe } from "@/hooks/use-me";
 import type { TestListItem } from "@/lib/types";
 
@@ -57,11 +67,16 @@ export function StaffTestsView() {
   const tc = useTranslations("common");
   const format = useFormatter();
   const { data: me } = useMe();
-  const isOffice = me?.user.role === "admin" || me?.user.role === "super_admin";
+  const isOffice =
+    me?.user.role === "teacher" ||
+    me?.user.role === "admin" ||
+    me?.user.role === "super_admin";
 
   const [tab, setTab] = React.useState<"manage" | "grading">(isOffice ? "manage" : "grading");
   const testsQ = useTests();
   const gradingQ = useAttempts("grading");
+  const deleteTest = useDeleteTest();
+  const [deleteTarget, setDeleteTarget] = React.useState<TestListItem | null>(null);
   const [dialog, setDialog] = React.useState<{ open: boolean; test: TestListItem | null }>({
     open: false,
     test: null,
@@ -348,6 +363,16 @@ export function StaffTestsView() {
                             <Settings2 />
                           </Link>
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Testni o'chirish"
+                          title="Testni o'chirish"
+                          onClick={() => setDeleteTarget(test)}
+                          className="text-danger hover:bg-danger/10"
+                        >
+                          <Trash2 />
+                        </Button>
                       </div>
                     </Card>
                   ))}
@@ -432,6 +457,44 @@ export function StaffTestsView() {
         test={dialog.test}
         onClose={() => setDialog({ open: false, test: null })}
       />
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Testni o&apos;chirishni tasdiqlang</DialogTitle>
+            <DialogDescription>
+              &ldquo;{deleteTarget?.title}&rdquo; testini butunlay o&apos;chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo&apos;lmaydi.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteTest.isPending}
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              loading={deleteTest.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteTest.mutate(deleteTarget.id, {
+                  onSuccess: () => {
+                    toast.success("Test muvaffaqiyatli o'chirildi");
+                    setDeleteTarget(null);
+                  },
+                  onError: (err) => {
+                    toast.error(err instanceof Error ? err.message : tc("unknownError"));
+                  },
+                });
+              }}
+            >
+              O&apos;chirish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

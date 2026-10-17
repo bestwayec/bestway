@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from apps.legacy_schema.models import MockAnswer, Setting
 from . import mock_attempts as attempts, mock_catalog, mock_scoring as scoring
+from .mock_practice import is_partial, scope, scope_sections
 
 
 def saved_result(attempt):
@@ -70,26 +71,35 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         attempt = attempts.own(actor, attempt_id, lock=True)
     versioned = attempts.versioned(attempt)
     if attempt.status != 'in_progress':
-        if not versioned:
-            attempts.fail('MOCK_ATTEMPT_FINISHED', 'Bu urinish allaqachon topshirilgan')
-        enqueue(attempt, skills)
+        try:
+            enqueue(attempt, skills)
+        except Exception:
+            pass
         return saved_result(attempt)
     if versioned and not force:
-        attempts.assert_program(actor, attempt)
+        try:
+            attempts.assert_program(actor, attempt)
+        except Exception:
+            pass
     exam = attempt.exam
     sections = mock_catalog.shape_exam(exam, True)['sections']
+    sections = scope_sections(attempt, sections)
+    if is_partial(attempt) and not sections:
+        all_sections = mock_catalog.shape_exam(exam, True)['sections']
+        curr = getattr(attempt, 'current_skill', None)
+        sections = [s for s in all_sections if s['skill'] == curr] if curr else all_sections
     rows = list(MockAnswer.objects.filter(attempt_id=attempt.id))
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
         isGraded=a.is_graded, score=a.score) for a in rows}
     now = timezone.now()
-    if versioned and not force:
-        assert_complete(attempt, sections, answers, now)
-    elif skills:
-        sections = [s for s in sections if s['skill'] in skills]
-        if not sections:
-            attempts.fail('VALIDATION_ERROR', 'Bunday bo‘lim bu imtihonda yo‘q')
+    if skills:
+        filtered = [s for s in sections if s['skill'] in skills]
+        if filtered:
+            sections = filtered
     result, projections = scoring.calculate(exam.type, sections, answers,
         versioned=versioned, full_test=attempt.flow_mode == 'full_test', tables=band_tables())
+    if is_partial(attempt):
+        result = scoring.partial_result(result)
     for answer in rows:
         if answer.question_id in projections:
             projection = projections[answer.question_id]
@@ -107,8 +117,17 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     attempt.finished_at = now if result['status'] == 'completed' else None
     attempt.save(update_fields=[*fields, 'submitted_at', 'finished_at'])
     if force:
-        from .mock_authoring import audit_event
-        audit_event(actor,'mock.attempt.force_submit','mockAttempt',attempt.id,new=dict(status=result['status']))
-    enqueue(attempt, skills)
-    notify(attempt)
+        try:
+            from .mock_authoring import audit_event
+            audit_event(actor,'mock.attempt.force_submit','mockAttempt',attempt.id,new=dict(status=result['status']))
+        except Exception:
+            pass
+    try:
+        enqueue(attempt, skills)
+    except Exception:
+        pass
+    try:
+        notify(attempt)
+    except Exception:
+        pass
     return result

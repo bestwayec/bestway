@@ -3,6 +3,8 @@
 import * as React from "react";
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
 import { ExamTrackDashboard } from '@/components/mock/exam-track-dashboard';
+import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
+import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
 import { AlertCircle, BookOpen, Check, Copy, Star, Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -55,6 +57,8 @@ export function StudentDashboard() {
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("greeting", { name: firstName })} />
 
+      <LiveExamPinCard />
+      <ScorePredictionCard />
       <ExamTrackSelector />
       <ExamTrackDashboard />
 

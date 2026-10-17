@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -7,6 +7,14 @@ import { Providers } from "@/components/providers";
 import { CENTER } from "@/lib/config";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1.0,
+  maximumScale: 5.0,
+  userScalable: true,
+  viewportFit: "cover",
+};
 
 // Inter — lotin yozuvidagi uz/en uchun. globals.css uni --font-inter orqali oladi.
 const inter = Inter({

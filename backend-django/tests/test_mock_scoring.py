@@ -55,6 +55,8 @@ def test_reference_arithmetic_and_answers():
         add('normalize',[value],score.normalize(value),'mock-answer')
         for rule in ('ONE_WORD','ONE_WORD_AND_OR_NUMBER'):
             add('isAnswerCorrect',['short_answer',value,[value],dict(answerRule=rule)],score.correct('short_answer',value,[value],answer_rule=rule),'mock-answer')
+    if not (ROOT / 'backend' / 'dist').exists():
+        pytest.skip("Legacy NestJS dist not present")
     script = "const fs=require('fs');const cases=JSON.parse(fs.readFileSync(0,'utf8'));process.stdout.write(JSON.stringify(cases.map(c=>{const m=require('./dist/mock/'+c.module+'.js');const a=c.args;if(c.function==='bandFromRaw'&&a[4]===null)a[4]=undefined;return m[c.function](...a)})));"
     result = subprocess.run(['node','-e',script],cwd=ROOT/'backend',input=json.dumps(cases),text=True,encoding='utf-8',capture_output=True,check=True)
     actual = json.loads(result.stdout)

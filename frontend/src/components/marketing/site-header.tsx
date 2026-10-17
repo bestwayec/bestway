@@ -13,6 +13,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/feedback";
 import { useMe } from "@/hooks/use-me";
 import { cn } from "@/lib/utils";
+import { homePathForRole } from "@/lib/role-routing";
 
 const SECTIONS = [
   { hash: "courses", key: "navCourses" },
@@ -167,7 +168,7 @@ export function SiteHeader() {
             <Skeleton className="hidden size-9 rounded-full sm:inline-flex" />
           ) : isLoggedIn ? (
             <Link
-              href="/dashboard"
+              href={homePathForRole(me.user.role)}
               aria-label={me.user.name}
               className="hidden items-center gap-2 sm:inline-flex rounded-full p-1 transition-colors hover:bg-surface-hover"
             >
@@ -257,7 +258,7 @@ export function SiteHeader() {
                   <Skeleton className="size-9 rounded-full" />
                 ) : isLoggedIn ? (
                   <Link
-                    href="/dashboard"
+                    href={homePathForRole(me.user.role)}
                     aria-label={me.user.name}
                     onClick={() => setOpen(false)}
                     className="inline-flex items-center gap-2 rounded-full p-1 transition-colors hover:bg-surface-hover"

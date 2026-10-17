@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import { useTeachers } from "@/hooks/use-users";
+import { useMe } from "@/hooks/use-me";
 import type { GroupDetail, GroupListItem, WeekDay } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -37,18 +38,29 @@ export function GroupFormDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("groups");
+  const { data: me } = useMe();
+  const isTeacher = me?.user.role === "teacher";
   const isEdit = !!group;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("edit") : t("create")}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? isTeacher
+                ? "Guruh nomini tahrirlash"
+                : t("edit")
+              : isTeacher
+                ? "Yangi guruh yaratish"
+                : t("create")}
+          </DialogTitle>
         </DialogHeader>
         {open && (
           <GroupFormFields
             key={group?.id ?? "new"}
             group={group}
+            isTeacher={isTeacher}
             onClose={onClose}
           />
         )}
@@ -59,9 +71,11 @@ export function GroupFormDialog({
 
 function GroupFormFields({
   group,
+  isTeacher,
   onClose,
 }: {
   group: GroupListItem | GroupDetail | null;
+  isTeacher?: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("groups");
@@ -69,7 +83,7 @@ function GroupFormFields({
   const tw = useTranslations("weekdaysShort");
   const isEdit = !!group;
 
-  const teachersQ = useTeachers();
+  const teachersQ = useTeachers(!isTeacher);
   const create = useCreateGroup();
   const update = useUpdateGroup(group?.id ?? "");
   const pending = create.isPending || update.isPending;
@@ -77,9 +91,9 @@ function GroupFormFields({
   const sched = group?.schedule ?? [];
   const [name, setName] = React.useState(group?.name ?? "");
   const [teacherId, setTeacherId] = React.useState(group?.teacherId ?? "none");
-  const [days, setDays] = React.useState<Set<string>>(new Set(sched.map((s) => s.day)));
-  const [start, setStart] = React.useState(sched[0]?.startTime ?? "");
-  const [end, setEnd] = React.useState(sched[0]?.endTime ?? "");
+  const [days, setDays] = React.useState<Set<string>>(new Set(sched.map((s) => s.day?.toLowerCase())));
+  const [start, setStart] = React.useState(sched[0]?.startTime ?? (sched[0] as any)?.time ?? "");
+  const [end, setEnd] = React.useState(sched[0]?.endTime ?? (sched[0] as any)?.time ?? "");
 
   function toggleDay(d: string) {
     setDays((prev) => {
@@ -94,24 +108,45 @@ function GroupFormFields({
     const trimmed = name.trim();
     if (trimmed.length < 2) return;
     const schedule =
-      start && end ? [...days].map((day) => ({ day: day as WeekDay, startTime: start, endTime: end })) : [];
+      start && end
+        ? [...days].map((day) => ({
+            day: day as WeekDay,
+            startTime: start.slice(0, 5),
+            endTime: end.slice(0, 5),
+          }))
+        : (group?.schedule ?? []);
 
     const onSettled = {
       onSuccess: () => {
-        toast.success(isEdit ? t("updated") : t("created"));
+        toast.success(isEdit ? (isTeacher ? "Guruh nomi muvaffaqiyatli saqlandi" : t("updated")) : t("created"));
         onClose();
       },
-      onError: () => toast.error(tc("unknownError")),
+      onError: (err: any) => {
+        const msg =
+          err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
+          tc("unknownError");
+        toast.error(msg);
+      },
     };
 
     if (isEdit) {
-      update.mutate(
-        { name: trimmed, teacherId: teacherId === "none" ? null : teacherId, schedule },
-        onSettled,
-      );
+      if (isTeacher) {
+        update.mutate({ name: trimmed, schedule }, onSettled);
+      } else {
+        update.mutate(
+          { name: trimmed, teacherId: teacherId === "none" ? null : teacherId, schedule },
+          onSettled,
+        );
+      }
     } else {
       create.mutate(
-        { name: trimmed, ...(teacherId !== "none" ? { teacherId } : {}), schedule },
+        {
+          name: trimmed,
+          ...(!isTeacher && teacherId !== "none" ? { teacherId } : {}),
+          schedule,
+        },
         onSettled,
       );
     }
@@ -130,21 +165,23 @@ function GroupFormFields({
           />
         </Field>
 
-        <Field label={t("teacher")}>
-          <Select value={teacherId} onValueChange={setTeacherId}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("noTeacher")}</SelectItem>
-              {(teachersQ.data ?? []).map((tch) => (
-                <SelectItem key={tch.id} value={tch.id}>
-                  {tch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {!isTeacher && (
+          <Field label={t("teacher")}>
+            <Select value={teacherId} onValueChange={setTeacherId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("noTeacher")}</SelectItem>
+                {(teachersQ.data ?? []).map((tch) => (
+                  <SelectItem key={tch.id} value={tch.id}>
+                    {tch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
 
         <Field label={t("schedule")}>
           <div className="flex flex-wrap gap-1.5">

@@ -44,7 +44,7 @@ def review(request,job_id):return success(assessment.review(request.user,job_id,
 @permission_classes([Authenticated])
 def audio(request,job_id,question_id):
     key=assessment.audio(request.user,job_id,question_id);path=storage_path(key);size=path.stat().st_size;start=0;end=size-1;status=200
-    mime={'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac'}.get(path.suffix.lower(),'audio/mpeg')
+    mime={'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(path.suffix.lower(),'audio/mpeg')
     if request.headers.get('Range'):
         match=re.search(r'bytes=([0-9]*)-([0-9]*)',request.headers['Range']);start=int(match[1]) if match and match[1] else 0;end=int(match[2]) if match and match[2] else size-1
         if start>=size or end>=size or start>end:
@@ -75,3 +75,61 @@ def grade(request,attempt_id):
     if data.get('feedback') is not None and (not isinstance(data['feedback'],str) or js_length(data['feedback'])>2000):invalid('feedback must be shorter than or equal to 2000 characters')
     if data.get('rubricScores') is not None and not isinstance(data['rubricScores'],dict):invalid('rubricScores must be an object')
     return success(mock_grading.grade(request.user,attempt_id,data),201)
+
+
+@api_view(['GET'])
+@permission_classes([roles('teacher', 'admin', 'super_admin')])
+def live_monitoring(request, group_id):
+    from datetime import timedelta
+    from django.utils import timezone
+    from apps.legacy_schema.models import Group, StudentProfile, MockAttempt, MockCheatEvent
+    from common.api.exceptions import ContractAPIException
+
+    group = Group.objects.filter(id=group_id).first()
+    if group is None:
+        raise ContractAPIException('GROUP_NOT_FOUND', 'Guruh topilmadi', 404)
+    if request.user.role == 'teacher' and group.teacher_id != request.user.id:
+        raise ContractAPIException('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+
+    students = list(StudentProfile.objects.filter(group_id=group_id).select_related('user').order_by('user__name', 'user__id'))
+    cutoff = timezone.now() - timedelta(hours=24)
+    students_data = []
+
+    for s in students:
+        active = MockAttempt.objects.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
+        if not active:
+            active = MockAttempt.objects.filter(student_id=s.user_id, status='completed', finished_at__gte=cutoff).select_related('exam').order_by('-finished_at').first()
+
+        active_attempt_data = None
+        if active:
+            cheat_events = list(MockCheatEvent.objects.filter(attempt_id=active.id).order_by('-created_at')[:10])
+            recent_anomalies = [
+                {
+                    "id": e.id,
+                    "event": e.event,
+                    "createdAt": e.created_at,
+                }
+                for e in cheat_events
+            ]
+            is_flagged = bool(active.anti_cheat_count > 0 or recent_anomalies)
+            active_attempt_data = {
+                "attemptId": active.id,
+                "examId": active.exam_id,
+                "examTitle": active.exam.title if active.exam else "",
+                "status": active.status,
+                "mode": active.mode,
+                "currentSkill": active.current_skill,
+                "startedAt": active.started_at,
+                "antiCheatCount": active.anti_cheat_count,
+                "recentAnomalies": recent_anomalies,
+                "isFlagged": is_flagged,
+            }
+
+        students_data.append({
+            "studentId": s.user_id,
+            "name": s.user.name if s.user else "",
+            "phone": s.user.phone if s.user else "",
+            "activeAttempt": active_attempt_data,
+        })
+
+    return success(dict(groupId=group_id, students=students_data))

@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
+import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import type { TeacherSelfProfile } from "@/lib/types";
 
@@ -22,6 +23,8 @@ export function TeacherDashboard() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("greeting", { name: firstName })} />
+
+      <LiveExamRoomPanel />
 
       <h2 className="mb-3 text-sm font-semibold text-fg-muted">{t("myGroups")}</h2>
 

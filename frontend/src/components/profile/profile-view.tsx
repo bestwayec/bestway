@@ -20,6 +20,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { formatPhone, isSafeHref } from "@/lib/utils";
 import { ExamTrackSelector } from './exam-track-selector';
+import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
 
 export function ProfileView() {
   const t = useTranslations("profile");
@@ -106,10 +107,15 @@ export function ProfileView() {
   const linked = statusQ.data?.linked ?? me.telegramLinked;
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader title={t("title")} />
 
-      {me.user.role === 'student' && <ExamTrackSelector />}
+      {me.user.role === 'student' && (
+        <>
+          <ExamTrackSelector />
+          <ScorePredictionCard />
+        </>
+      )}
 
       <Card>
         <CardHeader>

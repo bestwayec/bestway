@@ -91,3 +91,81 @@ def payments_csv(year,month=None):
     return csv(['Oy','Yil','Ism','Telefon','Guruh','Holat','Summa','Izoh','Kim belgiladi'],[
         [r.month,r.year,r.student.user.name,r.student.user.phone,r.student.group.name if r.student.group_id else '',
          {'paid':"To'langan",'unpaid':"To'lanmagan",'partial':'Qisman'}.get(r.state,r.state),r.amount,r.note or '',names.get(r.marked_by_id,'')] for r in rows])
+
+
+def group_results_csv(group_id):
+    students = m.StudentProfile.objects.filter(group_id=group_id, user__is_active=True).select_related('user').order_by('user__name')
+    student_ids = [s.user_id for s in students]
+    attempts = (
+        m.MockAttempt.objects.filter(student_id__in=student_ids)
+        .select_related('exam', 'student__user')
+        .order_by('student__user__name', '-finished_at', '-started_at')
+    )
+    student_attempts = {}
+    for att in attempts:
+        student_attempts.setdefault(att.student_id, []).append(att)
+
+    out = []
+    for s in students:
+        s_atts = student_attempts.get(s.user_id, [])
+        if not s_atts:
+            out.append([
+                s.user.name,
+                s.user.phone or '',
+                '-',
+                '-',
+                '-',
+                '-',
+                '-',
+                '-',
+                '-',
+                '-',
+                "Topshirilmagan"
+            ])
+            continue
+        for att in s_atts:
+            bands = att.section_bands or {}
+            l = bands.get('listening', '-')
+            r = bands.get('reading', '-')
+            w = bands.get('writing', '-')
+            sp = bands.get('speaking', '-')
+            overall = att.overall_band if att.overall_band is not None else (att.overall_score if att.overall_score is not None else '-')
+            cefr = att.cefr_level or '-'
+            dt = att.finished_at or att.submitted_at or att.started_at
+            dt_str = dt.isoformat()[:10] if dt else '-'
+            status_map = {
+                'completed': "Yakunlangan",
+                'grading': "Baholanmoqda",
+                'in_progress': "Jarayonda",
+                'abandoned': "Tashlab ketilgan",
+            }
+            status_str = status_map.get(att.status, att.status)
+            out.append([
+                s.user.name,
+                s.user.phone or '',
+                att.exam.title if att.exam else 'Mock Exam',
+                str(l),
+                str(r),
+                str(w),
+                str(sp),
+                str(overall),
+                str(cefr),
+                dt_str,
+                status_str
+            ])
+
+    headers = [
+        "O'quvchi",
+        "Telefon",
+        "Imtihon",
+        "Listening",
+        "Reading",
+        "Writing",
+        "Speaking",
+        "Umumiy Ball / Band",
+        "CEFR",
+        "Sana",
+        "Holat"
+    ]
+    return csv(headers, out)
+

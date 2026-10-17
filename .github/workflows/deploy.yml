@@ -70,11 +70,7 @@ jobs:
           script: |
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
-            if [ -f .bestway-runtime ] && [ "$(cat .bestway-runtime)" = django ]; then
-              echo "Django owns this VPS runtime; refusing to restart Nest automatically"
-              exit 1
-            fi
-            test -f ./backend/.env || { echo "backend/.env missing on VPS"; exit 1; }
+            test -f ./backend-django/.env || { echo "backend-django/.env missing on VPS"; exit 1; }
             git fetch origin main
             test "$(git rev-parse origin/main)" = "$DEPLOY_SHA" \
               || { echo "main advanced beyond the verified commit; wait for its CI"; exit 1; }
@@ -87,14 +83,9 @@ jobs:
               echo "      checkout after:  $(git rev-parse --short HEAD)"
             fi
             export BUILD_COMMIT="$(git rev-parse HEAD)"
-            if [ -f docker-compose.prod.yml ]; then
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait --wait-timeout 90
-            else
-              docker compose up -d --build --wait --wait-timeout 90
-            fi
+            docker compose up -d --build --wait --wait-timeout 180
             # Local gates (fatal): reach services over the compose network.
-            # No host ports are published in prod (tunnel-only), so check via exec.
-            DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+            DC="docker compose"
             $DC exec -T backend wget -qO- http://localhost:3001/v1/health > /dev/null
             $DC exec -T frontend wget -qO- http://localhost:3000/ > /dev/null
             # Public gates (warn-only): fail before DNS cutover / tunnel setup.

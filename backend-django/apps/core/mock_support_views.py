@@ -132,7 +132,8 @@ def delete_view(request,attempt_id):
 @renderer_classes([CertificateJSONRenderer])
 def certificate_view(request,attempt_id):
     allow(request)
+    value=service.certificate_data(request.user,attempt_id)
     from .mock_certificate import generate
-    response=HttpResponse(generate(service.certificate_data(request.user,attempt_id)),content_type='application/pdf')
+    response=HttpResponse(generate(value),content_type='application/pdf')
     response['Content-Disposition']=f'attachment; filename="mock-{attempt_id}.pdf"'
     return response

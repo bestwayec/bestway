@@ -38,11 +38,29 @@ const speakingJob: AssessmentJobView = {
 const render = (job: AssessmentJobView, isStaff = false) => renderToStaticMarkup(React.createElement(AssessmentCard, { job, attemptId: "attempt-1", isStaff }));
 
 describe("assessment feedback presentation", () => {
+  it("keeps scores and teacher review usable without exposing calculation-policy banners", () => {
+    const grade = { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false as const };
+    const job = { ...speakingJob, practiceMode: "PARTIAL" as const, aiPracticeGrade: grade, gradingPolicy: { id: grade.policyId, scaleMax: 75, rangeMin: 35, rangeMax: 50 } };
+    const student = render(job);
+    expect(student).toContain("44 /75");
+    expect(student).toContain("3/5");
+    expect(student).toContain("Teacher review required");
+    expect(student).not.toContain("35–50");
+    expect(student).not.toContain("Original rubric scores are retained");
+    expect(student).not.toContain("official CEFR");
+    expect(student).not.toContain(en.assessment.policies.FULL_MOCK_AI_WITH_REVIEW);
+    expect(student).not.toContain(en.assessment.holisticPart);
+    const teacher = render(job, true);
+    expect(teacher).toContain("Save review");
+    expect(teacher).toContain("Override score");
+    expect(teacher).toContain(en.assessment.holisticPart);
+    expect(teacher).not.toContain("35–50");
+  });
   it("keeps three original recordings with one formal holistic /5 part score", () => {
     const html = render(speakingJob);
     expect((html.match(/<audio /g) ?? []).length).toBe(3);
     expect((html.match(/AI raw task\/part estimate/g) ?? []).length).toBe(1);
-    expect(html).toContain("One holistic part score covers all these recordings");
+    expect(html).not.toContain("One holistic part score covers all these recordings");
     expect(html).toContain("Estimated Multilevel Speaking Score");
     expect(html).toContain("61 /75");
     expect(html).toContain("Teacher review required");
@@ -98,6 +116,21 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain("Original AI feedback (retained)");
     expect(html).toContain("Address both sides");
     expect(html).toContain("Teacher reviewed");
+    expect(html).toContain("Teacher raw task/part score");
+    expect(html).not.toContain("AI raw task/part estimate");
+  });
+  it("shows a real teacher-only partial score with its raw maximum and prefilled edits", () => {
+    const manual = { ...result, parts: [{ ...result.parts[0], rawScore: 4.5, criteria: {}, evidence: {} }] };
+    const html = render({ ...speakingJob, status: "SUCCEEDED", policyMode: "MANUAL_ONLY", practiceMode: "PARTIAL", rawMax: 5, aiScore: null, evaluation: null, finalResult: manual, approvedFeedback: null, teacherScore: 4.5, finalScore: 4.5, finalScoreSource: "TEACHER" }, true);
+    expect(html).toContain("Speaking practice score");
+    expect(html).toContain("4.5 /5 raw");
+    expect(html).toContain('value="4.5"');
+    expect(html).not.toContain("internal practice grades may also be shown");
+    expect(html).not.toContain("not an official overall Multilevel score");
+    expect(html).not.toMatch(/<dd[^>]*>[^<]*\/75/);
+    expect(html).not.toContain("AI raw task/part estimate");
+    expect(html).not.toContain("AI rubric estimates");
+    expect((html.match(/<audio /g) ?? []).length).toBe(3);
   });
   it("keeps IELTS pronunciation pending and prevents incomplete accept", () => {
     const html = render({ ...speakingJob, program: "IELTS_ACADEMIC", aiScore: null, evaluation: { result: { ...result, parts: [{ ...result.parts[0], rawScore: null, criteria: { fluency: 7, lexical: 7, grammar: 6.5, pronunciation: null } }] } } }, true);
@@ -106,6 +139,23 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain("Listen to the original audio before assigning pronunciation");
     expect(html).toContain('max="9"');
     expect(html).toContain('value="OVERRIDE"');
+  });
+  it("shows the saved internal AI and teacher grades while retaining original rubric evidence", () => {
+    const aiPracticeGrade = { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false as const };
+    const teacherPracticeGrade = { ...aiPracticeGrade, score: 47, rawScore: 4 };
+    const html = render({ ...speakingJob, status: "SUCCEEDED", practiceMode: "PARTIAL", rawMax: 5, aiScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER", aiPracticeGrade, teacherPracticeGrade, practiceGrade: teacherPracticeGrade }, true);
+    expect(html).toContain("44 /75");
+    expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
+    expect(html).toContain("3/5");
+    expect(html).toContain("4/5");
+    expect(html).not.toContain("35–50");
+    expect(html).not.toContain("75 /75");
+  });
+  it("keeps intermediate provider scores pending until the new policy grade is validated", () => {
+    const html = render({ ...speakingJob, status: "PROCESSING", aiScore: 75, gradingPolicy: { id: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", scaleMax: 75, rangeMin: 35, rangeMax: 50 }, aiPracticeGrade: null, teacherPracticeGrade: null, practiceGrade: null });
+    expect(html).not.toContain("35–50");
+    expect(html).not.toContain("75 /75");
+    expect(html).toContain("Pending");
   });
 });
 
