@@ -41,12 +41,19 @@ class Command(BaseCommand):
             default="Komiljon Roziyev (SuperAdmin)",
             help="Full name for the superadmin account",
         )
+        parser.add_argument(
+            "--password",
+            dest="password",
+            default=None,
+            help="Explicit password to set for the superadmin account",
+        )
 
     def handle(self, *args, **options):
         telegram_id = str(options.get("telegram_id") or "5582178765").strip()
         email = str(options.get("email") or "superadmin@bestwayec.uz").strip()
         phone = str(options.get("phone") or "+998900000001").strip()
         name = str(options.get("name") or "Komiljon Roziyev (SuperAdmin)").strip()
+        raw_password = options.get("password") or "BestWaySuperAdmin2026!"
         now = timezone.now()
 
         # Priority 1: User already linked to this telegram_id
@@ -64,12 +71,11 @@ class Command(BaseCommand):
                 "role": "super_admin",
                 "is_active": True,
                 "telegram_chat_id": telegram_id,
+                "password_hash": hash_password(raw_password),
                 "updated_at": now,
             }
             if not user.email:
                 update_fields["email"] = email
-            if not user.password_hash:
-                update_fields["password_hash"] = hash_password("BestWaySuperAdmin2026!")
             User.objects.filter(id=user.id).update(**update_fields)
             user.role = "super_admin"
             user.is_active = True
@@ -82,7 +88,7 @@ class Command(BaseCommand):
                 name=name,
                 phone=phone,
                 email=email,
-                password_hash=hash_password("BestWaySuperAdmin2026!"),
+                password_hash=hash_password(raw_password),
                 role="super_admin",
                 is_active=True,
                 telegram_chat_id=telegram_id,
@@ -90,6 +96,30 @@ class Command(BaseCommand):
                 updated_at=now,
             )
             action = "Created"
+
+        # Sync Django Admin auth mirror
+        try:
+            from django.contrib.auth import get_user_model
+            user_model = get_user_model()
+            username = str(user.id)[:150]
+            mirror, _ = user_model.objects.get_or_create(
+                username=username,
+                defaults={
+                    "is_staff": True,
+                    "is_superuser": True,
+                    "is_active": True,
+                    "first_name": (user.phone or "")[:150],
+                    "last_name": (user.name or "")[:150],
+                    "email": (user.email or "")[:254],
+                },
+            )
+            mirror.is_staff = True
+            mirror.is_superuser = True
+            mirror.is_active = True
+            mirror.set_unusable_password()
+            mirror.save(update_fields=["is_staff", "is_superuser", "is_active", "password"])
+        except Exception:
+            pass
 
         try:
             profile = StudentProfile.objects.filter(user_id=user.id).first()
@@ -108,8 +138,8 @@ class Command(BaseCommand):
             pass
 
         msg = (
-            f"{action} super_admin user id={user.id} "
-            f"telegram_chat_id={telegram_id} role=super_admin is_active=True is_approved=True"
+            f"{action} super_admin user id={user.id} phone={user.phone} email={user.email} "
+            f"telegram_chat_id={telegram_id} role=super_admin is_active=True is_superuser=True"
         )
         self.stdout.write(self.style.SUCCESS(msg))
         return msg
