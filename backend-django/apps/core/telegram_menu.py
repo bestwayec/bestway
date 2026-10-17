@@ -1536,10 +1536,10 @@ def show_topic_details(chat_id, topic_id):
 
 
 def handle(chat_id, text, from_user=None):
-    user = resolve_user(chat_id, True, from_user=from_user)
     if text == BTN['apk']:
         send_apk(chat_id)
         return True
+    user = resolve_user(chat_id, True, from_user=from_user)
     if text == BTN.get('topic_management'):
         if not is_superadmin(chat_id=chat_id, user=user):
             api.send(chat_id, "⛔ Bu bo'lim faqat Superadmin uchun ruxsat etilgan.")

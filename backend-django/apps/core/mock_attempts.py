@@ -177,6 +177,17 @@ def start_response(attempt, exam, resumed, full_duration=None):
             result['singleSection'] = skills[0]
             result['isSingleSection'] = True
             result['attemptTypeLabel'] = f"Single Section: {skills[0].capitalize()}"
+    try:
+        from .exam_import_service import get_listening_timestamps
+        ts_cfg = get_listening_timestamps(exam.id)
+        if ts_cfg and ts_cfg.get("timestamps"):
+            result["listeningTimestamps"] = ts_cfg["timestamps"]
+            shaped["listeningTimestamps"] = ts_cfg["timestamps"]
+            if ts_cfg.get("audioUrl"):
+                result["listeningAudioUrl"] = ts_cfg["audioUrl"]
+                shaped["listeningAudioUrl"] = ts_cfg["audioUrl"]
+    except Exception:
+        pass
     return result
 
 
@@ -648,6 +659,18 @@ def detail(actor, attempt_id):
                     diagnostic[job.skill] = format_diagnostic_feedback(res)
         if diagnostic:
             result['diagnosticFeedback'] = diagnostic
+    except Exception:
+        pass
+    try:
+        from .exam_import_service import get_listening_timestamps
+        ts_cfg = get_listening_timestamps(attempt.exam_id)
+        if ts_cfg and ts_cfg.get("timestamps"):
+            result["listeningTimestamps"] = ts_cfg["timestamps"]
+            if ts_cfg.get("audioUrl"):
+                result["listeningAudioUrl"] = ts_cfg["audioUrl"]
+        from .prediction_service import extract_attempt_dual_metrics
+        dual = extract_attempt_dual_metrics(attempt)
+        result["dualScale"] = dual
     except Exception:
         pass
     return result

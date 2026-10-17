@@ -18,44 +18,44 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const REPO = "bestwayec/bw-tauri";
-const RELEASES_URL = `https://github.com/${REPO}/releases/tag/bestway-app-v0.5.9`;
+const RELEASES_URL = `https://github.com/${REPO}/releases/tag/v0.8.0`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
-const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/bestway-app-v0.5.9`;
-const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_0.5.9_x64-setup.exe`;
+const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/v0.8.0`;
+const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_x64-setup.exe`;
 const FALLBACK_SERVER_WINDOWS_SETUP_URL =
-  "https://bestwayec.uz/media/downloads/Bestway.App_0.5.9_x64-setup.exe";
+  "https://bestwayec.uz/media/downloads/Bestway.App_0.8.0_x64-setup.exe";
 
 const FALLBACK_RELEASE: ReleaseInfo = {
-  version: "v0.5.9",
-  publishedAt: "2026-10-15T00:00:00Z",
+  version: "v0.8.0",
+  publishedAt: "2026-10-17T00:00:00Z",
   windows: [
     {
-      name: "Bestway.App_0.5.9_x64-setup.exe",
+      name: "Bestway.App_0.8.0_x64-setup.exe",
       url: LATEST_WINDOWS_SETUP_URL,
       sizeMB: "3.5 MB",
     },
   ],
   macos: [
     {
-      name: "Bestway.App_0.5.9_aarch64.dmg · Apple Silicon",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.9_aarch64.dmg`,
+      name: "Bestway.App_0.8.0_aarch64.dmg · Apple Silicon",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_aarch64.dmg`,
       sizeMB: "6.6 MB",
     },
     {
-      name: "Bestway.App_0.5.9_x64.dmg · Intel",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.9_x64.dmg`,
+      name: "Bestway.App_0.8.0_x64.dmg · Intel",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_x64.dmg`,
       sizeMB: "6.9 MB",
     },
   ],
   linux: [
     {
-      name: "Bestway.App_0.5.9_amd64.deb · Debian / Ubuntu",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.9_amd64.deb`,
+      name: "Bestway.App_0.8.0_amd64.deb · Debian / Ubuntu",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_amd64.deb`,
       sizeMB: "5.7 MB",
     },
     {
-      name: "Bestway.App_0.5.9_amd64.AppImage · Standalone",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.5.9_amd64.AppImage`,
+      name: "Bestway.App_0.8.0_amd64.AppImage · Standalone",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_0.8.0_amd64.AppImage`,
       sizeMB: "84.0 MB",
     },
   ],

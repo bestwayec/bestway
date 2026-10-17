@@ -748,6 +748,8 @@ export interface MockGroup {
   partNumber: number | null;
   audioDurationSec: number | null;
   audioPlayLimit: number;
+  startSec?: number | null;
+  endSec?: number | null;
   questions: MockQuestion[];
 }
 
@@ -758,6 +760,8 @@ export interface MockSection {
   sortOrder: number;
   durationMinutes: number | null;
   instructions: string | null;
+  audioUrl?: string | null;
+  audioTimestamps?: AudioTimestampItem[] | null;
   groups: MockGroup[];
 }
 
@@ -780,6 +784,7 @@ export interface MockExamStructure {
   /** Optimistic content version (stale-tab save guard). */
   contentVersion: number;
   questionCount: number;
+  audioTimestamps?: AudioTimestampItem[] | null;
   sections: MockSection[];
 }
 
@@ -1064,3 +1069,170 @@ export interface MockExamImportProvenance {
   issues: MockImportProvenanceIssue[];
   sourceMaps: MockImportSourceMap[];
 }
+
+/* ── Smart Bulk Import, Audio Timestamps, Score Prediction & Live Exam Rooms ── */
+
+export type ExamSimulatorMode = "cdi" | "dtm";
+
+export interface SmartParseQuestion {
+  number: number;
+  type: MockQuestionType;
+  prompt: string;
+  options?: string[] | null;
+  correctAnswers?: string[] | null;
+  acceptedVariants?: string[] | null;
+  points?: number;
+  wordLimit?: number | null;
+}
+
+export interface SmartParsePart {
+  partNumber: number;
+  title?: string;
+  instructions?: string;
+  passageText?: string;
+  questions: SmartParseQuestion[];
+}
+
+export interface SmartParseResult {
+  instructions?: string | null;
+  passageText?: string | null;
+  parts?: SmartParsePart[];
+  questions: SmartParseQuestion[];
+  answers: Record<string, string>;
+  count: number;
+  summary?: Record<string, number>;
+}
+
+export interface AudioTimestampItem {
+  partNumber: number;
+  groupId?: string;
+  label?: string;
+  startSec: number;
+  endSec?: number;
+}
+
+export interface AudioTimestampsResponse {
+  audioKey?: string | null;
+  audioUrl?: string | null;
+  durationSec?: number | null;
+  timestamps: AudioTimestampItem[];
+}
+
+export interface ScorePredictionWeakModule {
+  module: string;
+  skill: string;
+  questionType: string;
+  partLabel: string;
+  totalQuestions: number;
+  correctCount: number;
+  errorCount: number;
+  accuracyPercent: number;
+  errorRatePercent: number;
+  severity: "high" | "medium" | "low";
+  recommendation: string;
+}
+
+export interface ScorePredictionHistoryItem {
+  attemptId: string;
+  examId: string;
+  examTitle: string;
+  examType: string;
+  date: string;
+  ieltsBand: number;
+  multilevelScore: number;
+  cefrLevel: string;
+  skills: Record<string, number>;
+}
+
+export interface ScorePredictionResponse {
+  ielts: {
+    currentBand: number;
+    predictedBand: number;
+    targetBand: number;
+    targetProgressPercent: number;
+    cefrLevel: string;
+    skillBreakdown: {
+      listening?: number;
+      reading?: number;
+      writing?: number;
+      speaking?: number;
+    };
+  };
+  multilevel: {
+    currentScore: number;
+    predictedScore: number;
+    targetScore: number;
+    targetProgressPercent: number;
+    cefrLevel: "A2" | "B1" | "B2" | "C1" | string;
+    scaleBands: Array<{ level: string; min: number; max: number }>;
+    skillBreakdown: {
+      listening?: number;
+      reading?: number;
+      writing?: number;
+      speaking?: number;
+    };
+  };
+  history: ScorePredictionHistoryItem[];
+  weakModules: ScorePredictionWeakModule[];
+  trend: "improving" | "stable" | "declining" | "insufficient_data";
+  attemptsAnalyzed: number;
+}
+
+export interface LiveExamRoom {
+  id: string;
+  pin: string;
+  examId: string;
+  examTitle?: string;
+  examType?: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  simulatorMode: ExamSimulatorMode;
+  title?: string | null;
+  durationMinutes?: number | null;
+  status: "active" | "closed" | string;
+  joinUrl?: string;
+  participantCount?: number;
+  createdAt?: string;
+}
+
+export interface LiveRoomJoinResult {
+  session: LiveExamRoom;
+  attemptId: string;
+  attemptToken?: string;
+  sessionSignature?: string;
+  examId: string;
+  simulatorMode: ExamSimulatorMode;
+}
+
+export interface LiveRoomParticipant {
+  studentId: string;
+  name: string;
+  phone?: string;
+  attemptId: string;
+  status: "in_progress" | "grading" | "completed" | string;
+  currentSkill?: string | null;
+  currentQuestionNumber?: number | null;
+  answeredCount: number;
+  flaggedCount: number;
+  totalQuestions: number;
+  antiCheatCount: number;
+  rawScore?: number | null;
+  bandScore?: number | null;
+  multilevelScore?: number | null;
+  cefrLevel?: string | null;
+  joinedAt?: string;
+  finishedAt?: string | null;
+}
+
+export interface LiveRoomMonitorResponse {
+  session: LiveExamRoom;
+  summary: {
+    totalParticipants: number;
+    inProgressCount: number;
+    completedCount: number;
+    averageScore: number | null;
+    averageBand: number | null;
+  };
+  participants: LiveRoomParticipant[];
+}
+

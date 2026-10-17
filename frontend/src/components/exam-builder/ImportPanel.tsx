@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Upload } from "lucide-react";
+import { Sparkles, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { QTYPE_LABEL } from "@/components/mock/exam-builder/types";
 import { useImportMockQuestions } from "@/hooks/use-mock";
 import { api, ApiError } from "@/lib/api-client";
 import type { MockSkill } from "@/lib/types";
+import { SmartBulkImportModal } from "./SmartBulkImportModal";
 import { tx } from "./types";
 
 const MAX_TEXT = 20000;
@@ -124,6 +125,7 @@ export function ImportPanel({
   const [previewError, setPreviewError] = React.useState<string | null>(null);
   const [importError, setImportError] = React.useState<string | null>(null);
   const [checking, setChecking] = React.useState(false);
+  const [smartOpen, setSmartOpen] = React.useState(false);
   const importMut = useImportMockQuestions(examId);
   const importedRef = React.useRef(false);
 
@@ -361,14 +363,37 @@ export function ImportPanel({
   return (
     <Card className="min-w-0 overflow-hidden border-brand/30">
       <CardHeader>
-        <CardTitle>
-          {tx(t, "importTitle", "Import questions")}
-          <span className="ml-2 text-xs font-normal text-fg-muted">
-            Into {targetLabel} · {tx(t, "importHint", "Nothing is saved until you press Import.")}
-          </span>
-        </CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>
+            {tx(t, "importTitle", "Import questions")}
+            <span className="ml-2 text-xs font-normal text-fg-muted">
+              Into {targetLabel} · {tx(t, "importHint", "Nothing is saved until you press Import.")}
+            </span>
+          </CardTitle>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setSmartOpen(true)}
+            className="border-brand/50 bg-brand/10 text-brand hover:bg-brand/20"
+          >
+            <Sparkles className="size-4 mr-1.5" />
+            Tezkor Kiritish (Smart Text / Excel / Audio Timestamps)
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <SmartBulkImportModal
+          open={smartOpen}
+          onOpenChange={setSmartOpen}
+          examId={examId}
+          groupId={groupId}
+          groupLabel={targetLabel}
+          defaultSkill={skill}
+          onImported={(added) => {
+            onDone(added);
+          }}
+        />
         {/* Step 1 — Source */}
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">

@@ -186,4 +186,14 @@ def get_exam(user, exam_id: str):
     output.update({"ready": start_ready(exam), "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
     if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
         output.update(metadata(exam))
+    try:
+        from .exam_import_service import get_listening_timestamps
+        ts_cfg = get_listening_timestamps(exam.id)
+        if ts_cfg and ts_cfg.get("timestamps"):
+            output["listeningTimestamps"] = ts_cfg["timestamps"]
+            if ts_cfg.get("audioUrl"):
+                output["listeningAudioUrl"] = ts_cfg["audioUrl"]
+    except Exception:
+        pass
     return output
+

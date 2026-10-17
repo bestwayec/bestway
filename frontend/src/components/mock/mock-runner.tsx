@@ -1,7 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import {
+  CheckCircle2,
+  Contrast,
+  Flag,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Monitor,
+  Send,
+  StickyNote,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,12 +22,16 @@ import { Input, Textarea } from "@/components/ui/input";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import {
   useAdvanceMockSection,
+  useAudioTimestamps,
   useBulkMockAnswers,
   useFlagMockCheat,
   useMockExam,
+  useReportLiveRoomProgress,
   useSubmitMock,
 } from "@/hooks/use-mock";
 import type {
+  AudioTimestampItem,
+  ExamSimulatorMode,
   MockAttemptDetail,
   MockExamDetail,
   MockQuestion,
@@ -43,7 +59,13 @@ import { ExamLocker } from "./exam-locker";
 import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
-import { CbtAnnotatedText } from "./cbt-annotated-text";
+import {
+  CBT_ANNOTATIONS_UPDATED_EVENT,
+  CbtAnnotatedText,
+  type CbtStickyNote,
+  deleteAttemptNote,
+  loadAttemptNotes,
+} from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
@@ -52,6 +74,8 @@ import { WritingImageOcr } from "./writing-image-ocr";
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
 const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
+
+export type CdiContrastTheme = "standard" | "yellow_on_black" | "grey";
 
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
@@ -72,6 +96,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const examQ = useMockExam(attempt.examId);
+  const audioTimestampsQ = useAudioTimestamps(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
   const isSingleSection = Boolean(
     attempt.isSingleSection ||
@@ -84,10 +109,78 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const partialPractice = attempt.flowMode === "partial_practice" || isSingleSection || isPartialPractice(attempt);
   const versioned = !!attempt.specificationVersion;
 
+  // Simulator Mode ('cdi' | 'dtm') + CDI Contrast Theme + Notes Drawer + Fullscreen
+  const [simulatorMode, setSimulatorMode] = React.useState<ExamSimulatorMode>("cdi");
+  const [contrastTheme, setContrastTheme] = React.useState<CdiContrastTheme>("standard");
+  const [notesDrawerOpen, setNotesDrawerOpen] = React.useState(false);
+  const [attemptNotes, setAttemptNotes] = React.useState<CbtStickyNote[]>([]);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [flaggedQuestions, setFlaggedQuestions] = React.useState<Set<string>>(new Set());
+  const [activeQuestionNumber, setActiveQuestionNumber] = React.useState<number>(1);
+  const [liveRoomId, setLiveRoomId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const urlSim = params.get("simulator");
+    const roomParam = params.get("room") || sessionStorage.getItem(`bw_live_room_${attempt.id}`);
+    if (roomParam) {
+      setLiveRoomId(roomParam);
+    }
+    const storedSim = sessionStorage.getItem("bw_simulator_mode");
+    if (urlSim === "cdi" || urlSim === "dtm") {
+      setSimulatorMode(urlSim);
+    } else if (storedSim === "cdi" || storedSim === "dtm") {
+      setSimulatorMode(storedSim);
+    } else if (exam?.type === "multilevel") {
+      setSimulatorMode("dtm");
+    } else {
+      setSimulatorMode("cdi");
+    }
+  }, [attempt.id, exam?.type]);
+
+  React.useEffect(() => {
+    const syncNotes = () => setAttemptNotes(loadAttemptNotes(attempt.id));
+    syncNotes();
+    window.addEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, syncNotes);
+    return () => window.removeEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, syncNotes);
+  }, [attempt.id]);
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const toggleFullscreen = React.useCallback(async () => {
+    if (typeof document === "undefined") return;
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Ignore fullscreen permission errors
+    }
+  }, []);
+
+  const toggleQuestionFlag = React.useCallback((qid: string) => {
+    setFlaggedQuestions((prev) => {
+      const next = new Set(prev);
+      if (next.has(qid)) next.delete(qid);
+      else next.add(qid);
+      return next;
+    });
+  }, []);
+
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
   const advance = useAdvanceMockSection(attempt.id);
+  const reportLiveProgress = useReportLiveRoomProgress(liveRoomId);
+  const reportProgressMutate = reportLiveProgress.mutate;
   // Mutation wrappers change on every render; their callbacks stay stable.
   // Depending on a wrapper resets the 1500ms debounce on each 1000ms clock tick.
   const bulkMutateAsync = bulk.mutateAsync;
@@ -263,6 +356,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           .map(([questionId, response]) => ({ questionId, response }));
         if (all.length && (!versioned || !auto)) await bulkMutateAsync(all);
         await submitMutateAsync({ confirm: true, confirmed: true, force: true });
+        if (liveRoomId) {
+          reportProgressMutate({
+            attemptId: attempt.id,
+            status: "submitted",
+          });
+        }
         toast.success(t("submitted"));
       } catch (e) {
         submittingRef.current = false;
@@ -272,7 +371,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest],
+    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate],
   );
 
   React.useEffect(() => {
@@ -336,6 +435,37 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     setActiveSection(index);
   }, [exam, flush]);
 
+  const total = exam?.questionCount ?? 0;
+  const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
+  const section: MockSection | undefined = exam?.sections[activeSection];
+
+  // Live Exam Room telemetry heartbeat
+  React.useEffect(() => {
+    if (!liveRoomId || !exam) return;
+    const sendHeartbeat = () => {
+      reportProgressMutate({
+        attemptId: attempt.id,
+        currentSkill: section?.skill,
+        currentQuestionNumber: activeQuestionNumber,
+        answeredCount: answered,
+        flaggedCount: flaggedQuestions.size,
+        status: "in_progress",
+      });
+    };
+    sendHeartbeat();
+    const timer = window.setInterval(sendHeartbeat, 10000);
+    return () => window.clearInterval(timer);
+  }, [
+    liveRoomId,
+    exam,
+    attempt.id,
+    section?.skill,
+    activeQuestionNumber,
+    answered,
+    flaggedQuestions.size,
+    reportProgressMutate,
+  ]);
+
   function blockClipboard(e: React.ClipboardEvent | React.MouseEvent | React.DragEvent) {
     if (!strict) return;
     e.preventDefault();
@@ -357,11 +487,19 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     );
   }
 
-  const total = exam.questionCount;
-  const answered = countAnswered(exam, answers, audioSet);
-  const section: MockSection | undefined = exam.sections[activeSection];
   const guidedMultilevel = versioned && exam.type === "multilevel" && (section?.skill === "writing" || section?.skill === "speaking");
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
+
+  const contrastClasses =
+    simulatorMode === "cdi" && contrastTheme === "yellow_on_black"
+      ? "bg-[#09090b] text-[#fde047] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#18181b] [&_.bg-bg]:bg-[#09090b] [&_.bg-bg-subtle]:bg-[#18181b] [&_.text-fg]:text-[#fde047] [&_.text-fg-muted]:text-[#fef08a]/80 [&_.border-border]:border-amber-400/30"
+      : simulatorMode === "cdi" && contrastTheme === "grey"
+      ? "bg-[#374151] text-[#f3f4f6] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#1f2937] [&_.bg-bg]:bg-[#374151] [&_.bg-bg-subtle]:bg-[#1f2937] [&_.text-fg]:text-[#f3f4f6] [&_.text-fg-muted]:text-gray-300 [&_.border-border]:border-gray-500"
+      : "";
+
+  const examAudioTimestamps: AudioTimestampItem[] =
+    audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
+  const sharedSingleAudioUrl = audioTimestampsQ.data?.audioUrl ?? null;
 
   return (
     <ExamLocker
@@ -372,192 +510,349 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     >
       <NetworkBanner />
       <div
-        className="mx-auto max-w-4xl pb-24"
-      onCopy={blockClipboard}
-      onCut={blockClipboard}
-      onPaste={blockClipboard}
-      onContextMenu={blockClipboard}
-      onDragStart={blockClipboard}
-    >
-      {/* Yuqori panel */}
-      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/90 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            {isSingleSection && targetSkill ? (
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
-                  {targetSkill} Practice
-                </span>
+        className={cn(
+          "mx-auto pb-24 transition-colors",
+          simulatorMode === "dtm" ? "max-w-7xl" : "max-w-5xl",
+          contrastClasses
+        )}
+        onCopy={blockClipboard}
+        onCut={blockClipboard}
+        onPaste={blockClipboard}
+        onContextMenu={blockClipboard}
+        onDragStart={blockClipboard}
+      >
+        {/* Yuqori panel */}
+        <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              {isSingleSection && targetSkill ? (
+                <div className="flex items-center gap-2">
+                  <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                    {targetSkill} Practice
+                  </span>
+                  <p className="truncate font-semibold text-fg">{exam.title}</p>
+                </div>
+              ) : (
                 <p className="truncate font-semibold text-fg">{exam.title}</p>
+              )}
+              <p className="text-xs text-fg-muted">
+                {answered} / {total} {t("answered")}
+                {bulk.isPending && <Loader2 className="ml-2 inline size-3 animate-spin" />}
+              </p>
+            </div>
+
+            {/* Simulator Mode & Accessibility Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Simulator Mode Toggle (CDI vs DTM) */}
+              <div className="inline-flex items-center rounded-lg border border-border bg-surface p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSimulatorMode("cdi")}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition-colors",
+                    simulatorMode === "cdi"
+                      ? "bg-brand text-white"
+                      : "text-fg-muted hover:text-fg"
+                  )}
+                  title="IELTS Computer-Delivered (CDI) Interfeysi"
+                >
+                  <Monitor className="size-3.5" />
+                  <span>IELTS CDI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSimulatorMode("dtm")}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition-colors",
+                    simulatorMode === "dtm"
+                      ? "bg-brand text-white"
+                      : "text-fg-muted hover:text-fg"
+                  )}
+                  title="Multi-Level DTM (Bilimni baholash agentligi) Interfeysi"
+                >
+                  <span>DTM</span>
+                </button>
               </div>
-            ) : (
-              <p className="truncate font-semibold text-fg">{exam.title}</p>
-            )}
-            <p className="text-xs text-fg-muted">
-              {answered} / {total} {t("answered")}
-              {bulk.isPending && <Loader2 className="ml-2 inline size-3 animate-spin" />}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
-            {isFullTest && activeSection < exam.sections.length - 1 ? (
-              <Button size="sm" variant="outline" className="min-h-[44px] px-3.5 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
-                Next section
-              </Button>
-            ) : null}
-            <Button size="sm" className="min-h-[44px] px-3.5 touch-manipulation" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
-              <Send />
-              {t("submit")}
-            </Button>
-          </div>
-        </div>
-        {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
-          <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
-          {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
-        </div>}
-        <ResponseProgress answered={answered} total={total} />
-      </div>
 
-      {/* Bo'lim tablari (faqat to'liq imtihonda yoki bittadan ortiq bo'lim bo'lsa) */}
-      {!isSingleSection && exam.sections.length > 1 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {exam.sections.map((s, i) => {
-            const locked = isFullTest && attempt.currentSkill
-              ? s.skill !== attempt.currentSkill
-              : false;
-            return (
-              <button
-                key={s.id}
+              {/* CDI Mode: Contrast Theme Switcher + Notes Drawer */}
+              {simulatorMode === "cdi" && (
+                <>
+                  <div
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs"
+                    title="CDI Kontrast mavzusi"
+                  >
+                    <Contrast className="size-3.5 text-fg-muted" />
+                    <select
+                      aria-label="CDI Contrast Theme"
+                      value={contrastTheme}
+                      onChange={(e) => setContrastTheme(e.target.value as CdiContrastTheme)}
+                      className="bg-transparent text-xs font-medium text-fg focus:outline-none"
+                    >
+                      <option value="standard" className="bg-surface text-fg">
+                        Standart (Oq fon)
+                      </option>
+                      <option value="yellow_on_black" className="bg-zinc-900 text-yellow-300">
+                        Qora (Yellow-on-Black)
+                      </option>
+                      <option value="grey" className="bg-gray-700 text-gray-100">
+                        Kulrang (Grey)
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* Sticky Notes Drawer Trigger */}
+                  <div className="relative">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setNotesDrawerOpen((v) => !v)}
+                      className="h-8 gap-1.5 px-2.5 text-xs"
+                    >
+                      <StickyNote className="size-3.5 text-amber-500" />
+                      <span>Izohlar ({attemptNotes.length})</span>
+                    </Button>
+
+                    {notesDrawerOpen && (
+                      <div className="absolute right-0 top-10 z-50 w-80 rounded-xl border border-border bg-surface p-3 shadow-2xl">
+                        <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
+                          <span className="text-xs font-bold text-fg">
+                            Saqlangan Izohlar (Sticky Notes)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setNotesDrawerOpen(false)}
+                            className="rounded p-0.5 text-fg-muted hover:text-fg"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                        {attemptNotes.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-fg-muted">
+                            Matnni belgilab &ldquo;Izoh&rdquo; tugmasini bosing.
+                          </p>
+                        ) : (
+                          <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                            {attemptNotes.map((n) => (
+                              <div
+                                key={n.id}
+                                className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-2 text-xs"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="line-clamp-1 font-semibold text-amber-600 dark:text-amber-300">
+                                    &ldquo;{n.quote}&rdquo;
+                                  </p>
+                                  {n.storageKey && (
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteAttemptNote(n.storageKey!, n.id)}
+                                      className="text-fg-muted hover:text-danger"
+                                      title="Izohni o'chirish"
+                                    >
+                                      <Trash2 className="size-3" />
+                                    </button>
+                                  )}
+                                </div>
+                                <p className="mt-1 text-fg">{n.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* DTM Mode: Fullscreen Toggle */}
+              <Button
                 type="button"
-                disabled={isFullTest}
-                onClick={() => {
-                  if (isFullTest) return;
-                  flush();
-                  setActiveSection(i);
-                }}
-                aria-current={i === activeSection}
-                title={isFullTest && locked ? "Locked — current section only" : undefined}
-                className={cn(
-                  "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation",
-                  i === activeSection
-                    ? "bg-brand text-white"
-                    : "bg-surface text-fg-muted hover:bg-surface-hover",
-                  isFullTest && locked && "opacity-60",
-                  isFullTest && "cursor-default",
-                )}
+                size="sm"
+                variant="outline"
+                onClick={() => void toggleFullscreen()}
+                className="h-8 gap-1.5 px-2.5 text-xs"
+                title="To'liq ekran rejimi"
               >
-                {t(`skills.${s.skill}`)}
-              </button>
-            );
-          })}
+                {isFullscreen ? (
+                  <Minimize2 className="size-3.5" />
+                ) : (
+                  <Maximize2 className="size-3.5" />
+                )}
+                <span className="hidden sm:inline">To&apos;liq ekran</span>
+              </Button>
+
+              {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
+              {isFullTest && activeSection < exam.sections.length - 1 ? (
+                <Button size="sm" variant="outline" className="min-h-[44px] px-3.5 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
+                  Next section
+                </Button>
+              ) : null}
+              <Button size="sm" className="min-h-[44px] px-3.5 touch-manipulation" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+                <Send />
+                {t("submit")}
+              </Button>
+            </div>
+          </div>
+          {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
+            <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
+            {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
+          </div>}
+          <ResponseProgress answered={answered} total={total} />
         </div>
-      )}
 
-      {partialPractice && !isSingleSection && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
-      {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
-        const questions = item.groups.flatMap((group) => group.questions);
-        return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
-      }).map((item) => item.skill)} /></div>}
+        {/* Bo'lim tablari (faqat to'liq imtihonda yoki bittadan ortiq bo'lim bo'lsa) */}
+        {!isSingleSection && exam.sections.length > 1 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {exam.sections.map((s, i) => {
+              const locked = isFullTest && attempt.currentSkill
+                ? s.skill !== attempt.currentSkill
+                : false;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={isFullTest}
+                  onClick={() => {
+                    if (isFullTest) return;
+                    flush();
+                    setActiveSection(i);
+                  }}
+                  aria-current={i === activeSection}
+                  title={isFullTest && locked ? "Locked — current section only" : undefined}
+                  className={cn(
+                    "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation",
+                    i === activeSection
+                      ? "bg-brand text-white"
+                      : "bg-surface text-fg-muted hover:bg-surface-hover",
+                    isFullTest && locked && "opacity-60",
+                    isFullTest && "cursor-default",
+                  )}
+                >
+                  {t(`skills.${s.skill}`)}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-      {section && (
-        <div className="space-y-4">
-          {section.instructions && (
-            <p className="text-sm text-fg-muted">{section.instructions}</p>
-          )}
-          {guidedMultilevel && (section.skill === "writing" || section.skill === "speaking") ? <GuidedMultilevelGroups
-            skill={section.skill}
-            groups={section.groups}
-            activeTask={Math.min(activeTask, Math.max(0, section.groups.length - 1))}
-            setActiveTask={(index) => setActiveTaskBySkill((current) => ({ ...current, [section.skill]: index }))}
-            strict={strict}
-            timed={strict}
-            attemptId={attempt.id}
-            answers={answers}
-            audioSet={audioSet}
-            audioDurations={audioDurations}
-            onAnswer={setAnswer}
-            practice={partialPractice}
-          /> : <CbtSectionStepper
-            skill={section.skill}
-            groups={section.groups}
-            answers={answers}
-            audioSet={audioSet}
-            audioDurations={audioDurations}
-            renderGroupBlock={(g, reviewComplete) => (
-              <GroupBlock
-                key={g.id}
-                group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
-                skill={section.skill}
-                strict={strict && section.skill === "listening"}
-                timed={strict}
-                attemptId={attempt.id}
-                answers={answers}
-                audioSet={audioSet}
-                audioDurations={audioDurations}
-                onAnswer={setAnswer}
-                onReviewComplete={section.skill === "listening" ? reviewComplete ?? onListeningReviewComplete : undefined}
-              />
+        {partialPractice && !isSingleSection && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
+        {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
+          const questions = item.groups.flatMap((group) => group.questions);
+          return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
+        }).map((item) => item.skill)} /></div>}
+
+        {section && (
+          <div className="space-y-4">
+            {section.instructions && (
+              <p className="text-sm text-fg-muted">{section.instructions}</p>
             )}
-            onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
-            onNextSection={() => {
-              if (multilevelReview && missingWork) setReview("advance");
-              else void goNextSection();
-            }}
-            onSubmitSection={() => {
-              if (multilevelReview && missingWork) setReview("submit");
-              else void doSubmit(false);
-            }}
-            isLastSection={activeSection >= exam.sections.length - 1}
-            isFullTest={isFullTest}
-          />}
-        </div>
-      )}
+            {guidedMultilevel && (section.skill === "writing" || section.skill === "speaking") ? <GuidedMultilevelGroups
+              skill={section.skill}
+              groups={section.groups}
+              activeTask={Math.min(activeTask, Math.max(0, section.groups.length - 1))}
+              setActiveTask={(index) => setActiveTaskBySkill((current) => ({ ...current, [section.skill]: index }))}
+              strict={strict}
+              timed={strict}
+              attemptId={attempt.id}
+              answers={answers}
+              audioSet={audioSet}
+              audioDurations={audioDurations}
+              onAnswer={setAnswer}
+              practice={partialPractice}
+              simulatorMode={simulatorMode}
+              flaggedQuestions={flaggedQuestions}
+              onToggleFlag={toggleQuestionFlag}
+            /> : <CbtSectionStepper
+              skill={section.skill}
+              groups={section.groups}
+              answers={answers}
+              audioSet={audioSet}
+              audioDurations={audioDurations}
+              simulatorMode={simulatorMode}
+              flaggedQuestions={flaggedQuestions}
+              onToggleFlag={toggleQuestionFlag}
+              onActiveQuestionChange={setActiveQuestionNumber}
+              renderGroupBlock={(g, reviewComplete, partIdx) => (
+                <GroupBlock
+                  key={g.id}
+                  group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
+                  skill={section.skill}
+                  strict={strict && section.skill === "listening"}
+                  timed={strict}
+                  attemptId={attempt.id}
+                  answers={answers}
+                  audioSet={audioSet}
+                  audioDurations={audioDurations}
+                  onAnswer={setAnswer}
+                  onReviewComplete={section.skill === "listening" ? reviewComplete ?? onListeningReviewComplete : undefined}
+                  simulatorMode={simulatorMode}
+                  flaggedQuestions={flaggedQuestions}
+                  onToggleFlag={toggleQuestionFlag}
+                  partIndex={partIdx}
+                  audioTimestamps={examAudioTimestamps}
+                  sharedSingleAudioUrl={sharedSingleAudioUrl}
+                />
+              )}
+              onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
+              onNextSection={() => {
+                if (multilevelReview && missingWork) setReview("advance");
+                else void goNextSection();
+              }}
+              onSubmitSection={() => {
+                if (multilevelReview && missingWork) setReview("submit");
+                else void doSubmit(false);
+              }}
+              isLastSection={activeSection >= exam.sections.length - 1}
+              isFullTest={isFullTest}
+            />}
+          </div>
+        )}
 
-      {review && missingWork && (
-        <MultilevelSubmitReview
-          work={missingWork}
-          advance={review === "advance"}
-          allowIncomplete={isSingleSection || partialPractice}
-          busy={submit.isPending || advance.isPending}
-          onClose={() => setReview(null)}
-          // The review surface covers the runner, so a jump closes it and shows
-          // the section the student asked for.
-          onJump={isFullTest ? undefined : (skill) => { setReview(null); jumpToSection(skill); }}
-          onConfirm={() => {
-            const purpose = review;
-            setReview(null);
-            if (purpose === "advance") void goNextSection();
-            else void doSubmit(false, true);
-          }}
+        {review && missingWork && (
+          <MultilevelSubmitReview
+            work={missingWork}
+            advance={review === "advance"}
+            allowIncomplete={isSingleSection || partialPractice}
+            busy={submit.isPending || advance.isPending}
+            onClose={() => setReview(null)}
+            // The review surface covers the runner, so a jump closes it and shows
+            // the section the student asked for.
+            onJump={isFullTest ? undefined : (skill) => { setReview(null); jumpToSection(skill); }}
+            onConfirm={() => {
+              const purpose = review;
+              setReview(null);
+              if (purpose === "advance") void goNextSection();
+              else void doSubmit(false, true);
+            }}
+          />
+        )}
+
+        <MicCheckModal
+          open={section?.skill === "speaking" && !micChecked}
+          onConfirm={() => setMicChecked(true)}
+          onClose={!strict ? () => setMicChecked(true) : undefined}
         />
-      )}
 
-      <MicCheckModal
-        open={section?.skill === "speaking" && !micChecked}
-        onConfirm={() => setMicChecked(true)}
-        onClose={!strict ? () => setMicChecked(true) : undefined}
-      />
+        <SectionTransitionModal
+          open={transitionModal !== null}
+          completedSkill={transitionModal?.completedSkill ?? "listening"}
+          nextSkill={transitionModal?.nextSkill ?? "reading"}
+          onStartNext={() => setTransitionModal(null)}
+        />
 
-      <SectionTransitionModal
-        open={transitionModal !== null}
-        completedSkill={transitionModal?.completedSkill ?? "listening"}
-        nextSkill={transitionModal?.nextSkill ?? "reading"}
-        onStartNext={() => setTransitionModal(null)}
-      />
-
-      <SubmitConfirmModal
-        open={showSubmitConfirm}
-        onOpenChange={setShowSubmitConfirm}
-        onConfirm={() => void doSubmit(false, true)}
-        isSubmitting={submit.isPending}
-        answered={answered}
-        total={total}
-        isSingleSection={isSingleSection}
-        skillName={targetSkill}
-      />
-    </div>
-  </ExamLocker>
-);
+        <SubmitConfirmModal
+          open={showSubmitConfirm}
+          onOpenChange={setShowSubmitConfirm}
+          onConfirm={() => void doSubmit(false, true)}
+          isSubmitting={submit.isPending}
+          answered={answered}
+          total={total}
+          isSingleSection={isSingleSection}
+          skillName={targetSkill}
+        />
+      </div>
+    </ExamLocker>
+  );
 }
 
 function Timer({ ms, label }: { ms: number; label: string }) {
@@ -595,6 +890,9 @@ export function GuidedMultilevelGroups({
   audioDurations,
   onAnswer,
   practice = false,
+  simulatorMode = "cdi",
+  flaggedQuestions,
+  onToggleFlag,
 }: {
   skill: "writing" | "speaking";
   groups: MockSection["groups"];
@@ -608,6 +906,9 @@ export function GuidedMultilevelGroups({
   audioDurations?: Record<string, number>;
   onAnswer: (qid: string, value: string) => void;
   practice?: boolean;
+  simulatorMode?: ExamSimulatorMode;
+  flaggedQuestions?: Set<string>;
+  onToggleFlag?: (qid: string) => void;
 }) {
   const group = groups[activeTask];
   if (!group) return null;
@@ -633,6 +934,10 @@ export function GuidedMultilevelGroups({
       audioDurations={audioDurations}
       onAnswer={onAnswer}
       sharedWritingStimulus={sharedWritingStimulus}
+      simulatorMode={simulatorMode}
+      flaggedQuestions={flaggedQuestions}
+      onToggleFlag={onToggleFlag}
+      partIndex={activeTask}
     />
     <div className="flex items-center justify-between gap-3">
       <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
@@ -653,6 +958,12 @@ function GroupBlock({
   onAnswer,
   onReviewComplete,
   sharedWritingStimulus,
+  simulatorMode = "cdi",
+  flaggedQuestions,
+  onToggleFlag,
+  partIndex = 0,
+  audioTimestamps = [],
+  sharedSingleAudioUrl,
 }: {
   group: MockSection["groups"][number];
   skill: MockSkill;
@@ -665,15 +976,38 @@ function GroupBlock({
   onAnswer: (qid: string, val: string) => void;
   onReviewComplete?: () => void;
   sharedWritingStimulus?: string;
+  simulatorMode?: ExamSimulatorMode;
+  flaggedQuestions?: Set<string>;
+  onToggleFlag?: (qid: string) => void;
+  partIndex?: number;
+  audioTimestamps?: AudioTimestampItem[];
+  sharedSingleAudioUrl?: string | null;
 }) {
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
   const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
-  const audioSrc = media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`);
+
+  // Resolve single-audio timestamp boundaries for this Listening part
+  const stimTs = group.stimulusRef as { startSec?: number; endSec?: number | null } | null | undefined;
+  const matchedTs = audioTimestamps.find((ts) => ts.partNumber === partIndex + 1);
+  const startSec = group.startSec ?? stimTs?.startSec ?? matchedTs?.startSec;
+  const endSec = group.endSec ?? stimTs?.endSec ?? matchedTs?.endSec ?? null;
+
+  const hasListeningAudio = Boolean(group.hasAudio || (skill === "listening" && sharedSingleAudioUrl));
+  const audioSrc = group.hasAudio
+    ? media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`)
+    : sharedSingleAudioUrl
+    ? sharedSingleAudioUrl.startsWith("/api/")
+      ? sharedSingleAudioUrl
+      : media(sharedSingleAudioUrl)
+    : "";
+
+  const isDtmSplit = simulatorMode === "dtm" && hasPassage && !hasGappedContent;
+
   return (
     <Card className="p-4 sm:p-5">
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
-      {group.hasAudio && skill === "listening" ? (
+      {hasListeningAudio && skill === "listening" ? (
         <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 p-3 backdrop-blur-xl shadow-md sm:-mx-5 sm:-mt-5">
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
@@ -683,6 +1017,10 @@ function GroupBlock({
             src={audioSrc}
             strict={strict}
             onReviewComplete={strict ? onReviewComplete : undefined}
+            startSec={startSec}
+            endSec={endSec}
+            partLabel={group.title || `Part ${partIndex + 1}`}
+            timestamps={audioTimestamps}
           />}
         </div>
       ) : (
@@ -765,12 +1103,20 @@ function GroupBlock({
         </div>
       )}
 
-      <div className={cn("mt-3", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start")}>
+      <div
+        className={cn(
+          "mt-3",
+          hasPassage &&
+            !hasGappedContent &&
+            "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start",
+          isDtmSplit && "lg:divide-x lg:divide-border"
+        )}
+      >
         {hasPassage && !hasGappedContent && (
           <div
             className={cn(
               "whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg shadow-inner",
-              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto",
+              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
           >
@@ -821,6 +1167,7 @@ function GroupBlock({
             className={cn(
               "space-y-4",
               "lg:block",
+              isDtmSplit && "lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:pl-4 lg:pr-1",
               hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
             )}
           >
@@ -850,6 +1197,8 @@ function GroupBlock({
                   unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                   onChange={(v) => onAnswer(q.id, v)}
                   multilevelSkill={skill}
+                  isFlagged={flaggedQuestions?.has(q.id)}
+                  onToggleFlag={onToggleFlag ? () => onToggleFlag(q.id) : undefined}
                 />
               </div>
             ))}
@@ -871,6 +1220,8 @@ function QuestionInput({
   unavailableOptions,
   multilevelSkill,
   groupTitle,
+  isFlagged,
+  onToggleFlag,
 }: {
   question: MockQuestion;
   attemptId: string;
@@ -882,15 +1233,35 @@ function QuestionInput({
   unavailableOptions?: string[];
   multilevelSkill?: MockSkill;
   groupTitle?: string;
+  isFlagged?: boolean;
+  onToggleFlag?: () => void;
 }) {
   const tx = useTranslations("mock.runnerUx");
 
   const header = (
-    <div className="flex items-start gap-2">
-      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
-        {q.number}
-      </span>
-      <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
+    <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start gap-2">
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
+          {q.number}
+        </span>
+        <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
+      </div>
+      {onToggleFlag && (
+        <button
+          type="button"
+          onClick={onToggleFlag}
+          title={isFlagged ? "Belgini olib tashlash" : "Belgilash (Flag)"}
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+            isFlagged
+              ? "border-amber-500/60 bg-amber-400/20 text-amber-600 dark:text-amber-300"
+              : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
+          )}
+        >
+          <Flag className={cn("size-3", isFlagged && "fill-amber-400 text-amber-500")} />
+          <span className="hidden sm:inline">{isFlagged ? "Belgilangan" : "Belgilash"}</span>
+        </button>
+      )}
     </div>
   );
 
@@ -979,5 +1350,28 @@ function QuestionInput({
     );
   }
 
-  return <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />;
+  return (
+    <div className="space-y-2">
+      {onToggleFlag && (
+        <div className="flex justify-end -mb-1">
+          <button
+            type="button"
+            onClick={onToggleFlag}
+            title={isFlagged ? "Belgini olib tashlash" : "Belgilash (Flag)"}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
+              isFlagged
+                ? "border-amber-500/60 bg-amber-400/20 text-amber-600 dark:text-amber-300"
+                : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
+            )}
+          >
+            <Flag className={cn("size-3", isFlagged && "fill-amber-400 text-amber-500")} />
+            <span>{isFlagged ? "Belgilangan" : "Belgilash"}</span>
+          </button>
+        </div>
+      )}
+      <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />
+    </div>
+  );
 }
+

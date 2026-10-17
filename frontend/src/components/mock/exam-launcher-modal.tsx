@@ -23,13 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { MockAttemptMode, MockExamDetail, MockExamListItem, MockPracticeSkill } from "@/lib/types";
+import type { ExamSimulatorMode, MockAttemptMode, MockExamDetail, MockExamListItem, MockPracticeSkill } from "@/lib/types";
 
 interface ExamLauncherModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   exam: MockExamListItem | MockExamDetail;
-  onStart: (mode: MockAttemptMode, skills?: MockPracticeSkill[]) => void;
+  onStart: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) => void;
   isStarting?: boolean;
 }
 
@@ -41,6 +41,25 @@ export function ExamLauncherModal({
   isStarting,
 }: ExamLauncherModalProps) {
   const isMultilevel = exam.type === "multilevel";
+  const [simulatorMode, setSimulatorMode] = React.useState<ExamSimulatorMode>(
+    isMultilevel ? "dtm" : "cdi"
+  );
+
+  React.useEffect(() => {
+    setSimulatorMode(isMultilevel ? "dtm" : "cdi");
+  }, [isMultilevel, exam.id]);
+
+  function triggerStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("bw_simulator_mode", simulatorMode);
+      } catch {
+        // Ignore storage error
+      }
+    }
+    onStart(mode, skills, simulatorMode);
+    onOpenChange(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -66,11 +85,60 @@ export function ExamLauncherModal({
             {exam.title}
           </DialogTitle>
           <DialogDescription className="text-xs text-fg-muted">
-            Topshirish rejimini tanlang: To&apos;liq rasmiy imtihon yoki alohida bitta bo&apos;lim bo&apos;yicha amaliyot
+            Topshirish rejimini va rasmiy imtihon interfeysini tanlang
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-5 px-6 py-5 max-h-[75vh] overflow-y-auto">
+          {/* Official Simulator Interface Selector */}
+          <div className="rounded-xl border border-border bg-bg-subtle/60 p-3.5">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-fg">
+                Imtihon Simulyatori Interfeysi (Simulator Mode)
+              </span>
+              <Badge variant="info" className="text-[11px]">
+                {simulatorMode === "cdi" ? "IELTS CDI (Inspera)" : "Multi-Level DTM"}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setSimulatorMode("cdi")}
+                className={`flex flex-col items-start rounded-lg border p-3 text-left transition-all ${
+                  simulatorMode === "cdi"
+                    ? "border-brand bg-brand/10 ring-1 ring-brand"
+                    : "border-border bg-surface hover:border-brand/40"
+                }`}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-bold text-fg">IELTS Computer-Delivered (CDI)</span>
+                  {simulatorMode === "cdi" && <CheckCircle2 className="size-4 text-brand" />}
+                </div>
+                <p className="mt-1 text-[11px] text-fg-muted leading-snug">
+                  Kontrast mavzular (Oq, Qora/Sariq, Kulrang), 3 xil Highlighter, Underline va Sticky Notes (Izohlar) oynasi.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSimulatorMode("dtm")}
+                className={`flex flex-col items-start rounded-lg border p-3 text-left transition-all ${
+                  simulatorMode === "dtm"
+                    ? "border-brand bg-brand/10 ring-1 ring-brand"
+                    : "border-border bg-surface hover:border-brand/40"
+                }`}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-bold text-fg">Multi-Level DTM Simulyatori</span>
+                  {simulatorMode === "dtm" && <CheckCircle2 className="size-4 text-brand" />}
+                </div>
+                <p className="mt-1 text-[11px] text-fg-muted leading-snug">
+                  50/50 Vertikal Split-Screen, DTM pastki savollar palitrasi (Yashil/Kulrang/Sariq), Belgilash (Flag) va To&apos;liq ekran.
+                </p>
+              </button>
+            </div>
+          </div>
+
           {/* Rejim 1: Full Mock Exam */}
           <div className="rounded-xl border-2 border-brand/40 bg-gradient-to-br from-brand/10 via-surface to-surface p-4 shadow-sm transition-all hover:border-brand/70">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -98,10 +166,7 @@ export function ExamLauncherModal({
               <Button
                 className="flex-1 bg-brand font-bold text-white shadow-sm hover:bg-brand-hover"
                 loading={isStarting}
-                onClick={() => {
-                  onStart("timed");
-                  onOpenChange(false);
-                }}
+                onClick={() => triggerStart("timed")}
               >
                 <Timer className="size-4 mr-1.5" />
                 To&apos;liq Imtihonni Boshlash (Timed)
@@ -110,10 +175,7 @@ export function ExamLauncherModal({
                 variant="outline"
                 className="font-medium"
                 loading={isStarting}
-                onClick={() => {
-                  onStart("practice");
-                  onOpenChange(false);
-                }}
+                onClick={() => triggerStart("practice")}
               >
                 <Play className="size-4 mr-1.5 fill-current" />
                 Mashq Rejimi (Practice)
@@ -158,10 +220,7 @@ export function ExamLauncherModal({
                   variant="outline"
                   className="mt-3 w-full font-medium group-hover:border-brand/60 group-hover:text-brand"
                   loading={isStarting}
-                  onClick={() => {
-                    onStart("timed", ["listening"]);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => triggerStart("timed", ["listening"])}
                 >
                   <Play className="size-3.5 mr-1 fill-current" />
                   Listening Boshlash
@@ -187,10 +246,7 @@ export function ExamLauncherModal({
                   variant="outline"
                   className="mt-3 w-full font-medium group-hover:border-brand/60 group-hover:text-brand"
                   loading={isStarting}
-                  onClick={() => {
-                    onStart("timed", ["reading"]);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => triggerStart("timed", ["reading"])}
                 >
                   <Play className="size-3.5 mr-1 fill-current" />
                   Reading Boshlash
@@ -216,10 +272,7 @@ export function ExamLauncherModal({
                   variant="outline"
                   className="mt-3 w-full font-medium group-hover:border-brand/60 group-hover:text-brand"
                   loading={isStarting}
-                  onClick={() => {
-                    onStart("timed", ["writing"]);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => triggerStart("timed", ["writing"])}
                 >
                   <Play className="size-3.5 mr-1 fill-current" />
                   Writing Boshlash
@@ -245,10 +298,7 @@ export function ExamLauncherModal({
                   variant="outline"
                   className="mt-3 w-full font-medium group-hover:border-brand/60 group-hover:text-brand"
                   loading={isStarting}
-                  onClick={() => {
-                    onStart("timed", ["speaking"]);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => triggerStart("timed", ["speaking"])}
                 >
                   <Play className="size-3.5 mr-1 fill-current" />
                   Speaking Boshlash

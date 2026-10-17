@@ -34,14 +34,40 @@ function normalizePath(path: string): string {
 
 function rememberAttemptSignature(data: unknown): void {
   if (!data || typeof data !== "object") return;
-  const { attemptId, sessionSignature } = data as { attemptId?: unknown; sessionSignature?: unknown };
-  if (typeof attemptId === "string" && typeof sessionSignature === "string") attemptSignatures.set(attemptId, sessionSignature);
+  const { attemptId, sessionSignature, attemptToken } = data as {
+    attemptId?: unknown;
+    sessionSignature?: unknown;
+    attemptToken?: unknown;
+  };
+  const sig =
+    typeof sessionSignature === "string"
+      ? sessionSignature
+      : typeof attemptToken === "string"
+        ? attemptToken
+        : undefined;
+  if (typeof attemptId === "string" && sig) {
+    attemptSignatures.set(attemptId, sig);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(`bw_attempt_token_${attemptId}`, sig);
+      } catch {
+        // ignore storage quota errors
+      }
+    }
+  }
 }
 
 function signatureHeader(path: string): Record<string, string> {
   const normalized = normalizePath(path);
   const id = ATTEMPT_MUTATION.exec(normalized)?.[1];
-  const signature = id ? attemptSignatures.get(id) : undefined;
+  let signature = id ? attemptSignatures.get(id) : undefined;
+  if (!signature && id && typeof window !== "undefined") {
+    try {
+      signature = sessionStorage.getItem(`bw_attempt_token_${id}`) ?? undefined;
+    } catch {
+      // ignore storage errors
+    }
+  }
   return signature ? { "x-attempt-signature": signature } : {};
 }
 

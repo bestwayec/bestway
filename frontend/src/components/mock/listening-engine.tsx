@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Play, Volume2 } from "lucide-react";
+import { Clock, Play, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { AudioTimestampItem } from "@/lib/types";
 
 const REVIEW_SEC = 120;
 
@@ -12,19 +13,29 @@ function fmt(totalSec: number): string {
 }
 
 /**
- * Listening audio engine — spec §2.1.
+ * Listening audio engine — spec §2.1 + Single Audio Part Timestamps (v0.8.0).
  * strict (exam full_test): play ONCE, no pause/rewind/ff, volume only.
  * After audio ends → 2:00 review countdown → onReviewComplete (auto-advance).
  * practice: native controls, unlimited replay.
+ * When `startSec` is provided (from Single Audio Timestamps or part switching),
+ * automatically seeks `audioRef.current.currentTime = startSec`.
  */
 export function ListeningAudio({
   src,
   strict,
+  startSec,
+  endSec,
+  partLabel,
+  timestamps,
   onEnded,
   onReviewComplete,
 }: {
   src: string;
   strict: boolean;
+  startSec?: number | null;
+  endSec?: number | null;
+  partLabel?: string;
+  timestamps?: AudioTimestampItem[] | null;
   onEnded?: () => void;
   onReviewComplete?: () => void;
 }) {
@@ -33,6 +44,28 @@ export function ListeningAudio({
   const [ended, setEnded] = React.useState(false);
   const [reviewLeft, setReviewLeft] = React.useState<number | null>(null);
   const doneRef = React.useRef(false);
+  const lastSeekSecRef = React.useRef<number | null>(null);
+
+  // Seek to startSec when switching Listening parts or when metadata loads
+  const applyStartSeek = React.useCallback((targetSec: number | null | undefined) => {
+    if (targetSec == null || targetSec < 0 || !Number.isFinite(targetSec)) return;
+    const el = audioRef.current;
+    if (!el) return;
+    try {
+      if (el.readyState >= 1) {
+        el.currentTime = targetSec;
+        lastSeekSecRef.current = targetSec;
+      }
+    } catch {
+      // ignore if media not ready yet; onLoadedMetadata will apply it
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (startSec != null && startSec >= 0 && lastSeekSecRef.current !== startSec) {
+      applyStartSeek(startSec);
+    }
+  }, [startSec, applyStartSeek]);
 
   // Review countdown (exactly 2 minutes, spec §2.1)
   React.useEffect(() => {
@@ -51,27 +84,77 @@ export function ListeningAudio({
   function handleEnded() {
     setEnded(true);
     onEnded?.();
-    // Practice da review yo'q — faqat exam da auto-advance uchun.
     if (strict) setReviewLeft(REVIEW_SEC);
+  }
+
+  function handleTimeUpdate() {
+    if (endSec != null && endSec > 0 && audioRef.current) {
+      if (audioRef.current.currentTime >= endSec && !ended) {
+        if (!strict) {
+          // In practice mode, let the user continue or pause cleanly
+          return;
+        }
+      }
+    }
   }
 
   if (!strict) {
     return (
-      <audio
-        controls
-        src={src}
-        className="mt-3 w-full"
-        preload="none"
-        onEnded={handleEnded}
-      >
-        <track kind="captions" />
-      </audio>
+      <div className="mt-3 space-y-2">
+        <audio
+          ref={audioRef}
+          controls
+          src={src}
+          className="w-full"
+          preload="metadata"
+          onLoadedMetadata={() => {
+            if (startSec != null && startSec > 0) {
+              applyStartSeek(startSec);
+            }
+          }}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+        >
+          <track kind="captions" />
+        </audio>
+        {(startSec != null || (timestamps && timestamps.length > 0)) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+            {startSec != null && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 font-medium text-brand">
+                <Clock className="size-3" />
+                {partLabel ? `${partLabel}: ` : ""}
+                {fmt(startSec)}
+                {endSec != null ? ` – ${fmt(endSec)}` : ""}
+              </span>
+            )}
+            {timestamps &&
+              timestamps.map((ts) => (
+                <button
+                  key={ts.partNumber}
+                  type="button"
+                  onClick={() => {
+                    if (audioRef.current) {
+                      audioRef.current.currentTime = ts.startSec;
+                      void audioRef.current.play().catch(() => {});
+                    }
+                  }}
+                  className="rounded-md border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-fg hover:border-brand hover:text-brand transition-colors"
+                >
+                  {ts.label || `Part ${ts.partNumber}`} ({fmt(ts.startSec)})
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
     );
   }
 
   async function playOnce() {
     const el = audioRef.current;
     if (!el || started) return;
+    if (startSec != null && startSec > 0) {
+      applyStartSeek(startSec);
+    }
     setStarted(true);
     try {
       await el.play();
@@ -88,6 +171,12 @@ export function ListeningAudio({
         src={src}
         preload="auto"
         controlsList="nodownload noplaybackrate"
+        onLoadedMetadata={() => {
+          if (startSec != null && startSec > 0) {
+            applyStartSeek(startSec);
+          }
+        }}
+        onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -98,6 +187,14 @@ export function ListeningAudio({
           <Play />
           {started ? (ended ? "Played once" : "Playing… (once only)") : "Play audio (once only)"}
         </Button>
+        {startSec != null && startSec >= 0 && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand tabular-nums">
+            <Clock className="size-3" />
+            {partLabel ? `${partLabel} · ` : ""}
+            {fmt(startSec)}
+            {endSec != null ? ` – ${fmt(endSec)}` : ""}
+          </span>
+        )}
         <label className="flex items-center gap-2 text-sm text-fg-muted">
           <Volume2 className="size-4" />
           <input

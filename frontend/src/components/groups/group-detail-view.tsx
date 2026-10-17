@@ -37,6 +37,7 @@ import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
 import { GroupAiRanking } from "@/components/teacher/group-ai-ranking";
 import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
+import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { GroupAnalyticsPanel } from "@/components/groups/groups-view";
 import { useRouter } from "@/i18n/navigation";
 
@@ -184,6 +185,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
 
       {canSeePhones && (
         <>
+          <LiveExamRoomPanel defaultGroupId={groupId} />
           <GroupAnalyticsPanel
             groups={allGroups}
             selectedGroupId={groupId}

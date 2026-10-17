@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, ImagePlus, Music, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Music, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import type { MockExamDetail, MockQuestionType, MockSkill } from "@/lib/types";
 import { ImportPanel } from "./ImportPanel";
+import { SmartBulkImportModal } from "./SmartBulkImportModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
@@ -111,6 +112,7 @@ export function GroupEditor({
 
   const [imageFile, setImageFile] = React.useState<File | null>(null);
   const [showImport, setShowImport] = React.useState(false);
+  const [smartImportOpen, setSmartImportOpen] = React.useState(false);
   const [showPreview, setShowPreview] = React.useState(false);
   const [visualPreview, setVisualPreview] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -605,6 +607,15 @@ export function GroupEditor({
             {showPreview ? <EyeOff className="size-4 shrink-0" aria-hidden /> : <Eye className="size-4 shrink-0" aria-hidden />}
             <span className="truncate">{tx(t, "preview", "Preview")}</span>
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setSmartImportOpen(true)}
+            className="min-h-9 justify-center border-brand/50 bg-brand/10 text-brand hover:bg-brand/20"
+          >
+            <Sparkles className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">Tezkor Kiritish (Smart / Excel / Audio)</span>
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowImport((v) => !v)} className="min-h-9 justify-center">
             <Upload className="size-4 shrink-0" aria-hidden />
             <span className="truncate">{tx(t, "import", "Import")}</span>
@@ -617,6 +628,38 @@ export function GroupEditor({
           )}
         </div>
       </div>
+
+      <SmartBulkImportModal
+        open={smartImportOpen}
+        onOpenChange={setSmartImportOpen}
+        examId={examId}
+        examType={detail.type}
+        groupId={group.id}
+        groupLabel={`${skill.charAt(0).toUpperCase() + skill.slice(1)} → ${part.title.trim() || meta.unit}`}
+        defaultSkill={skill}
+        listeningGroups={detail.sections.find((s) => s.skill === "listening")?.groups ?? []}
+        onImported={(added) => {
+          if (!added || added.length === 0 || !group) return;
+          const have = new Set(group.questions.map((q) => q.id));
+          const merged = added
+            .filter((q) => q && typeof q.id === "string" && !have.has(q.id))
+            .map((q) => ({
+              clientId: q.id,
+              number: q.number,
+              type: q.type as typeof part.questions[number]["type"],
+              prompt: q.prompt ?? "",
+              options: q.options ?? [],
+              correctAnswers: q.correctAnswers ?? [],
+              acceptedVariants: q.acceptedVariants ?? [],
+              points: q.points ?? 1,
+              wordLimit: q.wordLimit ?? undefined,
+              answerRule: q.answerRule ?? null,
+              savedQuestionId: q.id,
+            }));
+          if (merged.length === 0) return;
+          update((prev) => ({ ...prev, questions: [...prev.questions, ...merged] }));
+        }}
+      />
 
       {showPreview && <StudentPreview group={previewGroup(part, group)} skill={skill} />}
 

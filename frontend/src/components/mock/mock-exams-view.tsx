@@ -44,8 +44,10 @@ import {
   usePurchaseMock,
   useStartMock,
 } from "@/hooks/use-mock";
-import type { MockAttemptMode, MockPracticeSkill } from "@/lib/types";
+import type { ExamSimulatorMode, MockAttemptMode, MockPracticeSkill } from "@/lib/types";
 import { ExamLauncherModal } from "./exam-launcher-modal";
+import { LiveExamPinCard } from "./live-exam-pin-card";
+import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from '@/hooks/use-exam-programs';
 import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
@@ -62,7 +64,7 @@ const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   speaking: Mic,
 };
 
-type Tab = "exams" | "grading" | "purchases";
+type Tab = "exams" | "live" | "grading" | "purchases";
 
 export function MockExamsView() {
   const t = useTranslations("mock");
@@ -85,11 +87,14 @@ export function MockExamsView() {
   const start = useStartMock();
   const router = useRouter();
 
-  function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+  function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) {
     start.mutate(
       { examId, mode, ...(skills ? { skills } : {}) },
       {
-        onSuccess: (res) => router.push(`/mock/attempt/${res.attemptId}`),
+        onSuccess: (res) =>
+          router.push(
+            `/mock/attempt/${res.attemptId}${simulatorMode ? `?simulator=${simulatorMode}` : ""}`
+          ),
         onError: (e) => toast.error(e instanceof Error ? e.message : tc("unknownError")),
       }
     );
@@ -119,19 +124,27 @@ export function MockExamsView() {
         }
       />
 
+      {isStudent && (
+        <div className="mb-5">
+          <LiveExamPinCard />
+        </div>
+      )}
       {isStudent && <ExamTrackSelector />}
       {isStudent && scope.program === 'MULTILEVEL' && <label className="mb-4 block text-sm">{tt('practiceLevel')} <select aria-label={tt('practiceLevel')} value={practiceLevel} onChange={(e) => setPracticeLevel(e.target.value as typeof practiceLevel)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">{tt('allLevels')}</option>{(['A1','A2','B1','B2','C1'] as const).map((level) => <option key={level} value={level}>{level}</option>)}</select></label>}
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
             <TabsTrigger value="exams">{t("title")}</TabsTrigger>
+            <TabsTrigger value="live">Live Exam Room (PIN)</TabsTrigger>
             <TabsTrigger value="grading">{t("grading")}</TabsTrigger>
             {isOffice && <TabsTrigger value="purchases">{t("purchases")}</TabsTrigger>}
           </TabsList>
         </Tabs>
       )}
 
-      {tab === "grading" && isStaff ? (
+      {tab === "live" && isStaff ? (
+        <LiveExamRoomPanel />
+      ) : tab === "grading" && isStaff ? (
         <GradingPanel />
       ) : tab === "purchases" && isOffice ? (
         <PurchasesPanel />
@@ -165,7 +178,7 @@ export function MockExamsView() {
               attempts={attemptsQ.data ?? []}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
-              onStart={(mode, skills) => onStart(e.id, mode, skills)}
+              onStart={(mode, skills, simulatorMode) => onStart(e.id, mode, skills, simulatorMode)}
               onDelete={async () => {
                 await deleteExam.mutateAsync(e.id);
               }}
@@ -201,7 +214,7 @@ export function MockExamCard({
   attempts: MockAttemptSummary[];
   buying: boolean;
   onBuy: () => void;
-  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[]) => void;
+  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) => void;
   onDelete?: () => Promise<unknown> | void;
 }) {
   const t = useTranslations("mock");

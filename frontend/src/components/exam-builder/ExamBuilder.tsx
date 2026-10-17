@@ -10,6 +10,7 @@ import {
   Loader2,
   Rocket,
   Save,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { PreviewDialog } from "@/components/exam-builder/PreviewDialog";
 import { ImportProvenanceDialog } from "@/components/exam-builder/ImportProvenanceDialog";
+import { SmartBulkImportModal } from "@/components/exam-builder/SmartBulkImportModal";
 import {
   useCloneMockExam,
   useExamImportProvenance,
@@ -193,6 +195,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const [selection, setSelection] = React.useState<Selection>({ kind: "overview" });
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [provenanceOpen, setProvenanceOpen] = React.useState(false);
+  const [smartImportOpen, setSmartImportOpen] = React.useState(false);
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
@@ -471,6 +474,15 @@ export function ExamBuilder({ examId }: { examId: string }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:shrink-0 sm:flex-wrap sm:items-center">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSmartImportOpen(true)}
+              className="min-h-9 justify-center border-brand/50 bg-brand/10 text-brand hover:bg-brand/20 max-sm:w-full sm:min-h-0"
+            >
+              <Sparkles className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">Tezkor Kiritish (Smart / Excel / Audio)</span>
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)} className="min-h-9 justify-center max-sm:w-full sm:min-h-0">
               <Eye className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "preview", "Preview")}</span>
@@ -729,6 +741,22 @@ export function ExamBuilder({ examId }: { examId: string }) {
           onSelect={requestSelect}
           onResolve={handleResolveIssue}
           resolvingId={resolvingId}
+        />
+      )}
+
+      {detail && (
+        <SmartBulkImportModal
+          open={smartImportOpen}
+          onOpenChange={setSmartImportOpen}
+          examId={examId}
+          examType={detail.type}
+          groupId={activeGroup?.g.id}
+          groupLabel={activeGroup?.g.title || undefined}
+          defaultSkill={activeGroup?.s.skill ?? activeSection?.skill ?? "reading"}
+          listeningGroups={detail.sections.find((s) => s.skill === "listening")?.groups ?? []}
+          onImported={() => {
+            void examQ.refetch();
+          }}
         />
       )}
 

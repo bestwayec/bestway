@@ -18,11 +18,13 @@ const hooks = vi.hoisted(() => {
 vi.mock('next-intl', () => ({ useTranslations: () => hooks.translate }));
 vi.mock('@/hooks/use-mock', () => ({
   useMockExam: () => ({ data: hooks.exam }),
+  useAudioTimestamps: () => ({ data: null }),
   // React Query returns a NEW wrapper each render, but stable callbacks.
   useBulkMockAnswers: () => ({ isPending: false, mutate: hooks.mutate, mutateAsync: hooks.save }),
   useSubmitMock: () => ({ isPending: false, mutateAsync: hooks.other }),
   useAdvanceMockSection: () => ({ isPending: false, mutateAsync: hooks.other }),
   useFlagMockCheat: () => ({ mutate: hooks.other }),
+  useReportLiveRoomProgress: () => ({ isPending: false, mutate: hooks.other }),
   useUploadMockSpeaking: () => ({ isPending: false, mutate: hooks.other }),
 }));
 vi.mock('@/lib/durable-recordings', () => ({ hasPendingRecordings: async () => hooks.pendingRecording, hasActiveRecording: () => hooks.activeRecording }));
