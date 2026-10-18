@@ -90,7 +90,7 @@ class AuthenticationTransactionTests(SimpleTestCase):
         issue.assert_not_called()
 
     def test_failed_desktop_exchange_commits_code_consumption(self):
-        for device, verifier_ok, active, role, expected in (("wrong", True, True, "student", "DEVICE_MISMATCH"), ("device", False, True, "student", "INVALID_VERIFIER"), ("device", True, False, "student", "USER_DEACTIVATED"), ("device", True, True, "teacher", "NOT_A_STUDENT")):
+        for device, verifier_ok, active, role, expected in (("wrong", True, True, "student", "DEVICE_MISMATCH"), ("device", False, True, "student", "INVALID_VERIFIER"), ("device", True, False, "student", "USER_DEACTIVATED"), ("device", True, True, "parent", "FORBIDDEN")):
             with self.subTest(expected=expected):
                 outcomes = []
                 cursor = MagicMock()

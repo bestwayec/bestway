@@ -152,8 +152,8 @@ def authorize_desktop(user_id: str, *, device_id: str, state: str, challenge: st
     user = fetch_user(user_id=user_id)
     if not user or not user[6]:
         raise ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
-    if user[3] != "student":
-        raise ContractAPIException("NOT_A_STUDENT", "Desktop ilova faqat o‘quvchilar uchun", 403)
+    if user[3] not in {"student", "teacher", "admin", "super_admin"}:
+        raise ContractAPIException("FORBIDDEN", "Desktop ilova faqat platforma foydalanuvchilari uchun", 403)
     code = base64url_random(32)
     expiry = timezone.now() + timedelta(minutes=5)
     with connection.cursor() as cursor:
@@ -181,8 +181,8 @@ def exchange_desktop(code: str, verifier: str, device_id: str):
             failure = ContractAPIException("INVALID_VERIFIER", "Xavfsizlik tekshiruvi o‘tmadi", 401)
         elif not user[6]:
             failure = ContractAPIException("USER_DEACTIVATED", "Akkaunt bloklangan. Administratsiyaga murojaat qiling", 403)
-        elif user[3] != "student":
-            failure = ContractAPIException("NOT_A_STUDENT", "Desktop ilova faqat o‘quvchilar uchun", 403)
+        elif user[3] not in {"student", "teacher", "admin", "super_admin"}:
+            failure = ContractAPIException("FORBIDDEN", "Desktop ilova faqat platforma foydalanuvchilari uchun", 403)
         else:
             result = {"user": public(user), **issue_tokens(user)}
     # Failed exchanges consume the code too, matching the one-time Nest contract.

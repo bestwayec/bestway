@@ -74,12 +74,19 @@ export function LoginForm() {
     (role: string) => {
       const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
       let target = `${prefix}${homePathForRole(role as import("@/lib/types").Role)}`;
-      const next = params?.get("next");
+      const next = params?.get("next") || params?.get("redirect");
       if (next) {
         const normalized = next.replace(/\\/g, "/");
         if (normalized.startsWith("/") && !normalized.startsWith("//")) {
           const resolved = new URL(normalized, window.location.origin);
           if (resolved.origin === window.location.origin) target = normalized;
+        } else if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+          try {
+            const resolved = new URL(normalized);
+            if (resolved.origin === window.location.origin) {
+              target = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+            }
+          } catch {}
         }
       }
       window.location.assign(target);

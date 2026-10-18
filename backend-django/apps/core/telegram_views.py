@@ -106,23 +106,47 @@ def verify_telegram_auth(data: dict) -> dict:
 
 
 def telegram_login(data: dict):
-    # Support one-time SSO token if provided without hash or as fallback
-    sso_token = data.get('sso_token') or data.get('token')
+    # Support one-time SSO or magic token if provided
+    sso_token = data.get('sso_token') or data.get('token') or data.get('magic_token')
     if sso_token and not data.get('hash'):
-        row = TelegramLinkToken.objects.filter(token_hash=links.token_hash(sso_token)).select_related('user').first()
-        if row and not row.used_at and (row.expires_at is None or row.expires_at > timezone.now()):
-            TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
-            user = auth_service.fetch_user(user_id=row.user_id)
-            if user:
-                if not user[6]:
-                    raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
-                tokens = auth_service.issue_tokens(user)
-                return {
-                    'user': auth_service.public(user),
-                    'tokens': tokens,
-                    'accessToken': tokens['accessToken'],
-                    'refreshToken': tokens['refreshToken'],
-                }
+        token_str = str(sso_token).strip()
+        row = TelegramLinkToken.objects.filter(token_hash=links.token_hash(token_str)).select_related('user').first()
+        if not row or row.used_at or (row.expires_at and row.expires_at <= timezone.now()):
+            raise ContractAPIException('INVALID_TOKEN', "Kirish kodi noto'g'ri yoki muddati tugagan", 401)
+
+        TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
+        db_user = row.user
+        if not db_user:
+            raise ContractAPIException('USER_NOT_FOUND', "Foydalanuvchi topilmadi", 404)
+        if not db_user.is_active:
+            raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
+
+        user_tuple = (
+            db_user.id,
+            db_user.name,
+            db_user.phone,
+            db_user.role,
+            db_user.created_at,
+            db_user.password_hash,
+            db_user.is_active,
+            db_user.telegram_chat_id,
+        )
+        tokens = auth_service.issue_tokens(user_tuple)
+        user_profile = {
+            'id': db_user.id,
+            'name': db_user.name,
+            'phone': db_user.phone,
+            'role': db_user.role,
+            'email': getattr(db_user, 'email', None),
+            'telegramChatId': db_user.telegram_chat_id,
+            'createdAt': db_user.created_at.isoformat() if hasattr(db_user.created_at, 'isoformat') else str(db_user.created_at),
+        }
+        return {
+            'user': user_profile,
+            'tokens': tokens,
+            'accessToken': tokens['accessToken'],
+            'refreshToken': tokens['refreshToken'],
+        }
 
     verified = verify_telegram_auth(data)
     telegram_id = verified.get('id')

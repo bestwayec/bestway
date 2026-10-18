@@ -221,7 +221,7 @@ def link_child_view(request):
 @api_view(["POST"])
 @permission_classes([Authenticated])
 def desktop_authorize_view(request):
-    require_role(request, "student")
+    require_role(request, "student", "teacher", "admin", "super_admin")
     data = body(request, {"deviceId", "state", "codeChallenge", "redirect"}); required(data, "deviceId", "state", "codeChallenge", "redirect")
     if not 8 <= len(data["deviceId"]) <= 128 or not 16 <= len(data["state"]) <= 128 or not re.fullmatch(r"[A-Za-z0-9_-]{43}", data["codeChallenge"]) or len(data["redirect"]) > 256:
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)

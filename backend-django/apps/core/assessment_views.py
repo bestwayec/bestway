@@ -144,3 +144,10 @@ def live_monitoring(request, group_id):
         })
 
     return success(dict(groupId=group_id, students=students_data))
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def assessment_overview_view(request):
+    from . import assessment_overview_service
+    return success(assessment_overview_service.get_assessment_overview(request.user))

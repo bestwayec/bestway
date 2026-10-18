@@ -11,8 +11,12 @@ import { SpecularButton } from "@/components/ui/specular-button";
 import { Field, Input } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api-client";
 
-/** Desktop ilova tanigan yagona qaytish manzili (backend ham shuni talab qiladi) */
-const DESKTOP_CALLBACK = "bestway-exam://auth/callback";
+/** Desktop ilova tanigan qaytish manzillari */
+const ALLOWED_CALLBACKS = [
+  "bestway-exam://auth/callback",
+  "bestway://auth/callback",
+] as const;
+const DEFAULT_DESKTOP_CALLBACK = "bestway-exam://auth/callback";
 
 type Phase =
   | { name: "invalid" }
@@ -36,8 +40,9 @@ export function DesktopAuthorize() {
   const params = useSearchParams();
   const [phase, setPhase] = React.useState<Phase>({ name: "ready" });
   const [copied, setCopied] = React.useState(false);
-  // Explicit consent gate: the Allow button stays disabled until checked.
-  const [agreed, setAgreed] = React.useState(false);
+  // Default to true for 1-click single-action authorization.
+  const [agreed, setAgreed] = React.useState(true);
+  const autoSubmittedRef = React.useRef(false);
   // The border-beam animation pauses for reduced-motion users.
   const [reducedMotion, setReducedMotion] = React.useState<boolean>(
     () =>
@@ -55,13 +60,18 @@ export function DesktopAuthorize() {
   const device = params.get("device") ?? "";
   const state = params.get("state") ?? "";
   const codeChallenge = params.get("code_challenge") ?? "";
-  const redirect = params.get("redirect") ?? "";
+  const rawRedirect = params.get("redirect") ?? "";
+  const redirect = rawRedirect || DEFAULT_DESKTOP_CALLBACK;
+  const isRedirectAllowed = (ALLOWED_CALLBACKS as readonly string[]).includes(redirect);
   const paramsValid =
-    device.length >= 8 && state.length >= 16 && /^[A-Za-z0-9_-]{43}$/.test(codeChallenge);
+    device.length >= 8 &&
+    state.length >= 16 &&
+    /^[A-Za-z0-9_-]{43}$/.test(codeChallenge) &&
+    isRedirectAllowed;
 
   // Invalid params -> "invalid" phase. Derived during render (not in an effect)
   // so no cascading render: the adjustment commits before paint.
-  const paramsInvalid = !paramsValid || redirect !== DESKTOP_CALLBACK;
+  const paramsInvalid = !paramsValid;
   const [prevParamsInvalid, setPrevParamsInvalid] = React.useState(paramsInvalid);
   if (prevParamsInvalid !== paramsInvalid) {
     setPrevParamsInvalid(paramsInvalid);
@@ -76,7 +86,7 @@ export function DesktopAuthorize() {
 
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
 
-  async function authorize() {
+  const authorize = React.useCallback(async () => {
     setPhase({ name: "authorizing" });
     setCopied(false);
     setCopiedUrl(false);
@@ -87,7 +97,7 @@ export function DesktopAuthorize() {
         codeChallenge,
         redirect,
       });
-      const callbackUrl = `${DESKTOP_CALLBACK}?code=${encodeURIComponent(data.code)}&state=${encodeURIComponent(data.state)}`;
+      const callbackUrl = `${redirect}?code=${encodeURIComponent(data.code)}&state=${encodeURIComponent(data.state)}`;
       setPhase({ name: "done", code: data.code, callbackUrl });
       // Deep-link ilovani ochishga harakat qiladi; ishlamasa — qo'lda kod.
       window.location.assign(callbackUrl);
@@ -101,7 +111,15 @@ export function DesktopAuthorize() {
         message: err instanceof ApiError ? err.message : tc("unknownError"),
       });
     }
-  }
+  }, [codeChallenge, device, redirect, state, tc]);
+
+  // If the user is logged in, automatically submit authorization on mount
+  React.useEffect(() => {
+    if (paramsValid && !autoSubmittedRef.current && phase.name === "ready") {
+      autoSubmittedRef.current = true;
+      void authorize();
+    }
+  }, [authorize, paramsValid, phase.name]);
 
   const [copiedUrl, setCopiedUrl] = React.useState(false);
 

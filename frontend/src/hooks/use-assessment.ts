@@ -63,6 +63,17 @@ export function useReviewAssessment(attemptId: string, jobId: string) {
       qc.invalidateQueries({ queryKey: ["mock-attempts"] });
       qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
       qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
+      qc.invalidateQueries({ queryKey: ["assessment-overview"] });
     },
+  });
+}
+
+export function useAssessmentOverview(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["assessment-overview"],
+    queryFn: () => api.get<import("@/lib/assessment-types").AssessmentOverviewData>("/assessment/overview"),
+    staleTime: 30_000,
+    retry: 2,
+    enabled: options?.enabled ?? true,
   });
 }

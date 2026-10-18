@@ -115,3 +115,99 @@ export interface AssessmentReviewInput {
   parts?: Array<{ id: string; rawScore?: number; criteria?: Record<string, number> }>;
   feedback?: AssessmentResult;
 }
+
+export interface AssessmentOverviewWeakModule {
+  module: string;
+  skill: string;
+  questionType?: string;
+  questionTypeLabel?: string;
+  parts?: string[];
+  totalQuestions: number;
+  correctCount: number;
+  errorCount: number;
+  accuracyPercent: number;
+  errorRatePercent: number;
+  severity: "high" | "medium" | "low";
+  recommendation: string;
+}
+
+export interface DualScaleIeltsPrediction {
+  currentBand: number;
+  predictedBand: number;
+  trendDelta: number;
+  targetBand: number;
+  targetProgressPercent: number;
+  gapToTarget: number;
+  cefrLevel: string;
+  skillBreakdown?: Record<string, number>;
+}
+
+export interface DualScaleMultilevelPrediction {
+  currentScore: number;
+  predictedScore: number;
+  trendDelta: number;
+  targetScore: number;
+  targetCefr: string;
+  targetProgressPercent: number;
+  gapToTarget: number;
+  cefrLevel: string;
+  scaleBands?: Array<{ level: string; min: number; max: number; label: string }>;
+  skillBreakdown?: Record<string, number>;
+}
+
+export interface StudentPredictionOverview {
+  studentId: string;
+  studentName?: string | null;
+  activeProgram?: string;
+  attemptsAnalyzed: number;
+  trend: "improving" | "stable" | "declining" | "insufficient_data";
+  ielts: DualScaleIeltsPrediction;
+  multilevel: DualScaleMultilevelPrediction;
+  history?: Array<{
+    attemptId: string;
+    examId?: string;
+    examTitle: string;
+    examType?: string;
+    date: string;
+    rawScore?: number;
+    rawMax?: number;
+    ieltsBand?: number;
+    multilevelScore?: number;
+    cefrLevel?: string;
+    skills?: Record<string, number>;
+    skillsMultilevel?: Record<string, number>;
+  }>;
+  weakModules: AssessmentOverviewWeakModule[];
+}
+
+export interface AssessmentOverviewData {
+  user: {
+    id: string;
+    name?: string | null;
+    phone?: string | null;
+    role?: string;
+  };
+  prediction: StudentPredictionOverview;
+  recentAttempts?: Array<{
+    id: string;
+    examId?: string;
+    examTitle?: string;
+    type?: string;
+    status?: string;
+    overallBand?: number;
+    overallScore?: number;
+    startedAt?: string;
+    finishedAt?: string;
+    [key: string]: unknown;
+  }>;
+  writingAssessments?: Array<AssessmentJobView>;
+  speakingAssessments?: Array<AssessmentJobView>;
+  statistics?: {
+    totalAttempts?: number;
+    averageIeltsBand?: number;
+    averageMultilevelScore?: number;
+    bestIeltsBand?: number;
+    bestMultilevelScore?: number;
+    [key: string]: unknown;
+  };
+}

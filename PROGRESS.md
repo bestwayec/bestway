@@ -1,52 +1,78 @@
-# BestWay Platform — Audit & Progress Report
+# BestWay Platform — Progress & Status Report
 
 ## Maqsad
-BestWay platformasida 5 bosqichli to'liq kod auditi (`/audit`), xatoliklarni bartaraf etish, React 19 / ESLint / Ruff muvofiqligi, superadmin hisobini to'liq faollashtirish hamda VPS serverga uzilishsiz deploy qilish.
+BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Yagona Autentifikatsiya (Google OAuth & 1-Click Telegram) hamda Baholash Dvigatelini barqarorlashtirish (`v0.8.2`).
 
 ---
 
 ## Bajarildi
-1. **Global Superadmin (`5582178765`) Faollashtirildi**:
-   - Telegram ID `5582178765` egasi (`+998976780066`) platforma web, API va Django admin (`/admin`) uchun to'liq huquqli `super_admin` etib tayinlandi (`is_superuser=True`, `is_staff=True`, `is_active=True`).
-   - Web API va Django Admin orqali kirish tasdiqlandi.
 
-2. **Nginx va Tarmoq Bog'liqligi (Cloudflare 525 / Upstream 502) To'liq Tuzatildi**:
-   - `lms-platform-prod-nginx-1` konteyneri `education-net` tarmog'iga ulandi.
-   - `https://bestwayec.uz/login` va `https://api.bestwayec.uz/admin/` to'g'ridan-to'g'ri `HTTP 200 OK` qaytarishi ta'minlandi.
+### 1. Unified Auth Engine (Django Core & Deep Link)
+- **Desktop & Mobile Deep Link Authorization**:
+  - `DESKTOP_REDIRECT_URIS`: `bestway-exam://auth/callback` hamda `bestway://auth/callback` standartlashtirildi.
+  - `authorize_desktop` va `desktop_authorize_view`: barcha faol platforma rollari (`student`, `teacher`, `admin`, `super_admin`) uchun ochildi (o'qituvchilar va ma'murlar desktopda bloklanmaydi).
+  - `exchange_desktop`: PKCE S256 orqali barcha rollar uchun sessiya tokenlarini xavfsiz taqdim etadi.
+- **1-Click Telegram & Magic Token Login**:
+  - `telegram_login`: `sso_token`, `token` yoki `magic_token` orqali bir martalik xavfsiz token bilan darhol to'liq foydalanuvchi profili va JWT tokenlarini (`accessToken`, `refreshToken`) beradi.
+  - Endpointlar: `/telegram/login`, `/telegram/login/`, `/v1/telegram/login`.
 
-3. **Backend Linting va Sifat Standarti (`backend-django`)**:
-   - `python -m ruff check --fix .` orqali 401 ta kod va import formatlash muammolari avtomatik to'g'irlandi.
-   - `pytest` to'liq ishga tushirildi: **442 ta test muvaffaqiyatli o'tdi** (0 ta xatolik, 4 skipped).
+### 2. Universal Baholash Endpointi (`/v1/assessment/overview`)
+- **Universal Assessment Overview API**:
+  - `backend-django/apps/core/assessment_overview_service.py` yaratildi.
+  - Yagona endpoint orqali uzatiladi:
+    - Foydalanuvchi ma'lumotlari (`user`)
+    - IELTS Band (0-9) va Multi-Level (0-75) CEFR (`A2`, `B1`, `B2`, `C1`) dual-scale prognozi (`prediction`)
+    - O'quvchining so'nggi 10 ta to'liq urinishlari (`recentAttempts`: listening, reading, writing, speaking ballari bilan)
+    - Writing va Speaking bo'yicha mezonli (rubric) baholar va tavsiyalar
+    - Umumiy statistika (`totalAttempts`, `averageBand`, `highestBand`, `averageMultilevelScore`, `practiceHours`)
+  - Web (`useAssessmentOverview`) va Desktop (`fetchAssessmentOverview`) mijozlariga to'liq integratsiya qilindi.
 
-4. **Frontend Linting va React 19 Qoidalari (`frontend`)**:
-   - `mock-runner.tsx`: Conditional hook chaqiruvi bartaraf etildi — insho muharriri alohida `EssayQuestionEditor` komponentiga ajratildi.
-   - `goNextSection` memoizatsiya bog'liqligi `exam?.sections` dan `exam` ga to'g'rilandi.
-   - `writing-image-ocr.tsx`: Render paytida ref ga murojaat qilish xatosi `useEffect` orqali xavfsiz holatga keltirildi.
-   - `npm run lint` 0 xatolik bilan yakunlandi.
-   - `npm test`: **51 test fayli, 354 ta test 100% o'tdi**.
-   - `npm run build`: Turbopack orqali barcha 71 ta statik va dinamik sahifalar 0 xatolik bilan yig'ildi.
+### 3. Frontend & Desktop Parity (`bw-tauri` & `frontend`)
+- **Desktopda Google SSO va Telegram 1-Click Kirish**:
+  - Desktop Login oynasida Google va Telegram vektor logotipli tugmalari qo'shildi.
+  - Tugma bosilganda tizim brauzeri orqali PKCE himoyalangan avtorizatsiya ochiladi va chuqur havola (`bestway-exam://` yoki `bestway://`) orqali ilovaga qaytadi.
+  - Muqobil ravishda vebdagi 6 xonali kodni nusxalab qo'lda kiritish qutisi taqdim etildi.
+- **401 Interceptor va Token Refresh**:
+  - `bw-tauri/src/lib/api.ts` da sessiya muddati tugaganda avtomatik `POST /auth/refresh` yuborilib, so'rov uzilishlarsiz qayta yuboriladi.
+- **Web Login Next Redirect**:
+  - Web login formasi (`login-form.tsx`) va `desktop-authorize.tsx` avtorizatsiyadan so'ng `?next=` manziliga avtomatik o'tishni ta'minlaydi.
 
-5. **Desktop Platformasi (`bw-tauri`)**:
-   - Versiya `0.8.0` ga yangilandi.
-   - `npm test`: **37 test fayli, 315 ta test 100% o'tdi**.
+### 4. Mobile (Android) Barqarorligi & Ruxsatlar
+- **Google OAuth WebView Cheklovi Bartaraf Etildi**:
+  - `MainActivity.kt` da Google domenlari (`accounts.google.com`, `oauth2.googleapis.com`) aniqlanib, tizim brauzeri / Custom Tabs orqali ochilishi ta'minlandi (Google'ning "disallowed_useragent" 403 xatosi oldi olindi).
+  - `onNewIntent` va cold-start deep link orqali avtorizatsiya kodi/tokeni ilovaga qaytariladi.
+- **Android Manifest va Ruxsatlar**:
+  - `AndroidManifest.xml` ga `bestway-exam` va `bestway` deep linking intent filtri qo'shildi.
+  - Android 13+ uchun `READ_MEDIA_IMAGES` ruxsati qo'shildi.
+  - `minSdk 24`, `targetSdk 34` va universal ABI (`armeabi-v7a`, `arm64-v8a`) to'liq saqlandi.
+
+### 5. Versiya Yangilanishi (`v0.8.2`)
+- `bw-tauri/package.json` -> `0.8.2`
+- `bestway/frontend/package.json` -> `0.8.2`
+- `bw-tauri/src-tauri/tauri.conf.json` -> `0.8.2`
+- `bw-tauri/src-tauri/Cargo.toml` -> `0.8.2`
+- `bw-tauri/android/app/build.gradle` -> `versionCode 820`, `versionName "0.8.2"`
+- `bw-tauri/src/lib/version.ts` -> `0.8.2`
 
 ---
 
-## Jarayonda
-- Barcha o'zgarishlarni Git repository ga clean commit qilish (`Komiljon Roziyev <kruziyev0@gmail.com>`).
-- Contabo VPS (`169.58.58.229`) ga uzilishsiz deploy qilish (`docker compose up -d --build backend frontend`).
-- Nginx va jonli endpointlarni `HTTP 200 OK` bo'yicha tekshirish.
+## Sifat Darvozasi (100% QA Pass Gate)
+- **Backend Pytest**: **453 passed**, 4 skipped, 0 failed (100% PASS)
+- **Frontend Vitest**: **51 files, 354 passed**, 0 failed (100% PASS)
+- **Desktop Vitest**: **39 files, 320 passed**, 0 failed (100% PASS)
+- **Frontend Next.js Build**: Turbopack orqali barcha 71 sahifa 0 xatolik bilan yig'ildi.
+- **Desktop App Build**: `tsc && vite build` 0 xatolik bilan muvaffaqiyatli yig'ildi.
 
 ---
 
-## Keyingi qadamlar
-1. O'zgarishlarni `main` branchiga commit qilish va push qilish.
-2. VPS serverda `git pull` qilib, frontend va backend konteynerlarini yangilash.
-3. Jonli domenda `curl -I https://bestwayec.uz/login` tekshiruvini o'tkazish.
+## Keyingi Qadamlar
+1. O'zgarishlarni Git repository ga commit qilish (`Komiljon Roziyev <kruziyev0@gmail.com>`).
+2. `bestway` va `bw-tauri` repositorylarini `origin main` ga push qilish.
+3. VPS server (`169.58.58.229`) tarmoq holatini tekshirish va uzilishsiz (zero-downtime) deploy qilish.
 
 ---
 
-## Muhim qarorlar
-- **Zero AI Attribution**: Barcha commitlar va o'zgarishlar faqat `Komiljon Roziyev <kruziyev0@gmail.com>` nomidan rasmiylashtiriladi.
-- **Zero Downtime Deploy**: Docker kompozitsiyasidagi ma'lumotlar bazasi va kesh konteynerlariga tegilmaydi, faqat `backend` va `frontend` servis-darajasida qayta yig'iladi.
-- **React Rules of Hooks**: `mock-runner.tsx` ichidagi shartli hook chaqiruvi insho holatini boshqaruvchi mustaqil subkomponentga ajratish orqali to'liq bartaraf etildi.
+## Muhim Qarorlar
+- **Zero AI Attribution**: Barcha commitlar va o'zgarishlar qat'iy ravishda `Komiljon Roziyev <kruziyev0@gmail.com>` muallifligi ostida amalga oshiriladi.
+- **Dual Scheme Parity**: Barcha desktop va mobil mijozlar bir vaqtning o'zida ham `bestway-exam://`, ham `bestway://` chuqur havolalarini qo'llab-quvvatlaydi.
+- **Universal Overview Contract**: Bir nechta alohida so'rovlar o'rniga barcha platformalar `/v1/assessment/overview` orqali to'liq tahlil va prognozni bir zumda oladi.
