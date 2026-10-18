@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from pathlib import Path
 import uuid
+from pathlib import Path
 
 from django.conf import settings
 from django.db import connection, transaction
@@ -376,7 +376,12 @@ def sync_topic_to_mock_exam(topic_dict: dict):
         return None
 
     try:
-        from apps.legacy_schema.models import MockExam, MockQuestion, MockQuestionGroup, MockSection
+        from apps.legacy_schema.models import (
+            MockExam,
+            MockQuestion,
+            MockQuestionGroup,
+            MockSection,
+        )
 
         topic_id = topic_dict["id"]
         skill = topic_dict["skill"]

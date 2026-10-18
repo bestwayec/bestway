@@ -1,5 +1,6 @@
 """Equivalent lifecycle fixtures for the local real-API differential runner."""
 from uuid import uuid4
+
 from psycopg import sql
 
 

@@ -1,13 +1,16 @@
 """Points history, teacher-scoped adjustment and public competition ranking."""
 from uuid import uuid4
+
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
-from apps.legacy_schema.models import StudentProfile, ParentStudent, PointsLog, User
+
+from apps.legacy_schema.models import ParentStudent, PointsLog, StudentProfile, User
 from common.api.exceptions import ContractAPIException
+
 from . import game
-from .system_settings import audit
 from .notifications import safe_notify, safe_notify_parents
+from .system_settings import audit
 
 
 def assert_can_view(actor, student_id):

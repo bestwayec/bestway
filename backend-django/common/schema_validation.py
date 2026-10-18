@@ -1,6 +1,6 @@
 """Read-only checks for the Prisma-owned compatibility database."""
-import json
 import hashlib
+import json
 from pathlib import Path
 
 

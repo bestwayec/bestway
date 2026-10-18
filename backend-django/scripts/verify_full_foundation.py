@@ -1,16 +1,17 @@
 """Settings/audit/group differential tests in isolated localhost schemas."""
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
-from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode, unquote
-from urllib.request import Request, urlopen
-from urllib.error import HTTPError
-from uuid import uuid4
+from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
+from urllib.request import Request, urlopen
+from uuid import uuid4
+
 import psycopg
 from psycopg import sql
 
@@ -74,6 +75,7 @@ try:
     import django
     django.setup()
     from rest_framework.test import APIClient
+
     from common.auth.jwt import issue_access
     client = APIClient()
     tokens = [{role: issue_access(uid, role.removeprefix('other_')) for role, uid in side.items()} for side in ids]
@@ -151,8 +153,9 @@ try:
                 stored=db.execute(sql.SQL('SELECT "passwordHash" FROM {}."User" WHERE id=%s').format(sql.Identifier(schemas[side])),(identifier,)).fetchone()[0]
                 assert stored[4:7]=='12$' and bcrypt.checkpw(body['password'].encode(),stored.encode())
             if capture_stream and result['status']<300:
-                from apps.core.videos import verify
                 from django.utils.dateparse import parse_datetime
+
+                from apps.core.videos import verify
                 token=dict(parse_qsl(urlparse(result['body']['data']['url']).query))['token']
                 claims=verify(token)
                 assert set(claims)=={'v','u','e'} and claims['v']==ids[side]['video'] and claims['u']==ids[side][role]
@@ -303,8 +306,9 @@ try:
     call('PUT','/v1/payments/bulk',{'year':2026,'records':[{'studentId':'{student}','month':10,'state':'paid'}]},label='blocked-student-payment')
     for side in (0,1):
         db.execute(sql.SQL('UPDATE {}."User" SET "isActive"=true WHERE id=%s').format(sql.Identifier(schemas[side])),(ids[side]['student'],))
-    from apps.core import payments
     from types import SimpleNamespace
+
+    from apps.core import payments
     before=state(0);original=payments.Payment.objects.update_or_create
     calls=0
     def fail_second_payment(*args,**kwargs):
@@ -342,14 +346,15 @@ try:
     (REPORT_DIR/'ADMIN_CONTENT_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=32,comparisons=len(admin_results),
         passed=sum(r['status']=='PASS' for r in admin_results),failed=sum(r['status']=='FAIL' for r in admin_results),results=admin_results),indent=2)+'\n',encoding='utf-8')
     from concurrent.futures import ThreadPoolExecutor
+
     from legacy_admin_contracts import verify_legacy
     legacy_start=len(results)
     verify_legacy(call,db,schemas,ids,state,local_checks)
     legacy_results=results[legacy_start:]
     (REPORT_DIR/'LEGACY_ADMIN_PARITY_REPORT.json').write_text(json.dumps(dict(contracts=9,comparisons=len(legacy_results),
         passed=sum(r['status']=='PASS' for r in legacy_results),failed=sum(r['status']=='FAIL' for r in legacy_results),results=legacy_results),indent=2)+'\n',encoding='utf-8')
-    from game_points_contracts import verify_concurrency
     from assessment_contracts import verify_assessment
+    from game_points_contracts import verify_concurrency
     assessment_start=len(results)
     verify_assessment(call,db,schemas,ids,state,reference_control,normalize,local_checks,media_roots)
     assessment_results=results[assessment_start:]
@@ -371,6 +376,7 @@ try:
     game_report['localChecks']=[s for s in local_checks if s.startswith('Game/points:')]
     (REPORT_DIR/'GAME_POINTS_PARITY_REPORT.json').write_text(json.dumps(game_report,indent=2)+'\n',encoding='utf-8')
     from threading import Barrier
+
     from django.db import connections
     for side in (0,1):
         barrier=Barrier(2)

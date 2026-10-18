@@ -1,11 +1,22 @@
 """Reference mock entitlement, staff controls and persisted result support."""
 from datetime import timedelta
-from django.db import connection, transaction, IntegrityError
+
+from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from apps.legacy_schema.models import MockExam, MockPurchase, MockAttempt, Notification
-from .mock_attempts import fail, assert_view, assert_in_progress, aware, iso, summary, SKILLS
-from .mock_authoring import new_id, audit_event
+
+from apps.legacy_schema.models import MockAttempt, MockExam, MockPurchase, Notification
+
+from .mock_attempts import (
+    SKILLS,
+    assert_in_progress,
+    assert_view,
+    aware,
+    fail,
+    iso,
+    summary,
+)
+from .mock_authoring import audit_event, new_id
 from .mock_catalog import access_for, student_title
 
 

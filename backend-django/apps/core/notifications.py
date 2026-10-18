@@ -3,10 +3,19 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
-from django.db import transaction, close_old_connections
+
+from django.db import close_old_connections, transaction
 from django.utils import timezone
-from apps.legacy_schema.models import Notification,User,StudentProfile,ParentStudent,Payment
+
+from apps.legacy_schema.models import (
+    Notification,
+    ParentStudent,
+    Payment,
+    StudentProfile,
+    User,
+)
 from common.api.exceptions import ContractAPIException
+
 from . import telegram_delivery
 from .system_settings import audit
 

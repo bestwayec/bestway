@@ -48,7 +48,7 @@ import django
 
 django.setup()
 
-from common.auth.passwords import hash_password, verify_password  # noqa: E402
+from common.auth.passwords import hash_password
 
 PORT = int(os.environ.get("BESTWAY_ADMIN_VERIFY_PORT", "8123"))
 BASE = f"http://127.0.0.1:{PORT}"
@@ -64,7 +64,7 @@ def check(condition: bool, label: str) -> None:
 
 
 # ── Disposable fixtures ────────────────────────────────────────────────────
-from apps.legacy_schema.models import User  # noqa: E402
+from apps.legacy_schema.models import User
 
 admin_password = secrets.token_urlsafe(18)
 student_password = secrets.token_urlsafe(18)

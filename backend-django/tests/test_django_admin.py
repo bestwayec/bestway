@@ -52,8 +52,9 @@ PRISMA_TABLES = ("User", "MockExam", "MockSection", "MockQuestionGroup", "MockQu
 @pytest.fixture()
 def legacy_schema(db):
     """Create the Prisma-shaped tables the admin screens read (rolled back)."""
-    from apps.legacy_schema import models as legacy_models
     from django.db import connection
+
+    from apps.legacy_schema import models as legacy_models
 
     existing = set(connection.introspection.table_names())
     created = []
@@ -72,8 +73,9 @@ def legacy_schema(db):
 @pytest.fixture()
 def legacy_users(legacy_schema):
     """Create two disposable accounts on the Prisma-shaped User table."""
-    from apps.legacy_schema.models import User
     from django.utils import timezone
+
+    from apps.legacy_schema.models import User
 
     stamp = timezone.now()
     password_hash = bcrypt.hashpw(

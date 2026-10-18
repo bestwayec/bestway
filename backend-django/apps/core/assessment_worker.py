@@ -5,13 +5,23 @@ import os
 from datetime import timedelta
 from threading import Lock
 from uuid import uuid4
-from django.db import transaction,close_old_connections
+
+from django.db import close_old_connections, transaction
 from django.utils import timezone
-from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation,SpeechTranscript,MockAttempt
-from . import assessment as service,assessment_results as results,assessment_providers as providers
+
+from apps.legacy_schema.models import (
+    AssessmentEvaluation,
+    AssessmentJob,
+    MockAttempt,
+    SpeechTranscript,
+)
+
+from . import assessment as service
+from . import assessment_providers as providers
+from . import assessment_results as results
+from .assessment_quality import enabled
 from .content_media import storage_path
 from .mock_import_validate import canonical_checksum
-from .assessment_quality import enabled
 
 _tick_lock=Lock()
 def failure(error):return error if isinstance(error,results.ProviderError) else results.ProviderError('ASSESSMENT_INTERNAL_FAILURE',False,True)

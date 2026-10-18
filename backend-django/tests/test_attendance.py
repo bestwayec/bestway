@@ -1,8 +1,10 @@
 from datetime import date
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
+
 from apps.core import attendance, attendance_views
 from common.api.exceptions import ContractAPIException
 

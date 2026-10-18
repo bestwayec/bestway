@@ -4,13 +4,20 @@ Authoring mutations are deliberately kept in their own Phase 3 slice; these
 handlers establish the exact existing catalogue access boundary first.
 """
 from __future__ import annotations
+
 import math
 import re
 
-from apps.legacy_schema.models import MockExam, MockPurchase, MockQuestion, MockQuestionGroup, MockSection
+from apps.legacy_schema.models import (
+    MockExam,
+    MockPurchase,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+)
 from common.api.exceptions import ContractAPIException
+
 from .exam_programs import state
-from .mock_rules import MANUAL_TYPES
 
 STAFF = {"teacher", "admin", "super_admin"}
 
@@ -96,8 +103,8 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
         "questionCount": 0, "sections": [],
     }
     if answers: result["assessmentPolicy"] = exam.assessment_policy
-    from .multilevel import specification_payload, speaking_profile, task_guidance
     from .mock_media import media_url
+    from .multilevel import speaking_profile, specification_payload, task_guidance
     specification = specification_payload(exam.specification_version) if exam.type == 'multilevel' else None
     profile = speaking_profile(exam.speaking_profile_version)
     if specification:
@@ -135,13 +142,13 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
 
 def total_duration(exam, sections):
     if exam.type == 'multilevel':
-        from .multilevel import SPECS, CURRENT_SPEC
+        from .multilevel import CURRENT_SPEC, SPECS
         return sum(SPECS[CURRENT_SPEC][s['skill']]['duration'] for s in sections) or None
     total = 0
     for section in sections:
         if section['skill'] == 'listening':
             duration = sum(g['audioDurationSec'] or 0 for g in section['groups'])
-            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else (math.ceil(((duration + 120) / 60)) if duration > 0 else 40)
+            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else (math.ceil((duration + 120) / 60) if duration > 0 else 40)
         elif section['skill'] == 'speaking':
             total += section.get('durationMinutes') if section.get('durationMinutes') is not None else 15
         else:

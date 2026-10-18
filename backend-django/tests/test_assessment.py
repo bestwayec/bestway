@@ -2,8 +2,13 @@ import copy
 import json
 import os
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
-from apps.core import assessment_results as service,assessment_providers as providers,assessment_prompts,assessment_worker
+
+from apps.core import assessment_prompts, assessment_worker
+from apps.core import assessment_providers as providers
+from apps.core import assessment_results as service
+
 
 def fixture(program='IELTS_ACADEMIC',skill='writing'):
     input=dict(program=program,skill=skill,pronunciationEvidence='UNAVAILABLE',rubricVersion='fixture',specificationVersion=None,speakingProfileVersion=None,

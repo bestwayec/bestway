@@ -1,6 +1,8 @@
-from threading import Event
 import signal
+from threading import Event
+
 from django.core.management.base import BaseCommand
+
 from apps.core.game_scheduler import run
 
 

@@ -1,8 +1,16 @@
+from uuid import uuid4
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from uuid import uuid4
-from apps.legacy_schema.models import MockExam, MockSection, MockQuestionGroup, MockQuestion, User
-from apps.core.multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE
+
+from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC
+from apps.legacy_schema.models import (
+    MockExam,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+    User,
+)
 
 
 class Command(BaseCommand):

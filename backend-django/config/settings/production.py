@@ -1,8 +1,9 @@
 """Explicit production configuration; never selected by local development."""
 from django.core.exceptions import ImproperlyConfigured
+
 from common.deployment_config import require_public_origin
 
-from .base import *  # noqa: F403
+from .base import *
 
 DEBUG = False
 PUBLIC_URL = require_public_origin(env('PUBLIC_URL'))

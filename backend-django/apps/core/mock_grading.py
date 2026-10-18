@@ -1,15 +1,24 @@
 """Existing teacher grade and caller-owned assessment recomputation contracts."""
 import math
+
 from django.db import transaction
 from django.utils import timezone
-from apps.legacy_schema.models import MockAttempt,MockAnswer,MockQuestion,AssessmentJob
-from .mock_attempts import fail,versioned
+
+from apps.legacy_schema.models import (
+    AssessmentJob,
+    MockAnswer,
+    MockAttempt,
+    MockQuestion,
+)
+
+from . import mock_scoring as scoring
+from .mock_attempts import fail, versioned
 from .mock_authoring import new_id
 from .mock_catalog import shape_exam
+from .mock_practice import is_partial, scope, scope_sections
 from .mock_submissions import band_tables
-from . import mock_scoring as scoring
 from .points import assert_can_view
-from .mock_practice import is_partial,scope,scope_sections
+
 
 def annotate_practice_grades(attempt,result):
     """Keep the native raw score and attach the same persisted display grade."""

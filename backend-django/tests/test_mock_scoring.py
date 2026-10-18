@@ -1,10 +1,12 @@
 """Direct differential calls to the unchanged compiled Nest pure functions."""
 import json
-from pathlib import Path
 import subprocess
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
-from datetime import datetime, timedelta, timezone
+
 import pytest
+
 from apps.core import mock_scoring as score
 from apps.core.mock_submissions import assert_complete
 from common.api.exceptions import ContractAPIException
@@ -108,7 +110,7 @@ def test_speaking_holistic_average_rounded_half():
 
 
 def test_timeout_completeness_and_unreachable_sections():
-    now=datetime(2026,10,8,tzinfo=timezone.utc)
+    now=datetime(2026,10,8,tzinfo=UTC)
     attempt=SimpleNamespace(overall_deadline_at=now,deadline_at=None,section_deadlines={},flow_mode='single_skill',current_skill=None)
     sections=[section('reading',[question('q')])]
     assert_complete(attempt,sections,{},now)

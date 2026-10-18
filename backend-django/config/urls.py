@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from django.conf import settings
 from django.contrib import admin
 from django.http import Http404

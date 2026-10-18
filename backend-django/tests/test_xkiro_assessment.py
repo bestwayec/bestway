@@ -3,7 +3,9 @@ import copy
 import json
 import os
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
+
 from apps.core import assessment_providers as providers
 from apps.core.assessment_results import ProviderError
 from tests.test_assessment_quality import fixture

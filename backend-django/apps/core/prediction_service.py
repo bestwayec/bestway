@@ -4,7 +4,6 @@ from __future__ import annotations
 import math
 
 from django.db import connection
-from django.utils import timezone
 
 from apps.legacy_schema.models import (
     MockAnswer,
@@ -14,6 +13,7 @@ from apps.legacy_schema.models import (
     User,
 )
 from common.api.exceptions import ContractAPIException
+
 from .mock_scoring import band_from_raw, cefr_band, round_half
 
 _target_table_ensured = False

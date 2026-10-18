@@ -16,13 +16,16 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.local')
 os.environ.setdefault('ALLOWED_HOSTS', 'testserver,localhost,127.0.0.1')
 os.environ['ASSESSMENT_CONFIDENCE_THRESHOLD'] = '.85'
 import django
+
 django.setup()
 from django.db import connection, transaction
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from rest_framework.test import APIClient
 from psycopg import sql
-from apps.core import assessment_results as results, assessment_quality as quality
+from rest_framework.test import APIClient
+
+from apps.core import assessment_quality as quality
+from apps.core import assessment_results as results
 from apps.core.mock_import_validate import canonical_checksum
 from apps.core.mock_practice import SCOPE_KEY
 from apps.core.multilevel import CURRENT_SPEC

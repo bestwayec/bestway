@@ -416,7 +416,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { if (versioned) submittingRef.current = false; }
-  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam?.sections]);
+  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -1209,6 +1209,98 @@ function GroupBlock({
   );
 }
 
+function EssayQuestionEditor({
+  q,
+  attemptId,
+  value,
+  onChange,
+  multilevelSkill,
+  groupTitle,
+  header,
+}: {
+  q: MockQuestion;
+  attemptId: string;
+  value: string;
+  onChange: (v: string) => void;
+  multilevelSkill?: MockSkill;
+  groupTitle?: string;
+  header: React.ReactNode;
+}) {
+  const tx = useTranslations("mock.runnerUx");
+  // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
+  const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
+
+  // Restore draft from localStorage on mount if current value is empty
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && !value) {
+      try {
+        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+        const cached = localStorage.getItem(draftKey);
+        if (cached && cached.trim()) {
+          onChange(cached);
+        }
+      } catch {}
+    }
+  }, [attemptId, q.id, value, onChange]);
+
+  const handleWritingChange = (text: string) => {
+    onChange(text);
+    if (typeof window !== "undefined") {
+      try {
+        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+        localStorage.setItem(draftKey, text);
+      } catch {}
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {q.guidance && multilevelSkill === "writing" ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {multilevelTaskName(q.guidance, `Task ${q.number}`) === groupTitle
+              ? <span />
+              : <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>}
+            <MultilevelTaskMeta question={q} />
+          </div>
+          <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
+        </div>
+      ) : header}
+      <WritingImageOcr
+        attemptId={attemptId}
+        questionId={q.id}
+        currentText={value}
+        onExtractedText={(ocrText, mode) => {
+          const nextText =
+            mode === "append" && value.trim()
+              ? `${value.trim()}\n\n${ocrText}`
+              : ocrText;
+          handleWritingChange(nextText);
+        }}
+      />
+      <Textarea
+        value={value}
+        onChange={(e) => handleWritingChange(e.target.value)}
+        className="min-h-72 resize-y leading-relaxed text-base sm:text-sm focus-visible:border-brand touch-manipulation font-mono sm:font-sans"
+        aria-label={tx("writingResponseLabel", { number: q.number })}
+        placeholder={tx("writingPlaceholder")}
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
+        autoComplete="off"
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+        <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+        {value.trim() && (
+          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+            <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function QuestionInput({
   question: q,
   attemptId,
@@ -1278,75 +1370,16 @@ function QuestionInput({
   }
 
   if (ESSAY.has(q.type)) {
-    // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
-    const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
-    // Restore draft from localStorage on mount if current value is empty
-    React.useEffect(() => {
-      if (typeof window !== "undefined" && !value) {
-        try {
-          const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
-          const cached = localStorage.getItem(draftKey);
-          if (cached && cached.trim()) {
-            onChange(cached);
-          }
-        } catch {}
-      }
-    }, [attemptId, q.id]);
-
-    const handleWritingChange = (text: string) => {
-      onChange(text);
-      if (typeof window !== "undefined") {
-        try {
-          const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
-          localStorage.setItem(draftKey, text);
-        } catch {}
-      }
-    };
-
     return (
-      <div className="space-y-3">
-        {q.guidance && multilevelSkill === "writing" ? <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* The task name is already the group heading when the two agree. */}
-            {multilevelTaskName(q.guidance, `Task ${q.number}`) === groupTitle
-              ? <span />
-              : <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>}
-            <MultilevelTaskMeta question={q} />
-          </div>
-          <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
-        </div> : header}
-        <WritingImageOcr
-          attemptId={attemptId}
-          questionId={q.id}
-          currentText={value}
-          onExtractedText={(ocrText, mode) => {
-            const nextText =
-              mode === "append" && value.trim()
-                ? `${value.trim()}\n\n${ocrText}`
-                : ocrText;
-            handleWritingChange(nextText);
-          }}
-        />
-        <Textarea
-          value={value}
-          onChange={(e) => handleWritingChange(e.target.value)}
-          className="min-h-72 resize-y leading-relaxed text-base sm:text-sm focus-visible:border-brand touch-manipulation font-mono sm:font-sans"
-          aria-label={tx("writingResponseLabel", { number: q.number })}
-          placeholder={tx("writingPlaceholder")}
-          spellCheck={false}
-          autoCorrect="off"
-          autoCapitalize="off"
-          autoComplete="off"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-          <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
-          {value.trim() && (
-            <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400">
-              <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
-            </span>
-          )}
-        </div>
-      </div>
+      <EssayQuestionEditor
+        q={q}
+        attemptId={attemptId}
+        value={value}
+        onChange={onChange}
+        multilevelSkill={multilevelSkill}
+        groupTitle={groupTitle}
+        header={header}
+      />
     );
   }
 

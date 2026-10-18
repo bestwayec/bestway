@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes
-from common.auth.permissions import roles
+
 from apps.legacy_schema.models import AuditLog
+from common.auth.permissions import roles
+
 from . import system_settings as service
-from .domain_contracts import payload, invalid, pagination, paginated
+from .domain_contracts import invalid, paginated, pagination, payload
 from .mock_attempt_views import success
 from .views import require_role
 

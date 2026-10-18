@@ -1,7 +1,7 @@
 """Canonical allow-listed authored HTML and one-to-one gap semantics."""
 import html
-from html.parser import HTMLParser
 import re
+from html.parser import HTMLParser
 
 from common.api.exceptions import ContractAPIException
 

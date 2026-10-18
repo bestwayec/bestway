@@ -12,10 +12,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 import django
+
 django.setup()
 
-from django.db import transaction
 from django.conf import settings
+from django.db import transaction
 from rest_framework.test import APIClient
 
 

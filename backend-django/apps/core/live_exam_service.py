@@ -1,14 +1,13 @@
 """Teacher PIN-Code & Live Exam Room Service (Real-Time Monitoring + Excel Results Export)."""
 from __future__ import annotations
 
-from datetime import timedelta
-from io import BytesIO
-import math
 import random
 import re
+from datetime import timedelta
+from io import BytesIO
 from uuid import uuid4
 
-from django.db import connection, transaction
+from django.db import connection
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -24,7 +23,8 @@ from apps.legacy_schema.models import (
     User,
 )
 from common.api.exceptions import ContractAPIException
-from . import attempt_signature, mock_attempts, mock_catalog
+
+from . import mock_attempts, mock_catalog
 from .prediction_service import extract_attempt_dual_metrics
 
 _live_tables_ensured = False

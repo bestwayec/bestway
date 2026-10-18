@@ -4,16 +4,18 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.request import Request, urlopen
 from uuid import uuid4
+
 from psycopg import sql
-from urllib.request import Request,urlopen
 
 
 def run(call,ids,db,schemas,results):
+    from django.db import close_old_connections, connections
+
     from apps.core import legacy_tests as service
-    from apps.legacy_schema.models import TestAttempt,Answer,Notification
+    from apps.legacy_schema.models import Answer, Notification, TestAttempt
     from common.api.exceptions import ContractAPIException
-    from django.db import close_old_connections,connections
     actor=SimpleNamespace(id=ids[0]['student'])
     def reference_submit(attempt_id,score):
         request=Request(call.reference_base+f'/v1/tests/attempts/{attempt_id}/submit',data=b'{}',method='POST',headers={'Authorization':'Bearer '+call.reference_student_token,'Content-Type':'application/json'})

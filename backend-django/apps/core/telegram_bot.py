@@ -3,9 +3,14 @@ import logging
 import os
 from types import SimpleNamespace
 from urllib.request import Request, urlopen
+
 from django.conf import settings
 from django.db import close_old_connections
-from . import telegram_delivery as api,telegram_links as links,telegram_menu as menu,telegram_fsm as fsm
+
+from . import telegram_delivery as api
+from . import telegram_fsm as fsm
+from . import telegram_links as links
+from . import telegram_menu as menu
 
 try:
     from . import writing_ocr

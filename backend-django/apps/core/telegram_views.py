@@ -1,25 +1,32 @@
 import hashlib
 import hmac
 import json
-import logging
 import os
 import secrets
 import time
 import urllib.parse
 import uuid
+
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection, transaction
 from django.utils import timezone
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
-from common.auth.permissions import Authenticated
-from common.auth.passwords import hash_password
-from common.api.exceptions import ContractAPIException
-from .mock_attempt_views import success
-from . import auth_service
-from . import telegram_links as links, telegram_bot as bot
+
 from apps.legacy_schema.models import TelegramLinkToken
+from common.api.exceptions import ContractAPIException
+from common.auth.passwords import hash_password
+from common.auth.permissions import Authenticated
+
+from . import auth_service
+from . import telegram_bot as bot
+from . import telegram_links as links
+from .mock_attempt_views import success
 
 
 def verify_telegram_auth(data: dict) -> dict:
@@ -215,7 +222,7 @@ def telegram_login_view(request):
     except ContractAPIException:
         raise
     except Exception as e:
-        raise ContractAPIException('TELEGRAM_AUTH_FAILED', f"Telegram orqali kirishda xatolik: {str(e)}", 400)
+        raise ContractAPIException('TELEGRAM_AUTH_FAILED', f"Telegram orqali kirishda xatolik: {e!s}", 400)
 
 
 def telegram_otp_verify(code: str):

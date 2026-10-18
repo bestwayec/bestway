@@ -14,13 +14,13 @@ Covers:
 """
 from __future__ import annotations
 
-import io
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from apps.core import telegram_bot, telegram_delivery, telegram_fsm as fsm, telegram_menu as menu
+from apps.core import telegram_bot, telegram_delivery
+from apps.core import telegram_fsm as fsm
 
 
 class TelegramTopicManagementV071Tests(SimpleTestCase):

@@ -1,12 +1,11 @@
 """Run the real cutover readiness function against a simulated edge restart."""
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'deploy_django.sh'
 GIT_BASH = Path('C:/Program Files/Git/bin/bash.exe')

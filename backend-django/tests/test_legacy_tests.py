@@ -1,11 +1,13 @@
 """Legacy-only pure/boundary contracts. Real DB assertions run in PG harness."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
+
 import pytest
-from django.urls import resolve
 from django.core.cache import cache
+from django.urls import resolve
 from rest_framework.test import APIClient
+
 from apps.core import legacy_tests as service
 from common.api.exceptions import ContractAPIException
 
@@ -36,7 +38,7 @@ def test_fisher_yates_permutation_not_mock_order():
 
 
 def test_timer_boundary_and_no_clock():
-    now=datetime(2026,10,8,tzinfo=timezone.utc)
+    now=datetime(2026,10,8,tzinfo=UTC)
     attempt=SimpleNamespace(started_at=now-timedelta(minutes=30),test=SimpleNamespace(duration_minutes=30))
     with patch('apps.core.legacy_tests.timezone.now',return_value=now):
         service.assert_time(attempt)

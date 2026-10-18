@@ -3,15 +3,17 @@ import json
 import math
 import os
 import re
-import socket
 import time
-from urllib.parse import urlsplit,urlunsplit,urlencode
-from urllib.request import Request,build_opener,HTTPRedirectHandler
-from urllib.error import HTTPError,URLError
-from .assessment_results import ProviderError,validate,schema,keys as rubric_keys
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
 from .assessment_prompts import system_prompt
 from .assessment_quality import enabled
+from .assessment_results import ProviderError, schema, validate
+from .assessment_results import keys as rubric_keys
 from .mock_scoring import js_round
+
 
 def provider_url(base,endpoint):
     try:
@@ -50,7 +52,7 @@ def provider_json(url,body,headers,timeout_ms):
         status=error.code;error.close()
         if 300<=status<400:raise ProviderError('PROVIDER_NETWORK_FAILURE',True,True) from None
         raise ProviderError('PROVIDER_AUTH_FAILED' if status in (401,403) else 'PROVIDER_RATE_LIMITED' if status==429 else 'PROVIDER_UNAVAILABLE' if status>=500 else 'PROVIDER_REQUEST_REJECTED',status==429 or status>=500,status==408) from None
-    except (TimeoutError,socket.timeout):raise ProviderError('PROVIDER_TIMEOUT',True,True) from None
+    except TimeoutError:raise ProviderError('PROVIDER_TIMEOUT',True,True) from None
     except URLError as error:raise ProviderError('PROVIDER_TIMEOUT' if isinstance(error.reason,TimeoutError) else 'PROVIDER_NETWORK_FAILURE',True,True) from None
     except Exception:raise ProviderError('PROVIDER_NETWORK_FAILURE',True,True) from None
 
@@ -411,7 +413,7 @@ def transcribe(path,mime,language='en',duration_ms=None):
         return local_transcribe(path,mime,language,duration_ms)
     if provider!='deepgram' or not key or not model:raise ProviderError('STT_NOT_CONFIGURED')
     url=provider_url(os.environ.get('STT_BASE_URL') or 'https://api.deepgram.com/v1','listen')
-    if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.I) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.I):raise ProviderError('STT_INPUT_INVALID')
+    if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.IGNORECASE) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.IGNORECASE):raise ProviderError('STT_INPUT_INVALID')
     try:
         if not path.is_file() or not 0<path.stat().st_size<=25*1024*1024:raise ProviderError('STT_INPUT_INVALID')
         audio=path.read_bytes()

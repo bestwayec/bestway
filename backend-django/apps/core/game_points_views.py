@@ -1,9 +1,16 @@
 import math
+
 from django.http import HttpResponse
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
+
 from common.auth.authentication import OptionalMockJWTAuthentication
 from common.auth.permissions import Authenticated, roles
+
 from . import game, points
 from .domain_contracts import invalid, payload
 from .mock_attempt_views import success

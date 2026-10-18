@@ -1,21 +1,23 @@
 import io
 import json
-from datetime import datetime, timedelta, timezone
+import wave
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
-import wave
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, override_settings
 from rest_framework.test import APIClient
-from apps.core import mock_attempts, mock_speaking_policy as policy
-from apps.core.mock_speaking_duration import decoded_duration, InvalidDuration, POLICY
-from apps.core.multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, task_guidance
+
+from apps.core import mock_attempts
+from apps.core import mock_speaking_policy as policy
+from apps.core.mock_speaking_duration import POLICY, InvalidDuration, decoded_duration
+from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, task_guidance
 from common.api.exceptions import ContractAPIException
 
-AT = datetime(2026, 10, 11, tzinfo=timezone.utc)
+AT = datetime(2026, 10, 11, tzinfo=UTC)
 
 
 def wav(seconds):

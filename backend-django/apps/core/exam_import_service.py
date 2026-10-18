@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import csv
-from io import BytesIO, StringIO
 import json
 import math
 import re
-from uuid import uuid4
+from io import BytesIO, StringIO
 
 from django.db import connection, transaction
-from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -21,8 +19,8 @@ from apps.legacy_schema.models import (
     MockSection,
 )
 from common.api.exceptions import ContractAPIException
+
 from .mock_authoring import (
-    AUTO_SKILLS,
     STAFF,
     audit_event,
     bump,
@@ -76,41 +74,41 @@ def ensure_listening_config_table() -> None:
 
 PART_HEADER_RE = re.compile(
     r"^\s*(?:PART|PASSAGE|SECTION|READING\s+PASSAGE|LISTENING\s+PART|TASK|BO['‘’]?LIM|QISM)\s*(\d{1,2})\b[:.\-—\s]*(.*)$",
-    re.I,
+    re.IGNORECASE,
 )
 ANSWER_SECTION_HEADER_RE = re.compile(
     r"^\s*(?:ANSWERS?|ANSWER\s+KEYS?|CORRECT\s+ANSWERS?|JAVOBLAR|KALITLAR|KEY)\s*[:\-—]?\s*$",
-    re.I,
+    re.IGNORECASE,
 )
 INLINE_ANSWER_RE = re.compile(
     r"(?:\(\s*(?:Answer|Ans|Correct|Key|Javob|To['‘’]?g['‘’]?ri\s+javob)\s*[:=\-]\s*([^)]+)\)|"
     r"\[\s*(?:Answer|Ans|Correct|Key|Javob)\s*[:=\-]\s*([^\]]+)\]|"
     r"(?:^|\s)(?:Answer|Ans|Key|Javob)\s*[:=]\s*([A-Za-z0-9_/\s,\-]+)\s*$)",
-    re.I,
+    re.IGNORECASE,
 )
 QUESTION_LINE_RE = re.compile(
     r"^\s*(?:(?:Question|Savol|Q|№|#)\s*(\d{1,3})\s*[.):\-]?|\[(\d{1,3})\]|(\d{1,3})\s*[.):\-])\s+(.+)$",
-    re.I,
+    re.IGNORECASE,
 )
 OPTION_LINE_RE = re.compile(
     r"^\s*(\*)?\s*\(?([A-Ha-h])\s*[.):\-]\s*(.+?)\s*(\[(?:correct|to['‘’]?g['‘’]?ri|\*)\])?\s*$",
-    re.I,
+    re.IGNORECASE,
 )
 INLINE_OPTIONS_RE = re.compile(
     r"(?:^|\s)(\*?)\(?([A-Ha-h])[.)]\s*([^\n\r]+?)(?=(?:\s+\*?\(?[A-Ha-h][.)]\s)|\s*$)"
 )
 ROMAN_HEADING_LINE_RE = re.compile(
     r"^\s*\(?((?:x|ix|iv|v?i{1,3}|xi{0,3}))[.)]\s+(.+)$",
-    re.I,
+    re.IGNORECASE,
 )
 POOL_OPTION_LINE_RE = re.compile(
     r"^\s*(?:List\s+of\s+(?:Headings|Options|People|Places|Ideas|Findings)|Options\s+Pool| Headings)\s*[:\-—]?\s*$",
-    re.I,
+    re.IGNORECASE,
 )
-BLANK_TOKEN_RE = re.compile(r"_{2,}|\.{3,}|…|\[gap(?:\s*\d+)?\]|\(\s*\d+\s*\)\s*_{2,}", re.I)
+BLANK_TOKEN_RE = re.compile(r"_{2,}|\.{3,}|…|\[gap(?:\s*\d+)?\]|\(\s*\d+\s*\)\s*_{2,}", re.IGNORECASE)
 ANSWER_PAIR_RE = re.compile(
     r"(?:^|[,;\s]+)(?:Q|№|#)?(\d{1,3})\s*(?:[.):\-=]|->)\s*([A-Za-z0-9_/'’\-\s]+?)(?=(?:[,;\s]+(?:Q|№|#)?\d{1,3}\s*(?:[.):\-=]|->))|$)",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -158,9 +156,9 @@ def _parse_inline_options(line: str) -> tuple[str, list[str], str | None] | None
         star = bool(m.group(1))
         letter = m.group(2).upper()
         raw_opt = m.group(3).strip()
-        if re.search(r"\[(?:correct|to['‘’]?g['‘’]?ri|\*)\]\s*$", raw_opt, re.I):
+        if re.search(r"\[(?:correct|to['‘’]?g['‘’]?ri|\*)\]\s*$", raw_opt, re.IGNORECASE):
             star = True
-            raw_opt = re.sub(r"\[(?:correct|to['‘’]?g['‘’]?ri|\*)\]\s*$", "", raw_opt, flags=re.I).strip()
+            raw_opt = re.sub(r"\[(?:correct|to['‘’]?g['‘’]?ri|\*)\]\s*$", "", raw_opt, flags=re.IGNORECASE).strip()
         if raw_opt.startswith("*"):
             star = True
             raw_opt = raw_opt.lstrip("*").strip()
@@ -254,7 +252,7 @@ def parse_smart_exam_text(
                     if ans_val:
                         answer_map[q_num] = ans_val
                 continue
-            single_m = re.match(r"^\s*(?:Q|№|#)?(\d{1,3})\s*[.):\-=]+\s*(.+)$", line, re.I)
+            single_m = re.match(r"^\s*(?:Q|№|#)?(\d{1,3})\s*[.):\-=]+\s*(.+)$", line, re.IGNORECASE)
             if single_m:
                 answer_map[int(single_m.group(1))] = single_m.group(2).strip()
                 continue
@@ -310,7 +308,7 @@ def parse_smart_exam_text(
             # Ensure this isn't just an answer key line at the bottom like "1. A" when we already have question 1
             existing_nums = {rq["number"] for rq in raw_questions} | ({current_q["number"]} if current_q else set())
             if q_num in existing_nums and len(q_body) <= 18 and re.fullmatch(
-                r"[A-Ha-h]|TRUE|FALSE|NOT\s+GIVEN|YES|NO|T|F|NG|Y|N|[ivxIVX]{1,4}", q_body, re.I
+                r"[A-Ha-h]|TRUE|FALSE|NOT\s+GIVEN|YES|NO|T|F|NG|Y|N|[ivxIVX]{1,4}", q_body, re.IGNORECASE
             ):
                 flush_question()
                 answer_map[q_num] = q_body.strip()
@@ -417,7 +415,7 @@ def parse_smart_exam_text(
         elif part_hint in {"matching_headings", "matching"} and shared_options:
             q_type = part_hint
             options = list(shared_options)
-        elif re.fullmatch(r"(?:x|ix|iv|v?i{1,3}|xi{0,3})", ans_upper, re.I):
+        elif re.fullmatch(r"(?:x|ix|iv|v?i{1,3}|xi{0,3})", ans_upper, re.IGNORECASE):
             q_type = "matching_headings"
             options = list(shared_options) if len(shared_options) >= 2 else [
                 "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"

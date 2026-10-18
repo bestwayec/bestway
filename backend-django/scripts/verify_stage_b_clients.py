@@ -3,15 +3,23 @@
 Never an assertion of native Tauri or complete four-skill UI coverage. Browser
 requests to non-loopback hosts are aborted. Only a generated schema is written.
 """
-import json,os,re,secrets,subprocess,sys,tempfile,time
+import json
+import os
+import re
+import secrets
+import subprocess
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
 from pathlib import Path
-from urllib.parse import urlparse,urlunparse,parse_qsl,urlencode,unquote
+from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
 from uuid import uuid4
+
 import bcrypt
 import psycopg
-from contextlib import contextmanager
+from playwright.sync_api import expect, sync_playwright
 from psycopg import sql
-from playwright.sync_api import sync_playwright, expect
 
 ROOT=Path(__file__).resolve().parents[1]
 EVIDENCE=Path(os.environ.get('BESTWAY_CLIENT_EVIDENCE_DIR',str(ROOT)))
@@ -48,8 +56,8 @@ def wait_url(url,proc):
 
 
 def measure_login(url,phone,secret,label):
-    from urllib.request import Request,urlopen
     from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
     started=time.monotonic()
     try:
         response=urlopen(Request(url,data=json.dumps(dict(phone=phone,password=secret)).encode(),headers={'Content-Type':'application/json'}),timeout=90)
@@ -61,8 +69,8 @@ def measure_login(url,phone,secret,label):
 
 
 def warm_proxy():
-    from urllib.request import urlopen
     from urllib.error import HTTPError
+    from urllib.request import urlopen
     started=time.monotonic()
     try:
         response=urlopen('http://localhost:3000/api/backend/auth/me',timeout=90)
@@ -86,7 +94,7 @@ def capture(page,role):
 
 def probe_authenticated_upstream(context):
     """Compare Python/Node transports without storing or printing credentials."""
-    from urllib.request import Request,urlopen
+    from urllib.request import Request, urlopen
     token=next((c['value'] for c in context.cookies() if c['name']=='bw_at'),None)
     if not token:return
     probes=[]
@@ -140,8 +148,9 @@ try:
     db.execute('INSERT INTO "MockQuestionGroup" (id,"sectionId","sortOrder",title,"passageText","createdAt") VALUES (%s,%s,0,\'Local passage\',\'The original answer is station.\',NOW())',(gid,sid))
     db.execute('INSERT INTO "MockQuestion" (id,"groupId",number,"sortOrder",type,prompt,"correctAnswers",points,"createdAt") VALUES (%s,%s,1,0,\'short_answer\',\'Where?\',\'["station"]\'::jsonb,1,NOW())',(qid,gid))
     sys.path.insert(0,str(ROOT))
-    from apps.core.multilevel import CURRENT_SPEC,CURRENT_SPEAKING_PROFILE,SPECS
     from stage_a_fixtures import multilevel_questions
+
+    from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, SPECS
     ml_id,ml_section=[str(uuid4()) for _ in range(2)]; ml_answers=[]
     db.execute('INSERT INTO "MockExam" (id,type,title,"isPublished","createdById","specificationVersion","speakingProfileVersion","createdAt","updatedAt") VALUES (%s,\'multilevel\',\'Local UI Multilevel Reading\',true,%s,%s,%s,NOW(),NOW())',(ml_id,users['admin'],CURRENT_SPEC,CURRENT_SPEAKING_PROFILE))
     db.execute('INSERT INTO "MockSection" (id,"examId",skill,title,"sortOrder","durationMinutes") VALUES (%s,%s,\'reading\',\'Multilevel Reading\',0,60)',(ml_section,ml_id))
@@ -155,7 +164,8 @@ try:
         number+=len(multilevel_questions('reading',part,number))
     extra_fixtures=[]
     if os.environ.get('BESTWAY_CLIENT_EXTRA_SKILLS')=='1':
-        import base64,wave
+        import base64
+        import wave
         media_root=Path(storage.name)/'mock';media_root.mkdir(parents=True,exist_ok=True)
         audio_key='mock/local-fixture.wav'
         with wave.open(str(Path(storage.name)/audio_key),'wb') as audio:
@@ -194,8 +204,8 @@ try:
     measure_login('http://localhost:3000/api/auth/login',phones['student'],'invalid-disposable-password','warm Next login route (invalid credentials)')
     warm_proxy()
     # Inspect redirect locations without following a possible self-loop.
-    from urllib.request import build_opener,HTTPRedirectHandler,Request
     from urllib.error import HTTPError
+    from urllib.request import HTTPRedirectHandler, Request, build_opener
     class NoRedirect(HTTPRedirectHandler):
         def redirect_request(self,*args): return None
     diagnostic=build_opener(NoRedirect())

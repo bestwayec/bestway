@@ -1,6 +1,7 @@
 """Checkpoint 3 boundaries; real reference/database tests live in the PG runner."""
 from types import SimpleNamespace
 from unittest.mock import patch
+
 import pytest
 from django.urls import resolve
 from rest_framework.test import APIClient

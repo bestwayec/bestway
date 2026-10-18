@@ -1,9 +1,12 @@
 """Public articles and administrator mutations, preserving raw reference content."""
 from uuid import uuid4
+
 from django.db import transaction
 from django.utils import timezone
+
 from apps.legacy_schema.models import Article
 from common.api.exceptions import ContractAPIException
+
 from .system_settings import audit
 
 

@@ -1,10 +1,11 @@
 from types import SimpleNamespace
 from unittest.mock import patch
-from django.test import SimpleTestCase, TestCase
+
+from django.test import SimpleTestCase
 from rest_framework.test import APIClient
-from apps.core.views import desktop_version
-from apps.core.assessment_results import format_diagnostic_feedback
+
 from apps.core import mock_attempts
+from apps.core.assessment_results import format_diagnostic_feedback
 
 
 class SingleSkillAndDesktopVersionTests(SimpleTestCase):

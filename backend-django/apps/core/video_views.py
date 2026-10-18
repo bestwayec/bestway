@@ -1,15 +1,22 @@
 import math
 import os
-from rest_framework.decorators import api_view,permission_classes,authentication_classes
+
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
-from common.auth.permissions import Authenticated,roles
+
 from common.auth.authentication import OptionalMockJWTAuthentication
-from .views import require_authenticated,require_role
-from .domain_contracts import payload,pagination,paginated,invalid,js_length
-from .game_points_views import js_number
-from .content_media import save_upload,delete_file
-from .mock_attempt_views import success
+from common.auth.permissions import Authenticated, roles
+
 from . import videos as service
+from .content_media import delete_file, save_upload
+from .domain_contracts import invalid, js_length, paginated, pagination, payload
+from .game_points_views import js_number
+from .mock_attempt_views import success
+from .views import require_authenticated, require_role
 
 
 def validate(data,update=False):

@@ -1,45 +1,83 @@
 from django.urls import path
-from . import system_views as system
-from . import group_views as groups
+
 from . import article_views as articles
+from . import assessment_ranking_views as assessment_rankings
+from . import assessment_views as assessment
+from . import attendance_views as attendance
+from . import auth_views, exam_mode_views, topic_views, user_admin
+from . import content_views as content
+from . import game_points_views as game_points
+from . import group_views as groups
+from . import legacy_authoring_views as legacy_admin
+from . import legacy_test_views as legacy
+from . import mock_support_views as support
 from . import notification_views as notifications
 from . import payment_views as payments
-from . import attendance_views as attendance
-from . import game_points_views as game_points
-from . import content_views as content
-from . import user_admin
 from . import statistics_views as statistics
-from . import video_views as videos
+from . import system_views as system
 from . import telegram_views as telegram
-from . import legacy_test_views as legacy
-from . import legacy_authoring_views as legacy_admin
-from . import auth_views
-from . import assessment_views as assessment
-from . import assessment_ranking_views as assessment_rankings
-from . import mock_support_views as support
-from . import topic_views
-from . import exam_mode_views
-from .mock_attempt_views import (start_view, answer_view, answers_view, advance_view,
-    prepare_view, play_view, speaking_start_view, cheat_view, annotations_view,
-    mine_view, detail_view, speaking_upload_view, speaking_audio_view, submit_view,
-    writing_ocr_view, standalone_writing_ocr_view)
-from .mock_media import group_media_view, group_audio_view, group_image_view
-from .mock_import_views import (validate_import_view, commit_import_view, stage_import_media_view,
-                               import_by_package_view, import_by_exam_view, resolve_import_issue_view)
-from .views import mock_parse_questions_view, mock_import_questions_view
-
-from .views import (desktop_authorize_view, desktop_exchange_view, desktop_version, desktop_update_json,
-                    health, legacy_test_detail_view, link_child_view, login_view, logout_view, me_view,
-                    mock_exam_clone_view, mock_exam_corrected_clone_view,
-                    mock_exam_detail_view, mock_exam_preview_view,
-                    mock_exam_readiness_view, mock_exam_repair_inspection_view,
-                    mock_exam_repair_view, mock_exam_safe_repair_view,
-                    mock_exam_sections_view, mock_exams_view,
-                    mock_group_content_view, mock_group_questions_view,
-                    mock_group_view, mock_question_view, mock_section_groups_view,
-                    mock_section_view, my_exam_programs_view, refresh_view, register_view,
-                    student_exam_programs_view, user_detail_view, users_view)
-
+from . import video_views as videos
+from .mock_attempt_views import (
+    advance_view,
+    annotations_view,
+    answer_view,
+    answers_view,
+    cheat_view,
+    detail_view,
+    mine_view,
+    play_view,
+    prepare_view,
+    speaking_audio_view,
+    speaking_start_view,
+    speaking_upload_view,
+    standalone_writing_ocr_view,
+    start_view,
+    submit_view,
+    writing_ocr_view,
+)
+from .mock_import_views import (
+    commit_import_view,
+    import_by_exam_view,
+    import_by_package_view,
+    resolve_import_issue_view,
+    stage_import_media_view,
+    validate_import_view,
+)
+from .mock_media import group_audio_view, group_image_view, group_media_view
+from .views import (
+    desktop_authorize_view,
+    desktop_exchange_view,
+    desktop_update_json,
+    desktop_version,
+    health,
+    legacy_test_detail_view,
+    link_child_view,
+    login_view,
+    logout_view,
+    me_view,
+    mock_exam_clone_view,
+    mock_exam_corrected_clone_view,
+    mock_exam_detail_view,
+    mock_exam_preview_view,
+    mock_exam_readiness_view,
+    mock_exam_repair_inspection_view,
+    mock_exam_repair_view,
+    mock_exam_safe_repair_view,
+    mock_exam_sections_view,
+    mock_exams_view,
+    mock_group_content_view,
+    mock_group_questions_view,
+    mock_group_view,
+    mock_import_questions_view,
+    mock_parse_questions_view,
+    mock_question_view,
+    mock_section_groups_view,
+    mock_section_view,
+    my_exam_programs_view,
+    refresh_view,
+    register_view,
+    student_exam_programs_view,
+)
 
 urlpatterns = [
     path('game/roster', game_points.roster_view),

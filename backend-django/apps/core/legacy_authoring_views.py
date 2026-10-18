@@ -1,16 +1,23 @@
 import math
-from rest_framework.decorators import api_view,permission_classes,authentication_classes
+
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
+
+from common.api.exceptions import ContractAPIException
 from common.auth.authentication import OptionalMockJWTAuthentication
 from common.auth.permissions import roles
+
 from . import legacy_authoring as service
-from .legacy_import_parser import parse
-from .legacy_test_views import list_view,test_view
-from .views import require_authenticated,require_role
-from .mock_attempt_views import success
-from .domain_contracts import payload,invalid,js_length
+from .domain_contracts import invalid, js_length, payload
 from .game_points_views import js_number
-from common.api.exceptions import ContractAPIException
+from .legacy_import_parser import parse
+from .legacy_test_views import list_view, test_view
+from .mock_attempt_views import success
+from .views import require_authenticated, require_role
 
 TEST_KEYS={'type','title','level','isDemo','durationMinutes','sectionQuestionCounts'}
 QUESTION_KEYS={'section','type','prompt','options','correctAnswer','maxScore','passageText','instructions','audioUrl'}

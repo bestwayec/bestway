@@ -1,19 +1,28 @@
 """User administration with source DTOs and exact non-atomic update boundaries."""
-from common.auth.passwords import hash_password
 import re
 from uuid import uuid4
+
 from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from common.auth.permissions import Authenticated
+
+from apps.legacy_schema.models import (
+    Group,
+    PointsLog,
+    RefreshToken,
+    StudentProfile,
+    User,
+)
 from common.api.exceptions import ContractAPIException
-from apps.legacy_schema.models import User, StudentProfile, PointsLog, Group, RefreshToken
-from .views import require_role, _user_detail, ROLES
-from .domain_contracts import payload, pagination, paginated, invalid,js_length
+from common.auth.passwords import hash_password
+from common.auth.permissions import Authenticated
+
+from .auth_service import unique_link_code
+from .domain_contracts import invalid, js_length, paginated, pagination, payload
 from .mock_attempt_views import success
 from .system_settings import audit, numeric_settings
-from .auth_service import unique_link_code
+from .views import ROLES, _user_detail, require_role
 
 
 def validate(data, update=False):

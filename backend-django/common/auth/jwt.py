@@ -1,9 +1,16 @@
 from __future__ import annotations
+
+import base64
+import hashlib
+import os
+import uuid
 from datetime import UTC, datetime, timedelta
-import base64, hashlib, os, uuid
+
 import jwt
 from django.conf import settings
+
 from common.api.exceptions import ContractAPIException
+
 
 def jwt_secret() -> str:
     secret = settings.JWT_SECRET

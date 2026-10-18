@@ -4,15 +4,21 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import patch
-from urllib.request import Request,urlopen
-from django.db import close_old_connections,connections
-from psycopg import sql
+from urllib.request import Request, urlopen
+
+from django.db import close_old_connections, connections
 
 
 def run(call,ids,db,schemas,results,clone,attempt):
     from apps.core import mock_support as service
     from apps.core.mock_submissions import submit
-    from apps.legacy_schema.models import MockAttempt,MockPurchase,MockAnswer,Notification,AssessmentJob,AuditLog
+    from apps.legacy_schema.models import (
+        AssessmentJob,
+        AuditLog,
+        MockAttempt,
+        MockPurchase,
+        Notification,
+    )
     from common.api.exceptions import ContractAPIException
     actor=SimpleNamespace(id=ids[0]['admin'],role='admin')
     student=SimpleNamespace(id=ids[0]['other_student'],role='student')

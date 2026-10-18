@@ -3,8 +3,8 @@ import json
 import logging
 import os
 from pathlib import Path
-from uuid import uuid4
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 
 def call(method, payload=None):
@@ -66,12 +66,12 @@ def send_document(chat_id,document,caption=None,filename='bestway-app.apk',parse
             fields['reply_markup']=json.dumps(reply_markup)
         parts=[]
         for key,value in fields.items():
-            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode('utf-8'))
+            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
         safe_name=(filename or 'bestway-app.apk').replace('"','')
         parts.append(
             f'--{boundary}\r\nContent-Disposition: form-data; name="document"; filename="{safe_name}"\r\n'
-            f'Content-Type: application/vnd.android.package-archive\r\n\r\n'.encode('utf-8')
-            + raw + f'\r\n--{boundary}--\r\n'.encode('utf-8')
+            f'Content-Type: application/vnd.android.package-archive\r\n\r\n'.encode()
+            + raw + f'\r\n--{boundary}--\r\n'.encode()
         )
         request=Request(
             f'https://api.telegram.org/bot{token}/sendDocument',
@@ -118,12 +118,12 @@ def send_audio(chat_id,audio,caption=None,title=None,performer=None,filename='sp
         if reply_markup is not None:fields['reply_markup']=json.dumps(reply_markup)
         parts=[]
         for key,value in fields.items():
-            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode('utf-8'))
+            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
         safe_name=(filename or 'speaking.mp3').replace('"','')
         parts.append(
             f'--{boundary}\r\nContent-Disposition: form-data; name="audio"; filename="{safe_name}"\r\n'
-            f'Content-Type: audio/mpeg\r\n\r\n'.encode('utf-8')
-            + raw + f'\r\n--{boundary}--\r\n'.encode('utf-8')
+            f'Content-Type: audio/mpeg\r\n\r\n'.encode()
+            + raw + f'\r\n--{boundary}--\r\n'.encode()
         )
         request=Request(
             f'https://api.telegram.org/bot{token}/sendAudio',
@@ -167,12 +167,12 @@ def send_voice(chat_id,voice,caption=None,parse_mode='HTML',reply_markup=None):
         if reply_markup is not None:fields['reply_markup']=json.dumps(reply_markup)
         parts=[]
         for key,value in fields.items():
-            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode('utf-8'))
+            parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
         safe_name=(filename or 'voice.ogg').replace('"','')
         parts.append(
             f'--{boundary}\r\nContent-Disposition: form-data; name="voice"; filename="{safe_name}"\r\n'
-            f'Content-Type: audio/ogg\r\n\r\n'.encode('utf-8')
-            + raw + f'\r\n--{boundary}--\r\n'.encode('utf-8')
+            f'Content-Type: audio/ogg\r\n\r\n'.encode()
+            + raw + f'\r\n--{boundary}--\r\n'.encode()
         )
         request=Request(
             f'https://api.telegram.org/bot{token}/sendVoice',

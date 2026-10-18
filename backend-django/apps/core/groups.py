@@ -1,10 +1,12 @@
 """Group membership, schedules, analytics, and Excel/CSV roster port."""
-from io import BytesIO
 import math
 import re
+from io import BytesIO
 from uuid import uuid4
+
 from django.db import transaction
 from django.utils import timezone
+
 from apps.legacy_schema.models import (
     Group,
     MockAnswer,
@@ -15,6 +17,7 @@ from apps.legacy_schema.models import (
     User,
 )
 from common.api.exceptions import ContractAPIException
+
 from .system_settings import audit
 
 

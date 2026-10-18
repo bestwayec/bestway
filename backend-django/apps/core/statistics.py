@@ -1,8 +1,11 @@
 """Administrative statistics and remaining CSV exports."""
 import math
 from datetime import datetime, timedelta
+
 from django.utils import timezone
+
 from apps.legacy_schema import models as m
+
 from .attendance import csv_cell
 
 

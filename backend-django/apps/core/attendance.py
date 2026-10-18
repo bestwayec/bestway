@@ -1,17 +1,18 @@
 """AttendanceService and attendance-only CSV export over the existing Prisma tables."""
-from datetime import date, datetime, timedelta, timezone as dt_timezone
-import re
 import locale
 import os
+import re
+from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
 from uuid import uuid4
 
-from django.db import transaction, connection
+from django.db import connection, transaction
 from django.db.models.functions import Collate
 from django.utils import timezone
 
 from apps.legacy_schema.models import Attendance, StudentProfile
 from common.api.exceptions import ContractAPIException
+
 from .groups import child_ids, get_group
 from .notifications import notify_parents
 from .system_settings import audit
@@ -58,7 +59,7 @@ def reference_date(value):
                 local = datetime(first + 1900 if first < 100 else first, second, third,
                     tzinfo=timezone.get_current_timezone())
             else: raise ValueError('invalid V8 legacy date')
-            return local.astimezone(dt_timezone.utc).date()
+            return local.astimezone(UTC).date()
         except ValueError:
             raise ContractAPIException('INTERNAL_ERROR', 'Serverda kutilmagan xatolik yuz berdi', 500)
     match = re.fullmatch(r'(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?', value)

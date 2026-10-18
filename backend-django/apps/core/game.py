@@ -1,14 +1,17 @@
 """Monthly game lifecycle, archive/reset and sticky qualification parity."""
 import logging
 from uuid import uuid4
+
 from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
-from apps.legacy_schema.models import StudentProfile, MonthlyPointsArchive
+
+from apps.legacy_schema.models import MonthlyPointsArchive, StudentProfile
 from common.api.exceptions import ContractAPIException
-from .system_settings import numeric_settings, audit
-from .notifications import notify_many, notify_parents
+
 from .attendance import csv_cell
+from .notifications import notify_many, notify_parents
+from .system_settings import audit, numeric_settings
 
 
 def period_key(now=None):

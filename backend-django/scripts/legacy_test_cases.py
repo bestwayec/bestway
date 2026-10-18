@@ -1,15 +1,17 @@
 """Real /tests API fixtures; separate legacy tables, identity and scoring."""
 from pathlib import Path
 from uuid import uuid4
+
 from psycopg import sql
 
 
 def run(call,ids,db,schemas,results):
-    from django.conf import settings
-    from apps.core import legacy_tests as service
     from unittest.mock import patch
-    from common.auth.jwt import issue_access
+
+    from django.conf import settings
     from django.core.cache import cache
+
+    from common.auth.jwt import issue_access
     cache.clear()
     names=['legacy_demo','legacy_private','legacy_inactive','legacy_empty','legacy_q1','legacy_q2','legacy_q3','legacy_w','legacy_audio']
     shared={name:str(uuid4()) for name in names}

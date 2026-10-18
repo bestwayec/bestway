@@ -1,13 +1,22 @@
 """Role-scoped AI rankings for comparable, immutable Multilevel task scopes."""
-from collections import defaultdict
-from hashlib import sha256
 import json
 import math
+from collections import defaultdict
+from hashlib import sha256
+
 from django.db.models.fields.json import KeyTransform
 
-from apps.legacy_schema.models import (Group, StudentProfile, MockExam, MockAttempt,
-    AssessmentJob, AssessmentEvaluation, SpeechTranscript)
+from apps.legacy_schema.models import (
+    AssessmentEvaluation,
+    AssessmentJob,
+    Group,
+    MockAttempt,
+    MockExam,
+    SpeechTranscript,
+    StudentProfile,
+)
 from common.api.exceptions import ContractAPIException
+
 from .mock_practice import SCOPE_KEY, is_partial, scope
 
 

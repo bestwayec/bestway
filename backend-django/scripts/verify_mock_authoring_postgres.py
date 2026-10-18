@@ -10,9 +10,9 @@ import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 from urllib.parse import urlparse
 from uuid import uuid4
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
@@ -27,13 +27,13 @@ import django
 
 django.setup()
 
-from django.db import connection
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.core import mock_authoring, mock_catalog
-from apps.core.multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS
+from apps.core import mock_authoring
+from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, SPECS
 from apps.legacy_schema.models import (
     AuditLog,
     MockAttempt,
@@ -41,10 +41,8 @@ from apps.legacy_schema.models import (
     MockQuestion,
     MockQuestionGroup,
     MockSection,
-    StudentProfile,
     User,
 )
-
 
 run_id = uuid4().hex[:12]
 admin = SimpleNamespace(id=f"django-verify-admin-{run_id}", role="admin", is_authenticated=True)

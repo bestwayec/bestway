@@ -2,14 +2,19 @@
 import copy
 import json
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
+
+from apps.core import assessment_prompts
+from apps.core import assessment_providers as providers
+from apps.core import assessment_results as results
 from common.api.exceptions import ContractAPIException
-from apps.core import assessment_results as results,assessment_providers as providers,assessment_prompts
 from tests.test_assessment import fixture
+
 
 class AssessmentDifferentialTests(SimpleTestCase):
     def compare(self,cases):

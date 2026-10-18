@@ -6,7 +6,8 @@ Strictly guards superadmin-only workflows (Topic Management, System Configs).
 import logging
 import os
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ def get_superadmin_id() -> str:
 SUPERADMIN_TELEGRAM_ID = get_superadmin_id()
 
 # In-memory storage fallback for FSM dialogs
-_FSM_MEMORY: Dict[str, Dict[str, Any]] = {}
+_FSM_MEMORY: dict[str, dict[str, Any]] = {}
 _FSM_CACHE_PREFIX = "tg_fsm:"
 _FSM_TIMEOUT_SECONDS = 86400  # 24 hours
 
@@ -54,7 +55,7 @@ TOPIC_STATES = {
 }
 
 
-def is_superadmin(chat_id: Optional[Union[int, str]] = None, user: Any = None) -> bool:
+def is_superadmin(chat_id: int | str | None = None, user: Any = None) -> bool:
     """Verifies whether the given chat_id or user model has Superadmin privileges."""
     sa_id = get_superadmin_id()
     if chat_id is not None and str(chat_id).strip() == sa_id:
@@ -64,14 +65,14 @@ def is_superadmin(chat_id: Optional[Union[int, str]] = None, user: Any = None) -
     return False
 
 
-def is_topic_state(state: Optional[str]) -> bool:
+def is_topic_state(state: str | None) -> bool:
     """Checks if a state string belongs to Topic Management."""
     if not state:
         return False
     return state in TOPIC_STATES or state.startswith('topic_')
 
 
-def check_superadmin_guard(chat_id: Union[int, str]) -> bool:
+def check_superadmin_guard(chat_id: int | str) -> bool:
     """
     Superadmin Security Guard.
     Ensures that only SUPERADMIN_TELEGRAM_ID can perform topic management tasks.
@@ -89,7 +90,7 @@ def check_superadmin_guard(chat_id: Union[int, str]) -> bool:
     return True
 
 
-def _cache_get(key: str) -> Optional[Any]:
+def _cache_get(key: str) -> Any | None:
     if settings.configured:
         try:
             from django.core.cache import cache
@@ -117,7 +118,7 @@ def _cache_delete(key: str) -> None:
             logger.debug("Cache delete error: %r", exc)
 
 
-def get_state(chat_id: Union[int, str]) -> Dict[str, Any]:
+def get_state(chat_id: int | str) -> dict[str, Any]:
     """
     Retrieves the current FSM state and data dictionary for the given chat_id.
     Returns an empty dict if no active dialog state exists.
@@ -134,7 +135,7 @@ def get_state(chat_id: Union[int, str]) -> Dict[str, Any]:
     return session
 
 
-def set_state(chat_id: Union[int, str], state: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def set_state(chat_id: int | str, state: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     Sets the active dialog state and payload data for the given chat_id.
     If the state is a protected topic management state, superadmin guard is enforced.
@@ -163,7 +164,7 @@ def set_state(chat_id: Union[int, str], state: str, data: Optional[Dict[str, Any
     return session
 
 
-def update_state_data(chat_id: Union[int, str], **kwargs: Any) -> Dict[str, Any]:
+def update_state_data(chat_id: int | str, **kwargs: Any) -> dict[str, Any]:
     """
     Updates the payload data dictionary of the active dialog state for the given chat_id.
     """
@@ -192,7 +193,7 @@ def update_state_data(chat_id: Union[int, str], **kwargs: Any) -> Dict[str, Any]
     return session
 
 
-def clear_state(chat_id: Union[int, str]) -> None:
+def clear_state(chat_id: int | str) -> None:
     """
     Resets/clears the active dialog state and data for the given chat_id.
     """

@@ -1,5 +1,8 @@
 from rest_framework.permissions import BasePermission
+
 from common.api.exceptions import ContractAPIException
+
+
 class Authenticated(BasePermission):
     """Return the Nest contract's missing-bearer response, not DRF's default."""
     def has_permission(self, request, view):

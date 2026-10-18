@@ -1,12 +1,12 @@
 """Regressions for values shared across multiple API and scheduler processes."""
 from unittest.mock import patch
 
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
+from rest_framework.test import APIRequestFactory
 
 from apps.core.system_settings import numeric_settings
 from common.api.throttling import GlobalAPIThrottle
-from rest_framework.test import APIRequestFactory
-from django.core.exceptions import ImproperlyConfigured
 from common.deployment_config import require_public_origin
 
 

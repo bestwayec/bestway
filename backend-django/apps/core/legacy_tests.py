@@ -1,16 +1,27 @@
 """Legacy /tests lifecycle over Prisma tables, deliberately separate from /mock."""
+import math
 import re
 import secrets
-import math
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
+
 from django.db import connection, transaction
 from django.utils import timezone
-from apps.legacy_schema.models import (Test, Question, TestAttempt, Answer, AntiCheatEvent,
-    StudentProfile, Notification, ParentStudent)
+
+from apps.legacy_schema.models import (
+    Answer,
+    AntiCheatEvent,
+    Notification,
+    ParentStudent,
+    Question,
+    StudentProfile,
+    Test,
+    TestAttempt,
+)
+
 from . import exam_programs
+from .mock_attempts import assert_view, aware, fail
 from .mock_authoring import new_id
-from .mock_attempts import aware, fail, assert_view
 from .mock_scoring import JS_SPACE, trim
 
 SECTIONS = ('listening','reading','writing','speaking')

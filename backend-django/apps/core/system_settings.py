@@ -2,11 +2,14 @@
 import logging
 import math
 from uuid import uuid4
+
 from django.db import transaction
-from django.db.models import Value, JSONField
+from django.db.models import JSONField, Value
 from django.utils import timezone
-from apps.legacy_schema.models import Setting, AuditLog
-from .mock_scoring import parse_band_table, LISTENING, ACADEMIC, GENERAL
+
+from apps.legacy_schema.models import AuditLog, Setting
+
+from .mock_scoring import ACADEMIC, GENERAL, LISTENING, parse_band_table
 
 DEFAULTS = dict(teacherPointLimit=20, initialPoints=100, monthlyFee=0, gameThreshold=150)
 BAND_KEYS = dict(listening='ieltsBandListening', readingAcademic='ieltsBandReadingAcademic', readingGeneral='ieltsBandReadingGeneral')

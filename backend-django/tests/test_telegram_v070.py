@@ -1,5 +1,4 @@
 """Tests for Telegram Bot v0.7.0: Superadmin Panel, Writing Image OCR + AI Evaluation, and Real-Time Notifications."""
-import io
 import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch

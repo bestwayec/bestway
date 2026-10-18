@@ -11,9 +11,9 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from unittest.mock import patch
 from urllib.parse import urlparse
 from uuid import uuid4
-from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 if urlparse(os.environ.get('DATABASE_URL','')).hostname not in ('localhost','127.0.0.1','::1'):
@@ -21,15 +21,28 @@ if urlparse(os.environ.get('DATABASE_URL','')).hostname not in ('localhost','127
 os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings.local')
 os.environ.setdefault('ALLOWED_HOSTS','testserver,localhost,127.0.0.1')
 import django
+
 django.setup()
-from django.db import connection,transaction
+from django.db import connection, transaction
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APIClient
 from psycopg import sql
-from apps.core import mock_submission_snapshots,assessment_worker,assessment,assessment_results
+from rest_framework.test import APIClient
+
+from apps.core import (
+    assessment,
+    assessment_results,
+    assessment_worker,
+    mock_submission_snapshots,
+)
 from apps.core.multilevel import CURRENT_SPEC
-from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation,MockAttempt,MockAnswer,MockExam
+from apps.legacy_schema.models import (
+    AssessmentEvaluation,
+    AssessmentJob,
+    MockAnswer,
+    MockAttempt,
+    MockExam,
+)
 
 prefix='grading-'+uuid4().hex[:12]
 ids={name:prefix+'-'+name for name in ('teacher','other_teacher','student','group','exam','attempt')}

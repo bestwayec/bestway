@@ -1,11 +1,12 @@
 """Tests for live monitoring endpoint and partial practice scoring."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
+
 from apps.core import mock_scoring
-from apps.core.multilevel import CURRENT_SPEC
 
 
 class LiveMonitoringTests(SimpleTestCase):
@@ -39,7 +40,7 @@ class LiveMonitoringTests(SimpleTestCase):
 
     def test_teacher_owner_success_with_active_and_inactive_students(self):
         self.client.force_authenticate(SimpleNamespace(id='t1', role='teacher', is_authenticated=True))
-        now = datetime(2026, 10, 13, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 13, 12, 0, 0, tzinfo=UTC)
         group = SimpleNamespace(id='g1', teacher_id='t1')
 
         student1 = SimpleNamespace(

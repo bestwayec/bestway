@@ -11,6 +11,7 @@ import django
 django.setup()
 
 from django.db import connection
+
 from apps.legacy_schema import models
 
 CHECKED_MODELS = [

@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes
+
 from common.auth.permissions import roles
+
+from . import assessment_rankings
 from .domain_contracts import invalid
 from .mock_attempt_views import success
-from . import assessment_rankings
 
 
 @api_view(['GET'])

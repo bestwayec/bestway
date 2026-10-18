@@ -1,6 +1,6 @@
 """Comprehensive unit tests for Google OAuth Sign-Up and Sign-In flows."""
-from unittest.mock import MagicMock, patch
 import uuid
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 from rest_framework.test import APIClient

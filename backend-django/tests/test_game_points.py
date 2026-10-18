@@ -1,10 +1,12 @@
-from datetime import datetime, timezone as utc_timezone
+from datetime import UTC, datetime
 from threading import Event
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
-from apps.core import game, points, game_scheduler
+
+from apps.core import game, game_scheduler, points
 from common.api.exceptions import ContractAPIException
 
 
@@ -79,7 +81,7 @@ class GamePointsTests(SimpleTestCase):
             query.return_value.update.assert_not_called()
 
     def test_period_uses_tashkent_local_calendar_at_year_boundary(self):
-        self.assertEqual(game.period_key(datetime(2026,12,31,19,tzinfo=utc_timezone.utc)),'2027-01')
+        self.assertEqual(game.period_key(datetime(2026,12,31,19,tzinfo=UTC)),'2027-01')
 
     def test_qualification_under_threshold_performs_no_write(self):
         with patch.object(game,'setting',return_value=150),patch.object(game.StudentProfile.objects,'filter') as query:
@@ -100,8 +102,8 @@ class GamePointsTests(SimpleTestCase):
 
 class GameSchedulerTests(SimpleTestCase):
     def test_schedule_timezone_and_year_transition(self):
-        due=game_scheduler.next_due(datetime(2026,12,31,19,tzinfo=utc_timezone.utc))
-        self.assertEqual(due.astimezone(utc_timezone.utc),datetime(2026,12,31,19,5,tzinfo=utc_timezone.utc))
+        due=game_scheduler.next_due(datetime(2026,12,31,19,tzinfo=UTC))
+        self.assertEqual(due.astimezone(UTC),datetime(2026,12,31,19,5,tzinfo=UTC))
         later=game_scheduler.next_due(due)
         self.assertEqual((later.year,later.month,later.day,later.hour,later.minute),(2027,2,1,0,5))
 
@@ -112,7 +114,7 @@ class GameSchedulerTests(SimpleTestCase):
             startup.assert_called_once();monthly.assert_not_called()
 
     def test_scheduled_tick_executes_once_and_stops_cleanly(self):
-        start=datetime(2026,10,31,19,tzinfo=utc_timezone.utc)
+        start=datetime(2026,10,31,19,tzinfo=UTC)
         due=game_scheduler.next_due(start)
         class Stop:
             stopped=False

@@ -1,6 +1,8 @@
 """Project real, validated AI evidence without substituting teacher grades."""
 import math
-from . import assessment_results as results,assessment_quality as quality
+
+from . import assessment_quality as quality
+from . import assessment_results as results
 
 
 def ranking_ai_projection(job,evaluations,transcripts=None):

@@ -5,10 +5,17 @@ import math
 import re
 import unicodedata
 
-from .mock_content import LAYOUTS, sanitize_content, gap_numbers
+from .mock_content import LAYOUTS, gap_numbers, sanitize_content
 from .mock_parse import build_correct_answers
-from .mock_rules import (ANSWER_RULES, MANUAL_TYPES, QUESTION_TYPES, TEXT_TYPES,
-                         canonical_decision, objective_question_issues, objective_group_issues)
+from .mock_rules import (
+    ANSWER_RULES,
+    MANUAL_TYPES,
+    QUESTION_TYPES,
+    TEXT_TYPES,
+    canonical_decision,
+    objective_group_issues,
+    objective_question_issues,
+)
 
 KEY = re.compile(r'^[a-z][a-z0-9_-]{0,79}$')
 SKILLS = ('listening', 'reading', 'writing', 'speaking')

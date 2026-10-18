@@ -1,18 +1,26 @@
 """Exact legacy DTO/HTTP boundary; no test-authoring or teacher grading routes."""
-from django.http import HttpResponse
+from threading import Lock
+
 from django.core.cache import cache
-from rest_framework.decorators import api_view, permission_classes, authentication_classes, renderer_classes
-from rest_framework.renderers import JSONRenderer
+from django.http import HttpResponse
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    renderer_classes,
+)
 from rest_framework.permissions import AllowAny
+from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from common.auth.authentication import OptionalMockJWTAuthentication
+
 from apps.legacy_schema.models import Question, TestAttempt
+from common.auth.authentication import OptionalMockJWTAuthentication
+
 from . import legacy_tests as service
-from .views import body, require_authenticated, require_role
+from .mock_attempt_audio import stream_audio
 from .mock_attempt_views import success, wire
 from .mock_media import resolve_key
-from .mock_attempt_audio import stream_audio
-from threading import Lock
+from .views import body, require_authenticated, require_role
 
 _THROTTLE_LOCK=Lock()
 

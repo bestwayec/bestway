@@ -1,8 +1,14 @@
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
+
 from common.auth.authentication import OptionalMockJWTAuthentication
+
 from . import articles as service
-from .domain_contracts import payload, invalid, pagination, paginated
+from .domain_contracts import invalid, paginated, pagination, payload
 from .mock_attempt_views import success
 from .views import require_authenticated, require_role
 

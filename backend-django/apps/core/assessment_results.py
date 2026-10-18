@@ -1,8 +1,11 @@
 """Deterministic assessment scoring and strict provider-result boundary."""
 import copy
 import math
+
 from common.api.exceptions import ContractAPIException
-from .mock_scoring import convert_expert, multilevel_level, round_half, js_round
+
+from .mock_scoring import convert_expert, js_round, multilevel_level, round_half
+
 
 class ProviderError(Exception):
     def __init__(self, code, transient=False, uncertain=False):

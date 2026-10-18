@@ -1,11 +1,16 @@
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
-from common.auth.permissions import Authenticated
+
 from common.auth.authentication import OptionalMockJWTAuthentication
-from .views import require_role, require_authenticated
-from .mock_attempt_views import success
+from common.auth.permissions import Authenticated
+
 from . import content_media as service
-from .domain_contracts import invalid
+from .mock_attempt_views import success
+from .views import require_authenticated, require_role
 
 
 def upload(request, teacher):

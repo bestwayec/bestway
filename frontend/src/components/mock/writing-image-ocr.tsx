@@ -83,7 +83,9 @@ export function WritingImageOcr({
 
   // Revoke object URLs on unmount
   const pagesRef = useRef(pages);
-  pagesRef.current = pages;
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
   useEffect(() => {
     return () => {
       for (const p of pagesRef.current) {

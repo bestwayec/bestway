@@ -113,11 +113,11 @@ class SmartTextParserAndExcelTests(SimpleTestCase):
 
     def test_csv_spreadsheet_parse(self):
         csv_content = (
-            "Part,QuestionNumber,QuestionType,Prompt,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,Points,WordLimit\n"
-            "1,1,multiple_choice,What is the capital?,London,Paris,Berlin,Rome,A,1,\n"
-            "1,2,true_false_notgiven,The Thames is in London.,TRUE,FALSE,NOT GIVEN,,TRUE,1,\n"
-            "2,3,short_answer,Complete: The tower is made of ____.,,,,,,steel,1,1\n"
-        ).encode("utf-8")
+            b"Part,QuestionNumber,QuestionType,Prompt,OptionA,OptionB,OptionC,OptionD,CorrectAnswer,Points,WordLimit\n"
+            b"1,1,multiple_choice,What is the capital?,London,Paris,Berlin,Rome,A,1,\n"
+            b"1,2,true_false_notgiven,The Thames is in London.,TRUE,FALSE,NOT GIVEN,,TRUE,1,\n"
+            b"2,3,short_answer,Complete: The tower is made of ____.,,,,,,steel,1,1\n"
+        )
         parsed = exam_import_service.parse_spreadsheet_bytes(csv_content, filename="sample.csv")
         self.assertEqual(parsed["count"], 3)
         self.assertEqual(parsed["questions"][0]["type"], "multiple_choice")

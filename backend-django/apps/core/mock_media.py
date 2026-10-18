@@ -1,7 +1,7 @@
 """Contained local media storage and reference-compatible authenticated streams."""
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
@@ -10,16 +10,33 @@ from django.db.models import Q
 from django.http import HttpResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from common.auth.authentication import OptionalMockJWTAuthentication
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
 
-from apps.legacy_schema.models import MockQuestionGroup, MockStagedMedia, MockAnswer, MockAttempt
-from common.auth.permissions import Authenticated
+from apps.legacy_schema.models import (
+    MockAnswer,
+    MockAttempt,
+    MockQuestionGroup,
+    MockStagedMedia,
+)
 from common.api.exceptions import ContractAPIException
-from .mock_authoring import _group_or_throw, locked_exam, assert_author, assert_mutable, bump, audit_event
-from .views import require_role, success
+from common.auth.authentication import OptionalMockJWTAuthentication
+from common.auth.permissions import Authenticated
+
+from .mock_authoring import (
+    _group_or_throw,
+    assert_author,
+    assert_mutable,
+    audit_event,
+    bump,
+    locked_exam,
+)
 from .multilevel import SPECS
+from .views import require_role, success
 
 AUDIO_EXTENSIONS = ('.mp3', '.m4a', '.wav', '.ogg', '.aac', '.webm', '.mp4')
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp', '.gif')
@@ -183,7 +200,7 @@ def record_audio_access(actor, attempt_id, group_id):
 
 
 def stream_media(request, group_id, kind):
-    from .mock_catalog import is_staff, access_for
+    from .mock_catalog import access_for, is_staff
     actor = request.user if request.user.is_authenticated else None
     attempt_id = request.query_params.get('attemptId')
     if kind == 'audio' and actor and actor.role == 'student':

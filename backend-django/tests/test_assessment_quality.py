@@ -2,17 +2,26 @@
 import copy
 import json
 import os
-from datetime import datetime,timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import Mock,patch
+from unittest.mock import Mock, patch
+
 from django.test import SimpleTestCase
-from apps.core import assessment_results as results,assessment_quality as quality,assessment_providers as providers
-from apps.core import mock_grading,assessment_prompts,mock_support,mock_submission_snapshots
-from common.api.exceptions import ContractAPIException
+
+from apps.core import (
+    assessment_prompts,
+    mock_grading,
+    mock_submission_snapshots,
+    mock_support,
+)
+from apps.core import assessment_providers as providers
+from apps.core import assessment_quality as quality
+from apps.core import assessment_results as results
 from apps.core.assessment_ranking_scores import ranking_ai_projection
 from apps.core.mock_import_validate import canonical_checksum
-from apps.core.mock_submission_snapshots import build_input,blueprint_failure,enqueue
+from apps.core.mock_submission_snapshots import blueprint_failure, build_input, enqueue
 from apps.core.multilevel import CURRENT_SPEC
+from common.api.exceptions import ContractAPIException
 from tests.test_assessment import fixture as legacy_fixture
 
 
@@ -38,7 +47,7 @@ def ledger(input,result,role='PRIMARY',status='NEEDS_REVIEW'):
         failure_code='TEACHER_CONFIRMATION_REQUIRED',confidence=.95)
     evaluation=SimpleNamespace(id='evaluation',job_id='job',role=role,status='SUCCEEDED',result=result,
         input_hash=canonical_checksum(input),provider='deepseek',model='fixture-model',attempt_number=1,
-        completed_at=datetime(2026,1,1,tzinfo=timezone.utc))
+        completed_at=datetime(2026,1,1,tzinfo=UTC))
     transcripts=[]
     if input['skill']=='speaking':
         response=input['parts'][0]['responses'][0]
@@ -226,7 +235,7 @@ class InternalGradeDeliveryTests(SimpleTestCase):
         return SimpleNamespace(id='attempt',student_id='student',status='completed',flow_mode='full_test',
             exam=SimpleNamespace(title='Authored full mock',type='multilevel',level='C1'),specification_version=CURRENT_SPEC,
             raw_scores=dict(writing=raw),section_bands={},standard_scores={},overall_band=None,overall_score=75,
-            cefr_level='C1',finished_at=datetime(2026,1,1,tzinfo=timezone.utc),student=SimpleNamespace(user=SimpleNamespace(name='Student')))
+            cefr_level='C1',finished_at=datetime(2026,1,1,tzinfo=UTC),student=SimpleNamespace(user=SimpleNamespace(name='Student')))
 
     def test_new_internal_full_attempt_cannot_issue_overall_cefr_certificate(self):
         row=self.attempt()

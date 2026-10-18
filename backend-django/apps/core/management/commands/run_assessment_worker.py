@@ -1,7 +1,10 @@
 import signal
 from threading import Event
+
 from django.core.management.base import BaseCommand
+
 from apps.core.assessment_worker import run
+
 
 class Command(BaseCommand):
     help='Run the explicit 20-second PostgreSQL assessment worker (no schema migrations).'

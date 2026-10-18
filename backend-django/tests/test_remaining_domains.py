@@ -3,11 +3,22 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
-from django.test import SimpleTestCase
+
 from django.core.files.uploadedfile import SimpleUploadedFile
-from common.api.exceptions import ContractAPIException
-from apps.core import content_media,user_admin,video_views,videos,legacy_import_parser,telegram_bot,telegram_menu,telegram_delivery
+from django.test import SimpleTestCase
+
+from apps.core import (
+    content_media,
+    legacy_import_parser,
+    telegram_bot,
+    telegram_delivery,
+    telegram_menu,
+    user_admin,
+    video_views,
+    videos,
+)
 from apps.core.domain_contracts import js_length
+from common.api.exceptions import ContractAPIException
 
 
 class ContentStorageTests(SimpleTestCase):
@@ -274,8 +285,9 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('2-o\'rin', text)
 
     def test_monitoring_for_teacher_shows_active_attempts_and_anomalies(self):
-        from apps.legacy_schema import models as m
         from django.utils import timezone
+
+        from apps.legacy_schema import models as m
         now = timezone.now()
         teacher = SimpleNamespace(id='t1', name='Ustoz', role='teacher')
         attempt = SimpleNamespace(
@@ -300,8 +312,9 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('Qoidabuzarlik: 2 ta!', text)
 
     def test_results_renders_mock_attempt_with_cefr_and_bands(self):
-        from apps.legacy_schema import models as m
         from django.utils import timezone
+
+        from apps.legacy_schema import models as m
         now = timezone.now()
         student = SimpleNamespace(id='s1', name='Jasur', role='student')
         mock_att = SimpleNamespace(
@@ -325,8 +338,9 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('L:70', text)
 
     def test_articles_text_for_renders_announcements(self):
-        from apps.legacy_schema import models as m
         from django.utils import timezone
+
+        from apps.legacy_schema import models as m
         now = timezone.now()
         article = SimpleNamespace(
             title='Yangi o\'quv yili boshlanishi',
@@ -342,9 +356,10 @@ class TelegramLifecycleTests(SimpleTestCase):
             self.assertIn('Yangiliklar', text)
 
     def test_media_serving_endpoint(self):
-        from config.urls import serve_media
-        from django.test import RequestFactory
         from django.http import Http404
+        from django.test import RequestFactory
+
+        from config.urls import serve_media
         rf = RequestFactory()
         with TemporaryDirectory() as temp_dir:
             downloads_dir = Path(temp_dir) / 'media' / 'downloads'

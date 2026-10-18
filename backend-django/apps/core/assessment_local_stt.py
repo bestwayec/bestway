@@ -7,10 +7,11 @@ import atexit
 import math
 import multiprocessing
 import os
-from pathlib import Path
-from numbers import Real
 import re
+from numbers import Real
+from pathlib import Path
 from threading import Lock
+
 from .assessment_results import ProviderError
 
 PROVIDER='faster-whisper-local'
@@ -180,7 +181,7 @@ def _request(config,request):
 def transcribe(path,mime,language='en',duration_ms=None):
     # duration_ms is legacy timer/metadata input. Only decoded samples establish
     # the actual duration returned to the assessment ledger.
-    if not isinstance(mime,str) or not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a|aac)(;.*)?',mime,re.I) or language!='en':
+    if not isinstance(mime,str) or not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a|aac)(;.*)?',mime,re.IGNORECASE) or language!='en':
         raise ProviderError('STT_INPUT_INVALID')
     try:
         path=Path(path)

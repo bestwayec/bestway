@@ -1,14 +1,19 @@
 """Schema-1.0 import and safe authored-content regression contracts."""
 import copy
 from pathlib import Path
-from django.test import SimpleTestCase, override_settings
-from rest_framework.test import APIClient
 from types import SimpleNamespace
 
-from apps.core.mock_import_validate import validate_package, canonical_checksum
-from apps.core.mock_content import sanitize_content, assert_draft_gaps, assert_gapped_questions
-from apps.core.mock_media import resolve_key, validate_upload
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import SimpleTestCase, override_settings
+from rest_framework.test import APIClient
+
+from apps.core.mock_content import (
+    assert_draft_gaps,
+    assert_gapped_questions,
+    sanitize_content,
+)
+from apps.core.mock_import_validate import canonical_checksum, validate_package
+from apps.core.mock_media import resolve_key, validate_upload
 from common.api.exceptions import ContractAPIException
 
 

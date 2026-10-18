@@ -1,8 +1,13 @@
 from django.test import SimpleTestCase
 
-from apps.core.mock_rules import objective_group_issues, objective_question_issues, respects_answer_rule
+from apps.core.mock_authoring import multilevel_readiness
+from apps.core.mock_authoring import readiness as authoring_readiness
+from apps.core.mock_rules import (
+    objective_group_issues,
+    objective_question_issues,
+    respects_answer_rule,
+)
 from apps.core.multilevel import CURRENT_SPEC
-from apps.core.mock_authoring import multilevel_readiness, readiness as authoring_readiness
 
 
 class QuestionRuleParityTests(SimpleTestCase):

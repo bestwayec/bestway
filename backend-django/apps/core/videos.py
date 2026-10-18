@@ -6,15 +6,18 @@ import json
 import os
 import re
 import time
-from datetime import datetime,timezone as utc
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
+
 from django.db import connection
-from django.http import HttpResponse,FileResponse
+from django.http import FileResponse
 from django.utils import timezone
-from apps.legacy_schema.models import VideoLesson,VideoPurchase,StudentProfile,User
+
+from apps.legacy_schema.models import StudentProfile, User, VideoLesson, VideoPurchase
 from common.api.exceptions import ContractAPIException
-from .content_media import storage_path,delete_file,public_url,save_upload
+
+from .content_media import delete_file, public_url, storage_path
 from .system_settings import audit
 
 
@@ -29,7 +32,7 @@ def signature(payload):
 def sign(video_id,user_id,ttl=3600):
     exp=int(time.time())+ttl
     payload=b64(json.dumps(dict(v=video_id,u=user_id,e=exp),separators=(',',':'),ensure_ascii=False).encode())
-    return dict(token=payload+'.'+signature(payload),expiresAt=datetime.fromtimestamp(exp,utc.utc))
+    return dict(token=payload+'.'+signature(payload),expiresAt=datetime.fromtimestamp(exp,UTC))
 
 
 def verify(token):

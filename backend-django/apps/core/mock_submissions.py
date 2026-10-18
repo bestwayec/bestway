@@ -1,11 +1,16 @@
 """Atomic submission boundary; deterministic scoring only, no grading workers."""
 import json
+
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+
 from apps.legacy_schema.models import MockAnswer, Setting
-from . import mock_attempts as attempts, mock_catalog, mock_scoring as scoring
-from .mock_practice import is_partial, scope, scope_sections
+
+from . import mock_attempts as attempts
+from . import mock_catalog
+from . import mock_scoring as scoring
+from .mock_practice import is_partial, scope_sections
 
 
 def saved_result(attempt):

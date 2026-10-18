@@ -7,6 +7,7 @@ transaction routes ship; this file validates pure-layer parity and the
 student/auditor visibility boundary here and now.
 """
 from __future__ import annotations
+
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -15,7 +16,7 @@ from django.urls import resolve
 from rest_framework.test import APIClient
 
 from apps.core import mock_authoring
-from apps.core.mock_rules import MANUAL_TYPES, objective_question_issues
+from apps.core.mock_rules import objective_question_issues
 
 
 def _fake_question(type_: str, prompt: str = "Prompt", options=None, correct_answers=None, accepted_variants=None, points=1, word_limit=None, answer_rule=None):
@@ -151,15 +152,17 @@ class AuthoringSanitizationAndParityTests(SimpleTestCase):
         self.assertIn("Full Multilevel mock requires all four sections", issues)
 
     def test_catalogue_preserves_nest_ielts_start_readiness(self):
-        from apps.core.mock_catalog import start_ready
         from types import SimpleNamespace
+
+        from apps.core.mock_catalog import start_ready
         # Nest catalogue/detail intentionally do not apply Review's key/media checks.
         self.assertTrue(start_ready(SimpleNamespace(type="ielts")))
 
     def test_catalogue_multilevel_uses_structural_start_readiness(self):
-        from apps.core.mock_catalog import start_ready
         from types import SimpleNamespace
         from unittest.mock import patch
+
+        from apps.core.mock_catalog import start_ready
         tree = {"specification_version": "OLD_SPEC", "sections": []}
         with patch.object(mock_authoring, "_exam_tree", return_value=tree):
             self.assertFalse(start_ready(SimpleNamespace(type="multilevel")))

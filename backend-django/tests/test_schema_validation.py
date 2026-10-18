@@ -1,11 +1,13 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from django.test import SimpleTestCase
+
 from common.schema_validation import migration_problems
 
 
 class MigrationGateTests(SimpleTestCase):
     expected = [{'name': '001', 'checksums': ['correct']}, {'name': '002', 'checksums': ['next']}]
-    finished = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    finished = datetime(2026, 1, 1, tzinfo=UTC)
 
     def test_completed_exact_release_passes(self):
         self.assertEqual(migration_problems(self.expected, [

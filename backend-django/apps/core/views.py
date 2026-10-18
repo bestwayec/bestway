@@ -1,24 +1,27 @@
 from __future__ import annotations
 
-from common.auth.passwords import hash_password
 import re
 import uuid
 
 from django.conf import settings
 from django.db import connection, transaction
 from django.utils.timezone import now
-from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
-from common.auth.authentication import OptionalMockJWTAuthentication
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from common.api.exceptions import ContractAPIException
+from common.auth.authentication import OptionalMockJWTAuthentication
+from common.auth.passwords import hash_password
 from common.auth.permissions import Authenticated
 from common.auth.throttling import PublicAuthThrottle, SensitiveAuthThrottle
-from . import auth_service
-from . import exam_programs
-from . import mock_authoring
-from . import mock_catalog
+
+from . import auth_service, exam_programs, mock_authoring, mock_catalog
 
 ROLES = {"super_admin", "admin", "teacher", "student", "parent"}
 PHONE = re.compile(r"^\+?[0-9]{9,15}$")
@@ -288,6 +291,7 @@ def mock_exams_view(request):
 
 def _delete_mock_exam_for_staff(actor, exam_id: str) -> dict:
     from types import SimpleNamespace
+
     from apps.legacy_schema.models import MockExam
 
     exam = MockExam.objects.filter(id=exam_id).first()
@@ -331,7 +335,7 @@ def legacy_test_detail_view(request, test_id):
         return legacy_admin.test(request._request, test_id)
     require_authenticated(request)
     require_role(request, "teacher", "admin", "super_admin")
-    from apps.legacy_schema.models import Test, Question
+    from apps.legacy_schema.models import Question, Test
     test_obj = Test.objects.filter(id=test_id).first()
     if test_obj is None:
         raise ContractAPIException("TEST_NOT_FOUND", "Test topilmadi", 404)

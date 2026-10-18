@@ -1,4 +1,5 @@
-from django.core.management.base import BaseCommand,CommandError
+from django.core.management.base import BaseCommand, CommandError
+
 from apps.core.assessment_local_stt import warmup
 from apps.core.assessment_results import ProviderError
 

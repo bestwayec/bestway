@@ -3,14 +3,17 @@ import os
 import re
 from pathlib import Path
 from uuid import uuid4
-from django.http import FileResponse
+
 from django.conf import settings
+from django.http import FileResponse
 from django.utils import timezone
+
 from apps.legacy_schema.models import GalleryImage, Teacher
 from common.api.exceptions import ContractAPIException
-from .system_settings import audit
-from .domain_contracts import invalid,js_length
+
+from .domain_contracts import invalid, js_length
 from .game_points_views import js_number
+from .system_settings import audit
 
 
 def storage_path(key):

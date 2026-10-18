@@ -3,14 +3,25 @@ import os
 from datetime import timedelta
 from urllib.parse import quote
 from uuid import uuid4
-from django.db import transaction,connection
-from django.db.models import Q,F
+
+from django.db import connection, transaction
+from django.db.models import F, Q
 from django.utils import timezone
-from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation,SpeechTranscript,MockAttempt,MockAnswer,AuditLog
-from .mock_attempts import fail,aware
-from .points import assert_can_view
-from .content_media import storage_path
+
+from apps.legacy_schema.models import (
+    AssessmentEvaluation,
+    AssessmentJob,
+    AuditLog,
+    MockAnswer,
+    MockAttempt,
+    SpeechTranscript,
+)
+
 from . import assessment_results as results
+from .content_media import storage_path
+from .mock_attempts import aware, fail
+from .points import assert_can_view
+
 
 def setting(name,fallback,low,high):
     try:value=float(os.environ.get(name,'nan'))
@@ -231,7 +242,7 @@ def review(actor,identifier,data):
         evaluations=list(AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluated=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
         input=job.input_snapshot
-        from .assessment_quality import enabled,evidence_input
+        from .assessment_quality import enabled, evidence_input
         if enabled(input) and input['skill']=='speaking':input=evidence_input(input,list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at')))
         base=job.final_result if job.final_result is not None else evaluated.result if evaluated else None;action=data['action']
         old=dict(finalScore=job.final_score,teacherScore=job.teacher_score,source=job.final_score_source,version=job.version,status=job.status)

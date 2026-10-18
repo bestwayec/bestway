@@ -14,7 +14,13 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 from common.api.exceptions import ContractAPIException
-from common.auth.jwt import base64url_random, issue_access, new_family, new_refresh, token_hash
+from common.auth.jwt import (
+    base64url_random,
+    issue_access,
+    new_family,
+    new_refresh,
+    token_hash,
+)
 from common.auth.passwords import hash_password, needs_rehash, verify_password
 
 DUMMY_HASH = b"$2a$10$S0DkiNylcFUhAIuwhOeOz.jS/i48bFSlu6E0mrcE/jVrZ9Ph9i6Zy"

@@ -1,8 +1,10 @@
-from rest_framework.decorators import api_view,permission_classes
-from common.auth.permissions import Authenticated,roles
-from apps.legacy_schema.models import Notification,NotificationType,Role
+from rest_framework.decorators import api_view, permission_classes
+
+from apps.legacy_schema.models import Notification, NotificationType, Role
+from common.auth.permissions import Authenticated, roles
+
 from . import notifications as service
-from .domain_contracts import payload,invalid,pagination,paginated
+from .domain_contracts import invalid, paginated, pagination, payload
 from .mock_attempt_views import success
 
 

@@ -1,10 +1,10 @@
 """Decode the actual audio timeline in a bounded, model-free subprocess."""
 import json
 import math
-from pathlib import Path
 import subprocess
 import sys
 import wave
+from pathlib import Path
 
 MAX_BYTES = 25 * 1024 * 1024
 TOLERANCE_SECONDS = .25  # Codec framing/padding and recorder stop scheduling.

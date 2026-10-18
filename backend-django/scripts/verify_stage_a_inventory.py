@@ -1,16 +1,18 @@
 """Compare active reference routes to DRF registration, not semantic parity."""
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.test')
 import django
+
 django.setup()
 from apps.core.urls import urlpatterns
+
 
 def canonical(path):
     return re.sub(r':[^/]+|<[^>]+>', ':param', path.rstrip('/'))

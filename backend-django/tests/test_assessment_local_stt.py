@@ -1,13 +1,14 @@
 """Local STT limits, real evidence projection and cancellable process boundary."""
-import copy
 import math
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import Mock,patch
+from unittest.mock import Mock, patch
+
 from django.test import SimpleTestCase
+
 from apps.core import assessment_local_stt as stt
 from apps.core.assessment_results import ProviderError
 

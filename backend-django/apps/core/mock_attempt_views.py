@@ -1,11 +1,14 @@
 """HTTP boundary for the migrated student attempt mutations."""
 from datetime import datetime
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from . import attempt_signature, mock_attempts as engine
-from .views import body, require_authenticated, require_role, success as envelope
+from . import attempt_signature
+from . import mock_attempts as engine
+from .views import body, require_authenticated, require_role
+from .views import success as envelope
 
 
 def wire(value):
@@ -265,9 +268,10 @@ def speaking_upload_view(request, attempt_id, question_id):
 @permission_classes([AllowAny])
 def speaking_audio_view(request, attempt_id, question_id):
     require_authenticated(request)
-    from apps.legacy_schema.models import MockAttempt, MockAnswer
-    from .mock_media import resolve_key
+    from apps.legacy_schema.models import MockAnswer, MockAttempt
+
     from .mock_attempt_audio import stream_audio
+    from .mock_media import resolve_key
     attempt = MockAttempt.objects.filter(id=attempt_id).first()
     if attempt is None:
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
@@ -281,7 +285,7 @@ def speaking_audio_view(request, attempt_id, question_id):
 def _extract_uploaded_images(request, max_size=10 * 1024 * 1024):
     import base64
     from pathlib import Path
-    from . import writing_ocr
+
 
     allowed_exts = {'.jpg', '.jpeg', '.png', '.webp'}
     allowed_mimes = {'image/jpeg', 'image/jpg', 'image/png', 'image/webp'}
@@ -359,10 +363,13 @@ def _extract_uploaded_images(request, max_size=10 * 1024 * 1024):
 @permission_classes([AllowAny])
 def writing_ocr_view(request, attempt_id, question_id=None):
     from uuid import uuid4
+
     from django.utils import timezone
-    from apps.legacy_schema.models import MockAttempt, MockAnswer, MockQuestion
-    from .content_media import storage_path
+
+    from apps.legacy_schema.models import MockAnswer, MockAttempt, MockQuestion
+
     from . import writing_ocr
+    from .content_media import storage_path
 
     require_authenticated(request)
     if request.user.role not in ('student', 'teacher', 'admin', 'super_admin'):

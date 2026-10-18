@@ -2,15 +2,18 @@ import hashlib
 import os
 import re
 import secrets
-from datetime import timedelta
+from datetime import UTC, timedelta
 from types import SimpleNamespace
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from apps.legacy_schema.models import User,TelegramLinkToken
+
+from apps.legacy_schema.models import TelegramLinkToken, User
 from common.api.exceptions import ContractAPIException
-from .system_settings import audit
+
 from . import telegram_delivery as api
+from .system_settings import audit
 
 
 def escape(text):return text.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
@@ -54,8 +57,7 @@ def consume(token,chat_id):
     # Prisma's legacy PostgreSQL schema uses TIMESTAMP WITHOUT TIME ZONE; values
     # are UTC wall time. Interpret naive values as UTC before comparing.
     if expires_at is not None and timezone.is_naive(expires_at):
-        from datetime import timezone as datetime_timezone
-        expires_at=expires_at.replace(tzinfo=datetime_timezone.utc)
+        expires_at=expires_at.replace(tzinfo=UTC)
     if not row or row.used_at or expires_at<timezone.now():
         api.plain(chat_id,'❌ Bog\'lash havolasi eskirgan yoki ishlatilgan.\nSaytga kiring va "Telegramni ulash" tugmasini qaytadan bosing.');return
     if not row.user.is_active:api.plain(chat_id,'❌ Akkaunt bloklangan. Administratsiyaga murojaat qiling.');return

@@ -1,11 +1,13 @@
 import re
 
 from rest_framework.decorators import api_view, permission_classes
-from common.auth.permissions import Authenticated
+
 from common.api.exceptions import ContractAPIException
-from .views import require_role, success
+from common.auth.permissions import Authenticated
+
 from . import mock_imports
 from .mock_import_validate import validate_package
+from .views import require_role, success
 
 
 def import_body(request, *, commit=False):

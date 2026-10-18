@@ -6,9 +6,10 @@ exam rewrite is needed. Every response and assessment must use this same scope.
 import re
 from types import SimpleNamespace
 
-from .multilevel import SPECS, authored
-from .mock_rules import objective_question_issues, MANUAL_TYPES, QUESTION_TYPES
 from common.api.exceptions import ContractAPIException
+
+from .mock_rules import MANUAL_TYPES, QUESTION_TYPES, objective_question_issues
+from .multilevel import SPECS, authored
 
 SCOPE_KEY = '__practice_scope'
 PRACTICE_SKILLS = ('listening', 'reading', 'writing', 'speaking')
@@ -110,11 +111,7 @@ def task_scope(tree, media_exists):
                     if types is not None and qtype not in types:
                         continue
                 else:
-                    if skill == 'writing' and qtype not in ('essay_task1', 'essay_task2'):
-                        continue
-                    elif skill == 'speaking' and qtype != 'speaking_task':
-                        continue
-                    elif is_auto and (qtype in MANUAL_TYPES or qtype not in QUESTION_TYPES):
+                    if skill == 'writing' and qtype not in ('essay_task1', 'essay_task2') or skill == 'speaking' and qtype != 'speaking_task' or is_auto and (qtype in MANUAL_TYPES or qtype not in QUESTION_TYPES):
                         continue
 
                 if is_auto:
@@ -141,7 +138,13 @@ def task_scope(tree, media_exists):
 
 
 def practice_plan(exam):
-    from apps.legacy_schema.models import MockQuestion, MockQuestionGroup, MockSection, MockImportReviewIssue
+    from apps.legacy_schema.models import (
+        MockImportReviewIssue,
+        MockQuestion,
+        MockQuestionGroup,
+        MockSection,
+    )
+
     from .mock_authoring import group_payload, question_payload
     from .mock_media import resolve_key
     if exam.type not in ('multilevel', 'ielts_academic', 'ielts_general'):

@@ -1,14 +1,16 @@
 """The ten scoped mock access/staff/result HTTP contracts."""
 import math
+
 from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+
 from . import mock_support as service
-from .mock_attempt_views import success, wire
 from .legacy_test_views import CertificateJSONRenderer
-from .views import body, require_authenticated, require_role
+from .mock_attempt_views import success, wire
 from .mock_scoring import trim
+from .views import body, require_authenticated, require_role
 
 
 def number(value):

@@ -1,18 +1,18 @@
 """Clock and HTTP-boundary regressions; ORM integration lives in PG harness."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from django.urls import resolve
 from rest_framework.test import APIClient
-from unittest.mock import patch
 
 from apps.core import mock_attempts as engine
 from apps.core.mock_attempt_views import validate_answer, wire
 from common.api.exceptions import ContractAPIException
 
-AT = datetime(2026, 10, 8, tzinfo=timezone.utc)
+AT = datetime(2026, 10, 8, tzinfo=UTC)
 
 
 class AttemptTimingTests(SimpleTestCase):

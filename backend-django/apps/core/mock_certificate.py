@@ -1,11 +1,13 @@
 """Persisted IELTS/Multilevel result certificate; no grading or external I/O."""
-from io import BytesIO
-from decimal import Decimal,ROUND_HALF_UP
 import os
-from reportlab.pdfgen import canvas
+from decimal import ROUND_HALF_UP, Decimal
+from io import BytesIO
+
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from .mock_attempts import aware
+from reportlab.pdfgen import canvas
+
 from .legacy_tests import js_string
+from .mock_attempts import aware
 
 
 def generate(data):

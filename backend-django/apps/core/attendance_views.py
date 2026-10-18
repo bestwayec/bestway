@@ -1,10 +1,13 @@
 """Exact Nest attendance DTO boundaries and authenticated routes."""
 import re
+
 from django.http import HttpResponse
 from rest_framework.decorators import api_view, permission_classes
+
 from common.auth.permissions import Authenticated, roles
+
 from . import attendance as service
-from .domain_contracts import payload, invalid
+from .domain_contracts import invalid, payload
 from .mock_attempt_views import success
 
 # validator.js isISO8601, non-strict default used by @IsISO8601().

@@ -3,18 +3,17 @@
 The reference never loads application jobs or external-service configuration.
 Only UUIDs and ISO timestamps are normalized. Each mismatch remains a failure.
 """
-import copy
 import json
 import os
-from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
-import shutil
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
-from urllib.request import Request, urlopen
+from pathlib import Path
 from urllib.error import HTTPError
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 import psycopg
@@ -85,8 +84,9 @@ try:
     import django
     django.setup()
     from django.conf import settings
-    from rest_framework.test import APIClient
     from django.core.files.uploadedfile import SimpleUploadedFile
+    from rest_framework.test import APIClient
+
     from common.auth.jwt import issue_access
     tokens = [{role: issue_access(uid, role) for role, uid in side.items()} for side in ids]
     with tempfile.TemporaryDirectory(prefix='bestway-stage-a-diff-', dir=ROOT, delete=False) as storage:
@@ -181,6 +181,7 @@ try:
             # text and page dimensions, not arbitrary binary serialization.
             if path.endswith('/certificate') and all(r['status']==200 for r in responses):
                 from io import BytesIO
+
                 from pypdf import PdfReader
                 for result in responses:
                     reader=PdfReader(BytesIO(bytes(result['body']['bytes'])))
@@ -339,13 +340,13 @@ try:
             results=results)
         if STAGE_B:
             stage_b_inventory = json.loads(subprocess.run(['node', str(ROOT / 'scripts/stage_b_inventory.cjs')], capture_output=True, text=True, check=True).stdout)
-            from django.urls import resolve, Resolver404
+            from django.urls import Resolver404, resolve
             missing_contracts = []
             for endpoint in stage_b_inventory['endpoints']:
                 target = re.sub(r':[^/]+', 'fixture', endpoint['path'])
                 try:
                     found = resolve(target).func
-                    implemented = endpoint['method'].lower() in getattr(found, 'cls').http_method_names
+                    implemented = endpoint['method'].lower() in found.cls.http_method_names
                 except (Resolver404, AttributeError):
                     implemented = False
                 if not implemented:

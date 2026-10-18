@@ -1,13 +1,17 @@
 import math
 import re
-from django.http import HttpResponse,StreamingHttpResponse
-from rest_framework.decorators import api_view,permission_classes
-from common.auth.permissions import Authenticated,roles
-from . import assessment,mock_grading
+
+from django.http import HttpResponse, StreamingHttpResponse
+from rest_framework.decorators import api_view, permission_classes
+
+from common.auth.permissions import Authenticated, roles
+
+from . import assessment, mock_grading
 from .content_media import storage_path
-from .domain_contracts import payload,invalid,js_length
+from .domain_contracts import invalid, js_length, payload
 from .game_points_views import js_number
 from .mock_attempt_views import success
+
 
 def validate_review(data):
     actions=['ACCEPT','OVERRIDE','EDIT_FEEDBACK','REGRADE','NEEDS_REVIEW']
@@ -81,8 +85,15 @@ def grade(request,attempt_id):
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
 def live_monitoring(request, group_id):
     from datetime import timedelta
+
     from django.utils import timezone
-    from apps.legacy_schema.models import Group, StudentProfile, MockAttempt, MockCheatEvent
+
+    from apps.legacy_schema.models import (
+        Group,
+        MockAttempt,
+        MockCheatEvent,
+        StudentProfile,
+    )
     from common.api.exceptions import ContractAPIException
 
     group = Group.objects.filter(id=group_id).first()

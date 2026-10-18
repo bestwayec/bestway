@@ -6,7 +6,6 @@ and role-based API views.
 """
 from __future__ import annotations
 
-import io
 import os
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -17,7 +16,7 @@ from django.db import connection
 from django.test import TransactionTestCase
 from rest_framework.test import APIClient
 
-from apps.core import topic_service, topic_views
+from apps.core import topic_service
 from common.api.exceptions import ContractAPIException
 
 

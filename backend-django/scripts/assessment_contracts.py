@@ -3,14 +3,17 @@ import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
-from psycopg import sql
 from unittest.mock import patch
+from uuid import uuid4
+
+from psycopg import sql
+
 
 def verify_assessment(call,db,schemas,ids,state,control,normalize,checks,media_roots):
-    from apps.core import assessment,assessment_results as rubric,assessment_worker as worker
+    from apps.core import assessment
+    from apps.core import assessment_results as rubric
+    from apps.core import assessment_worker as worker
     from apps.core.mock_import_validate import canonical_checksum
-    from apps.legacy_schema.models import AssessmentJob,AssessmentEvaluation
     shared={label:str(uuid4()) for label in ('assessment_exam','assessment_section','assessment_group','assessment_question','assessment_attempt','assessment_legacy_attempt','assessment_job')}
     for side in (0,1):
         ids[side].update(shared)
@@ -144,6 +147,7 @@ def verify_assessment(call,db,schemas,ids,state,control,normalize,checks,media_r
     seed_job('assessment_claim_a',generation=20);seed_job('assessment_claim_b',generation=21)
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
+
     from django.db import connections
     barrier=Barrier(2)
     def claim_once(_):

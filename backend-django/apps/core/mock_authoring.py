@@ -7,15 +7,28 @@ from __future__ import annotations
 import re
 from uuid import uuid4
 
-from django.db import IntegrityError, connection, transaction
+from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import AssessmentJob, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup, MockSection
+from apps.legacy_schema.models import (
+    AssessmentJob,
+    MockAnswer,
+    MockAttempt,
+    MockExam,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+)
 from common.api.exceptions import ContractAPIException
+
 from .auth_service import audit
-from .mock_rules import MANUAL_TYPES, QUESTION_TYPES, objective_group_issues, objective_question_issues
-from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, authored
+from .mock_rules import (
+    QUESTION_TYPES,
+    objective_group_issues,
+    objective_question_issues,
+)
+from .multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, SPECS
 
 
 def _student_question_payload(question, group) -> dict:
@@ -164,7 +177,7 @@ def _resolve_points(exam_type: str, is_auto: bool, value, prefix: str = "") -> i
 def _group_payload(data: dict) -> dict:
     mapping = {"sortOrder": "sort_order", "title": "title", "instructions": "instructions", "passageText": "passage_text", "contentHtml": "content_html", "audioScript": "audio_script", "contentLayout": "content_layout", "optionsReusable": "options_reusable", "maxScore": "max_score", "stimulusRef": "stimulus_ref", "partNumber": "part_number", "audioDurationSec": "audio_duration_sec", "audioPlayLimit": "audio_play_limit"}
     values = {target: data[source] for source, target in mapping.items() if source in data}
-    from .mock_content import sanitize_content, assert_draft_gaps
+    from .mock_content import assert_draft_gaps, sanitize_content
     for field in ('content_html', 'audio_script'):
         if field in values:
             values[field] = sanitize_content(values[field])
@@ -304,8 +317,9 @@ def create_exam(actor, data: dict):
         if data.get("starterStructure"):
             if exam_type == "multilevel": multilevel_preset(exam.id, data.get("skills"))
             else: ielts_preset(exam.id, data.get("skills"))
-        from .auth_service import audit
         from django.db import connection
+
+        from .auth_service import audit
         with connection.cursor() as cursor: audit(cursor, actor.id, "mock.exam.create", "mockExam", exam.id, new={"title": exam.title, "type": exam.type})
     return exam
 
@@ -623,9 +637,10 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
     if is_full:
         for skill in ('listening', 'reading', 'writing') + (() if ielts else ('speaking',)):
             items.append(dict(key=skill + '_section', ok=skill in by_skill, detail='exists' if skill in by_skill else 'missing section'))
+    from apps.legacy_schema.models import MockImportReviewIssue
+
     from .mock_content import assert_gapped_questions, gap_numbers
     from .mock_media import resolve_key
-    from apps.legacy_schema.models import MockImportReviewIssue
     def item(key, ok, detail):
         items.append(dict(key=key, ok=ok, detail=detail))
     persisted_groups = {s['id']: list(MockQuestionGroup.objects.filter(section_id=s['id']).order_by('sort_order')) for s in sections}

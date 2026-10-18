@@ -6,23 +6,28 @@ import os
 import re
 import secrets
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import connection, transaction
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
 
 from common.api.exceptions import ContractAPIException
 from common.auth.passwords import hash_password
+
 from . import auth_service
 from .mock_attempt_views import success
 
 logger = logging.getLogger(__name__)
 
 
-def verify_google_credential(credential: str, client_id: str | None = None) -> Dict[str, Any]:
+def verify_google_credential(credential: str, client_id: str | None = None) -> dict[str, Any]:
     """Verify Google OAuth2 id_token / credential.
     
     Uses google.oauth2.id_token.verify_oauth2_token with fallback to

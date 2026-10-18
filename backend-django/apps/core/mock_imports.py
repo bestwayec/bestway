@@ -2,17 +2,27 @@
 import hashlib
 from datetime import timedelta
 
-from django.db import connection, transaction, IntegrityError, OperationalError
+from django.db import IntegrityError, OperationalError, connection, transaction
 from django.utils import timezone
 
-from apps.legacy_schema.models import (MockExam, MockSection, MockQuestionGroup, MockQuestion,
-    MockExamImport, MockImportSourceMap, MockImportReviewIssue, MockStagedMedia, MockAttempt)
+from apps.legacy_schema.models import (
+    MockAttempt,
+    MockExam,
+    MockExamImport,
+    MockImportReviewIssue,
+    MockImportSourceMap,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+    MockStagedMedia,
+)
 from common.api.exceptions import ContractAPIException
-from .mock_authoring import new_id, audit_event, bump
+
+from .mock_authoring import audit_event, bump, new_id
 from .mock_content import sanitize_content
 from .mock_import_validate import validate_package
 from .mock_rules import canonical_decision
-from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE
+from .multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC
 
 
 def assert_staff(actor):
@@ -84,7 +94,7 @@ def stage_media(actor, upload):
     assert_staff(actor)
     if upload is None:
         raise ContractAPIException('NO_FILE', 'Fayl yuklanmadi', 400)
-    from .mock_media import store_upload, delete_created
+    from .mock_media import delete_created, store_upload
     key = store_upload(upload, staged=True)
     stamp = timezone.now()
     try:

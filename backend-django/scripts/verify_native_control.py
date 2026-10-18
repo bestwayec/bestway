@@ -5,15 +5,16 @@ Keep existing OS credentials untouched and use a new D: WebView profile.
 """
 import json
 import os
-from pathlib import Path
 import socket
 import subprocess
 import time
-from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Thread
-from urllib.request import urlopen
 from urllib.parse import urlparse
+from urllib.request import urlopen
 from uuid import uuid4
+
 from playwright.sync_api import sync_playwright
 
 ROOT=Path(__file__).resolve().parents[1]

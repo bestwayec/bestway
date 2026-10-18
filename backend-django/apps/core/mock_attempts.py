@@ -6,20 +6,41 @@ response/media mutations; no client revision or countdown is authoritative.
 from __future__ import annotations
 
 from copy import copy
-from datetime import timedelta
-from datetime import timezone as datetime_timezone
+from datetime import UTC, timedelta
 
 from django.db import connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from apps.legacy_schema.models import (MockAnswer, MockAttempt, MockCheatEvent,
-    MockExam, MockQuestion, MockQuestionGroup, MockSection, StudentProfile)
+from apps.legacy_schema.models import (
+    MockAnswer,
+    MockAttempt,
+    MockCheatEvent,
+    MockExam,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+    StudentProfile,
+)
 from common.api.exceptions import ContractAPIException
+
 from . import attempt_signature, exam_programs, mock_catalog
 from .mock_authoring import _exam_tree, multilevel_readiness, new_id
-from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, SPECS, speaking_profile, task_guidance
-from .mock_practice import is_partial, scope, scope_sections, selected_scope, SCOPE_KEY, PRACTICE_SKILLS
+from .mock_practice import (
+    PRACTICE_SKILLS,
+    SCOPE_KEY,
+    is_partial,
+    scope,
+    scope_sections,
+    selected_scope,
+)
+from .multilevel import (
+    CURRENT_SPEAKING_PROFILE,
+    CURRENT_SPEC,
+    SPECS,
+    speaking_profile,
+    task_guidance,
+)
 
 SKILLS = ('listening', 'reading', 'writing', 'speaking')
 
@@ -34,7 +55,7 @@ def iso(value):
 
 def aware(value):
     # Prisma uses PostgreSQL timestamp without time zone, storing UTC.
-    return value.replace(tzinfo=datetime_timezone.utc) if value is not None and timezone.is_naive(value) else value
+    return value.replace(tzinfo=UTC) if value is not None and timezone.is_naive(value) else value
 
 
 def versioned(attempt):
@@ -231,15 +252,7 @@ def start(actor, exam_id, data):
         if existing:
             now = timezone.now()
             exp = existing.overall_deadline_at or existing.deadline_at
-            if exp and aware(exp) <= now:
-                from .mock_submissions import submit
-                try:
-                    submit(actor, existing.id, force=True)
-                except Exception:
-                    existing.status = 'completed'
-                    existing.save(update_fields=['status'])
-                existing = None
-            elif partial != is_partial(existing) or (partial and set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
+            if exp and aware(exp) <= now or partial != is_partial(existing) or (partial and set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
                 from .mock_submissions import submit
                 try:
                     submit(actor, existing.id, force=True)
@@ -316,10 +329,13 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
 
 
 def notify_teacher_proctoring_alert(attempt, actor, event):
-    import os
     import logging
+    import os
+
     from django.core.cache import cache
+
     from apps.legacy_schema.models import StudentProfile, User
+
     from . import telegram_delivery
 
     attempt_id = getattr(attempt, 'id', 'unknown')
@@ -457,8 +473,8 @@ def advance(actor, attempt_id):
 
 
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
-    from .mock_speaking_policy import strict
     from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS
+    from .mock_speaking_policy import strict
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         if not versioned(attempt):
@@ -644,7 +660,8 @@ def detail(actor, attempt_id):
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
     result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections))
     try:
-        from apps.legacy_schema.models import AssessmentJob, AssessmentEvaluation
+        from apps.legacy_schema.models import AssessmentEvaluation, AssessmentJob
+
         from .assessment_results import format_diagnostic_feedback
         jobs = AssessmentJob.objects.filter(attempt_id=attempt_id).order_by('-generation', '-created_at')
         diagnostic = {}
@@ -704,8 +721,13 @@ def validate_audio_container(upload):
 
 
 def upload_speaking(actor, attempt_id, question_id, upload):
-    from .mock_media import store_upload, delete_created, delete_unreferenced, validate_upload
     from . import mock_speaking_policy as speaking
+    from .mock_media import (
+        delete_created,
+        delete_unreferenced,
+        store_upload,
+        validate_upload,
+    )
     if upload is None:
         fail('NO_FILE', 'Audio fayl yuklanmadi')
     validate_upload(upload, 'audio')

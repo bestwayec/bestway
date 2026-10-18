@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 from unittest.mock import patch
+
+
 def verify_telegram(call,control,normalize,checks):
     deliveries=[]
     def transport(method,payload=None):

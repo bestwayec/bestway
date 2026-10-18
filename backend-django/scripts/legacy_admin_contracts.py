@@ -31,6 +31,7 @@ def verify_legacy(call,db,schemas,ids,state,checks):
     call('DELETE','/v1/tests/questions/{legacy_question}')
     call('POST','/v1/tests/{legacy_test}/questions',dict(section='writing',type='essay',prompt='Discuss the topic.',maxScore=10),capture='legacy_essay')
     from uuid import uuid4
+
     from psycopg import sql
     for side in (0,1):
         ids[side]['legacy_attempt']=str(uuid4())
@@ -43,9 +44,10 @@ def verify_legacy(call,db,schemas,ids,state,checks):
     checks.append('Legacy: teacher ownership, half-point scoring, upsert of a same-test question outside questionOrder and completed-attempt regrade preserve reference result/notification behavior')
     # Database mutation fault is injected inside the real serializable import;
     # every partially inserted question and its audit must disappear.
-    from apps.core import legacy_authoring
     from types import SimpleNamespace
     from unittest.mock import patch
+
+    from apps.core import legacy_authoring
     before=state(0);original=legacy_authoring.Question.objects.create;count=0
     def failing_insert(*args,**kwargs):
         nonlocal count

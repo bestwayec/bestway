@@ -2,17 +2,21 @@ import hashlib
 import hmac
 import logging
 import os
-from pathlib import Path
 import time
 import urllib.parse
 import urllib.request
-from urllib.request import Request, urlopen as _stdlib_urlopen
+from pathlib import Path
+from urllib.request import Request
+from urllib.request import urlopen as _stdlib_urlopen
+
 from django.conf import settings
 from django.utils import timezone
+
 from apps.legacy_schema import models as m
-from .telegram_links import escape,find
+
 from . import telegram_delivery as api
 from . import telegram_fsm as fsm
+from .telegram_links import escape, find
 
 urlopen=_stdlib_urlopen
 SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
@@ -74,7 +78,6 @@ def ensure_superadmin_user(chat_id, from_user=None):
     linked to telegram_chat_id=5582178765.
     """
     from types import SimpleNamespace
-    from uuid import uuid4
     chat_str = str(chat_id)
     user = None
     try:
@@ -121,8 +124,9 @@ def ensure_superadmin_user(chat_id, from_user=None):
                 pass
     else:
         try:
-            from common.auth.passwords import hash_password
             import secrets
+
+            from common.auth.passwords import hash_password
             pwd_hash = hash_password(secrets.token_urlsafe(16))
         except Exception:
             pwd_hash = 'superadmin_sso_hash'
@@ -778,8 +782,9 @@ def text_for(user,key):
 
 
 def send_otp_code(chat_id, from_user=None):
-    from django.core.cache import cache
     import secrets
+
+    from django.core.cache import cache
     code = f"{secrets.randbelow(900000) + 100000}"
     cache_key = f"telegram_otp:{code}"
 
@@ -884,7 +889,8 @@ def create_writing_topic_helper(title: str, prompt: str, task_type: str, image_k
         except Exception as err:
             logging.getLogger(__name__).warning('topic_service.create_writing_topic failed: %r', err)
 
-    import uuid, time
+    import time
+    import uuid
     return {
         'id': str(uuid.uuid4())[:8],
         'skill': 'writing',
@@ -928,7 +934,8 @@ def create_speaking_topic_helper(title: str, part: str, cue_card: list = None, q
         except Exception as err:
             logging.getLogger(__name__).warning('topic_service.create_speaking_topic failed: %r', err)
 
-    import uuid, time
+    import time
+    import uuid
     return {
         'id': str(uuid.uuid4())[:8],
         'skill': 'speaking',

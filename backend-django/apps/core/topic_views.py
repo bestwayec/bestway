@@ -6,12 +6,17 @@ Restricted endpoints require super_admin or admin roles.
 from __future__ import annotations
 
 import json
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 
 from common.api.exceptions import ContractAPIException
 from common.auth.authentication import OptionalMockJWTAuthentication
+
 from . import topic_service as service
 from .views import require_role, success
 

@@ -1,8 +1,10 @@
 """Local legacy result PDF. No external service, result grading or schema writes."""
-from io import BytesIO
 import os
-from reportlab.pdfgen import canvas
+from io import BytesIO
+
 from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfgen import canvas
+
 from .mock_attempts import aware
 
 

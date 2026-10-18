@@ -1,17 +1,20 @@
 """Legacy Test/Question administration, independent from mock authoring."""
 from pathlib import Path
 from uuid import uuid4
-from django.db import transaction,connection
-from django.db.models import Value,JSONField
+
+from django.db import connection, transaction
+from django.db.models import JSONField, Value
 from django.utils import timezone
-from apps.legacy_schema.models import Test,Question,TestAttempt,Answer
+
+from apps.legacy_schema.models import Answer, Question, Test, TestAttempt
+
 from . import legacy_tests as service
-from .legacy_import_parser import parse
-from .system_settings import audit
-from .domain_contracts import invalid,js_length
+from .content_media import delete_file, storage_path
+from .domain_contracts import invalid, js_length
 from .game_points_views import bounded
-from .content_media import storage_path,delete_file
+from .legacy_import_parser import parse
 from .points import assert_can_view
+from .system_settings import audit
 
 TEST_FIELDS=dict(isDemo='is_demo',isActive='is_active',durationMinutes='duration_minutes',sectionQuestionCounts='section_question_counts')
 QUESTION_FIELDS=dict(correctAnswer='correct_answer',maxScore='max_score',passageText='passage_text',audioUrl='audio_url')

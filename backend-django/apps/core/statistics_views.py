@@ -1,10 +1,12 @@
 from django.http import HttpResponse
-from rest_framework.decorators import api_view,permission_classes
+from rest_framework.decorators import api_view, permission_classes
+
 from common.auth.permissions import roles
-from .mock_attempt_views import success
-from .game_points_views import query,bounded
-from .domain_contracts import invalid
+
 from . import statistics as service
+from .domain_contracts import invalid
+from .game_points_views import bounded, query
+from .mock_attempt_views import success
 
 
 @api_view(['GET'])

@@ -1,10 +1,10 @@
 """Tests for v0.7.0 Writing Vision OCR, 3-Tier Gemini Fallback, Teacher Groups/Analytics, Excel Export, and Superadmin."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from io import BytesIO
 import json
 import os
+from datetime import UTC, datetime
+from io import BytesIO
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -15,7 +15,7 @@ from django.test import SimpleTestCase
 from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
-from apps.core import assessment_providers, assessment_worker, groups, writing_ocr
+from apps.core import assessment_providers, assessment_worker, writing_ocr
 from tests.test_assessment_quality import fixture as quality_fixture
 
 
@@ -175,7 +175,7 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
             teacher_id="teacher-77",
             teacher=SimpleNamespace(name="Mr. Teacher"),
             schedule=[{"day": "mon", "startTime": "14:00", "endTime": "16:00"}],
-            created_at=datetime(2026, 10, 16, tzinfo=timezone.utc),
+            created_at=datetime(2026, 10, 16, tzinfo=UTC),
         )
 
         class DummyAtomic:
@@ -215,7 +215,7 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
             teacher_id="teacher-1",
             teacher=SimpleNamespace(name="Teacher One"),
             schedule=[],
-            created_at=datetime(2026, 10, 1, tzinfo=timezone.utc),
+            created_at=datetime(2026, 10, 1, tzinfo=UTC),
         )
         student_profile = SimpleNamespace(
             user_id="stu-1",
@@ -239,9 +239,9 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
             overall_band=7.0,
             overall_score=None,
             cefr_level="C1",
-            finished_at=datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc),
-            submitted_at=datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc),
-            started_at=datetime(2026, 10, 15, 10, 0, tzinfo=timezone.utc),
+            finished_at=datetime(2026, 10, 15, 12, 0, tzinfo=UTC),
+            submitted_at=datetime(2026, 10, 15, 12, 0, tzinfo=UTC),
+            started_at=datetime(2026, 10, 15, 10, 0, tzinfo=UTC),
             exam=SimpleNamespace(title="IELTS Mock #1"),
         )
 
@@ -287,9 +287,9 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
             overall_band=7.5,
             overall_score=None,
             cefr_level="C1",
-            finished_at=datetime(2026, 10, 16, 9, 30, tzinfo=timezone.utc),
+            finished_at=datetime(2026, 10, 16, 9, 30, tzinfo=UTC),
             submitted_at=None,
-            started_at=datetime(2026, 10, 16, 8, 0, tzinfo=timezone.utc),
+            started_at=datetime(2026, 10, 16, 8, 0, tzinfo=UTC),
             exam=SimpleNamespace(title="Official IELTS Mock 4"),
         )
 

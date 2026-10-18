@@ -184,9 +184,10 @@ class TelegramBotParityTests(TestCase):
             self.assertIn("https://bestwayec.uz/mock/cefr-1", text)
 
     def test_bot_audio_request_playback(self):
-        from apps.legacy_schema import models as m
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from apps.legacy_schema import models as m
 
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
             tmp.write(b"fake-audio-bytes")

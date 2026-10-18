@@ -7,18 +7,20 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import patch
-from uuid import uuid4
 from urllib.request import Request, urlopen
+from uuid import uuid4
+
 from psycopg import sql
 
 
 def run(call, ids, db, schemas, results):
-    from apps.core.mock_submissions import submit
+    from django.db import close_old_connections, connections
+
     from apps.core.mock_attempts import save_answers
+    from apps.core.mock_submissions import submit
     from apps.core.multilevel import CURRENT_SPEC
     from apps.legacy_schema.models import MockAnswer, MockAttempt, Notification
     from common.api.exceptions import ContractAPIException
-    from django.db import close_old_connections, connections
 
     def clone(side, table, source, changes):
         schema = sql.Identifier(schemas[side]); name = sql.Identifier(table)

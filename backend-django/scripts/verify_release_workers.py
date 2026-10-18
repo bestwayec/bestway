@@ -4,13 +4,13 @@ No live provider credentials, reference backend, or production requests are used
 """
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Thread
-from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode, unquote
+from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
 from uuid import uuid4
 
 import psycopg

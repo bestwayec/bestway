@@ -2,13 +2,14 @@
 import copy
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.test')
 import django
+
 django.setup()
 from apps.core.mock_content import sanitize_content
 from apps.core.mock_import_validate import validate_package

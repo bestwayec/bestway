@@ -1,8 +1,10 @@
 from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
+
 from apps.core import assessment_rankings as ranking
 from apps.core.mock_practice import SCOPE_KEY
 from common.api.exceptions import ContractAPIException

@@ -8,7 +8,7 @@ def parse(text,default_section=None):
     def finish():
         nonlocal current
         if current is not None: drafts.append(current);current=None
-    def match(pattern,line): return re.match(pattern,line,re.I)
+    def match(pattern,line): return re.match(pattern,line,re.IGNORECASE)
     for index,raw in enumerate(re.sub(r'\r\n?','\n',text).split('\n'),1):
         line=raw.rstrip()
         if not line.strip():continue
@@ -58,7 +58,7 @@ def parse(text,default_section=None):
         if raw and raw.strip():
             for part in raw.split('|'):
                 value=part.strip()
-                if re.fullmatch('[A-H]',value,re.I):
+                if re.fullmatch('[A-H]',value,re.IGNORECASE):
                     i=ord(value.upper())-65;value=options[i] if i<len(options) else value
                 if value:resolved.append(value)
         correct='|'.join(resolved)

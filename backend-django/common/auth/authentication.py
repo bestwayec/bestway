@@ -1,8 +1,13 @@
 from dataclasses import dataclass
+
 from django.db import connection
 from rest_framework.authentication import BaseAuthentication
+
 from common.api.exceptions import ContractAPIException
+
 from .jwt import decode_access
+
+
 @dataclass
 class LegacyUser:
     id: str; name: str; phone: str; role: str; is_active: bool

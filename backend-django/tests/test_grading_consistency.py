@@ -3,12 +3,14 @@ import copy
 from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
+
 from apps.core import assessment, assessment_results, mock_grading, mock_scoring
-from apps.core.mock_submission_snapshots import build_input, blueprint_failure
-from apps.core.multilevel import CURRENT_SPEC, task_guidance
 from apps.core.mock_practice import SCOPE_KEY, scope_sections
+from apps.core.mock_submission_snapshots import blueprint_failure, build_input
+from apps.core.multilevel import CURRENT_SPEC, task_guidance
 
 
 def part(skill, identifier, score=None):

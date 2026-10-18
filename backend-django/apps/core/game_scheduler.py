@@ -1,9 +1,11 @@
 """Separate worker: startup recovery and monthly 00:05 Asia/Tashkent reset."""
-from datetime import datetime
 import logging
+from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from django.db import close_old_connections
 from django.utils import timezone
+
 from . import game
 
 ZONE = ZoneInfo('Asia/Tashkent')

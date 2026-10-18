@@ -2,19 +2,26 @@
 import hashlib
 import os
 from pathlib import Path
+
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from apps.legacy_schema.models import (AssessmentJob, MockAnswer, MockQuestionGroup,
-    Notification, ParentStudent)
+
+from apps.legacy_schema.models import (
+    AssessmentJob,
+    MockAnswer,
+    MockQuestionGroup,
+    Notification,
+    ParentStudent,
+)
+from common.api.exceptions import ContractAPIException
+
+from .assessment_quality import EVIDENCE_POLICY, GRADE_POLICY, PROMPT_VERSION
 from .mock_authoring import new_id
 from .mock_catalog import shape_exam, student_title
 from .mock_import_validate import canonical_checksum
 from .mock_media import resolve_key
+from .mock_practice import is_partial, scope_sections
 from .multilevel import CURRENT_SPEC, SPECS, task_guidance
-from common.api.exceptions import ContractAPIException
-from .mock_practice import is_partial,scope_sections
-from .assessment_quality import PROMPT_VERSION,EVIDENCE_POLICY,GRADE_POLICY
-
 
 
 def build_input(exam, attempt, skill, groups, answers, hash_audio):
@@ -165,6 +172,7 @@ def announce_channel_mock_result(attempt):
         return
     try:
         from apps.legacy_schema.models import MockAttempt
+
         from . import telegram_delivery as tg_api
         from .telegram_links import escape
         att = MockAttempt.objects.select_related('student__user', 'exam').filter(id=attempt.id).first() or attempt

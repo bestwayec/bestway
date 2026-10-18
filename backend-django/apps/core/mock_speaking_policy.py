@@ -1,10 +1,12 @@
 """Authoritative response windows for new/in-progress current-profile tasks."""
 import hashlib
 from datetime import timedelta
+
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from .multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE, task_guidance
+
 from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS, measure_duration
+from .multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, task_guidance
 
 
 def strict(attempt):
@@ -12,8 +14,9 @@ def strict(attempt):
 
 
 def expected(attempt, question):
+    from apps.legacy_schema.models import MockQuestion, MockQuestionGroup
+
     from .mock_attempts import fail
-    from apps.legacy_schema.models import MockQuestionGroup, MockQuestion
     groups = list(MockQuestionGroup.objects.filter(section__exam_id=attempt.exam_id, section__skill='speaking').order_by('sort_order'))
     index = next((i for i, group in enumerate(groups) if group.id == question.group_id), -1)
     questions = list(MockQuestion.objects.filter(group_id=question.group_id).order_by('sort_order'))
@@ -26,7 +29,7 @@ def expected(attempt, question):
 
 
 def phase_window(attempt, question_id, seconds, *, at=None):
-    from .mock_attempts import fail, aware
+    from .mock_attempts import aware, fail
     at = at or timezone.now()
     phase = (attempt.media_state or {}).get(question_id)
     try:
@@ -86,8 +89,9 @@ def verify_stored(attempt, question, key, *, submission=False):
 
 
 def assert_submission(attempt, sections, answers):
-    from .mock_attempts import fail
     from apps.legacy_schema.models import MockQuestion
+
+    from .mock_attempts import fail
     if not strict(attempt):
         return
     ids = [q['id'] for section in sections if section['skill'] == 'speaking' for group in section['groups'] for q in group['questions']]

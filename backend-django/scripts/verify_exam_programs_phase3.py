@@ -8,13 +8,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 import django
+
 django.setup()
 
 from django.conf import settings
 from django.db import connection, transaction
 from rest_framework.test import APIClient
-from common.auth.jwt import issue_access
+
 from apps.core import exam_programs
+from common.auth.jwt import issue_access
 
 
 def expect(response, status, label):

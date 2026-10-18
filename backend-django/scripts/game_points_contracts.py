@@ -3,8 +3,10 @@ from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
-from psycopg import sql
+
 from django.utils import timezone
+from psycopg import sql
+
 from apps.core import game, points
 
 
@@ -131,8 +133,9 @@ def verify_game_points(call,db,schemas,ids,state,checks,control,tokens,port):
     assert control('notificationFailure')['ok']
     checks.append('Game/points: safe points-notification failures retain success; awaited game failures match reference post-commit 500 and persisted state')
     # Real scheduler callback is driven across a monthly boundary without sleeping.
-    from apps.core import game_scheduler
     from datetime import datetime
+
+    from apps.core import game_scheduler
     start=datetime(now.year,now.month,1,tzinfo=game_scheduler.ZONE)-timedelta(seconds=1)
     due=game_scheduler.next_due(start)
     seed('student',current_points=201,points_period=old,game_qualified=True)
@@ -164,8 +167,9 @@ def verify_concurrency(db,schemas,ids,tokens,port,checks,control,current,old):
     import json
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
-    from urllib.request import Request,urlopen
     from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
     from django.db import connections
     from rest_framework.test import APIClient
     for side,period,base,final,game_messages in ((0,current,140,160,2),(1,current,140,160,2),

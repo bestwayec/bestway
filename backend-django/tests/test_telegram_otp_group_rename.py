@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
 
-from apps.core import telegram_menu, telegram_views, groups
+from apps.core import telegram_menu
 
 
 class TelegramOtpAndGroupRenameTests(SimpleTestCase):
@@ -48,7 +48,7 @@ class TelegramOtpAndGroupRenameTests(SimpleTestCase):
             'username': 'dilshod_t',
         }, timeout=300)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_user = ('u1', 'Dilshod Toshmatov', '+998901234567', 'student', now, 'hash', True, '99112233')
 
         mock_cursor = MagicMock()

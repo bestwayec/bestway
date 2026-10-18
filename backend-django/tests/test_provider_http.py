@@ -1,10 +1,12 @@
 """Real HTTP adapter tests against loopback only, never external providers."""
-from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
+
 from django.test import SimpleTestCase
+
 from apps.core.assessment_providers import provider_json
 from apps.core.assessment_results import ProviderError
+
 
 class ProviderHTTPTests(SimpleTestCase):
     @classmethod

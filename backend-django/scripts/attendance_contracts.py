@@ -82,9 +82,10 @@ def verify_attendance(call, db, schemas, ids, state, checks, client, tokens, por
     call('GET','/v1/attendance?groupId={group}&month=2026-10',role='parent',label='parent-group-filter-remains-ignored')
     mark(present,label='former-member-cannot-mark-in-old-group')
     call('POST','/v1/groups/{second}/students',{'studentId':'{student}'})
-    from apps.core import attendance
     from types import SimpleNamespace
     from unittest.mock import patch
+
+    from apps.core import attendance
     before=state(0);original=attendance.upsert
     counter=0
     def fail_second(*args,**kwargs):
@@ -124,8 +125,9 @@ def verify_concurrency(db,schemas,ids,tokens,port,checks):
     import json
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
-    from urllib.request import Request,urlopen
     from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
     from django.db import connections
     from rest_framework.test import APIClient
     for side in (0,1):

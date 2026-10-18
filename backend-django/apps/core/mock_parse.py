@@ -3,9 +3,9 @@ import re
 
 from .mock_rules import canonical_decision
 
-Q_START = re.compile(r"^\s*(?:Q|№|#)?\s*(\d{1,3})\s*[.)\]:-]?\s+(\S.*)$", re.I)
+Q_START = re.compile(r"^\s*(?:Q|№|#)?\s*(\d{1,3})\s*[.)\]:-]?\s+(\S.*)$", re.IGNORECASE)
 OPTION = re.compile(r"^\s*\(?([A-Ha-h])[.)]\s*(\S.*)$")
-BLANK = re.compile(r"_{2,}|\.{3,}|…|\bgap\b", re.I)
+BLANK = re.compile(r"_{2,}|\.{3,}|…|\bgap\b", re.IGNORECASE)
 
 
 def parse_questions(text):
@@ -66,7 +66,7 @@ def build_correct_answers(question_type, options, answer):
         add(part)
         if question_type in {'true_false_notgiven', 'yes_no_notgiven'} and part.lower() in decisions:
             add(canonical_decision(decisions[part.lower()]))
-        if question_type in {'multiple_choice', 'multi_select', 'matching', 'matching_headings', 'map_labelling'} and options and re.fullmatch(r'[a-z]', part, re.I):
+        if question_type in {'multiple_choice', 'multi_select', 'matching', 'matching_headings', 'map_labelling'} and options and re.fullmatch(r'[a-z]', part, re.IGNORECASE):
             index = ord(part.upper()) - 65
             if index < len(options) and options[index]:
                 add(options[index])

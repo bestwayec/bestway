@@ -1,7 +1,8 @@
 """Checkpoint 3 actual Nest/Django contracts in disposable local schemas."""
 import json
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
+
 from psycopg import sql
 
 

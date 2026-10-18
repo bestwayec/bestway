@@ -5,14 +5,14 @@ never copies users or application data and never calls external providers.
 """
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
 from urllib.error import HTTPError
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse, unquote
+from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 from uuid import uuid4
 from wsgiref.simple_server import WSGIRequestHandler, make_server
@@ -58,6 +58,7 @@ try:
     import django
     django.setup()
     from django.core.wsgi import get_wsgi_application
+
     from common.auth.passwords import hash_password
     password = 'LocalFixturePassword!'
     ids = {}
@@ -171,10 +172,12 @@ try:
         'mock completed attempt/cheat count persisted', 'mock answer graded correctly', 'student start omits answer keys', 'resume keeps attempt and original mode']
     # Delete is a separately confirmed super-admin operation; history prevents
     # edits, not deletion. Exercise real Prisma cascades in this empty schema.
-    from django.test import override_settings
-    from apps.core import mock_authoring
     from types import SimpleNamespace
     from unittest.mock import patch
+
+    from django.test import override_settings
+
+    from apps.core import mock_authoring
     with TemporaryDirectory(prefix='bestway-delete-fixture-') as media_root, override_settings(MEDIA_ROOT=media_root):
         keys = [f'mock/{uuid4()}.{extension}' for extension in ('webm', 'mp3', 'png')]
         for key in keys:

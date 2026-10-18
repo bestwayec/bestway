@@ -3,16 +3,16 @@
 No external providers, production mutations, or browser E2E are involved.
 """
 import io
-from datetime import timedelta
-from decimal import Decimal, ROUND_HALF_UP
 import os
-from pathlib import Path
 import sys
+import wave
+from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 from urllib.parse import urlparse
 from uuid import uuid4
-import wave
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 if urlparse(os.environ.get('DATABASE_URL', '')).hostname not in {'127.0.0.1', 'localhost', '::1'}:
@@ -20,16 +20,25 @@ if urlparse(os.environ.get('DATABASE_URL', '')).hostname not in {'127.0.0.1', 'l
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.local')
 os.environ.setdefault('ALLOWED_HOSTS', 'testserver,localhost,127.0.0.1')
 import django
+
 django.setup()
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
-from apps.core import mock_authoring
-from apps.core.multilevel import CURRENT_SPEC, CURRENT_SPEAKING_PROFILE
-from apps.legacy_schema.models import (AssessmentJob, AuditLog, MockAttempt,
-    MockExam, MockQuestion, MockQuestionGroup, MockSection, Notification, User)
+
+from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC
+from apps.legacy_schema.models import (
+    AssessmentJob,
+    AuditLog,
+    MockExam,
+    MockQuestion,
+    MockQuestionGroup,
+    MockSection,
+    Notification,
+    User,
+)
 
 run_id = uuid4().hex[:12]
 admin = SimpleNamespace(id=str(uuid4()), role='super_admin', is_authenticated=True)

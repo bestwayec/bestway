@@ -22,7 +22,7 @@ def _key() -> bytes:
 
 def _message(attempt_id, student_id, started_at) -> bytes:
     stamp = started_at.replace(tzinfo=None).isoformat() if started_at else ''
-    return f'{attempt_id}:{student_id}:{stamp}'.encode('utf-8')
+    return f'{attempt_id}:{student_id}:{stamp}'.encode()
 
 
 def sign(attempt) -> str:
@@ -31,7 +31,9 @@ def sign(attempt) -> str:
 
 def verify_request(request, attempt_id) -> None:
     """Raise a 403 ContractAPIException when the supplied signature is not valid."""
-    from apps.legacy_schema.models import MockAttempt  # local import avoids app-loading cycles
+    from apps.legacy_schema.models import (
+        MockAttempt,  # local import avoids app-loading cycles
+    )
     provided = request.META.get(HEADER, '')
     required = getattr(settings, 'ATTEMPT_SIGNATURE_REQUIRED', False)
     if not provided:
