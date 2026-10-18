@@ -13,6 +13,35 @@ function fmt(totalSec: number): string {
 }
 
 /**
+ * Global in-memory Blob cache (url -> objectUrl).
+ * Once an audio URL is fetched as a Blob, cache the resulting object URL so subsequent
+ * renders or part switches reuse the cached Blob URL with 0ms network latency!
+ */
+export const mediaBlobCache = new Map<string, string>();
+
+export async function fetchAudioBlobUrl(url: string, signal?: AbortSignal): Promise<string> {
+  const cached = mediaBlobCache.get(url);
+  if (cached) return cached;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  mediaBlobCache.set(url, objectUrl);
+  return objectUrl;
+}
+
+export function clearMediaBlobCache(): void {
+  for (const objectUrl of mediaBlobCache.values()) {
+    try {
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      /* ignore */
+    }
+  }
+  mediaBlobCache.clear();
+}
+
+/**
  * Listening audio engine — spec §2.1 + Single Audio Part Timestamps (v0.8.0).
  * strict (exam full_test): play ONCE, no pause/rewind/ff, volume only.
  * After audio ends → 2:00 review countdown → onReviewComplete (auto-advance).
@@ -45,6 +74,36 @@ export function ListeningAudio({
   const [reviewLeft, setReviewLeft] = React.useState<number | null>(null);
   const doneRef = React.useRef(false);
   const lastSeekSecRef = React.useRef<number | null>(null);
+
+  const [activeSrc, setActiveSrc] = React.useState<string>(() => {
+    if (!src || src.startsWith("blob:") || src.startsWith("data:")) return src;
+    return mediaBlobCache.get(src) ?? src;
+  });
+
+  React.useEffect(() => {
+    if (!src || src.startsWith("blob:") || src.startsWith("data:")) {
+      setActiveSrc(src);
+      return;
+    }
+    const cached = mediaBlobCache.get(src);
+    if (cached) {
+      setActiveSrc(cached);
+      return;
+    }
+    let alive = true;
+    const ctrl = new AbortController();
+    fetchAudioBlobUrl(src, ctrl.signal)
+      .then((blobUrl) => {
+        if (alive) setActiveSrc(blobUrl);
+      })
+      .catch(() => {
+        if (alive) setActiveSrc(src);
+      });
+    return () => {
+      alive = false;
+      ctrl.abort();
+    };
+  }, [src]);
 
   // Seek to startSec when switching Listening parts or when metadata loads
   const applyStartSeek = React.useCallback((targetSec: number | null | undefined) => {
@@ -104,7 +163,7 @@ export function ListeningAudio({
         <audio
           ref={audioRef}
           controls
-          src={src}
+          src={activeSrc}
           className="w-full"
           preload="metadata"
           onLoadedMetadata={() => {
@@ -168,7 +227,7 @@ export function ListeningAudio({
       {/* Hidden audio: no native controls → no pause/seek UI. Volume via control below. */}
       <audio
         ref={audioRef}
-        src={src}
+        src={activeSrc}
         preload="auto"
         controlsList="nodownload noplaybackrate"
         onLoadedMetadata={() => {

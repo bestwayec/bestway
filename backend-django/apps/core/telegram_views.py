@@ -111,13 +111,24 @@ def telegram_login(data: dict):
     if sso_token and not data.get('hash'):
         token_str = str(sso_token).strip()
         row = TelegramLinkToken.objects.filter(token_hash=links.token_hash(token_str)).select_related('user').first()
-        if not row or row.used_at or (row.expires_at and row.expires_at <= timezone.now()):
-            raise ContractAPIException('INVALID_TOKEN', "Kirish kodi noto'g'ri yoki muddati tugagan", 401)
+        if not row:
+            row = TelegramLinkToken.objects.filter(token_hash=token_str).select_related('user').first()
+        db_user = None
+        if row and not row.used_at and (not row.expires_at or row.expires_at > timezone.now()):
+            TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
+            db_user = row.user
+        elif not row:
+            cache_user_id = cache.get(f"sso_token:{token_str}") or cache.get(f"magic_token:{token_str}") or cache.get(f"telegram_sso:{token_str}") or cache.get(token_str)
+            if cache_user_id:
+                cache.delete(f"sso_token:{token_str}")
+                cache.delete(f"magic_token:{token_str}")
+                cache.delete(f"telegram_sso:{token_str}")
+                cache.delete(token_str)
+                from apps.legacy_schema.models import User
+                db_user = User.objects.filter(id=cache_user_id).first()
 
-        TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
-        db_user = row.user
         if not db_user:
-            raise ContractAPIException('USER_NOT_FOUND', "Foydalanuvchi topilmadi", 404)
+            raise ContractAPIException('INVALID_TOKEN', "Kirish kodi noto'g'ri yoki muddati tugagan", 401)
         if not db_user.is_active:
             raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
 
@@ -130,6 +141,7 @@ def telegram_login(data: dict):
             db_user.password_hash,
             db_user.is_active,
             db_user.telegram_chat_id,
+            getattr(db_user, 'email', None),
         )
         tokens = auth_service.issue_tokens(user_tuple)
         user_profile = {
@@ -137,7 +149,9 @@ def telegram_login(data: dict):
             'name': db_user.name,
             'phone': db_user.phone,
             'role': db_user.role,
-            'email': getattr(db_user, 'email', None),
+            'email': getattr(db_user, 'email', None) or '',
+            'isActive': bool(db_user.is_active),
+            'is_active': bool(db_user.is_active),
             'telegramChatId': db_user.telegram_chat_id,
             'createdAt': db_user.created_at.isoformat() if hasattr(db_user.created_at, 'isoformat') else str(db_user.created_at),
         }
@@ -156,7 +170,7 @@ def telegram_login(data: dict):
 
     with connection.cursor() as cursor:
         cursor.execute(
-            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
+            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId","email" '
             'FROM "User" WHERE "telegramChatId"=%s LIMIT 1',
             [telegram_chat_id],
         )

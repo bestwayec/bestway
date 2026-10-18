@@ -5,6 +5,7 @@ response/media mutations; no client revision or countdown is authoritative.
 """
 from __future__ import annotations
 
+import json
 from copy import copy
 from datetime import UTC, timedelta
 
@@ -430,6 +431,82 @@ def flag_cheat(actor, attempt_id, event):
             except Exception:
                 pass
     return {'saved': True}
+
+
+SUPPORTED_TELEMETRY_EVENTS = {
+    'window_blur',
+    'window_focus',
+    'fullscreen_exit',
+    'mouse_leave',
+    'tab_switch',
+    'devtools_open',
+}
+
+SUSPICIOUS_TELEMETRY_EVENTS = {
+    'window_blur',
+    'fullscreen_exit',
+    'mouse_leave',
+    'tab_switch',
+    'devtools_open',
+}
+
+
+def record_telemetry(actor, attempt_id, data):
+    event = data.get('event')
+    if not isinstance(event, str) or not event.strip():
+        fail('VALIDATION_ERROR', 'event should not be empty')
+    event = event.strip()
+    if len(event) > 100:
+        fail('VALIDATION_ERROR', 'event must be shorter than or equal to 100 characters')
+
+    blur_count = data.get('blurCount') or data.get('blur_count') or 0
+    try:
+        blur_count = int(blur_count)
+    except (TypeError, ValueError):
+        blur_count = 0
+
+    metadata = data.get('metadata')
+    if metadata is not None and not isinstance(metadata, dict):
+        fail('VALIDATION_ERROR', 'metadata must be an object')
+    metadata = metadata or {}
+
+    with transaction.atomic():
+        attempt = own(actor, attempt_id, lock=True)
+        is_suspicious = (event in SUSPICIOUS_TELEMETRY_EVENTS) or (blur_count > 0)
+
+        if attempt.status == 'in_progress':
+            if is_suspicious:
+                attempt.anti_cheat_count += 1
+                attempt.save(update_fields=['anti_cheat_count'])
+
+            if MockCheatEvent.objects.filter(attempt_id=attempt_id).count() < 100:
+                event_str = f"telemetry:{event}"
+                if metadata:
+                    try:
+                        event_str = f"telemetry:{event} {json.dumps(metadata)}"
+                    except Exception:
+                        event_str = f"telemetry:{event}"
+                MockCheatEvent.objects.create(
+                    id=new_id(),
+                    attempt_id=attempt_id,
+                    event=event_str,
+                    created_at=timezone.now(),
+                )
+
+            if is_suspicious:
+                try:
+                    if connection.in_atomic_block:
+                        transaction.on_commit(lambda: notify_teacher_proctoring_alert(attempt, actor, event), robust=True)
+                    else:
+                        notify_teacher_proctoring_alert(attempt, actor, event)
+                except Exception:
+                    pass
+
+        return {
+            'success': True,
+            'antiCheatCount': attempt.anti_cheat_count,
+            'recorded': True,
+        }
 
 
 def advance(actor, attempt_id):

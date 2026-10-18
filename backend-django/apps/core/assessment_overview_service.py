@@ -68,6 +68,7 @@ def get_assessment_overview(user) -> dict:
                 "activeProgram": "IELTS",
                 "attemptsAnalyzed": 0,
                 "trend": "insufficient_data",
+                "targetProgressPercent": 0,
                 "ielts": {
                     "currentBand": 0.0,
                     "predictedBand": 0.0,
@@ -93,6 +94,15 @@ def get_assessment_overview(user) -> dict:
                 "history": [],
                 "weakModules": [],
             }
+
+    if prediction and isinstance(prediction, dict):
+        if "targetProgressPercent" not in prediction:
+            prog = prediction.get("ielts", {}).get("targetProgressPercent")
+            if prog is None:
+                prog = prediction.get("multilevel", {}).get("targetProgressPercent", 0)
+            prediction["targetProgressPercent"] = prog or 0
+        if "weakModules" not in prediction:
+            prediction["weakModules"] = []
 
     # 2. Recent attempts (last 10 across MockAttempt and legacy TestAttempt)
     attempts_combined = []

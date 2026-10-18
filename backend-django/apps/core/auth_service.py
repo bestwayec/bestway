@@ -33,7 +33,32 @@ def db_now():
 
 
 def public(row):
-    return {"id": row[0], "name": row[1], "phone": row[2], "role": row[3], "createdAt": row[4]}
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, "id"):
+        return {
+            "id": str(row.id),
+            "name": getattr(row, "name", "") or "",
+            "phone": getattr(row, "phone", "") or "",
+            "email": getattr(row, "email", None) or "",
+            "role": getattr(row, "role", "student"),
+            "isActive": bool(getattr(row, "is_active", True)),
+            "is_active": bool(getattr(row, "is_active", True)),
+            "createdAt": row.created_at.isoformat() if hasattr(getattr(row, "created_at", None), "isoformat") else str(row.created_at) if getattr(row, "created_at", None) else None,
+        }
+    created_at = row[4]
+    user_email = row[8] if len(row) > 8 and row[8] else ""
+    is_active = row[6] if len(row) > 6 else True
+    return {
+        "id": str(row[0]),
+        "name": str(row[1] or ""),
+        "phone": str(row[2] or ""),
+        "email": str(user_email or ""),
+        "role": str(row[3]),
+        "isActive": bool(is_active),
+        "is_active": bool(is_active),
+        "createdAt": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at) if created_at else None,
+    }
 
 
 def fetch_user(*, phone: str | None = None, user_id: str | None = None):
@@ -41,14 +66,14 @@ def fetch_user(*, phone: str | None = None, user_id: str | None = None):
         if phone is not None:
             ident = phone.strip()
             cursor.execute(
-                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
+                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId","email" '
                 'FROM "User" WHERE "phone"=%s OR lower("email")=lower(%s) OR lower(split_part("email", \'@\', 1))=lower(%s) OR "telegramChatId"=%s OR "id"=%s '
                 'ORDER BY CASE WHEN "phone"=%s THEN 0 WHEN lower("email")=lower(%s) THEN 1 WHEN "telegramChatId"=%s THEN 2 ELSE 3 END LIMIT 1',
                 [ident, ident, ident, ident, ident, ident, ident, ident],
             )
         else:
             cursor.execute(
-                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
+                'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId","email" '
                 'FROM "User" WHERE "id"=%s',
                 [user_id],
             )
@@ -147,7 +172,19 @@ def verify_challenge(verifier: str, challenge: str) -> bool:
 
 
 def authorize_desktop(user_id: str, *, device_id: str, state: str, challenge: str, redirect: str):
-    if redirect not in settings.DESKTOP_REDIRECT_URIS:
+    valid_redirects = {
+        "bestway-exam://auth/callback",
+        "bestway://auth/callback",
+        "bestway-exam://auth/callback/",
+        "bestway://auth/callback/",
+    }
+    if hasattr(settings, "DESKTOP_REDIRECT_URIS"):
+        for r in settings.DESKTOP_REDIRECT_URIS:
+            valid_redirects.add(r)
+            valid_redirects.add(r.rstrip("/"))
+            valid_redirects.add(f"{r.rstrip('/')}/")
+    clean_redirect = redirect.strip() if isinstance(redirect, str) else ""
+    if clean_redirect not in valid_redirects and redirect not in valid_redirects:
         raise ContractAPIException("INVALID_REDIRECT", "Ruxsat etilmagan qaytish manzili", 400)
     user = fetch_user(user_id=user_id)
     if not user or not user[6]:

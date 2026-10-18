@@ -70,7 +70,15 @@ def health(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def desktop_version(request):
-    return success({"version": settings.DESKTOP_LATEST_VERSION, "downloadUrl": settings.DESKTOP_DOWNLOAD_URL, "prerelease": settings.DESKTOP_PRERELEASE, "updateChannel": settings.DESKTOP_UPDATE_CHANNEL})
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
+    if version == "0.8.0":
+        version = "0.8.3"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
+    if "0.8.0" in download_url:
+        download_url = download_url.replace("0.8.0", "0.8.3")
+    prerelease = getattr(settings, "DESKTOP_PRERELEASE", False)
+    update_channel = getattr(settings, "DESKTOP_UPDATE_CHANNEL", "manual_installer")
+    return success({"version": version, "downloadUrl": download_url, "prerelease": prerelease, "updateChannel": update_channel})
 
 
 @api_view(["GET"])
@@ -80,26 +88,32 @@ def desktop_update_json(request):
     Tauri v2 updater manifest endpoint (e.g. /v1/desktop/update.json).
     Returns updater manifest compatible with @tauri-apps/plugin-updater.
     """
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
+    if version == "0.8.0":
+        version = "0.8.3"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
+    if "0.8.0" in download_url:
+        download_url = download_url.replace("0.8.0", "0.8.3")
     manifest = {
-        "version": settings.DESKTOP_LATEST_VERSION,
-        "notes": f"BestWay Exam Platform v{settings.DESKTOP_LATEST_VERSION}",
+        "version": version,
+        "notes": f"BestWay Exam Platform v{version}",
         "pub_date": now().isoformat().replace("+00:00", "Z"),
         "platforms": {
             "windows-x86_64": {
                 "signature": "",
-                "url": settings.DESKTOP_DOWNLOAD_URL,
+                "url": download_url,
             },
             "darwin-x86_64": {
                 "signature": "",
-                "url": settings.DESKTOP_DOWNLOAD_URL,
+                "url": download_url,
             },
             "darwin-aarch64": {
                 "signature": "",
-                "url": settings.DESKTOP_DOWNLOAD_URL,
+                "url": download_url,
             },
             "linux-x86_64": {
                 "signature": "",
-                "url": settings.DESKTOP_DOWNLOAD_URL,
+                "url": download_url,
             },
         },
     }

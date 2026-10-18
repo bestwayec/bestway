@@ -557,6 +557,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         "activeProgram": active_program,
         "attemptsAnalyzed": len(history),
         "trend": trend,
+        "targetProgressPercent": ml_progress if active_program == "MULTILEVEL" else band_progress,
         "ielts": {
             "currentBand": curr_band,
             "predictedBand": pred_band,

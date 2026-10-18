@@ -207,6 +207,21 @@ def cheat_view(request, attempt_id):
     return success(engine.flag_cheat(request.user, attempt_id, event), 201)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def telemetry_view(request, attempt_id):
+    student(request)
+    allowed = {'event', 'timestamp', 'time', 'blurCount', 'blur_count', 'metadata', 'meta', 'details'}
+    data = body(request, allowed)
+    result = engine.record_telemetry(request.user, attempt_id, data)
+    return Response({
+        'success': True,
+        'antiCheatCount': result['antiCheatCount'],
+        'recorded': True,
+        'data': result,
+    }, status=200)
+
+
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def annotations_view(request, attempt_id):

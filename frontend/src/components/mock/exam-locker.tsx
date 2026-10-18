@@ -38,6 +38,7 @@ function getFullscreenElement(): Element | null {
 
 export function ExamLocker({
   active,
+  attemptId,
   onAnomaly,
   onForceSubmit,
   children,
@@ -98,6 +99,14 @@ export function ExamLocker({
         setLastWarningEvent(eventType);
         setWarningModalOpen(true);
 
+        if (attemptId && typeof fetch === "function") {
+          fetch(`/api/backend/mock/attempts/${encodeURIComponent(attemptId)}/telemetry`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event: "window_blur", blurCount: next }),
+          }).catch(() => undefined);
+        }
+
         if (next >= 3) {
           forceSubmittedRef.current = true;
           setTimeout(() => {
@@ -107,7 +116,7 @@ export function ExamLocker({
         return next;
       });
     },
-    [active]
+    [active, attemptId]
   );
 
   // 1. Initial fullscreen request on engage
@@ -164,12 +173,20 @@ export function ExamLocker({
       triggerViolation("window_blur");
     };
 
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (!e.relatedTarget && e.clientY <= 0) {
+        triggerViolation("mouse_leave");
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("blur", handleBlur);
+    document.documentElement.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
+      document.documentElement.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, [active, triggerViolation]);
 
@@ -289,7 +306,7 @@ export function ExamLocker({
             <h3 className="text-xl font-bold text-fg">
               {warningsCount >= 3
                 ? "Imtihon to'xtatildi!"
-                : `Qoidabuzarlik aniqlandi! (${warningsCount}/3)`}
+                : "Diqqat! Imtihon oynasidan chiqish taqiqlanadi! (Hodisa qayd etildi)"}
             </h3>
 
             <p className="mt-2 text-sm text-fg-muted">
