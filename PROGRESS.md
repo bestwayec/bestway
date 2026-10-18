@@ -1,78 +1,79 @@
 # BestWay Platform — Progress & Status Report
 
 ## Maqsad
-BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Yagona Autentifikatsiya (Google OAuth & 1-Click Telegram) hamda Baholash Dvigatelini barqarorlashtirish (`v0.8.2`).
+BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulator Overhaul (5 ta ilg'or himoya va qulaylik moduli), Advanced Anti-Cheat Telemetry, Native Custom TitleBar, Audio Blob Caching hamda Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish (`v0.8.3`).
 
 ---
 
 ## Bajarildi
 
-### 1. Unified Auth Engine (Django Core & Deep Link)
-- **Desktop & Mobile Deep Link Authorization**:
-  - `DESKTOP_REDIRECT_URIS`: `bestway-exam://auth/callback` hamda `bestway://auth/callback` standartlashtirildi.
-  - `authorize_desktop` va `desktop_authorize_view`: barcha faol platforma rollari (`student`, `teacher`, `admin`, `super_admin`) uchun ochildi (o'qituvchilar va ma'murlar desktopda bloklanmaydi).
-  - `exchange_desktop`: PKCE S256 orqali barcha rollar uchun sessiya tokenlarini xavfsiz taqdim etadi.
-- **1-Click Telegram & Magic Token Login**:
-  - `telegram_login`: `sso_token`, `token` yoki `magic_token` orqali bir martalik xavfsiz token bilan darhol to'liq foydalanuvchi profili va JWT tokenlarini (`accessToken`, `refreshToken`) beradi.
-  - Endpointlar: `/telegram/login`, `/telegram/login/`, `/v1/telegram/login`.
+### 1. 5 ta Ilg'or Imtihon Moduli (Multi-Level & IELTS Simulator)
+1. **Anti-Cheat & Fullscreen Guard**:
+   - Imtihon boshlanishi bilan qat'iy to'liq ekran rejimi faollashadi.
+   - Oynadan fokus yo'qolganda (`window.onblur`) yoki sichqoncha oynadan chiqib ketganda darhol ogohlantiruvchi qizil banner/modal chiqadi: *"Diqqat! Imtihon oynasidan chiqish taqiqlanadi! (Hodisa qayd etildi)"*.
+   - Kontekst menyu (right-click) va Developer Tools tugmalari (`F12`, `Ctrl+Shift+I`, `Ctrl+Shift+J`, `Ctrl+U`) bloklandi.
+   - Har bir anomaliya serverga `/v1/mock/attempts/<id>/telemetry` orqali yoziladi va `anti_cheat_count` oshiriladi.
+2. **Offline-First State Sync**:
+   - Talabaning javoblari har bir harakatda darhol `IndexedDB` / lokal xotirada keshlanadi (`cacheAnswer`).
+   - Taymer ko'rsatkichi har soniyada lokal saqlanadi (`cacheTimerSeconds`, `readCachedTimerSeconds`).
+   - Tarmoq uzilganda yuqori panelda *"Offline — javoblar lokal saqlanmoqda"* xabari chiqadi; aloqa tiklanganda avtomatik navbat (`flushOfflineSyncQueue`) orqali barcha javoblar serverga uzatiladi.
+3. **Audio Blob Caching (Listening Barqarorligi)**:
+   - Listening audio fayli birinchi marta yuklanganda xotirada global `mediaBlobCache` ga joylanadi.
+   - Bo'limlar yoki savollar (parts) almashganda tarmoqqa qayta so'rov yuborilmaydi; keshdagi audio manzilidan belgilangan timestampga 0ms kechikish bilan sakraydi.
+4. **Native Custom TitleBar (Desktop UI/UX Polish)**:
+   - Zamonaviy Obsidian Glassmorphism (`#0B0F17/90`, `backdrop-blur-md`, `border-b border-white/5`) uslubidagi sarlavha paneli (`TitleBar.tsx`) yaratildi.
+   - Oynani siljitish (`data-tauri-drag-region`), tarmoq indikatori (Online: Yashil, Offline: Sariq), versiya belgisi (`v0.8.3`) va Tauri oynani boshqarish tugmalari (Kichraytirish, Kattalashtirish, Yopish).
+   - Faol imtihon rejimida *"Exam Mode — Fullscreen Protected"* himoyasi yoqiladi va oynani tasodifiy yopib yuborish tugmasi bloklanadi.
+5. **Android Back-Button Trap (Orqaga Tugmasi Himoyasi)**:
+   - Android qurilmalarda imtihon paytida orqaga tugmasi (Back gesture / hardware button) bosilganda testdan chiqib ketish bloklanadi va maxsus tasdiqlash modali talab qilinadi.
+   - Tasdiqlanmasa, imtihon to'xtovsiz davom etadi.
 
-### 2. Universal Baholash Endpointi (`/v1/assessment/overview`)
-- **Universal Assessment Overview API**:
-  - `backend-django/apps/core/assessment_overview_service.py` yaratildi.
-  - Yagona endpoint orqali uzatiladi:
-    - Foydalanuvchi ma'lumotlari (`user`)
-    - IELTS Band (0-9) va Multi-Level (0-75) CEFR (`A2`, `B1`, `B2`, `C1`) dual-scale prognozi (`prediction`)
-    - O'quvchining so'nggi 10 ta to'liq urinishlari (`recentAttempts`: listening, reading, writing, speaking ballari bilan)
-    - Writing va Speaking bo'yicha mezonli (rubric) baholar va tavsiyalar
-    - Umumiy statistika (`totalAttempts`, `averageBand`, `highestBand`, `averageMultilevelScore`, `practiceHours`)
-  - Web (`useAssessmentOverview`) va Desktop (`fetchAssessmentOverview`) mijozlariga to'liq integratsiya qilindi.
+### 2. Backend & Telemetriya API (Django Core)
+- **`AttemptTelemetry` API**:
+  - `/v1/mock/attempts/<id>/telemetry` va `/v1/assessment/attempts/<id>/telemetry` endpointlari joriy qilindi.
+  - Event turlari: `window_blur`, `window_focus`, `fullscreen_exit`, `mouse_leave`, `tab_switch`, `devtools_open`.
+  - Audit jurnali `MockCheatEvent` ga to'liq metadata bilan qayd etiladi.
+- **Yagona Autentifikatsiya**:
+  - `bestway-exam://auth/callback` va `bestway://auth/callback` deep link sxemalari barcha rollar (`student`, `teacher`, `admin`, `super_admin`) uchun faollashtirildi.
+  - 1-Click Telegram Magic Token orqali bir zumda sessiya yaratish (`POST /telegram/login`).
+  - Desktop yangilanish manifesti: `https://bestwayec.uz/api/v1/desktop/update.json` versiyasi `0.8.3` ga yangilandi.
+- **Universal Baholash Endpointi**:
+  - `/v1/assessment/overview`: IELTS Band (0-9) va Multi-Level (0-75) CEFR (`A2`, `B1`, `B2`, `C1`), so'nggi 10 urinish, mezonli baholar va zaif modullar tahlilini uzatadi.
 
-### 3. Frontend & Desktop Parity (`bw-tauri` & `frontend`)
-- **Desktopda Google SSO va Telegram 1-Click Kirish**:
-  - Desktop Login oynasida Google va Telegram vektor logotipli tugmalari qo'shildi.
-  - Tugma bosilganda tizim brauzeri orqali PKCE himoyalangan avtorizatsiya ochiladi va chuqur havola (`bestway-exam://` yoki `bestway://`) orqali ilovaga qaytadi.
-  - Muqobil ravishda vebdagi 6 xonali kodni nusxalab qo'lda kiritish qutisi taqdim etildi.
-- **401 Interceptor va Token Refresh**:
-  - `bw-tauri/src/lib/api.ts` da sessiya muddati tugaganda avtomatik `POST /auth/refresh` yuborilib, so'rov uzilishlarsiz qayta yuboriladi.
-- **Web Login Next Redirect**:
-  - Web login formasi (`login-form.tsx`) va `desktop-authorize.tsx` avtorizatsiyadan so'ng `?next=` manziliga avtomatik o'tishni ta'minlaydi.
+### 3. Mobile (Android) Barqarorligi
+- **Chrome Custom Tabs**: Google OAuth `accounts.google.com` va `oauth2.googleapis.com` manzillari tizim brauzeri / Custom Tabs orqali ochilib, Google'ning `403 disallowed_useragent` xatoligi to'liq yo'qotildi.
+- **Android Ruxsatlari**: `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `CAMERA`, Android 13/14 uchun `READ_MEDIA_IMAGES` to'liq tekshirildi.
 
-### 4. Mobile (Android) Barqarorligi & Ruxsatlar
-- **Google OAuth WebView Cheklovi Bartaraf Etildi**:
-  - `MainActivity.kt` da Google domenlari (`accounts.google.com`, `oauth2.googleapis.com`) aniqlanib, tizim brauzeri / Custom Tabs orqali ochilishi ta'minlandi (Google'ning "disallowed_useragent" 403 xatosi oldi olindi).
-  - `onNewIntent` va cold-start deep link orqali avtorizatsiya kodi/tokeni ilovaga qaytariladi.
-- **Android Manifest va Ruxsatlar**:
-  - `AndroidManifest.xml` ga `bestway-exam` va `bestway` deep linking intent filtri qo'shildi.
-  - Android 13+ uchun `READ_MEDIA_IMAGES` ruxsati qo'shildi.
-  - `minSdk 24`, `targetSdk 34` va universal ABI (`armeabi-v7a`, `arm64-v8a`) to'liq saqlandi.
-
-### 5. Versiya Yangilanishi (`v0.8.2`)
-- `bw-tauri/package.json` -> `0.8.2`
-- `bestway/frontend/package.json` -> `0.8.2`
-- `bw-tauri/src-tauri/tauri.conf.json` -> `0.8.2`
-- `bw-tauri/src-tauri/Cargo.toml` -> `0.8.2`
-- `bw-tauri/android/app/build.gradle` -> `versionCode 820`, `versionName "0.8.2"`
-- `bw-tauri/src/lib/version.ts` -> `0.8.2`
+### 4. Versiya Yangilanishi (`v0.8.3`)
+- `bw-tauri/package.json` -> `0.8.3`
+- `bestway/frontend/package.json` -> `0.8.3`
+- `bw-tauri/src-tauri/tauri.conf.json` -> `0.8.3`
+- `bw-tauri/src-tauri/Cargo.toml` -> `0.8.3`
+- `bw-tauri/android/app/build.gradle` -> `versionCode 830`, `versionName "0.8.3"`
+- `bw-tauri/src/lib/version.ts` -> `0.8.3`
+- `backend-django/apps/core/views.py` -> `0.8.3`
 
 ---
 
 ## Sifat Darvozasi (100% QA Pass Gate)
-- **Backend Pytest**: **453 passed**, 4 skipped, 0 failed (100% PASS)
-- **Frontend Vitest**: **51 files, 354 passed**, 0 failed (100% PASS)
-- **Desktop Vitest**: **39 files, 320 passed**, 0 failed (100% PASS)
+- **Backend Pytest**: **463 passed**, 4 skipped, 0 failed (100% PASS)
+- **Frontend Vitest**: **51 test fayli, 354 test passed**, 0 failed (100% PASS)
+- **Desktop Vitest**: **41 test fayli, 327 test passed**, 0 failed (100% PASS)
 - **Frontend Next.js Build**: Turbopack orqali barcha 71 sahifa 0 xatolik bilan yig'ildi.
-- **Desktop App Build**: `tsc && vite build` 0 xatolik bilan muvaffaqiyatli yig'ildi.
+- **Desktop App Build**: `tsc && vite build` 0 xatolik bilan yig'ildi.
 
 ---
 
-## Keyingi Qadamlar
-1. O'zgarishlarni Git repository ga commit qilish (`Komiljon Roziyev <kruziyev0@gmail.com>`).
-2. `bestway` va `bw-tauri` repositorylarini `origin main` ga push qilish.
-3. VPS server (`169.58.58.229`) tarmoq holatini tekshirish va uzilishsiz (zero-downtime) deploy qilish.
-
----
-
-## Muhim Qarorlar
-- **Zero AI Attribution**: Barcha commitlar va o'zgarishlar qat'iy ravishda `Komiljon Roziyev <kruziyev0@gmail.com>` muallifligi ostida amalga oshiriladi.
-- **Dual Scheme Parity**: Barcha desktop va mobil mijozlar bir vaqtning o'zida ham `bestway-exam://`, ham `bestway://` chuqur havolalarini qo'llab-quvvatlaydi.
-- **Universal Overview Contract**: Bir nechta alohida so'rovlar o'rniga barcha platformalar `/v1/assessment/overview` orqali to'liq tahlil va prognozni bir zumda oladi.
+## Git & Contabo VPS Zero-Downtime Deploy
+- **Git Commits & Tags**:
+  - `bestway`: Commit `bd5d895`, Tag `v0.8.3`
+  - `bw-tauri`: Commit `7f94076`, Tag `v0.8.3`
+  - Muallif: `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI attribution qoidasiga 100% muvofiq).
+- **Contabo VPS (`169.58.58.229`)**:
+  - `git pull origin main` muvaffaqiyatli bajarildi.
+  - `docker compose up -d --build backend frontend` orqali konteynerlar xizmat uzilishlarsiz qayta yig'ildi.
+  - **Jonli Tekshiruvlar**:
+    - `https://bestwayec.uz/login` -> **HTTP 200 OK**
+    - `https://api.bestwayec.uz/v1/health` -> **HTTP 200 OK**
+    - `https://api.bestwayec.uz/v1/desktop/update.json` -> **HTTP 200 OK** (`version: "0.8.3"`)
+    - `https://api.bestwayec.uz/v1/assessment/overview` -> **HTTP 200 OK**
