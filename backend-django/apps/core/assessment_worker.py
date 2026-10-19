@@ -94,6 +94,8 @@ def rate(job,input,role,grader):
     try:
         output=grader(input,role)
         from .assessment_quality import normalized, response_text
+        if not any(bool(normalized(response_text(input, r))) for part in input['parts'] for r in part['responses']):
+            raise results.ProviderError('ASSESSMENT_RESPONSE_EVIDENCE_MISSING')
         criteria_keys = results.keys(input)
         for part in input['parts']:
             sources = [response_text(input, r) for r in part['responses']]
