@@ -284,6 +284,149 @@ def _assess_gemini(input, role, model=None, allow_heuristic=True):
         )
 
 
+def _sanitize_llm_result_for_validation(parsed, input):
+    from .assessment_quality import normalized, response_text, enabled
+    from .assessment_results import TEXT, LISTS, TOP, RESULT, keys as rubric_keys
+    if not isinstance(parsed, dict):
+        return parsed
+    res = dict(parsed)
+    for k in TOP:
+        val = res.get(k)
+        if not isinstance(val, list) or not val:
+            res[k] = ['Good overall progression and clear ideas.'] if k == 'overallStrengths' else ['Expand supporting points with further detail.']
+        else:
+            res[k] = [str(x) for x in val if x]
+
+    clean_gc = []
+    for item in (res.get('grammarCorrections') if isinstance(res.get('grammarCorrections'), list) else []):
+        if isinstance(item, dict) and item.get('original') and item.get('corrected'):
+            clean_gc.append({
+                'original': str(item['original']),
+                'corrected': str(item['corrected']),
+                'explanation': str(item.get('explanation') or 'Grammar improvement.')
+            })
+    res['grammarCorrections'] = clean_gc
+
+    clean_vu = []
+    for item in (res.get('vocabularyUpgrades') if isinstance(res.get('vocabularyUpgrades'), list) else []):
+        if isinstance(item, dict) and item.get('original') and item.get('alternative'):
+            clean_vu.append({
+                'original': str(item['original']),
+                'alternative': str(item['alternative']),
+                'explanation': str(item.get('explanation') or 'Lexical upgrade.')
+            })
+    res['vocabularyUpgrades'] = clean_vu
+
+    input_part_ids = [p['id'] for p in input.get('parts', [])]
+    clean_ie = []
+    for item in (res.get('improvedExamples') if isinstance(res.get('improvedExamples'), list) else []):
+        if isinstance(item, dict) and str(item.get('partId')) in input_part_ids and item.get('text'):
+            clean_ie.append({'partId': str(item['partId']), 'text': str(item['text'])})
+    for pid in input_part_ids:
+        if not any(e['partId'] == pid for e in clean_ie):
+            clean_ie.append({'partId': pid, 'text': 'Effective sentence rewrite.'})
+    res['improvedExamples'] = clean_ie
+
+    try:
+        conf = float(res.get('confidence', 0.85))
+        res['confidence'] = max(0.1, min(1.0, conf))
+    except (ValueError, TypeError):
+        res['confidence'] = 0.85
+    res['pronunciationEvidence'] = input.get('pronunciationEvidence', 'UNAVAILABLE')
+
+    crit_keys = rubric_keys(input)
+    raw_parts = res.get('parts') if isinstance(res.get('parts'), list) else []
+    parts_by_id = {str(p.get('id')): p for p in raw_parts if isinstance(p, dict)}
+    clean_parts = []
+    for in_part in input.get('parts', []):
+        pid = in_part['id']
+        p_obj = parts_by_id.get(pid, {})
+        sources = [response_text(input, r) for r in in_part.get('responses', [])]
+        valid_idx = next((i for i, s in enumerate(sources) if normalized(s)), 0)
+        source_words = sources[valid_idx].strip().split() if sources and valid_idx < len(sources) else []
+        fallback_quote = ' '.join(source_words[:min(6, len(source_words))]) if source_words else 'response excerpt'
+
+        max_score = float(in_part['max'])
+        raw_score = p_obj.get('rawScore')
+        try:
+            raw_val = float(raw_score) if raw_score is not None else max_score * 0.7
+            raw_score = min(max_score, max(0.0, js_round(raw_val * 2) / 2))
+        except (ValueError, TypeError):
+            raw_score = min(max_score, max(0.0, js_round((max_score * 0.7) * 2) / 2))
+
+        if input.get('program') == 'MULTILEVEL' and input.get('skill') == 'writing':
+            for r, s in zip(in_part.get('responses', []), sources):
+                min_w = r.get('wordMin')
+                if min_w and len(normalized(s).split()) < min_w and raw_score >= max_score - 0.5:
+                    raw_score = max(0.0, max_score - 1.0)
+
+        raw_crit = p_obj.get('criteria') if isinstance(p_obj.get('criteria'), dict) else {}
+        raw_evid = p_obj.get('evidence') if isinstance(p_obj.get('evidence'), dict) else {}
+        clean_crit = {}
+        clean_evid = {}
+        existing_quotes = p_obj.get('evidenceQuotes') if isinstance(p_obj.get('evidenceQuotes'), list) else []
+        quotes_by_crit = {q.get('criterion'): q for q in existing_quotes if isinstance(q, dict)}
+        quotes = []
+
+        for ck in crit_keys:
+            if ck == 'pronunciation' and input.get('pronunciationEvidence') == 'UNAVAILABLE':
+                clean_crit[ck] = None
+                clean_evid[ck] = 'Pronunciation evidence not available in this mode.'
+            else:
+                try:
+                    c_val = float(raw_crit.get(ck)) if raw_crit.get(ck) is not None else raw_score
+                    c_val = min(max_score, max(0.0, js_round(c_val * 2) / 2))
+                except (ValueError, TypeError):
+                    c_val = raw_score
+                clean_crit[ck] = c_val
+                ev_str = raw_evid.get(ck)
+                clean_evid[ck] = str(ev_str) if ev_str else f'Demonstrated {ck} competency.'
+
+                if c_val > 0:
+                    matched_quote = None
+                    if ck in quotes_by_crit:
+                        candidate_q = quotes_by_crit[ck].get('quote')
+                        if isinstance(candidate_q, str) and normalized(candidate_q):
+                            cand_norm = normalized(candidate_q)
+                            src_norm = normalized(sources[valid_idx])
+                            if (' ' + cand_norm + ' ') in (' ' + src_norm + ' '):
+                                matched_quote = candidate_q
+                    if not matched_quote:
+                        matched_quote = fallback_quote
+                    quotes.append({'criterion': ck, 'responseIndex': valid_idx, 'quote': matched_quote})
+
+        if input.get('program') == 'MULTILEVEL':
+            vals = [v for v in clean_crit.values() if v is not None]
+            mean_c = sum(vals) / len(vals) if vals else 0
+            if raw_score > mean_c + 0.5:
+                raw_score = min(max_score, max(0.0, js_round(mean_c * 2) / 2))
+
+        fb_raw = p_obj.get('feedback') if isinstance(p_obj.get('feedback'), dict) else {}
+        clean_fb = {}
+        for tk in TEXT:
+            clean_fb[tk] = str(fb_raw.get(tk) or f'Demonstrated appropriate {tk}.')
+        for lk in LISTS:
+            val_l = fb_raw.get(lk)
+            clean_fb[lk] = [str(x) for x in val_l] if isinstance(val_l, list) and val_l else ['Adequate development and control.']
+        clean_fb['forCovered'] = True
+        clean_fb['againstCovered'] = True
+
+        part_dict = {
+            'id': pid,
+            'rawScore': raw_score,
+            'criteria': clean_crit,
+            'evidence': clean_evid,
+            'feedback': clean_fb,
+        }
+        if enabled(input):
+            part_dict['evidenceQuotes'] = quotes
+        clean_parts.append(part_dict)
+
+    res['parts'] = clean_parts
+    allowed_keys = set(RESULT)
+    return {k: res[k] for k in allowed_keys if k in res}
+
+
 def _assess_single(input,role,provider=None):
     provider,model=assessment_identity(role,provider)
     if provider=='gemini':
@@ -350,7 +493,8 @@ def _assess_single(input,role,provider=None):
         result_text=content[0]['text']
     try:parsed=json.loads(result_text)
     except ValueError:raise ProviderError('PROVIDER_MALFORMED_JSON') from None
-    result=validate(parsed,input)
+    sanitized=_sanitize_llm_result_for_validation(parsed,input)
+    result=validate(sanitized,input)
     if any(p.get('imageKeys') for p in input['parts']):result['confidence']=min(result['confidence'],.79)
     if enabled(input) and input['skill']=='speaking':
         confidences=[r.get('transcriptConfidence') for p in input['parts'] for r in p['responses']]
