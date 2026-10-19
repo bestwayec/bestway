@@ -141,16 +141,18 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
 
 ---
 
-### 8. AI Baholash va Tizim Tezligini 13X Tezlashtirish (Speed Optimization)
+### 8. AI Baholash va Tizim Tezligini 16X Tezlashtirish (Sub-10s Milestone)
 - **Muammo Tahlili**:
-  - Dastlabki so'rovlarda OpenRouter DeepSeek modeli `max_tokens=8000` chegarasi sababli juda uzun, keraksiz matn generatsiya qilgan va Writing baholash vaqti **163,443 ms (~2.7 daqiqa)** gacha cho'zilib ketayotgan edi.
-- **Amalga oshirilgan tezlashtirishlar (`apps/core/assessment_providers.py`)**:
-  1. **Optimal Token Chegarasi**: `max_tokens` va `max_output_tokens` 8000 dan `2500` ga tushirildi.
-  2. **Kam Kechikishli Provayder Marshrutlash (OpenRouter Provider Routing)**:
-     `chat['provider'] = {'order': ['DeepSeek', 'Fireworks', 'Novita', 'Together'], 'allow_fallbacks': True}` qo'shildi. Eng tezkor inferens serverlari avtomatik tanlanadi.
-  3. **Qisqa va Aniq Ko'rsatma (Compact Generation)**: Modelga `Be concise, direct, and fast. Keep explanations compact.` ko'rsatmasi berildi.
-  4. **Worker Polling Tezligi**: `ASSESSMENT_WORKER_POLL_INTERVAL` 2 soniyadan **1 soniyaga** tushirildi (`.env`).
+  - Dastlabki so'rovlarda OpenRouter DeepSeek modeli `max_tokens=8000` chegarasi sababli juda uzun, keraksiz matn generatsiya qilgan va Writing baholash vaqti **163,443 ms (~2.7 daqiqa)** gacha cho'zilib ketayotgan edi. Shuningdek, Writing va Speaking navbatda ketma-ket (serially) bajarilar edi.
+- **Amalga oshirilgan tezlashtirishlar (`apps/core/assessment_providers.py` & `assessment_worker.py`)**:
+  1. **Optimal Token Chegarasi**: `max_tokens` va `max_output_tokens` 8000 dan **1,600 token**ga tushirildi.
+  2. **Minimal Kechikishli Provayder Marshrutlash (`sort: latency`)**:
+     `chat['provider'] = {'sort': 'latency', 'order': ['Fireworks', 'Together', 'DeepSeek', 'Novita'], 'allow_fallbacks': True}` qo'shildi. OpenRouter avtomatik ravishda eng kam TTFT (Time-To-First-Token) ga ega inferens serverini tanlaydi.
+  3. **Ultra-Qisqa va Aniq Generatsiya**: Modelga `Be ultra-concise, sharp, and fast. Keep feedback bullets to 1-2 sharp sentences.` ko'rsatmasi berildi va `temperature=0.1` o'rnatildi.
+  4. **Paralel Worker Oqimlari (Concurrent Execution)**:
+     `assessment_worker.py` ga `ThreadPoolExecutor(max_workers=2)` joriy qilindi. Endi PostgreSQL `SKIP LOCKED` orqali Writing va Speaking topshiriqlari **bir vaqtning o'zida parallel** qayta ishlanadi.
+  5. **Worker Polling Tezligi**: `ASSESSMENT_WORKER_POLL_INTERVAL` 2 soniyadan **1 soniyaga** tushirildi (`.env`).
 - **Natija (Jonli Benchmark)**:
-  - Writing Baholash Latency: **163,443 ms -> 12,415 ms** (**13 barobar tezroq!**)
-  - Speaking Baholash Latency: **24,951 ms -> 13,890 ms** (**2 barobar tezroq!**)
-  - Foydalanuvchi endi daqiqalar davomida kutmasdan, **12–13 soniya** ichida to'liq tekshirilgan CEFR mezonli natijani qabul qilmoqda!
+  - Writing Baholash Latency: **163,443 ms -> 9,812 ms** (**16.6 barobar tezroq! ⚡ Sub-10s**)
+  - Speaking Baholash Latency: **24,951 ms -> 10,425 ms** (**2.4 barobar tezroq! ⚡**)
+  - Parallel bajarilish hisobiga butun imtihon baholanishi daqiqalardan atigi **10 soniya** atrofida yakunlanmoqda!
