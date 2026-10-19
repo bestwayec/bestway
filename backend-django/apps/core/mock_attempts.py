@@ -253,7 +253,7 @@ def start(actor, exam_id, data):
         if existing:
             now = timezone.now()
             exp = existing.overall_deadline_at or existing.deadline_at
-            if exp and aware(exp) <= now or partial != is_partial(existing) or (partial and set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
+            if exp and aware(exp) <= now:
                 from .mock_submissions import submit
                 try:
                     submit(actor, existing.id, force=True)
@@ -261,6 +261,10 @@ def start(actor, exam_id, data):
                     existing.status = 'completed'
                     existing.save(update_fields=['status'])
                 existing = None
+            elif partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
+                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
+            elif not partial and is_partial(existing):
+                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
             else:
                 return start_response(existing, exam, True)
         practice = selected_scope(exam, data['skills']) if partial else None
