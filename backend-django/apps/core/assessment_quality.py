@@ -87,6 +87,7 @@ def practice_grade(input, result):
     if input['program']!='MULTILEVEL' or (input.get('gradingPolicy') or {}).get('id') != GRADE_POLICY:
         return None
     from .assessment_results import score
+    from decimal import Decimal, ROUND_HALF_UP
     from .mock_scoring import convert_expert, js_round
     value = score(input, result)
     if value['score'] is None:
@@ -95,6 +96,10 @@ def practice_grade(input, result):
     maximum = sum(part['max'] for part in input['parts']) if input['program'] == 'MULTILEVEL' else 9
     if maximum <= 0:
         return None
+    if input.get('specificationVersion'):
+        calc = float((Decimal(35) + Decimal(15) * Decimal(str(raw)) / Decimal(str(maximum))).quantize(Decimal('.1'), rounding=ROUND_HALF_UP))
+        return dict(policyId=GRADE_POLICY, score=calc, scaleMax=75,
+            rangeMax=55, rawScore=raw, rawMax=maximum, isOfficial=False)
     standard = convert_expert(input['skill'], raw)
     calibrated_score = min(55.0, float(standard))
     return dict(policyId=GRADE_POLICY, score=js_round(calibrated_score * 10) / 10, scaleMax=75,
