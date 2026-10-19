@@ -77,3 +77,26 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
     - `https://api.bestwayec.uz/v1/health` -> **HTTP 200 OK**
     - `https://api.bestwayec.uz/v1/desktop/update.json` -> **HTTP 200 OK** (`version: "0.8.3"`)
     - `https://api.bestwayec.uz/v1/assessment/overview` -> **HTTP 200 OK**
+
+---
+
+### 5. Superadmin Akkaunti, Dual AI (OpenRouter DeepSeek) va Multi-Level Mock Imtihon
+- **Superadmin Akkaunti Sozlandi**:
+  - Telegram ID `5582178765` egasi (`Komiljon Roziyev`) uchun Django `auth_user` va platforma `User` jadvallarida bosh admin huquqlari (`role="super_admin"`, `is_superuser=True`, `is_staff=True`, `is_active=True`) to'liq berildi.
+  - Kirish ma'lumotlari: Login `superadmin` / `admin`, Parol `BestwaySuperAdmin2026!`, Telefon `+998976780066`, Email `admin@bestwayec.uz`.
+  - Django Admin (`/admin/`), Web/Desktop ilova (`/login`) hamda Telegram 1-click SSO orqali to'liq autentifikatsiya kafolatlandi.
+- **Dual AI Baholash Dvigateli Integratsiyasi**:
+  - **OpenRouter API** (`deepseek/deepseek-chat`): VPS muhitida `OPENROUTER_API_KEY` o'rnatildi, `education-backend` konteynerida test so'rovi muvaffaqiyatli (HTTP 200 OK) sinovdan o'tkazildi.
+  - **xKiro API** (`qwen/qwen3.8-max:free`): Fallback provayder sifatida sozlangan.
+- **Yangi Multi-Level Mock Imtihon Kiritildi (`multilevel-writing-speaking-01`)**:
+  - Writing va Speaking bo'limlaridan iborat rasmiy CEFR Multi-Level imtihoni yaratildi va VPS bazasiga seed qilindi:
+    - **Writing** (70 ball):
+      - Task 1.1 (Norasmiy xat, ~50 so'z): Shahar musiqa festivali tashkilotchilariga minnatdorchilik va tavsiyalar.
+      - Task 1.2 (Rasmiy xat, 120–150 so'z): Festival komitetiga takliflar, xizmat ko'rsatish kamchiliklari va yechimlar.
+      - Task 2 (Fikr-mulohaza posti, 180–200 so'z): Masofaviy ta'lim (Online learning) va an'anaviy ta'lim afzalliklari bo'yicha forum posti.
+    - **Speaking** (75 ball):
+      - Part 1 (Free Time): Bo'sh vaqt, sevimli mashg'ulotlar bo'yicha 3 ta savol.
+      - Part 2 (Cue Card): "Describe a person who has had a positive influence on your life" (1 min tayyorgarlik, 2 min nutq).
+  - Django boshqaruv komandasi `seed_multilevel_writing_speaking` yaratildi va `main` tarmog'iga push qilindi.
+  - Jonli API `https://api.bestwayec.uz/v1/mock/exams` da imtihon faol ekanligi tasdiqlandi.
+
