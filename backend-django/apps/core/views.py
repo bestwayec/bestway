@@ -71,11 +71,12 @@ def health(request):
 @permission_classes([AllowAny])
 def desktop_version(request):
     version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
-    if version == "0.8.0":
+    if version in ("0.8.0", "0.7.1", "0.7.0"):
         version = "0.8.3"
     download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
-    if "0.8.0" in download_url:
-        download_url = download_url.replace("0.8.0", "0.8.3")
+    for old_v in ("0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+        if old_v in download_url:
+            download_url = download_url.replace(old_v, version)
     prerelease = getattr(settings, "DESKTOP_PRERELEASE", False)
     update_channel = getattr(settings, "DESKTOP_UPDATE_CHANNEL", "manual_installer")
     return success({"version": version, "downloadUrl": download_url, "prerelease": prerelease, "updateChannel": update_channel})
@@ -89,11 +90,12 @@ def desktop_update_json(request):
     Returns updater manifest compatible with @tauri-apps/plugin-updater.
     """
     version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
-    if version == "0.8.0":
+    if version in ("0.8.0", "0.7.1", "0.7.0"):
         version = "0.8.3"
     download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
-    if "0.8.0" in download_url:
-        download_url = download_url.replace("0.8.0", "0.8.3")
+    for old_v in ("0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+        if old_v in download_url:
+            download_url = download_url.replace(old_v, version)
     manifest = {
         "version": version,
         "notes": f"BestWay Exam Platform v{version}",
