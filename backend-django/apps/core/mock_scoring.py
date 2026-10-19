@@ -255,6 +255,6 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
 
 def partial_result(result):
     """A selected/incomplete practice is graded only on its observed work."""
-    standards = result.get('standardScores') or {}
+    standards = (result.get('standardScores') or {}) if len(result.get('rawScores') or {}) <= 1 else {}
     return dict(result, standardScores=standards, overallScore=None, overallBand=None, cefrLevel=None,
         scoreMethod='PRACTICE_PARTIAL', scoreVersion=None, isOfficial=False)
