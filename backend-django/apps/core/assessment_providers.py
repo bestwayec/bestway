@@ -456,17 +456,17 @@ def _assess_single(input,role,provider=None):
         payload['parts'].append(projected)
     encoded=lambda value:json.dumps(value,ensure_ascii=False,separators=(',',':')).encode()
     body=encoded(dict(model=model,instructions=system_prompt(input),input=[dict(role='user',content=[dict(type='input_text',text=encoded(payload).decode())])],
-        text=dict(format=dict(type='json_schema',name='bestway_assessment',schema=schema(input))),reasoning=dict(effort='none'),temperature=.1,stream=False,tool_choice='none',max_output_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',1600,600,3500)))
+        text=dict(format=dict(type='json_schema',name='bestway_assessment',schema=schema(input))),reasoning=dict(effort='none'),temperature=.1,stream=False,tool_choice='none',max_output_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',3000,1500,6000)))
     if api_format=='chat_completions':
         body=encoded(dict(model=model,messages=[dict(role='system',content=system_prompt(input)+'\nRequired JSON schema:\n'+encoded(schema(input)).decode()),
             dict(role='user',content=encoded(payload).decode())],response_format=dict(type='json_object'),
-            temperature=.1,stream=False,max_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',1600,600,3500)))
+            temperature=.1,stream=False,max_tokens=bounded('ASSESSMENT_MAX_OUTPUT_TOKENS',3000,1500,6000)))
         if provider in ('xkiro','openrouter'):
             chat=json.loads(body)
             if provider=='xkiro':chat['reasoning_effort']='none'
             if provider=='openrouter':
                 chat['provider']={'sort':'latency','order':['Fireworks','Together','DeepSeek','Novita'],'allow_fallbacks':True}
-            chat['messages'][0]['content']+='\nBe ultra-concise, sharp, and fast. Keep feedback bullets to 1-2 sharp sentences. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
+            chat['messages'][0]['content']+='\nBe concise, sharp, and fast. Keep explanations compact. Every native diagnostic and Multilevel holistic score must use increments of 0.5.'
             if enabled(input):
                 diagnostics=', '.join(k for k in rubric_keys(input) if k!='pronunciation')
                 chat['messages'][0]['content']+='\nFor EACH part, evidenceQuotes must cover EVERY positive diagnostic: '+diagnostics+'. Do not stop after two or three criteria. Before returning, check every nonzero criterion has its own matching evidenceQuotes entry. Reusing a short excerpt is allowed when relevant. Copy ONE contiguous excerpt from ONE candidate response verbatim; never paraphrase, correct its grammar, add ellipses, or join separated excerpts.'
@@ -511,7 +511,7 @@ def _assess_single(input,role,provider=None):
 
 def _is_fallback_eligible(error):
     return (
-        error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE','PROVIDER_AUTH_FAILED')
+        error.code in ('PROVIDER_RATE_LIMITED','PROVIDER_UNAVAILABLE','PROVIDER_TIMEOUT','PROVIDER_NOT_CONFIGURED','PROVIDER_NETWORK_FAILURE','PROVIDER_AUTH_FAILED','PROVIDER_TRUNCATED_RESULT','PROVIDER_EMPTY_RESPONSE','PROVIDER_MALFORMED_JSON')
         or (error.code=='PROVIDER_REQUEST_REJECTED' and error.uncertain)
         or error.transient
     )
