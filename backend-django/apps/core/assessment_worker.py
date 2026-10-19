@@ -160,10 +160,21 @@ def run_once(grader=None,speech=None):
         problem=failure(error);service.fail_job(job,problem.code,problem.transient,problem.uncertain)
     return True
 
+def _process_one(grader, speech):
+    close_old_connections()
+    return run_once(grader, speech)
+
 def tick():
     if os.environ.get('ASSESSMENT_WORKER_ENABLED')=='false' or not _tick_lock.acquire(blocking=False):return
     try:
-        while run_once():pass
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        max_workers = 2
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            while True:
+                futures = [executor.submit(_process_one, providers.assess, providers.transcribe) for _ in range(max_workers)]
+                results = [f.result() for f in as_completed(futures)]
+                if not any(results):
+                    break
     except Exception:pass # Durable lease recovery owns operational failures.
     finally:_tick_lock.release()
 
