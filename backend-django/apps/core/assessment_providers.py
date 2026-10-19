@@ -387,10 +387,12 @@ def _sanitize_llm_result_for_validation(parsed, input):
                     if ck in quotes_by_crit:
                         candidate_q = quotes_by_crit[ck].get('quote')
                         if isinstance(candidate_q, str) and normalized(candidate_q):
-                            cand_norm = normalized(candidate_q)
-                            src_norm = normalized(sources[valid_idx])
-                            if (' ' + cand_norm + ' ') in (' ' + src_norm + ' '):
-                                matched_quote = candidate_q
+                            cand_words = candidate_q.strip().split()
+                            for w_count in (min(len(cand_words), 20), 12, 6):
+                                sub_q = ' '.join(cand_words[:w_count])
+                                if len(sub_q) <= 400 and normalized(sub_q) and (' ' + normalized(sub_q) + ' ') in (' ' + normalized(sources[valid_idx]) + ' '):
+                                    matched_quote = sub_q
+                                    break
                     if not matched_quote:
                         matched_quote = fallback_quote
                     quotes.append({'criterion': ck, 'responseIndex': valid_idx, 'quote': matched_quote})
