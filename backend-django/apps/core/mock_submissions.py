@@ -97,6 +97,8 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
         isGraded=a.is_graded, score=a.score) for a in rows}
     now = timezone.now()
+    if versioned and not force:
+        assert_complete(attempt, sections, answers, now)
     if skills:
         filtered = [s for s in sections if s['skill'] in skills]
         if filtered:
