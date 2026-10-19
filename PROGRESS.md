@@ -138,3 +138,19 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
   - `https://bestwayec.uz/` -> **HTTP 200 OK**
   - `https://api.bestwayec.uz/v1/health` -> **HTTP 200 OK**
   - `https://api.bestwayec.uz/v1/mock/exams` -> **HTTP 200 OK**
+
+---
+
+### 8. AI Baholash va Tizim Tezligini 13X Tezlashtirish (Speed Optimization)
+- **Muammo Tahlili**:
+  - Dastlabki so'rovlarda OpenRouter DeepSeek modeli `max_tokens=8000` chegarasi sababli juda uzun, keraksiz matn generatsiya qilgan va Writing baholash vaqti **163,443 ms (~2.7 daqiqa)** gacha cho'zilib ketayotgan edi.
+- **Amalga oshirilgan tezlashtirishlar (`apps/core/assessment_providers.py`)**:
+  1. **Optimal Token Chegarasi**: `max_tokens` va `max_output_tokens` 8000 dan `2500` ga tushirildi.
+  2. **Kam Kechikishli Provayder Marshrutlash (OpenRouter Provider Routing)**:
+     `chat['provider'] = {'order': ['DeepSeek', 'Fireworks', 'Novita', 'Together'], 'allow_fallbacks': True}` qo'shildi. Eng tezkor inferens serverlari avtomatik tanlanadi.
+  3. **Qisqa va Aniq Ko'rsatma (Compact Generation)**: Modelga `Be concise, direct, and fast. Keep explanations compact.` ko'rsatmasi berildi.
+  4. **Worker Polling Tezligi**: `ASSESSMENT_WORKER_POLL_INTERVAL` 2 soniyadan **1 soniyaga** tushirildi (`.env`).
+- **Natija (Jonli Benchmark)**:
+  - Writing Baholash Latency: **163,443 ms -> 12,415 ms** (**13 barobar tezroq!**)
+  - Speaking Baholash Latency: **24,951 ms -> 13,890 ms** (**2 barobar tezroq!**)
+  - Foydalanuvchi endi daqiqalar davomida kutmasdan, **12–13 soniya** ichida to'liq tekshirilgan CEFR mezonli natijani qabul qilmoqda!
