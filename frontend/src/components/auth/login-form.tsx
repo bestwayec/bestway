@@ -420,12 +420,12 @@ export function LoginForm() {
         <button
           type="button"
           onClick={handleTelegramLogin}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-[#229ED9]/60 bg-[#229ED9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E88E5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#229ED9]"
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-700/80 bg-slate-950/50 px-4 py-2.5 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-slate-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
         >
-          <svg className="size-5 fill-current" viewBox="0 0 24 24">
+          <svg className="size-5 fill-[#229ED9]" viewBox="0 0 24 24">
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
           </svg>
-          {t("telegramLogin")}
+          <span>{t("telegramLogin")}</span>
         </button>
       </div>
 

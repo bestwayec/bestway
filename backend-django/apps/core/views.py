@@ -70,11 +70,11 @@ def health(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def desktop_version(request):
-    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
-    if version in ("0.8.0", "0.7.1", "0.7.0"):
-        version = "0.8.3"
-    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
-    for old_v in ("0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.4"
+    if version in ("0.8.3", "0.8.0", "0.7.1", "0.7.0"):
+        version = "0.8.4"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe"
+    for old_v in ("0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
         if old_v in download_url:
             download_url = download_url.replace(old_v, version)
     prerelease = getattr(settings, "DESKTOP_PRERELEASE", False)
@@ -89,11 +89,11 @@ def desktop_update_json(request):
     Tauri v2 updater manifest endpoint (e.g. /v1/desktop/update.json).
     Returns updater manifest compatible with @tauri-apps/plugin-updater.
     """
-    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.3"
-    if version in ("0.8.0", "0.7.1", "0.7.0"):
-        version = "0.8.3"
-    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe"
-    for old_v in ("0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.4"
+    if version in ("0.8.3", "0.8.0", "0.7.1", "0.7.0"):
+        version = "0.8.4"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe"
+    for old_v in ("0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
         if old_v in download_url:
             download_url = download_url.replace(old_v, version)
     manifest = {
@@ -569,9 +569,14 @@ def _user_detail(cursor, viewer, target_id):
 @api_view(["GET", "POST"])
 @permission_classes([Authenticated])
 def users_view(request):
-    require_role(request, "admin", "super_admin")
     if request.method == "GET":
+        if request.user.role not in ("admin", "super_admin", "teacher"):
+            raise ContractAPIException("FORBIDDEN", "Ruxsat berilmagan", 403)
         q = request.query_params; role = q.get("role"); group_id = q.get("groupId"); search = q.get("search")
+        if request.user.role == "teacher":
+            if role and role != "student":
+                raise ContractAPIException("FORBIDDEN", "O'qituvchi faqat o'quvchilarni ko'ra oladi", 403)
+            role = "student"
         if role and role not in ROLES: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
         try: page, limit = int(q.get("page", 1)), int(q.get("limit", 20))
         except ValueError: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
@@ -579,7 +584,21 @@ def users_view(request):
         filters, params = [], []
         if role: filters.append('u."role"=%s'); params.append(role)
         if group_id: filters.append('s."groupId"=%s'); params.append(group_id)
-        if search: filters.append('(u."name" ILIKE %s OR u."phone" LIKE %s)'); params += [f"%{search}%", f"%{search}%"]
+        if search:
+            search_str = search.strip()
+            words = [w for w in re.split(r'\s+', search_str) if w]
+            for w in words:
+                escaped_chars = []
+                for ch in w:
+                    if ch in "'’‘`ʻʼʹ′":
+                        escaped_chars.append("['’‘`ʻʼʹ′]?")
+                    else:
+                        escaped_chars.append(re.escape(ch))
+                pat = "".join(escaped_chars)
+                w_clean = re.sub(r"['’‘`ʻʼʹ′]", "", w)
+                w_std = re.sub(r"['’‘`ʻʼʹ′]", "'", w)
+                filters.append('(u."name" ~* %s OR u."name" ILIKE %s OR u."name" ILIKE %s OR u."name" ILIKE %s OR u."phone" LIKE %s OR u."email" ILIKE %s)')
+                params += [pat, f"%{w}%", f"%{w_clean}%", f"%{w_std}%", f"%{w_clean}%", f"%{w}%"]
         where = (" WHERE " + " AND ".join(filters)) if filters else ""
         with connection.cursor() as cursor:
             cursor.execute('SELECT COUNT(*) FROM "User" u LEFT JOIN "StudentProfile" s ON s."userId"=u."id"' + where, params); total = cursor.fetchone()[0]

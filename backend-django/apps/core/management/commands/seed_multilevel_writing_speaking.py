@@ -165,7 +165,7 @@ class Command(BaseCommand):
                 title="Speaking",
                 sort_order=1,
                 duration_minutes=11,
-                instructions="The Speaking paper consists of Part 1 (Free Time Interview) and Part 2 (Describe a person).",
+                instructions="The Speaking paper consists of Part 1.1 (Interview), Part 1.2 (Picture Comparison), Part 2 (Long Turn), and Part 3 (Discussion).",
             )
 
             # Part 1.1 Free Time Interview
@@ -211,6 +211,50 @@ class Command(BaseCommand):
                 created_at=now,
             )
 
+            # Part 1.2 Picture Comparison (Two-picture asset)
+            sg1_2 = MockQuestionGroup.objects.create(
+                id="ml-ws01-grp-speaking-1-2",
+                section=s_section,
+                sort_order=1,
+                part_number=2,
+                title="Part 1.2",
+                instructions="Look at the two pictures showing different ways of learning. Compare the pictures and answer the questions.",
+                image_key="multilevel/assets/speaking-1.2-two-picture.png",
+                max_score=5,
+                audio_play_limit=0,
+                created_at=now,
+            )
+            MockQuestion.objects.create(
+                id="ml-ws01-q-s1-2-1",
+                group=sg1_2,
+                number=4,
+                sort_order=3,
+                type="speaking_task",
+                prompt="1. What are the key differences between the two study environments shown in the pictures?",
+                points=5,
+                created_at=now,
+            )
+            MockQuestion.objects.create(
+                id="ml-ws01-q-s1-2-2",
+                group=sg1_2,
+                number=5,
+                sort_order=4,
+                type="speaking_task",
+                prompt="2. What are the advantages and disadvantages of studying in each environment?",
+                points=5,
+                created_at=now,
+            )
+            MockQuestion.objects.create(
+                id="ml-ws01-q-s1-2-3",
+                group=sg1_2,
+                number=6,
+                sort_order=5,
+                type="speaking_task",
+                prompt="3. Which learning style suits you better and why?",
+                points=5,
+                created_at=now,
+            )
+
             # Part 2 Cue Card Long Turn
             cue_card_text = (
                 "Describe a person who has had a positive influence on your life.\n\n"
@@ -223,8 +267,8 @@ class Command(BaseCommand):
             sg2 = MockQuestionGroup.objects.create(
                 id="ml-ws01-grp-speaking-2",
                 section=s_section,
-                sort_order=1,
-                part_number=2,
+                sort_order=2,
+                part_number=3,
                 title="Part 2",
                 instructions="Describe a person who has had a positive influence on your life. You have 1 minute to prepare and 2 minutes to speak.",
                 passage_text=cue_card_text,
@@ -236,13 +280,43 @@ class Command(BaseCommand):
             MockQuestion.objects.create(
                 id="ml-ws01-q-s2-1",
                 group=sg2,
-                number=4,
-                sort_order=3,
+                number=7,
+                sort_order=6,
                 type="speaking_task",
                 prompt=cue_card_text,
                 points=5,
                 created_at=now,
             )
-            self.stdout.write(self.style.SUCCESS("Created Speaking Section (Part 1 & Part 2)"))
+
+            # Part 3 Discussion & Analytical Questions
+            discussion_text = (
+                "Discussion Topic: Role Models and Social Influence\n"
+                "In what ways do role models and influential figures shape the values of young people in modern society? "
+                "How has the concept of a role model changed with the rise of digital social media?"
+            )
+            sg3 = MockQuestionGroup.objects.create(
+                id="ml-ws01-grp-speaking-3",
+                section=s_section,
+                sort_order=3,
+                part_number=4,
+                title="Part 3",
+                instructions="Answer the discussion questions in depth. You have 1 minute to think and 2 minutes to speak.",
+                passage_text=discussion_text,
+                stimulus_ref="speaking-part3-role-models",
+                max_score=6,
+                audio_play_limit=0,
+                created_at=now,
+            )
+            MockQuestion.objects.create(
+                id="ml-ws01-q-s3-1",
+                group=sg3,
+                number=8,
+                sort_order=7,
+                type="speaking_task",
+                prompt=discussion_text,
+                points=6,
+                created_at=now,
+            )
+            self.stdout.write(self.style.SUCCESS("Created Speaking Section (Parts 1.1, 1.2, 2, 3)"))
 
         self.stdout.write(self.style.SUCCESS(f"Successfully seeded exam: {EXAM_ID}"))

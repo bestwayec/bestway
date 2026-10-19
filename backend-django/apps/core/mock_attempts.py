@@ -219,6 +219,17 @@ def start(actor, exam_id, data):
     exam = MockExam.objects.filter(id=exam_id).first()
     if not exam:
         fail('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404)
+    if exam.profile == 'practice' and 'skills' not in data:
+        from apps.legacy_schema.models import MockSection
+        section_skills = list(
+            MockSection.objects.filter(exam_id=exam.id)
+            .order_by('sort_order')
+            .values_list('skill', flat=True)
+        )
+        if section_skills:
+            data['skills'] = [s for s in section_skills if s in PRACTICE_SKILLS]
+            if not data.get('flow'):
+                data['flow'] = 'single_skill' if len(data['skills']) == 1 else 'partial_practice'
     partial = 'skills' in data
     if partial:
         if exam.type not in ('multilevel', 'ielts_academic', 'ielts_general'):
@@ -267,14 +278,14 @@ def start(actor, exam_id, data):
         if practice is not None and len(data['skills']) == 1:
             practice['single_section'] = data['skills'][0]
             practice['section_filter'] = data['skills'][0]
-        if exam.type == 'multilevel' and not partial:
+        if exam.type == 'multilevel' and not partial and exam.profile == 'full_mock':
             readiness = multilevel_readiness(_exam_tree(exam))
             if not readiness['supported']:
                 fail('SPECIFICATION_UNSUPPORTED', readiness['issues'][0])
             if readiness['issues']:
                 fail('MOCK_NOT_READY', '; '.join(readiness['issues']))
             exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
-        if partial:
+        if partial or exam.profile != 'full_mock':
             exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
         shaped = mock_catalog.shape_exam(exam, False)
         if shaped['questionCount'] == 0:

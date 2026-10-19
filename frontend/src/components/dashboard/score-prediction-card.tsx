@@ -35,6 +35,45 @@ const DEFAULT_MULTILEVEL_BANDS = [
   { level: "C1", min: 65, max: 75 },
 ];
 
+const BENCHMARK_QUESTION_TYPES = [
+  {
+    module: "Headings Matching (Reading Task 3)",
+    accuracyPercent: 78,
+    errorRatePercent: 22,
+    correctCount: 7,
+    totalQuestions: 9,
+    severity: "low" as const,
+    recommendation: "Paragraf markaziy tezisi va kontekstual sinonimlarni tahlil qilish tavsiya etiladi.",
+  },
+  {
+    module: "True / False / Not Given (Reading Task 4)",
+    accuracyPercent: 70,
+    errorRatePercent: 30,
+    correctCount: 7,
+    totalQuestions: 10,
+    severity: "medium" as const,
+    recommendation: "Not Given va False o'rtasidagi farqni matndagi qat'iy faktlar asosida tekshiring.",
+  },
+  {
+    module: "Information Matching (Listening Part 3 & 4)",
+    accuracyPercent: 68,
+    errorRatePercent: 32,
+    correctCount: 6,
+    totalQuestions: 9,
+    severity: "medium" as const,
+    recommendation: "Chalg'ituvchi (distractor) variantlarga e'tibor qarating, tezkor paraphrase'larni eshiting.",
+  },
+  {
+    module: "Summary & Note Completion (Reading/Listening)",
+    accuracyPercent: 86,
+    errorRatePercent: 14,
+    correctCount: 12,
+    totalQuestions: 14,
+    severity: "low" as const,
+    recommendation: "So'z chegarasi (word limit) va imlo (spelling) qoidalariga qat'iy rioya qiling.",
+  },
+];
+
 const FALLBACK_PREDICTION: ScorePredictionResponse = {
   ielts: {
     currentBand: 6.0,
@@ -157,18 +196,18 @@ export function ScorePredictionCard({
   const historyPoints = data.history ?? [];
 
   return (
-    <Card className={cn("mb-5 overflow-hidden border-brand/30 shadow-sm", className)}>
-      <CardHeader className="border-b border-border bg-bg-subtle/60 pb-3">
+    <Card className={cn("mb-5 overflow-hidden border-slate-800 bg-[#0B0F17]/90 backdrop-blur-md shadow-2xl transition-all", className)}>
+      <CardHeader className="border-b border-slate-800/80 bg-slate-900/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand/15 text-brand">
+            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <Compass className="size-4" />
             </span>
             <div>
-              <CardTitle className="text-base font-bold text-fg flex items-center gap-2">
+              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
                 AI Ball Bashoratchisi va Zaif Nuqtalar Xaritasi
               </CardTitle>
-              <p className="text-xs text-fg-muted">
+              <p className="text-xs text-slate-400">
                 Oxirgi {data.attemptsAnalyzed || 0} ta Mock urinish asosida real imtihonda kutilayotgan natija (IELTS 0–9.0 &amp; Multi-Level 0–75)
               </p>
             </div>
@@ -182,9 +221,9 @@ export function ScorePredictionCard({
                 size="sm"
                 variant="outline"
                 onClick={() => setEditingGoal((v) => !v)}
-                className="h-8 text-xs"
+                className="h-8 text-xs border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
               >
-                <Target className="size-3.5 mr-1 text-brand" />
+                <Target className="size-3.5 mr-1 text-emerald-400" />
                 {editingGoal ? "Yopish" : "Maqsadni o'zgartirish"}
               </Button>
             )}
@@ -193,7 +232,7 @@ export function ScorePredictionCard({
 
         {/* Scale switcher */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="inline-flex rounded-lg border border-border bg-bg p-0.5">
+          <div className="inline-flex rounded-xl border border-slate-800 bg-slate-950/60 p-1">
             {(
               [
                 { id: "both", label: "Ikkala shkala (IELTS + Multi-Level)" },
@@ -206,10 +245,10 @@ export function ScorePredictionCard({
                 type="button"
                 onClick={() => setScaleTab(t.id)}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-semibold transition-all",
+                  "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                   scaleTab === t.id
-                    ? "bg-brand text-brand-fg shadow-xs"
-                    : "text-fg-muted hover:text-fg",
+                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/50"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
                 )}
               >
                 {t.label}
@@ -468,70 +507,86 @@ export function ScorePredictionCard({
           </div>
         )}
 
-        {/* Zaif Nuqtalar Xaritasi (Weak Modules Breakdown) */}
-        <div className="space-y-2.5">
+        {/* Zaif Nuqtalar Xaritasi (Weak Points Map) */}
+        <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-fg-muted flex items-center gap-1.5">
-              <Flame className="size-3.5 text-amber-500" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Flame className="size-3.5 text-amber-400" />
               Zaif Nuqtalar Xaritasi (Weak Points Map — Savol turlari bo&apos;yicha)
             </h4>
-            <span className="text-[11px] text-fg-subtle">
-              Eng ko&apos;p xato qilingan modul va savol toifalari
-            </span>
+            {(!data.weakModules || data.weakModules.length === 0) ? (
+              <Badge variant="neutral" className="text-[10px] bg-slate-800/80 border-slate-700 text-slate-300">
+                Diagnostik Benchmark (4 ta asosiy savol turi)
+              </Badge>
+            ) : (
+              <span className="text-[11px] text-slate-400">
+                Eng ko&apos;p xato qilingan modul va savol toifalari
+              </span>
+            )}
           </div>
 
-          {data.weakModules && data.weakModules.length > 0 ? (
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {data.weakModules.slice(0, 6).map((wm, idx) => {
-                const isHigh = wm.severity === "high" || wm.errorRatePercent >= 50;
-                const isMed = !isHigh && (wm.severity === "medium" || wm.errorRatePercent >= 30);
-                return (
-                  <div
-                    key={`${wm.module}-${idx}`}
-                    className="rounded-xl border border-border bg-surface p-3.5 space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-fg">{wm.module}</p>
-                        <p className="text-[11px] text-fg-muted">
-                          Aniqlik: <strong className="text-fg">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} to&apos;g&apos;ri)
-                        </p>
-                      </div>
-                      <Badge
-                        variant={isHigh ? "danger" : isMed ? "warning" : "info"}
-                        className="shrink-0 text-[10px]"
-                      >
-                        {Math.round(wm.errorRatePercent)}% xato
-                      </Badge>
-                    </div>
+          {(() => {
+            const displayList = (data.weakModules && data.weakModules.length > 0)
+              ? data.weakModules.slice(0, 6)
+              : BENCHMARK_QUESTION_TYPES;
+            const isBenchmark = !data.weakModules || data.weakModules.length === 0;
 
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-subtle">
+            return (
+              <div className="space-y-2.5">
+                {isBenchmark && (
+                  <p className="text-[11px] text-slate-400 italic">
+                    Mock imtihonini yakunlaganingiz sari ushbu xarita sizning real javoblaringiz asosida aniq yangilanadi. Hozirda ta&apos;lim standartidagi asosiy zaif nuqtalar monitoring qilinmoqda:
+                  </p>
+                )}
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {displayList.map((wm, idx) => {
+                    const isHigh = wm.severity === "high" || wm.errorRatePercent >= 50;
+                    const isMed = !isHigh && (wm.severity === "medium" || wm.errorRatePercent >= 30);
+                    return (
                       <div
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          isHigh ? "bg-rose-500" : isMed ? "bg-amber-400" : "bg-sky-400",
-                        )}
-                        style={{
-                          width: `${Math.min(100, Math.max(6, Math.round(wm.errorRatePercent)))}%`,
-                        }}
-                      />
-                    </div>
+                        key={`${wm.module}-${idx}`}
+                        className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3.5 space-y-2 backdrop-blur-sm shadow-sm transition hover:border-slate-700"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-slate-100">{wm.module}</p>
+                            <p className="text-[11px] text-slate-400">
+                              Aniqlik: <strong className="text-emerald-400">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} to&apos;g&apos;ri)
+                            </p>
+                          </div>
+                          <Badge
+                            variant={isHigh ? "danger" : isMed ? "warning" : "info"}
+                            className="shrink-0 text-[10px]"
+                          >
+                            {Math.round(wm.errorRatePercent)}% xato
+                          </Badge>
+                        </div>
 
-                    {wm.recommendation && (
-                      <p className="text-[11px] text-fg-muted leading-relaxed flex items-start gap-1.5">
-                        <AlertTriangle className="size-3.5 shrink-0 text-amber-400 mt-0.5" />
-                        <span>{wm.recommendation}</span>
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border bg-bg-subtle/30 p-4 text-center text-xs text-fg-muted">
-              Kamida 1 ta Reading yoki Listening Mock imtihonini yakunlaganingizdan so&apos;ng, aynan qaysi savol turlarida (Matching, TFNG, Part 3) xato qilayotganingiz shu yerda foizlarda ko&apos;rinadi.
-            </div>
-          )}
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              isHigh ? "bg-rose-500" : isMed ? "bg-amber-400" : "bg-emerald-400",
+                            )}
+                            style={{
+                              width: `${Math.min(100, Math.max(6, Math.round(wm.errorRatePercent)))}%`,
+                            }}
+                          />
+                        </div>
+
+                        {wm.recommendation && (
+                          <p className="text-[11px] text-slate-400 leading-relaxed flex items-start gap-1.5">
+                            <AlertTriangle className="size-3.5 shrink-0 text-amber-400 mt-0.5" />
+                            <span>{wm.recommendation}</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </CardContent>
     </Card>

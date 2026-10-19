@@ -316,12 +316,29 @@ def add_student(actor, group_id, student_id):
     group = get_group(group_id, True)
     if actor.role == 'teacher' and group.teacher_id != actor.id:
         fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+    user = User.objects.filter(id=student_id).first()
+    if user is None:
+        fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
+    if user.role != 'student':
+        fail('NOT_A_STUDENT', "Foydalanuvchi o'quvchi emas", 400)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
     if profile is None:
-        fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
-    old = profile.group_id
-    profile.group_id = group_id
-    profile.save(update_fields=['group_id'])
+        profile = StudentProfile.objects.create(
+            user_id=student_id,
+            group_id=group_id,
+            is_approved=True,
+            current_points=0,
+            link_code=student_id[:8],
+            available_programs=['IELTS', 'MULTILEVEL'],
+            active_program='IELTS',
+            game_qualified=False,
+            created_at=timezone.now(),
+        )
+        old = None
+    else:
+        old = profile.group_id
+        profile.group_id = group_id
+        profile.save(update_fields=['group_id'])
     audit(actor, 'group.add_student', 'studentProfile', student_id, old=dict(groupId=old), new=dict(groupId=group_id))
     return dict(groupId=group_id, studentId=student_id, added=True)
 

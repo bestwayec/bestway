@@ -182,24 +182,24 @@ class DesktopVersionAndAuthParityTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_desktop_version_returns_0_8_3(self):
-        """Verify GET /v1/desktop/version returns 0.8.3 with valid download URL."""
+    def test_desktop_version_returns_0_8_4(self):
+        """Verify GET /v1/desktop/version returns 0.8.4 with valid download URL."""
         response = self.client.get("/v1/desktop/version")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
         data = response.data["data"]
-        self.assertEqual(data["version"], "0.8.3")
-        self.assertIn("0.8.3", data["downloadUrl"])
-        self.assertEqual(data["downloadUrl"], "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe")
+        self.assertEqual(data["version"], "0.8.4")
+        self.assertIn("0.8.4", data["downloadUrl"])
+        self.assertEqual(data["downloadUrl"], "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe")
 
-    def test_desktop_update_json_manifest_returns_0_8_3(self):
-        """Verify GET /v1/desktop/update.json returns Tauri v2 manifest for 0.8.3."""
+    def test_desktop_update_json_manifest_returns_0_8_4(self):
+        """Verify GET /v1/desktop/update.json returns Tauri v2 manifest for 0.8.4."""
         response = self.client.get("/v1/desktop/update.json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["version"], "0.8.3")
-        self.assertIn("0.8.3", response.data["notes"])
+        self.assertEqual(response.data["version"], "0.8.4")
+        self.assertIn("0.8.4", response.data["notes"])
         windows_platform = response.data["platforms"]["windows-x86_64"]
-        self.assertEqual(windows_platform["url"], "https://bestwayec.uz/media/downloads/Bestway.App_0.8.3_x64-setup.exe")
+        self.assertEqual(windows_platform["url"], "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe")
 
     def test_desktop_auth_both_schemes_for_all_roles(self):
         """Verify both bestway-exam:// and bestway:// schemes work for student, teacher, admin, super_admin."""
