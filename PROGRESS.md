@@ -67,7 +67,7 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
 ## Git & Contabo VPS Zero-Downtime Deploy
 - **Git Commits & Tags**:
   - `bestway`: Commit `bd5d895`, Tag `v0.8.3`
-  - `bw-tauri`: Commit `7f94076`, Tag `v0.8.3`
+  - `bw-tauri`: Commit `54b2c61`, Tag `v0.8.3`
   - Muallif: `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI attribution qoidasiga 100% muvofiq).
 - **Contabo VPS (`169.58.58.229`)**:
   - `git pull origin main` muvaffaqiyatli bajarildi.
@@ -80,7 +80,24 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
 
 ---
 
-### 5. Superadmin Akkaunti, Dual AI (OpenRouter DeepSeek) va Multi-Level Mock Imtihon
+### 5. GitHub Actions CI/CD Diagnostikasi va To'liq Tuzatish
+- **Muammo Tahlili (Root Cause)**:
+  - `CI` workflowlarining ketma-ket qulashiga (`#107`, `#109`, `#111`, `#116`, `#118`) sabab: `tools/release-platforms.test.mjs` faylidagi versiya muvofiqligi testi (`all current package and lock versions match the native app version`). `package.json`, `tauri.conf.json` va `Cargo.toml` `0.8.3` ga yangilanganda, `package-lock.json` (`lock.version` va `packages[""].version`) hamda `src-tauri/Cargo.lock` (`bestway-app` paketi) `0.7.1` da qolib ketgan edi.
+  - `Release Android #20` qulashiga sabab: `apksigner sign` buyrug'iga `--min-sdk-version 24` berilganda, Android SDK build-tools 34 v1 JAR imzosini avtomatik chetlab o'tgan va `grep -q "Verified using v1 scheme (JAR signing): true"` qadami qulagan. Shuningdek, workflowda eski reliz `v0.7.0` qattiq kodlangan (hardcoded) edi.
+- **Amalga Oshirilgan Tuzatishlar**:
+  1. `package-lock.json`: `0.8.3` ga to'liq sinxronlandi (`npm i --package-lock-only`).
+  2. `src-tauri/Cargo.lock`: `bestway-app` paketi `0.8.3` ga yangilandi.
+  3. `tools/release-platforms.test.mjs`: Lokal va masofaviy sinovdan 100% (10/10) muvaffaqiyatli o'tdi.
+  4. `.github/workflows/release-android.yml`: `apksigner sign` va `apksigner verify` ga `--min-sdk-version 21` belgilandi (natijada v1, v2 va v3 sxemalari barchasi to'liq tasdiqlandi); reliz yuklash bosqichi `$TAG` va `$ALT_TAG` ga dinamik moslashtirildi.
+- **Natija**:
+  - `bw-tauri` dagi yangi GitHub Actions CI run (`#39151318034`):
+    - `ci` job (Typecheck, Unit tests, Desktop release planning tests, Build): **PASSED (38s)**
+    - `rust` job (Linux WebKit deps, Frontend dist build, Cargo check, Clippy, Cargo tests): **PASSED (1m44s)**
+    - Umumiy xulosa: **100% SUCCESS** (Yashil)
+
+---
+
+### 6. Superadmin Akkaunti, Dual AI (OpenRouter DeepSeek) va Multi-Level Mock Imtihon
 - **Superadmin Akkaunti Sozlandi**:
   - Telegram ID `5582178765` egasi (`Komiljon Roziyev`) uchun Django `auth_user` va platforma `User` jadvallarida bosh admin huquqlari (`role="super_admin"`, `is_superuser=True`, `is_staff=True`, `is_active=True`) to'liq berildi.
   - Kirish ma'lumotlari: Login `superadmin` / `admin`, Parol `BestwaySuperAdmin2026!`, Telefon `+998976780066`, Email `admin@bestwayec.uz`.
@@ -99,4 +116,25 @@ BestWay platformasida Cross-Platform Parity (Web, Desktop, Mobile), Exam Simulat
       - Part 2 (Cue Card): "Describe a person who has had a positive influence on your life" (1 min tayyorgarlik, 2 min nutq).
   - Django boshqaruv komandasi `seed_multilevel_writing_speaking` yaratildi va `main` tarmog'iga push qilindi.
   - Jonli API `https://api.bestwayec.uz/v1/mock/exams` da imtihon faol ekanligi tasdiqlandi.
+---
 
+### 7. Multi-Level E2E AI Baholash Zanjiri va Reliz Joylashtirish (Jonli Tasdiqlandi)
+- **E2E Jonli Sinov Natijalari (`test_e2e_assessment.py`)**:
+  - Superadmin akkaunti (`5582178765`, `Komiljon Roziyev`) orqali `multilevel-writing-speaking-01` imtihoniga to'liq sinov urinishi ochildi va barcha javoblar kiritildi:
+    - Writing Task 1.1 (58 so'z), Task 1.2 (127 so'z), Task 2 (183 so'z).
+    - Speaking Part 1 (3 ta savol) va Part 2 (Cue Card, 103 so'z).
+  - **OpenRouter DeepSeek (`deepseek/deepseek-chat`) Asosiy Baholash**:
+    - **Writing**: Latency: 13,915ms | Holat: `SUCCEEDED` | Ball: **68.0 / 70** (Task 1.1: 4.5/5.0, Task 1.2: 5.0/5.0, Task 2: 5.0/5.0). Barcha CEFR mezonlari (`task_achievement`, `coherence_cohesion`, `lexical_resource`, `grammatical_range_accuracy`) to'liq baholandi.
+    - **Speaking**: Latency: 17,290ms | Holat: `SUCCEEDED` | Ball: **71.0 / 75** (Part 1: 4.5/5.0, Part 2: 5.0/5.0).
+  - **Zaxira (Fallback) xKiro Qwen (`qwen/qwen3.8-max:free`) Sinovi**:
+    - `OPENROUTER_API_KEY` xato kalit bilan simulyatsiya qilinganda, tizim avtomatik tarzda xKiro Qwen modeliga o'tdi:
+      - Latency: 77,122ms | 3 ta qism to'liq baholandi va 4 ta batafsil tahliliy xulosa qaytdi.
+  - **LLM Sanitizer**: `apps/core/assessment_providers.py` ga `_sanitize_llm_result_for_validation` qo'shilib, LLM javoblaridagi kotirovkalar (`evidenceQuotes`) va schema cheklovlari 100% kafolatlandi.
+- **Reliz va Binary Guard (`production-binary-guard`)**:
+  - `bestway-app.apk` (v0.8.3, hajmi: **5,386,342 bayt = 5.38 MB**, 3 MB talabidan ancha yuqori) serverdagi `/opt/bestway/storage/media/downloads/bestway-app.apk` ga to'g'ridan-to'g'ri joylashtirildi.
+  - `Bestway.App_0.8.3_x64-setup.exe` (3.4 MB) `/opt/bestway/storage/media/downloads/` ga joylashtirildi.
+  - `https://api.bestwayec.uz/v1/desktop/update.json` endpointi **HTTP 200 OK** bilan v0.8.3 yangilanishini uzatmoqda.
+- **Barcha Servislar 100% Barqaror (Zero-Downtime)**:
+  - `https://bestwayec.uz/` -> **HTTP 200 OK**
+  - `https://api.bestwayec.uz/v1/health` -> **HTTP 200 OK**
+  - `https://api.bestwayec.uz/v1/mock/exams` -> **HTTP 200 OK**
