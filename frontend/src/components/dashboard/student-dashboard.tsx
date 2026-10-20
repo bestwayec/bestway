@@ -5,6 +5,7 @@ import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
 import { ExamTrackDashboard } from '@/components/mock/exam-track-dashboard';
 import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
 import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
+import { MistakeVault } from "@/components/dashboard/mistake-vault";
 import { AlertCircle, BookOpen, Check, Copy, Star, Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ export function StudentDashboard() {
 
       <LiveExamPinCard />
       <ScorePredictionCard />
+      <MistakeVault className="mt-4 mb-4" />
       <ExamTrackSelector />
       <ExamTrackDashboard />
 

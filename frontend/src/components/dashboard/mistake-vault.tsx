@@ -1,0 +1,209 @@
+"use client";
+
+import * as React from "react";
+import { AlertCircle, ArrowRight, BookOpen, CheckCircle, Flame, Play, RefreshCw, Sparkles, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+export interface MistakeCategory {
+  id: string;
+  name: string;
+  skill: "reading" | "listening" | "writing" | "speaking";
+  wrongCount: number;
+  totalAttempted: number;
+  accuracy: number;
+  lastTrained?: string;
+  recommendedFocus: string;
+}
+
+const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
+  {
+    id: "tfng",
+    name: "True / False / Not Given",
+    skill: "reading",
+    wrongCount: 8,
+    totalAttempted: 24,
+    accuracy: 66,
+    lastTrained: "2 kun oldin",
+    recommendedFocus: "Matnda to'g'ridan-to'g'ri berilmagan ma'lumotlarni taxmin qilmaslik (Not Given vs False).",
+  },
+  {
+    id: "headings",
+    name: "Headings Matching",
+    skill: "reading",
+    wrongCount: 5,
+    totalAttempted: 18,
+    accuracy: 72,
+    lastTrained: "Kecha",
+    recommendedFocus: "Paragrafning birinchi va oxirgi jumlalariga emas, umumiy g'oyasiga e'tibor qaratish.",
+  },
+  {
+    id: "info-matching",
+    name: "Information Matching & Multiple Choice",
+    skill: "listening",
+    wrongCount: 7,
+    totalAttempted: 20,
+    accuracy: 65,
+    lastTrained: "3 kun oldin",
+    recommendedFocus: "Spikerning fikrini o'zgartiruvchi 'However', 'Actually' kabi signallarni payqash.",
+  },
+  {
+    id: "summary",
+    name: "Summary & Sentence Completion",
+    skill: "reading",
+    wrongCount: 4,
+    totalAttempted: 22,
+    accuracy: 81,
+    lastTrained: "Bugun",
+    recommendedFocus: "Grammatik shakl (ot, fe'l, sifat) va so'z chegarasi (NO MORE THAN TWO WORDS) qoidasi.",
+  },
+];
+
+export function MistakeVault({ className }: { className?: string }) {
+  const router = useRouter();
+  const [selectedFilter, setSelectedFilter] = React.useState<"all" | "reading" | "listening">("all");
+  const [loadingCategory, setLoadingCategory] = React.useState<string | null>(null);
+
+  const filtered = DEFAULT_MISTAKE_VAULT.filter(
+    (item) => selectedFilter === "all" || item.skill === selectedFilter
+  );
+
+  const totalMistakes = DEFAULT_MISTAKE_VAULT.reduce((acc, curr) => acc + curr.wrongCount, 0);
+
+  const handleStartReTest = (category: MistakeCategory) => {
+    setLoadingCategory(category.id);
+    toast.success(`"${category.name}" bo'yicha maqsadli mini-mashq (Re-test) boshlanmoqda...`, {
+      description: "Faqat xato qilingan savollar formati asosida 10 talik mashq yuklanmoqda.",
+    });
+
+    setTimeout(() => {
+      setLoadingCategory(null);
+      router.push(`/mock?skill=${category.skill}&practiceLevel=practice&category=${category.id}`);
+    }, 600);
+  };
+
+  return (
+    <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/90 text-slate-100 shadow-xl", className)}>
+      <CardHeader className="pb-3 border-b border-slate-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-white">
+              <Target className="size-4 text-emerald-400" />
+              Zaif Nuqtalar Banki (Personal Mistake Vault)
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-400">
+              Imtihonlarda yo&apos;l qo&apos;yilgan xatolar asosida shakllangan shaxsiy mashqlar ombori
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="danger" className="border-rose-500/30 bg-rose-950/30 text-rose-300 text-xs py-0.5">
+              <Flame className="size-3 mr-1 text-rose-400" />
+              {totalMistakes} ta xato savol to&apos;plandi
+            </Badge>
+          </div>
+        </div>
+
+        {/* Skill Filters */}
+        <div className="flex items-center gap-1.5 pt-2">
+          {(["all", "reading", "listening"] as const).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setSelectedFilter(filter)}
+              className={cn(
+                "rounded-lg px-2.5 py-1 text-xs font-medium transition-all capitalize",
+                selectedFilter === filter
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              )}
+            >
+              {filter === "all" ? "Barcha savol turlari" : filter}
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-4 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {filtered.map((cat) => {
+            const isCritical = cat.accuracy < 70;
+            const isLoading = loadingCategory === cat.id;
+
+            return (
+              <div
+                key={cat.id}
+                className="group relative flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/50 p-4 transition-all hover:border-emerald-500/40 hover:bg-slate-900/80"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">
+                        {cat.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 capitalize">
+                        Modul: <span className="text-slate-300 font-medium">{cat.skill}</span> · Oxirgi mashq: {cat.lastTrained}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={isCritical ? "danger" : "warning"}
+                      className="text-[10px] shrink-0"
+                    >
+                      {cat.wrongCount} xato
+                    </Badge>
+                  </div>
+
+                  {/* Accuracy Bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Aniqlik ko&apos;rsatkichi:</span>
+                      <span className={isCritical ? "text-rose-400 font-bold" : "text-amber-400 font-bold"}>
+                        {cat.accuracy}% ({cat.totalAttempted - cat.wrongCount}/{cat.totalAttempted})
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className={cn("h-full rounded-full transition-all", isCritical ? "bg-rose-500" : "bg-amber-400")}
+                        style={{ width: `${cat.accuracy}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pedagogical Recommendation */}
+                  <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800/60">
+                    💡 <span className="text-slate-300 font-medium">Tavsiya:</span> {cat.recommendedFocus}
+                  </p>
+                </div>
+
+                {/* Re-test CTA Button */}
+                <div className="pt-3 mt-3 border-t border-slate-800/60 flex items-center justify-between">
+                  <span className="text-[10px] text-emerald-400/90 font-medium flex items-center gap-1">
+                    <Sparkles className="size-3" /> 10 ta xato savol tayyor
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => handleStartReTest(cat)}
+                    className="h-8 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white text-xs font-semibold shadow-sm transition-all"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="size-3 animate-spin mr-1" />
+                    ) : (
+                      <Play className="size-3 fill-current mr-1" />
+                    )}
+                    Re-test boshlash
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
