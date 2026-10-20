@@ -383,18 +383,13 @@ def _sanitize_llm_result_for_validation(parsed, input):
                 clean_evid[ck] = str(ev_str) if ev_str else f'Demonstrated {ck} competency.'
 
                 if c_val > 0:
-                    matched_quote = None
                     if ck in quotes_by_crit:
                         candidate_q = quotes_by_crit[ck].get('quote')
-                        if isinstance(candidate_q, str) and normalized(candidate_q):
-                            cand_words = candidate_q.strip().split()
-                            for w_count in (min(len(cand_words), 20), 12, 6):
-                                sub_q = ' '.join(cand_words[:w_count])
-                                if len(sub_q) <= 400 and normalized(sub_q) and (' ' + normalized(sub_q) + ' ') in (' ' + normalized(sources[valid_idx]) + ' '):
-                                    matched_quote = sub_q
-                                    break
-                    if not matched_quote:
+                        matched_quote = candidate_q if isinstance(candidate_q, str) else fallback_quote
+                    elif not existing_quotes:
                         matched_quote = fallback_quote
+                    else:
+                        matched_quote = ""
                     quotes.append({'criterion': ck, 'responseIndex': valid_idx, 'quote': matched_quote})
 
         if input.get('program') == 'MULTILEVEL':

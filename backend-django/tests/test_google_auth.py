@@ -2,6 +2,11 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
+try:
+    import google.oauth2.id_token  # Ensure namespace package is imported for patch
+except ImportError:
+    pass
+
 from django.test import TestCase
 from rest_framework.test import APIClient
 

@@ -45,6 +45,20 @@ export function ExamLauncherModal({
     isMultilevel ? "dtm" : "cdi"
   );
 
+  const examSkills: MockPracticeSkill[] = React.useMemo(() => {
+    if ("skills" in exam && Array.isArray((exam as { skills?: unknown }).skills)) {
+      return (exam as { skills: MockPracticeSkill[] }).skills;
+    }
+    if ("sections" in exam && Array.isArray((exam as { sections?: Array<{ skill?: string }> }).sections)) {
+      return (exam as { sections: Array<{ skill?: string }> }).sections
+        .map((s) => s.skill as MockPracticeSkill)
+        .filter(Boolean);
+    }
+    return [];
+  }, [exam]);
+
+  const isPracticeExam = exam.profile === "practice" || (examSkills.length > 0 && examSkills.length < 4);
+
   React.useEffect(() => {
     setSimulatorMode(isMultilevel ? "dtm" : "cdi");
   }, [isMultilevel, exam.id]);
@@ -139,7 +153,7 @@ export function ExamLauncherModal({
             </div>
           </div>
 
-          {/* Rejim 1: Full Mock Exam */}
+          {/* Rejim 1: Full Mock Exam / Practice Exam */}
           <div className="rounded-xl border-2 border-brand/40 bg-gradient-to-br from-brand/10 via-surface to-surface p-4 shadow-sm transition-all hover:border-brand/70">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -147,35 +161,58 @@ export function ExamLauncherModal({
                   1
                 </span>
                 <h3 className="font-bold text-base text-fg">
-                  To&apos;liq Mock Imtihon (Full Mock)
+                  {isPracticeExam
+                    ? "Imtihonni Boshlash (Practice Exam)"
+                    : "To'liq Mock Imtihon (Full Mock)"}
                 </h3>
               </div>
               <Badge variant="success" className="gap-1 text-xs font-semibold">
                 <Sparkles className="size-3 fill-current" />
-                Rasmiy CBT Oqimi
+                {isPracticeExam ? "Practice Oqimi" : "Rasmiy CBT Oqimi"}
               </Badge>
             </div>
 
             <p className="mt-2 text-xs text-fg-muted leading-relaxed">
-              Barcha 4 ta bo&apos;lim rasmiy tartibda ketma-ket topshiriladi:{" "}
-              <strong className="text-fg font-medium">1. Listening → 2. Reading → 3. Writing → 4. Speaking</strong>.
-              Har bir bo&apos;lim qat&apos;iy vaqt bilan nazorat qilinadi.
+              {isPracticeExam && examSkills.length > 0 ? (
+                <>
+                  Imtihon bo&apos;limlari ketma-ket topshiriladi:{" "}
+                  <strong className="text-fg font-medium">
+                    {examSkills.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(" → ")}
+                  </strong>.
+                </>
+              ) : (
+                <>
+                  Barcha 4 ta bo&apos;lim rasmiy tartibda ketma-ket topshiriladi:{" "}
+                  <strong className="text-fg font-medium">1. Listening → 2. Reading → 3. Writing → 4. Speaking</strong>.
+                  Har bir bo&apos;lim qat&apos;iy vaqt bilan nazorat qilinadi.
+                </>
+              )}
             </p>
 
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
               <Button
                 className="flex-1 bg-brand font-bold text-white shadow-sm hover:bg-brand-hover"
                 loading={isStarting}
-                onClick={() => triggerStart("timed")}
+                onClick={() =>
+                  triggerStart(
+                    "timed",
+                    isPracticeExam && examSkills.length > 0 ? examSkills : undefined
+                  )
+                }
               >
                 <Timer className="size-4 mr-1.5" />
-                To&apos;liq Imtihonni Boshlash (Timed)
+                Imtihonni Boshlash (Timed)
               </Button>
               <Button
                 variant="outline"
                 className="font-medium"
                 loading={isStarting}
-                onClick={() => triggerStart("practice")}
+                onClick={() =>
+                  triggerStart(
+                    "practice",
+                    isPracticeExam && examSkills.length > 0 ? examSkills : undefined
+                  )
+                }
               >
                 <Play className="size-4 mr-1.5 fill-current" />
                 Mashq Rejimi (Practice)

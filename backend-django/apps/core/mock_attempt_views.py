@@ -155,7 +155,7 @@ def submit_view(request, attempt_id):
         or data.get('timeout')
         or request.query_params.get('force')
     )
-    return success(submit(request.user, attempt_id, skills, force=force), 200)
+    return success(submit(request.user, attempt_id, skills, force=force), 201)
 
 
 @api_view(['POST'])

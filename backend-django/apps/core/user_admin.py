@@ -111,14 +111,42 @@ def deactivate(actor,identifier):
 @api_view(['GET','POST'])
 @permission_classes([Authenticated])
 def users(request):
-    require_role(request,'admin','super_admin')
-    if request.method=='POST': return success(create(request.user,validate(payload(request,{'name','phone','password','role','groupId'}))),201)
+    if request.method=='POST':
+        require_role(request,'admin','super_admin')
+        return success(create(request.user,validate(payload(request,{'name','phone','password','role','groupId'}))),201)
+    if request.user.role not in ('admin', 'super_admin', 'teacher'):
+        raise ContractAPIException('FORBIDDEN', 'Ruxsat berilmagan', 403)
     q=pagination(request,{'role','groupId','search'})
+    if request.user.role == 'teacher':
+        if q.get('role') and q['role'] != 'student':
+            raise ContractAPIException('FORBIDDEN', "O'qituvchi faqat o'quvchilarni ko'ra oladi", 403)
+        q['role'] = 'student'
     if q.get('role') and q['role'] not in ROLES: invalid('role must be one of the following values: super_admin, admin, teacher, student, parent')
     rows=User.objects.all()
     if q.get('role'): rows=rows.filter(role=q['role'])
     if q.get('groupId'): rows=rows.filter(id__in=StudentProfile.objects.filter(group_id=q['groupId']).values('user_id'))
-    if q.get('search'): rows=rows.filter(Q(name__icontains=q['search'])|Q(phone__contains=q['search']))
+    search_term = (q.get('search') or '').strip()
+    if search_term:
+        words = [w for w in re.split(r'\s+', search_term) if w]
+        for word in words:
+            escaped_chars = []
+            for ch in word:
+                if ch in "'’‘`ʻʼʹ′":
+                    escaped_chars.append("['’‘`ʻʼʹ′]?")
+                else:
+                    escaped_chars.append(re.escape(ch))
+            pattern = "".join(escaped_chars)
+            word_clean = re.sub(r"['’‘`ʻʼʹ′]", "", word)
+            word_std = re.sub(r"['’‘`ʻʼʹ′]", "'", word)
+            word_q = (
+                Q(name__iregex=pattern)
+                | Q(name__icontains=word)
+                | Q(name__icontains=word_clean)
+                | Q(name__icontains=word_std)
+                | Q(phone__icontains=word_clean)
+                | Q(email__icontains=word)
+            )
+            rows = rows.filter(word_q)
     total=rows.count();start=(q['page']-1)*q['limit']
     # List shapes omit parent children/teacher groups, unlike detail.
     from .views import _lookup_user, _user_shape

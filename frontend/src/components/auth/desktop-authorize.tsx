@@ -40,6 +40,7 @@ export function DesktopAuthorize() {
   const params = useSearchParams();
   const [phase, setPhase] = React.useState<Phase>({ name: "ready" });
   const [copied, setCopied] = React.useState(false);
+  const [copiedUrl, setCopiedUrl] = React.useState(false);
   // Default to true for 1-click single-action authorization.
   const [agreed, setAgreed] = React.useState(true);
   const autoSubmittedRef = React.useRef(false);
@@ -120,8 +121,6 @@ export function DesktopAuthorize() {
       void authorize();
     }
   }, [authorize, paramsValid, phase.name]);
-
-  const [copiedUrl, setCopiedUrl] = React.useState(false);
 
   async function copyCode(code: string) {
     try {
