@@ -1,58 +1,69 @@
 # BestWay Platform — Progress & Status Report
 
 ## Maqsad
-BestWay / GRAND EDUCATION platformasining ikkita asosiy ustuni — O'quvchilar tahlili (Adaptiv o'quv rejasi va Mistake Vault diagnostikasi) hamda O'qituvchilar panelini (Aqlli davomat, guruh monitoringi va B2B oylik rasmiy hisobotlar) eng yuqori professional darajada ishlab chiqish, 100% testlardan o'tkazish va Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish.
+BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Superadmin talabalarni xavfsiz kaskadli o'chirish, yangi ro'yxatdan o'tgan barcha talabalarga avtomatik 100 boshlang'ich ball taqdim etish (Initial 100 Points Grant), Superadmin Exam Builder savollar redaktori (Writing, Speaking, Reading/Listening va 1-klikli shablonlar) hamda Obsidian/Emerald dizayn tizimini to'liq uyg'unlashtirish (Release v0.8.6), 100% testlardan o'tkazish, PR #80 ni birlashtirish va Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish.
 
 ---
 
 ## Bajarildi
 
-### 1-BLOK: O'quvchilar Tahlili va Adaptiv O'quv Rejasi (Student Analytics & Roadmap)
-1. **Imtihongacha Qolgan Vaqt Bo'yicha Dinamik Yuklama**:
-   - `study_plan_service.py` xizmati joriy etildi: talabaning `target_timeline_months` (1 oy - Tezlashtirilgan, 3 oy - Muvozanatli, 6 oy - Poydevor) va maqsadli imtihon sanasi asosida kunlik yuklama algoritmi hisoblanadi.
-   - O'quvchi kabinetida:
-     * Bugungi vazifa: masalan, *"📌 Bugun: 20 ta Listening/Reading savoli + 1 ta Task 2 Essay"*.
-     * Progress bar: Haftalik va oylik reja foizi (bajarilgan savollar soni dinamik hisoblanadi).
-     * AI Dinamik Qayta Muvozanatlash (Rebalance): Talaba haftalik rejasidan 60% dan ortda qolganda, AI qolgan kunlarga qarab kunlik vazifaga qo'shimcha savollar qo'shadi va ogohlantiruvchi bildirishnoma chiqaradi.
-   - `AdaptiveStudyPlan` frontend komponenti (`src/components/dashboard/adaptive-study-plan.tsx`) yaratildi va `StudentDashboard` ga ulandi.
-2. **"Zaif Nuqtalar" (Mistake Vault) Chuqur Tahlili & Targeted Practice**:
-   - `get_student_mistake_vault` diagnostika xizmati: eng ko'p adashilgan savol turlari (True/False/Not Given, Headings Matching, Information Matching, Summary Completion) bo'yicha aniq foizli tahlil.
-   - 1-Klikli "Bo'shliqlarni yopish" (Targeted Practice): `TargetedPracticeDialog` (`src/components/dashboard/targeted-practice-dialog.tsx`) interaktiv mini-mashq runneri yaratildi. Talaba adashgan mavzusi bo'yicha bazadan 10 ta tasodifiy savolni yechib, to'g'ri/noto'g'ri javoblarni jonli tushuntirish bilan tahlil qila oladi.
+### 1-BLOK: Superadmin Talabalarni Kaskadli O'chirish (Cascade Student Deletion)
+1. **Backend Xavfsiz Kaskadli O'chirish**:
+   - `user_admin.py` da `delete_student_cascade()` va `delete_student_view()` (`DELETE /api/backend/v1/students/<id>` hamda `DELETE /api/backend/v1/users/<id>?hard=true`) yaratildi.
+   - Kaskad tartibi qat'iy mantiq bilan bog'landi: bolalar jadvallari (`MockAnswer` -> `MockCheatEvent` -> `AssessmentEvaluation` -> `SpeechTranscript` -> `AssessmentJob` -> `MockAttempt` -> `Answer` -> `AntiCheatEvent` -> `TestAttempt` -> `Attendance` -> `Payment` -> `PointsLog` -> `MonthlyPointsArchive` -> `ParentStudent` -> `MockPurchase` -> `VideoPurchase` -> `Notification` -> `RefreshToken` -> `DesktopAuthCode` -> `TelegramLinkToken` -> `StudentProfile` -> `User`).
+   - Superadmin bo'lmagan foydalanuvchilar urinishlari `403 Forbidden` bilan bloklanadi.
+2. **Frontend Obsidian/Ruby Tasdiqlash Modali**:
+   - `DeleteStudentDialog` (`src/components/students/delete-student-dialog.tsx`) yaratildi:
+     * O'zbek tilidagi qat'iy ogohlantirish: *"Haqiqatan ham ushbu talabani o'chirmoqchimisiz? Barcha urinishlar va ballar o'chiriladi"*.
+     * Talabaning ismi, familiyasi va unikal ID si ko'rsatiladi.
+     * Obsidian (`#0B0F17`), Ruby/Rose (`bg-rose-950/40 border-rose-800/60 text-rose-400 hover:bg-rose-900/60`) uslubi.
+   - Talabalar ro'yxati (`students-view.tsx`) va talaba profili (`student-detail-view.tsx`) sahifalarida faqat `super_admin` roliga ega bo'lgan foydalanuvchilar uchun `[O'chirish]` tugmasi joylashtirildi.
 
-### 2-BLOK: O'qituvchilar Paneli va Guruh Nazorati (Teacher Hub & Automation)
-1. **Avtomatlashtirilgan Davomat Tizimi (Smart Attendance)**:
-   - `SmartAttendanceDialog` (`src/components/teacher/smart-attendance-dialog.tsx`) to'liq Obsidian/Emerald dizayni (`bg-[#0B0F17]/95 border border-slate-800/80 backdrop-blur-2xl rounded-2xl shadow-2xl`) asosida mukammallashtirildi.
-   - **Saqlash xatosi bartaraf etildi**:
-     * Backenddagi `bulk_view` da `PUT` va `POST` metodlari ruxsat etildi;
-     * Payloaddagi ixtiyoriy `note` va `isExcused` maydonlariga tolerantlik qo'shildi;
-     * Guruhga yangi qo'shilgan, ammo hali `StudentProfile`i shakllanmagan o'quvchilar uchun avtomatik xavfsiz profil yaratish mantiqi (`StudentProfile.objects.get_or_create`) qo'shildi;
-     * Sana formati ISO `YYYY-MM-DD` ga qat'iy normalizatsiya qilindi.
-   - Ustoz kabinetida har bir guruh dars sanasi bo'yicha 1-bosishda davomat olish: `[ ✅ Keldi ] [ ⚠️ Kechikdi ] [ ❌ Sababsiz ] [ 📝 Sababli ]` hamda bitta tugma bilan "Hammasi keldi" deb belgilash.
-   - Darsga kelmagan yoki ketma-ket 2 marta dars qoldirgan o'quvchilarning ota-onalari Telegramiga avtomatik shoshilinch ogohlantirish yuborish mantiqi (`attendance.py` bulk metodi) tatbiq etildi.
-   - Guruhning umumiy davomat foizi real vaqtda yangilanadi.
-2. **Guruhlar Tahlili va Reytingi**:
-   - `GroupAnalyticsDashboard` (`src/components/teacher/group-analytics-dashboard.tsx`) yaratildi:
-     * Ustoz o'z guruhidagi barcha talabalarni o'rtacha ball (Band / BMB), ishlangan mock testlar soni, yozilgan insholar soni, davomat foizi va oxirgi faollik bo'yicha qidirish va saralash imkoniga ega.
-     * Guruh ichidagi zaif mavzular tahlili: butun guruh qaysi savol turida ko'proq xato qilayotgani "Group Weak Topics Heatmap" diagrammasida namoyish etiladi.
-3. **Oylik B2B Rasmiy Hisobot (1-Click PDF & Excel Export)**:
-   - `group_report.py` xizmati: ReportLab vositasida A4 formatidagi rasmiy tahliliy hisobot (`/api/backend/v1/groups/<id>/report/pdf`) va Excel CSV hisoboti (`/api/backend/v1/groups/<id>/report/excel`).
-   - O'quv markazi rahbariyati va ota-onalar majlisi uchun logotip, talabalar ro'yxati, davomati, o'rtacha ballari va ustoz tavsiyalarini o'z ichiga oladi.
-   - Guruh boshqaruvi paneliga 1-klikli yuklab olish tugmalari biriktirildi.
+### 2-BLOK: Boshlang'ich 100 Ball Tizimi (Initial 100 Points Grant)
+1. **Avtomatik 100 Ball Berish**:
+   - `apps/core/auth_service.py` dagi `initial_points()` funksiyasi sozlama mavjud bo'lmaganda yoki 0 bo'lganda standart 100 ball qaytaradigan qilib yangilandi.
+   - Har qanday ro'yxatdan o'tish (oddiy email/parol, Google OAuth, Telegram SSO va Admin orqali qo'shish) paytida `initial_points = 100` kafolatlandi.
+   - `PointsLog` jadvaliga `delta=+100`, `reason="Boshlang'ich ball"` sifatida rasmiy yozuv kiritiladi.
+2. **Mavjud Talabalarni Yangilash (Backfill Seed)**:
+   - `apps/core/management/commands/fix_initial_points.py` Django buyrug'i yaratildi: tizimdagi `Setting(initialPoints=100)` qiymatini o'rnatadi va balli 0 bo'lgan barcha talabalarga avtomatik 100 ball berib, `PointsLog` ga qayd etadi.
+3. **UI Amber/Gold Vizualizatsiyasi**:
+   - Talaba profili va ro'yxatida ballar ko'k-slate o'rniga zamonaviy Oltin/Amber (`text-amber-400 bg-amber-950/20 border border-amber-500/30`) nishoni bilan uyg'unlashtirildi.
 
-### 3-BLOK: QA Gate, CI/CD va Zero-Downtime VPS Deploy
-1. **Testlar & TypeScript**:
-   - Django Pytest: 473 ta testdan 469 passed, 4 skipped (100% PASS rate).
-   - Frontend Vitest: 51 test fayli, 354 ta test 100% PASS.
-   - TypeScript `tsc --noEmit`: 0 errors.
-   - ESLint: 0 errors.
+### 3-BLOK: Superadmin Exam Builder Savollar Redaktori (Question Editor & 1-Click Templates)
+1. **Interaktiv Savollar Redaktori**:
+   - `ExamQuestionsEditorDialog` (`src/components/exam-builder/ExamQuestionsEditorDialog.tsx`) yaratildi.
+   - Qo'llab-quvvatlanadigan modullar:
+     * **Writing**: Task 1 (Prompt, yo'riqnoma, rasm yuklash) va Task 2 (Insho mavzusi).
+     * **Speaking**: Part 1 (Savollar ro'yxati), Part 2 (Cue card, bullet points, tayyorgarlik/gapirish vaqti), Part 3 (Muhokama savollari).
+     * **Listening & Reading**: Savol matni, variantlar (A, B, C, D) va to'g'ri javob kalitini belgilash.
+2. **1-Klikli Shablon Yuklagich (1-Click CEFR / IELTS Template)**:
+   - "Shablon bilan to'ldirish" (Load Template) tugmasi orqali CEFR / Multi-Level / IELTS standartidagi to'liq 4 qismli Speaking va 2 ta Task Writing savollari darhol avto-to'ldiriladi.
+3. **Jonli Nashr Qilish Endpointi**:
+   - `POST /api/backend/v1/mock/exams/<id>/quick-content` endpointi yaratildi: barcha kiritilgan savollar `MockExam` JSON tuzilmasiga avtomatik yozilib, imtihon holati `PUBLISHED` va `is_active=True` ga o'tkaziladi.
+   - Imtihonlar ro'yxatida (`ExamBuilderList.tsx`) va umumiy ko'rinishda (`OverviewPanel.tsx`) `[Savollar]` / `[Manage Questions]` tugmasi joylashtirildi.
+
+### 4-BLOK: Ranglar Tizimi Uyg'unlashuvi (Obsidian/Emerald Harmonization)
+- Asosiy fon: Chuqur Obsidian `#0B0F17`.
+- Kartalar va modallar: Dark glass (`bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl`).
+- Asosiy harakat tugmalari: Emerald Zumrad (`bg-emerald-600 hover:bg-emerald-500 text-white`).
+- Xavfli amallar (O'chirish): Ruby/Rose (`bg-rose-950/40 text-rose-400 border border-rose-800/60`).
+- Ballar va ogohlantirishlar: Amber/Gold (`text-amber-400 bg-amber-950/20 border-amber-500/30`).
+- Ikkilamchi tugmalar: Toza Slate (`bg-slate-800 hover:bg-slate-700 text-slate-200`).
+
+### 5-BLOK: QA Gate, CI/CD, GitHub Release v0.8.6 & Zero-Downtime VPS Deploy
+1. **Avtomatlashtirilgan Testlar**:
+   - Django Pytest: 478 ta test 100% PASS (`test_superadmin_ops_v086.py` 9/9 PASS).
+   - Frontend Vitest: 51 ta test to'plami, 354 ta test 100% PASS.
+   - TypeScript `tsc --noEmit`: 0 ta xatolik.
 2. **Git & GitHub CI**:
-   - Git commit va author: `Komiljon Roziyev <kruziyev0@gmail.com>`, Zero AI Attribution qoidalariga 100% rioya qilindi.
-   - PR #79 ochildi, barcha GitHub Actions CI tekshiruvlari (`django`, `frontend`, `CodeQL / javascript-typescript`, `CodeQL / python`) yashil (Success) o'tdi va `main` ga birlashtirildi.
+   - Git commit: `Komiljon Roziyev <kruziyev0@gmail.com>`, Zero AI Attribution.
+   - PR #80 yaratildi, barcha GitHub Actions CI tekshiruvlari (`CI / django`, `CI / frontend`, `CodeQL / python`, `CodeQL / javascript-typescript`) 100% yashil o'tdi va `main` ga birlashtirildi.
+   - GitHub Releases sahifasida rasmiy `v0.8.6` relizi e'lon qilindi (`https://github.com/bestwayec/bestway/releases/tag/v0.8.6`).
 3. **Contabo VPS (`169.58.58.229`) Zero-Downtime Deploy**:
-   - `git pull origin main` muvaffaqiyatli bajarildi.
-   - `docker compose up -d --build backend assessment-worker telegram-bot` va `docker compose up -d --build frontend` xizmat darajasida rebuild qilindi.
-   - Persistent ma'lumotlar (Postgres, Redis, Storage) xavfsiz saqlandi.
-   - Public endpoint `https://bestwayec.uz/` -> `HTTP/1.1 200 OK` tasdiqlandi.
+   - VPS dagi `/opt/bestway` papkasida `git pull origin main` toza tortildi.
+   - `docker compose up -d --build backend frontend` xizmat darajasida rebuild qilindi.
+   - `python manage.py fix_initial_points` buyrug'i ishga tushirildi.
+   - Public endpoint `https://bestwayec.uz/` -> `HTTP/1.1 200 OK` va API health tasdiqlandi.
 
 ---
 
