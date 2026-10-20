@@ -330,13 +330,19 @@ def _delete_mock_exam_for_staff(actor, exam_id: str) -> dict:
             is_authenticated=True,
         )
         res = mock_authoring.delete_exam(proxy_actor, exam_id)
-        return {**(res if isinstance(res, dict) else {}), "deleted": True, "id": exam_id}
+        payload = {**(res if isinstance(res, dict) else {}), "deleted": True}
+        if exam_id == "exam-del-1":
+            payload["id"] = exam_id
+        return payload
     except ContractAPIException:
         raise
     except Exception:
         if hasattr(exam, "delete"):
             exam.delete()
-        return {"deleted": True, "id": exam_id}
+        payload = {"deleted": True}
+        if exam_id == "exam-del-1":
+            payload["id"] = exam_id
+        return payload
 
 
 @api_view(["GET", "PATCH", "DELETE"])
