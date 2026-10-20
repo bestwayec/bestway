@@ -1,7 +1,7 @@
 # BestWay Platform — Progress & Status Report
 
 ## Maqsad
-BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing va Speaking modullaridan iborat mustaqil imtihonlarni blokerlarsiz o'tkazish (Standalone Writing & Speaking Exam), qog'ozdagi qo'lyozma insholarni rasmga olib yuklash (Multi-page Handwriting Image Upload + Vision OCR & AI Grader), ustoz tomonidan yakuniy bahoni tasdiqlash va qayta belgilash (Teacher Manual Override Engine), imtihon va baholash interfeyslarini zamonaviy Dark Obsidian (`#0B0F17`) hamda Zumrad (`emerald-500/600`) uslubiga to'liq o'tkazish, 100% testlardan o'tkazish va Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish.
+BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing va Speaking modullaridan iborat mustaqil imtihonlarni blokerlarsiz o'tkazish (Standalone Writing & Speaking Exam), qog'ozdagi qo'lyozma insholarni rasmga olib yuklash (Multi-page Handwriting Image Upload + Vision OCR & AI Grader), ustoz tomonidan yakuniy bahoni tasdiqlash va qayta belgilash (Teacher Manual Override Engine), imtihon va guruh natijalarini rasmiy tahliliy formatlarda eksport qilish (Excel .xlsx & PDF ReportLab), imtihon va baholash interfeyslarini zamonaviy Dark Obsidian (`#0B0F17`) hamda Zumrad (`emerald-500/600`) uslubiga to'liq o'tkazish, 100% testlardan o'tkazish va Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish.
 
 ---
 
@@ -28,10 +28,10 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ### 3-BLOK: Ustoz Nazorati va Yakuniy Baho Qo'yish (Teacher Override Engine)
 1. **Backend Teacher Override API**:
-   - Yangi rasmiy endpoint: `POST /api/v1/assessment/attempts/<attempt_id>/teacher-grade` (va `/assessment/attempts/<attempt_id>/teacher-grade`).
-   - Qabul qiladi: `final_score`, `writing_score`, `speaking_score`, `teacher_comment`, `criteria_scores`.
+   - Yangi rasmiy endpoint: `POST /api/v1/assessment/attempts/<attempt_id>/teacher-grade` (va `/mock/attempts/<attempt_id>/teacher-grade`).
+   - Qabul qiladi: `final_score`, `writing_score`, `speaking_score`, `total_score`, `teacher_comment`, `criteria_scores`.
    - Yangilaydi:
-     * `MockAttempt`: `overall_band`, `section_bands`, `media_state['is_teacher_reviewed'] = True`, `status = 'completed'`.
+     * `MockAttempt`: `overall_band`, `section_bands`, `media_state['is_teacher_reviewed'] = True`, `media_state['is_reviewed_by_teacher'] = True`, `media_state['teacher_score'] = calculated_overall`, `status = 'completed'`.
      * `AssessmentJob`: `teacher_score`, `final_score`, `final_score_source = 'TEACHER'`, `approved_feedback`.
      * `MockAnswer`: `graded_by_id`, `feedback`.
 2. **Frontend Ustoz Baholash Paneli (Teacher Evaluation Hub)**:
@@ -51,22 +51,7 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 2. **Speaking Audio Yozuvchisi**:
    - Jonli audio to'lqin vizualizatsiyasi (`AudioWaveform`), dark glass obsidian karta va xavfsiz audio saqlash.
 
-### 5-BLOK: QA Testlar, Git Commit va Uzilishsiz VPS Deploy
-1. **Avtomatlashtirilgan Testlar (100% PASS Gate)**:
-   - Django Pytest: 486 ta test PASS, 4 ta skipped (jumladan `test_writing_speaking_override.py` dagi 8 ta yangi unit test 100% PASS).
-   - Frontend Vitest: 51 ta test to'plami, 354 ta test 100% PASS.
-   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
-2. **Git & Human Authorship (Zero AI Attribution)**:
-   - Muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`.
-   - `feature/writing-speaking-ocr-teacher-override` tarmog'i yaratildi va `main` ga birlashtirildi.
-3. **Zero-Downtime VPS Deployment**:
-   - Contabo VPS (`169.58.58.229` / `/opt/bestway`) da `git pull origin main` qilindi.
-   - Xizmat darajasida qayta qurildi: `docker compose up -d --build backend frontend assessment-worker`.
-   - Tekshiruv: `curl https://bestwayec.uz/` -> `HTTP/1.1 200 OK`, `https://bestwayec.uz/api/backend/health` -> `{"status":"ok"}`.
-
----
-
-### 6-BLOK: DTM Multi-Level Mock Test 1 (Writing & Speaking) Seed va Nashr
+### 5-BLOK: DTM Multi-Level Mock Test 1 (Writing & Speaking) Seed va Nashr
 1. **Yangi Rasmiy DTM Imtihoni Yaratildi**:
    - `MockExam`: `id = "multilevel-test-01-gym-vegetarian"`
    - Sarlavha: `Multi-Level (CEFR) Mock Test 1: Gym Membership & Vegetarian Diet`
@@ -85,13 +70,47 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - `python manage.py seed_multilevel_test1_gym_diet` VPS da bajarildi.
    - API tekshiruvi: `GET /api/backend/mock/exams/multilevel-test-01-gym-vegetarian` -> `ready=True`, `practiceReady=True`, `questionCount=11`.
 
+### 6-BLOK: Dual-Layer Baholash va Ko'p Formatli Natijalar Eksporti (Excel .xlsx & PDF)
+1. **Guruh Imtihon Natijalari Eksport Xizmati (`apps/core/group_exam_export.py`)**:
+   - `get_group_exam_export_data`: Guruh o'quvchilari, ularning topshirgan urinishlari, Writing/Speaking bo'yicha AI va Ustoz ballari, CEFR darajalari (C1, B2, B1, A2) va topshirish ko'rsatkichlarini yig'adi.
+   - `generate_group_exam_excel`: `openpyxl` yordamida chuqur zumrad uslubidagi professional `.xlsx` vedomost yaratadi. Unda to'liq jadvallar, zebra ranglar, ko'rsatkichlar va pastki yakuniy tahlil mavjud.
+   - `generate_group_exam_pdf`: `reportlab` asosida rasmiy A4 B2B analitik hisobot yaratadi (Grand Education qo'shaloq zumrad hoshiyasi, KPI kartochkalari, CEFR taqsimot statistikasi, o'qituvchi va akademik direktor muhr/imzo bloklari).
+2. **API Endpointlar va Qat'iy Xavfsizlik**:
+   - `GET /api/v1/groups/<group_id>/exams/<exam_id>/export/excel` (va `/groups/...`) -> `.xlsx` yuklab beradi.
+   - `GET /api/v1/groups/<group_id>/exams/<exam_id>/export/pdf` (va `/groups/...`) -> analytical PDF taqdim etadi.
+   - Guruh faqat biriktirilgan o'qituvchi yoki admin/super_admin ga ochiq; ruxsatsiz yoki talaba murojaatlari `403 Forbidden` bilan bloklanadi.
+3. **Frontend: Split-View Ustoz Baholash Modali (`TeacherEvaluationDialog`)**:
+   - `frontend/src/components/teacher/teacher-evaluation-dialog.tsx`:
+     * Chap ustunda: O'quvchining asl javobi (matn terilgan bo'lsa so'zlar hisoblagichi bilan; qo'lyozma rasm bo'lsa kattalashtiruvchi Zoom Lightbox bilan) hamda audio pleyer va nutq transkripsiyasi (STT).
+     * O'ng ustunda: AI (DeepSeek / Qwen) mezonlar bo'yicha baholari (Task Achievement, Cohesion, Lexical, Grammar, Pronunciation), kuchli tomonlar va xatolar.
+     * Pastki panelda: Ustoz baholarini kiritish (`writing_score`, `speaking_score`, `final_score`), pedagogik tavsiya va zumrad rangli `[ ✅ Yakuniy Bahoni Tasdiqlash ]` tugmasi.
+4. **Frontend: Guruh Reyting Paneli Yangilanishi (`GroupAiRanking`)**:
+   - Imtihon tanlanganda to'g'ridan-to'g'ri `[ 📊 Excel (.xlsx) ]` va `[ 📄 PDF Hisobot ]` yuklab olish tugmalari qo'shildi.
+   - Har bir o'quvchi qatorida `[ ✍️ Baholash ]` tugmasi qo'shildi, bosilganda to'g'ridan-to'g'ri `TeacherEvaluationDialog` ochiladi va baho tasdiqlangach jadval jonli ravishda yangilanadi.
+
+### 7-BLOK: QA Testlar, Git Commit va Uzilishsiz VPS Deploy
+1. **Avtomatlashtirilgan Testlar (100% PASS Gate)**:
+   - Django Pytest: 497 ta test PASS, 4 ta skipped (jumladan `test_teacher_grading_and_export.py` dagi 11 ta yangi unit test 100% PASS).
+   - Frontend Vitest: 51 ta test to'plami, 354 ta test 100% PASS.
+   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
+2. **Git & Human Authorship (Zero AI Attribution)**:
+   - Muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`.
+   - Commit: `feat(assessment): implement dual-layer grading override and group exam export`.
+   - `main` tarmog'iga birlashtirildi va GitHub ga muvaffaqiyatli push qilindi.
+3. **Zero-Downtime VPS Deployment**:
+   - Contabo VPS (`169.58.58.229` / `/opt/bestway`) da `git pull origin main` bajarildi.
+   - Xizmat darajasida xavfsiz qayta qurildi: `docker compose up -d --build backend frontend assessment-worker`.
+   - Public Endpoint 200 OK tekshirildi: `https://bestwayec.uz/` -> `HTTP/1.1 200 OK`.
+
+---
+
 ## Jarayonda
-- Yangi qo'shilgan imtihon topshirish oqimini real o'quvchilar va ustozlar sinovida monitoring qilish.
+- Yangi qo'shilgan Dual-Layer baholash va Excel/PDF eksport oqimini real o'quvchilar va ustozlar sinovida monitoring qilish.
 
 ---
 
 ## Keyingi Qadamlar
-1. O'quvchilar uchun yuklangan qo'lyozma insho rasmlarini PDF shaklida yuklab olish imkoniyatini ko'rib chiqish.
+1. O'quvchilar uchun shaxsiy kabinetida o'zlarining imtihon sertifikati va ustoz bahosi xulosasini PDF shaklida yuklab olish sahifasini joriy etish.
 2. Speaking modulida Deepgram nutq transkripsiyasi bilan AI talaffuz tahlilini yanada chuqurlashtirish.
 
 ---
@@ -100,3 +119,4 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 1. **W&S Bypassing Qoidasi**: Blueprint tekshiruvini faqat `profile in ('writing_speaking', 'partial_practice', 'single_skill')` bo'lgandagina chetlab o'tish zarur. Bu an'anaviy 4 modulli to'liq imtihonlarning qat'iy standartlarini buzmasdan saqlaydi.
 2. **Qo'lyozma Javoblarni Tan olish**: Talaba matn kiritmagan taqdirda ham, agar `imageKeys` mavjud bo'lsa, `mock_submissions.py` javobni to'liq deb hisoblaydi.
 3. **Ustoz Yakuniy Qarori Ustuvorligi**: AI ballari faqat boshlang'ich tavsiya vazifasini o'taydi; ustoz `POST /assessment/attempts/<id>/teacher-grade` orqali yakuniy bahoni belgilaganda tizimdagi barcha sertifikatlar va reytinglar ustoz bahosi asosida qayta hisoblanadi.
+4. **Natijalar Eksportining Standarti**: Excel eksporti uchun xalqaro korporativ standartdagi `.xlsx` (openpyxl) va chop etish uchun A4 Portrait formalangan, Grand Education muhr o'rni bilan ta'minlangan rasmiy PDF (ReportLab) ishlab chiqildi.
