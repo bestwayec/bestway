@@ -87,8 +87,8 @@ def verify(password: str, encoded: str) -> bool:
 def initial_points(cursor) -> int:
     cursor.execute('SELECT "value" FROM "Setting" WHERE "key"=%s', ["initialPoints"])
     row = cursor.fetchone()
-    if not row:
-        return 0
+    if not row or row[0] is None:
+        return 100
     value = row[0]
     if isinstance(value, str):
         try:
@@ -96,9 +96,10 @@ def initial_points(cursor) -> int:
         except json.JSONDecodeError:
             pass
     try:
-        return int(value)
+        val = int(value)
+        return val if val > 0 else 100
     except (TypeError, ValueError):
-        return 0
+        return 100
 
 
 def unique_link_code(cursor) -> str:

@@ -381,6 +381,14 @@ def mock_exam_detail_view(request, exam_id):
     return success(mock_authoring.exam_payload(mock_authoring.update_exam(request.user, exam_id, data)))
 
 
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def mock_exam_quick_content_view(request, exam_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = request.data if isinstance(request.data, dict) else {}
+    return success(mock_authoring.save_quick_content(request.user, exam_id, data))
+
+
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([AllowAny])
 @authentication_classes([OptionalMockJWTAuthentication])

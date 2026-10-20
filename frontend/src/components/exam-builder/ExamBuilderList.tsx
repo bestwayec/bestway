@@ -21,6 +21,8 @@ import { PageHeader } from "@/components/app/page-header";
 import { PreviewDialog } from "@/components/exam-builder/PreviewDialog";
 import { ConfirmDialog } from "@/components/exam-builder/ConfirmDialog";
 import { JsonImportDialog } from "@/components/exam-builder/JsonImportDialog";
+import { ExamQuestionsEditorDialog } from "@/components/exam-builder/ExamQuestionsEditorDialog";
+import { Sparkles } from "lucide-react";
 import {
   useCloneMockExam,
   useDeleteMockExam,
@@ -62,6 +64,7 @@ export function ExamBuilderList() {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<MockExamListItem | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
+  const [quickEditTarget, setQuickEditTarget] = React.useState<MockExamListItem | null>(null);
   const examsQ = useMockExams();
   const clone = useCloneMockExam();
   const del = useDeleteMockExam();
@@ -321,6 +324,16 @@ export function ExamBuilderList() {
                   <Globe className="size-3.5 shrink-0" aria-hidden />
                   <span className="truncate">{e.isPublished ? "Unpublish" : "Publish"}</span>
                 </Button>
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  className="min-h-9 w-full justify-center text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                  onClick={() => setQuickEditTarget(e)}
+                  title="Savollarni tahrirlash va tezkor nashr qilish"
+                >
+                  <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  <span className="truncate">Savollar</span>
+                </Button>
                 <Link href={`/exam-builder/${e.id}`} className="min-w-0">
                   <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`} className="min-h-9 w-full justify-center">
                     <Pencil className="size-3.5 shrink-0" aria-hidden />
@@ -441,6 +454,16 @@ export function ExamBuilderList() {
                         <Globe className="size-3.5 shrink-0" aria-hidden />
                         <span>{e.isPublished ? "Unpublish" : "Publish"}</span>
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="subtle"
+                        className="text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                        onClick={() => setQuickEditTarget(e)}
+                        title="Savollarni tahrirlash va tezkor nashr qilish"
+                      >
+                        <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <span>Savollar</span>
+                      </Button>
                       <Link href={`/exam-builder/${e.id}`}>
                         <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}>
                           <Pencil className="size-3.5" aria-hidden />
@@ -491,6 +514,15 @@ export function ExamBuilderList() {
       {previewId && <PreviewDialog examId={previewId} onClose={() => setPreviewId(null)} />}
 
       <JsonImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+
+      {quickEditTarget && (
+        <ExamQuestionsEditorDialog
+          open={!!quickEditTarget}
+          onClose={() => setQuickEditTarget(null)}
+          exam={quickEditTarget}
+          onSuccess={() => examsQ.refetch()}
+        />
+      )}
 
       <ConfirmDialog
         open={deleteTarget != null && canDelete}

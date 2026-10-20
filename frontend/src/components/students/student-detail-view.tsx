@@ -13,6 +13,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
+import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
+import { Trash2 } from "lucide-react";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
 import { useUserDetail, useApproveStudent, useDeactivateUser } from "@/hooks/use-users";
 import { useMe } from "@/hooks/use-me";
@@ -56,6 +58,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
   const tst = useTranslations("staff");
   const [adjustOpen, setAdjustOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const user = userQ.data;
   const groupId = user?.student?.groupId ?? undefined;
@@ -134,8 +137,8 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-2xl font-bold text-fg tabular-nums">
-              <Star className="size-5 text-brand" />
+            <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-950/20 px-3 py-1 text-2xl font-bold text-amber-400 tabular-nums shadow-sm shadow-amber-950/30">
+              <Star className="size-5 fill-amber-400 text-amber-400" />
               {user.student?.currentPoints ?? 0}
             </span>
           </div>
@@ -166,11 +169,22 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
               {tc("confirm")}
             </Button>
           )}
+          {isSuper && user.id !== me?.user.id && user.role !== "super_admin" && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="border border-rose-800/60 bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 hover:text-rose-200"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-4 shrink-0 text-rose-400" />
+              Talabani o&apos;chirish
+            </Button>
+          )}
           {isSuper && user.isActive && user.id !== me?.user.id && user.role !== "super_admin" && (
             <Button
               size="sm"
               variant="ghost"
-              className="text-danger hover:text-danger hover:bg-danger-bg"
+              className="text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               loading={deactivate.isPending}
               onClick={() => {
                 if (!confirm(tst("deactivateConfirm"))) return;

@@ -919,3 +919,296 @@ def clone_corrected_multilevel(actor, exam_id: str):
     clone = clone_exam(actor, exam_id)
     audit_event(actor, "mock.exam.multilevel.clone_corrected", "mockExam", clone.id, old={"sourceId": exam_id})
     return {"id": clone.id, "status": "DRAFT_REQUIRES_REVIEW", "sourcePreserved": True}
+
+
+
+def save_quick_content(actor, exam_id: str, data: dict):
+    exam = locked_exam(exam_id)
+    assert_author(actor, exam, allow_any_staff=True)
+
+    def write(locked_exam_obj):
+        sections_map = {s.skill: s for s in MockSection.objects.filter(exam_id=exam_id)}
+
+        # 1. Writing
+        writing_data = data.get("writing")
+        if writing_data and isinstance(writing_data, dict):
+            sec = sections_map.get("writing")
+            if not sec:
+                sec = MockSection.objects.create(
+                    id=new_id(),
+                    exam_id=exam_id,
+                    skill="writing",
+                    title="Writing",
+                    sort_order=len(sections_map),
+                    duration_minutes=60,
+                )
+                sections_map["writing"] = sec
+
+            groups = list(MockQuestionGroup.objects.filter(section_id=sec.id).order_by("sort_order"))
+            t1 = writing_data.get("task1") or {}
+            t2 = writing_data.get("task2") or {}
+
+            # Task 1
+            if len(groups) > 0:
+                g1 = groups[0]
+            else:
+                g1 = MockQuestionGroup.objects.create(
+                    id=new_id(),
+                    section_id=sec.id,
+                    sort_order=0,
+                    title="Task 1" if locked_exam_obj.type != "multilevel" else "Task 1.1 — Informal Letter",
+                    created_at=now(),
+                )
+                groups.append(g1)
+
+            if t1.get("passageText"):
+                g1.passage_text = t1["passageText"]
+            if t1.get("imageKey"):
+                g1.image_key = t1["imageKey"]
+            if t1.get("instructions"):
+                g1.instructions = t1["instructions"]
+            g1.save()
+
+            q1_prompt = t1.get("prompt") or "Summarise the information by selecting and reporting the main features."
+            q1 = MockQuestion.objects.filter(group_id=g1.id).first()
+            if not q1:
+                MockQuestion.objects.create(
+                    id=new_id(),
+                    group_id=g1.id,
+                    number=1,
+                    sort_order=0,
+                    type="essay_task1",
+                    prompt=q1_prompt,
+                    points=5 if locked_exam_obj.type == "multilevel" else 9,
+                    word_limit=t1.get("wordLimit") or (50 if locked_exam_obj.type == "multilevel" else 150),
+                    created_at=now(),
+                )
+            else:
+                q1.prompt = q1_prompt
+                if t1.get("wordLimit"):
+                    q1.word_limit = t1["wordLimit"]
+                q1.save()
+
+            # Task 2
+            if len(groups) > 1:
+                g2 = groups[1]
+            else:
+                g2 = MockQuestionGroup.objects.create(
+                    id=new_id(),
+                    section_id=sec.id,
+                    sort_order=1,
+                    title="Task 2" if locked_exam_obj.type != "multilevel" else "Task 2 — Publication",
+                    created_at=now(),
+                )
+                groups.append(g2)
+
+            if t2.get("instructions"):
+                g2.instructions = t2["instructions"]
+                g2.save()
+
+            q2_prompt = t2.get("prompt") or "Discuss both views and give your own opinion."
+            q2 = MockQuestion.objects.filter(group_id=g2.id).first()
+            if not q2:
+                MockQuestion.objects.create(
+                    id=new_id(),
+                    group_id=g2.id,
+                    number=2,
+                    sort_order=1,
+                    type="essay_task2",
+                    prompt=q2_prompt,
+                    points=6 if locked_exam_obj.type == "multilevel" else 9,
+                    word_limit=t2.get("wordLimit") or (200 if locked_exam_obj.type == "multilevel" else 250),
+                    created_at=now(),
+                )
+            else:
+                q2.prompt = q2_prompt
+                if t2.get("wordLimit"):
+                    q2.word_limit = t2["wordLimit"]
+                q2.save()
+
+        # 2. Speaking
+        speaking_data = data.get("speaking")
+        if speaking_data and isinstance(speaking_data, dict):
+            sec = sections_map.get("speaking")
+            if not sec:
+                sec = MockSection.objects.create(
+                    id=new_id(),
+                    exam_id=exam_id,
+                    skill="speaking",
+                    title="Speaking",
+                    sort_order=len(sections_map),
+                    duration_minutes=14,
+                )
+                sections_map["speaking"] = sec
+
+            sp_groups = list(MockQuestionGroup.objects.filter(section_id=sec.id).order_by("sort_order"))
+            part1_questions = speaking_data.get("part1") or []
+            part2_data = speaking_data.get("part2") or {}
+            part3_data = speaking_data.get("part3") or {}
+
+            # Part 1 Group
+            if len(sp_groups) > 0:
+                sg1 = sp_groups[0]
+            else:
+                sg1 = MockQuestionGroup.objects.create(
+                    id=new_id(),
+                    section_id=sec.id,
+                    sort_order=0,
+                    title="Part 1",
+                    instructions="Answer each question spontaneously. Speak for about 30 seconds per question.",
+                    created_at=now(),
+                )
+                sp_groups.append(sg1)
+
+            if isinstance(part1_questions, list) and part1_questions:
+                existing_qs = list(MockQuestion.objects.filter(group_id=sg1.id).order_by("sort_order"))
+                for idx, q_text in enumerate(part1_questions):
+                    prompt_str = q_text if isinstance(q_text, str) else q_text.get("prompt", "")
+                    if idx < len(existing_qs):
+                        existing_qs[idx].prompt = prompt_str
+                        existing_qs[idx].save()
+                    else:
+                        MockQuestion.objects.create(
+                            id=new_id(),
+                            group_id=sg1.id,
+                            number=idx + 1,
+                            sort_order=idx,
+                            type="speaking_task",
+                            prompt=prompt_str,
+                            points=5 if locked_exam_obj.type == "multilevel" else 9,
+                            created_at=now(),
+                        )
+
+            # Part 2 Group
+            if len(sp_groups) > 1:
+                sg2 = sp_groups[1]
+            else:
+                sg2 = MockQuestionGroup.objects.create(
+                    id=new_id(),
+                    section_id=sec.id,
+                    sort_order=1,
+                    title="Part 2",
+                    instructions="Describe the topic. You have 1 minute to prepare and 2 minutes to speak.",
+                    created_at=now(),
+                )
+                sp_groups.append(sg2)
+
+            p2_prompt = part2_data.get("cueCard") or part2_data.get("prompt")
+            if p2_prompt:
+                sg2.passage_text = p2_prompt
+                sg2.save()
+                q_p2 = MockQuestion.objects.filter(group_id=sg2.id).first()
+                if not q_p2:
+                    MockQuestion.objects.create(
+                        id=new_id(),
+                        group_id=sg2.id,
+                        number=len(part1_questions) + 1,
+                        sort_order=0,
+                        type="speaking_task",
+                        prompt=p2_prompt,
+                        points=5 if locked_exam_obj.type == "multilevel" else 9,
+                        created_at=now(),
+                    )
+                else:
+                    q_p2.prompt = p2_prompt
+                    q_p2.save()
+
+            # Part 3 Group
+            if len(sp_groups) > 2:
+                sg3 = sp_groups[2]
+            else:
+                sg3 = MockQuestionGroup.objects.create(
+                    id=new_id(),
+                    section_id=sec.id,
+                    sort_order=2,
+                    title="Part 3",
+                    instructions="Discussion topic. Give developed, analytical answers.",
+                    created_at=now(),
+                )
+                sp_groups.append(sg3)
+
+            p3_prompt = part3_data.get("discussion") or part3_data.get("prompt")
+            if p3_prompt:
+                sg3.passage_text = p3_prompt
+                sg3.save()
+                q_p3 = MockQuestion.objects.filter(group_id=sg3.id).first()
+                if not q_p3:
+                    MockQuestion.objects.create(
+                        id=new_id(),
+                        group_id=sg3.id,
+                        number=len(part1_questions) + 2,
+                        sort_order=0,
+                        type="speaking_task",
+                        prompt=p3_prompt,
+                        points=6 if locked_exam_obj.type == "multilevel" else 9,
+                        created_at=now(),
+                    )
+                else:
+                    q_p3.prompt = p3_prompt
+                    q_p3.save()
+
+        # 3. Listening / Reading
+        for skill_name in ["listening", "reading"]:
+            skill_items = data.get(skill_name)
+            if isinstance(skill_items, list) and skill_items:
+                sec = sections_map.get(skill_name)
+                if not sec:
+                    sec = MockSection.objects.create(
+                        id=new_id(),
+                        exam_id=exam_id,
+                        skill=skill_name,
+                        title=skill_name.title(),
+                        sort_order=len(sections_map),
+                        duration_minutes=40 if skill_name == "listening" else 60,
+                    )
+                    sections_map[skill_name] = sec
+
+                grp = MockQuestionGroup.objects.filter(section_id=sec.id).first()
+                if not grp:
+                    grp = MockQuestionGroup.objects.create(
+                        id=new_id(),
+                        section_id=sec.id,
+                        sort_order=0,
+                        title=f"{skill_name.title()} Section",
+                        created_at=now(),
+                    )
+
+                existing_qs = list(MockQuestion.objects.filter(group_id=grp.id).order_by("sort_order"))
+                for idx, item in enumerate(skill_items):
+                    prompt_str = item.get("prompt", "")
+                    options = item.get("options", ["A", "B", "C", "D"])
+                    correct = item.get("correctAnswer") or item.get("correctAnswers") or ["A"]
+                    if isinstance(correct, str):
+                        correct = [correct]
+                    if idx < len(existing_qs):
+                        q = existing_qs[idx]
+                        q.prompt = prompt_str
+                        q.options = options
+                        q.correct_answers = correct
+                        q.points = item.get("points", 1)
+                        q.save()
+                    else:
+                        MockQuestion.objects.create(
+                            id=new_id(),
+                            group_id=grp.id,
+                            number=idx + 1,
+                            sort_order=idx,
+                            type="multiple_choice",
+                            prompt=prompt_str,
+                            options=options,
+                            correct_answers=correct,
+                            points=item.get("points", 1),
+                            created_at=now(),
+                        )
+
+        # 4. Publish status
+        publish_flag = data.get("publish", True) or data.get("isPublished", True)
+        if publish_flag:
+            locked_exam_obj.is_published = True
+
+        return {"published": locked_exam_obj.is_published}
+
+    _locked_mutation(actor, exam_id, write, save_contract=True)
+    fresh_exam = MockExam.objects.get(id=exam_id)
+    audit_event(actor, "mock.exam.quick_content", "mockExam", exam_id, new={"published": fresh_exam.is_published})
+    return exam_payload(fresh_exam)

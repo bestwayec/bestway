@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Ban, BookOpen, Check, ChevronRight, Plus, Search, Star, Users } from "lucide-react";
+import { Ban, BookOpen, Check, ChevronRight, Plus, Search, Star, Trash2, Users } from "lucide-react";
+import { DeleteStudentDialog } from "@/components/students/delete-student-dialog";
+import type { UserListItem } from "@/lib/types";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -27,6 +29,7 @@ export function StudentsView() {
   const isSuper = me?.user.role === "super_admin";
   const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<UserListItem | null>(null);
   const debounced = useDebouncedValue(search);
   const { data, isLoading, isError, refetch } = useStudents(debounced);
   const groupsQ = useGroups();
@@ -113,8 +116,8 @@ export function StudentsView() {
                     {s.student.groupName}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-sm font-semibold text-fg tabular-nums">
-                  <Star className="size-3.5 text-brand" />
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-950/20 px-2 py-0.5 text-xs font-bold text-amber-400 tabular-nums shadow-sm shadow-amber-950/20">
+                  <Star className="size-3 fill-amber-400 text-amber-400" />
                   {s.student?.currentPoints ?? 0}
                 </span>
                 {s.student?.isApproved ? (
@@ -133,15 +136,26 @@ export function StudentsView() {
                   </Button>
                 )}
                 {!s.isActive && <Badge variant="danger">{tst("inactive")}</Badge>}
+                {isSuper && s.id !== me?.user.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="O'chirish"
+                    onClick={() => setDeleteTarget(s)}
+                    className="shrink-0 text-rose-400 hover:bg-rose-950/40 hover:text-rose-300"
+                  >
+                    <Trash2 className="size-4 text-rose-400" />
+                  </Button>
+                )}
                 {isSuper && s.isActive && s.id !== me?.user.id && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     aria-label={tst("deactivate")}
                     onClick={() => onDeactivate(s.id)}
-                    className="shrink-0"
+                    className="shrink-0 text-slate-400 hover:bg-slate-800"
                   >
-                    <Ban className="text-danger" />
+                    <Ban className="size-3.5" />
                   </Button>
                 )}
                 <Link href={`/students/${s.id}`} aria-label={s.name}>
@@ -159,6 +173,16 @@ export function StudentsView() {
         roleOptions={["student"]}
         groups={groupsQ.data ?? []}
       />
+
+      {deleteTarget && (
+        <DeleteStudentDialog
+          open={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          studentId={deleteTarget.id}
+          studentName={deleteTarget.name}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }

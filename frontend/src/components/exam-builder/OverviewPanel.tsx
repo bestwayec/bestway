@@ -15,6 +15,8 @@ import { ApiError } from "@/lib/api-client";
 import type { MockExamDetail, MockSkill } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ExamQuestionsEditorDialog } from "./ExamQuestionsEditorDialog";
+import { Sparkles } from "lucide-react";
 import { EXAM_TYPE_LABEL, tx, type Selection } from "./types";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
@@ -53,6 +55,7 @@ export function OverviewPanel({
   const [isFreeForApproved, setIsFreeForApproved] = React.useState(detail.isFreeForApproved);
   const [isDemo, setIsDemo] = React.useState(detail.isDemo);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [quickEditorOpen, setQuickEditorOpen] = React.useState(false);
 
   const dirty = React.useMemo(
     () =>
@@ -225,6 +228,17 @@ export function OverviewPanel({
                 {tx(t, "noSectionsHint", "No sections yet — add Listening, Reading, Writing and Speaking from the sidebar (+).")}
               </p>
             )}
+            <div className="pt-2">
+              <Button
+                size="sm"
+                variant="subtle"
+                className="w-full justify-center border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                onClick={() => setQuickEditorOpen(true)}
+              >
+                <Sparkles className="size-3.5 text-emerald-400" />
+                <span>Savollar Redaktori (Tezkor kiritish)</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
