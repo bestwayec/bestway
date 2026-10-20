@@ -85,7 +85,10 @@ def readiness(exam):
         return dict(supported=False, issues=['Unsupported Multilevel specification'])
     profile = exam.get('profile')
     sections = exam.get('sections') or []
-    is_ws_only = profile in ('writing_speaking', 'partial_practice', 'single_skill')
+    skills = {s.get('skill') for s in sections if isinstance(s, dict)}
+    is_ws_only = profile in ('writing_speaking', 'partial_practice', 'single_skill') or (
+        profile == 'practice' and bool(skills) and skills.issubset({'writing', 'speaking'})
+    )
     if is_ws_only:
         return dict(supported=True, issues=[])
     full = profile == 'full_mock'
