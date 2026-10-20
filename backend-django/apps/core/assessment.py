@@ -407,13 +407,23 @@ def record_legacy_grade(attempt_id,question_id):
 def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     if actor.role not in ('teacher', 'admin', 'super_admin'):
         fail('FORBIDDEN', 'Staff access required', 403)
-    attempt = MockAttempt.objects.filter(id=attempt_id).select_related('exam').first()
+    attempt = MockAttempt.objects.filter(id=attempt_id).select_related('exam', 'student__group').first()
     if attempt is None:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
+
+    if actor.role == 'teacher':
+        student = getattr(attempt, 'student', None)
+        student_group = getattr(student, 'group', None) if student else None
+        if student_group and getattr(student_group, 'teacher_id', None) and student_group.teacher_id != actor.id:
+            fail('FORBIDDEN', 'Ushbu talaba sizning guruhingizga biriktirilmagan', 403)
 
     final_score = data.get('final_score')
     if final_score is None:
         final_score = data.get('finalScore')
+    if final_score is None:
+        final_score = data.get('total_score')
+    if final_score is None:
+        final_score = data.get('totalScore')
     writing_score = data.get('writing_score')
     if writing_score is None:
         writing_score = data.get('writingScore')
@@ -502,6 +512,9 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
 
     media_st = dict(attempt.media_state or {})
     media_st['is_teacher_reviewed'] = True
+    media_st['is_reviewed_by_teacher'] = True
+    media_st['teacher_score'] = calculated_overall
+    media_st['final_score_source'] = 'TEACHER'
     media_st['teacher_comment'] = teacher_comment
     media_st['teacher_reviewed_by'] = actor.name or actor.id
     media_st['teacher_reviewed_at'] = now.isoformat()
@@ -519,7 +532,11 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
         'attemptId': attempt_id,
         'isTeacherReviewed': True,
         'is_teacher_reviewed': True,
+        'is_reviewed_by_teacher': True,
         'finalScore': calculated_overall,
+        'final_score': calculated_overall,
+        'totalScore': calculated_overall,
+        'total_score': calculated_overall,
         'final_score': calculated_overall,
         'sectionBands': sec_bands,
         'section_bands': sec_bands,

@@ -152,6 +152,10 @@ urlpatterns = [
     path('assessment/attempts/<str:attempt_id>/teacher-grade/', assessment.teacher_grade),
     path('v1/assessment/attempts/<str:attempt_id>/teacher-grade', assessment.teacher_grade),
     path('v1/assessment/attempts/<str:attempt_id>/teacher-grade/', assessment.teacher_grade),
+    path('mock/attempts/<str:attempt_id>/teacher-grade', assessment.teacher_grade),
+    path('mock/attempts/<str:attempt_id>/teacher-grade/', assessment.teacher_grade),
+    path('v1/mock/attempts/<str:attempt_id>/teacher-grade', assessment.teacher_grade),
+    path('v1/mock/attempts/<str:attempt_id>/teacher-grade/', assessment.teacher_grade),
     path('assessment/attempts/<str:attempt_id>/flag-cheat', cheat_view),
     path('assessment/attempts/<str:attempt_id>/flag-cheat/', cheat_view),
     path('assessment/attempts/<str:attempt_id>/anomaly', cheat_view),
@@ -363,6 +367,16 @@ urlpatterns = [
     path('groups/<str:group_id>/report/excel/', group_reports.group_report_excel_view),
     path('v1/groups/<str:group_id>/report/excel', group_reports.group_report_excel_view),
     path('v1/groups/<str:group_id>/report/excel/', group_reports.group_report_excel_view),
+
+    path('groups/<str:group_id>/exams/<str:exam_id>/export/excel', group_reports.group_exam_export_excel_view),
+    path('groups/<str:group_id>/exams/<str:exam_id>/export/excel/', group_reports.group_exam_export_excel_view),
+    path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/excel', group_reports.group_exam_export_excel_view),
+    path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/excel/', group_reports.group_exam_export_excel_view),
+
+    path('groups/<str:group_id>/exams/<str:exam_id>/export/pdf', group_reports.group_exam_export_pdf_view),
+    path('groups/<str:group_id>/exams/<str:exam_id>/export/pdf/', group_reports.group_exam_export_pdf_view),
+    path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/pdf', group_reports.group_exam_export_pdf_view),
+    path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/pdf/', group_reports.group_exam_export_pdf_view),
 
     path('students/study-plan', study_plans.study_plan_view),
     path('students/study-plan/', study_plans.study_plan_view),
