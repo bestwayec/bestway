@@ -308,13 +308,27 @@ def mock_exams_view(request):
 def _delete_mock_exam_for_staff(actor, exam_id: str) -> dict:
     from types import SimpleNamespace
 
-    from apps.legacy_schema.models import MockExam
+    from apps.legacy_schema.models import MockAttempt, MockExam, MockPurchase
 
     exam = MockExam.objects.filter(id=exam_id).first()
     if exam is None:
         raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
+    has_history = False
     try:
-        proxy_actor = SimpleNamespace(id=actor.id, role="super_admin", is_authenticated=True)
+        has_history = (
+            MockAttempt.objects.filter(exam_id=exam_id).exists()
+            or MockPurchase.objects.filter(exam_id=exam_id).exists()
+        )
+    except Exception:
+        has_history = False
+    if has_history and getattr(actor, "role", None) != "super_admin":
+        raise ContractAPIException("FORBIDDEN", "Tarixga ega imtihonni faqat super admin o'chira oladi", 403)
+    try:
+        proxy_actor = SimpleNamespace(
+            id=actor.id,
+            role="super_admin" if getattr(actor, "role", None) == "super_admin" or not has_history else getattr(actor, "role", "teacher"),
+            is_authenticated=True,
+        )
         res = mock_authoring.delete_exam(proxy_actor, exam_id)
         return {**(res if isinstance(res, dict) else {}), "deleted": True, "id": exam_id}
     except ContractAPIException:
