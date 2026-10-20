@@ -66,6 +66,25 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ---
 
+### 6-BLOK: DTM Multi-Level Mock Test 1 (Writing & Speaking) Seed va Nashr
+1. **Yangi Rasmiy DTM Imtihoni Yaratildi**:
+   - `MockExam`: `id = "multilevel-test-01-gym-vegetarian"`
+   - Sarlavha: `Multi-Level (CEFR) Mock Test 1: Gym Membership & Vegetarian Diet`
+   - Holat: `is_published = True`, `is_demo = False`, `price = 0`, `is_free_for_approved = True` (barcha o'quvchilar darhol topshira oladi).
+2. **Writing Bo'limi (60 daqiqa, 70 ball)**:
+   - Part 1 Stimulus (Gym Membership fee increase letter) to'liq kiritildi (`stimulus_ref = "gym-membership-increase"`).
+   - Task 1.1 — Informal Letter (Do'stga norasmiy xat, ~50 words).
+   - Task 1.2 — Formal Letter (Murabbiyga rasmiy xat, 120–150 words).
+   - Part 2 — Publication / Forum Discussion (Vegetarian diet essay, 180–200 words).
+3. **Speaking Bo'limi (DTM CEFR Standart Taymerlari & 2 ta Rasm Aktivi)**:
+   - Part 1.1 Interview: 3 ta savol (Free time, Country, First teacher) — 5s tayyorgarlik, 30s gapirish.
+   - Part 1.2 Picture Comparison: `Traditional Classroom` vs `Online Distance Study` yuqori aniqlikdagi rasmlar aktivi (`speaking-1.2-classroom-vs-online.png`) yaratildi va bog'landi. 1 ta asosiy taqqoslash (10s tayyorgarlik, 45s gapirish) va 2 ta follow-up savol (5s prep, 30s speak).
+   - Part 2 Cue Card: Muhim o'quv tajribasi / kurs mavzusi (1 daqiqa prep, 2 daqiqa speak).
+   - Part 3 Discussion: Ta'lim, sun'iy intellekt va texnologiyalar kelajagi (1 daqiqa prep, 2 daqiqa speak).
+4. **Serverda Ishga Tushirish va 200 OK Tekshiruvi**:
+   - `python manage.py seed_multilevel_test1_gym_diet` VPS da bajarildi.
+   - API tekshiruvi: `GET /api/backend/mock/exams/multilevel-test-01-gym-vegetarian` -> `ready=True`, `practiceReady=True`, `questionCount=11`.
+
 ## Jarayonda
 - Yangi qo'shilgan imtihon topshirish oqimini real o'quvchilar va ustozlar sinovida monitoring qilish.
 
