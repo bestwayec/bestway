@@ -842,3 +842,74 @@ export function useCloseLiveExamRoom() {
   });
 }
 
+
+
+/* ── Adaptive Study Plan & Mistake Vault Hooks ───────────────────────── */
+
+export function useStudentStudyPlan(targetMonths?: number, targetExamDate?: string) {
+  return useQuery({
+    queryKey: ["student-study-plan", targetMonths, targetExamDate],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (targetMonths) params.set("target_months", String(targetMonths));
+      if (targetExamDate) params.set("target_exam_date", targetExamDate);
+      const queryStr = params.toString() ? `?${params.toString()}` : "";
+      return api.get<import("@/lib/types").AdaptiveStudyPlanResponse>(`/students/study-plan${queryStr}`);
+    },
+    retry: false,
+  });
+}
+
+export function useUpdateStudyPlanTarget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { targetMonths?: number; targetExamDate?: string }) =>
+      api.post<import("@/lib/types").AdaptiveStudyPlanResponse>("/students/study-plan/target", body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["student-study-plan"] });
+    },
+  });
+}
+
+export function useMistakeVault() {
+  return useQuery({
+    queryKey: ["student-mistake-vault"],
+    queryFn: () => api.get<import("@/lib/types").MistakeVaultResponse>("/students/mistake-vault"),
+    retry: false,
+  });
+}
+
+export function useTargetedPractice(categoryId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["targeted-practice", categoryId],
+    queryFn: () => {
+      const param = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : "";
+      return api.get<import("@/lib/types").TargetedPracticeResponse>(`/students/mistake-vault/practice${param}`);
+    },
+    enabled: !!categoryId && enabled,
+    retry: false,
+  });
+}
+
+/* ── Teacher Hub Group Analytics & Attendance Hooks ──────────────────── */
+
+export function useGroupAnalytics(groupId?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["group-analytics", groupId],
+    queryFn: () => api.get<import("@/lib/types").GroupAnalyticsResponse>(`/groups/${groupId}/analytics`),
+    enabled: !!groupId && enabled,
+    retry: false,
+  });
+}
+
+export function useGroupAttendanceSummary(groupId?: string, date?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["group-attendance-summary", groupId, date],
+    queryFn: () => {
+      const param = date ? `?date=${encodeURIComponent(date)}` : "";
+      return api.get<import("@/lib/types").GroupAttendanceSummaryResponse>(`/attendance/group-summary/${groupId}${param}`);
+    },
+    enabled: !!groupId && enabled,
+    retry: false,
+  });
+}

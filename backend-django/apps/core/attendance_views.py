@@ -71,3 +71,9 @@ def export_view(request):
     response = HttpResponse(service.export(data), content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="davomat-{data.get("month", "joriy-oy")}.csv"'
     return response
+
+
+@api_view(['GET'])
+@permission_classes([roles('teacher', 'admin', 'super_admin')])
+def group_summary_view(request):
+    return success(service.group_summary(request.user, query(request, 'stats')))

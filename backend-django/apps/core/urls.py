@@ -8,6 +8,10 @@ from . import auth_views, exam_mode_views, topic_views, user_admin
 from . import content_views as content
 from . import game_points_views as game_points
 from . import group_views as groups
+from . import group_report_views as group_reports
+from . import study_plan_views as study_plans
+from . import group_report_views as group_reports
+from . import study_plan_views as study_plans
 from . import legacy_authoring_views as legacy_admin
 from . import legacy_test_views as legacy
 from . import mock_support_views as support
@@ -105,8 +109,8 @@ urlpatterns = [
     path('groups/', groups.groups_view),
     path('groups/<str:group_id>', groups.group_view),
     path('groups/<str:group_id>/', groups.group_view),
-    path('groups/<str:group_id>/analytics', groups.group_view),
-    path('groups/<str:group_id>/analytics/', groups.group_view),
+    path('groups/<str:group_id>/analytics', group_reports.group_analytics_view),
+    path('groups/<str:group_id>/analytics/', group_reports.group_analytics_view),
     path('groups/<str:group_id>/results', groups.group_view),
     path('groups/<str:group_id>/results/', groups.group_view),
     path('groups/<str:group_id>/export', groups.export_group_results_view),
@@ -328,4 +332,42 @@ urlpatterns = [
     path("mock/live-rooms/<str:room_id>/close/", exam_mode_views.live_room_close_view),
     path("mock/live-rooms/<str:room_id>/export/excel", exam_mode_views.live_room_export_excel_view),
     path("mock/live-rooms/<str:room_id>/export/excel/", exam_mode_views.live_room_export_excel_view),
+
+    path('attendance/group-summary', attendance.group_summary_view),
+    path('attendance/group-summary/', attendance.group_summary_view),
+    path('v1/attendance/group-summary', attendance.group_summary_view),
+    path('v1/attendance/group-summary/', attendance.group_summary_view),
+
+    path('v1/groups/<str:group_id>/analytics', group_reports.group_analytics_view),
+    path('v1/groups/<str:group_id>/analytics/', group_reports.group_analytics_view),
+
+    path('groups/<str:group_id>/report/pdf', group_reports.group_report_pdf_view),
+    path('groups/<str:group_id>/report/pdf/', group_reports.group_report_pdf_view),
+    path('v1/groups/<str:group_id>/report/pdf', group_reports.group_report_pdf_view),
+    path('v1/groups/<str:group_id>/report/pdf/', group_reports.group_report_pdf_view),
+
+    path('groups/<str:group_id>/report/excel', group_reports.group_report_excel_view),
+    path('groups/<str:group_id>/report/excel/', group_reports.group_report_excel_view),
+    path('v1/groups/<str:group_id>/report/excel', group_reports.group_report_excel_view),
+    path('v1/groups/<str:group_id>/report/excel/', group_reports.group_report_excel_view),
+
+    path('students/study-plan', study_plans.study_plan_view),
+    path('students/study-plan/', study_plans.study_plan_view),
+    path('v1/students/study-plan', study_plans.study_plan_view),
+    path('v1/students/study-plan/', study_plans.study_plan_view),
+
+    path('students/study-plan/target', study_plans.study_plan_target_view),
+    path('students/study-plan/target/', study_plans.study_plan_target_view),
+    path('v1/students/study-plan/target', study_plans.study_plan_target_view),
+    path('v1/students/study-plan/target/', study_plans.study_plan_target_view),
+
+    path('students/mistake-vault', study_plans.mistake_vault_view),
+    path('students/mistake-vault/', study_plans.mistake_vault_view),
+    path('v1/students/mistake-vault', study_plans.mistake_vault_view),
+    path('v1/students/mistake-vault/', study_plans.mistake_vault_view),
+
+    path('students/mistake-vault/practice', study_plans.targeted_practice_view),
+    path('students/mistake-vault/practice/', study_plans.targeted_practice_view),
+    path('v1/students/mistake-vault/practice', study_plans.targeted_practice_view),
+    path('v1/students/mistake-vault/practice/', study_plans.targeted_practice_view),
 ]

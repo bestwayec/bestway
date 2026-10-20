@@ -1236,3 +1236,136 @@ export interface LiveRoomMonitorResponse {
   participants: LiveRoomParticipant[];
 }
 
+
+
+/* ── Adaptive Study Plan & Mistake Vault Types ───────────────────────── */
+
+export interface StudyPlanTask {
+  id: string;
+  title: string;
+  skill: string;
+  count: number;
+  completed: boolean;
+}
+
+export interface StudyPlanProgress {
+  targetQuestions: number;
+  completedQuestions: number;
+  targetEssays?: number;
+  completedEssays?: number;
+  percent: number;
+}
+
+export interface AdaptiveStudyPlanResponse {
+  studentId: string;
+  studentName: string;
+  intensityLevel: "intensive" | "balanced" | "foundation";
+  intensityLabel: string;
+  targetMonths: number;
+  targetExamDate: string;
+  daysRemaining: number;
+  dailyHeadline: string;
+  dailyTasks: StudyPlanTask[];
+  baseDailyQuestionsTarget: number;
+  dailyQuestionsTarget: number;
+  dailyEssaysTarget: number;
+  weeklyProgress: StudyPlanProgress;
+  monthlyProgress: StudyPlanProgress;
+  isBehindSchedule: boolean;
+  rebalanceAdjustment: number;
+  rebalanceMessage: string | null;
+  updatedAt: string;
+}
+
+export interface MistakeVaultCategory {
+  id: string;
+  name: string;
+  skill: "reading" | "listening" | "writing" | "speaking";
+  wrongCount: number;
+  totalAttempted: number;
+  accuracy: number;
+  lastTrained: string;
+  recommendedFocus: string;
+}
+
+export interface MistakeVaultResponse {
+  studentId: string;
+  totalMistakes: number;
+  categories: MistakeVaultCategory[];
+  overallAccuracy: number;
+  urgentCategory: MistakeVaultCategory | null;
+  updatedAt: string;
+}
+
+export interface TargetedPracticeQuestion {
+  id: string;
+  number: number;
+  question: string;
+  context?: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+export interface TargetedPracticeResponse {
+  categoryId: string;
+  categoryName: string;
+  skill: string;
+  questionCount: number;
+  questions: TargetedPracticeQuestion[];
+  instructions: string;
+}
+
+/* ── Teacher Hub Group Analytics & Attendance ─────────────────────────── */
+
+export interface GroupAnalyticsStudent {
+  studentId: string;
+  name: string;
+  phone: string;
+  isActive: boolean;
+  attendanceRate: number;
+  mockAttemptsCount: number;
+  essaysCount: number;
+  averageScore: number;
+  scoreLabel: string;
+  lastActiveAt: string;
+}
+
+export interface GroupWeakTopic {
+  topic: string;
+  groupErrorRate: number;
+  recommendation: string;
+}
+
+export interface GroupAnalyticsResponse {
+  groupId: string;
+  groupName: string;
+  teacherName: string;
+  totalStudents: number;
+  groupAverageScore: number;
+  groupAverageAttendance: number;
+  totalMockAttempts: number;
+  totalEssays: number;
+  students: GroupAnalyticsStudent[];
+  weakTopicsHeatmap: GroupWeakTopic[];
+  generatedAt: string;
+}
+
+export interface GroupAttendanceSummaryResponse {
+  groupId: string;
+  groupName: string;
+  date: string;
+  totalStudents: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  attendanceRate: number;
+  students: Array<{
+    id: string;
+    studentId: string;
+    studentName: string;
+    state: "present" | "late" | "absent";
+    isExcused: boolean;
+    note: string;
+  }>;
+}

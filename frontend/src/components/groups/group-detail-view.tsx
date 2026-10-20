@@ -36,6 +36,9 @@ import { useSettings } from "@/hooks/use-settings";
 import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
 import { GroupAiRanking } from "@/components/teacher/group-ai-ranking";
+import { SmartAttendanceDialog } from "@/components/teacher/smart-attendance-dialog";
+import { GroupAnalyticsDashboard } from "@/components/teacher/group-analytics-dashboard";
+import { CheckSquare, FileText } from "lucide-react";
 import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { GroupAnalyticsPanel } from "@/components/groups/groups-view";
@@ -54,6 +57,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const settingsQ = useSettings();
   const [editOpen, setEditOpen] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [attendanceOpen, setAttendanceOpen] = React.useState(false);
   const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = React.useState("");
@@ -160,14 +164,35 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {canSeePhones && (
+              <Button
+                size="sm"
+                onClick={() => setAttendanceOpen(true)}
+                className="gap-1.5 bg-brand text-white hover:bg-brand/90 font-medium text-xs"
+              >
+                <CheckSquare className="size-4" />
+                <span>📋 Aqlli Davomat Olish</span>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+              className="gap-1.5 border-rose-500/40 text-rose-300 hover:bg-rose-500/10 text-xs"
+            >
+              <a href={`/api/backend/v1/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
+                <FileText className="size-4 text-rose-400" />
+                <span>📄 Oylik Hisobot (PDF)</span>
+              </a>
+            </Button>
             <Button
               size="sm"
               onClick={handleDownloadExcel}
               loading={excelBusy}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs"
             >
               <Download className="size-4" />
-              <span>📊 Excel (.xlsx) yuklab olish</span>
+              <span>📊 Excel (.xlsx)</span>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a href={`/api/backend/assessment/groups/${groupId}/export`} download>
@@ -196,10 +221,25 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
             }}
             showGroupSelector={Boolean(allGroups && allGroups.length > 1)}
           />
+          <GroupAnalyticsDashboard groupId={groupId} groupName={group.name} className="mb-4" />
           <GroupLiveMonitoring groupId={groupId} />
           <GroupAiRanking groupId={groupId} />
         </>
       )}
+
+      {/* Aqlli Davomat Olish Modali */}
+      <SmartAttendanceDialog
+        groupId={groupId}
+        groupName={group.name}
+        students={(group.students ?? []).map((s) => ({
+          studentId: s.studentId,
+          studentName: s.name,
+          phone: s.phone,
+        }))}
+        open={attendanceOpen}
+        onOpenChange={setAttendanceOpen}
+        onSuccess={() => refetch()}
+      />
 
       {/* O'quvchi qo'shish */}
       <Card className="mb-4">
