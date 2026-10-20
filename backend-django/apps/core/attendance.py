@@ -96,9 +96,23 @@ def bulk(actor, data):
     manage_group(actor, data['groupId'])
     day = reference_date(data['date'])
     members = {p.user_id: p for p in StudentProfile.objects.filter(group_id=data['groupId']).select_related('user')}
+    
+    # Safe fallback if student profile is not yet provisioned for user in this group
+    missing_ids = [r['studentId'] for r in data['records'] if r['studentId'] not in members]
+    if missing_ids:
+        from apps.legacy_schema.models import User
+        fallback_users = list(User.objects.filter(id__in=missing_ids))
+        for u in fallback_users:
+            profile, _ = StudentProfile.objects.get_or_create(user_id=u.id, defaults={'group_id': data['groupId'], 'link_code': u.id[:8]})
+            if profile.group_id != data['groupId']:
+                profile.group_id = data['groupId']
+                profile.save(update_fields=['group_id'])
+            profile.user = u
+            members[u.id] = profile
+
     if any(r['studentId'] not in members for r in data['records']):
         raise ContractAPIException('STUDENT_NOT_IN_GROUP', "Ro'yxatda guruhga tegishli bo'lmagan o'quvchi bor", 400)
-    if any(not members[r['studentId']].user.is_active for r in data['records']):
+    if any(not getattr(getattr(members[r['studentId']], 'user', None), 'is_active', True) for r in data['records']):
         raise ContractAPIException('STUDENT_BLOCKED', "Bloklangan o'quvchi uchun davomat belgilab bo'lmaydi", 400)
     previous = dict(Attendance.objects.filter(group_id=data['groupId'], date=day,
         student_id__in=[r['studentId'] for r in data['records']]).values_list('student_id', 'state'))

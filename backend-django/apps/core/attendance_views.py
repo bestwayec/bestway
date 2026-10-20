@@ -45,7 +45,7 @@ def stats_view(request):
     return success(service.stats(request.user, query(request, 'stats')))
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'POST'])
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
 def bulk_view(request):
     data = payload(request, {'groupId', 'date', 'records'})
@@ -57,7 +57,7 @@ def bulk_view(request):
     for row in rows:
         if not isinstance(row, dict): invalid('each value in nested property records must be either object or array')
         for key in row:
-            if key not in ('studentId', 'state'): invalid(f'property {key} should not exist')
+            if key not in ('studentId', 'state', 'note', 'isExcused'): invalid(f'property {key} should not exist')
         string(row, 'studentId', required=True, not_empty=True)
         if row.get('state') not in ('present', 'absent', 'late', 'empty', 'blank'):
             invalid('state must be one of the following values: present, absent, late, empty, blank')
