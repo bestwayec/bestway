@@ -21,7 +21,12 @@ BestWay / GRAND EDUCATION platformasining ikkita asosiy ustuni — O'quvchilar t
 
 ### 2-BLOK: O'qituvchilar Paneli va Guruh Nazorati (Teacher Hub & Automation)
 1. **Avtomatlashtirilgan Davomat Tizimi (Smart Attendance)**:
-   - `SmartAttendanceDialog` (`src/components/teacher/smart-attendance-dialog.tsx`) yaratildi.
+   - `SmartAttendanceDialog` (`src/components/teacher/smart-attendance-dialog.tsx`) to'liq Obsidian/Emerald dizayni (`bg-[#0B0F17]/95 border border-slate-800/80 backdrop-blur-2xl rounded-2xl shadow-2xl`) asosida mukammallashtirildi.
+   - **Saqlash xatosi bartaraf etildi**:
+     * Backenddagi `bulk_view` da `PUT` va `POST` metodlari ruxsat etildi;
+     * Payloaddagi ixtiyoriy `note` va `isExcused` maydonlariga tolerantlik qo'shildi;
+     * Guruhga yangi qo'shilgan, ammo hali `StudentProfile`i shakllanmagan o'quvchilar uchun avtomatik xavfsiz profil yaratish mantiqi (`StudentProfile.objects.get_or_create`) qo'shildi;
+     * Sana formati ISO `YYYY-MM-DD` ga qat'iy normalizatsiya qilindi.
    - Ustoz kabinetida har bir guruh dars sanasi bo'yicha 1-bosishda davomat olish: `[ ✅ Keldi ] [ ⚠️ Kechikdi ] [ ❌ Sababsiz ] [ 📝 Sababli ]` hamda bitta tugma bilan "Hammasi keldi" deb belgilash.
    - Darsga kelmagan yoki ketma-ket 2 marta dars qoldirgan o'quvchilarning ota-onalari Telegramiga avtomatik shoshilinch ogohlantirish yuborish mantiqi (`attendance.py` bulk metodi) tatbiq etildi.
    - Guruhning umumiy davomat foizi real vaqtda yangilanadi.
