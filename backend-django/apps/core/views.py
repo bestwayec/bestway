@@ -302,21 +302,25 @@ def mock_exams_view(request):
     program, exam_type, practice = q.get("program"), q.get("type"), q.get("practiceLevel")
     if program and program not in {"IELTS", "MULTILEVEL"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
     if exam_type and exam_type not in {"ielts_academic", "ielts_general", "multilevel"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
-    user_id = getattr(request.user, "id", None) if getattr(request.user, "is_authenticated", False) else "anon"
-    cache_key = f"mock_exams_list_{user_id}_{program}_{exam_type}_{practice}"
-    try:
-        from django.core.cache import cache
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return success(cached)
-    except Exception:
-        cached = None
-    data = mock_catalog.list_exams(request.user if getattr(request.user, "is_authenticated", False) else None, program=program, exam_type=exam_type, practice_level=practice)
-    try:
-        from django.core.cache import cache
-        cache.set(cache_key, data, timeout=60)
-    except Exception:
-        pass
+    user = request.user if getattr(request.user, "is_authenticated", False) else None
+    role = getattr(user, "role", None)
+    should_cache = user is None or role == "student"
+    cache_key = f"mock_exams_list_{role or 'anon'}_{program}_{exam_type}_{practice}"
+    if should_cache:
+        try:
+            from django.core.cache import cache
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return success(cached)
+        except Exception:
+            cached = None
+    data = mock_catalog.list_exams(user, program=program, exam_type=exam_type, practice_level=practice)
+    if should_cache:
+        try:
+            from django.core.cache import cache
+            cache.set(cache_key, data, timeout=60)
+        except Exception:
+            pass
     return success(data)
 
 
