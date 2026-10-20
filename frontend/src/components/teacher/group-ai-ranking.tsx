@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv-export";
 import { finalGradeLabel, groupGradeRows, groupGradesCsv, groupLeaderboardExcelCsv, type GroupGradeSummary, type GroupSkillGrade } from "@/lib/group-grade-export";
 import { useGroupDetail } from "@/hooks/use-groups";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Search, ArrowUpDown } from "lucide-react";
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -82,6 +82,28 @@ export function GroupAiRankingTable({ rows, cohort, t }: {
 }
 
 export function GroupAllGradesTable({ rows, t }: { rows: GroupGradeSummary[]; t: Translate }) {
+  const [search, setSearch] = React.useState("");
+  const [sortBy, setSortBy] = React.useState<"name" | "score-desc" | "score-asc">("name");
+
+  const getStudentScore = (item: GroupGradeSummary): number => {
+    const w = item.writing?.row.finalScore ?? item.writing?.row.aiScore ?? -1;
+    const s = item.speaking?.row.finalScore ?? item.speaking?.row.aiScore ?? -1;
+    if (w >= 0 && s >= 0) return (w + s) / 2;
+    return Math.max(w, s);
+  };
+
+  const processedRows = React.useMemo(() => {
+    const list = rows.filter((r) => r.name.toLowerCase().includes(search.trim().toLowerCase()));
+    if (sortBy === "name") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "score-desc") {
+      list.sort((a, b) => getStudentScore(b) - getStudentScore(a));
+    } else if (sortBy === "score-asc") {
+      list.sort((a, b) => getStudentScore(a) - getStudentScore(b));
+    }
+    return list;
+  }, [rows, search, sortBy]);
+
   const ai = (grade?: GroupSkillGrade) => <>
     {rankingScoreLabel(grade?.row.aiScore, grade?.cohort?.scaleMax)}
     {grade?.row.aiRawScore != null && <span className="block text-xs text-fg-muted">{t("rawScore")}: {rankingScoreLabel(grade.row.aiRawScore, grade.cohort?.rawMax)}</span>}
@@ -94,22 +116,70 @@ export function GroupAllGradesTable({ rows, t }: { rows: GroupGradeSummary[]; t:
     {grade && <span className="block text-xs text-fg-muted">{t(grade.row.finalScore != null ? "graded" : rankingStatusKey(grade.row))}</span>}
     {grade?.cohort && <span className="block text-xs text-fg-muted">{grade.cohort.label} · {grade.cohort.specificationVersion ?? t("historical")}</span>}
   </>;
-  return <div className="overflow-x-auto rounded-xl border border-border">
-    <table className="w-full text-left text-sm">
-      <thead className="bg-bg-subtle text-fg-muted"><tr>
-        <th scope="col" className="px-3 py-2 font-medium">{t("student")}</th>
-        {(["writing", "speaking"] as const).flatMap(skill => ["aiScore", "teacherScore", "finalScore"].map(key => <th key={skill + key} scope="col" className="whitespace-nowrap px-3 py-2 font-medium">{t(skill)} · {t(key)}</th>))}
-      </tr></thead>
-      <tbody className="divide-y divide-border">{rows.map(row => <tr key={row.studentId}>
-        <th scope="row" className="px-3 py-3 font-medium text-fg">{row.name}</th>
-        {(["writing", "speaking"] as const).map(skill => <React.Fragment key={skill}>
-          <td className="whitespace-nowrap px-3 py-3 text-fg">{ai(row[skill])}</td>
-          <td className="whitespace-nowrap px-3 py-3 text-fg-muted">{rankingScoreLabel(row[skill]?.row.teacherScore, row[skill]?.row.finalScoreScaleMax)}</td>
-          <td className="px-3 py-3 text-fg">{final(row[skill])}</td>
-        </React.Fragment>)}
-      </tr>)}</tbody>
-    </table>
-  </div>;
+
+  return (
+    <div className="space-y-3">
+      {/* Search and Sort Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+        <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-fg-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="O'quvchi ismini qidirish..."
+            className="h-8 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-fg-muted">
+            <ArrowUpDown className="size-3 text-fg-subtle" />
+            <span>Saralash:</span>
+          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "name" | "score-desc" | "score-asc")}
+            className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs text-fg focus:border-brand focus:outline-none"
+          >
+            <option value="name">Alifbo bo&apos;yicha</option>
+            <option value="score-desc">Ball: eng yuqoridan</option>
+            <option value="score-asc">Ball: eng pastdan</option>
+          </select>
+          <span className="text-[11px] text-fg-subtle">
+            ({processedRows.length} ta o&apos;quvchi)
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-bg-subtle text-fg-muted"><tr>
+            <th scope="col" className="px-3 py-2 font-medium">{t("student")}</th>
+            {(["writing", "speaking"] as const).flatMap(skill => ["aiScore", "teacherScore", "finalScore"].map(key => <th key={skill + key} scope="col" className="whitespace-nowrap px-3 py-2 font-medium">{t(skill)} · {t(key)}</th>))}
+          </tr></thead>
+          <tbody className="divide-y divide-border">
+            {processedRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-3 py-6 text-center text-xs text-fg-muted">
+                  Qidiruv bo&apos;yicha o&apos;quvchi topilmadi
+                </td>
+              </tr>
+            ) : (
+              processedRows.map(row => <tr key={row.studentId} className="hover:bg-bg-subtle/40 transition-colors">
+                <th scope="row" className="px-3 py-3 font-medium text-fg">{row.name}</th>
+                {(["writing", "speaking"] as const).map(skill => <React.Fragment key={skill}>
+                  <td className="whitespace-nowrap px-3 py-3 text-fg">{ai(row[skill])}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-fg-muted">{rankingScoreLabel(row[skill]?.row.teacherScore, row[skill]?.row.finalScoreScaleMax)}</td>
+                  <td className="px-3 py-3 text-fg">{final(row[skill])}</td>
+                </React.Fragment>)}
+              </tr>)
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 export function GroupAiRanking({ groupId }: { groupId: string }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Check, Download, Loader2, Printer, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Award, Check, Download, Loader2, Printer, Sparkles, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { AssessmentPanel } from "./assessment-panel";
 import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
 import { CefrResultInfographic } from "./cefr-result-infographic";
+import { CertificateModal } from "./certificate-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 
 const media = (path: string) => `/api/backend${path}`;
@@ -111,6 +112,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const role = me?.user.role;
   const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
   const grade = useGradeMock(attempt.id);
+  const [certModalOpen, setCertModalOpen] = React.useState(false);
 
   const isIelts = attempt.examType !== "multilevel";
   const completed = attempt.status === "completed";
@@ -242,6 +244,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
         )}
       </Card>
+      <CertificateModal attempt={attempt} open={certModalOpen} onClose={() => setCertModalOpen(false)} />
 
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
 

@@ -150,4 +150,19 @@ def live_monitoring(request, group_id):
 @permission_classes([Authenticated])
 def assessment_overview_view(request):
     from . import assessment_overview_service
-    return success(assessment_overview_service.get_assessment_overview(request.user))
+    user_id = getattr(request.user, 'id', None) or 'anonymous'
+    cache_key = f"assessment_overview_{user_id}"
+    try:
+        from django.core.cache import cache
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return success(cached)
+    except Exception:
+        cached = None
+    data = assessment_overview_service.get_assessment_overview(request.user)
+    try:
+        from django.core.cache import cache
+        cache.set(cache_key, data, timeout=60)
+    except Exception:
+        pass
+    return success(data)

@@ -18,4 +18,18 @@ def rankings(request, group_id):
     exam_id = request.query_params.get('examId')
     if exam_id is not None and (not exam_id.strip() or len(exam_id) > 255):
         invalid('examId must be a nonempty identifier')
-    return success(assessment_rankings.rankings(request.user, group_id, exam_id, skill))
+    cache_key = f"group_rankings_{group_id}_{exam_id or 'all'}_{skill}"
+    try:
+        from django.core.cache import cache
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return success(cached)
+    except Exception:
+        cached = None
+    data = assessment_rankings.rankings(request.user, group_id, exam_id, skill)
+    try:
+        from django.core.cache import cache
+        cache.set(cache_key, data, timeout=60)
+    except Exception:
+        pass
+    return success(data)

@@ -70,11 +70,11 @@ def health(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def desktop_version(request):
-    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.4"
-    if version in ("0.8.3", "0.8.0", "0.7.1", "0.7.0"):
-        version = "0.8.4"
-    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe"
-    for old_v in ("0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.5"
+    if version in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0"):
+        version = "0.8.5"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.5_x64-setup.exe"
+    for old_v in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
         if old_v in download_url:
             download_url = download_url.replace(old_v, version)
     prerelease = getattr(settings, "DESKTOP_PRERELEASE", False)
@@ -89,11 +89,11 @@ def desktop_update_json(request):
     Tauri v2 updater manifest endpoint (e.g. /v1/desktop/update.json).
     Returns updater manifest compatible with @tauri-apps/plugin-updater.
     """
-    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.4"
-    if version in ("0.8.3", "0.8.0", "0.7.1", "0.7.0"):
-        version = "0.8.4"
-    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.4_x64-setup.exe"
-    for old_v in ("0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+    version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.5"
+    if version in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0"):
+        version = "0.8.5"
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.5_x64-setup.exe"
+    for old_v in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
         if old_v in download_url:
             download_url = download_url.replace(old_v, version)
     manifest = {
@@ -302,7 +302,22 @@ def mock_exams_view(request):
     program, exam_type, practice = q.get("program"), q.get("type"), q.get("practiceLevel")
     if program and program not in {"IELTS", "MULTILEVEL"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
     if exam_type and exam_type not in {"ielts_academic", "ielts_general", "multilevel"}: raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
-    return success(mock_catalog.list_exams(request.user if getattr(request.user, "is_authenticated", False) else None, program=program, exam_type=exam_type, practice_level=practice))
+    user_id = getattr(request.user, "id", None) if getattr(request.user, "is_authenticated", False) else "anon"
+    cache_key = f"mock_exams_list_{user_id}_{program}_{exam_type}_{practice}"
+    try:
+        from django.core.cache import cache
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return success(cached)
+    except Exception:
+        cached = None
+    data = mock_catalog.list_exams(request.user if getattr(request.user, "is_authenticated", False) else None, program=program, exam_type=exam_type, practice_level=practice)
+    try:
+        from django.core.cache import cache
+        cache.set(cache_key, data, timeout=60)
+    except Exception:
+        pass
+    return success(data)
 
 
 def _delete_mock_exam_for_staff(actor, exam_id: str) -> dict:
