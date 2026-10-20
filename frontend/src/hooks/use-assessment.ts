@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { assessmentPollingInterval } from "@/lib/assessment-model";
-import type { AssessmentReviewInput, AttemptAssessments } from "@/lib/assessment-types";
+import type { AssessmentReviewInput, AttemptAssessments, TeacherGradeAttemptInput } from "@/lib/assessment-types";
 
 export function useAttemptAssessments(attemptId: string, enabled = true) {
   const qc = useQueryClient();
@@ -75,5 +75,22 @@ export function useAssessmentOverview(options?: { enabled?: boolean }) {
     staleTime: 30_000,
     retry: 2,
     enabled: options?.enabled ?? true,
+  });
+}
+
+
+export function useTeacherGradeAttempt(attemptId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TeacherGradeAttemptInput) =>
+      api.post(`/assessment/attempts/${encodeURIComponent(attemptId)}/teacher-grade`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["attempt-assessments", attemptId] });
+      qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
+      qc.invalidateQueries({ queryKey: ["mock-attempts"] });
+      qc.invalidateQueries({ queryKey: ["mock-attempts-mine"] });
+      qc.invalidateQueries({ queryKey: ["group-ai-ranking"] });
+      qc.invalidateQueries({ queryKey: ["assessment-overview"] });
+    },
   });
 }

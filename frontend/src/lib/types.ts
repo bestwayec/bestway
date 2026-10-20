@@ -859,6 +859,8 @@ export interface MockAttemptSummary {
   standardScores?: Record<string, { estimatedStandardScore: number; rawCorrect?: number; questionCount?: number; gradingSource?: string }>;
   overallScore?: number | null;
   serverTime?: string;
+  isTeacherReviewed?: boolean;
+  mediaState?: Record<string, any>;
   antiCheatCount: number;
   startedAt: string;
   submittedAt: string | null;

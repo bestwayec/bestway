@@ -40,7 +40,7 @@ def assert_complete(attempt, sections, answers, now):
             continue
         questions = [q for g in section['groups'] for q in g['questions']]
         count = sum(not (answers.get(q['id'], {}).get('audioKey') if q['type'] == 'speaking_task'
-            else scoring.trim(answers.get(q['id'], {}).get('response', ''))) for q in questions)
+            else (scoring.trim(answers.get(q['id'], {}).get('response', '')) or answers.get(q['id'], {}).get('hasImages'))) for q in questions)
         if count:
             spoken = any(q['type'] == 'speaking_task' for q in questions)
             missing.append(f"{skill.capitalize()} {count} of {len(questions)} {'not recorded' if spoken else 'unanswered'}")
@@ -95,7 +95,8 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         sections = [s for s in all_sections if s['skill'] == curr] if curr else all_sections
     rows = list(MockAnswer.objects.filter(attempt_id=attempt.id))
     answers = {a.question_id: dict(response=a.response, audioKey=a.audio_key,
-        isGraded=a.is_graded, score=a.score) for a in rows}
+        isGraded=a.is_graded, score=a.score,
+        hasImages=bool(isinstance(a.rubric_scores, dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls')))) for a in rows}
     now = timezone.now()
     if versioned and not force:
         assert_complete(attempt, sections, answers, now)

@@ -48,6 +48,7 @@ def for_attempt(actor,identifier):
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Attempt not found',404)
     assert_can_view(actor,attempt.student_id)
     if actor.role=='student':assert_program(actor,attempt)
+    answers_map = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=identifier)}
     rows=AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at');seen=set();values=[]
     for job in rows:
         if job.skill in seen:continue
@@ -72,8 +73,27 @@ def for_attempt(actor,identifier):
         for part in input['parts']:
             for r in part['responses']:
                 transcript=next((t for t in transcripts if t.question_id==r['questionId'] and t.audio_hash==r.get('audioHash')),None)
-                value['submissions'].append(dict(questionId=r['questionId'],partId=part['id'],partNumber=r['partNumber'],prompt=r['prompt'],context=part['context'],originalResponse=r['originalResponse'],wordCount=len(r['originalResponse'].split()),
-                    audioUrl=(os.environ.get('PUBLIC_URL','http://localhost:3001')+'/v1/assessment/jobs/'+job.id+'/audio/'+quote(r['questionId'],safe="~()*!.'-")) if r.get('audioKey') else None,
+                ans = answers_map.get(r['questionId'])
+                img_keys = []
+                ocr_text = r.get('originalResponse') or ''
+                if ans and isinstance(ans.rubric_scores, dict):
+                    img_keys = list(ans.rubric_scores.get('imageKeys') or [])
+                    if ans.rubric_scores.get('ocrText'):
+                        ocr_text = ans.rubric_scores['ocrText']
+                elif isinstance(r.get('rubricScores'), dict):
+                    img_keys = list(r['rubricScores'].get('imageKeys') or [])
+                img_urls = [f"/media/{k}" for k in img_keys]
+                audio_link = None
+                if r.get('audioKey'):
+                    qid_quoted = quote(r['questionId'], safe="~()*!.'-")
+                    audio_link = f"/api/v1/assessment/jobs/{job.id}/audio/{qid_quoted}"
+                value['submissions'].append(dict(
+                    questionId=r['questionId'],partId=part['id'],partNumber=r['partNumber'],prompt=r['prompt'],context=part['context'],
+                    originalResponse=r['originalResponse'],wordCount=len(r['originalResponse'].split()),
+                    imageKeys=img_keys,imageUrls=img_urls,ocrText=ocr_text,
+                    audioUrl=audio_link,
+                    teacherScore=ans.score if (ans and ans.graded_by_id) else None,
+                    teacherFeedback=ans.feedback if ans else None,
                     transcript=dict(text=transcript.text,confidence=transcript.confidence,segments=transcript.segments,pronunciationEvidence=transcript.pronunciation_evidence) if transcript else None))
         values.append(value)
     CRIT_MAP = {
@@ -187,13 +207,30 @@ def for_attempt(actor,identifier):
     band_8_rewrite = "\n\n".join(improved_rewrites) if improved_rewrites else ""
     next_action = next_actions[0] if next_actions else ("Review detailed feedback and focus on weaker areas." if top_status == 'completed' else "Exam assessment is underway.")
 
+    teacher_comment = None
+    for j in rows:
+        fb = j.approved_feedback or {}
+        if isinstance(fb, dict) and (fb.get('teacherComment') or fb.get('teacher_comment')):
+            teacher_comment = fb.get('teacherComment') or fb.get('teacher_comment')
+            break
+    if not teacher_comment and attempt.media_state and isinstance(attempt.media_state, dict):
+        teacher_comment = attempt.media_state.get('teacher_comment')
+
+    is_reviewed = teacher_confirmed or bool(attempt.media_state and isinstance(attempt.media_state, dict) and attempt.media_state.get('is_teacher_reviewed'))
+    reviewed_by = (attempt.media_state.get('teacher_reviewed_by') if (attempt.media_state and isinstance(attempt.media_state, dict)) else None)
+
     return dict(
         attemptId=identifier,
         status=top_status,
         overall_band=overall_band,
         confidence=conf,
         provisional=provisional,
-        teacher_confirmed=teacher_confirmed,
+        teacher_confirmed=is_reviewed,
+        is_teacher_reviewed=is_reviewed,
+        isTeacherReviewed=is_reviewed,
+        teacher_comment=teacher_comment,
+        teacherComment=teacher_comment,
+        teacher_reviewed_by=reviewed_by,
         criteria_scores=criteria_scores,
         strengths=strengths,
         weaknesses=weaknesses,
@@ -365,3 +402,128 @@ def record_legacy_grade(attempt_id,question_id):
     from .assessment_quality import attach_grade
     result=attach_grade(input,result);score=results.score(input,result)['score']
     update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,approved_feedback=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
+
+
+def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
+    if actor.role not in ('teacher', 'admin', 'super_admin'):
+        fail('FORBIDDEN', 'Staff access required', 403)
+    attempt = MockAttempt.objects.filter(id=attempt_id).select_related('exam').first()
+    if attempt is None:
+        fail('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
+
+    final_score = data.get('final_score')
+    if final_score is None:
+        final_score = data.get('finalScore')
+    writing_score = data.get('writing_score')
+    if writing_score is None:
+        writing_score = data.get('writingScore')
+    speaking_score = data.get('speaking_score')
+    if speaking_score is None:
+        speaking_score = data.get('speakingScore')
+    teacher_comment = str(data.get('teacher_comment') or data.get('teacherComment') or data.get('comment') or '').strip()
+    criteria_scores = data.get('criteria_scores') or data.get('criteriaScores') or {}
+
+    try:
+        final_score_val = float(final_score) if final_score is not None else None
+    except (ValueError, TypeError):
+        final_score_val = None
+
+    try:
+        w_score_val = float(writing_score) if writing_score is not None else None
+    except (ValueError, TypeError):
+        w_score_val = None
+
+    try:
+        s_score_val = float(speaking_score) if speaking_score is not None else None
+    except (ValueError, TypeError):
+        s_score_val = None
+
+    if final_score_val is None and w_score_val is None and s_score_val is None:
+        fail('SCORE_REQUIRED', 'Baho kiritilishi shart', 400)
+
+    now = timezone.now()
+    jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))
+    for job in jobs:
+        score_to_apply = None
+        if job.skill == 'writing':
+            score_to_apply = w_score_val if w_score_val is not None else final_score_val
+        elif job.skill == 'speaking':
+            score_to_apply = s_score_val if s_score_val is not None else final_score_val
+        else:
+            score_to_apply = final_score_val
+
+        if score_to_apply is not None:
+            approved = dict(job.approved_feedback or job.final_result or {})
+            approved['teacherComment'] = teacher_comment
+            approved['teacher_comment'] = teacher_comment
+            if criteria_scores and job.skill == 'writing':
+                approved['criteriaScores'] = criteria_scores
+            AssessmentJob.objects.filter(id=job.id).update(
+                teacher_score=score_to_apply,
+                final_score=score_to_apply,
+                final_score_source='TEACHER',
+                status='SUCCEEDED',
+                approved_feedback=approved,
+                failure_code=None,
+                completed_at=now,
+                updated_at=now,
+            )
+
+    MockAnswer.objects.filter(
+        attempt_id=attempt_id,
+        question__group__section__skill__in=['writing', 'speaking']
+    ).update(
+        graded_by_id=actor.id,
+        feedback=teacher_comment,
+        is_graded=True,
+        updated_at=now
+    )
+
+    sec_bands = dict(attempt.section_bands or {})
+    if w_score_val is not None:
+        sec_bands['writing'] = w_score_val
+    elif final_score_val is not None and ('writing' in sec_bands or not sec_bands):
+        sec_bands['writing'] = final_score_val
+
+    if s_score_val is not None:
+        sec_bands['speaking'] = s_score_val
+
+    calculated_overall = final_score_val
+    if calculated_overall is None and sec_bands:
+        valid_nums = [float(v) for v in sec_bands.values() if isinstance(v, (int, float))]
+        if valid_nums:
+            calculated_overall = round(sum(valid_nums) / len(valid_nums) * 2) / 2
+
+    std_scores = dict(attempt.standard_scores or {})
+    if w_score_val is not None:
+        std_scores['writing'] = w_score_val
+    if s_score_val is not None:
+        std_scores['speaking'] = s_score_val
+
+    media_st = dict(attempt.media_state or {})
+    media_st['is_teacher_reviewed'] = True
+    media_st['teacher_comment'] = teacher_comment
+    media_st['teacher_reviewed_by'] = actor.name or actor.id
+    media_st['teacher_reviewed_at'] = now.isoformat()
+
+    attempt.overall_band = calculated_overall
+    attempt.section_bands = sec_bands
+    attempt.standard_scores = std_scores
+    attempt.media_state = media_st
+    attempt.status = 'completed'
+    attempt.finished_at = attempt.finished_at or now
+    attempt.save(update_fields=['overall_band', 'section_bands', 'standard_scores', 'media_state', 'status', 'finished_at'])
+
+    return {
+        'success': True,
+        'attemptId': attempt_id,
+        'isTeacherReviewed': True,
+        'is_teacher_reviewed': True,
+        'finalScore': calculated_overall,
+        'final_score': calculated_overall,
+        'sectionBands': sec_bands,
+        'section_bands': sec_bands,
+        'teacherComment': teacher_comment,
+        'teacher_comment': teacher_comment,
+        'reviewedBy': actor.name or actor.id,
+    }

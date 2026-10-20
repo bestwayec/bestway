@@ -159,9 +159,24 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           {attempt.examTitle}
           {isStaff && attempt.studentName ? ` · ${attempt.studentName}` : ""}
         </p>
-        <div className="mt-2 flex items-center justify-center print:hidden">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
+          {(attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400">
+              <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
+              <Sparkles className="size-3.5" /> AI bahosi (Ustoz ko&apos;rib chiqishi kutilmoqda)
+            </span>
+          )}
         </div>
+        {Boolean(attempt.mediaState?.teacher_comment) && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Ustozning rasmiy xulosasi:</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{String(attempt.mediaState?.teacher_comment)}&rdquo;</p>
+          </div>
+        )}
 
         {attempt.status === "grading" && <SteppedGradingProgress />}
 

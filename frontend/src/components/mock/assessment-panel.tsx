@@ -3,19 +3,228 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { Award, CheckCircle2, Image as ImageIcon, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
-import { useAttemptAssessments, useReviewAssessment } from "@/hooks/use-assessment";
+import { useAttemptAssessments, useReviewAssessment, useTeacherGradeAttempt } from "@/hooks/use-assessment";
+import { ImageZoomModal } from "./writing-image-ocr";
 import { ApiError } from "@/lib/api-client";
 import { assessmentAudioPath, assessmentStatusKey, canAcceptAssessment, criterionKeys, hasActiveAssessments, overrideParts, splitFeedbackLines } from "@/lib/assessment-model";
-import type { AssessmentJobView, AssessmentPartFeedback, AssessmentResult, AssessmentReviewAction, AssessmentReviewInput } from "@/lib/assessment-types";
+import type { AssessmentJobView, AssessmentPartFeedback, AssessmentResult, AssessmentReviewAction, AssessmentReviewInput, AttemptAssessments } from "@/lib/assessment-types";
 
 type Translate = ReturnType<typeof useTranslations>;
 const TEXT_FEEDBACK = ["taskCoverage", "grammar", "vocabulary", "fluencyCohesion", "ideaDevelopment", "register", "spellingPunctuation", "position", "argumentBalance"] as const;
 const LIST_FEEDBACK = ["strengths", "issues", "missedPrompts", "usefulPhrases"] as const;
 const ACTIONS: AssessmentReviewAction[] = ["ACCEPT", "OVERRIDE", "EDIT_FEEDBACK", "REGRADE", "NEEDS_REVIEW"];
+
+export function TeacherAttemptOverrideCard({
+  attemptId,
+  data,
+}: {
+  attemptId: string;
+  data?: AttemptAssessments;
+}) {
+  const mutation = useTeacherGradeAttempt(attemptId);
+  const writingJob = data?.assessments.find((a) => a.skill === "writing");
+  const speakingJob = data?.assessments.find((a) => a.skill === "speaking");
+
+  const [writingScore, setWritingScore] = React.useState<string>(
+    writingJob?.finalScore != null ? String(writingJob.finalScore) : ""
+  );
+  const [speakingScore, setSpeakingScore] = React.useState<string>(
+    speakingJob?.finalScore != null ? String(speakingJob.finalScore) : ""
+  );
+  const [overallScore, setOverallScore] = React.useState<string>("");
+  const [comment, setComment] = React.useState<string>(data?.teacherComment || "");
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (data?.teacherComment && !comment) {
+      setComment(data.teacherComment);
+    }
+  }, [data?.teacherComment, comment]);
+
+  const isReviewed = Boolean(data?.isTeacherReviewed || data?.assessments.some((a) => a.finalScoreSource === "TEACHER"));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const w = writingScore.trim() ? parseFloat(writingScore) : undefined;
+    const s = speakingScore.trim() ? parseFloat(speakingScore) : undefined;
+    const o = overallScore.trim() ? parseFloat(overallScore) : undefined;
+
+    if (w == null && s == null && o == null && !comment.trim()) {
+      toast.error("Kamida bitta modul ballini yoki ustoz izohini kiriting!");
+      return;
+    }
+
+    mutation.mutate(
+      {
+        writing_score: w,
+        speaking_score: s,
+        final_score: o,
+        teacher_comment: comment.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.success("✅ Ustoz bahosi va izohi muvaffaqiyatli tasdiqlandi!");
+          setIsOpen(false);
+        },
+        onError: (err) => {
+          toast.error(err instanceof Error ? err.message : "Bahoni saqlashda xatolik yuz berdi");
+        },
+      }
+    );
+  };
+
+  return (
+    <Card className="overflow-hidden border border-emerald-500/40 bg-surface shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-emerald-950/20 p-4">
+        <div className="flex items-center gap-2.5">
+          <div className="grid size-9 place-items-center rounded-xl bg-emerald-500/20 text-emerald-400">
+            <Award className="size-5" />
+          </div>
+          <div>
+            <h3 className="flex items-center gap-2 font-bold text-fg text-sm sm:text-base">
+              Ustoz Nazorati & Yakuniy Bahoni Tasdiqlash
+              {isReviewed ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+                  <CheckCircle2 className="size-3" /> Tasdiqlangan
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+                  <Sparkles className="size-3" /> AI Tavsiyasi
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-fg-muted">
+              AI qo&apos;ygan ballarni tahrirlash, qo&apos;lda yakuniy baho belgilash va o&apos;quvchiga shaxsiy xulosa qoldirish
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(!isOpen)}
+          className="border-emerald-500/30 text-xs text-emerald-400 hover:bg-emerald-500/10"
+        >
+          {isOpen ? "Yopish" : "Tahrirlash / Baholash"}
+        </Button>
+      </div>
+
+      {data?.teacherComment && !isOpen && (
+        <div className="border-b border-border/30 bg-emerald-950/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Ustozning rasmiy izohi:</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{data.teacherComment}&rdquo;</p>
+          {(data.teacherReviewedBy || data.teacher_reviewed_by) && (
+            <p className="mt-1 text-[11px] text-fg-subtle">— {(data.teacherReviewedBy || data.teacher_reviewed_by)}</p>
+          )}
+        </div>
+      )}
+
+      {isOpen && (
+        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-fg-muted">
+                Writing Yakuniy Ball
+              </label>
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                max="75"
+                placeholder="Masalan: 6.5 yoki 55"
+                value={writingScore}
+                onChange={(e) => setWritingScore(e.target.value)}
+                className="bg-surface font-mono"
+              />
+              {writingJob?.finalScore != null && (
+                <span className="mt-1 block text-[11px] text-fg-subtle">
+                  AI taklifi: {writingJob.finalScore}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-fg-muted">
+                Speaking Yakuniy Ball
+              </label>
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                max="75"
+                placeholder="Masalan: 7.0 yoki 60"
+                value={speakingScore}
+                onChange={(e) => setSpeakingScore(e.target.value)}
+                className="bg-surface font-mono"
+              />
+              {speakingJob?.finalScore != null && (
+                <span className="mt-1 block text-[11px] text-fg-subtle">
+                  AI taklifi: {speakingJob.finalScore}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-fg-muted">
+                Umumiy (Overall) Ball
+              </label>
+              <Input
+                type="number"
+                step="0.5"
+                min="0"
+                max="75"
+                placeholder="Ixtiyoriy overall"
+                value={overallScore}
+                onChange={(e) => setOverallScore(e.target.value)}
+                className="bg-surface font-mono"
+              />
+              <span className="mt-1 block text-[11px] text-fg-subtle">
+                Bo&apos;sh qoldirilsa, avtomatik hisoblanadi
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-fg-muted">
+              Ustoz Pedagogik Izohi va Tavsiyalari
+            </label>
+            <Textarea
+              rows={3}
+              placeholder="O'quvchiga kuchli va zaif tomonlari, imtihonda e'tibor qaratishi kerak bo'lgan tavsiyalarni yozing..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="bg-surface text-sm leading-relaxed"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsOpen(false)}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              loading={mutation.isPending}
+              className="bg-emerald-600 font-semibold text-white hover:bg-emerald-500"
+            >
+              <CheckCircle2 className="size-4" /> Yakuniy Bahoni Tasdiqlash
+            </Button>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+}
 
 export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isStaff: boolean }) {
   const t = useTranslations("assessment");
@@ -26,6 +235,7 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
         <h2 id="assessment-feedback-title" className="font-semibold text-fg">{t("title")}</h2>
         <Button variant="outline" size="sm" loading={query.isFetching} onClick={() => query.refresh()}>{t("refresh")}</Button>
       </div>
+      {isStaff && <TeacherAttemptOverrideCard attemptId={attemptId} data={query.data} />}
       {query.isLoading && <p role="status" className="text-sm text-fg-muted">{t("loading")}</p>}
       {query.isError && <Card role="alert" className="p-4 text-sm text-fg-muted">{t("loadError")}</Card>}
       {!query.isLoading && !query.isError && query.data?.assessments.length === 0 && (
@@ -39,6 +249,7 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
 
 export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJobView; attemptId: string; isStaff: boolean }) {
   const t = useTranslations("assessment");
+  const [selectedZoomImage, setSelectedZoomImage] = React.useState<{ url: string; title: string } | null>(null);
   const result = job.approvedFeedback ?? job.finalResult ?? job.evaluation?.result;
   const partial = job.practiceMode === "PARTIAL";
   const title = partial ? t("partialPractice", { skill: job.skill === "writing" ? "Writing" : "Speaking" }) : job.program === "MULTILEVEL" ? t(`multilevel.${job.skill}`) : t(`ielts.${job.skill}`);
@@ -90,9 +301,39 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("original")}</h5>
               {job.skill === "writing" && <p className="text-xs text-fg-muted">{t("wordCount", { count: submission.wordCount })}</p>}
               {submission.originalResponse && <p className="whitespace-pre-wrap break-words text-sm text-fg">{submission.originalResponse}</p>}
+              {submission.imageUrls && submission.imageUrls.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-emerald-500/30 bg-emerald-950/15 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+                      <ImageIcon className="size-3.5" /> Qo&apos;lyozma rasmlar ({submission.imageUrls.length} ta sahifa)
+                    </span>
+                    <span className="text-[11px] text-fg-subtle">Kattalashtirish uchun ustiga bosing</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5 pt-1">
+                    {submission.imageUrls.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedZoomImage({ url, title: `Qo'lyozma ${part.task} · Sahifa #${idx + 1}` })}
+                        className="group relative size-20 overflow-hidden rounded-lg border border-slate-700 bg-black/40 transition hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/40"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Qo'lyozma sahifa ${idx + 1}`} className="size-full object-cover transition-transform duration-200 group-hover:scale-110" />
+                        <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[9px] font-bold text-white">#{idx + 1}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {submission.ocrText && (
+                    <div className="mt-2 rounded-lg border border-border/50 bg-bg-subtle p-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">AI o&apos;qigan matn (OCR):</p>
+                      <p className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed text-fg">{submission.ocrText}</p>
+                    </div>
+                  )}
+                </div>
+              )}
               {submission.audioUrl && <audio controls preload="none" className="w-full max-w-md" aria-label={t("originalAudio")}
                 src={assessmentAudioPath(attemptId, submission.questionId)}><track kind="captions" /></audio>}
-              {!submission.originalResponse && !submission.audioUrl && <p className="text-sm text-fg-muted">{t("noResponse")}</p>}
+              {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{t("noResponse")}</p>}
               {job.skill === "speaking" && <div className="rounded-[8px] bg-bg-subtle p-3">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("transcript")}</h5>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{submission.transcript?.text || t("transcriptPending")}</p>
@@ -132,6 +373,11 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
         </details>
         {isStaff && <AssessmentReviewForm job={job} attemptId={attemptId} />}
       </div>
+      <ImageZoomModal
+        url={selectedZoomImage?.url ?? null}
+        title={selectedZoomImage?.title}
+        onClose={() => setSelectedZoomImage(null)}
+      />
     </Card>
   );
 }

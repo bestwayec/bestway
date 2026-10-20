@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import {
+  Camera,
   CheckCircle2,
+  Keyboard,
   Contrast,
   Flag,
   Loader2,
@@ -1253,6 +1255,8 @@ function EssayQuestionEditor({
     }
   };
 
+  const [writingMode, setWritingMode] = React.useState<"type" | "image">("type");
+
   return (
     <div className="space-y-3">
       {q.guidance && multilevelSkill === "writing" ? (
@@ -1266,37 +1270,89 @@ function EssayQuestionEditor({
           <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
         </div>
       ) : header}
-      <WritingImageOcr
-        attemptId={attemptId}
-        questionId={q.id}
-        currentText={value}
-        onExtractedText={(ocrText, mode) => {
-          const nextText =
-            mode === "append" && value.trim()
-              ? `${value.trim()}\n\n${ocrText}`
-              : ocrText;
-          handleWritingChange(nextText);
-        }}
-      />
-      <Textarea
-        value={value}
-        onChange={(e) => handleWritingChange(e.target.value)}
-        className="min-h-72 resize-y leading-relaxed text-base sm:text-sm focus-visible:border-brand touch-manipulation font-mono sm:font-sans"
-        aria-label={tx("writingResponseLabel", { number: q.number })}
-        placeholder={tx("writingPlaceholder")}
-        spellCheck={false}
-        autoCorrect="off"
-        autoCapitalize="off"
-        autoComplete="off"
-      />
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-        <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+
+      {/* Writing input mode switcher: typing vs handwritten paper upload */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
+        <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-surface-subtle p-1">
+          <button
+            type="button"
+            onClick={() => setWritingMode("type")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+              writingMode === "type"
+                ? "bg-brand text-white shadow-sm"
+                : "text-fg-muted hover:bg-surface hover:text-fg"
+            )}
+          >
+            <Keyboard className="size-3.5" /> ⌨️ Matn terish
+          </button>
+          <button
+            type="button"
+            onClick={() => setWritingMode("image")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+              writingMode === "image"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-fg-muted hover:bg-surface hover:text-fg"
+            )}
+          >
+            <Camera className="size-3.5" /> 📷 Qog&apos;oz / Rasm yuklash (OCR)
+          </button>
+        </div>
         {value.trim() && (
           <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400">
             <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
           </span>
         )}
       </div>
+
+      {writingMode === "image" ? (
+        <div className="space-y-3">
+          <WritingImageOcr
+            attemptId={attemptId}
+            questionId={q.id}
+            currentText={value}
+            onExtractedText={(ocrText, mode) => {
+              const nextText =
+                mode === "append" && value.trim()
+                  ? `${value.trim()}\n\n${ocrText}`
+                  : ocrText;
+              handleWritingChange(nextText);
+            }}
+          />
+          {value.trim() && (
+            <div className="space-y-1.5 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-emerald-400">
+                <span>📝 OCR olingan / Saqlangan matn tahriri</span>
+                <span className="font-mono text-[11px]">{value.trim().split(/\s+/).filter(Boolean).length} so&apos;z</span>
+              </div>
+              <Textarea
+                value={value}
+                onChange={(e) => handleWritingChange(e.target.value)}
+                className="min-h-36 resize-y font-mono text-sm leading-relaxed"
+                placeholder="OCR qilingan matn bu yerda chiqadi yoki bemalol o'zgartirishingiz mumkin..."
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <Textarea
+            value={value}
+            onChange={(e) => handleWritingChange(e.target.value)}
+            className="min-h-72 resize-y font-mono text-base leading-relaxed touch-manipulation focus-visible:border-brand sm:font-sans sm:text-sm"
+            aria-label={tx("writingResponseLabel", { number: q.number })}
+            placeholder={tx("writingPlaceholder")}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            autoComplete="off"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+            <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

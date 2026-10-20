@@ -83,7 +83,13 @@ def readiness(exam):
     version = exam.get('specification_version', exam.get('specificationVersion'))
     if version not in SPECS:
         return dict(supported=False, issues=['Unsupported Multilevel specification'])
-    return dict(supported=True, issues=blueprint_issues(exam.get('sections') or [], exam.get('profile') == 'full_mock', version))
+    profile = exam.get('profile')
+    sections = exam.get('sections') or []
+    is_ws_only = profile in ('writing_speaking', 'partial_practice', 'single_skill')
+    if is_ws_only:
+        return dict(supported=True, issues=[])
+    full = profile == 'full_mock'
+    return dict(supported=True, issues=blueprint_issues(sections, full, version))
 
 
 def specification_payload(version):

@@ -272,11 +272,14 @@ def start(actor, exam_id, data):
             practice['single_section'] = data['skills'][0]
             practice['section_filter'] = data['skills'][0]
         if exam.type == 'multilevel' and not partial:
-            readiness = multilevel_readiness(_exam_tree(exam))
-            if not readiness['supported']:
-                fail('SPECIFICATION_UNSUPPORTED', readiness['issues'][0])
-            if readiness['issues']:
-                fail('MOCK_NOT_READY', '; '.join(readiness['issues']))
+            sections_skills = {s.skill for s in MockSection.objects.filter(exam_id=exam.id)}
+            is_ws_only = exam.profile == 'writing_speaking' or (sections_skills and sections_skills.issubset({'writing', 'speaking'}))
+            if not is_ws_only:
+                readiness = multilevel_readiness(_exam_tree(exam))
+                if not readiness['supported']:
+                    fail('SPECIFICATION_UNSUPPORTED', readiness['issues'][0])
+                if readiness['issues']:
+                    fail('MOCK_NOT_READY', '; '.join(readiness['issues']))
             exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
         if partial:
             exam.speaking_profile_version = exam.speaking_profile_version or CURRENT_SPEAKING_PROFILE
@@ -285,7 +288,7 @@ def start(actor, exam_id, data):
             fail('MOCK_EXAM_EMPTY', "Bu imtihonda hali savollar yo'q")
         is_single = partial and len(data['skills']) == 1
         flow = 'single_skill' if is_single else ('partial_practice' if partial else ('full_test' if data.get('flow') == 'full_test' else 'single_skill'))
-        if flow == 'full_test' and exam.profile != 'full_mock':
+        if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
         at = timezone.now()
@@ -295,7 +298,7 @@ def start(actor, exam_id, data):
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
             flow_mode=flow,
-            current_skill=data['skills'][0] if partial else ('listening' if flow == 'full_test' else None),
+            current_skill=data['skills'][0] if partial else (('listening' if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])) else (shaped.get('sections', [{}])[0].get('skill') if shaped.get('sections') else 'writing')) if flow == 'full_test' else None),
             media_state={SCOPE_KEY: practice} if partial else None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,
             submitted_sections=[] if flow == 'full_test' else None)
@@ -519,11 +522,11 @@ def advance(actor, attempt_id):
         assert_in_progress(attempt)
         if attempt.flow_mode != 'full_test':
             fail('NOT_FULL_TEST', 'Bu urinish full_test rejimida emas')
+        existing_skills = [s.skill for s in MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order')]
+        filtered_order = [s for s in SKILLS if s in existing_skills]
+        order = filtered_order or existing_skills or list(SKILLS)
         if versioned(attempt):
             assert_program(actor, attempt)
-            order = SKILLS
-        else:
-            order = SKILLS if MockSection.objects.filter(exam_id=attempt.exam_id, skill='speaking').exists() else SKILLS[:3]
         index = order.index(attempt.current_skill) if attempt.current_skill in order else -1
         if index < 0 or index == len(order)-1:
             fail('FLOW_COMPLETE', 'Submit the final section' if versioned(attempt) else 'Oxirgi bo‘limdasiz — imtihonni yakunlang')

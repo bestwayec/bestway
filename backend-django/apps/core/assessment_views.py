@@ -41,6 +41,11 @@ def validate_review(data):
 def attempt(request,attempt_id):return success(assessment.for_attempt(request.user,attempt_id))
 
 @api_view(['POST'])
+@permission_classes([roles('teacher', 'admin', 'super_admin')])
+def teacher_grade(request, attempt_id):
+    return success(assessment.teacher_grade_attempt(request.user, attempt_id, request.data or {}), 200)
+
+@api_view(['POST'])
 @permission_classes([roles('teacher','admin','super_admin')])
 def review(request,job_id):return success(assessment.review(request.user,job_id,validate_review(payload(request,{'action','expectedVersion','reason','parts','feedback'}))),201)
 

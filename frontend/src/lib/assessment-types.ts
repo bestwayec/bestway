@@ -92,6 +92,11 @@ export interface AssessmentJobView {
     originalResponse: string;
     wordCount: number;
     audioUrl: string | null;
+    imageUrls?: string[];
+    imageKeys?: string[];
+    ocrText?: string;
+    teacherScore?: number | null;
+    teacherFeedback?: string | null;
     transcript: {
       text: string;
       confidence: number | null;
@@ -104,7 +109,39 @@ export interface AssessmentJobView {
 
 export interface AttemptAssessments {
   attemptId: string;
+  status?: string;
+  overall_band?: number | null;
+  confidence?: number | null;
+  provisional?: boolean;
+  teacher_confirmed?: boolean;
+  is_teacher_reviewed?: boolean;
+  isTeacherReviewed?: boolean;
+  teacher_comment?: string | null;
+  teacherComment?: string | null;
+  teacher_reviewed_by?: string | null;
+  teacherReviewedBy?: string | null;
+  criteria_scores?: Record<string, number>;
+  strengths?: string[];
+  weaknesses?: string[];
+  mistakes_and_fixes?: Array<{ original: string; corrected: string; explanation: string }>;
+  vocabulary_upgrades?: Array<{ original: string; alternative: string; explanation: string }>;
+  next_action?: string;
+  band_8_rewrite?: string;
   assessments: AssessmentJobView[];
+}
+
+export interface TeacherGradeAttemptInput {
+  final_score?: number;
+  finalScore?: number;
+  writing_score?: number;
+  writingScore?: number;
+  speaking_score?: number;
+  speakingScore?: number;
+  teacher_comment?: string;
+  teacherComment?: string;
+  comment?: string;
+  criteria_scores?: Record<string, number>;
+  criteriaScores?: Record<string, number>;
 }
 
 export type AssessmentReviewAction = "ACCEPT" | "OVERRIDE" | "EDIT_FEEDBACK" | "REGRADE" | "NEEDS_REVIEW";
