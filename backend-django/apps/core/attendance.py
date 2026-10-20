@@ -115,8 +115,18 @@ def bulk(actor, data):
     # payload can intentionally produce multiple messages; do not deduplicate.
     for r in data['records']:
         if r['state'] == 'absent' and previous.get(r['studentId']) != 'absent':
-            notify_parents(r['studentId'], 'attendance',
-                f"Farzandingiz {members[r['studentId']].user.name} {day.isoformat()} kungi darsga kelmadi.")
+            # Check previous absence for consecutive warnings
+            prev_records = list(Attendance.objects.filter(
+                group_id=data['groupId'],
+                student_id=r['studentId'],
+                date__lt=day
+            ).order_by('-date')[:1])
+            is_consecutive = bool(prev_records and prev_records[0].state == 'absent')
+            if is_consecutive:
+                msg = f"⚠️ DIQQAT! Farzandingiz {members[r['studentId']].user.name} ketma-ket 2 marta dars qoldirdi ({day.isoformat()}). Iltimos, o'quv markazi ma'muriyati bilan bog'laning."
+            else:
+                msg = f"Farzandingiz {members[r['studentId']].user.name} {day.isoformat()} kungi darsga kelmadi."
+            notify_parents(r['studentId'], 'attendance', msg)
     audit(actor, 'attendance.bulk_update', 'group', data['groupId'],
         new=dict(date=data['date'][:10], records=len(data['records'])))
     return dict(updated=len(marked), cleared=len(cleared))
@@ -181,3 +191,21 @@ def export(query):
     lines = ['Sana;Ism;Holat']
     lines += [';'.join(map(csv_cell, [r.date.isoformat(), r.student.user.name, labels.get(r.state, r.state)])) for r in rows]
     return '\ufeff' + '\r\n'.join(lines)
+
+
+def group_summary(actor, query):
+    manage_group(actor, query['groupId'])
+    rows = list(month_rows(query.get('month')).filter(group_id=query['groupId']))
+    present = sum(1 for r in rows if r.state == 'present')
+    late = sum(1 for r in rows if r.state == 'late')
+    absent = sum(1 for r in rows if r.state == 'absent')
+    total = len(rows)
+    rate = round(((present + (late * 0.5)) / max(1, total)) * 100) if total > 0 else 100
+    return {
+        "groupId": query['groupId'],
+        "totalMarked": total,
+        "present": present,
+        "late": late,
+        "absent": absent,
+        "attendanceRate": rate,
+    }
