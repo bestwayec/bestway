@@ -58,7 +58,9 @@ def create(actor,data):
     if User.objects.filter(phone=data['phone']).exists(): raise ContractAPIException('PHONE_TAKEN',"Bu telefon raqam allaqachon ro'yxatdan o'tgan",409)
     group_exists(data.get('groupId'))
     hashed=hash_password(data['password'])
-    initial=numeric_settings()['initialPoints']
+    initial=numeric_settings().get('initialPoints') or 100
+    if not initial or initial <= 0:
+        initial = 100
     identifier=str(uuid4())
     with transaction.atomic():
         User.objects.create(id=identifier,name=data['name'],phone=data['phone'],password_hash=hashed,role=data['role'],is_active=True,created_at=timezone.now(),updated_at=timezone.now())
@@ -154,11 +156,111 @@ def users(request):
     return paginated(items,q['page'],q['limit'],total)
 
 
+def delete_student_cascade(actor, identifier):
+    user = User.objects.filter(id=identifier).first()
+    if user is None:
+        raise ContractAPIException('USER_NOT_FOUND', 'Foydalanuvchi topilmadi', 404)
+    if user.role == 'super_admin':
+        raise ContractAPIException('FORBIDDEN', "Super adminni o'chirib bo'lmaydi", 403)
+    if identifier == actor.id:
+        raise ContractAPIException('FORBIDDEN', "O'z akkauntingizni o'chira olmaysiz", 403)
+    if actor.role != 'super_admin':
+        raise ContractAPIException('FORBIDDEN', "Faqat super admin talabani o'chira oladi", 403)
+
+    from apps.legacy_schema.models import (
+        Answer,
+        AntiCheatEvent,
+        AssessmentEvaluation,
+        AssessmentJob,
+        Attendance,
+        DesktopAuthCode,
+        MockAnswer,
+        MockAttempt,
+        MockCheatEvent,
+        MockPurchase,
+        MonthlyPointsArchive,
+        Notification,
+        ParentStudent,
+        Payment,
+        PointsLog,
+        RefreshToken,
+        SpeechTranscript,
+        StudentProfile,
+        TelegramLinkToken,
+        TestAttempt,
+        VideoPurchase,
+    )
+
+    with transaction.atomic():
+        # 1. Mock attempts and all nested assessments/evaluations/transcripts/answers/cheats
+        mock_attempt_ids = list(MockAttempt.objects.filter(student_id=identifier).values_list('id', flat=True))
+        if mock_attempt_ids:
+            job_ids = list(AssessmentJob.objects.filter(Q(attempt_id__in=mock_attempt_ids) | Q(student_id=identifier)).values_list('id', flat=True))
+            if job_ids:
+                AssessmentEvaluation.objects.filter(job_id__in=job_ids).delete()
+                SpeechTranscript.objects.filter(job_id__in=job_ids).delete()
+                AssessmentJob.objects.filter(id__in=job_ids).delete()
+            MockAnswer.objects.filter(attempt_id__in=mock_attempt_ids).delete()
+            MockCheatEvent.objects.filter(attempt_id__in=mock_attempt_ids).delete()
+            MockAttempt.objects.filter(id__in=mock_attempt_ids).delete()
+        else:
+            job_ids = list(AssessmentJob.objects.filter(student_id=identifier).values_list('id', flat=True))
+            if job_ids:
+                AssessmentEvaluation.objects.filter(job_id__in=job_ids).delete()
+                SpeechTranscript.objects.filter(job_id__in=job_ids).delete()
+                AssessmentJob.objects.filter(id__in=job_ids).delete()
+
+        # 2. Legacy test attempts
+        legacy_attempt_ids = list(TestAttempt.objects.filter(student_id=identifier).values_list('id', flat=True))
+        if legacy_attempt_ids:
+            Answer.objects.filter(attempt_id__in=legacy_attempt_ids).delete()
+            AntiCheatEvent.objects.filter(attempt_id__in=legacy_attempt_ids).delete()
+            TestAttempt.objects.filter(id__in=legacy_attempt_ids).delete()
+
+        # 3. Attendance, Payments, Points, Monthly Archives
+        Attendance.objects.filter(student_id=identifier).delete()
+        Payment.objects.filter(student_id=identifier).delete()
+        PointsLog.objects.filter(student_id=identifier).delete()
+        MonthlyPointsArchive.objects.filter(student_id=identifier).delete()
+
+        # 4. Parent student links
+        ParentStudent.objects.filter(Q(student_id=identifier) | Q(parent_user_id=identifier)).delete()
+
+        # 5. Purchases, notifications, tokens
+        MockPurchase.objects.filter(user_id=identifier).delete()
+        VideoPurchase.objects.filter(user_id=identifier).delete()
+        Notification.objects.filter(user_id=identifier).delete()
+        RefreshToken.objects.filter(user_id=identifier).delete()
+        DesktopAuthCode.objects.filter(user_id=identifier).delete()
+        TelegramLinkToken.objects.filter(user_id=identifier).delete()
+
+        # 6. StudentProfile
+        StudentProfile.objects.filter(user_id=identifier).delete()
+
+        # 7. User record
+        old_user = dict(id=user.id, name=user.name, phone=user.phone, role=user.role)
+        User.objects.filter(id=identifier).delete()
+
+    audit(actor, 'user.delete', 'user', identifier, old=old_user, new=None)
+    return dict(deleted=True, id=identifier)
+
+
+@api_view(['DELETE'])
+@permission_classes([Authenticated])
+def delete_student_view(request, student_id):
+    require_role(request, 'super_admin')
+    return success(delete_student_cascade(request.user, student_id))
+
+
 @api_view(['GET','PATCH','DELETE'])
 @permission_classes([Authenticated])
 def user(request,user_id):
     if request.method=='GET': return success(detail(request.user,user_id))
     require_role(request,*(['super_admin'] if request.method=='DELETE' else ['admin','super_admin']))
-    if request.method=='DELETE': return success(deactivate(request.user,user_id))
+    if request.method=='DELETE':
+        hard = request.GET.get('hard') == 'true' or request.user.role == 'super_admin'
+        if hard:
+            return success(delete_student_cascade(request.user, user_id))
+        return success(deactivate(request.user,user_id))
     data=validate(payload(request,{'name','phone','password','role','isActive','isApproved','groupId','telegramChatId'}),True)
     return success(update(request.user,user_id,data))

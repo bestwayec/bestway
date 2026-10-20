@@ -80,6 +80,15 @@ export function useDeactivateUser() {
   });
 }
 
+/** Superadmin permanent cascade deletion for a student */
+export function useDeleteStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/students/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 /** PATCH /users/:id { isApproved: true } — tez tasdiqlash */
 export function useApproveStudent() {
   const qc = useQueryClient();
