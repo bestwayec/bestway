@@ -102,10 +102,33 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Xizmat darajasida xavfsiz qayta qurildi: `docker compose up -d --build backend frontend assessment-worker`.
    - Public Endpoint 200 OK tekshirildi: `https://bestwayec.uz/` -> `HTTP/1.1 200 OK`.
 
+### 8-BLOK: Resume Bo'limini Tanlash, Moslashuvchan Qisman Topshirish (Zero-Score Fallback) & Speaking 30 Daqiqa (Release v0.8.6)
+1. **Resume Bo'limini Tanlash Modali (`ExamResumeModal`)**:
+   - `frontend/src/components/mock/exam-resume-modal.tsx`: Talaba imtihon kartasida yoki imtihon tafsilotlari sahifasida "Resume" (Davom ettirish) bosganda to'g'ridan-to'g'ri Speaking moduliga o'tib ketmasdan, faol modullardan birini tanlash dialogi ko'rsatiladi: `[ ✍️ Writing ]` yoki `[ 🗣️ Speaking ]`.
+   - Tanlangan modulga ko'ra `/mock/attempt/${id}?skill=${skill}` manziliga yo'naltiradi va bo'limlararo erkin o'tish imkonini beradi.
+   - `mock-exams-view.tsx` va `mock-exam-detail-view.tsx` komponentlariga to'liq ulandi.
+2. **Qat'iy Submit Blockerlar Olib Tashlandi (Moslashuvchan Topshirish)**:
+   - Backend `backend-django/apps/core/mock_submissions.py` dagi `assert_complete` tekshiruvi moslashuvchan (non-blocking) qilindi: talaba to'liq bo'lmagan holatda yoki 0 ta savolga javob bergan bo'lsa ham imtihonni yakunlay oladi.
+   - Javob berilmagan barcha savollar uchun avtomatik ravishda `MockAnswer` yozuvlari `score = 0.0` (va ob'ektiv savollar uchun `is_correct = False`) bilan yaratiladi.
+   - `backend-django/apps/core/assessment_worker.py`: Hech qanday javob yoki audio taqdim etilmagan modullar uchun `build_zero_result(input)` generatsiyasi qo'shildi (`score: 0.0`, evidence: "Javob taqdim etilmadi (0 ball)"), natijada `ASSESSMENT_RESPONSE_EVIDENCE_MISSING` xatosi to'liq bartaraf etildi.
+3. **Frontend Submit Tasdiqlash Modali (`SubmitConfirmModal`)**:
+   - `frontend/src/components/mock/submit-confirm-modal.tsx`: Agar o'quvchi ba'zi savollarni qoldirgan bo'lsa, xolis ogohlantirish beradi:
+     *"Siz {total} tadan {answered} ta savolga javob berdingiz. Qolgan javob berilmagan savollarga 0 ball qo'yiladi. Imtihonni yakunlaysizmi?"*
+   - Tugmalar: `[ ⬅️ Davom etish ]` va `[ ✅ Ha, yakunlash ]`.
+4. **Speaking Moduli Davomiyligi 30 Daqiqaga Uzaytirildi**:
+   - `backend-django/apps/core/multilevel.py` spetsifikatsiyasida speaking davomiyligi 30 daqiqa (1800s) etib belgilandi.
+   - `seed_multilevel_test1_gym_diet.py` da `duration_minutes=30` qilindi va bazadagi barcha speaking bo'limlari 30 daqiqaga yangilandi.
+5. **QA Testlar (100% PASS Gate), Git Teg & Uzilishsiz VPS Deploy**:
+   - Backend Pytest: 500 ta test PASS, 4 ta skipped (`test_exam_resume_and_partial_submit_v086.py` 100% PASS).
+   - Frontend Vitest: 52 ta test to'plami, 356 ta test 100% PASS (jumladan `exam-resume-modal.spec.ts`).
+   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
+   - Rasmiy versiya `v0.8.6` teglanib, GitHub `main` tarmog'iga push qilindi.
+   - Contabo VPS (`169.58.58.229`) serverida `backend`, `frontend` va `assessment-worker` konteynerlari qayta qurildi, `seed_multilevel_test1_gym_diet` qayta yurgizildi va `https://bestwayec.uz/` -> `HTTP 200 OK` tasdiqlandi.
+
 ---
 
 ## Jarayonda
-- Yangi qo'shilgan Dual-Layer baholash va Excel/PDF eksport oqimini real o'quvchilar va ustozlar sinovida monitoring qilish.
+- Yangi v0.8.6 versiyasida topshirilgan qisman imtihonlar (partial submissions) va AI baholash natijalarini real o'quvchilar sinovida kuzatish.
 
 ---
 
@@ -120,3 +143,5 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 2. **Qo'lyozma Javoblarni Tan olish**: Talaba matn kiritmagan taqdirda ham, agar `imageKeys` mavjud bo'lsa, `mock_submissions.py` javobni to'liq deb hisoblaydi.
 3. **Ustoz Yakuniy Qarori Ustuvorligi**: AI ballari faqat boshlang'ich tavsiya vazifasini o'taydi; ustoz `POST /assessment/attempts/<id>/teacher-grade` orqali yakuniy bahoni belgilaganda tizimdagi barcha sertifikatlar va reytinglar ustoz bahosi asosida qayta hisoblanadi.
 4. **Natijalar Eksportining Standarti**: Excel eksporti uchun xalqaro korporativ standartdagi `.xlsx` (openpyxl) va chop etish uchun A4 Portrait formalangan, Grand Education muhr o'rni bilan ta'minlangan rasmiy PDF (ReportLab) ishlab chiqildi.
+5. **Moslashuvchan Topshirish & Zero-Score Fallback**: Hech qanday holatda talabaning imtihonni topshirishi qat'iy validatorlar bilan to'xtatilmasligi shart. Javobsiz savollar 0 ball bilan xavfsiz to'ldiriladi va AI worker xatosiz yakunlanadi.
+6. **Resume Tanlovi**: O'quvchi o'zi xohlagan bo'limni (Writing yoki Speaking) tanlab davom ettirish huquqiga ega, tizim avtomatik ravishda bitta modulga majburlab tiqmasligi shart.
