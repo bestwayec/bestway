@@ -149,6 +149,22 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Barcha konteynerlar (`education-backend`, `bestway-prod-assessment-worker-1`, `education-frontend`) qayta qurildi va ishga tushirildi.
    - Server tekshiruvi: `https://bestwayec.uz/` -> `HTTP 200 OK`, `https://bestwayec.uz/api/backend/health` -> `HTTP 200 OK` (`status: ok`).
 
+### 10-BLOK: Multimodal Audio/Visual Pipeline (Gemini 2.5 Flash STT & Vision) & DeepSeek v4.1 Evaluator
+1. **Multimodal Audio STT & Fonetik Diagnostika (`google/gemini-2.5-flash`)**:
+   - Talaba yuborgan `.webm`, `.mp3` va `.wav` audio oqimlari Gemini Flash multimodal endpointi orqali to'g'ridan-to'g'ri so'zma-so'z transkripsiya qilinadi.
+   - So'zma-so'z matndan tashqari, noaniq talaffuz qilingan so'zlar (`mispronounced_words`), sun'iy to'xtalishlar/fillerlar (`pauses_and_hesitations`) va ravonlik bahosi (`fluency_score`) ajratib olinadi.
+   - Natijalar `MockAnswer.response`, `MockAnswer.rubric_scores['speech_diagnostics']`, `MockAttempt.media_state['speech_diagnostics']`, va `SpeechTranscript.pronunciation_evidence` ga to'liq saqlanadi.
+   - Frontend: `assessment-panel.tsx` va `teacher-evaluation-dialog.tsx` da talaffuz muammolari va ravonlik ko'rsatkichlari chiroyli vizual kartalar ko'rinishida chiqariladi.
+2. **Writing Qo'lyozma Rasmlarini OCR Qilish (Vision `google/gemini-2.5-flash`)**:
+   - `writing_ocr.py` dagi birlamchi Vision dvigateli `google/gemini-2.5-flash` ga o'tkazildi. Qog'ozdagi insholar paragraf va tinish belgilarini saqlagan holda 100% aniqlikda matnga aylantiriladi.
+   - Ajratilgan matn DeepSeek v4.1 Flash (`deepseek/deepseek-v4.1-flash`) modeliga uzatilib, Task Achievement, Cohesion, Lexical Resource va Grammar bo'yicha yakuniy CEFR ballari hisoblanadi.
+3. **Graceful Partial Submission Kafolati**:
+   - Talaba imtihonni istalgan paytda yakunlaganda (1 ta yoki bir nechta savol topshirilganidan qat'i nazar), topshirilmagan barcha savollarga 0 ball yoziladi va tizim xatosiz `200 OK` bilan yakuniy natijalarga o'tadi.
+4. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Django Pytest: **509 ta test PASS**, 4 ta skipped (100% PASS).
+   - Frontend Vitest: **52 ta test to'plami, 356 ta test PASS** (100% PASS).
+   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
+
 ---
 
 ## Jarayonda

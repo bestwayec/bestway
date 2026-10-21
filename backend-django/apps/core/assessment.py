@@ -70,6 +70,8 @@ def for_attempt(actor,identifier):
         active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
         if active_res:
             value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
+        if isinstance(attempt.media_state, dict):
+            value['speechDiagnostics'] = attempt.media_state.get('speech_diagnostics', {})
         for part in input['parts']:
             for r in part['responses']:
                 transcript=next((t for t in transcripts if t.question_id==r['questionId'] and (not r.get('audioHash') or t.audio_hash==r.get('audioHash'))),None)
@@ -98,11 +100,23 @@ def for_attempt(actor,identifier):
                 if not t_text and isinstance(attempt.media_state, dict):
                     t_text = attempt.media_state.get('transcripts', {}).get(r['questionId'])
 
+                speech_diag = None
+                if transcript and transcript.pronunciation_evidence and transcript.pronunciation_evidence != 'UNAVAILABLE':
+                    try:
+                        speech_diag = json.loads(transcript.pronunciation_evidence)
+                    except Exception:
+                        pass
+                if not speech_diag and ans and isinstance(ans.rubric_scores, dict):
+                    speech_diag = ans.rubric_scores.get('speech_diagnostics') or ans.rubric_scores.get('speechDiagnostics')
+                if not speech_diag and isinstance(attempt.media_state, dict):
+                    speech_diag = attempt.media_state.get('speech_diagnostics', {}).get(r['questionId'])
+
                 t_dict = dict(
                     text=t_text,
                     confidence=transcript.confidence if transcript else 0.95,
                     segments=transcript.segments if (transcript and transcript.segments) else [],
-                    pronunciationEvidence='UNAVAILABLE'
+                    pronunciationEvidence='AVAILABLE' if (speech_diag and speech_diag.get('mispronounced_words')) else 'UNAVAILABLE',
+                    speechDiagnostics=speech_diag
                 ) if t_text else None
 
                 value['submissions'].append(dict(
@@ -112,7 +126,8 @@ def for_attempt(actor,identifier):
                     audioUrl=audio_link,
                     teacherScore=ans.score if (ans and ans.graded_by_id) else None,
                     teacherFeedback=ans.feedback if ans else None,
-                    transcript=t_dict))
+                    transcript=t_dict,
+                    speechDiagnostics=speech_diag))
         values.append(value)
     CRIT_MAP = {
         'ta': 'task_achievement',

@@ -102,6 +102,12 @@ export interface AssessmentJobView {
       confidence: number | null;
       segments: Array<{ start: number; end: number; text: string; confidence: number | null }>;
       pronunciationEvidence: PronunciationEvidence;
+      speechDiagnostics?: {
+        mispronounced_words?: Array<{ word: string; issue: string; suggestion: string; approximate_ms?: number }>;
+        pauses_and_hesitations?: Array<{ type: string; text: string; approximate_ms?: number }>;
+        fluency_score?: number;
+        clarity_rating?: string;
+      } | null;
     } | null;
   }>;
   parts: Array<{ id: string; max: number; task: string; context: string }>;
@@ -127,6 +133,7 @@ export interface AttemptAssessments {
   vocabulary_upgrades?: Array<{ original: string; alternative: string; explanation: string }>;
   next_action?: string;
   band_8_rewrite?: string;
+  speechDiagnostics?: Record<string, any> | null;
   assessments: AssessmentJobView[];
 }
 

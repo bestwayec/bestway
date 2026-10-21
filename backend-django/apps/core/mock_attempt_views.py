@@ -481,6 +481,18 @@ def writing_ocr_view(request, attempt_id, question_id=None):
         ),
     )
 
+    try:
+        m_state = attempt.media_state if isinstance(attempt.media_state, dict) else {}
+        m_images = list(m_state.get('writing_images') or [])
+        for k in merged_keys:
+            u = f"/media/{k}"
+            if u not in m_images:
+                m_images.append(u)
+        m_state['writing_images'] = m_images
+        MockAttempt.objects.filter(id=attempt.id).update(media_state=m_state)
+    except Exception:
+        pass
+
     return success({
         'ocrText': final_text,
         'pages': ocr_result.get('pages', []),

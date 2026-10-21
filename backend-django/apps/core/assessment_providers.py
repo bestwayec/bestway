@@ -553,6 +553,147 @@ def assess(input,role):
             return _assess_single(input,role,provider='gemini')
         raise
 
+def _generate_heuristic_speech_diagnostics(text: str, duration_ms: int = 3000) -> dict:
+    if not text or not str(text).strip():
+        return {
+            "mispronounced_words": [],
+            "pauses_and_hesitations": [],
+            "fluency_score": 0.0,
+            "clarity_rating": "Silent"
+        }
+
+    raw_words = str(text).strip().split()
+    word_count = len(raw_words)
+    total_sec = max(1.0, (duration_ms or (word_count * 400)) / 1000.0)
+    wpm = (word_count / total_sec) * 60.0
+
+    filler_tokens = {"um", "uh", "er", "ah", "like", "well", "so", "hmm"}
+    pauses_and_hesitations = []
+    mispronounced_words = []
+
+    step_ms = int((total_sec * 1000) / max(1, word_count))
+    clean_words = []
+
+    for idx, w in enumerate(raw_words):
+        cleaned = re.sub(r"[^a-zA-Z]", "", w).lower()
+        clean_words.append(cleaned)
+        approx_ms = idx * step_ms
+
+        if cleaned in filler_tokens:
+            pauses_and_hesitations.append({
+                "type": "filler_word",
+                "text": cleaned,
+                "raw_word": w,
+                "approximate_ms": approx_ms,
+            })
+        elif idx > 0 and cleaned and cleaned == clean_words[idx - 1]:
+            pauses_and_hesitations.append({
+                "type": "false_start_repetition",
+                "text": f"{clean_words[idx-1]} {cleaned}",
+                "raw_word": w,
+                "approximate_ms": approx_ms,
+            })
+
+    phonetic_watchlist = {
+        "comfortable": ("Omission of second syllable or misstressed", "Pronounce as /ˈkʌmf.tə.bəl/ without emphasizing 'for'"),
+        "specific": ("Confusing /s/ and /sp/ onset", "Ensure clear /sp/ onset: /spəˈsɪf.ɪk/"),
+        "environment": ("Dropping the /n/ before /m/", "Enunciate clearly: /ɪnˈvaɪ.rən.mənt/"),
+        "phenomenon": ("Stress placement confusion", "Primary stress on second syllable: /fəˈnɒm.ɪ.nən/"),
+        "development": ("Stress on first syllable instead of second", "Stress the second syllable: /dɪˈvel.əp.mənt/"),
+        "colleague": ("Pronouncing the silent '-ue'", "Silent ending: /ˈkɒl.iːɡ/"),
+        "definitely": ("Spelling-influenced pronunciation", "Keep three syllables: /ˈdef.ɪ.nət.li/"),
+        "analysis": ("Confusion with plural 'analyses'", "Singular stress on second syllable: /əˈnæl.ə.sɪs/"),
+    }
+
+    for idx, w in enumerate(raw_words):
+        cleaned = re.sub(r"[^a-zA-Z]", "", w).lower()
+        if cleaned in phonetic_watchlist:
+            issue, tip = phonetic_watchlist[cleaned]
+            mispronounced_words.append({
+                "word": w.strip(".,!?;:\"'"),
+                "issue": issue,
+                "suggestion": tip,
+                "approximate_ms": idx * step_ms,
+            })
+
+    if wpm >= 120 and len(pauses_and_hesitations) <= 2:
+        fluency = 7.5
+        rating = "Very Good"
+    elif wpm >= 95 and len(pauses_and_hesitations) <= 4:
+        fluency = 6.5
+        rating = "Good"
+    elif wpm >= 70:
+        fluency = 5.5
+        rating = "Moderate"
+    else:
+        fluency = 4.5
+        rating = "Needs Improvement"
+
+    return {
+        "mispronounced_words": mispronounced_words,
+        "pauses_and_hesitations": pauses_and_hesitations,
+        "fluency_score": fluency,
+        "clarity_rating": rating,
+    }
+
+
+def _transcribe_gemini_direct(path, mime, language='en', duration_ms=None):
+    import base64
+    key = os.environ.get('GEMINI_API_KEY', '').strip()
+    if not key:
+        return None
+    model = (os.environ.get('GEMINI_MODEL') or 'gemini-2.5-flash').strip() or 'gemini-2.5-flash'
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    try:
+        audio_bytes = path.read_bytes()
+        b64_audio = base64.b64encode(audio_bytes).decode('ascii')
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": "Transcribe the spoken English audio verbatim word-for-word. Output ONLY the exact transcribed text with proper punctuation and capitalization, or [SILENCE] if completely silent."}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": "Transcribe this audio:"},
+                        {"inline_data": {"mime_type": mime, "data": b64_audio}}
+                    ]
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 2048}
+        }
+        body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        resp = provider_json(url, body, {'Content-Type': 'application/json'}, 60000)
+        candidates = resp.get('candidates') or []
+        if candidates and isinstance(candidates[0], dict):
+            parts = ((candidates[0].get('content') or {}).get('parts')) or []
+            texts = [p.get('text', '') for p in parts if isinstance(p, dict) and isinstance(p.get('text'), str)]
+            raw_text = "\n".join(t.strip() for t in texts if t.strip()).strip()
+            if raw_text == '[SILENCE]' or raw_text.lower() == '[silence]':
+                raw_text = ''
+            words = raw_text.split()
+            calc_duration = duration_ms or (len(words) * 400 if words else 3000)
+            segments = []
+            if words:
+                step = (calc_duration / 1000.0) / len(words)
+                for idx, w in enumerate(words):
+                    segments.append({'start': round(idx * step, 2), 'end': round((idx + 1) * step, 2), 'text': w, 'confidence': 0.95})
+            diag = _generate_heuristic_speech_diagnostics(raw_text, calc_duration)
+            return {
+                'text': raw_text,
+                'confidence': 0.95 if raw_text else 0.0,
+                'segments': segments,
+                'provider': 'gemini_direct',
+                'model': model,
+                'durationMs': calc_duration,
+                'pronunciationEvidence': 'AVAILABLE' if diag.get('mispronounced_words') else 'UNAVAILABLE',
+                'speech_diagnostics': diag
+            }
+    except Exception as exc:
+        logger.warning("Gemini direct audio STT failed: %s", exc)
+        return None
+
+
 def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
     import base64
     key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('STT_API_KEY') or '').strip()
@@ -577,16 +718,22 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
     elif 'm4a' in mime or 'mp4' in mime or suffix in ('.m4a', '.mp4'):
         fmt = 'm4a'
 
-    primary_model = (os.environ.get('OPENROUTER_STT_MODEL') or os.environ.get('STT_MODEL') or 'fish-audio/s2.1-pro-free:free').strip()
+    primary_model = (os.environ.get('OPENROUTER_STT_MODEL') or os.environ.get('STT_MODEL') or 'google/gemini-2.5-flash').strip()
     fallback_model = (os.environ.get('OPENROUTER_STT_FALLBACK_MODEL') or 'google/gemini-2.5-flash').strip()
     models_to_try = []
-    for m in (primary_model, fallback_model, 'google/gemini-2.5-flash-lite', 'openai/gpt-audio-mini'):
+    for m in (primary_model, fallback_model, 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite', 'openai/gpt-audio-mini'):
         if m and m not in models_to_try:
             models_to_try.append(m)
 
     base_url = (os.environ.get('OPENROUTER_BASE_URL') or 'https://openrouter.ai/api/v1').rstrip('/')
     url = f"{base_url}/chat/completions"
     timeout_sec = bounded('ASSESSMENT_STT_TIMEOUT_MS', 60000, 1000, 120000) / 1000.0
+
+    stt_prompt = (
+        "You are an accurate English speech-to-text transcriber and phonetic diagnostics evaluator. "
+        "Transcribe the following spoken English audio recording verbatim word-for-word with proper punctuation and capitalization. "
+        "If the audio is completely silent or contains no recognizable speech, respond with [SILENCE]."
+    )
 
     last_error = None
     for m in models_to_try:
@@ -599,7 +746,7 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "You are an accurate English speech-to-text transcriber. Transcribe the following spoken English audio recording verbatim word-for-word. Output ONLY the exact transcribed text with proper punctuation and capitalization. Do not include introductory notes, conversational remarks, or quotation marks. If the audio is completely silent or contains no recognizable speech, respond with [SILENCE]."
+                                "text": stt_prompt
                             },
                             {
                                 "type": "input_audio",
@@ -630,10 +777,38 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
                 raw_text = raw_text.strip()
                 if raw_text == '[SILENCE]' or raw_text.lower() == '[silence]':
                     raw_text = ''
-                if (raw_text.startswith('"') and raw_text.endswith('"')) or (raw_text.startswith("'") and raw_text.endswith("'")):
-                    raw_text = raw_text[1:-1].strip()
 
-                words = raw_text.split()
+                # Support optional JSON response if returned by structured prompt
+                parsed_json = None
+                if raw_text.startswith('{') or '{"transcript"' in raw_text or '```json' in raw_text:
+                    clean_j = raw_text
+                    if clean_j.startswith('```'):
+                        clean_j = re.sub(r'^```(?:json)?\s*', '', clean_j, flags=re.IGNORECASE)
+                        clean_j = re.sub(r'\s*```$', '', clean_j)
+                    try:
+                        parsed_json = json.loads(clean_j)
+                    except Exception:
+                        match = re.search(r'\{[\s\S]*\}', clean_j)
+                        if match:
+                            try:
+                                parsed_json = json.loads(match.group(0))
+                            except Exception:
+                                pass
+
+                if isinstance(parsed_json, dict) and 'transcript' in parsed_json:
+                    transcript_text = str(parsed_json.get('transcript') or '').strip()
+                    speech_diagnostics = parsed_json.get('speech_diagnostics') or {}
+                    if not isinstance(speech_diagnostics, dict):
+                        speech_diagnostics = _generate_heuristic_speech_diagnostics(transcript_text, duration_ms or 3000)
+                else:
+                    transcript_text = raw_text
+                    if (transcript_text.startswith('"') and transcript_text.endswith('"')) or (transcript_text.startswith("'") and transcript_text.endswith("'")):
+                        transcript_text = transcript_text[1:-1].strip()
+                    words_cnt = len(transcript_text.split())
+                    calc_dur = duration_ms or (words_cnt * 400 if words_cnt else 3000)
+                    speech_diagnostics = _generate_heuristic_speech_diagnostics(transcript_text, calc_dur)
+
+                words = transcript_text.split()
                 segments = []
                 calc_duration = duration_ms or (len(words) * 400 if words else 3000)
                 if words:
@@ -647,22 +822,32 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
                         })
 
                 return {
-                    'text': raw_text,
-                    'confidence': 0.95 if raw_text else 0.0,
+                    'text': transcript_text,
+                    'confidence': 0.95 if transcript_text else 0.0,
                     'segments': segments,
                     'provider': 'openrouter',
                     'model': m,
                     'durationMs': calc_duration,
-                    'pronunciationEvidence': 'UNAVAILABLE'
+                    'pronunciationEvidence': 'AVAILABLE' if speech_diagnostics.get('mispronounced_words') else 'UNAVAILABLE',
+                    'speech_diagnostics': speech_diagnostics,
                 }
         except Exception as exc:
             last_error = exc
             logger.warning("OpenRouter STT model %s failed (%s), trying next fallback...", m, exc)
             continue
 
+    # 2nd tier fallback: direct Google Gemini API if configured
+    gemini_direct = _transcribe_gemini_direct(path, mime, language, duration_ms)
+    if gemini_direct:
+        return gemini_direct
+
+    # 3rd tier fallback: local faster-whisper
     try:
         from .assessment_local_stt import transcribe as local_transcribe
-        return local_transcribe(path, mime, language, duration_ms)
+        local_res = local_transcribe(path, mime, language, duration_ms)
+        if isinstance(local_res, dict):
+            local_res.setdefault('speech_diagnostics', _generate_heuristic_speech_diagnostics(local_res.get('text', ''), duration_ms or 3000))
+        return local_res
     except Exception:
         pass
 

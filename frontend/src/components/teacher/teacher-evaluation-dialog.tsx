@@ -341,9 +341,31 @@ export function TeacherEvaluationDialog({
                         )}
 
                         {q.response && (
-                          <div className="text-[11px] text-slate-300 bg-slate-950/60 p-2.5 rounded border border-slate-800">
-                            <strong className="text-slate-400 block mb-0.5">Nutq Transkripsiyasi (STT):</strong>
-                            {q.response}
+                          <div className="text-[11px] text-slate-300 bg-slate-950/60 p-2.5 rounded border border-slate-800 space-y-1.5">
+                            <div>
+                              <strong className="text-slate-400 block mb-0.5">Nutq Transkripsiyasi (STT):</strong>
+                              {q.response}
+                            </div>
+                            {(() => {
+                              const diag = (mediaState.speech_diagnostics as Record<string, any>)?.[q.id];
+                              if (!diag) return null;
+                              return (
+                                <div className="mt-2 pt-2 border-t border-slate-800 text-[10px] space-y-1">
+                                  <div className="flex items-center justify-between text-emerald-400 font-semibold">
+                                    <span>Fonetik / Ravonlik Tahlili:</span>
+                                    {diag.fluency_score && <span>Ravonlik: {diag.fluency_score}/9.0</span>}
+                                  </div>
+                                  {diag.mispronounced_words?.length > 0 && (
+                                    <div className="text-amber-400">
+                                      <span>Noaniq talaffuz: </span>
+                                      {diag.mispronounced_words.map((m: any, mi: number) => (
+                                        <span key={mi} className="text-slate-300">{m.word} ({m.issue}){mi < diag.mispronounced_words.length - 1 ? ", " : ""}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

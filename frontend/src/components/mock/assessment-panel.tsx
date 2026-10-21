@@ -341,6 +341,35 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 {!!submission.transcript?.segments.length && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">{t("segments")}</summary>
                   <ol className="mt-2 space-y-1">{submission.transcript.segments.map((segment, index) => <li key={index}>{segment.start.toFixed(1)}–{segment.end.toFixed(1)}s · {segment.text}</li>)}</ol>
                 </details>}
+                {submission.transcript?.speechDiagnostics && (
+                  <div className="mt-2.5 space-y-2 rounded-md border border-border/60 bg-bg/50 p-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-fg">Fonetik va Ravonlik Tahlili:</span>
+                      {submission.transcript.speechDiagnostics.fluency_score ? (
+                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                          Ravonlik: {submission.transcript.speechDiagnostics.fluency_score}/9.0
+                        </span>
+                      ) : null}
+                    </div>
+                    {!!submission.transcript.speechDiagnostics.mispronounced_words?.length && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-medium text-amber-400">Noaniq talaffuz qilingan so&apos;zlar:</p>
+                        <ul className="space-y-1 pl-2 text-[11px] text-fg-muted">
+                          {submission.transcript.speechDiagnostics.mispronounced_words.map((m, mIdx) => (
+                            <li key={mIdx}>
+                              <strong className="text-fg">{m.word}</strong>: {m.issue} {m.suggestion && <span className="text-emerald-400">({m.suggestion})</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {!!submission.transcript.speechDiagnostics.pauses_and_hesitations?.length && (
+                      <p className="text-[11px] text-fg-subtle">
+                        Pauza va to&apos;xtalishlar: {submission.transcript.speechDiagnostics.pauses_and_hesitations.length} ta ({submission.transcript.speechDiagnostics.pauses_and_hesitations.map((p) => p.text).slice(0, 4).join(", ")})
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>}
             </div>)}
             {partResult && <div className="space-y-3 rounded-[10px] bg-bg-subtle p-4">

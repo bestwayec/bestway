@@ -10,6 +10,7 @@ from django.db import close_old_connections, transaction
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
+    Answer,
     AssessmentEvaluation,
     AssessmentJob,
     MockAnswer,
@@ -73,20 +74,45 @@ def transcribe(job,input,speech):
                 provider=os.environ.get('STT_PROVIDER','deepgram'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
         try:
             output=speech(path,mime_type,'en',response.get('durationMs'))
-            SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='SUCCEEDED',text=output['text'],segments=output['segments'],confidence=output['confidence'],provider=output['provider'],model=output['model'],duration_ms=output['durationMs'],pronunciation_evidence='UNAVAILABLE',completed_at=timezone.now())
+            diag = output.get('speech_diagnostics') or {}
+            import json as _json
+            diag_str = _json.dumps(diag, ensure_ascii=False) if diag else 'UNAVAILABLE'
+            SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(
+                status='SUCCEEDED',
+                text=output['text'],
+                segments=output['segments'],
+                confidence=output['confidence'],
+                provider=output['provider'],
+                model=output['model'],
+                duration_ms=output['durationMs'],
+                pronunciation_evidence=diag_str,
+                completed_at=timezone.now()
+            )
             response['transcript']=output['text']
+            response['speechDiagnostics']=diag
             if enabled(input):response.update(transcriptConfidence=output['confidence'],audioDurationMs=output['durationMs'])
             try:
-                ans = MockAnswer.objects.filter(attempt_id=job.attempt_id, question_id=response['questionId']).first()
+                qid = response['questionId']
+                ans = MockAnswer.objects.filter(attempt_id=job.attempt_id, question_id=qid).first()
                 if ans:
                     r_scores = ans.rubric_scores if isinstance(ans.rubric_scores, dict) else {}
                     r_scores['transcript'] = output['text']
+                    r_scores['speech_diagnostics'] = diag
+                    r_scores['speechDiagnostics'] = diag
                     MockAnswer.objects.filter(id=ans.id).update(response=output['text'], rubric_scores=r_scores)
+                reg_ans = Answer.objects.filter(attempt_id=job.attempt_id, question_id=qid).first()
+                if reg_ans:
+                    hl = reg_ans.highlights if isinstance(reg_ans.highlights, dict) else {}
+                    hl['transcript'] = output['text']
+                    hl['speech_diagnostics'] = diag
+                    Answer.objects.filter(id=reg_ans.id).update(answer=output['text'], highlights=hl)
                 attempt = MockAttempt.objects.filter(id=job.attempt_id).first()
                 if attempt:
                     m_state = attempt.media_state if isinstance(attempt.media_state, dict) else {}
                     trans_map = m_state.setdefault('transcripts', {})
-                    trans_map[response['questionId']] = output['text']
+                    trans_map[qid] = output['text']
+                    diag_map = m_state.setdefault('speech_diagnostics', {})
+                    diag_map[qid] = diag
                     MockAttempt.objects.filter(id=attempt.id).update(media_state=m_state)
             except Exception:
                 pass

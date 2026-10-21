@@ -32,7 +32,7 @@ WRITING_EVAL_SYSTEM_PROMPT = (
 )
 
 DEFAULT_GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "gemini-fallback-configured")
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 
 def _round_half(value: float) -> float:
@@ -79,7 +79,7 @@ def _ocr_single_openrouter(image_bytes: bytes, mime_type: str) -> str | None:
     if not key:
         return None
     base_url = (os.environ.get("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
-    model = os.environ.get("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001").strip() or "google/gemini-2.0-flash-001"
+    model = (os.environ.get("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip() or "google/gemini-2.5-flash"
     b64 = base64.b64encode(image_bytes).decode("ascii")
     data_uri = f"data:{mime_type};base64,{b64}"
     payload = {
@@ -419,7 +419,7 @@ def evaluate_writing_text(text: str, task_prompt: str = "", task_type: str = "ta
     if or_key:
         try:
             base_url = (os.environ.get("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
-            model = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
+            model = (os.environ.get("OPENROUTER_EVAL_MODEL") or os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-v4.1-flash")).strip() or "deepseek/deepseek-v4.1-flash"
             resp = _post_json(
                 f"{base_url}/chat/completions",
                 {

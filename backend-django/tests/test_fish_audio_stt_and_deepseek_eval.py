@@ -117,3 +117,72 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
             res = attempts.save_answers(user, "att-1", items, bulk=True)
             self.assertEqual(res["saved"], 2)
             self.assertEqual(mock_upsert.call_count, 2)
+
+    @patch("urllib.request.urlopen")
+    def test_transcribe_gemini_flash_multimodal_with_diagnostics(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = (
+            b'{"choices": [{"message": {"content": "{\\"transcript\\": \\"I feel comfortable in this specific environment, um, absolutely.\\", \\"speech_diagnostics\\": {\\"mispronounced_words\\": [{\\"word\\": \\"comfortable\\", \\"issue\\": \\"unclear vowel\\", \\"suggestion\\": \\"/\\u02c8k\\u028cmf.t\\u0259.b\\u0259l/\\"}], \\"pauses_and_hesitations\\": [{\\"type\\": \\"filler_word\\", \\"text\\": \\"um\\"}], \\"fluency_score\\": 7.0}}"}}]}'
+        )
+        mock_resp.__enter__.return_value = mock_resp
+        mock_resp.__exit__.return_value = None
+        mock_urlopen.return_value = mock_resp
+
+        mock_path = MagicMock()
+        mock_path.is_file.return_value = True
+        mock_path.stat.return_value.st_size = 2048
+        mock_path.read_bytes.return_value = b"RIFF....WAVEfmt "
+        mock_path.suffix = ".wav"
+
+        with patch.dict(os.environ, {
+            "OPENROUTER_API_KEY": "dummy-key",
+            "OPENROUTER_STT_MODEL": "google/gemini-2.5-flash",
+        }):
+            res = providers._transcribe_openrouter(mock_path, "audio/wav", "en", duration_ms=5000)
+            self.assertEqual(res["text"], "I feel comfortable in this specific environment, um, absolutely.")
+            self.assertEqual(res["model"], "google/gemini-2.5-flash")
+            self.assertIn("speech_diagnostics", res)
+            diag = res["speech_diagnostics"]
+            self.assertEqual(len(diag["mispronounced_words"]), 1)
+            self.assertEqual(diag["mispronounced_words"][0]["word"], "comfortable")
+            self.assertEqual(diag["fluency_score"], 7.0)
+            self.assertEqual(res["pronunciationEvidence"], "AVAILABLE")
+
+    def test_heuristic_speech_diagnostics_detection(self):
+        text = "Well, um, I think this specific situation is comfortable, you know."
+        diag = providers._generate_heuristic_speech_diagnostics(text, duration_ms=6000)
+        self.assertIn("mispronounced_words", diag)
+        self.assertIn("pauses_and_hesitations", diag)
+        self.assertTrue(any(p["text"].lower() == "um" for p in diag["pauses_and_hesitations"]))
+        self.assertTrue(any(m["word"].lower() == "specific" for m in diag["mispronounced_words"]))
+        self.assertTrue(0.0 <= diag["fluency_score"] <= 9.0)
+
+    @patch("apps.core.writing_ocr._post_json")
+    def test_writing_ocr_gemini_flash_and_deepseek_eval(self, mock_post_json):
+        from apps.core import writing_ocr
+
+        # Mock OCR response from OpenRouter Gemini Flash Vision
+        ocr_resp = {"choices": [{"message": {"content": "This is an essay written by a student about environmental issues."}}]}
+        # Mock evaluation response from DeepSeek v4.1 Flash
+        eval_resp = {
+            "choices": [{
+                "message": {
+                    "content": '{"task_achievement": 7.0, "coherence_cohesion": 6.5, "lexical_resource": 7.0, "grammatical_range": 6.5, "overall_band": 7.0, "strengths": ["Clear thesis"], "weaknesses": ["More examples needed"], "feedback": "Good job."}'
+                }
+            }]
+        }
+        mock_post_json.side_effect = [ocr_resp, eval_resp]
+
+        with patch.dict(os.environ, {
+            "OPENROUTER_API_KEY": "dummy-key",
+            "OPENROUTER_VISION_MODEL": "google/gemini-2.5-flash",
+            "OPENROUTER_EVAL_MODEL": "deepseek/deepseek-v4.1-flash",
+        }):
+            res = writing_ocr.extract_and_evaluate_images(
+                [(b"fake-image-bytes", "image/jpeg")],
+                task_prompt="Discuss environmental challenges",
+                task_type="task2"
+            )
+            self.assertEqual(res["overall_band"], 7.0)
+            self.assertEqual(res["task_achievement"], 7.0)
+            self.assertEqual(res["ocrText"], "This is an essay written by a student about environmental issues.")
