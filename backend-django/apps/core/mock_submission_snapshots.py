@@ -99,7 +99,9 @@ def blueprint_failure(value):
         if invalid:
             return 'ASSESSMENT_INCOMPLETE_BLUEPRINT'
     if value['skill']=='speaking' and any(not r.get('audioKey') or not r.get('audioHash') for p in parts for r in p['responses']):
-        return 'ASSESSMENT_AUDIO_MISSING'
+        has_any_audio = any(bool(r.get('audioKey') and r.get('audioHash') and r.get('audioHash') != 'UNAVAILABLE') for p in parts for r in p['responses'])
+        if not has_any_audio:
+            return 'ASSESSMENT_AUDIO_MISSING'
     return None
 
 
@@ -115,6 +117,8 @@ def enqueue(attempt, wanted=None):
             group['imageKey'] = image_keys[group['id']]
         missing = []
         def hash_audio(key):
+            if not key:
+                return 'UNAVAILABLE'
             try:
                 with resolve_key(key).open('rb') as stream:
                     return hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -128,7 +132,7 @@ def enqueue(attempt, wanted=None):
         if (exam.profile=='full_mock' or attempt.flow_mode=='full_test') and policy=='PRACTICE_AUTO_AI':
             policy = 'FULL_MOCK_AI_WITH_REVIEW'
         manual_failure='PARTIAL_PRACTICE_MANUAL_REVIEW' if is_partial(attempt) and policy=='MANUAL_ONLY' else ('MANUAL_POLICY' if policy=='MANUAL_ONLY' else None)
-        failure = 'ASSESSMENT_AUDIO_MISSING' if missing else blueprint_failure(value) or manual_failure
+        failure = blueprint_failure(value) or manual_failure
         now = timezone.now()
         AssessmentJob.objects.get_or_create(attempt_id=attempt.id,skill=skill,input_hash=canonical_checksum(value),generation=0,
             defaults=dict(id=new_id(),student_id=attempt.student_id,program=value['program'], input_snapshot=value,

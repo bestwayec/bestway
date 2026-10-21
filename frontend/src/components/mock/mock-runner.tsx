@@ -216,15 +216,31 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [answers, setAnswers] = React.useState<Record<string, string>>(() => initial.ans);
   const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
   const [audioDurations, setAudioDurations] = React.useState(initial.durations);
-  const [selectedSection, setActiveSection] = React.useState(0);
+  const [selectedSection, setSelectedSection] = React.useState<number | null>(null);
+  const setActiveSection = React.useCallback((idx: number) => setSelectedSection(idx), []);
   const [activeTaskBySkill, setActiveTaskBySkill] = React.useState<Partial<Record<"writing" | "speaking", number>>>({});
-  // The exam query can resolve after mount. Full-test navigation always follows
-  // the server skill, including a resume directly into Reading/Writing/Speaking.
+
+  const resolvedSectionIndex = React.useMemo(() => {
+    if (!exam?.sections || exam.sections.length === 0) return 0;
+    if (typeof window !== "undefined") {
+      const urlSkill = new URLSearchParams(window.location.search).get("skill");
+      if (urlSkill) {
+        const found = exam.sections.findIndex((s) => s.skill === urlSkill);
+        if (found >= 0) return found;
+      }
+    }
+    if (attempt.currentSkill) {
+      const found = exam.sections.findIndex((s) => s.skill === attempt.currentSkill);
+      if (found >= 0) return found;
+    }
+    return 0;
+  }, [exam?.sections, attempt.currentSkill]);
+
   const activeSection = isSingleSection
     ? 0
-    : isFullTest && attempt.currentSkill
-    ? Math.max(0, exam?.sections.findIndex((s) => s.skill === attempt.currentSkill) ?? 0)
-    : selectedSection;
+    : selectedSection !== null
+    ? selectedSection
+    : resolvedSectionIndex;
   const [micChecked, setMicChecked] = React.useState(false);
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
@@ -713,21 +729,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                 <button
                   key={s.id}
                   type="button"
-                  disabled={isFullTest}
                   onClick={() => {
-                    if (isFullTest) return;
                     flush();
                     setActiveSection(i);
                   }}
                   aria-current={i === activeSection}
-                  title={isFullTest && locked ? "Locked — current section only" : undefined}
                   className={cn(
-                    "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation",
+                    "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation cursor-pointer",
                     i === activeSection
                       ? "bg-brand text-white"
-                      : "bg-surface text-fg-muted hover:bg-surface-hover",
-                    isFullTest && locked && "opacity-60",
-                    isFullTest && "cursor-default",
+                      : "bg-surface text-fg-muted hover:bg-surface-hover hover:text-fg",
                   )}
                 >
                   {t(`skills.${s.skill}`)}
@@ -801,8 +812,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                 else void goNextSection();
               }}
               onSubmitSection={() => {
-                if (multilevelReview && missingWork) setReview("submit");
-                else void doSubmit(false);
+                void doSubmit(false);
               }}
               isLastSection={activeSection >= exam.sections.length - 1}
               isFullTest={isFullTest}
@@ -814,12 +824,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <MultilevelSubmitReview
             work={missingWork}
             advance={review === "advance"}
-            allowIncomplete={isSingleSection || partialPractice}
+            allowIncomplete={true}
             busy={submit.isPending || advance.isPending}
             onClose={() => setReview(null)}
-            // The review surface covers the runner, so a jump closes it and shows
-            // the section the student asked for.
-            onJump={isFullTest ? undefined : (skill) => { setReview(null); jumpToSection(skill); }}
+            onJump={(skill) => { setReview(null); jumpToSection(skill); }}
             onConfirm={() => {
               const purpose = review;
               setReview(null);

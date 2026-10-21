@@ -26,7 +26,7 @@ class AttemptTimingTests(SimpleTestCase):
         self.assertIsNone(engine.skill_seconds('speaking', {}, 'ielts_academic'))
 
     def test_multilevel_current_durations(self):
-        self.assertEqual([engine.skill_seconds(s, {}, 'multilevel') for s in engine.SKILLS], [2700, 3600, 3600, 660])
+        self.assertEqual([engine.skill_seconds(s, {}, 'multilevel') for s in engine.SKILLS], [2700, 3600, 3600, 1800])
 
     def test_practice_has_no_clock(self):
         self.assertEqual(engine.timing('multilevel', [], 'practice', 'single_skill', AT), (None, None, None))

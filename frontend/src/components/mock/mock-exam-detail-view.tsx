@@ -31,6 +31,7 @@ import {
 } from "@/hooks/use-mock";
 import type { MockAttemptMode, MockPracticeSkill, MockSkill } from "@/lib/types";
 import { availablePracticeSkills } from "@/lib/mock-practice";
+import { ExamResumeModal } from "./exam-resume-modal";
 import { displayTotalMinutes } from "@/lib/mock-timing";
 import { formatMoney } from "@/lib/utils";
 import { MultilevelReadiness, studentStartMessage } from "./multilevel-student-ui";
@@ -62,12 +63,22 @@ export function MockExamDetailView({ examId }: { examId: string }) {
   const [selectedPractice, setSelectedPractice] = React.useState<MockPracticeSkill[] | null>(() =>
     initialSkill ? [initialSkill] : null
   );
+  const [resumeOpen, setResumeOpen] = React.useState(false);
   React.useEffect(() => {
     if (initialSkill) setSelectedPractice([initialSkill]);
   }, [initialSkill]);
   const selectedSkills = practiceSkills.filter((skill) => selectedPractice === null || selectedPractice.includes(skill));
   const attempts = (attemptsQ.data ?? []).filter((a) => a.examId === examId);
   const inProgress = attempts.find((a) => a.status === "in_progress");
+  const availableSkills: MockSkill[] = React.useMemo(() => {
+    if (inProgress?.practiceScope?.skills && inProgress.practiceScope.skills.length > 0) {
+      return inProgress.practiceScope.skills as MockSkill[];
+    }
+    if (exam?.sections && exam.sections.length > 0) {
+      return exam.sections.map((s) => s.skill);
+    }
+    return ["writing", "speaking"];
+  }, [inProgress, exam?.sections]);
 
   function onStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
     if (exam?.ready === false && !(skills?.length && practiceSkills.length)) {
@@ -274,14 +285,33 @@ export function MockExamDetailView({ examId }: { examId: string }) {
           {staff ? (
             <Link href={`/exam-builder/${examId}`}><Button className="w-full" variant="outline">{t("manage")}</Button></Link>
           ) : inProgress ? (
-            <Button
-              className="w-full"
-              loading={start.isPending}
-              onClick={() => router.push(`/mock/attempt/${inProgress.id}`)}
-            >
-              <RefreshCw />
-              {t("resume")}
-            </Button>
+            <>
+              {availableSkills.length > 1 ? (
+                <Button
+                  className="w-full"
+                  onClick={() => setResumeOpen(true)}
+                >
+                  <RefreshCw className="mr-2 size-4" />
+                  {t("resume")}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  loading={start.isPending}
+                  onClick={() => router.push(`/mock/attempt/${inProgress.id}`)}
+                >
+                  <RefreshCw />
+                  {t("resume")}
+                </Button>
+              )}
+              <ExamResumeModal
+                open={resumeOpen}
+                onOpenChange={setResumeOpen}
+                attemptId={inProgress.id}
+                skills={availableSkills}
+                examTitle={exam.title}
+              />
+            </>
           ) : unavailable ? (
             <div className="space-y-2">
               <p className="text-sm text-fg-muted">This exam is still being prepared.</p>

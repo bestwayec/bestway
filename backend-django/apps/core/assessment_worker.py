@@ -81,6 +81,63 @@ def transcribe(job,input,speech):
             response['transcript']=''
     input['pronunciationEvidence']='UNAVAILABLE'
 
+def build_zero_result(input_data):
+    from . import assessment_results as results
+    from . import assessment_quality as quality
+    criteria_keys = results.keys(input_data)
+    parts = []
+    for part in input_data.get('parts', []):
+        part_id = part.get('id', '')
+        criteria = {}
+        evidence = {}
+        for k in criteria_keys:
+            if k == 'pronunciation' and input_data.get('pronunciationEvidence') == 'UNAVAILABLE':
+                criteria[k] = None
+            else:
+                criteria[k] = 0.0
+            evidence[k] = 'Javob taqdim etilmadi (0 ball)'
+
+        feedback = {
+            'taskCoverage': 'Javob taqdim etilmadi.',
+            'grammar': 'Tahlil uchun matn mavjud emas.',
+            'vocabulary': 'Tahlil uchun lugʻat boyligi mavjud emas.',
+            'fluencyCohesion': 'Matn mavjud emas.',
+            'ideaDevelopment': 'Fikr bildirilmagan.',
+            'register': 'Mavjud emas.',
+            'spellingPunctuation': 'Mavjud emas.',
+            'position': 'Mavjud emas.',
+            'argumentBalance': 'Mavjud emas.',
+            'strengths': [],
+            'issues': ['Javob taqdim etilmagan (0 ball).'],
+            'missedPrompts': ['Barcha topshiriq savollari qoldirib ketilgan.'],
+            'usefulPhrases': [],
+            'forCovered': False,
+            'againstCovered': False,
+        }
+        part_res = {
+            'id': part_id,
+            'rawScore': 0.0,
+            'criteria': criteria,
+            'evidence': evidence,
+            'feedback': feedback,
+        }
+        if quality.enabled(input_data):
+            part_res['evidenceQuotes'] = []
+        parts.append(part_res)
+
+    return {
+        'parts': parts,
+        'overallStrengths': [],
+        'priorityImprovements': ['Topshiriqlarni toʻliq bajarish tavsiya etiladi.'],
+        'recommendedPractice': ['Keyingi safar kamida asosiy qoralamalarni kiritib boring.'],
+        'grammarCorrections': [],
+        'vocabularyUpgrades': [],
+        'improvedExamples': [],
+        'confidence': 1.0,
+        'pronunciationEvidence': input_data.get('pronunciationEvidence', 'UNAVAILABLE'),
+    }
+
+
 def rate(job,input,role,grader):
     refresh(job)
     cached=AssessmentEvaluation.objects.filter(job_id=job.id,role=role,status='SUCCEEDED').order_by('-completed_at').first()
@@ -92,10 +149,20 @@ def rate(job,input,role,grader):
         evaluation=AssessmentEvaluation.objects.create(id=str(uuid4()),job_id=job.id,role=role,attempt_number=job.attempt_count,input_hash=canonical_checksum(input),provider=provider,
             model=model or 'UNCONFIGURED',status='STARTED',uncertain=False,started_at=timezone.now())
     try:
-        output=grader(input,role)
         from .assessment_quality import normalized, response_text
-        if not any(bool(normalized(response_text(input, r))) for part in input['parts'] for r in part['responses']):
-            raise results.ProviderError('ASSESSMENT_RESPONSE_EVIDENCE_MISSING')
+        has_any_evidence = any(bool(normalized(response_text(input, r))) for part in input['parts'] for r in part['responses'])
+        if not has_any_evidence:
+            output = {
+                'result': build_zero_result(input),
+                'provider': provider or 'SYSTEM_FALLBACK',
+                'model': model or 'ZERO_FALLBACK',
+                'confidence': 1.0,
+                'inputTokens': 0,
+                'outputTokens': 0,
+                'latencyMs': 1,
+            }
+        else:
+            output = grader(input, role)
         criteria_keys = results.keys(input)
         for part in input['parts']:
             sources = [response_text(input, r) for r in part['responses']]
@@ -107,8 +174,27 @@ def rate(job,input,role,grader):
                         if k in p_res.get('criteria', {}):
                             p_res['criteria'][k] = 0.0
                         if k in p_res.get('evidence', {}):
-                            p_res['evidence'][k] = 'No response was provided for this task.'
-                    p_res['evidenceQuotes'] = []
+                            p_res['evidence'][k] = 'Javob taqdim etilmadi (0 ball)'
+                    if 'evidenceQuotes' in p_res:
+                        p_res['evidenceQuotes'] = []
+                    if not p_res.get('feedback'):
+                        p_res['feedback'] = {
+                            'taskCoverage': 'Javob taqdim etilmadi.',
+                            'grammar': 'Tahlil uchun matn mavjud emas.',
+                            'vocabulary': 'Tahlil uchun lugʻat boyligi mavjud emas.',
+                            'fluencyCohesion': 'Matn mavjud emas.',
+                            'ideaDevelopment': 'Fikr bildirilmagan.',
+                            'register': 'Mavjud emas.',
+                            'spellingPunctuation': 'Mavjud emas.',
+                            'position': 'Mavjud emas.',
+                            'argumentBalance': 'Mavjud emas.',
+                            'strengths': [],
+                            'issues': ['Javob taqdim etilmagan (0 ball).'],
+                            'missedPrompts': ['Barcha topshiriq savollari qoldirib ketilgan.'],
+                            'usefulPhrases': [],
+                            'forCovered': False,
+                            'againstCovered': False,
+                        }
         result=results.validate(output['result'],input)
         AssessmentEvaluation.objects.filter(id=evaluation.id,status='STARTED').update(status='SUCCEEDED',result=result,provider=output['provider'],model=output['model'],confidence=result['confidence'],input_tokens=output['inputTokens'],output_tokens=output['outputTokens'],latency_ms=output['latencyMs'],completed_at=timezone.now())
         if role=='PRIMARY':AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(ai_score=results.score(input,result)['score'],confidence=result['confidence'],selected_evaluation_id=evaluation.id,updated_at=timezone.now())

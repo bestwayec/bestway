@@ -23,6 +23,7 @@ from . import telegram_views as telegram
 from . import video_views as videos
 from .mock_attempt_views import (
     advance_view,
+    switch_section_view,
     annotations_view,
     answer_view,
     answers_view,
@@ -211,6 +212,10 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/answers', answers_view),
     path('mock/attempts/<str:attempt_id>/submit', submit_view),
     path('mock/attempts/<str:attempt_id>/advance', advance_view),
+    path('mock/attempts/<str:attempt_id>/switch-section', switch_section_view),
+    path('mock/attempts/<str:attempt_id>/switch-section/', switch_section_view),
+    path('v1/mock/attempts/<str:attempt_id>/switch-section', switch_section_view),
+    path('v1/mock/attempts/<str:attempt_id>/switch-section/', switch_section_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/prepare', prepare_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/play', play_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>/start', speaking_start_view),

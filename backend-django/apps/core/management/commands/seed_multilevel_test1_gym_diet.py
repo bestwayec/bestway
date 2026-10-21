@@ -279,7 +279,7 @@ class Command(BaseCommand):
                 skill="speaking",
                 title="Speaking",
                 sort_order=1,
-                duration_minutes=15,
+                duration_minutes=30,
                 instructions="The Speaking paper consists of Part 1.1 (Interview), Part 1.2 (Picture Comparison), Part 2 (Long Turn), and Part 3 (Discussion).",
             )
 

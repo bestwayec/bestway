@@ -160,6 +160,18 @@ def submit_view(request, attempt_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def switch_section_view(request, attempt_id):
+    student(request)
+    data = request.data or {}
+    skill = data.get('skill') or request.query_params.get('skill')
+    if not skill:
+        from common.api.exceptions import ContractAPIException
+        raise ContractAPIException('TARGET_SKILL_REQUIRED', 'target skill is required', 400)
+    return success(engine.switch_section(request.user, attempt_id, skill), 200)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def advance_view(request, attempt_id):
     student(request)
     return success(engine.advance(request.user, attempt_id), 201)

@@ -1,14 +1,18 @@
 import Image from "next/image";
-import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { WingedEmblem } from "@/components/common/logo";
 
 export { WingedEmblem };
 
+const SIZE = {
+  sm: { full: "h-7 sm:h-8", mark: "size-8" },
+  md: { full: "h-9 sm:h-10", mark: "size-9" },
+  lg: { full: "h-11 sm:h-12", mark: "size-11" },
+  xl: { full: "h-14 sm:h-16", mark: "size-14" },
+} as const;
+
 /**
- * Best Way markaz logotipi:
- * 1. `BrandMark` — asl yashil-emerald squircle qanotli vektor SVG (sun rays, wings, B monogram)
- * 2. `BrandImage` — transparent PNG rasmi (fallback/image varianti)
+ * Markaziy 3D kubik ikonkasi (avatar, kichik nishonlar, collapsed holat)
  */
 export function BrandMark({
   className,
@@ -17,17 +21,23 @@ export function BrandMark({
   className?: string;
   animated?: boolean;
 }) {
-  return <WingedEmblem className={className} animated={animated} />;
+  return (
+    <Image
+      src="/brand/bestway-icon.png"
+      alt="Best Way"
+      width={48}
+      height={48}
+      className={cn(
+        "object-contain shrink-0 select-none",
+        animated && "animate-pulse transition-transform duration-300 hover:scale-105",
+        className,
+      )}
+    />
+  );
 }
 
-const SIZE = {
-  sm: { mark: "size-8", text: "text-base" },
-  md: { mark: "size-9", text: "text-lg" },
-  lg: { mark: "size-12", text: "text-2xl" },
-} as const;
-
 /**
- * Shaffof PNG rasmi (fallback yoki image varianti uchun)
+ * Shaffof to'liq qanotli PNG rasmi
  */
 export function BrandImage({
   className,
@@ -38,26 +48,26 @@ export function BrandImage({
 }) {
   return (
     <Image
-      src="/logo.png"
+      src="/brand/bestway-logo-full.png"
       alt="Best Way"
-      width={2130}
-      height={762}
+      width={1024}
+      height={367}
       priority={priority}
-      className={cn("h-auto w-auto object-contain drop-shadow-sm", className)}
+      className={cn("h-auto w-auto object-contain drop-shadow-md select-none", className)}
     />
   );
 }
 
 /**
- * Emblema + "Best Way" so'z-belgisi. `showText={false}` — faqat qanotli emblema.
- * `variant="mark"` — asl yashil-emerald qanotli squircle vektor SVG.
+ * Asl Qanotli Best Way Emblemasi.
+ * `showText={false}` bo'lganda faqat markaziy 3D kubik nishoni ko'rsatiladi.
+ * `showText={true}` bo'lganda to'liq qanotli va yozuvli rasmiy nishon aks etadi.
  */
 export function Brand({
   className,
   size = "md",
   showText = true,
   animated = false,
-  variant = "mark",
 }: {
   className?: string;
   size?: keyof typeof SIZE;
@@ -65,41 +75,40 @@ export function Brand({
   animated?: boolean;
   variant?: "image" | "mark";
 }) {
-  const t = useTranslations("brand");
-  const s = SIZE[size];
-  if (variant === "image") {
+  const s = SIZE[size] || SIZE.md;
+
+  if (!showText) {
     return (
-      <span className={cn("inline-flex items-center gap-2.5", className)}>
-        <BrandImage
-          priority
-          className={cn(
-            size === "sm" ? "h-8" : size === "lg" ? "h-12" : "h-10",
-            "w-auto",
-          )}
-        />
-        {showText && (
-          <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
-            <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent font-extrabold">
-              {t("best")}
-            </span>
-            <span className="text-white ml-0.5">{t("way")}</span>
-          </span>
+      <Image
+        src="/brand/bestway-icon.png"
+        alt="Best Way"
+        width={48}
+        height={48}
+        priority
+        className={cn(
+          "object-contain shrink-0 select-none drop-shadow-md transition-transform duration-300 hover:scale-105",
+          s.mark,
+          animated && "animate-pulse",
+          className,
         )}
-      </span>
+      />
     );
   }
+
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <BrandMark className={cn(s.mark, "drop-shadow-sm")} animated={animated} />
-      {showText && (
-        <span className={cn("font-extrabold leading-none tracking-tight", s.text)}>
-          <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent font-extrabold">
-            {t("best")}
-          </span>
-          <span className="text-white ml-0.5">{t("way")}</span>
-        </span>
-      )}
+    <span className={cn("inline-flex items-center select-none", className)}>
+      <Image
+        src="/brand/bestway-logo-full.png"
+        alt="Best Way"
+        width={1024}
+        height={367}
+        priority
+        className={cn(
+          "w-auto object-contain drop-shadow-md transition-transform duration-300 hover:scale-[1.02]",
+          s.full,
+          animated && "animate-pulse",
+        )}
+      />
     </span>
   );
 }
-

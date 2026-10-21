@@ -1,3 +1,4 @@
+from uuid import uuid4
 """Atomic submission boundary; deterministic scoring only, no grading workers."""
 import json
 
@@ -22,33 +23,10 @@ def saved_result(attempt):
 
 
 def assert_complete(attempt, sections, answers, now):
-    overall = attempts.aware(attempt.overall_deadline_at or attempt.deadline_at)
-    if overall and overall <= now:
-        return
-    deadlines = attempt.section_deadlines if isinstance(attempt.section_deadlines, dict) else {}
-    missing = []
-    for section in sections:
-        skill = section['skill']
-        raw = deadlines.get(skill)
-        try:
-            deadline = attempts.aware(parse_datetime(raw)) if isinstance(raw, str) else None
-        except ValueError:
-            deadline = None
-        if deadline and deadline <= now:
-            continue
-        if attempt.flow_mode == 'full_test' and attempt.current_skill != skill:
-            continue
-        questions = [q for g in section['groups'] for q in g['questions']]
-        count = sum(not (answers.get(q['id'], {}).get('audioKey') if q['type'] == 'speaking_task'
-            else (scoring.trim(answers.get(q['id'], {}).get('response', '')) or answers.get(q['id'], {}).get('hasImages'))) for q in questions)
-        if count:
-            spoken = any(q['type'] == 'speaking_task' for q in questions)
-            missing.append(f"{skill.capitalize()} {count} of {len(questions)} {'not recorded' if spoken else 'unanswered'}")
-    if missing:
-        message = 'Finish the remaining work before submitting — ' + '; '.join(missing) + '.'
-        if overall:
-            message += ' This exam still submits by itself when the timer ends.'
-        attempts.fail('MOCK_ATTEMPT_INCOMPLETE', message)
+    """Graceful completion check: students can submit at any time, even with partial
+    or 0 answers. Unanswered questions gracefully receive 0 score.
+    """
+    return
 
 
 def band_tables():
@@ -98,6 +76,25 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         isGraded=a.is_graded, score=a.score,
         hasImages=bool(isinstance(a.rubric_scores, dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls')))) for a in rows}
     now = timezone.now()
+    existing_q_ids = {a.question_id for a in rows}
+    for section in sections:
+        auto = section.get('skill') in ('listening', 'reading')
+        for group in section.get('groups', []):
+            for q in group.get('questions', []):
+                qid = q['id']
+                if qid not in existing_q_ids:
+                    ans_obj = MockAnswer.objects.create(
+                        id=str(uuid4()),
+                        attempt_id=attempt.id,
+                        question_id=qid,
+                        response='',
+                        is_correct=False if auto else None,
+                        score=0.0,
+                        is_graded=auto,
+                        updated_at=now,
+                    )
+                    rows.append(ans_obj)
+                    answers[qid] = dict(response='', audioKey=None, isGraded=auto, score=0.0, hasImages=False)
     if versioned and not force:
         assert_complete(attempt, sections, answers, now)
     if skills:

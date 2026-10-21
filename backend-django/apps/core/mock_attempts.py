@@ -321,6 +321,12 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
             assert_question(attempt, items[0]['questionId'])
         valid = questions(attempt, [a['questionId'] for a in items])
         if attempt.flow_mode == 'full_test' and attempt.current_skill:
+            q_skills = {q.group.section.skill for q in valid}
+            if len(q_skills) == 1:
+                target_sec_skill = next(iter(q_skills))
+                if target_sec_skill != attempt.current_skill:
+                    attempt.current_skill = target_sec_skill
+                    attempt.save(update_fields=['current_skill'])
             valid = [q for q in valid if q.group.section.skill == attempt.current_skill]
         valid_ids = {q.id for q in valid}
         selected = [a for a in items if a['questionId'] in valid_ids]
@@ -516,6 +522,18 @@ def record_telemetry(actor, attempt_id, data):
         }
 
 
+def switch_section(actor, attempt_id, target_skill):
+    with transaction.atomic():
+        attempt = own(actor, attempt_id, lock=True)
+        assert_in_progress(attempt)
+        sec = MockSection.objects.filter(exam_id=attempt.exam_id, skill=target_skill).first()
+        if not sec:
+            fail('SECTION_NOT_FOUND', f"Section with skill '{target_skill}' not found in exam", 404)
+        attempt.current_skill = target_skill
+        attempt.save(update_fields=['current_skill'])
+        return {'saved': True, 'currentSkill': attempt.current_skill}
+
+
 def advance(actor, attempt_id):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
@@ -581,7 +599,11 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         if is_partial(attempt) and len(qs) != len(ids):
             fail('QUESTION_NOT_IN_EXAM', 'Media task is outside the selected practice scope', 403)
         if attempt.flow_mode == 'full_test' and any(q.group.section.skill != attempt.current_skill for q in qs):
-            fail('SECTION_LOCKED', 'Question outside current section', 403)
+            if kind in ('listening', 'speaking') and all(q.group.section.skill == kind for q in qs):
+                attempt.current_skill = kind
+                attempt.save(update_fields=['current_skill'])
+            else:
+                fail('SECTION_LOCKED', 'Question outside current section', 403)
         at = timezone.now()
         state = dict(attempt.media_state or {})
         phase = state.get(entity_id)

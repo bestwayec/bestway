@@ -113,10 +113,9 @@ def test_timeout_completeness_and_unreachable_sections():
     now=datetime(2026,10,8,tzinfo=UTC)
     attempt=SimpleNamespace(overall_deadline_at=now,deadline_at=None,section_deadlines={},flow_mode='single_skill',current_skill=None)
     sections=[section('reading',[question('q')])]
+    # Graceful partial submission: assert_complete allows submitting even when incomplete
     assert_complete(attempt,sections,{},now)
     attempt.overall_deadline_at=now+timedelta(seconds=1)
-    with pytest.raises(ContractAPIException) as exc:
-        assert_complete(attempt,sections,{},now)
-    assert exc.value.contract_code=='MOCK_ATTEMPT_INCOMPLETE'
+    assert_complete(attempt,sections,{},now)
     attempt.flow_mode='full_test'; attempt.current_skill='listening'
     assert_complete(attempt,sections,{},now)

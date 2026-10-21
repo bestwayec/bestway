@@ -11,7 +11,7 @@ def _spec(part12_prep: list[int]) -> dict:
         "listening": {"duration": 45, "parts": [("1", 8, ["multiple_choice"], 3), ("2", 6, ["short_answer", "note_completion"], None), ("3", 4, ["matching"], 6), ("4", 5, ["matching"], 8), ("5", 6, ["multiple_choice"], 3), ("6", 6, ["short_answer", "note_completion"], None)]},
         "reading": {"duration": 60, "parts": [("1", 6, ["short_answer", "sentence_completion"], None), ("2", 8, ["matching"], 10), ("3", 6, ["matching_headings"], 8), ("4", 9, ["multiple_choice", "true_false_notgiven"], None), ("5", 6, ["short_answer", "summary_completion", "multiple_choice"], None)]},
         "writing": {"duration": 60, "parts": [("informal_email", 1, ["essay_task1"], 5), ("formal_email", 1, ["essay_task1"], 5), ("publication", 1, ["essay_task2"], 6)]},
-        "speaking": {"duration": 11, "parts": [("1.1", 3, ["speaking_task"], 5), ("1.2", 3, ["speaking_task"], 5), ("2", 1, ["speaking_task"], 5), ("3", 1, ["speaking_task"], 6)], "part12Prep": part12_prep},
+        "speaking": {"duration": 30, "parts": [("1.1", 3, ["speaking_task"], 5), ("1.2", 3, ["speaking_task"], 5), ("2", 1, ["speaking_task"], 5), ("3", 1, ["speaking_task"], 6)], "part12Prep": part12_prep},
     }
 
 

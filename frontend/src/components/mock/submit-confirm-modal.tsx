@@ -38,7 +38,7 @@ export function SubmitConfirmModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-6">
+      <DialogContent className="max-w-md p-6 bg-[#0B0F17] border border-border text-fg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-fg">
             <Send className="size-5 text-brand" />
@@ -66,9 +66,11 @@ export function SubmitConfirmModal({
             <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold">Diqqat: {missing} ta topshiriqqa javob berilmadi!</p>
-                <p className="mt-0.5 text-fg-muted">
-                  Topshirilsa, javob berilmagan savollarga ball berilmaydi. Shunga qaramay topshirishni tasdiqlaysizmi?
+                <p className="font-semibold text-amber-400">
+                  Siz {total} tadan {answered} ta savolga javob berdingiz.
+                </p>
+                <p className="mt-1 text-fg-muted">
+                  Qolgan javob berilmagan savollarga 0 ball qo&apos;yiladi. Imtihonni yakunlaysizmi?
                 </p>
               </div>
             </div>
@@ -83,7 +85,7 @@ export function SubmitConfirmModal({
             disabled={isSubmitting}
             onClick={() => onOpenChange(false)}
           >
-            Davom ettirish
+            ⬅️ Davom etish
           </Button>
           <Button
             type="button"
@@ -91,7 +93,7 @@ export function SubmitConfirmModal({
             loading={isSubmitting}
             onClick={onConfirm}
           >
-            Ha, topshirish
+            ✅ Ha, yakunlash
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -46,6 +46,7 @@ import {
 } from "@/hooks/use-mock";
 import type { ExamSimulatorMode, MockAttemptMode, MockPracticeSkill } from "@/lib/types";
 import { ExamLauncherModal } from "./exam-launcher-modal";
+import { ExamResumeModal } from "./exam-resume-modal";
 import { LiveExamPinCard } from "./live-exam-pin-card";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
@@ -220,11 +221,22 @@ export function MockExamCard({
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const [launcherOpen, setLauncherOpen] = React.useState(false);
+  const [resumeOpen, setResumeOpen] = React.useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const multilevel = exam.type === "multilevel";
   const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
   const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
+
+  const availableSkills: MockSkill[] = React.useMemo(() => {
+    if (inProgress?.practiceScope?.skills && inProgress.practiceScope.skills.length > 0) {
+      return inProgress.practiceScope.skills as MockSkill[];
+    }
+    if (exam.skills && exam.skills.length > 0) {
+      return exam.skills;
+    }
+    return ["writing", "speaking"];
+  }, [inProgress, exam.skills]);
 
   async function handleConfirmDelete() {
     if (!onDelete) return;
@@ -339,13 +351,32 @@ export function MockExamCard({
             Start Exam
           </Button>
         ) : inProgress ? (
-          <Link
-            href={`/mock/attempt/${inProgress.id}`}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            <RefreshCw className="size-4" />
-            {t("resume")}
-          </Link>
+          <>
+            {availableSkills.length > 1 ? (
+              <Button
+                className="w-full bg-brand font-semibold text-white transition-colors hover:bg-brand-hover"
+                onClick={() => setResumeOpen(true)}
+              >
+                <RefreshCw className="mr-1.5 size-4" />
+                {t("resume")}
+              </Button>
+            ) : (
+              <Link
+                href={`/mock/attempt/${inProgress.id}`}
+                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+              >
+                <RefreshCw className="size-4" />
+                {t("resume")}
+              </Link>
+            )}
+            <ExamResumeModal
+              open={resumeOpen}
+              onOpenChange={setResumeOpen}
+              attemptId={inProgress.id}
+              skills={availableSkills}
+              examTitle={exam.title}
+            />
+          </>
         ) : exam.access === "granted" ? (
           onStart ? (
             <>

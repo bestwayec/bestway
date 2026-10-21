@@ -22,4 +22,17 @@ describe('resuming the rendered full-test section', () => {
     expect(html).toContain(`Current ${skill} content`);
     expect(html).not.toContain('Current listening content');
   });
+
+  it('opens requested skill via URL query parameter even when currentSkill differs', () => {
+    (globalThis as unknown as { window: unknown }).window = {
+      location: { search: '?skill=writing' },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    const attempt = { id:'resume', examId:'exam', mode:'timed', flowMode:'full_test', currentSkill:'speaking', specificationVersion:'UZBMB_MULTILEVEL_EN_2026_V1', sections:[] } as unknown as MockAttemptDetail;
+    const html = renderToStaticMarkup(React.createElement(MockRunner, { attempt }));
+    expect(html).toContain('Current writing content');
+    expect(html).not.toContain('Current speaking content');
+  });
 });
