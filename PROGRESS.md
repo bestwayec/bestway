@@ -125,6 +125,26 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Rasmiy versiya `v0.8.6` teglanib, GitHub `main` tarmog'iga push qilindi.
    - Contabo VPS (`169.58.58.229`) serverida `backend`, `frontend` va `assessment-worker` konteynerlari qayta qurildi, `seed_multilevel_test1_gym_diet` qayta yurgizildi va `https://bestwayec.uz/` -> `HTTP 200 OK` tasdiqlandi.
 
+### 9-BLOK: Fish Audio STT & DeepSeek Evaluator (OpenRouter Pipeline) & Submit Blocker Bartaraf Etilishi
+1. **OpenRouter Speech-to-Text (`fish-audio/s2.1-pro-free:free` & Gemini Failover)**:
+   - `backend-django/apps/core/assessment_providers.py` da `_transcribe_openrouter` joriy etildi.
+   - Base64 kodlangan audio fayllarni OpenRouter API ga yuboradi. Agar `fish-audio/s2.1-pro-free:free` modeli orqali transkripsiya xatosi yuzaga kelsa (TTS 400), tizim avtomatik ravishda `google/gemini-2.5-flash` multimodal modeliga zaxira o'tish (failover) qiladi va talabaning nutqini so'zma-so'z to'liq transkripsiya qiladi.
+   - Natija `SpeechTranscript` jadvaliga `status='SUCCEEDED'` bilan, `MockAnswer.response` va `MockAttempt.media_state['transcripts']` obyektlariga yoziladi.
+   - `assessment.py` da `for_attempt` xizmati ushbu transkripsiyalarni uzluksiz o'qiydi; natijalar sahifasidagi `"No transcript is available yet"` butunlay yo'qolib, o'quvchining gapirgan asl matni ko'rinadi.
+2. **AI Baholash Motori Yangilandi (`deepseek/deepseek-v4.1-flash`)**:
+   - Asosiy evaluator modeli OpenRouter `deepseek/deepseek-v4.1-flash` ga o'tkazildi.
+   - Yangi taqdim etilgan OpenRouter API kaliti (`sk-or-v1-d2a1...`) sozlandi.
+   - Transkripsiya qilingan matn asosida barcha CEFR mezonlari (Grammar, Coherence, Vocabulary, Task Coverage, Pronunciation) to'liq tahlil qilinadi, kuchli va zaif tomonlar hamda C1 tavsiyalari shakllanadi.
+3. **Qisman Topshirishdagi Submit Blocker Bartaraf Etildi**:
+   - `mock_attempts.py` da `assert_question` dagi qat'iy `SECTION_LOCKED` (403) blokeri olib tashlandi: bo'limlararo savollarga javob berilganda `attempt.current_skill` avtomatik yangilanadi.
+   - `mock_attempts.py` ning `save_answers` funksiyasidan `SECTION_LOCKED` xatosi olib tashlandi.
+   - `mock_submissions.py` da `submit` funksiyasi `in_progress` bo'lmagan holatda xatolik chiqarmasdan xavfsiz yakunlangan natijani qaytaradi.
+   - `mock-runner.tsx` da topshirish oldidan bajariladigan autosave xatosi yakuniy `submitMutateAsync` ni to'xtatmaydigan qilindi.
+4. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Django Pytest: 506 ta test muvaffaqiyatli o'tdi (0 failed, 4 skipped, 216 subtests).
+   - Frontend Vitest: 52 ta test to'plami, 356 ta test 100% PASS.
+   - TypeScript `tsc --noEmit`: 0 ta xatolik.
+
 ---
 
 ## Jarayonda

@@ -12,6 +12,7 @@ from django.utils import timezone
 from apps.legacy_schema.models import (
     AssessmentEvaluation,
     AssessmentJob,
+    MockAnswer,
     MockAttempt,
     SpeechTranscript,
 )
@@ -75,6 +76,20 @@ def transcribe(job,input,speech):
             SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='SUCCEEDED',text=output['text'],segments=output['segments'],confidence=output['confidence'],provider=output['provider'],model=output['model'],duration_ms=output['durationMs'],pronunciation_evidence='UNAVAILABLE',completed_at=timezone.now())
             response['transcript']=output['text']
             if enabled(input):response.update(transcriptConfidence=output['confidence'],audioDurationMs=output['durationMs'])
+            try:
+                ans = MockAnswer.objects.filter(attempt_id=job.attempt_id, question_id=response['questionId']).first()
+                if ans:
+                    r_scores = ans.rubric_scores if isinstance(ans.rubric_scores, dict) else {}
+                    r_scores['transcript'] = output['text']
+                    MockAnswer.objects.filter(id=ans.id).update(response=output['text'], rubric_scores=r_scores)
+                attempt = MockAttempt.objects.filter(id=job.attempt_id).first()
+                if attempt:
+                    m_state = attempt.media_state if isinstance(attempt.media_state, dict) else {}
+                    trans_map = m_state.setdefault('transcripts', {})
+                    trans_map[response['questionId']] = output['text']
+                    MockAttempt.objects.filter(id=attempt.id).update(media_state=m_state)
+            except Exception:
+                pass
         except Exception as error:
             problem=failure(error)
             SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now())

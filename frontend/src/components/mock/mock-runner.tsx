@@ -368,11 +368,19 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       submittingRef.current = true;
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
-        await saveInFlight.current;
+        try {
+          await saveInFlight.current;
+        } catch {}
         const all = Object.entries(answersRef.current)
           .filter(([qid, v]) => versioned ? (!isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === qid))) : v !== '')
           .map(([questionId, response]) => ({ questionId, response }));
-        if (all.length && (!versioned || !auto)) await bulkMutateAsync(all);
+        if (all.length && (!versioned || !auto)) {
+          try {
+            await bulkMutateAsync(all);
+          } catch (saveErr) {
+            console.warn("Autosave before submit error:", saveErr);
+          }
+        }
         await submitMutateAsync({ confirm: true, confirmed: true, force: true });
         if (liveRoomId) {
           reportProgressMutate({

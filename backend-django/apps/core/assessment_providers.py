@@ -1,7 +1,11 @@
 """Single-shot, bounded provider HTTP. Durable ledger owns all retry decisions."""
 import json
+import logging
 import math
 import os
+import urllib.request
+
+logger = logging.getLogger(__name__)
 import re
 import time
 from urllib.error import HTTPError, URLError
@@ -73,11 +77,11 @@ def assessment_identity(role,provider=None):
             elif os.environ.get('GEMINI_API_KEY'):provider='gemini'
             else:provider='openrouter'
     prefix='OPENROUTER' if provider=='openrouter' else 'XKIRO' if provider=='xkiro' else 'GEMINI' if provider=='gemini' else 'DEEPSEEK'
-    model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL')
+    model=os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_EVAL_MODEL') or os.environ.get(prefix+'_ADJUDICATOR_MODEL' if role=='ADJUDICATOR' else prefix+'_MODEL')
     if model is None and role=='ADJUDICATOR':
-        model=os.environ.get(prefix+'_MODEL')
+        model=os.environ.get(prefix+'_EVAL_MODEL') or os.environ.get(prefix+'_MODEL')
     if model is None:
-        if provider=='openrouter':model=os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-chat').strip() or 'deepseek/deepseek-chat'
+        if provider=='openrouter':model=(os.environ.get('OPENROUTER_EVAL_MODEL') or os.environ.get('OPENROUTER_MODEL','deepseek/deepseek-v4.1-flash')).strip() or 'deepseek/deepseek-v4.1-flash'
         elif provider=='xkiro':model=os.environ.get('XKIRO_MODEL','qwen/qwen3.8-max:free').strip() or 'qwen/qwen3.8-max:free'
         elif provider=='gemini':model=os.environ.get('GEMINI_MODEL',DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
         else:model=''
@@ -549,12 +553,140 @@ def assess(input,role):
             return _assess_single(input,role,provider='gemini')
         raise
 
+def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
+    import base64
+    key = (os.environ.get('OPENROUTER_API_KEY') or os.environ.get('STT_API_KEY') or '').strip()
+    if not key:
+        raise ProviderError('STT_NOT_CONFIGURED')
+    try:
+        if not path.is_file() or not 0 < path.stat().st_size <= 25 * 1024 * 1024:
+            raise ProviderError('STT_INPUT_INVALID')
+        audio_bytes = path.read_bytes()
+    except OSError:
+        raise ProviderError('STT_AUDIO_UNAVAILABLE') from None
+
+    b64_audio = base64.b64encode(audio_bytes).decode('ascii')
+    fmt = 'webm'
+    suffix = path.suffix.lower()
+    if 'wav' in mime or suffix == '.wav':
+        fmt = 'wav'
+    elif 'mp3' in mime or 'mpeg' in mime or suffix == '.mp3':
+        fmt = 'mp3'
+    elif 'ogg' in mime or suffix == '.ogg':
+        fmt = 'ogg'
+    elif 'm4a' in mime or 'mp4' in mime or suffix in ('.m4a', '.mp4'):
+        fmt = 'm4a'
+
+    primary_model = (os.environ.get('OPENROUTER_STT_MODEL') or os.environ.get('STT_MODEL') or 'fish-audio/s2.1-pro-free:free').strip()
+    fallback_model = (os.environ.get('OPENROUTER_STT_FALLBACK_MODEL') or 'google/gemini-2.5-flash').strip()
+    models_to_try = []
+    for m in (primary_model, fallback_model, 'google/gemini-2.5-flash-lite', 'openai/gpt-audio-mini'):
+        if m and m not in models_to_try:
+            models_to_try.append(m)
+
+    base_url = (os.environ.get('OPENROUTER_BASE_URL') or 'https://openrouter.ai/api/v1').rstrip('/')
+    url = f"{base_url}/chat/completions"
+    timeout_sec = bounded('ASSESSMENT_STT_TIMEOUT_MS', 60000, 1000, 120000) / 1000.0
+
+    last_error = None
+    for m in models_to_try:
+        try:
+            req_body = json.dumps({
+                "model": m,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "You are an accurate English speech-to-text transcriber. Transcribe the following spoken English audio recording verbatim word-for-word. Output ONLY the exact transcribed text with proper punctuation and capitalization. Do not include introductory notes, conversational remarks, or quotation marks. If the audio is completely silent or contains no recognizable speech, respond with [SILENCE]."
+                            },
+                            {
+                                "type": "input_audio",
+                                "input_audio": {
+                                    "data": b64_audio,
+                                    "format": fmt
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "temperature": 0.0
+            }).encode('utf-8')
+
+            req = urllib.request.Request(
+                url,
+                data=req_body,
+                headers={
+                    'Authorization': f'Bearer {key}',
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://bestwayec.uz',
+                    'X-Title': 'BestWay Education'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                resp_data = json.loads(resp.read().decode('utf-8'))
+                raw_text = resp_data.get('choices', [{}])[0].get('message', {}).get('content', '') or ''
+                raw_text = raw_text.strip()
+                if raw_text == '[SILENCE]' or raw_text.lower() == '[silence]':
+                    raw_text = ''
+                if (raw_text.startswith('"') and raw_text.endswith('"')) or (raw_text.startswith("'") and raw_text.endswith("'")):
+                    raw_text = raw_text[1:-1].strip()
+
+                words = raw_text.split()
+                segments = []
+                calc_duration = duration_ms or (len(words) * 400 if words else 3000)
+                if words:
+                    step = (calc_duration / 1000.0) / len(words)
+                    for idx, w in enumerate(words):
+                        segments.append({
+                            'start': round(idx * step, 2),
+                            'end': round((idx + 1) * step, 2),
+                            'text': w,
+                            'confidence': 0.95
+                        })
+
+                return {
+                    'text': raw_text,
+                    'confidence': 0.95 if raw_text else 0.0,
+                    'segments': segments,
+                    'provider': 'openrouter',
+                    'model': m,
+                    'durationMs': calc_duration,
+                    'pronunciationEvidence': 'UNAVAILABLE'
+                }
+        except Exception as exc:
+            last_error = exc
+            logger.warning("OpenRouter STT model %s failed (%s), trying next fallback...", m, exc)
+            continue
+
+    try:
+        from .assessment_local_stt import transcribe as local_transcribe
+        return local_transcribe(path, mime, language, duration_ms)
+    except Exception:
+        pass
+
+    raise ProviderError('STT_RESPONSE_INVALID') from last_error
+
+
 def transcribe(path,mime,language='en',duration_ms=None):
     provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()
+    if provider in ('openrouter', 'fish-audio', 'fish_audio') or os.environ.get('OPENROUTER_API_KEY'):
+        try:
+            return _transcribe_openrouter(path, mime, language, duration_ms)
+        except Exception:
+            if provider in ('faster_whisper', 'faster-whisper'):
+                from .assessment_local_stt import transcribe as local_transcribe
+                return local_transcribe(path, mime, language, duration_ms)
+            raise
+
     if provider in ('faster_whisper','faster-whisper'):
         from .assessment_local_stt import transcribe as local_transcribe
         return local_transcribe(path,mime,language,duration_ms)
-    if provider!='deepgram' or not key or not model:raise ProviderError('STT_NOT_CONFIGURED')
+    if provider!='deepgram' or not key or not model:
+        if os.environ.get('OPENROUTER_API_KEY') or os.environ.get('STT_API_KEY'):
+            return _transcribe_openrouter(path, mime, language, duration_ms)
+        raise ProviderError('STT_NOT_CONFIGURED')
     url=provider_url(os.environ.get('STT_BASE_URL') or 'https://api.deepgram.com/v1','listen')
     if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.IGNORECASE) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.IGNORECASE):raise ProviderError('STT_INPUT_INVALID')
     try:

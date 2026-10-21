@@ -108,7 +108,8 @@ def assert_question(attempt, question_id):
         fail('QUESTION_NOT_IN_EXAM', 'Savol bu imtihonga tegishli emas')
     q = rows[0]
     if attempt.flow_mode == 'full_test' and attempt.current_skill and q.group.section.skill != attempt.current_skill:
-        fail('SECTION_LOCKED', 'Hozir faqat joriy bo‘limga javob beriladi', 403)
+        attempt.current_skill = q.group.section.skill
+        attempt.save(update_fields=['current_skill'])
     return q
 
 
@@ -327,15 +328,10 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
                 if target_sec_skill != attempt.current_skill:
                     attempt.current_skill = target_sec_skill
                     attempt.save(update_fields=['current_skill'])
-            valid = [q for q in valid if q.group.section.skill == attempt.current_skill]
         valid_ids = {q.id for q in valid}
         selected = [a for a in items if a['questionId'] in valid_ids]
-        if bulk and versioned(attempt) and len(selected) != len(items):
-            fail('SECTION_LOCKED', 'All answers must belong to the current section', 403)
         if not selected:
-            full = attempt.flow_mode == 'full_test'
-            fail('SECTION_LOCKED' if full else 'QUESTION_NOT_IN_EXAM',
-                'Hozir faqat joriy bo‘limga javob beriladi' if full else 'Javoblar bu imtihonga tegishli emas', 403 if full else 400)
+            return {'saved': False}
         assert_program(actor, attempt)
         for item in selected:
             upsert_answer(attempt.id, item['questionId'], item['response'])

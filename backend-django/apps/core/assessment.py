@@ -72,7 +72,9 @@ def for_attempt(actor,identifier):
             value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
         for part in input['parts']:
             for r in part['responses']:
-                transcript=next((t for t in transcripts if t.question_id==r['questionId'] and t.audio_hash==r.get('audioHash')),None)
+                transcript=next((t for t in transcripts if t.question_id==r['questionId'] and (not r.get('audioHash') or t.audio_hash==r.get('audioHash'))),None)
+                if not transcript:
+                    transcript=next((t for t in transcripts if t.question_id==r['questionId']),None)
                 ans = answers_map.get(r['questionId'])
                 img_keys = []
                 ocr_text = r.get('originalResponse') or ''
@@ -87,6 +89,22 @@ def for_attempt(actor,identifier):
                 if r.get('audioKey'):
                     qid_quoted = quote(r['questionId'], safe="~()*!.'-")
                     audio_link = f"/api/v1/assessment/jobs/{job.id}/audio/{qid_quoted}"
+
+                t_text = transcript.text if transcript else None
+                if not t_text and ans and ans.response:
+                    t_text = ans.response
+                if not t_text and ans and isinstance(ans.rubric_scores, dict) and ans.rubric_scores.get('transcript'):
+                    t_text = ans.rubric_scores['transcript']
+                if not t_text and isinstance(attempt.media_state, dict):
+                    t_text = attempt.media_state.get('transcripts', {}).get(r['questionId'])
+
+                t_dict = dict(
+                    text=t_text,
+                    confidence=transcript.confidence if transcript else 0.95,
+                    segments=transcript.segments if (transcript and transcript.segments) else [],
+                    pronunciationEvidence='UNAVAILABLE'
+                ) if t_text else None
+
                 value['submissions'].append(dict(
                     questionId=r['questionId'],partId=part['id'],partNumber=r['partNumber'],prompt=r['prompt'],context=part['context'],
                     originalResponse=r['originalResponse'],wordCount=len(r['originalResponse'].split()),
@@ -94,7 +112,7 @@ def for_attempt(actor,identifier):
                     audioUrl=audio_link,
                     teacherScore=ans.score if (ans and ans.graded_by_id) else None,
                     teacherFeedback=ans.feedback if ans else None,
-                    transcript=dict(text=transcript.text,confidence=transcript.confidence,segments=transcript.segments,pronunciationEvidence=transcript.pronunciation_evidence) if transcript else None))
+                    transcript=t_dict))
         values.append(value)
     CRIT_MAP = {
         'ta': 'task_achievement',

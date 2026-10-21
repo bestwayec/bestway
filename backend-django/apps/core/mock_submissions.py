@@ -49,7 +49,6 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     if force:
         from .mock_support import locked
         attempt = locked(actor, attempt_id)
-        attempts.assert_in_progress(attempt)
     else:
         attempt = attempts.own(actor, attempt_id, lock=True)
     versioned = attempts.versioned(attempt)
@@ -59,6 +58,7 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         except Exception:
             pass
         return saved_result(attempt)
+    attempts.assert_in_progress(attempt)
     if versioned and not force:
         try:
             attempts.assert_program(actor, attempt)
