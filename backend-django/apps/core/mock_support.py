@@ -147,15 +147,69 @@ def certificate_data(actor,attempt_id):
     row=MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     assert_view(actor,row.student_id)
-    from .mock_practice import is_partial
-    if is_partial(row): fail('MOCK_PARTIAL_PRACTICE_NO_CERTIFICATE','Selected task practice does not issue a full exam certificate')
-    from .assessment_quality import attempt_practice_grades
-    if attempt_practice_grades(row):fail('MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE','Internal classroom practice grades do not issue an overall exam or CEFR certificate')
-    if row.status!='completed': fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
-    sections=[dict(skill=skill,score=raw['score'],max=raw['max'],band=(row.section_bands or {}).get(skill),
-        standardScore=(row.standard_scores or {}).get(skill,{}).get('estimatedStandardScore'))
-        for skill in SKILLS if (raw:=(row.raw_scores or {}).get(skill))]
-    return dict(studentName=row.student.user.name,examTitle=student_title(row.exam.title) if actor.role=='student' else row.exam.title,
-        examType=row.exam.type,level=row.exam.level,isIelts=row.exam.type!='multilevel',finishedAt=row.finished_at or timezone.now(),
-        attemptId=row.id,sections=sections,overallBand=row.overall_band,overallScore=row.overall_score,
-        specificationVersion=row.specification_version,cefrLevel=row.cefr_level)
+    from .mock_practice import is_partial, scope
+    is_part = is_partial(row)
+    if row.status not in ('completed', 'submitted'):
+        fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
+
+    raw_map = row.raw_scores or {}
+    sec_bands = row.section_bands or {}
+    std_scores = row.standard_scores or {}
+    skills_present = set(raw_map.keys()) | set(sec_bands.keys()) | set(std_scores.keys())
+    if is_part:
+        sc = scope(row)
+        if sc and sc.get('skills'):
+            skills_present.update(sc['skills'])
+
+    sections = []
+    for skill in SKILLS:
+        if skill not in skills_present and skill not in raw_map:
+            continue
+        raw = raw_map.get(skill) or {}
+        score = raw.get('score')
+        max_score = raw.get('max')
+        band = sec_bands.get(skill)
+        std_val = std_scores.get(skill)
+        standard_score = std_val.get('estimatedStandardScore') if isinstance(std_val, dict) else std_val
+
+        if score is None:
+            score = standard_score if standard_score is not None else band
+        if max_score is None:
+            max_score = 75 if row.exam.type == 'multilevel' else 9
+
+        sections.append(dict(
+            skill=skill,
+            score=score if score is not None else 0,
+            max=max_score,
+            band=band,
+            standardScore=standard_score if standard_score is not None else score,
+        ))
+
+    overall_score = row.overall_score
+    overall_band = row.overall_band
+    cefr_level = row.cefr_level
+
+    if is_part or overall_score is None or overall_band is None or not cefr_level:
+        if overall_score is None and sections:
+            overall_score = sections[0].get('standardScore') or sections[0].get('score')
+        if overall_band is None and sections:
+            overall_band = sections[0].get('band')
+        if not cefr_level and overall_score is not None and row.exam.type == 'multilevel':
+            from .prediction_service import multilevel_cefr_from_score
+            cefr_level = multilevel_cefr_from_score(overall_score)
+
+    return dict(
+        studentName=row.student.user.name if row.student and row.student.user else "Student",
+        examTitle=student_title(row.exam.title) if actor.role=='student' else row.exam.title,
+        examType=row.exam.type,
+        level=row.exam.level,
+        isIelts=row.exam.type!='multilevel',
+        finishedAt=row.finished_at or timezone.now(),
+        attemptId=row.id,
+        sections=sections,
+        overallBand=overall_band,
+        overallScore=overall_score,
+        specificationVersion=row.specification_version,
+        cefrLevel=cefr_level,
+        isPartial=is_part,
+    )

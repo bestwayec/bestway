@@ -114,11 +114,20 @@ export function useConfirmMockPurchase() {
 
 export function useStartMock() {
   return useMutation({
-    mutationFn: (v: { examId: string; mode?: "practice" | "timed"; flow?: "full_test" | "single_skill"; skills?: import("@/lib/types").MockPracticeSkill[] }) =>
+    mutationFn: (v: {
+      examId: string;
+      mode?: "practice" | "timed";
+      flow?: "full_test" | "single_skill";
+      skills?: import("@/lib/types").MockPracticeSkill[];
+      retake?: boolean;
+      force?: boolean;
+    }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
         ...(v.flow ? { flow: v.flow } : {}),
         ...(v.skills ? { skills: v.skills } : {}),
+        ...(v.retake ? { retake: true } : {}),
+        ...(v.force ? { force: true } : {}),
       }),
   });
 }

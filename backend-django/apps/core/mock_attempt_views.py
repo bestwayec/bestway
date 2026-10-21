@@ -29,7 +29,7 @@ def success(data, status=200):
 
 def student(request):
     require_authenticated(request)
-    require_role(request, 'student')
+    require_role(request, 'student', 'super_admin', 'admin')
 
 
 def validate_answer(data):
@@ -50,7 +50,7 @@ def validate_answer(data):
 @permission_classes([AllowAny])
 def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id'})
+    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force'})
     target_exam_id = exam_id or data.get('examId') or data.get('exam_id') or request.query_params.get('examId') or request.query_params.get('exam_id')
     if not target_exam_id:
         engine.fail('VALIDATION_ERROR', 'examId should not be empty')

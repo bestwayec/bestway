@@ -54,7 +54,13 @@ def generate(data):
     # Header branding
     center(os.environ.get('CENTER_NAME', "BESTWAY EDUCATION"), 95, 26, True, dark_accent)
     center('EXAM PREPARATION & ASSESSMENT CENTER', 120, 9, False, '#64748b')
-    center('OFFICIAL MOCK TEST REPORT' if not data.get('specificationVersion') else 'MULTILEVEL CEFR ESTIMATED RESULT', 145, 13, True, accent)
+    if data.get('isPartial'):
+        cert_heading = 'IELTS SKILL PRACTICE REPORT' if data.get('isIelts') else 'MULTILEVEL SKILL PRACTICE REPORT'
+    elif not data.get('specificationVersion'):
+        cert_heading = 'OFFICIAL MOCK TEST REPORT'
+    else:
+        cert_heading = 'MULTILEVEL CEFR ESTIMATED RESULT'
+    center(cert_heading, 145, 13, True, accent)
 
     center('This certifies that', 182, 11, False, '#64748b')
     extra = center(data['studentName'], 210, 22, True, '#0f172a')
@@ -66,7 +72,7 @@ def generate(data):
         text(value, x, y, 11, 'Helvetica-Bold', '#0f172a')
     if data['isIelts']:
         text('Band Score', 420, y, 11, 'Helvetica-Bold', '#0f172a')
-    elif data.get('specificationVersion'):
+    elif data.get('specificationVersion') or data.get('isPartial'):
         text('Estimate /75', 420, y, 11, 'Helvetica-Bold', '#0f172a')
 
     def line(y_pos):
@@ -81,21 +87,36 @@ def generate(data):
         text(row['skill'].capitalize(), 130, y, 11, 'Helvetica', '#334155')
         text(js_string(row['score']) + ' / ' + js_string(row['max']), 310, y, 11, 'Helvetica', '#334155')
         if data['isIelts']:
-            text(fixed(row['band']) if row['band'] is not None else '—', 420, y, 11, 'Helvetica-Bold', '#0f172a')
-        elif data.get('specificationVersion'):
-            text(js_string(row['standardScore']) if row['standardScore'] is not None else 'Pending', 420, y, 11, 'Helvetica-Bold', '#0f172a')
+            text(fixed(row['band']) if row.get('band') is not None else '—', 420, y, 11, 'Helvetica-Bold', '#0f172a')
+        elif data.get('specificationVersion') or data.get('isPartial'):
+            val_to_show = row.get('standardScore') if row.get('standardScore') is not None else row.get('score')
+            text(js_string(val_to_show) if val_to_show is not None else 'Pending', 420, y, 11, 'Helvetica-Bold', '#0f172a')
         y += 22
 
     line(y + 4)
     y += 44
 
-    if data['isIelts'] and data['overallBand'] is not None:
-        center('OVERALL BAND SCORE', y, 11, True, '#64748b')
-        center(fixed(data['overallBand']), y + 44, 42, True, accent)
-    elif data.get('cefrLevel'):
-        val = 'ESTIMATED SCORE: ' + (js_string(data['overallScore']) if data.get('overallScore') is not None else 'Pending') + ' / 75' if data.get('specificationVersion') else 'OVERALL CEFR LEVEL'
-        center(val, y, 11, True, '#64748b')
-        center(data['cefrLevel'], y + 44, 42, True, accent)
+    if data['isIelts']:
+        band_val = data.get('overallBand')
+        if band_val is None and data.get('isPartial') and data.get('sections'):
+            band_val = data['sections'][0].get('band')
+        if band_val is not None:
+            center('OVERALL BAND SCORE' if not data.get('isPartial') else 'PRACTICE BAND SCORE', y, 11, True, '#64748b')
+            center(fixed(band_val), y + 44, 42, True, accent)
+    else:
+        sc_val = data.get('overallScore')
+        if sc_val is None and data.get('isPartial') and data.get('sections'):
+            sc_val = data['sections'][0].get('standardScore') or data['sections'][0].get('score')
+        cefr = data.get('cefrLevel')
+        if not cefr and sc_val is not None:
+            from .prediction_service import multilevel_cefr_from_score
+            cefr = multilevel_cefr_from_score(sc_val)
+
+        if cefr or sc_val is not None:
+            score_str = js_string(sc_val) if sc_val is not None else 'Pending'
+            val = ('PRACTICE SCORE: ' if data.get('isPartial') else 'ESTIMATED SCORE: ') + score_str + ' / 75'
+            center(val, y, 11, True, '#64748b')
+            center(cefr or 'A2', y + 44, 42, True, accent)
 
     # Footer verification metadata
     base_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')

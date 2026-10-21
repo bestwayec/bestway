@@ -87,13 +87,13 @@ describe("partial teacher result presentation", () => {
     expect(breakdown).toContain("— / 10");
     expect(breakdown).not.toContain("3 / 10");
   });
-  it("shows observed raw results without a fabricated overall, CEFR or certificate link", () => {
+  it("shows observed raw results with skill practice report certificate link", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: attempt() }));
     expect(html).toContain("Selected task practice result");
     expect(html).not.toContain("no overall Multilevel score");
     expect(html).toContain("4/5");
     expect(html).not.toContain(" /75");
-    expect(html).not.toContain("/certificate");
+    expect(html).toContain("/certificate");
     expect(html).toContain('max="5"');
     expect(html).not.toContain('max="9"');
   });

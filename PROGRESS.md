@@ -165,15 +165,32 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Frontend Vitest: **52 ta test to'plami, 356 ta test PASS** (100% PASS).
    - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
 
+### 11-BLOK: Amaliyot Imtihonlari Sertifikati (Practice PDF Report) va Cheksiz Qayta Topshirish (Unlimited Retakes)
+1. **Amaliyot Imtihonlari Sertifikati (Practice PDF Report & CEFR Estimation)**:
+   - `backend-django/apps/core/mock_support.py` dagi `MOCK_PARTIAL_PRACTICE_NO_CERTIFICATE` va `MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE` blokeri olib tashlandi.
+   - Writing, Speaking yoki istalgan qisman topshirilgan amaliyot urinishi uchun ReportLab orqali A4 formatdagi "Multi-Level Skill Practice Report / Performance Report" (yoki IELTS bo'lsa "IELTS Skill Practice Report") xatosiz yaratiladi.
+   - Topshirilgan modul bo'yicha to'plangan ball (masalan: `Speaking: 37.9 / 75`), DTM CEFR darajasi (A2: 0-33, B1: 34-45, B2: 46-59, C1: 60-75) va tekshirish QR/havolasi to'liq ko'rsatiladi.
+   - Frontend: `mock-result-view.tsx` va `certificate-modal.tsx` da `Amaliyot Hisoboti (PDF)` yuklab olish tugmasi va modal oynasi faollashtirildi.
+2. **Cheksiz Qayta Topshirish (Unlimited Retakes) va Scope Ziddiyatini Yechish**:
+   - `backend-django/apps/core/mock_attempts.py` da `start()` funksiyasida:
+     * O'quvchi boshqa modulni (masalan Writing'dan Speaking'ga) tanlaganda yoki yangidan boshlamoqchi bo'lganda (`scope_mismatch` yoki `retake=True`), eski `in_progress` holatdagi urinish avtomatik xavfsiz yakunlanadi va yangi urinish to'g'ridan-to'g'ri boshlanadi. `MOCK_ATTEMPT_SCOPE_CONFLICT` (409) va "The exam could not be started" xatolari bartaraf etildi.
+     * Admin/superadmin foydalanuvchilar platformani erkin sinab ko'rishi uchun avtomatik `StudentProfile` ta'minlanadi, `NOT_A_STUDENT` xatosi chiqmaydi.
+     * `mock_attempt_views.py` dagi `body` ruxsat etilgan maydonlariga `retake`, `allow_retake`, `allowRetake`, `force` kiritildi.
+   - Frontend: `multilevel-student-ui.tsx` dagi `studentStartMessage` backend qaytargan xabarlarni yashirmasdan to'g'ri ko'rsatadi.
+3. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Backend Django Pytest: yangi `test_practice_certificate_and_retake.py`, `test_mock_attempts.py`, `test_mock_support.py` — **40 ta test 100% PASS**.
+   - Frontend Vitest: **52 ta test to'plami, 356 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik (Clean build)**.
+
 ---
 
 ## Jarayonda
-- Yangi v0.8.6+ versiyasida topshirilgan qisman imtihonlar (partial submissions) va AI baholash natijalarini real o'quvchilar sinovida kuzatish.
+- Yangi amaliyot sertifikatlari va cheksiz qayta topshirish funksionalini Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish va tekshirish.
 
 ---
 
 ## Keyingi Qadamlar
-1. O'quvchilar uchun shaxsiy kabinetida o'zlarining imtihon sertifikati va ustoz bahosi xulosasini PDF shaklida yuklab olish sahifasini joriy etish.
+1. O'quvchilar uchun shaxsiy kabinetida o'zlarining imtihon sertifikati va ustoz bahosi xulosasini PDF shaklida yuklab olish sahifasini yanada boyitish.
 2. Speaking modulida Deepgram nutq transkripsiyasi bilan AI talaffuz tahlilini yanada chuqurlashtirish.
 
 ---
@@ -186,3 +203,5 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 5. **Moslashuvchan Topshirish & Zero-Score Fallback**: Hech qanday holatda talabaning imtihonni topshirishi qat'iy validatorlar bilan to'xtatilmasligi shart. Javobsiz savollar 0 ball bilan xavfsiz to'ldiriladi va AI worker xatosiz yakunlanadi.
 6. **Resume Tanlovi**: O'quvchi o'zi xohlagan bo'limni (Writing yoki Speaking) tanlab davom ettirish huquqiga ega, tizim avtomatik ravishda bitta modulga majburlab tiqmasligi shart.
 7. **Speech-to-Text Failover Qoidasi**: O'quvchi audio yuklagan har qanday holatda transkripsiya bo'sh qolmasligi shart. OpenRouter orqali `fish-audio/s2.1-pro-free:free` so'rovi (TTS xatosi) paydo bo'lganda zudlik bilan multimodal `google/gemini-2.5-flash` modeliga o'tiladi va audio to'liq matnga o'girilib bazaga saqlanadi.
+8. **Amaliyot Sertifikati Qoidasi**: Faqat bitta bo'lim (Writing yoki Speaking) topshirgan o'quvchi uchun ham rasmiy "Multi-Level Skill Practice Report" PDF hujjati chiqariladi, JSON xatoliklar taqiqlanadi.
+9. **Cheksiz Qayta Topshirish (Unlimited Retakes)**: O'quvchi yoki admin boshqa bo'limni tanlaganda yoki qayta topshirishni boshlaganda eski `in_progress` holatdagi urinish zudlik bilan yopiladi va yangi urinish to'siqsiz ishga tushadi.

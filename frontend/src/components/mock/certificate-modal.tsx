@@ -15,6 +15,10 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
   if (!open) return null;
 
   const isIelts = attempt.examType !== "multilevel";
+  const isPartial = attempt.flowMode === "partial_practice" || attempt.sections.length < 4;
+  const singleSec = attempt.sections[0];
+  const displayScore = attempt.overallScore ?? (singleSec?.standardScore ?? singleSec?.score);
+  const displayCefr = attempt.cefrLevel ?? (displayScore != null && !isIelts ? (displayScore >= 60 ? "C1" : displayScore >= 46 ? "B2" : displayScore >= 34 ? "B1" : "A2") : "—");
   const finishedDate = attempt.finishedAt ? new Date(attempt.finishedAt).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -83,7 +87,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
               <ShieldCheck className="size-3.5" /> BestWay Education Assessment Center
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white uppercase mt-2">
-              Official Mock Examination Report
+              {isPartial ? (isIelts ? "IELTS Practice Performance Report" : "Multi-Level Skill Practice Report") : "Official Mock Examination Report"}
             </h1>
             <p className="text-xs text-slate-400">
               {isIelts ? "IELTS Academic Simulation · Diagnostic Assessment" : "Multi-Level (CEFR) National Framework Assessment"}
@@ -104,16 +108,16 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
           {/* Overall Score Highlight */}
           <div className="my-6 mx-auto max-w-xs rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              {isIelts ? "Overall Band Score" : "Umumiy Natija (CEFR)"}
+              {isIelts ? (isPartial ? "Practice Band Score" : "Overall Band Score") : (isPartial ? "Amaliyot Natijasi (CEFR)" : "Umumiy Natija (CEFR)")}
             </p>
             <div className="mt-1 text-4xl font-extrabold text-white tracking-tight">
               {isIelts ? (
-                <span>{attempt.overallBand?.toFixed(1) ?? "—"}</span>
+                <span>{(attempt.overallBand ?? singleSec?.band)?.toFixed(1) ?? "—"}</span>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-emerald-400">{attempt.cefrLevel ?? "—"}</span>
-                  {attempt.overallScore != null && (
-                    <span className="text-lg text-slate-400 font-normal">({attempt.overallScore} / 75)</span>
+                  <span className="text-emerald-400">{displayCefr}</span>
+                  {displayScore != null && (
+                    <span className="text-lg text-slate-400 font-normal">({displayScore} / 75)</span>
                   )}
                 </div>
               )}

@@ -237,7 +237,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           );})}
         </div>
 
-        {completed && !partialPractice && !internalPractice && (
+        {completed && !internalPractice && (
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 print:hidden">
             <a
               href={media(`/mock/attempts/${attempt.id}/certificate`)}
@@ -246,7 +246,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
-              {t("certificate")} (PDF)
+              {partialPractice ? "Amaliyot Hisoboti (PDF)" : `${t("certificate")} (PDF)`}
             </a>
             <button
               type="button"

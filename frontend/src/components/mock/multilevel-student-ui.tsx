@@ -44,6 +44,8 @@ function errorMessage(error: unknown): string {
 export function studentStartMessage(error: unknown): string {
   const code = errorCode(error);
   if (code === "MOCK_NOT_READY" || code === "SPECIFICATION_UNSUPPORTED") return "Exam is not ready yet.";
+  const msg = errorMessage(error);
+  if (msg) return msg;
   return "The exam could not be started. Please try again.";
 }
 

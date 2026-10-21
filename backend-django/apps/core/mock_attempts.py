@@ -216,6 +216,18 @@ def start_response(attempt, exam, resumed, full_duration=None):
 
 def start(actor, exam_id, data):
     if not StudentProfile.objects.filter(user_id=actor.id).exists():
+        if getattr(actor, 'role', None) in ('super_admin', 'admin', 'teacher', 'student'):
+            from .auth_service import initial_points, unique_link_code
+            with connection.cursor() as cursor:
+                pts = initial_points(cursor)
+                code = unique_link_code(cursor)
+                cursor.execute(
+                    'INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") '
+                    'VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'MULTILEVEL\'::"ExamProgram",true,%s,%s,NOW(),false) '
+                    'ON CONFLICT ("userId") DO NOTHING',
+                    [actor.id, pts, code],
+                )
+    if not StudentProfile.objects.filter(user_id=actor.id).exists():
         fail('NOT_A_STUDENT', "Faqat o'quvchi imtihon topshira oladi", 403)
     exam = MockExam.objects.filter(id=exam_id).first()
     if not exam:
@@ -235,7 +247,7 @@ def start(actor, exam_id, data):
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
         programs = exam_programs.state(cursor, actor.id)['availablePrograms']
-    if mock_catalog.program_for_type(exam.type) not in programs:
+    if mock_catalog.program_for_type(exam.type) not in programs and not mock_catalog.is_staff(actor):
         fail('PROGRAM_NOT_ENROLLED', 'Not enrolled in this exam track', 403)
     access = mock_catalog.access_for(actor, exam)
     if access == 'pending':
@@ -254,7 +266,9 @@ def start(actor, exam_id, data):
         if existing:
             now = timezone.now()
             exp = existing.overall_deadline_at or existing.deadline_at
-            if exp and aware(exp) <= now:
+            is_retake = bool(data.get('retake') or data.get('allow_retake') or data.get('allowRetake') or data.get('force'))
+            scope_mismatch = (partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills']))) or (not partial and is_partial(existing))
+            if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
                 try:
                     submit(actor, existing.id, force=True)
@@ -262,10 +276,6 @@ def start(actor, exam_id, data):
                     existing.status = 'completed'
                     existing.save(update_fields=['status'])
                 existing = None
-            elif partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills'])):
-                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
-            elif not partial and is_partial(existing):
-                fail('MOCK_ATTEMPT_SCOPE_CONFLICT', 'Resume the existing attempt before selecting a different practice scope', 409)
             else:
                 return start_response(existing, exam, True)
         practice = selected_scope(exam, data['skills']) if partial else None
@@ -658,7 +668,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
 
 
 def assert_view(actor, student_id):
-    if actor.role in ('admin', 'super_admin') or (actor.role == 'student' and actor.id == student_id):
+    if actor.role in ('admin', 'super_admin') or actor.id == student_id:
         return
     with connection.cursor() as cursor:
         if actor.role == 'teacher':
