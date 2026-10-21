@@ -144,11 +144,15 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Django Pytest: 506 ta test muvaffaqiyatli o'tdi (0 failed, 4 skipped, 216 subtests).
    - Frontend Vitest: 52 ta test to'plami, 356 ta test 100% PASS.
    - TypeScript `tsc --noEmit`: 0 ta xatolik.
+5. **VPS Uzilishsiz Deploy & Natija Tasdiqlandi (Zero Downtime)**:
+   - Contabo VPS (`169.58.58.229`) dagi `/opt/bestway/.env` va `/opt/bestway/backend-django/.env` yangilandi: OpenRouter API kaliti, `OPENROUTER_MODEL=deepseek/deepseek-v4.1-flash`, `OPENROUTER_EVAL_MODEL=deepseek/deepseek-v4.1-flash`, `STT_PROVIDER=openrouter`, `OPENROUTER_STT_MODEL=fish-audio/s2.1-pro-free:free`, `OPENROUTER_STT_FALLBACK_MODEL=google/gemini-2.5-flash`.
+   - Barcha konteynerlar (`education-backend`, `bestway-prod-assessment-worker-1`, `education-frontend`) qayta qurildi va ishga tushirildi.
+   - Server tekshiruvi: `https://bestwayec.uz/` -> `HTTP 200 OK`, `https://bestwayec.uz/api/backend/health` -> `HTTP 200 OK` (`status: ok`).
 
 ---
 
 ## Jarayonda
-- Yangi v0.8.6 versiyasida topshirilgan qisman imtihonlar (partial submissions) va AI baholash natijalarini real o'quvchilar sinovida kuzatish.
+- Yangi v0.8.6+ versiyasida topshirilgan qisman imtihonlar (partial submissions) va AI baholash natijalarini real o'quvchilar sinovida kuzatish.
 
 ---
 
@@ -165,3 +169,4 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 4. **Natijalar Eksportining Standarti**: Excel eksporti uchun xalqaro korporativ standartdagi `.xlsx` (openpyxl) va chop etish uchun A4 Portrait formalangan, Grand Education muhr o'rni bilan ta'minlangan rasmiy PDF (ReportLab) ishlab chiqildi.
 5. **Moslashuvchan Topshirish & Zero-Score Fallback**: Hech qanday holatda talabaning imtihonni topshirishi qat'iy validatorlar bilan to'xtatilmasligi shart. Javobsiz savollar 0 ball bilan xavfsiz to'ldiriladi va AI worker xatosiz yakunlanadi.
 6. **Resume Tanlovi**: O'quvchi o'zi xohlagan bo'limni (Writing yoki Speaking) tanlab davom ettirish huquqiga ega, tizim avtomatik ravishda bitta modulga majburlab tiqmasligi shart.
+7. **Speech-to-Text Failover Qoidasi**: O'quvchi audio yuklagan har qanday holatda transkripsiya bo'sh qolmasligi shart. OpenRouter orqali `fish-audio/s2.1-pro-free:free` so'rovi (TTS xatosi) paydo bo'lganda zudlik bilan multimodal `google/gemini-2.5-flash` modeliga o'tiladi va audio to'liq matnga o'girilib bazaga saqlanadi.
