@@ -184,8 +184,40 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ---
 
+### 12-BLOK: To'liq Funksional Lug'at Dvigateli (Vocabulary Engine), SRS Xatolar Banki, Gamifikatsiya (+5 / +3 Ball) va Guruh Excel Eksporti (Release v0.9.0)
+1. **Django Core Lug'at Modellari va Migratsiya**:
+   - `VocabularySet`: sarlavha, daraja (A1-IELTS), tavsif, guruh (Group FK), yaratuvchi (User FK), public bayrog'i.
+   - `VocabularyWord`: to'plamga bog'langan so'z, inglizcha, o'zbekcha, so'z turkumi va kontekst jumla.
+   - `VocabularyAttempt`: o'quvchi natijasi, ball, foiz, mukofot balli, modus va xatolar ro'yxati (JSON).
+   - `UserWeakWord` (SRS): o'quvchi xatolari, `mistake_count`, `correct_streak`, `is_mastered`, `last_reviewed`.
+   - Yangi `core.0001_initial` migratsiyasi orqali jadvallar PostgreSQL bazasida xavfsiz yaratildi.
+2. **Lug'at Xizmatlari (vocabulary_service.py)**:
+   - Regex asosidagi "Aqlli matn tashlash" (Smart Paste) parseri (`apple - olma`, `banana — banan`, `• cat : mushuk`, `1. dog = it`, `\t`).
+   - Avtomatik 4 ta modus bo'yicha test generatori (`eng_uzb`, `uzb_eng`, `spelling`, `mixed`).
+   - Gamifikatsiya: 100% aniqlik uchun +5 platforma balli, 80-99% uchun +3 ball, <80% uchun 0 ball. `StudentProfile.current_points` va `PointsLog` avtomatik yangilanadi.
+   - SRS (Spaced Repetition System): Xato qilingan so'zlar avtomatik xatolar bankiga tushadi. 2 marta ketma-ket to'g'ri topshirilganda `is_mastered=True` holatiga o'tadi.
+   - Openpyxl asosidagi Emerald (`#064E3B`) korporativ stilli Guruh Excel (.xlsx) hisoboti.
+3. **Frontend Komponentlari va Sahifalari**:
+   - `VocabularyBuilder.tsx`: O'qituvchilar uchun qo'lda so'z kiritish va Smart Paste modal oynasi (jonli tahlil preview bilan).
+   - `VocabularyGroupReport.tsx`: Guruh o'quvchilari natijalari, o'rtacha ko'rsatkich, eng qiyin so'zlar tahlili va .xlsx yuklab olish.
+   - `VocabularyQuizRunner.tsx`: Dark Obsidian mavzusidagi audio TTS talaffuz tugmasi (`window.speechSynthesis`), progress bar, tezkor teskari aloqa, bayramona modal va SRS qayta topshirish.
+   - `src/app/[locale]/(app)/vocabulary/page.tsx`: Barcha to'plamlar katalogi, darajalar filtri, xatolar banki banneri.
+   - `src/app/[locale]/(app)/vocabulary/[id]/page.tsx`: Test modusi tanlovi va mashq runneri.
+   - `src/app/[locale]/(app)/vocabulary/srs/page.tsx`: O'quvchining shaxsiy xatolar banki va mashq tizimi.
+   - Navigatsiya: `src/lib/nav.ts` va `messages/uz.json`, `en.json` ga "Lug'at" bo'limi qo'shildi.
+4. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Backend Django Pytest: `test_vocabulary_engine.py` (13 ta test) va regressiya testlari — **100% PASS**.
+   - Frontend Vitest: **52 ta test to'plami, 356 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik**.
+5. **Git va Contabo VPS Deploy (Zero-Downtime, v0.9.0)**:
+   - Git commit va teg: `v0.9.0` muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`, zero AI attribution.
+   - Contabo VPS (`169.58.58.229`) da xizmatlar darajasida qayta qurish (`docker compose up -d --build backend frontend`) va `core` migratsiyasi muvaffaqiyatli bajarildi.
+   - Public endpoint holati: `HTTP 200 OK` (`https://bestwayec.uz/` va `api/backend/health`).
+
+---
+
 ## Jarayonda
-- Yangi amaliyot sertifikatlari va cheksiz qayta topshirish funksionalini Contabo VPS ga uzilishsiz (zero-downtime) deploy qilish va tekshirish.
+- Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
 
 ---
 
@@ -205,3 +237,4 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 7. **Speech-to-Text Failover Qoidasi**: O'quvchi audio yuklagan har qanday holatda transkripsiya bo'sh qolmasligi shart. OpenRouter orqali `fish-audio/s2.1-pro-free:free` so'rovi (TTS xatosi) paydo bo'lganda zudlik bilan multimodal `google/gemini-2.5-flash` modeliga o'tiladi va audio to'liq matnga o'girilib bazaga saqlanadi.
 8. **Amaliyot Sertifikati Qoidasi**: Faqat bitta bo'lim (Writing yoki Speaking) topshirgan o'quvchi uchun ham rasmiy "Multi-Level Skill Practice Report" PDF hujjati chiqariladi, JSON xatoliklar taqiqlanadi.
 9. **Cheksiz Qayta Topshirish (Unlimited Retakes)**: O'quvchi yoki admin boshqa bo'limni tanlaganda yoki qayta topshirishni boshlaganda eski `in_progress` holatdagi urinish zudlik bilan yopiladi va yangi urinish to'siqsiz ishga tushadi.
+10. **Lug'at Gamifikatsiyasi va SRS Qoidasi**: Har bir topshirilgan lug'at testi 100% natija uchun +5 ball, 80-99% uchun +3 ball beradi. Xatolar o'quvchining shaxsiy bankiga (SRS) yoziladi va faqat ketma-ket 2 marta to'g'ri topshirilgandan keyingina to'liq o'zlashtirilgan deb hisoblanadi.
