@@ -261,8 +261,9 @@ class InternalGradeDeliveryTests(SimpleTestCase):
         self.assertEqual(notifications.create.call_count,2)
         for call in notifications.create.call_args_list:
             text=call.kwargs['text']
-            self.assertIn('Writing: 45/75',text);self.assertIn('35–50',text)
-            self.assertIn('CEFR/rasmiy natija emas',text)
+            self.assertIn('natijangiz tayyor',text) if call is notifications.create.call_args_list[0] else self.assertIn('natijasi tayyor',text)
+            self.assertIn('Writing',text)
+            self.assertNotIn('CEFR/rasmiy natija emas',text);self.assertNotIn('ichki mashq bahosi',text);self.assertNotIn('35–50',text)
             self.assertNotIn('75/75',text);self.assertNotIn('C1',text)
 
     def test_historical_notification_is_not_rewritten(self):

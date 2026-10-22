@@ -149,6 +149,10 @@ def certificate_data(actor,attempt_id):
     assert_view(actor,row.student_id)
     from .mock_practice import is_partial, scope
     is_part = is_partial(row)
+    if not is_part:
+        from .assessment_quality import attempt_practice_grades
+        if attempt_practice_grades(row):
+            fail('MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE','Internal classroom practice grades do not issue an overall exam or CEFR certificate')
     if row.status not in ('completed', 'submitted'):
         fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
 

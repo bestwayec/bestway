@@ -156,7 +156,14 @@ def notify(attempt):
         from .assessment_quality import attempt_practice_grades
         grades=attempt_practice_grades(attempt)
         if grades:
-            headline='; '.join(f"{skill.title()}: {number(grade['score'])}/{number(grade['scaleMax'])}" for skill,grade in grades.items())+' · Bestway ichki mashq bahosi (35–50 oralig‘i; CEFR/rasmiy natija emas)'
+            skills_label=' va '.join(skill.title() for skill in grades)
+            title = student_title(attempt.exam.title)
+            create(attempt.student_id,f'"{title}" bo\'yicha {skills_label} natijangiz tayyor! Natijani ko\'rish uchun bosing.')
+            for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
+                create(parent,f'Farzandingizning "{title}" bo\'yicha {skills_label} natijasi tayyor!')
+            if attempt.status == 'completed':
+                announce_channel_mock_result(attempt)
+            return
         else:
             headline = '; '.join(f"{skill}: {number(raw['score'])}/{number(raw['max'])}" for skill,raw in (attempt.raw_scores or {}).items())+' (qisman mashq, umumiy daraja berilmaydi)' if is_partial(attempt) else f"estimated (unofficial): {number(attempt.overall_score)}/75 · {attempt.cefr_level or '—'}" if versioned(attempt) else f"daraja: {attempt.cefr_level or '—'}"
     else:

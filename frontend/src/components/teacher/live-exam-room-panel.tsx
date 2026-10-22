@@ -39,9 +39,15 @@ import type { ExamSimulatorMode } from "@/lib/types";
 export function LiveExamRoomPanel({
   defaultGroupId,
   className,
+  compact = false,
+  openCreateSignal = 0,
 }: {
   defaultGroupId?: string;
   className?: string;
+  /** Ixcham gorizontal panel: faol xona bo'lmasa faqat bitta qator ko'rinadi */
+  compact?: boolean;
+  /** Qiymat o'zgarganda yaratish formasi ochiladi (tezkor harakatlar uchun) */
+  openCreateSignal?: number;
 }) {
   const roomsQ = useLiveExamRooms(defaultGroupId);
   const examsQ = useMockExams();
@@ -59,6 +65,10 @@ export function LiveExamRoomPanel({
   const [copiedPin, setCopiedPin] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [downloadingExcel, setDownloadingExcel] = React.useState(false);
+
+  React.useEffect(() => {
+    if (openCreateSignal > 0) setShowCreateForm(true);
+  }, [openCreateSignal]);
 
   const rooms = roomsQ.data ?? [];
   const activeRooms = rooms.filter((r) => r.status === "active");
@@ -163,8 +173,8 @@ export function LiveExamRoomPanel({
   }
 
   return (
-    <Card className={cn("mb-6 overflow-hidden border-brand/30 shadow-sm", className)}>
-      <CardHeader className="border-b border-border bg-bg-subtle/60 pb-3">
+    <Card className={cn(compact ? "overflow-hidden border-brand/30 shadow-sm" : "mb-6 overflow-hidden border-brand/30 shadow-sm", className)}>
+      <CardHeader className={cn("bg-bg-subtle/60", compact ? "py-3" : "border-b border-border pb-3")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -173,7 +183,7 @@ export function LiveExamRoomPanel({
                 <span className="relative inline-flex size-3 rounded-full bg-brand" />
               </span>
               <CardTitle className="text-base font-bold text-fg">
-                Live Exam Room &amp; O&apos;qituvchi Jonli Kuzatuv Paneli (PIN Mode)
+                {compact ? "Live Exam (PIN)" : "Live Exam Room & O'qituvchi Jonli Kuzatuv Paneli (PIN Mode)"}
               </CardTitle>
               <Badge variant={activeRooms.length > 0 ? "success" : "neutral"}>
                 {activeRooms.length > 0
@@ -181,9 +191,11 @@ export function LiveExamRoomPanel({
                   : "Faol xona yo'q"}
               </Badge>
             </div>
-            <CardDescription className="text-xs text-fg-muted">
-              6 xonali PIN-kod orqali guruhga sinxron imtihon (IELTS CDI yoki Multi-Level DTM) boshlang va har bir o&apos;quvchining nechanchi savolda ekanini real vaqtda kuzating.
-            </CardDescription>
+            {!compact && (
+              <CardDescription className="text-xs text-fg-muted">
+                6 xonali PIN-kod orqali guruhga sinxron imtihon (IELTS CDI yoki Multi-Level DTM) boshlang va har bir o&apos;quvchining nechanchi savolda ekanini real vaqtda kuzating.
+              </CardDescription>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -207,13 +219,14 @@ export function LiveExamRoomPanel({
               className="bg-brand font-bold text-brand-fg hover:bg-brand-hover"
             >
               <Plus className="size-4 mr-1" />
-              {showCreateForm ? "Yopish" : "Yangi Live Imtihon (PIN) Ochish"}
+              {showCreateForm ? "Yopish" : compact ? "Yangi PIN imtihon" : "Yangi Live Imtihon (PIN) Ochish"}
             </Button>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-5 space-y-5">
+      {(!compact || !!currentRoom || showCreateForm) && (
+      <CardContent className="border-t border-border p-4 sm:p-5 space-y-5">
         {/* 1. Create Live Exam Room Form */}
         {showCreateForm && (
           <form
@@ -579,7 +592,7 @@ export function LiveExamRoomPanel({
             )}
           </div>
         ) : (
-          !showCreateForm && (
+          !showCreateForm && !compact && (
             <div className="rounded-xl border border-dashed border-border bg-bg-subtle/30 py-6 text-center">
               <p className="text-sm font-semibold text-fg">
                 Hozirda ochilgan Live Exam xonasi yo&apos;q
@@ -591,6 +604,7 @@ export function LiveExamRoomPanel({
           )
         )}
       </CardContent>
+      )}
     </Card>
   );
 }
