@@ -21,7 +21,7 @@ describe("role home navigation", () => {
   it("keeps all super-admin sections and exact dashboard selection", () => {
     expect(navForRole("super_admin").map((item) => item.href)).toEqual([
       "/super-admin", "/attendance", "/payments", "/students", "/groups", "/staff",
-      "/mock", "/exam-builder", "/videos", "/articles", "/gallery", "/notifications", "/settings", "/audit",
+      "/mock", "/vocabulary", "/exam-builder", "/videos", "/articles", "/gallery", "/notifications", "/settings", "/audit",
     ]);
     expect(isActive("/super-admin", "/super-admin")).toBe(true);
     expect(isActive("/super-admin/other", "/super-admin")).toBe(false);

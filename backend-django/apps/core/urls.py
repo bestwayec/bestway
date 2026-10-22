@@ -21,6 +21,7 @@ from . import statistics_views as statistics
 from . import system_views as system
 from . import telegram_views as telegram
 from . import video_views as videos
+from . import vocabulary_views as vocabulary
 from .mock_attempt_views import (
     advance_view,
     switch_section_view,
@@ -402,4 +403,55 @@ urlpatterns = [
     path('students/mistake-vault/practice/', study_plans.targeted_practice_view),
     path('v1/students/mistake-vault/practice', study_plans.targeted_practice_view),
     path('v1/students/mistake-vault/practice/', study_plans.targeted_practice_view),
+
+    # Vocabulary Engine, Multi-Mode Quizzes, Gamification & SRS
+    path('vocabulary/sets', vocabulary.vocabulary_sets_view),
+    path('vocabulary/sets/', vocabulary.vocabulary_sets_view),
+    path('v1/vocabulary/sets', vocabulary.vocabulary_sets_view),
+    path('v1/vocabulary/sets/', vocabulary.vocabulary_sets_view),
+
+    path('vocabulary/sets/parse-text', vocabulary.parse_text_preview_view),
+    path('vocabulary/sets/parse-text/', vocabulary.parse_text_preview_view),
+    path('v1/vocabulary/sets/parse-text', vocabulary.parse_text_preview_view),
+    path('v1/vocabulary/sets/parse-text/', vocabulary.parse_text_preview_view),
+
+    path('vocabulary/sets/<str:set_id>', vocabulary.vocabulary_set_detail_view),
+    path('vocabulary/sets/<str:set_id>/', vocabulary.vocabulary_set_detail_view),
+    path('v1/vocabulary/sets/<str:set_id>', vocabulary.vocabulary_set_detail_view),
+    path('v1/vocabulary/sets/<str:set_id>/', vocabulary.vocabulary_set_detail_view),
+
+    path('vocabulary/sets/<str:set_id>/quiz', vocabulary.vocabulary_quiz_view),
+    path('vocabulary/sets/<str:set_id>/quiz/', vocabulary.vocabulary_quiz_view),
+    path('v1/vocabulary/sets/<str:set_id>/quiz', vocabulary.vocabulary_quiz_view),
+    path('v1/vocabulary/sets/<str:set_id>/quiz/', vocabulary.vocabulary_quiz_view),
+
+    path('vocabulary/sets/<str:set_id>/submit', vocabulary.vocabulary_submit_view),
+    path('vocabulary/sets/<str:set_id>/submit/', vocabulary.vocabulary_submit_view),
+    path('v1/vocabulary/sets/<str:set_id>/submit', vocabulary.vocabulary_submit_view),
+    path('v1/vocabulary/sets/<str:set_id>/submit/', vocabulary.vocabulary_submit_view),
+
+    path('vocabulary/sets/<str:set_id>/report', vocabulary.vocabulary_group_report_view),
+    path('vocabulary/sets/<str:set_id>/report/', vocabulary.vocabulary_group_report_view),
+    path('v1/vocabulary/sets/<str:set_id>/report', vocabulary.vocabulary_group_report_view),
+    path('v1/vocabulary/sets/<str:set_id>/report/', vocabulary.vocabulary_group_report_view),
+
+    path('vocabulary/sets/<str:set_id>/export/excel', vocabulary.vocabulary_export_excel_view),
+    path('vocabulary/sets/<str:set_id>/export/excel/', vocabulary.vocabulary_export_excel_view),
+    path('v1/vocabulary/sets/<str:set_id>/export/excel', vocabulary.vocabulary_export_excel_view),
+    path('v1/vocabulary/sets/<str:set_id>/export/excel/', vocabulary.vocabulary_export_excel_view),
+
+    path('vocabulary/srs/quiz', vocabulary.srs_quiz_view),
+    path('vocabulary/srs/quiz/', vocabulary.srs_quiz_view),
+    path('v1/vocabulary/srs/quiz', vocabulary.srs_quiz_view),
+    path('v1/vocabulary/srs/quiz/', vocabulary.srs_quiz_view),
+
+    path('vocabulary/srs/submit', vocabulary.srs_submit_view),
+    path('vocabulary/srs/submit/', vocabulary.srs_submit_view),
+    path('v1/vocabulary/srs/submit', vocabulary.srs_submit_view),
+    path('v1/vocabulary/srs/submit/', vocabulary.srs_submit_view),
+
+    path('vocabulary/srs/stats', vocabulary.srs_stats_view),
+    path('vocabulary/srs/stats/', vocabulary.srs_stats_view),
+    path('v1/vocabulary/srs/stats', vocabulary.srs_stats_view),
+    path('v1/vocabulary/srs/stats/', vocabulary.srs_stats_view),
 ]

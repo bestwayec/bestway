@@ -595,6 +595,7 @@
   },
   "nav": {
     "mock": "Exams",
+    "vocabulary": "Vocabulary",
     "dashboard": "Dashboard",
     "attendance": "Attendance",
     "payments": "Payments",

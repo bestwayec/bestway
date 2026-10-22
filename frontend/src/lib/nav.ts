@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookA,
   BookOpen,
   CalendarCheck,
   ClipboardCheck,
@@ -46,6 +47,7 @@ const NAV: NavItem[] = [
   { href: "/groups", key: "groups", icon: BookOpen, roles: STAFF },
   { href: "/staff", key: "staff", icon: UserCog, roles: OFFICE },
   { href: "/mock", key: "mock", icon: Target, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },
+  { href: "/vocabulary", key: "vocabulary", icon: BookA, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },
   { href: "/exam-builder", key: "examBuilder", icon: SquarePen, roles: STAFF },
   { href: "/videos", key: "videos", icon: PlaySquare, roles: ALL },
   { href: "/articles", key: "articles", icon: Newspaper, roles: OFFICE },
