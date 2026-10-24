@@ -24,6 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Link } from "@/i18n/navigation";
 import { VocabularyBuilder } from "@/components/teacher/VocabularyBuilder";
 import { VocabularyGroupReport } from "@/components/teacher/VocabularyGroupReport";
+import { VocabBattleHost } from "@/components/vocabulary/VocabBattleHost";
+import { VocabBattlePlayer } from "@/components/vocabulary/VocabBattlePlayer";
+import { Gamepad2, Zap } from "lucide-react";
 
 export interface VocabularySetSummary {
   id: string;
@@ -59,6 +62,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
   // Modal states
   const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
   const [reportSetId, setReportSetId] = React.useState<string | null>(null);
+  const [battleSetId, setBattleSetId] = React.useState<string | null>(null);
+  const [isPlayerBattleOpen, setIsPlayerBattleOpen] = React.useState(false);
 
   const isTeacherOrAdmin = ["teacher", "admin", "super_admin"].includes(userRole);
 
@@ -120,6 +125,27 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsPlayerBattleOpen(true)}
+            className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+          >
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            PIN Bilan Kirish
+          </Button>
+
+          {isTeacherOrAdmin && sets.length > 0 && (
+            <Button
+              type="button"
+              onClick={() => setBattleSetId(sets[0].id)}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-medium shadow-md shadow-amber-600/20"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Live Vocab Battle
+            </Button>
+          )}
+
           <Button
             type="button"
             variant="outline"
@@ -290,15 +316,26 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                         </Link>
 
                         {isTeacherOrAdmin && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setReportSetId(s.id)}
-                            className="border-border text-foreground hover:bg-muted"
-                            title="Guruh hisoboti va Excel"
-                          >
-                            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-                          </Button>
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setBattleSetId(s.id)}
+                              className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                              title="Ushbu to'plam bo'yicha Live Battle (PIN) ochish"
+                            >
+                              <Zap className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setReportSetId(s.id)}
+                              className="border-border text-foreground hover:bg-muted"
+                              title="Guruh hisoboti va Excel"
+                            >
+                              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -320,6 +357,30 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                 fetchData();
               }}
               onCancel={() => setIsBuilderOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      
+      {/* Live Vocab Battle Host Modal */}
+      {battleSetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="w-full max-w-4xl my-8">
+            <VocabBattleHost
+              setId={battleSetId}
+              onClose={() => setBattleSetId(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Live Vocab Battle Player Modal */}
+      {isPlayerBattleOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <div className="w-full max-w-md my-8">
+            <VocabBattlePlayer
+              onClose={() => setIsPlayerBattleOpen(false)}
             />
           </div>
         </div>

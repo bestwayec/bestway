@@ -1,5 +1,6 @@
 """Vocabulary engine service: raw text parsing, quiz generation, gamified scoring, SRS, and Excel export."""
 from io import BytesIO
+import logging
 import random
 import re
 from typing import Any
@@ -14,6 +15,8 @@ from openpyxl.utils import get_column_letter
 
 from apps.legacy_schema.models import PointsLog, StudentProfile, User
 from common.api.exceptions import ContractAPIException
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     QuizMode,
@@ -342,6 +345,15 @@ def submit_quiz_attempt(
                 created_at=timezone.now(),
             )
 
+    try:
+        from apps.core.parent_bot_service import notify_parent_exam_result
+        score_text = f"{score}/{total_words} ({int(percentage)}%)"
+        if points_awarded > 0:
+            score_text += f", +{points_awarded} ball"
+        notify_parent_exam_result(student.id, vocab_set.title, score_text, skill="Lug'at")
+    except Exception as e:
+        logger.warning("Failed to notify parent on quiz submit: %s", e)
+
     return {
         "attemptId": attempt.id,
         "setId": vocab_set.id,
@@ -559,3 +571,363 @@ def export_vocabulary_set_excel(set_id: str) -> bytes:
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
+    """Compile comprehensive group performance report with KPI metrics and hardest words."""
+    vocab_set = VocabularySet.objects.select_related("group").filter(id=set_id).first()
+    if not vocab_set:
+        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
+
+    attempts = list(
+        VocabularyAttempt.objects.filter(set_id=set_id)
+        .select_related("student")
+        .order_by("-completed_at")
+    )
+
+    student_roster = []
+    seen = set()
+    hardest_words_counter = {}
+
+    for a in attempts:
+        for w in (a.wrong_answers or []):
+            eng = w.get("english")
+            if eng:
+                hardest_words_counter[eng] = hardest_words_counter.get(eng, 0) + 1
+
+        if a.student_id in seen:
+            continue
+        seen.add(a.student_id)
+
+        student_roster.append({
+            "attemptId": a.id,
+            "studentId": a.student_id,
+            "studentName": getattr(a.student, "name", "Noma'lum") or "Noma'lum",
+            "phone": getattr(a.student, "phone", "") or "-",
+            "score": a.score,
+            "totalWords": a.total_words,
+            "percentage": round(a.percentage, 1),
+            "pointsAwarded": a.points_awarded,
+            "mode": a.mode,
+            "completedAt": a.completed_at.isoformat(),
+            "wrongCount": len(a.wrong_answers or []),
+        })
+
+    total_words = vocab_set.words.count()
+    total_attempts = len(student_roster)
+    average_percentage = (
+        round(sum(r["percentage"] for r in student_roster) / total_attempts, 1)
+        if total_attempts > 0
+        else 0.0
+    )
+
+    hardest = sorted(hardest_words_counter.items(), key=lambda x: x[1], reverse=True)[:8]
+    hardest_words_list = []
+    if hardest:
+        words_map = {w.english.lower(): w for w in vocab_set.words.filter(english__in=[x[0] for x in hardest])}
+        for word, cnt in hardest:
+            w_obj = words_map.get(word.lower())
+            hardest_words_list.append({
+                "wordId": w_obj.id if w_obj else word,
+                "english": word,
+                "word": word,
+                "uzbek": w_obj.uzbek if w_obj else "",
+                "mistakes": cnt,
+                "mistakeCount": cnt,
+                "errors": cnt,
+            })
+
+    return {
+        "setId": vocab_set.id,
+        "title": vocab_set.title,
+        "setTitle": vocab_set.title,
+        "level": vocab_set.level,
+        "totalWords": total_words,
+        "total_words": total_words,
+        "totalAttempts": total_attempts,
+        "total_attempts": total_attempts,
+        "averagePercentage": average_percentage,
+        "average_percentage": average_percentage,
+        "groupName": vocab_set.group.name if vocab_set.group else "Umumiy",
+        "totalStudentsSubmitted": total_attempts,
+        "roster": student_roster,
+        "hardestWords": hardest_words_list,
+    }
+
+
+def lookup_word(word: str) -> dict[str, Any]:
+    """Perform high-speed lookup of an English word with Uzbek translation and grammatical metadata."""
+    cleaned = (word or "").strip().lower()
+    cleaned = re.sub(r"^[^a-zA-Z]+|[^a-zA-Z]+$", "", cleaned)
+    if not cleaned:
+        raise ContractAPIException("INVALID_WORD", "So'z kiritilmadi", 400)
+
+    # 1. Database word check
+    vw = VocabularyWord.objects.filter(english__iexact=cleaned).first()
+    if vw:
+        return {
+            "word": vw.english,
+            "cleanWord": cleaned,
+            "uzbek": vw.uzbek,
+            "partOfSpeech": vw.part_of_speech or "noun",
+            "contextSentence": vw.context_sentence or "",
+            "source": "database",
+        }
+
+    # 2. Built-in CEFR high-frequency dictionary
+    common_dict = {
+        "abandon": ("tashlab ketmoq", "verb"),
+        "ability": ("qobiliyat", "noun"),
+        "abroad": ("chet elda", "adverb"),
+        "absence": ("yo'qlik", "noun"),
+        "absorb": ("shimib olmoq", "verb"),
+        "academic": ("akademik", "adjective"),
+        "accent": ("aksent, talaffuz", "noun"),
+        "accept": ("qabul qilmoq", "verb"),
+        "access": ("kirish huquqi", "noun"),
+        "accident": ("baxtsiz hodisa", "noun"),
+        "accompany": ("hamrohlik qilmoq", "verb"),
+        "accomplish": ("erishmoq, bajarmoq", "verb"),
+        "accurate": ("aniq", "adjective"),
+        "achieve": ("erishmoq", "verb"),
+        "acquire": ("orttirmoq", "verb"),
+        "action": ("harakat", "noun"),
+        "active": ("faol", "adjective"),
+        "adapt": ("moslashmoq", "verb"),
+        "adequate": ("yetarli", "adjective"),
+        "adjust": ("sozlamoq", "verb"),
+        "admire": ("qoyil qolmoq", "verb"),
+        "advantage": ("afzallik", "noun"),
+        "adventure": ("sarguzasht", "noun"),
+        "advice": ("maslahat", "noun"),
+        "affect": ("ta'sir qilmoq", "verb"),
+        "afford": ("qurbi yetmoq", "verb"),
+        "agenda": ("kun tartibi", "noun"),
+        "allow": ("ruxsat bermoq", "verb"),
+        "alter": ("o'zgartirmoq", "verb"),
+        "alternative": ("muqobil", "noun"),
+        "amazing": ("ajoyib", "adjective"),
+        "ambition": ("intilish, maqsad", "noun"),
+        "analyse": ("tahlil qilmoq", "verb"),
+        "analyze": ("tahlil qilmoq", "verb"),
+        "ancient": ("qadimiy", "adjective"),
+        "annual": ("yillik", "adjective"),
+        "anxious": ("xavotirlangan", "adjective"),
+        "appear": ("paydo bo'lmoq", "verb"),
+        "apply": ("qo'llamoq, ariza bermoq", "verb"),
+        "appreciate": ("qadrlamoq", "verb"),
+        "approach": ("yondashuv", "noun"),
+        "appropriate": ("mos, munosib", "adjective"),
+        "approve": ("ma'qullamoq", "verb"),
+        "argument": ("bahs-munozara", "noun"),
+        "aspect": ("jihat", "noun"),
+        "assess": ("baholamoq", "verb"),
+        "assessment": ("baholash", "noun"),
+        "attempt": ("urinish", "noun"),
+        "attitude": ("munosabat", "noun"),
+        "attract": ("jalb qilmoq", "verb"),
+        "available": ("mavjud", "adjective"),
+        "average": ("o'rtacha", "adjective"),
+        "avoid": ("chetlanmoq", "verb"),
+        "award": ("mukofot", "noun"),
+        "aware": ("xabardor", "adjective"),
+        "balance": ("muvozanat", "noun"),
+        "barrier": ("to'siq", "noun"),
+        "benefit": ("foyda, naf", "noun"),
+        "brief": ("qisqa", "adjective"),
+        "calculate": ("hisoblamoq", "verb"),
+        "campaign": ("kampaniya", "noun"),
+        "candidate": ("nomzod", "noun"),
+        "capacity": ("sig'im, qobiliyat", "noun"),
+        "challenge": ("qiyinchilik, chaqiriq", "noun"),
+        "circumstance": ("holat, sharoit", "noun"),
+        "citizen": ("fuqaro", "noun"),
+        "collaborate": ("hamkorlik qilmoq", "verb"),
+        "combine": ("birlashtirmoq", "verb"),
+        "community": ("hamjamiyat", "noun"),
+        "comprehension": ("tushunish darajasi", "noun"),
+        "conclusion": ("xulosa", "noun"),
+        "confidence": ("ishonch", "noun"),
+        "confirm": ("tasdiqlamoq", "verb"),
+        "consequence": ("oqibat", "noun"),
+        "consider": ("o'ylab ko'rmoq", "verb"),
+        "consistent": ("izchil", "adjective"),
+        "contribute": ("hissa qo'shmoq", "verb"),
+        "convenient": ("qulay", "adjective"),
+        "crucial": ("juda muhim", "adjective"),
+        "curious": ("qiziquvchan", "adjective"),
+        "decade": ("o'n yillik", "noun"),
+        "decrease": ("kamaymoq", "verb"),
+        "demonstrate": ("namoyish etmoq", "verb"),
+        "determine": ("aniqlamoq", "verb"),
+        "development": ("rivojlanish", "noun"),
+        "diverse": ("turli xil", "adjective"),
+        "economy": ("iqtisodiyot", "noun"),
+        "effective": ("samarali", "adjective"),
+        "efficient": ("unumdor", "adjective"),
+        "emphasize": ("ta'kidlamoq", "verb"),
+        "encourage": ("rag'batlantirmoq", "verb"),
+        "enhance": ("kuchaytirmoq, oshirmoq", "verb"),
+        "enormous": ("ulkan", "adjective"),
+        "environment": ("atrof-muhit", "noun"),
+        "essential": ("muhim, zarur", "adjective"),
+        "evaluate": ("baholamoq", "verb"),
+        "evidence": ("dalil", "noun"),
+        "experience": ("tajriba", "noun"),
+        "fluent": ("ravon", "adjective"),
+        "focus": ("diqqatni qaratmoq", "verb"),
+        "frequent": ("tez-tez", "adjective"),
+        "generation": ("avlod", "noun"),
+        "global": ("global, dunyo miqyosidagi", "adjective"),
+        "gradual": ("bosqichma-bosqich", "adjective"),
+        "guidance": ("yo'l-yo'riq", "noun"),
+        "hesitate": ("ikkilanmoq", "verb"),
+        "highlight": ("ajratib ko'rsatmoq", "verb"),
+        "identify": ("aniqlamoq", "verb"),
+        "illustrate": ("tasvirlamoq", "verb"),
+        "impact": ("ta'sir", "noun"),
+        "implement": ("amalga oshirmoq", "verb"),
+        "increase": ("oshmoq", "verb"),
+        "indicate": ("ko'rsatmoq", "verb"),
+        "influence": ("ta'sir ko'rsatmoq", "verb"),
+        "innovative": ("innovatsion", "adjective"),
+        "insight": ("chuqur tushuncha", "noun"),
+        "inspire": ("ilhomlantirmoq", "verb"),
+        "interact": ("o'zaro muloqot qilmoq", "verb"),
+        "investigate": ("tadqiq qilmoq", "verb"),
+        "knowledge": ("bilim", "noun"),
+        "maintain": ("saqlamoq", "verb"),
+        "manage": ("boshqarmoq", "verb"),
+        "measure": ("o'lchamoq", "verb"),
+        "motivate": ("rag'batlantirmoq", "verb"),
+        "necessary": ("zarur", "adjective"),
+        "notice": ("payqamoq", "verb"),
+        "obtain": ("qo'lga kiritmoq", "verb"),
+        "obvious": ("ravshan, aniq", "adjective"),
+        "opportunity": ("imkoniyat", "noun"),
+        "outcome": ("natija", "noun"),
+        "pamper": ("erkalamoq, ko'nglini olmoq", "verb"),
+        "participate": ("qatnashmoq", "verb"),
+        "perception": ("idrok", "noun"),
+        "perspective": ("nuqtai nazar", "noun"),
+        "potential": ("salohiyat", "noun"),
+        "practice": ("mashq, amaliyot", "noun"),
+        "predict": ("bashorat qilmoq", "verb"),
+        "prepare": ("tayyorlanmoq", "verb"),
+        "prevent": ("oldini olmoq", "verb"),
+        "primary": ("asosiy", "adjective"),
+        "priority": ("ustuvor vazifa", "noun"),
+        "probability": ("ehtimollik", "noun"),
+        "progress": ("o'sish, siljish", "noun"),
+        "propose": ("taklif qilmoq", "verb"),
+        "provide": ("ta'minlamoq", "verb"),
+        "recognize": ("tanimoq", "verb"),
+        "recommend": ("tavsiya qilmoq", "verb"),
+        "reduce": ("kamaytirmoq", "verb"),
+        "reflect": ("aks ettirmoq", "verb"),
+        "regular": ("muntazam", "adjective"),
+        "relevant": ("tegishli, dolzarb", "adjective"),
+        "reliable": ("ishonchli", "adjective"),
+        "require": ("talab qilmoq", "verb"),
+        "research": ("tadqiqot", "noun"),
+        "resource": ("manba, resurs", "noun"),
+        "respond": ("javob qaytarmoq", "verb"),
+        "significant": ("ahamiyatli", "adjective"),
+        "solution": ("yechim", "noun"),
+        "specific": ("aniq, muayyan", "adjective"),
+        "strategy": ("strategiya", "noun"),
+        "structure": ("tuzilma", "noun"),
+        "succeed": ("muvaffaqiyat qozonmoq", "verb"),
+        "sufficient": ("yetarli", "adjective"),
+        "summarize": ("umumlashtirmoq", "verb"),
+        "support": ("qo'llab-quvvatlamoq", "verb"),
+        "sustain": ("qo'llab-quvvatlab turmoq", "verb"),
+        "target": ("maqsad", "noun"),
+        "technique": ("uslub, texnika", "noun"),
+        "theory": ("nazariya", "noun"),
+        "transform": ("o'zgartirmoq", "verb"),
+        "ultimate": ("yakuniy", "adjective"),
+        "understand": ("tushunmoq", "verb"),
+        "unique": ("noyob", "adjective"),
+        "valuable": ("qimmatli", "adjective"),
+        "variety": ("xilma-xillik", "noun"),
+        "vary": ("farqlanmoq", "verb"),
+        "visible": ("ko'rinadigan", "adjective"),
+        "vocabulary": ("lug'at", "noun"),
+    }
+    match = common_dict.get(cleaned)
+    if match:
+        return {
+            "word": word,
+            "cleanWord": cleaned,
+            "uzbek": match[0],
+            "partOfSpeech": match[1],
+            "contextSentence": "",
+            "source": "dictionary",
+        }
+
+    return {
+        "word": word,
+        "cleanWord": cleaned,
+        "uzbek": f"'{cleaned}' so'zi",
+        "partOfSpeech": "word",
+        "contextSentence": "",
+        "source": "general",
+    }
+
+
+def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict[str, Any]:
+    """Add or upsert a word into student's personal SRS Weak Words bank."""
+    cleaned_en = english.strip()
+    if not cleaned_en:
+        raise ContractAPIException("ENGLISH_WORD_REQUIRED", "So'z kiritilmadi", 400)
+
+    # Resolve uzbek if not provided
+    if not uzbek or uzbek.startswith("'"):
+        lookup_res = lookup_word(cleaned_en)
+        uzbek = lookup_res.get("uzbek") or cleaned_en
+
+    # Ensure a VocabularyWord exists
+    word_obj = VocabularyWord.objects.filter(english__iexact=cleaned_en).first()
+    if not word_obj:
+        # Find or create a default set for personal words
+        default_set = VocabularySet.objects.filter(title="Shaxsiy Lug'at Banki (Personal)").first()
+        if not default_set:
+            first_user = User.objects.first()
+            default_set = VocabularySet.objects.create(
+                title="Shaxsiy Lug'at Banki (Personal)",
+                description="Matndan tanlab qo'shilgan so'zlar",
+                level="B1",
+                is_public=True,
+                created_by=first_user,
+            )
+        word_obj = VocabularyWord.objects.create(
+            set=default_set,
+            english=cleaned_en.capitalize(),
+            uzbek=uzbek,
+            part_of_speech="noun",
+        )
+
+    # Upsert UserWeakWord
+    user_weak, created = UserWeakWord.objects.get_or_create(
+        student_id=student_id,
+        word=word_obj,
+        defaults={
+            "mistake_count": 1,
+            "correct_streak": 0,
+            "is_mastered": False,
+        },
+    )
+    if not created:
+        user_weak.is_mastered = False
+        user_weak.mistake_count += 1
+        user_weak.save(update_fields=["is_mastered", "mistake_count", "last_reviewed"])
+
+    return {
+        "success": True,
+        "wordId": word_obj.id,
+        "english": word_obj.english,
+        "uzbek": word_obj.uzbek,
+        "isCreated": created,
+        "message": f"'{word_obj.english}' shaxsiy lug'at bankiga (SRS) muvaffaqiyatli qo'shildi!",
+    }

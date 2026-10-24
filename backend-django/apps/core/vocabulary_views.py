@@ -187,54 +187,8 @@ def vocabulary_group_report_view(request, set_id):
     require_authenticated(request)
     require_role(request, "teacher", "admin", "super_admin")
 
-    vocab_set = VocabularySet.objects.select_related("group").filter(id=set_id).first()
-    if not vocab_set:
-        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
-
-    attempts = list(
-        VocabularyAttempt.objects.filter(set_id=set_id)
-        .select_related("student")
-        .order_by("-completed_at")
-    )
-
-    student_roster = []
-    seen = set()
-    hardest_words_counter = {}
-
-    for a in attempts:
-        for w in (a.wrong_answers or []):
-            eng = w.get("english")
-            if eng:
-                hardest_words_counter[eng] = hardest_words_counter.get(eng, 0) + 1
-
-        if a.student_id in seen:
-            continue
-        seen.add(a.student_id)
-
-        student_roster.append({
-            "studentId": a.student_id,
-            "studentName": getattr(a.student, "name", "Noma'lum") or "Noma'lum",
-            "phone": getattr(a.student, "phone", "") or "-",
-            "score": a.score,
-            "totalWords": a.total_words,
-            "percentage": a.percentage,
-            "pointsAwarded": a.points_awarded,
-            "completedAt": a.completed_at.isoformat(),
-            "wrongCount": len(a.wrong_answers or []),
-        })
-
-    # Top hardest words
-    hardest = sorted(hardest_words_counter.items(), key=lambda x: x[1], reverse=True)[:8]
-    hardest_words = [{"word": word, "mistakes": cnt} for word, cnt in hardest]
-
-    return success({
-        "setId": vocab_set.id,
-        "setTitle": vocab_set.title,
-        "groupName": vocab_set.group.name if vocab_set.group else "Umumiy",
-        "totalStudentsSubmitted": len(student_roster),
-        "roster": student_roster,
-        "hardestWords": hardest_words,
-    })
+    report_data = get_vocabulary_set_report(set_id)
+    return success(report_data)
 
 
 @api_view(["GET"])
@@ -354,3 +308,33 @@ def srs_stats_view(request):
         "totalMasteredWords": total_mastered,
         "weakWords": words,
     })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def vocabulary_lookup_view(request):
+    """Look up translation and phonetic details of an English word (Click-to-Vocab)."""
+    require_authenticated(request)
+    word = (request.query_params.get("word") or "").strip()
+    if not word:
+        raise ContractAPIException("WORD_REQUIRED", "So'z ko'rsatilmadi", 400)
+
+    from apps.core.vocabulary_service import lookup_word
+    result = lookup_word(word)
+    return success(result)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def add_user_word_view(request):
+    """Add a clicked or customized word into student's personal SRS weak words bank."""
+    user = require_authenticated(request)
+    data = request.data or {}
+    english = (data.get("english") or data.get("word") or "").strip()
+    uzbek = (data.get("uzbek") or "").strip()
+    if not english:
+        raise ContractAPIException("WORD_REQUIRED", "Inglizcha so'z kiritilmadi", 400)
+
+    from apps.core.vocabulary_service import add_word_to_user_srs
+    result = add_word_to_user_srs(user.id, english=english, uzbek=uzbek)
+    return success(result, status_code=201)

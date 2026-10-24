@@ -12,6 +12,7 @@ import {
   Trophy,
   Users,
   Wallet,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { useQueries } from "@tanstack/react-query";
@@ -267,7 +268,20 @@ export function TeacherDashboard() {
   const ta = useTranslations("attendance");
   const { data: me, isLoading } = useMe();
   const [pinSignal, setPinSignal] = React.useState(0);
+  const [isSendingDigest, setIsSendingDigest] = React.useState(false);
   const pinRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSendParentDigest = async () => {
+    setIsSendingDigest(true);
+    try {
+      const res = await api.post<{ message: string; sentCount: number }>("/v1/parents/send-weekly-digest", {});
+      toast.success(res.message || "Haftalik hisobot ota-onalarga jo'natildi!");
+    } catch (err: any) {
+      toast.error(err?.message || "Hisobot jo'natishda xatolik yuz berdi");
+    } finally {
+      setIsSendingDigest(false);
+    }
+  };
 
   const firstName = me?.user.name.split(" ")[0] ?? "";
   const profile = me?.profile && "groups" in me.profile ? (me.profile as TeacherSelfProfile) : null;
@@ -342,6 +356,17 @@ export function TeacherDashboard() {
           <Users />
           {td("manageGroups")}
         </Link>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleSendParentDigest}
+          disabled={isSendingDigest}
+          className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+        >
+          <Send className="mr-1.5 size-3.5" />
+          {isSendingDigest ? "Jo'natilmoqda..." : "📲 Ota-onalarga Digest"}
+        </Button>
       </div>
 
       {/* Compact live exam */}

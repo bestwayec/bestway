@@ -167,7 +167,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 Jami So'zlar
               </span>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {report.totalWords} ta
+                {report.totalWords ?? (report as any).total_words ?? 0} ta
               </p>
             </div>
 
@@ -176,7 +176,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 Topshirganlar
               </span>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {report.totalAttempts} ta
+                {report.totalAttempts ?? (report as any).total_attempts ?? (report as any).totalStudentsSubmitted ?? report.roster?.length ?? 0} ta
               </p>
             </div>
 
@@ -185,7 +185,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 O'rtacha Natija
               </span>
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {report.averagePercentage}%
+                {report.averagePercentage ?? (report as any).average_percentage ?? 0}%
               </p>
             </div>
 
@@ -208,18 +208,23 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 <span>Guruhda Eng Ko'p Xato Qilingan So'zlar (Hardest Words)</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {report.hardestWords.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-sm"
-                  >
-                    <span className="font-semibold text-foreground">{item.english}</span>
-                    <span className="text-muted-foreground">({item.uzbek})</span>
-                    <Badge variant="danger" className="h-5 px-1.5 text-[10px]">
-                      {item.mistakeCount} xato
-                    </Badge>
-                  </div>
-                ))}
+                {report.hardestWords.map((item, idx) => {
+                  const english = item.english || (item as any).word || "Noma'lum";
+                  const uzbek = item.uzbek || "";
+                  const count = item.mistakeCount ?? (item as any).mistakes ?? (item as any).errors ?? 0;
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-sm"
+                    >
+                      <span className="font-semibold text-foreground">{english}</span>
+                      {uzbek && <span className="text-muted-foreground">({uzbek})</span>}
+                      <Badge variant="danger" className="h-5 px-1.5 text-[10px]">
+                        {count} xato
+                      </Badge>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

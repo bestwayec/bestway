@@ -52,6 +52,14 @@ def notify_many(user_ids,kind,text):
 
 def notify_parents(student_id,kind,text):
     notify_many(ParentStudent.objects.filter(student_id=student_id).values_list('parent_user_id',flat=True),kind,text)
+    try:
+        from apps.core.models import ParentTelegramLink
+        from apps.core import telegram_delivery as tele_api
+        links = ParentTelegramLink.objects.filter(student_id=student_id, is_active=True).exclude(parent_chat_id__isnull=True).exclude(parent_chat_id="")
+        for lk in links:
+            tele_api.send(lk.parent_chat_id, f"🔔 <b>Ota-ona xabarnomasi</b>\n━━━━━━━━━━━━━━━━━━\n{text}")
+    except Exception as e:
+        logging.getLogger(__name__).warning("Parent direct telegram dispatch failed: %s", e)
 
 
 def safe_notify(user_id,kind,text):

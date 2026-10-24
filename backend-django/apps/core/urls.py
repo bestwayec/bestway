@@ -22,6 +22,8 @@ from . import system_views as system
 from . import telegram_views as telegram
 from . import video_views as videos
 from . import vocabulary_views as vocabulary
+from . import parent_views as parents
+from . import vocab_battle_views as vocab_battle
 from .mock_attempt_views import (
     advance_view,
     switch_section_view,
@@ -454,4 +456,57 @@ urlpatterns = [
     path('vocabulary/srs/stats/', vocabulary.srs_stats_view),
     path('v1/vocabulary/srs/stats', vocabulary.srs_stats_view),
     path('v1/vocabulary/srs/stats/', vocabulary.srs_stats_view),
+
+    # Click-to-Vocab Lookup & Personal SRS Add
+    path('vocabulary/lookup', vocabulary.vocabulary_lookup_view),
+    path('vocabulary/lookup/', vocabulary.vocabulary_lookup_view),
+    path('v1/vocabulary/lookup', vocabulary.vocabulary_lookup_view),
+    path('v1/vocabulary/lookup/', vocabulary.vocabulary_lookup_view),
+
+    path('vocabulary/user-words/add', vocabulary.add_user_word_view),
+    path('vocabulary/user-words/add/', vocabulary.add_user_word_view),
+    path('v1/vocabulary/user-words/add', vocabulary.add_user_word_view),
+    path('v1/vocabulary/user-words/add/', vocabulary.add_user_word_view),
+
+    # Live Vocab Battle (PIN / Kahoot Mode)
+    path('vocabulary/battle/create', vocab_battle.battle_create_view),
+    path('vocabulary/battle/create/', vocab_battle.battle_create_view),
+    path('v1/vocabulary/battle/create', vocab_battle.battle_create_view),
+    path('v1/vocabulary/battle/create/', vocab_battle.battle_create_view),
+
+    path('vocabulary/battle/join', vocab_battle.battle_join_view),
+    path('vocabulary/battle/join/', vocab_battle.battle_join_view),
+    path('v1/vocabulary/battle/join', vocab_battle.battle_join_view),
+    path('v1/vocabulary/battle/join/', vocab_battle.battle_join_view),
+
+    path('vocabulary/battle/<str:pin>/state', vocab_battle.battle_state_view),
+    path('vocabulary/battle/<str:pin>/state/', vocab_battle.battle_state_view),
+    path('v1/vocabulary/battle/<str:pin>/state', vocab_battle.battle_state_view),
+    path('v1/vocabulary/battle/<str:pin>/state/', vocab_battle.battle_state_view),
+
+    path('vocabulary/battle/<str:pin>/next', vocab_battle.battle_next_view),
+    path('vocabulary/battle/<str:pin>/next/', vocab_battle.battle_next_view),
+    path('v1/vocabulary/battle/<str:pin>/next', vocab_battle.battle_next_view),
+    path('v1/vocabulary/battle/<str:pin>/next/', vocab_battle.battle_next_view),
+
+    path('vocabulary/battle/<str:pin>/answer', vocab_battle.battle_answer_view),
+    path('vocabulary/battle/<str:pin>/answer/', vocab_battle.battle_answer_view),
+    path('v1/vocabulary/battle/<str:pin>/answer', vocab_battle.battle_answer_view),
+    path('v1/vocabulary/battle/<str:pin>/answer/', vocab_battle.battle_answer_view),
+
+    path('vocabulary/battle/<str:pin>/finish', vocab_battle.battle_finish_view),
+    path('vocabulary/battle/<str:pin>/finish/', vocab_battle.battle_finish_view),
+    path('v1/vocabulary/battle/<str:pin>/finish', vocab_battle.battle_finish_view),
+    path('v1/vocabulary/battle/<str:pin>/finish/', vocab_battle.battle_finish_view),
+
+    # Parent Telegram Monitoring & Weekly Digest
+    path('parents/my-invite-code', parents.parent_invite_code_view),
+    path('parents/my-invite-code/', parents.parent_invite_code_view),
+    path('v1/parents/my-invite-code', parents.parent_invite_code_view),
+    path('v1/parents/my-invite-code/', parents.parent_invite_code_view),
+
+    path('parents/send-weekly-digest', parents.send_parent_weekly_digest_view),
+    path('parents/send-weekly-digest/', parents.send_parent_weekly_digest_view),
+    path('v1/parents/send-weekly-digest', parents.send_parent_weekly_digest_view),
+    path('v1/parents/send-weekly-digest/', parents.send_parent_weekly_digest_view),
 ]

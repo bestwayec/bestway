@@ -138,3 +138,68 @@ class UserWeakWord(models.Model):
 
     def __str__(self):
         return f"{self.student_id} - {self.word_id} (mistakes: {self.mistake_count})"
+
+
+class ParentTelegramLink(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="parent_links",
+    )
+    invite_code = models.CharField(max_length=32, unique=True, db_index=True)
+    parent_chat_id = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    parent_name = models.CharField(max_length=255, null=True, blank=True)
+    parent_phone = models.CharField(max_length=64, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    linked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ParentTelegramLink"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.student_id} -> {self.parent_chat_id or 'NOT_LINKED'} ({self.invite_code})"
+
+
+class BattleStatus(models.TextChoices):
+    WAITING = "WAITING", "Waiting for players"
+    QUESTION = "QUESTION", "Question active"
+    LEADERBOARD = "LEADERBOARD", "Leaderboard review"
+    FINISHED = "FINISHED", "Battle finished"
+
+
+class VocabBattleSession(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    pin = models.CharField(max_length=10, unique=True, db_index=True)
+    set = models.ForeignKey(
+        VocabularySet,
+        on_delete=models.CASCADE,
+        related_name="battle_sessions",
+    )
+    host = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="hosted_battles",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=BattleStatus.choices,
+        default=BattleStatus.WAITING,
+    )
+    current_question_index = models.IntegerField(default=0)
+    questions = models.JSONField(default=list, blank=True)
+    participants = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "VocabBattleSession"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Battle {self.pin} ({self.status}) - {self.set.title}"

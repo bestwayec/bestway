@@ -441,6 +441,25 @@ def handle(update):
             fsm.clear_state(chat_id)
             api.send(chat_id, "❌ Faol jarayon mavjud emas.")
             return
+        if text.startswith('/parent') or (text.startswith('/start') and 'parent_' in text.lower()):
+            code = text[len('/parent'):].strip() if text.startswith('/parent') else text[text.lower().find('parent_') + 7:].strip()
+            p_name = from_user.get('first_name', '') or from_user.get('username', '') or "Ota-ona"
+            from apps.core.parent_bot_service import link_parent_by_code
+            res = link_parent_by_code(chat_id, code, parent_name=p_name)
+            if res.get('success'):
+                api.send(
+                    chat_id,
+                    f"✅ <b>Muvaffaqiyatli bog'landi!</b>\n\n"
+                    f"Siz muvaffaqiyatli ravishda <b>{res['studentName']}</b>ning profili bilan bog'landingiz.\n\n"
+                    f"Endi farzandingizning:\n"
+                    f"• Darsdagi davomati (kelmagan yoki kechikkan holatda);\n"
+                    f"• Topshirgan imtihon va amaliyot natijalari;\n"
+                    f"• Har yakshanba haftalik o'zlashtirish hisoboti (Digest)\n"
+                    f"to'g'ridan-to'g'ri ushbu bot orqali sizga yuborib turiladi."
+                )
+            else:
+                api.send(chat_id, f"❌ {res.get('message', 'Taklif kodi yaroqsiz.')}")
+            return
         if text.startswith('/start'):
             payload=text[len('/start'):].strip()
             if payload:

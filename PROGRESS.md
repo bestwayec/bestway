@@ -216,6 +216,33 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ---
 
+### 14-BLOK: BestWay v1.0.0 — Ota-onalar Telegram Monitoringi, Interaktiv Click-to-Vocab & Jonli Vocab Battle (Kahoot Mode)
+1. **Frontend UI/UX Silliqlash va Guruh Tahlili (VocabularyGroupReport) Tuzatildi**:
+   - `backend-django/apps/core/vocabulary_service.py` da `get_vocabulary_set_report()` funksiyasi yaratildi: `totalWords`, `totalAttempts`, `averagePercentage` va `hardestWords` (eng ko'p xato qilingan 8 ta so'z, ularning o'zbekcha tarjimasi va xatolar soni) to'liq hisoblab qaytarilishi ta'minlandi.
+   - `frontend/src/components/teacher/VocabularyGroupReport.tsx` da bo'sh qolgan KPI raqamlari (`undefined ta`, `undefined%`) va `0 xato` holatlari to'liq bartaraf etildi.
+2. **Ota-onalar Uchun Telegram Monitoring va Haftalik Digest**:
+   - `ParentTelegramLink` modeli yaratildi (`invite_code` masalan `BW-839201`).
+   - Telegram botda `/parent <KOD>` va `/start parent_<KOD>` orqali ota-ona o'z farzandining profiliga avtomatik bog'lanadi.
+   - O'quvchi darsga kelmasa (`absent`) yoki kechiksa (`late`), ota-onaga darhol botdan muloyim rasmiy xabarnoma yuboriladi.
+   - Test yoki amaliyot topshirilganda natijalar ota-onaga jo'natiladi.
+   - `send_weekly_parent_digest()`: O'quvchining haftalik davomati %, yechilgan lug'at mashqlari soni va to'plangan ballari chiroyli haftalik digest hisoboti shaklida ota-onaga yuboriladi. O'qituvchi boshqaruv panelida `[ 📲 Ota-onalarga Digest ]` tugmasi qo'shildi.
+3. **Interactive Reading & Listening "Click-to-Vocab" + Audio Sync**:
+   - `frontend/src/components/mock/ClickToVocabWrapper.tsx` yaratildi: matndagi istalgan so'z bosilganda qalqib chiquvchi Obsidian Dark popover orqali o'zbekcha tarjimasi, Web Speech API audio talaffuzi va `[ ➕ Shaxsiy Lug'atga (SRS) Qo'shish ]` tugmasi taqdim etiladi.
+   - Backendda tezkor `/api/v1/vocabulary/lookup` va `/api/v1/vocabulary/user-words/add` integratsiyasi amalga oshirildi.
+   - Listening transkriptlarida har bir gap yoniga `[ ▶️ Tinglash ]` tugmasi qo'shildi va audio pleyer bilan millisekundlarda sinxronlashtirildi.
+4. **"Vocab Battle" — Jonli Sinf Bellashuvi (Kahoot / PIN Mode)**:
+   - `backend-django/apps/core/vocab_battle.py`: 6 xonali PIN-kod, 4 variantli tezkor savollar, tezlik va streak bo'yicha dinamik ball berish, jonli leaderboard poygasi va g'oliblarni taqdirlash tizimi yaratildi.
+   - Podium g'oliblariga avtomatik platforma ballari taqsimlanadi: 1-o'rin **+10 ball**, 2-o'rin **+7 ball**, 3-o'rin **+5 ball**.
+   - `frontend/src/components/vocabulary/VocabBattleHost.tsx` (Ustoz boshqaruv paneli: kutish zali, taymerli savollar, podium va konfetti effekti) va `VocabBattlePlayer.tsx` (O'quvchi interfeysi: 4 ta yirik rangli tugmalar 🔺🔷🟡🟢, tezkor reyting) ishlab chiqildi.
+   - `/vocabulary` katalogida `[ ⚡️ Live Vocab Battle ]` va `[ 🎮 PIN Bilan Kirish ]` tugmalari integratsiya qilindi.
+5. **Sifat Nazorati va Reliz (v1.0.0)**:
+   - Backend Django Pytest: **540 ta test 100% PASS** (shu jumladan yangi `test_vocab_battle_and_lookup.py` va `test_parent_digest.py`).
+   - Frontend Vitest: **54 ta test to'plami, 360 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik**.
+   - Frontend talqini `v1.0.0` ga ko'tarildi.
+
+---
+
 ## Jarayonda
 - Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
 
