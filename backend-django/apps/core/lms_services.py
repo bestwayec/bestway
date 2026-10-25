@@ -112,6 +112,8 @@ def stream_video_file(file_path: str, request: HttpRequest) -> HttpResponse | St
             response["Content-Range"] = f"bytes {start}-{end}/{total_size}"
             response["Content-Length"] = str(length)
             response["Accept-Ranges"] = "bytes"
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Expose-Headers"] = "Content-Range, Content-Length, Accept-Ranges"
             return response
 
     response = StreamingHttpResponse(
@@ -121,6 +123,8 @@ def stream_video_file(file_path: str, request: HttpRequest) -> HttpResponse | St
     )
     response["Content-Length"] = str(total_size)
     response["Accept-Ranges"] = "bytes"
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Expose-Headers"] = "Content-Range, Content-Length, Accept-Ranges"
     return response
 
 
@@ -251,14 +255,15 @@ def list_quiz_decks(
     result = []
     for d in qs:
         result.append({
-            "id": d.id,
+            "id": str(d.id),
             "title": d.title,
             "category": d.category,
             "is_lesson_tied": d.is_lesson_tied,
-            "lesson_id": d.lesson_id,
+            "lesson_id": str(d.lesson_id) if d.lesson_id else None,
             "lesson_title": d.lesson.title if d.lesson else None,
             "card_count": d.cards.count(),
             "created_at": d.created_at.isoformat(),
+            "is_unlocked": True,
         })
     return result
 
@@ -281,7 +286,7 @@ def get_quiz_deck_detail(deck_id: str, user: Optional[User] = None) -> Dict[str,
     cards = []
     for c in deck.cards.all():
         cards.append({
-            "id": c.id,
+            "id": str(c.id),
             "question_text": c.question_text,
             "points": c.points,
             "options": c.options or [],
@@ -291,7 +296,7 @@ def get_quiz_deck_detail(deck_id: str, user: Optional[User] = None) -> Dict[str,
         })
 
     return {
-        "id": deck.id,
+        "id": str(deck.id),
         "title": deck.title,
         "category": deck.category,
         "is_lesson_tied": deck.is_lesson_tied,

@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,7 @@ export function BamboozleLobby() {
 
   // Creator modal
   const [isCreatorOpen, setIsCreatorOpen] = React.useState(false);
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedDeckId = searchParams?.get("deck");
 
@@ -102,16 +103,61 @@ export function BamboozleLobby() {
     fetchDecks();
   }, [fetchDecks]);
 
-  React.useEffect(() => {
-    if (requestedDeckId && decks.length > 0 && !activeDeck) {
-      const match = decks.find((d) => d.id === requestedDeckId);
-      if (match) {
-        handleStartGame(match);
-      }
-    }
-  }, [requestedDeckId, decks, activeDeck]);
+  // Direct start deck by ID regardless of local deck list loading
+  const startDeckById = React.useCallback(async (deckId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await api.get<any>(`/v1/quiz-decks/${deckId}`);
+      const data = res.data?.data || res.data || {};
+      const rawCards = data.cards || [];
+      const title = data.title || "Grammar Bamboozle Battle";
+      const category = data.category || "Grammar";
 
-  const handleStartGame = async (deck: QuizDeckItem) => {
+      let gameCards: BamboozleCard[] = rawCards;
+      if (gameCards.length === 0) {
+        const types: ("question" | "swap" | "steal" | "double" | "bomb")[] = [
+          "question", "question", "swap", "question",
+          "question", "steal", "question", "double",
+          "question", "bomb", "question", "question",
+          "question", "swap", "question", "bomb",
+        ];
+        gameCards = types.map((t, idx) => ({
+          id: `card-${idx + 1}`,
+          order_index: idx + 1,
+          card_type: t,
+          points: t === "question" ? [10, 15, 20][idx % 3] : 0,
+          question_text:
+            t === "question"
+              ? `Savol #${idx + 1}: Select the correct grammar form?`
+              : t.toUpperCase(),
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correct_answer: "Option A",
+        }));
+      }
+
+      setActiveDeck({
+        title,
+        category,
+        cards: gameCards,
+      });
+    } catch (err) {
+      console.error("Direct deck start error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (requestedDeckId) {
+      startDeckById(requestedDeckId);
+    }
+  }, [requestedDeckId, startDeckById]);
+
+  const handleStartGame = (deck: QuizDeckItem) => {
+    startDeckById(deck.id);
+  };
+
+  const handleStartGameLegacy = async (deck: QuizDeckItem) => {
     try {
       const res = await api.get<any>(`/v1/quiz-decks/${deck.id}`);
       const data = res.data?.data || res.data || {};
@@ -169,7 +215,10 @@ export function BamboozleLobby() {
         deckTitle={activeDeck.title}
         category={activeDeck.category}
         cards={activeDeck.cards}
-        onExit={() => setActiveDeck(null)}
+        onExit={() => {
+          setActiveDeck(null);
+          router.replace("/bamboozle");
+        }}
       />
     );
   }

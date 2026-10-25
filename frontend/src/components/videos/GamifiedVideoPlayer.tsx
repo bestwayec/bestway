@@ -77,12 +77,37 @@ export function GamifiedVideoPlayer({
   } | null>(null);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = React.useState(false);
 
-  // Synchronize duration from video metadata
+    React.useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.volume = 1.0;
+      video.muted = false;
+      setVolume(1.0);
+      setMuted(false);
+    }
+  }, [src]);
+
+  // Synchronize duration from video metadata and enforce unmuted audio
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      const dur = videoRef.current.duration;
+      const v = videoRef.current;
+      const dur = v.duration;
       if (Number.isFinite(dur) && dur > 0) {
         setDuration(dur);
+      }
+      v.volume = 1.0;
+      v.muted = false;
+      setVolume(1.0);
+      setMuted(false);
+      try {
+        const anyVideo = v as any;
+        if (anyVideo.audioTracks && anyVideo.audioTracks.length > 0) {
+          for (let i = 0; i < anyVideo.audioTracks.length; i++) {
+            anyVideo.audioTracks[i].enabled = true;
+          }
+        }
+      } catch {
+        // audioTracks API not supported across all browsers
       }
     }
   };
@@ -155,7 +180,20 @@ export function GamifiedVideoPlayer({
 
     setTabPausedNotice(false);
     if (video.paused) {
-      video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      video.volume = muted ? 0 : (volume || 1.0);
+      video.muted = muted;
+      video
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          // If browser policy prevents unmuted playback without prior interaction, fallback to muted
+          video.muted = true;
+          setMuted(true);
+          video
+            .play()
+            .then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false));
+        });
     } else {
       video.pause();
       setIsPlaying(false);
@@ -266,7 +304,30 @@ export function GamifiedVideoPlayer({
         onSeeking={handleSeeking}
         onEnded={handleCompleteLesson}
         playsInline
+        autoPlay={false}
+        muted={muted}
+        preload="auto"
       />
+
+      {/* Unmute button if browser enforced muted playback */}
+      {isPlaying && muted && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              videoRef.current.volume = 1.0;
+              setVolume(1.0);
+              setMuted(false);
+            }
+          }}
+          className="absolute top-16 right-4 z-30 flex items-center gap-2 px-3.5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xl transition-all hover:scale-105 animate-pulse"
+        >
+          <Volume2 className="w-4 h-4" />
+          <span>Ovozni yoqish</span>
+        </button>
+      )}
 
       {/* Anti-Cheat Toast Warning */}
       {antiCheatWarning && (
