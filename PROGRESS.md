@@ -338,8 +338,30 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - `main` ga push qilindi va serverda `education-backend`, `education-frontend` konteynerlari yangilandi.
    - Ommaviy endpointlar (`https://bestwayec.uz`, `/en/videos`, `/en/bamboozle?deck=...`) `200 OK` bilan to'liq tasdiqlandi.
 
+### 19-BLOK: Bamboozle Lobby To'plamlari, 100% Haqiqiy Grammatika Savollari va Silliq 3D Animatsiyalar (v1.0.2)
+1. **Lobby To'plamlari Ko'rinishi va API Unwrapping Yechildi (`BamboozleLobby.tsx`)**:
+   - `fetchDecks` ichidagi `res.data?.data || res.data || []` xatoligi to'liq bartaraf etildi; `api.get` qaytargan unwrap massiv to'g'ridan-to'g'ri qabul qilinib barcha 6 ta grammatika to'plami Lobby da paydo bo'lishi ta'minlandi.
+   - `startDeckById` da `data.cards` to'g'ri o'qilib, backenddagi haqiqiy 16 ta grammatika kartasi yuklanishi ta'minlandi (shablon fallbacklar to'xtatildi).
+   - Kategoriyalar va filtrlar yangilandi: `All` va `Grammar` filtrlarida barcha 6 ta grammatika darsi to'liq ko'rinadi.
+2. **Haqiqiy va 100% Grammatik Savollar Ingestion (`seed_grammar_videos_and_bamboozle.py`)**:
+   - 1-darsdan 6-darsgacha (Nouns, Noun Test, Adjectives, Adverbs, Numerals, Articles) barcha to'plamlar `category: "Grammar"` ostiga birlashtirildi.
+   - 96 ta kartaning barchasi CEFR / Grammatika qoidalariga 100% mos keluvchi 4 tadan variant va aniq to'g'ri javoblar bilan yangilandi.
+   - Backend `list_quiz_decks` ga baza bo'sh bo'lgan taqdirda avtomatik seed qilish xavfsizlik himoyasi (`auto-seed`) kiritildi.
+3. **O'yin Interfeysiga Silliq 3D va Partikl Animatsiyalari (`BamboozleArena.tsx`)**:
+   - **3D Flip (Aylanish)**: Har bir kartani bosganda `motion.button` yordamida 180 darajali silliq 3D aylanish effekti qo'shildi.
+   - **Syurpriz Karta Pop-up & Confetti**: `Swap`, `Steal`, `Double`, `Bomb` kartalari ochilganda ekranda maxsus yorqin pop-up oynasi hamda 90 ta rangli zarralardan iborat yuqori unumli Canvas Confetti otilishi joriy qilindi.
+   - **Jonli Qizil Taymer**: Savol vaqti 5 soniyadan kam qolganda taymer qizil neon bilan o'chib-yonuvchi (`animate-pulse shadow-red`) holatga o'tadi.
+4. **Sifat Nazorati va Contabo VPS Relizi (v1.0.2)**:
+   - Frontend `package.json` versiyasi `1.0.2` ga ko'tarildi.
+   - TypeScript `tsc --noEmit`: 0 ta xatolik.
+   - Frontend Vitest: **56 ta fayl, 364 ta test 100% PASS**.
+   - Backend Pytest: **13 ta LMS/Bamboozle testi 100% PASS**.
+   - Git Commit & Push: `Komiljon Roziyev <kruziyev0@gmail.com>`.
+   - VPS (`169.58.58.229`): `docker compose up -d --build backend frontend` va `seed_grammar_videos_and_bamboozle` muvaffaqiyatli ishga tushirildi.
+   - Ommaviy endpointlar (`https://bestwayec.uz/en/bamboozle`, `/api/backend/v1/quiz-decks`) `200 OK` bilan tasdiqlandi.
+
 ## Jarayonda
-- Barcha grammatika darslari va Bamboozle o'yinlari pleyer hamda to'g'ridan-to'g'ri link orqali mukammal ishlamoqda.
+- Bamboozle o'yin maydoni va Lobby interfeysi v1.0.2 talablariga to'liq mos ravishda ishga tushirildi.
 
 ---
 
