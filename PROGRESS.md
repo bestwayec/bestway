@@ -292,6 +292,34 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Git Commit & Push: `feat(grammar): add grammar video lessons, bamboozle decks and rbac lobby guard` muallif: `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI attribution).
    - Contabo VPS (`169.58.58.229`): Xizmat darajasida build qilindi (`docker compose up -d --build backend frontend`), barcha video fayllar Docker storage hajmiga kiritildi, seed skripti muvaffaqiyatli ishga tushirildi va public endpointlar (`bestwayec.uz`, `/en/videos`, `/en/bamboozle`) `HTTP 200 OK` bilan tasdiqlandi.
 
+### 17-BLOK: BestWay Reliz v1.0.1 — Video Darslar UI, Bamboozle Creator UX va Lug'at Analitikasini To'liq Tuzatish
+1. **`/en/videos` Sahifasi va LMS Sinxronizatsiyasi**:
+   - `backend-django/apps/core/videos.py` da `listing()`, `stream_url()` va `get()` funksiyalari yangi LMS `Lesson` va eski `VideoLesson` jadvallarini to'liq birlashtirdi.
+   - Har bir video dars uchun davomiylik formati (`22:17`, `07:26`, `18:44`, `15:09`, `18:17`, `23:56`), `+50 XP` mukofoti, ko'rilganlik holati (`Ko'rilgan` / `Yangi`) hamda unga biriktirilgan Bamboozle testi ID'si to'liq qaytariladi.
+   - `frontend/src/components/videos/videos-view.tsx`:
+     * `"English Grammar Foundation: Nouns to Articles"` banneri joylashtirildi.
+     * 6 ta video dars kartochkalari, ularning davomiyligi, statusi va `[ 🎮 Bamboozle ]` tugmalari integratsiya qilindi.
+     * Bosilganda zamonaviy `GamifiedVideoPlayer` (anti-cheat, HTTP 206 Partial Content range streaming) orqali ochiladi.
+2. **Bamboozle `QuizDeckCreator.tsx` Kiritish Interfeysi Kengaytmasi**:
+   - `Darsga biriktirish (Lesson-Tied Mode)` yoqilganda avtomatik ravishda barcha mavjud darslarni yuklovchi **Video Dars Tanlash (`<select>`)** dropdowni ochiladi.
+   - Savol kartalaridagi variantlar (A, B, C, D) yoniga **Radio/Check (`✓`)** tugmalari joylashtirildi; ustoz bitta bosish orqali to'g'ri variantni yashil hoshiya bilan belgilaydi va u `correct_answer` ga tushadi.
+   - **`[ ✨ Smart Paste ]`**: Ustoz savollar ro'yxatini matn ko'rinishida tashlaganda avtomatik tahlil qilinib kartochkalar hosil qilinadi.
+   - **`[ 🎲 16 Kartani Aralashtirish ]`**: Mavjud savollar bilan birga 4 ta syurpriz kartani (`swap`, `steal`, `double`, `bomb`) 3, 7, 11, 15-pozitsiyalarga avtomatik aralashtiradi.
+   - `BamboozleLobby.tsx`: URL da `?deck=<deckId>` berilganda to'g'ridan-to'g'ri o'sha o'yinni ishga tushirish imkoniyati qo'shildi.
+3. **Lug'at Analitika Paneli (`VocabularyGroupReport.tsx`) va Backend Tuzatishi**:
+   - `backend-django/apps/core/vocabulary_service.py` dagi `get_vocabulary_set_report()` funksiyasi `total_words`, `submitted_count`, `average_percentage` va `hardest_words` ni aniq hisoblaydi.
+   - Xato qilinmagan (`0 xato`) so'zlar filtrlanib, faqat haqiqiy xato qilingan so'zlar ro'yxati qaytariladi.
+   - `VocabularyGroupReport.tsx` kartalarida `60 ta`, `1 ta`, `40%` raqamlari aniq ko'rinishi ta'minlandi.
+4. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Backend Pytest: **26 ta test 100% PASS**.
+   - Frontend Vitest: **56 ta test to'plami, 364 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik**.
+5. **Reliz `v1.0.1` va VPS Deploy**:
+   - `package.json` versiyasi `1.0.1` ga ko'tarildi.
+   - Git tag `v1.0.1` qo'yildi va GitHub `origin/main` ga push qilindi (muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`).
+   - Contabo VPS (`169.58.58.229`) da xizmatlar yangilandi, PostgreSQL `max_connections = 300` ga oshirildi, idle ulanishlar tozalandi va `seed_grammar_videos_and_bamboozle` muvaffaqiyatli ishga tushirildi.
+   - Public endpointlar (`https://bestwayec.uz/`, `/en/videos`, `/en/bamboozle`, `/api/backend/videos`, `/api/backend/v1/lessons`) to'liq tasdiqlandi.
+
 ## Jarayonda
 - Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
 
