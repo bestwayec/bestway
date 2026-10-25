@@ -28,6 +28,8 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { VideoCreateDialog } from "@/components/videos/video-create-dialog";
 import { GamifiedVideoPlayer } from "@/components/videos/GamifiedVideoPlayer";
+import { CourseCardThumbnail } from "@/components/videos/course-card-thumbnail";
+import { motion } from "motion/react";
 import {
   useVideos,
   useStreamUrl,
@@ -172,152 +174,170 @@ export function VideosView() {
       ) : (videosQ.data?.length ?? 0) === 0 ? (
         <EmptyState icon={Video} title={t("noVideos")} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {videosQ.data!.map((v) => {
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {videosQ.data!.map((v, idx) => {
             const duration = (v as any).durationFormatted || "15:00";
             const xpReward = (v as any).xpReward || 50;
             const isCompleted = Boolean((v as any).isCompleted);
             const tiedDeckId = (v as any).bamboozleDeckId;
 
             return (
-              <TiltCard key={v.id} maxTilt={4} className="h-full rounded-2xl">
-                <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800 bg-[#0B0F17] p-0 hover:border-emerald-500/40 transition-all">
-                  {/* muqova */}
-                  <div className="relative aspect-video overflow-hidden bg-slate-900">
-                    {v.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={v.thumbnailUrl}
-                        alt={v.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950">
-                        <PlaySquare className="size-12 text-emerald-500/60" />
+              <motion.div
+                key={v.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: idx * 0.05 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="h-full"
+              >
+                <TiltCard maxTilt={4} className="h-full rounded-2xl">
+                  <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800/80 bg-[#0B0F17] p-0 hover:border-emerald-500/50 hover:shadow-[0_12px_35px_rgba(16,185,129,0.18)] transition-all duration-300">
+                    {/* Muqova / Artwork Banner */}
+                    <div className="relative aspect-video overflow-hidden bg-slate-900 border-b border-slate-800/80">
+                      {v.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={v.thumbnailUrl}
+                          alt={v.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <CourseCardThumbnail title={v.title} />
+                      )}
+
+                      {/* Vignette Overlay */}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 opacity-70" />
+
+                      {/* Floating Badges Bar (Top Left & Top Right) */}
+                      <div className="absolute top-2.5 inset-x-2.5 z-20 flex items-center justify-between pointer-events-none">
+                        {/* Status Badge */}
+                        <div>
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/95 text-slate-950 px-2.5 py-0.5 text-[11px] font-black shadow-[0_2px_8px_rgba(16,185,129,0.4)] backdrop-blur">
+                              <CheckCircle2 className="size-3" /> Ko&apos;rilgan
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 text-slate-950 px-2.5 py-0.5 text-[11px] font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)] backdrop-blur">
+                              <Sparkles className="size-3" /> Yangi
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Price Badge */}
+                        <div>
+                          {v.price === 0 ? (
+                            <span className="inline-flex items-center rounded-full bg-slate-950/80 border border-emerald-500/50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 shadow backdrop-blur">
+                              {t("free")}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-slate-950/85 border border-slate-700 px-2.5 py-0.5 text-[11px] font-semibold text-white tabular-nums shadow backdrop-blur">
+                              {formatMoney(v.price)} {tc("sum")}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Gradient overlay */}
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80" />
-
-                    {/* Narx yoki Bepul belgisi */}
-                    <div className="absolute right-2 top-2">
-                      {v.price === 0 ? (
-                        <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-bold text-emerald-300 backdrop-blur">
-                          {t("free")}
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-black/75 px-2.5 py-1 text-xs font-semibold text-white tabular-nums backdrop-blur">
-                          {formatMoney(v.price)} {tc("sum")}
-                        </span>
+                      {/* Play Hover Overlay Button */}
+                      {v.access === "granted" && (
+                        <button
+                          type="button"
+                          onClick={() => onWatch(v)}
+                          aria-label={t("watch")}
+                          className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 focus-visible:opacity-100 bg-black/40 backdrop-blur-[2px]"
+                        >
+                          <span className="grid size-14 place-items-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-transform duration-300 group-hover:scale-110">
+                            <Play className="size-6 fill-current ml-0.5" />
+                          </span>
+                        </button>
                       )}
                     </div>
 
-                    {/* Status badge: Ko'rilgan / Yangi */}
-                    <div className="absolute left-2 top-2">
-                      {isCompleted ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[11px] font-bold text-slate-950 shadow-md">
-                          <CheckCircle2 className="size-3" /> Ko&apos;rilgan
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[11px] font-bold text-slate-950 shadow-md">
-                          <Sparkles className="size-3" /> Yangi
-                        </span>
-                      )}
-                    </div>
+                    {/* Matn va Tafsilotlar Qismi */}
+                    <div className="flex flex-1 flex-col p-4 justify-between space-y-3">
+                      <div>
+                        {/* Meta qatori: Davomiylik & XP */}
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                          <span className="inline-flex items-center gap-1 font-mono text-slate-300">
+                            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                            {duration}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 shadow-sm">
+                            <Sparkles className="w-3 h-3" />
+                            +{xpReward} XP
+                          </span>
+                        </div>
 
-                    {/* Play hover trigger */}
-                    {v.access === "granted" && (
-                      <button
-                        type="button"
-                        onClick={() => onWatch(v)}
-                        aria-label={t("watch")}
-                        className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 focus-visible:opacity-100"
-                      >
-                        <span className="grid size-14 place-items-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-transform duration-300 group-hover:scale-110">
-                          <Play className="size-6 fill-current" />
-                        </span>
-                      </button>
-                    )}
-                  </div>
+                        {/* Dars sarlavhasi */}
+                        <h3 className="line-clamp-2 font-black text-white text-sm sm:text-base leading-snug group-hover:text-emerald-400 transition-colors">
+                          {v.title}
+                        </h3>
 
-                  {/* matn qismi */}
-                  <div className="flex flex-1 flex-col p-4 space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span className="inline-flex items-center gap-1 font-mono">
-                        <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                        {duration}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">
-                        <Sparkles className="w-3 h-3" />
-                        +{xpReward} XP
-                      </span>
-                    </div>
+                        {/* Tavsif */}
+                        {v.description && (
+                          <p className="line-clamp-2 text-xs text-slate-400 mt-1 leading-relaxed">
+                            {v.description}
+                          </p>
+                        )}
+                      </div>
 
-                    <p className="line-clamp-2 font-bold text-white text-sm leading-snug group-hover:text-emerald-400 transition-colors">
-                      {v.title}
-                    </p>
-
-                    {v.description && (
-                      <p className="line-clamp-2 text-xs text-slate-400 flex-1">{v.description}</p>
-                    )}
-
-                    <div className="pt-2 flex flex-wrap gap-2">
-                      {v.access === "granted" ? (
-                        <>
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold"
-                            loading={stream.isPending}
-                            onClick={() => onWatch(v)}
-                          >
-                            <PlaySquare className="w-4 h-4 mr-1.5" />
-                            {t("watch")}
-                          </Button>
-                          {tiedDeckId && (
+                      {/* Harakat tugmalari */}
+                      <div className="pt-2 flex flex-wrap items-center gap-2">
+                        {v.access === "granted" ? (
+                          <>
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => router.push(`/bamboozle?deck=${tiedDeckId}`)}
-                              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold"
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                              loading={stream.isPending}
+                              onClick={() => onWatch(v)}
                             >
-                              <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400" />
-                              <span>🎮 Bamboozle</span>
+                              <PlaySquare className="w-4 h-4 mr-1.5" />
+                              {t("watch")}
                             </Button>
-                          )}
-                        </>
-                      ) : v.access === "pending_confirmation" ? (
-                        <Badge variant="warning" className="flex-1 justify-center py-1.5">
-                          <Clock className="w-3 h-3 mr-1" /> {t("pending")}
-                        </Badge>
-                      ) : isStudent ? (
-                        <Button size="sm" variant="outline" className="flex-1" loading={purchase.isPending} onClick={() => onBuy(v.id)}>
-                          <ShoppingCart className="w-3.5 h-3.5 mr-1" />
-                          {t("buy")}
-                        </Button>
-                      ) : (
-                        <Badge variant="neutral" className="flex-1 justify-center py-1.5">
-                          <Lock className="w-3 h-3 mr-1" /> {t("locked")}
-                        </Badge>
-                      )}
+                            {tiedDeckId && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => router.push(`/bamboozle?deck=${tiedDeckId}`)}
+                                className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold"
+                              >
+                                <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400" />
+                                <span>🎮 Bamboozle</span>
+                              </Button>
+                            )}
+                          </>
+                        ) : v.access === "pending_confirmation" ? (
+                          <Badge variant="warning" className="flex-1 justify-center py-1.5">
+                            <Clock className="w-3 h-3 mr-1" /> {t("pending")}
+                          </Badge>
+                        ) : isStudent ? (
+                          <Button size="sm" variant="outline" className="flex-1" loading={purchase.isPending} onClick={() => onBuy(v.id)}>
+                            <ShoppingCart className="w-3.5 h-3.5 mr-1" />
+                            {t("buy")}
+                          </Button>
+                        ) : (
+                          <Badge variant="neutral" className="flex-1 justify-center py-1.5">
+                            <Lock className="w-3 h-3 mr-1" /> {t("locked")}
+                          </Badge>
+                        )}
 
-                      {isOffice && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onDelete(v.id)}
-                          aria-label={t("delete")}
-                          className="text-slate-500 hover:text-red-400 p-2"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
+                        {isOffice && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onDelete(v.id)}
+                            aria-label={t("delete")}
+                            className="text-slate-500 hover:text-red-400 p-2"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              </TiltCard>
+                  </Card>
+                </TiltCard>
+              </motion.div>
             );
           })}
         </div>
