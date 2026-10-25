@@ -60,7 +60,13 @@ export function BamboozleLobby() {
     setIsLoading(true);
     try {
       const res = await api.get<any>("/v1/quiz-decks");
-      const list = res.data?.data || res.data || [];
+      const list: QuizDeckItem[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
       setDecks(list);
     } catch {
       // Fallback sample decks if empty
@@ -108,8 +114,15 @@ export function BamboozleLobby() {
     setIsLoading(true);
     try {
       const res = await api.get<any>(`/v1/quiz-decks/${deckId}`);
-      const data = res.data?.data || res.data || {};
-      const rawCards = data.cards || [];
+      const data =
+        res && Array.isArray(res.cards)
+          ? res
+          : res?.data && Array.isArray(res.data.cards)
+          ? res.data
+          : res?.data?.data && Array.isArray(res.data.data.cards)
+          ? res.data.data
+          : res || {};
+      const rawCards = Array.isArray(data?.cards) ? data.cards : [];
       const title = data.title || "Grammar Bamboozle Battle";
       const category = data.category || "Grammar";
 
@@ -223,11 +236,25 @@ export function BamboozleLobby() {
     );
   }
 
-  const categories = ["All", "Vocabulary", "Grammar", "IELTS", "General"];
+  const categories = ["All", "Grammar", "Vocabulary", "IELTS", "General"];
 
   const filteredDecks = decks.filter((d) => {
-    const matchesCat = selectedCategory === "All" || d.category.toLowerCase() === selectedCategory.toLowerCase();
-    const matchesSearch = d.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const deckCat = (d.category || "").toLowerCase();
+    const isGrammarCat = selectedCategory.toLowerCase() === "grammar";
+    const matchesCat =
+      selectedCategory === "All" ||
+      deckCat === selectedCategory.toLowerCase() ||
+      (isGrammarCat && (
+        deckCat === "grammar" ||
+        d.title.toLowerCase().includes("grammar") ||
+        d.title.toLowerCase().includes("noun") ||
+        d.title.toLowerCase().includes("adjective") ||
+        d.title.toLowerCase().includes("adverb") ||
+        d.title.toLowerCase().includes("numeral") ||
+        d.title.toLowerCase().includes("article")
+      ));
+    const matchesSearch =
+      !searchQuery || d.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
 

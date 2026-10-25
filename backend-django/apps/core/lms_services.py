@@ -246,9 +246,17 @@ def list_quiz_decks(
     is_lesson_tied: Optional[bool] = None,
 ) -> List[Dict[str, Any]]:
     """List quiz decks with metadata, card counts, and lesson association."""
-    qs = QuizDeck.objects.select_related("lesson", "created_by").all()
-    if category:
-        qs = qs.filter(category__iexact=category)
+    # Safety mechanism: auto-seed grammar decks if database has 0 decks
+    if QuizDeck.objects.count() == 0:
+        try:
+            from django.core.management import call_command
+            call_command("seed_grammar_videos_and_bamboozle")
+        except Exception as e:
+            logger.warning("Auto-seed quiz decks failed: %s", e)
+
+    qs = QuizDeck.objects.select_related("lesson", "created_by").all().order_by("lesson__order_index", "created_at")
+    if category and category.strip().lower() != "all":
+        qs = qs.filter(category__iexact=category.strip())
     if is_lesson_tied is not None:
         qs = qs.filter(is_lesson_tied=is_lesson_tied)
 

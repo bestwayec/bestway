@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "motion/react";
 
 export interface BamboozleCard {
   id: string;
@@ -129,6 +130,78 @@ function createSoundPlayer() {
   };
 }
 
+// ============================================================================
+// CANVAS CONFETTI PARTICLE SYSTEM
+// ============================================================================
+
+function ConfettiCanvas({ active }: { active: boolean }) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  React.useEffect(() => {
+    if (!active) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    const width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth);
+    const height = (canvas.height = canvas.parentElement?.clientHeight || window.innerHeight);
+
+    const colors = ["#10B981", "#F59E0B", "#3B82F6", "#EC4899", "#8B5CF6", "#F43F5E", "#EAB308"];
+    const particles = Array.from({ length: 90 }).map(() => ({
+      x: width * 0.5 + (Math.random() - 0.5) * 120,
+      y: height * 0.35 + (Math.random() - 0.5) * 60,
+      vx: (Math.random() - 0.5) * 15,
+      vy: Math.random() * -12 - 5,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 12,
+      opacity: 1,
+    }));
+
+    const startTime = Date.now();
+
+    const draw = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed > 2800) {
+        ctx.clearRect(0, 0, width, height);
+        return;
+      }
+      ctx.clearRect(0, 0, width, height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.45; // gravity
+        p.rotation += p.rotSpeed;
+        p.opacity = Math.max(0, 1 - elapsed / 2800);
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        ctx.restore();
+      });
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    animId = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(animId);
+  }, [active]);
+
+  if (!active) return null;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 z-[60] w-full h-full"
+    />
+  );
+}
+
 export function BamboozleArena({
   deckTitle,
   category = "Umumiy",
@@ -155,8 +228,15 @@ export function BamboozleArena({
   const [timerSeconds, setTimerSeconds] = React.useState(15);
   const [isTimerRunning, setIsTimerRunning] = React.useState(false);
 
-  // Surprise event banner
+  // Surprise event banner & visual modal
   const [eventNotice, setEventNotice] = React.useState<string | null>(null);
+  const [surpriseModal, setSurpriseModal] = React.useState<{
+    type: "swap" | "steal" | "double" | "bomb";
+    title: string;
+    subtitle: string;
+    icon: string;
+  } | null>(null);
+  const [confettiActive, setConfettiActive] = React.useState(false);
 
   // Smart TV / Projector mode
   const [isProjectorMode, setIsProjectorMode] = React.useState(false);
@@ -211,7 +291,7 @@ export function BamboozleArena({
     }
   };
 
-  // Process surprise cards: SWAP, STEAL, DOUBLE, BOMB
+  // Process surprise cards: SWAP, STEAL, DOUBLE, BOMB with popup modal & confetti
   const handleSurpriseCard = (card: BamboozleCard) => {
     const isT1 = activeTeam === 1;
 
@@ -219,6 +299,14 @@ export function BamboozleArena({
       if (soundEnabled) soundPlayer.playSurprise();
       setTeam1Score(team2Score);
       setTeam2Score(team1Score);
+      setSurpriseModal({
+        type: "swap",
+        title: "🔄 BALLAR ALMASHDI!",
+        subtitle: `Team 1: ${team2Score} ball ⟷ Team 2: ${team1Score} ball!`,
+        icon: "🔄",
+      });
+      setConfettiActive(true);
+      setTimeout(() => setConfettiActive(false), 2500);
       showEventNotice(`🔄 SYURPRIZ: Ballar almashdi! (Team 1: ${team2Score}, Team 2: ${team1Score})`);
       switchTurn();
     } else if (card.card_type === "steal") {
@@ -228,13 +316,27 @@ export function BamboozleArena({
         const actualSteal = Math.min(stealPts, team2Score);
         setTeam1Score((s) => s + actualSteal);
         setTeam2Score((s) => Math.max(0, s - actualSteal));
+        setSurpriseModal({
+          type: "steal",
+          title: "🥷 15 BALL O'G'IRLANDI!",
+          subtitle: `Team 1 raqibdan +${actualSteal} ball tortib oldi!`,
+          icon: "🥷",
+        });
         showEventNotice(`🥷 O'G'IRLASH: Team 1 raqibdan +${actualSteal} ball o'g'irladi!`);
       } else {
         const actualSteal = Math.min(stealPts, team1Score);
         setTeam2Score((s) => s + actualSteal);
         setTeam1Score((s) => Math.max(0, s - actualSteal));
+        setSurpriseModal({
+          type: "steal",
+          title: "🥷 15 BALL O'G'IRLANDI!",
+          subtitle: `Team 2 raqibdan +${actualSteal} ball tortib oldi!`,
+          icon: "🥷",
+        });
         showEventNotice(`🥷 O'G'IRLASH: Team 2 raqibdan +${actualSteal} ball o'g'irladi!`);
       }
+      setConfettiActive(true);
+      setTimeout(() => setConfettiActive(false), 2500);
       switchTurn();
     } else if (card.card_type === "double") {
       if (soundEnabled) soundPlayer.playSurprise();
@@ -245,6 +347,14 @@ export function BamboozleArena({
         setTeam2Double(true);
         showEventNotice(`⚡️ 2X MULTIPLIER: Team 2 uchun keyingi savol 2 barobar ball beradi!`);
       }
+      setSurpriseModal({
+        type: "double",
+        title: "⚡️ 2X MULTIPLIER!",
+        subtitle: `Team ${activeTeam} uchun keyingi to'g'ri javob 2 barobar ball keltiradi!`,
+        icon: "⚡️",
+      });
+      setConfettiActive(true);
+      setTimeout(() => setConfettiActive(false), 2500);
       switchTurn();
     } else if (card.card_type === "bomb") {
       if (soundEnabled) soundPlayer.playBomb();
@@ -256,6 +366,12 @@ export function BamboozleArena({
         setTeam2Score((s) => Math.max(0, s - bombPts));
         showEventNotice(`💣 BOMBA! Team 2 dan -${bombPts} ball ayirildi!`);
       }
+      setSurpriseModal({
+        type: "bomb",
+        title: "💣 BOMBA PORTLADI!",
+        subtitle: `Team ${activeTeam} dan -${bombPts} ball ayirildi!`,
+        icon: "💣",
+      });
       switchTurn();
     }
   };
@@ -472,39 +588,112 @@ export function BamboozleArena({
           const isRevealed = card.is_revealed;
 
           return (
-            <button
+            <motion.button
               key={card.id}
               type="button"
               disabled={isRevealed || activeCard !== null || gameOver}
               onClick={() => handleCardClick(card)}
-              className={`relative rounded-xl border flex flex-col items-center justify-center font-black transition-all transform ${
+              whileHover={!isRevealed ? { scale: 1.05, y: -2 } : {}}
+              whileTap={!isRevealed ? { scale: 0.95 } : {}}
+              animate={{
+                rotateY: isRevealed ? 180 : 0,
+                scale: isRevealed ? 0.96 : 1,
+              }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              style={{ transformStyle: "preserve-3d" }}
+              className={`relative rounded-xl border flex flex-col items-center justify-center font-black transition-colors ${
                 isProjectorMode ? "h-28 text-3xl" : "h-20 sm:h-24 text-2xl"
               } ${
                 isRevealed
-                  ? "bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed opacity-50 scale-95"
+                  ? "bg-slate-900/80 border-slate-700 text-slate-400 cursor-not-allowed opacity-90"
                   : activeTeam === 1
-                  ? "bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                  : "bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/40 text-amber-300 hover:border-amber-400 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                  ? "bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer"
+                  : "bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/40 text-amber-300 hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
               }`}
             >
               {isRevealed ? (
-                <div className="flex flex-col items-center text-xs text-slate-400">
-                  {card.card_type === "swap" && <span>🔄 Almashdi</span>}
-                  {card.card_type === "steal" && <span>🥷 O&apos;g&apos;irlandi</span>}
-                  {card.card_type === "double" && <span>⚡️ 2x</span>}
-                  {card.card_type === "bomb" && <span>💣 Bomba</span>}
-                  {card.card_type === "question" && <span>✅ {card.points}pt</span>}
+                <div style={{ transform: "rotateY(180deg)" }} className="flex flex-col items-center justify-center text-xs">
+                  {card.card_type === "swap" && (
+                    <div className="flex flex-col items-center text-purple-400">
+                      <span className="text-xl sm:text-2xl mb-0.5">🔄</span>
+                      <span className="font-bold text-[11px]">Almashdi</span>
+                    </div>
+                  )}
+                  {card.card_type === "steal" && (
+                    <div className="flex flex-col items-center text-cyan-400">
+                      <span className="text-xl sm:text-2xl mb-0.5">🥷</span>
+                      <span className="font-bold text-[11px]">O&apos;g&apos;irlandi</span>
+                    </div>
+                  )}
+                  {card.card_type === "double" && (
+                    <div className="flex flex-col items-center text-amber-400">
+                      <span className="text-xl sm:text-2xl mb-0.5">⚡️</span>
+                      <span className="font-bold text-[11px]">2x Multi</span>
+                    </div>
+                  )}
+                  {card.card_type === "bomb" && (
+                    <div className="flex flex-col items-center text-red-400">
+                      <span className="text-xl sm:text-2xl mb-0.5">💣</span>
+                      <span className="font-bold text-[11px]">-15 Bomba</span>
+                    </div>
+                  )}
+                  {card.card_type === "question" && (
+                    <div className="flex flex-col items-center text-emerald-400">
+                      <CheckCircle className="w-5 h-5 mb-0.5" />
+                      <span className="font-mono font-bold text-xs">{card.points}pt</span>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <>
+                <div className="flex flex-col items-center">
                   <span className="font-mono">{card.order_index}</span>
                   <span className="text-[10px] text-slate-400 font-normal">Karta</span>
-                </>
+                </div>
               )}
-            </button>
+            </motion.button>
           );
         })}
       </div>
+
+            {/* Fullscreen Confetti Particle Burst */}
+      <ConfettiCanvas active={confettiActive} />
+
+      {/* Surprise Event Pop-up Modal */}
+      <AnimatePresence>
+        {surpriseModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSurpriseModal(null)}
+            className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+          >
+            <motion.div
+              initial={{ scale: 0.5, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: -20 }}
+              transition={{ type: "spring", damping: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-b from-slate-900 via-[#0B0F17] to-black border-2 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col items-center text-center relative"
+            >
+              <div className="text-6xl mb-3 animate-bounce">{surpriseModal.icon}</div>
+              <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
+                {surpriseModal.title}
+              </h3>
+              <p className="text-sm text-slate-200 mb-6 font-medium max-w-xs leading-relaxed">
+                {surpriseModal.subtitle}
+              </p>
+              <Button
+                type="button"
+                onClick={() => setSurpriseModal(null)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-8 py-2.5 rounded-xl shadow-lg hover:scale-105 transition-transform"
+              >
+                Davom etish
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Active Question Modal */}
       {activeCard && (
@@ -528,9 +717,15 @@ export function BamboozleArena({
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 text-sm font-mono text-amber-400 font-bold">
-                <Clock className="w-4 h-4" />
-                <span className={timerSeconds <= 5 ? "text-red-400 animate-pulse font-black" : ""}>
+              <div
+                className={`flex items-center gap-1.5 text-sm font-mono font-bold transition-all ${
+                  timerSeconds <= 5
+                    ? "text-red-400 bg-red-500/20 border border-red-500/50 px-2.5 py-1 rounded-full animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)] scale-110"
+                    : "text-amber-400"
+                }`}
+              >
+                <Clock className={`w-4 h-4 ${timerSeconds <= 5 ? "animate-spin text-red-400" : ""}`} />
+                <span className={timerSeconds <= 5 ? "text-red-400 font-black animate-ping-once" : ""}>
                   {timerSeconds}s
                 </span>
               </div>

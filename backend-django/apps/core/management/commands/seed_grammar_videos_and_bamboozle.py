@@ -38,7 +38,7 @@ class Command(BaseCommand):
                     "order_index": 1,
                     "video_file": "videos/grammar/1_nouns.mp4",
                     "deck_title": "Nouns (Otlar — Countable, Uncountable & Plurals)",
-                    "category": "Vocabulary",
+                    "category": "Grammar",
                     "cards": [
                         {"points": 10, "text": "Choose the correct plural form of 'child':", "options": ["children", "childs", "childrens", "childes"], "correct": "children", "type": CardType.QUESTION},
                         {"points": 10, "text": "Which of the following nouns is UNCOUNTABLE?", "options": ["furniture", "chair", "table", "coin"], "correct": "furniture", "type": CardType.QUESTION},
