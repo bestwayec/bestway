@@ -117,12 +117,22 @@ def lesson_stream_view(request, lesson_id):
         raise ContractAPIException("LESSON_NOT_FOUND", "Dars topilmadi", 404)
 
     file_path = lesson.video_file or ""
-    # Support relative paths under media/storage
-    if file_path and not os.path.isabs(file_path):
-        storage_dir = getattr(settings, "STORAGE_DIR", "/app/storage")
-        file_path = os.path.join(storage_dir, file_path)
+    # Support relative and mounted paths under media/storage
+    candidates = [
+        file_path,
+        os.path.join(getattr(settings, "STORAGE_DIR", "/app/storage"), file_path),
+        os.path.join(getattr(settings, "MEDIA_ROOT", "/app/media"), file_path),
+        os.path.join("/app/storage", file_path),
+        os.path.join("/app/media", file_path),
+        os.path.join("/opt/bestway/backend-django/media", file_path),
+    ]
+    resolved_path = file_path
+    for c in candidates:
+        if c and os.path.exists(c) and os.path.isfile(c):
+            resolved_path = c
+            break
 
-    return stream_video_file(file_path, request)
+    return stream_video_file(resolved_path, request)
 
 
 @api_view(["GET", "POST"])

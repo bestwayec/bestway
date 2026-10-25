@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BamboozleArena, BamboozleCard } from "./BamboozleArena";
@@ -32,6 +33,10 @@ export interface QuizDeckItem {
 }
 
 export function BamboozleLobby() {
+  const { data: me } = useMe();
+  const role = me?.user?.role;
+  const canManageDecks = ["teacher", "admin", "super_admin"].includes(role || "");
+
   const [decks, setDecks] = React.useState<QuizDeckItem[]>([]);
   const [selectedCategory, setSelectedCategory] = React.useState<string>("All");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -185,14 +190,16 @@ export function BamboozleLobby() {
             </p>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => setIsCreatorOpen(true)}
-            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Yangi Deck Yaratish</span>
-          </Button>
+          {canManageDecks && (
+            <Button
+              type="button"
+              onClick={() => setIsCreatorOpen(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Yangi Deck Yaratish</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -239,14 +246,16 @@ export function BamboozleLobby() {
           <Gamepad2 className="w-12 h-12 text-slate-600 mx-auto mb-3" />
           <h4 className="text-base font-bold text-white mb-1">To&apos;plamlar Topilmadi</h4>
           <p className="text-xs text-slate-400 mb-4">Ushbu kategoriya bo&apos;yicha hali quiz to&apos;plamlari mavjud emas.</p>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setIsCreatorOpen(true)}
-            className="bg-emerald-500 text-slate-950 font-bold text-xs"
-          >
-            Birinchi bo&apos;lib to&apos;plam yarating
-          </Button>
+          {canManageDecks && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsCreatorOpen(true)}
+              className="bg-emerald-500 text-slate-950 font-bold text-xs"
+            >
+              Birinchi bo&apos;lib to&apos;plam yarating
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
