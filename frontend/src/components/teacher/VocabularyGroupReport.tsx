@@ -167,7 +167,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 Jami So'zlar
               </span>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {report.totalWords ?? (report as any).total_words ?? 0} ta
+                {Number(report.totalWords ?? (report as any).total_words ?? 0)} ta
               </p>
             </div>
 
@@ -176,7 +176,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 Topshirganlar
               </span>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {report.totalAttempts ?? (report as any).total_attempts ?? (report as any).totalStudentsSubmitted ?? report.roster?.length ?? 0} ta
+                {Number(report.totalAttempts ?? (report as any).total_attempts ?? (report as any).submitted_count ?? (report as any).totalStudentsSubmitted ?? report.roster?.length ?? 0)} ta
               </p>
             </div>
 
@@ -185,7 +185,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 O'rtacha Natija
               </span>
               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                {report.averagePercentage ?? (report as any).average_percentage ?? 0}%
+                {Number(report.averagePercentage ?? (report as any).average_percentage ?? 0)}%
               </p>
             </div>
 
@@ -201,33 +201,41 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
           </div>
 
           {/* Hardest Words Card */}
-          {report.hardestWords && report.hardestWords.length > 0 && (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold text-sm">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Guruhda Eng Ko'p Xato Qilingan So'zlar (Hardest Words)</span>
+          {(() => {
+            const rawList = report.hardestWords || (report as any).hardest_words || [];
+            const hardestItems = rawList.filter((item: any) => {
+              const cnt = item.mistakeCount ?? item.errors ?? item.mistakes ?? 0;
+              return cnt > 0;
+            });
+            if (hardestItems.length === 0) return null;
+            return (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold text-sm">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Guruhda Eng Ko'p Xato Qilingan So'zlar (Hardest Words)</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {hardestItems.map((item: any, idx: number) => {
+                    const english = item.english || item.word || "Noma'lum";
+                    const uzbek = item.uzbek || "";
+                    const count = item.mistakeCount ?? item.errors ?? item.mistakes ?? 1;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-sm"
+                      >
+                        <span className="font-semibold text-foreground">{english}</span>
+                        {uzbek && <span className="text-muted-foreground">({uzbek})</span>}
+                        <Badge variant="danger" className="h-5 px-1.5 text-[10px]">
+                          {count} xato
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {report.hardestWords.map((item, idx) => {
-                  const english = item.english || (item as any).word || "Noma'lum";
-                  const uzbek = item.uzbek || "";
-                  const count = item.mistakeCount ?? (item as any).mistakes ?? (item as any).errors ?? 0;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-sm"
-                    >
-                      <span className="font-semibold text-foreground">{english}</span>
-                      {uzbek && <span className="text-muted-foreground">({uzbek})</span>}
-                      <Badge variant="danger" className="h-5 px-1.5 text-[10px]">
-                        {count} xato
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Student Roster Table */}
           <div className="space-y-3">

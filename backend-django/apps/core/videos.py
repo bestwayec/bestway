@@ -50,7 +50,24 @@ def verify(token):
 
 def get(identifier):
     row=VideoLesson.objects.filter(id=identifier).first()
-    if row is None:fail('VIDEO_NOT_FOUND','Video topilmadi',404)
+    if row is None:
+        try:
+            from apps.core.models import Lesson
+            lesson = Lesson.objects.filter(id=identifier).first()
+            if lesson:
+                return VideoLesson(
+                    id=str(lesson.id),
+                    title=lesson.title,
+                    description=lesson.description,
+                    price=0,
+                    is_free_for_approved=True,
+                    file_key=lesson.video_file or "",
+                    mime_type="video/mp4",
+                    thumbnail_key=None,
+                )
+        except Exception:
+            pass
+        fail('VIDEO_NOT_FOUND','Video topilmadi',404)
     return row
 
 
@@ -66,10 +83,59 @@ def shape(row):
         thumbnailUrl=f'{public_url()}/v1/videos/{row.id}/thumbnail' if row.thumbnail_key else None,createdAt=row.created_at)
 
 
+def format_duration(seconds):
+    if not seconds:
+        return "00:00"
+    m = int(seconds) // 60
+    s = int(seconds) % 60
+    return f"{m:02d}:{s:02d}"
+
+
 def listing(actor=None):
+    from apps.core.models import Lesson, UserLessonProgress
     purchases=dict(VideoPurchase.objects.filter(user_id=actor.id).values_list('video_id','status')) if actor else {}
+    completed_ids = set()
+    if actor and actor.is_authenticated:
+        try:
+            completed_ids = set(UserLessonProgress.objects.filter(user_id=actor.id, is_completed=True).values_list('lesson_id', flat=True))
+        except Exception:
+            pass
+
     result=[]
+    # 1. LMS Video Lessons
+    try:
+        lessons = Lesson.objects.select_related("course").order_by("order_index", "created_at")
+        for idx, l in enumerate(lessons, start=1):
+            is_completed = l.id in completed_ids
+            deck = l.quiz_decks.filter(is_lesson_tied=True).first()
+            item = {
+                "id": str(l.id),
+                "title": l.title,
+                "description": l.description or (l.course.title if l.course else None),
+                "price": 0,
+                "isFreeForApproved": True,
+                "thumbnailUrl": l.course.thumbnail_url if l.course else None,
+                "createdAt": l.created_at.isoformat() if l.created_at else timezone.now().isoformat(),
+                "access": "granted",
+                "durationSeconds": l.duration or 0,
+                "durationFormatted": format_duration(l.duration),
+                "xpReward": l.xp_reward or 50,
+                "courseTitle": l.course.title if l.course else "English Grammar Foundation",
+                "isCompleted": is_completed,
+                "isUnlocked": idx == 1 or is_completed,
+                "hasQuiz": deck is not None,
+                "bamboozleDeckId": str(deck.id) if deck else None,
+                "streamUrl": f"{public_url()}/v1/lessons/{l.id}/stream",
+            }
+            result.append(item)
+    except Exception:
+        pass
+
+    # 2. Legacy VideoLesson items
+    existing_ids = {r["id"] for r in result}
     for row in VideoLesson.objects.order_by('-created_at'):
+        if str(row.id) in existing_ids:
+            continue
         value=shape(row)
         if actor:value['access']=access(actor,row,purchases.get(row.id))
         result.append(value)
@@ -104,6 +170,13 @@ def remove(actor,identifier):
 
 
 def stream_url(actor,identifier):
+    try:
+        from apps.core.models import Lesson
+        lesson = Lesson.objects.filter(id=identifier).first()
+        if lesson:
+            return dict(url=f'{public_url()}/v1/lessons/{lesson.id}/stream', expiresAt=datetime.now(UTC), lessonId=str(lesson.id))
+    except Exception:
+        pass
     row=get(identifier);purchase=VideoPurchase.objects.filter(user_id=actor.id,video_id=identifier).first()
     allowed=access(actor,row,purchase.status if purchase else None)
     if allowed!='granted':fail('VIDEO_ACCESS_DENIED',"Xaridingiz admin tasdig'ini kutmoqda" if allowed=='pending_confirmation' else 'Bu video pullik — sotib olish uchun administratsiyaga murojaat qiling',403)

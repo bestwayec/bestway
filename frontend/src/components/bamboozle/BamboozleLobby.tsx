@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useSearchParams } from "next/navigation";
 import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,8 @@ export function BamboozleLobby() {
 
   // Creator modal
   const [isCreatorOpen, setIsCreatorOpen] = React.useState(false);
+  const searchParams = useSearchParams();
+  const requestedDeckId = searchParams?.get("deck");
 
   const fetchDecks = React.useCallback(async () => {
     setIsLoading(true);
@@ -98,6 +101,15 @@ export function BamboozleLobby() {
   React.useEffect(() => {
     fetchDecks();
   }, [fetchDecks]);
+
+  React.useEffect(() => {
+    if (requestedDeckId && decks.length > 0 && !activeDeck) {
+      const match = decks.find((d) => d.id === requestedDeckId);
+      if (match) {
+        handleStartGame(match);
+      }
+    }
+  }, [requestedDeckId, decks, activeDeck]);
 
   const handleStartGame = async (deck: QuizDeckItem) => {
     try {

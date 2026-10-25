@@ -4,6 +4,8 @@ import * as React from "react";
 import {
   Bomb,
   Check,
+  Dices,
+  FileText,
   Plus,
   Save,
   Sparkles,
@@ -41,6 +43,10 @@ export function QuizDeckCreator({
   const [category, setCategory] = React.useState("Vocabulary");
   const [isLessonTied, setIsLessonTied] = React.useState(isLessonTiedDefault);
   const [lessonId, setLessonId] = React.useState(initialLessonId || "");
+  const [lessonsList, setLessonsList] = React.useState<Array<{ id: string; title: string; duration?: number }>>([]);
+  const [isSmartPasteOpen, setIsSmartPasteOpen] = React.useState(false);
+  const [bulkText, setBulkText] = React.useState("");
+
   const [cards, setCards] = React.useState<NewCardItem[]>([
     {
       id: "1",
@@ -54,7 +60,7 @@ export function QuizDeckCreator({
       id: "2",
       card_type: "swap",
       points: 0,
-      question_text: "SYURPRIZ: Ballarni Almashtirish!",
+      question_text: "SYURPRIZ: Ballarni Almashtirish (Swap)!",
       options: [],
       correct_answer: "",
     },
@@ -79,8 +85,23 @@ export function QuizDeckCreator({
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Fetch available lessons for tying
+  React.useEffect(() => {
+    let active = true;
+    api.get<any>("/v1/lessons")
+      .then((res: any) => {
+        if (!active) return;
+        const list = res?.data?.data || res?.data || res || [];
+        setLessonsList(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleAddCard = (type: "question" | "swap" | "steal" | "double" | "bomb" = "question") => {
-    const newId = String(Date.now());
+    const newId = String(Date.now() + Math.random());
     if (type === "question") {
       setCards((prev) => [
         ...prev,
@@ -97,8 +118,8 @@ export function QuizDeckCreator({
       const descriptions = {
         swap: "SYURPRIZ: Ballarni Almashtirish (Swap)!",
         steal: "SYURPRIZ: Raqibdan 15 Ball O'g'irlash (Steal)!",
-        double: "SYURPRIZ: 2x Multiplier Ball!",
-        bomb: "BOMBA: -15 Ball Jarima (Bomb)!",
+        double: "⚡️ SYURPRIZ: 2x Multiplier Ball!",
+        bomb: "💣 BOMBA: -15 Ball Jarima!",
       };
       setCards((prev) => [
         ...prev,
@@ -135,6 +156,121 @@ export function QuizDeckCreator({
     );
   };
 
+  // Smart Bulk Paste Parser
+  const handleApplySmartPaste = () => {
+    if (!bulkText.trim()) return;
+    const lines = bulkText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const parsedCards: NewCardItem[] = [];
+
+    // Check pipe format: "Question | Opt1 | Opt2 | Opt3 | Opt4 | CorrectOpt"
+    let isPipeFormat = lines.some((l) => l.includes("|"));
+
+    if (isPipeFormat) {
+      lines.forEach((l) => {
+        const parts = l.split("|").map((p) => p.trim());
+        if (parts.length >= 2) {
+          const qText = parts[0];
+          const opts = parts.slice(1, 5);
+          while (opts.length < 4) opts.push("");
+          const correct = parts[5] || opts[0] || "";
+          parsedCards.push({
+            id: String(Date.now() + Math.random()),
+            card_type: "question",
+            points: 10,
+            question_text: qText,
+            options: opts,
+            correct_answer: correct,
+          });
+        }
+      });
+    } else {
+      // Line block parsing: "1. Question... A) ... B) ... C) ... D) ... Ans: ..."
+      let currentQ: Partial<NewCardItem> | null = null;
+      for (const line of lines) {
+        if (/^(\d+[\.\)]|q:)/i.test(line)) {
+          if (currentQ && currentQ.question_text) {
+            while ((currentQ.options?.length || 0) < 4) currentQ.options?.push("");
+            parsedCards.push(currentQ as NewCardItem);
+          }
+          currentQ = {
+            id: String(Date.now() + Math.random()),
+            card_type: "question",
+            points: 10,
+            question_text: line.replace(/^(\d+[\.\)]|q:)\s*/i, ""),
+            options: [],
+            correct_answer: "",
+          };
+        } else if (/^[A-D][\.\)]\s*/i.test(line) && currentQ) {
+          const isStar = line.includes("*");
+          const optVal = line.replace(/^[A-D][\.\)]\s*/i, "").replace(/\*/g, "").trim();
+          currentQ.options = currentQ.options || [];
+          currentQ.options.push(optVal);
+          if (isStar && !currentQ.correct_answer) {
+            currentQ.correct_answer = optVal;
+          }
+        } else if (/^(ans|answer|to'g'ri):\s*/i.test(line) && currentQ) {
+          currentQ.correct_answer = line.replace(/^(ans|answer|to'g'ri):\s*/i, "").trim();
+        }
+      }
+      if (currentQ && currentQ.question_text) {
+        while ((currentQ.options?.length || 0) < 4) currentQ.options?.push("");
+        parsedCards.push(currentQ as NewCardItem);
+      }
+    }
+
+    if (parsedCards.length > 0) {
+      setCards((prev) => [...prev, ...parsedCards]);
+      setBulkText("");
+      setIsSmartPasteOpen(false);
+    }
+  };
+
+  // Auto-mix surprise cards to form balanced 16-card deck
+  const handleAutoMixSurprises = () => {
+    const qCards = cards.filter((c) => c.card_type === "question");
+    if (qCards.length === 0) return;
+
+    const surpriseTypes: ("swap" | "steal" | "double" | "bomb")[] = ["swap", "steal", "double", "bomb"];
+    const surpriseDescs = {
+      swap: "🔄 SYURPRIZ: Ballarni Almashtirish (Swap)!",
+      steal: "🥷 SYURPRIZ: Raqibdan 15 Ball O'g'irlash (Steal)!",
+      double: "⚡️ SYURPRIZ: 2x Multiplier Ball!",
+      bomb: "💣 BOMBA: -15 Ball Jarima!",
+    };
+
+    const finalDeck: NewCardItem[] = [];
+    let qIdx = 0;
+    let sIdx = 0;
+
+    for (let slot = 1; slot <= 16; slot++) {
+      if ((slot === 3 || slot === 7 || slot === 11 || slot === 15) && sIdx < surpriseTypes.length) {
+        const sType = surpriseTypes[sIdx++];
+        finalDeck.push({
+          id: String(Date.now() + Math.random()),
+          card_type: sType,
+          points: 0,
+          question_text: surpriseDescs[sType],
+          options: [],
+          correct_answer: "",
+        });
+      } else {
+        if (qIdx < qCards.length) {
+          finalDeck.push({ ...qCards[qIdx++] });
+        } else {
+          // Re-use question or add sample
+          const copy = qCards[qIdx % qCards.length];
+          finalDeck.push({
+            ...copy,
+            id: String(Date.now() + Math.random()),
+          });
+          qIdx++;
+        }
+      }
+    }
+
+    setCards(finalDeck);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -165,7 +301,7 @@ export function QuizDeckCreator({
         })),
       });
 
-      const deckId = res.data?.data?.id || res.data?.id;
+      const deckId = (res as any)?.data?.data?.id || (res as any)?.data?.id || (res as any)?.id;
       if (onSuccess && deckId) onSuccess(deckId);
     } catch (err: any) {
       setError(err?.response?.data?.error?.message || "Saqlashda xatolik yuz berdi");
@@ -191,6 +327,54 @@ export function QuizDeckCreator({
       {error && (
         <div className="mb-6 p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-sm font-semibold">
           {error}
+        </div>
+      )}
+
+      {/* Smart Paste Modal */}
+      {isSmartPasteOpen && (
+        <div className="mb-6 p-4 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+              <Sparkles className="w-4 h-4" />
+              <span>✨ Aqlli Matn Tashlash (Smart Bulk Paste)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSmartPasteOpen(false)}
+              className="text-slate-400 hover:text-white text-xs"
+            >
+              Yopish ✕
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">
+            Savollarni pastga tashlang. Format: <code>Savol | Variant A | Variant B | Variant C | Variant D | To&apos;g&apos;ri</code> yoki <code>1. Savol... A) ... B) ... C)* ... D) ...</code>
+          </p>
+          <textarea
+            rows={6}
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            placeholder="What is the past tense of 'go'? | went | goed | gone | goes | went&#10;Choose the noun: | apple | quickly | beautifully | run | apple"
+            className="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white outline-none focus:border-emerald-500 font-mono"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsSmartPasteOpen(false)}
+              className="text-xs"
+            >
+              Bekor Qilish
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleApplySmartPaste}
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs"
+            >
+              Kartalarga Aylantirish
+            </Button>
+          </div>
         </div>
       )}
 
@@ -223,22 +407,44 @@ export function QuizDeckCreator({
           </div>
         </div>
 
-        {/* Lesson-tied checkbox */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 border border-slate-800">
-          <input
-            type="checkbox"
-            id="tiedCheck"
-            checked={isLessonTied}
-            onChange={(e) => setIsLessonTied(e.target.checked)}
-            className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
-          />
-          <label htmlFor="tiedCheck" className="text-xs text-slate-300 cursor-pointer">
-            <strong className="text-white">Darsga biriktirish (Lesson-Tied Mode):</strong> O&apos;quvchi dars videosini to&apos;liq ko&apos;rib bo&apos;lgandagina bu test qulfdan chiqariladi.
-          </label>
+        {/* Lesson-tied selector */}
+        <div className="space-y-3 p-3 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="tiedCheck"
+              checked={isLessonTied}
+              onChange={(e) => setIsLessonTied(e.target.checked)}
+              className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+            />
+            <label htmlFor="tiedCheck" className="text-xs text-slate-300 cursor-pointer">
+              <strong className="text-white">Darsga biriktirish (Lesson-Tied Mode):</strong> O&apos;quvchi dars videosini to&apos;liq ko&apos;rib bo&apos;lgandagina bu test qulfdan chiqariladi.
+            </label>
+          </div>
+
+          {isLessonTied && (
+            <div className="pt-2 border-t border-slate-800/80">
+              <label className="block text-xs font-bold text-emerald-400 mb-1.5 flex items-center gap-1.5">
+                <span>Qaysi video darsga biriktirilsin?</span>
+              </label>
+              <select
+                value={lessonId}
+                onChange={(e) => setLessonId(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-emerald-500/40 text-white text-xs focus:border-emerald-500 outline-none"
+              >
+                <option value="">-- Darsni tanlang --</option>
+                {lessonsList.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.title} {l.duration ? `(${Math.floor(l.duration / 60)}:${String(l.duration % 60).padStart(2, "0")})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Cards Header and Add Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
           <div className="flex items-center gap-2">
             <h4 className="font-bold text-white text-sm">Kartalar Ro&apos;yxati ({cards.length} ta)</h4>
             <Badge variant="neutral" className="bg-emerald-500/20 text-emerald-400 text-xs">
@@ -247,6 +453,26 @@ export function QuizDeckCreator({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsSmartPasteOpen((v) => !v)}
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs flex items-center gap-1"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>✨ Smart Paste</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleAutoMixSurprises}
+              className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs flex items-center gap-1"
+            >
+              <Dices className="w-3.5 h-3.5 text-amber-400" />
+              <span>🎲 16 Kartani Aralashtirish</span>
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -296,7 +522,7 @@ export function QuizDeckCreator({
         </div>
 
         {/* Cards Editor List */}
-        <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+        <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2">
           {cards.map((c, idx) => (
             <div
               key={c.id}
@@ -353,24 +579,61 @@ export function QuizDeckCreator({
                     className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm outline-none focus:border-emerald-500"
                   />
                   <div className="grid grid-cols-2 gap-2">
-                    {c.options.map((opt, optIdx) => (
-                      <input
-                        key={optIdx}
-                        type="text"
-                        value={opt}
-                        onChange={(e) => handleOptionChange(c.id, optIdx, e.target.value)}
-                        placeholder={`Variant ${String.fromCharCode(65 + optIdx)}`}
-                        className="px-3 py-1 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 outline-none"
-                      />
-                    ))}
+                    {c.options.map((opt, optIdx) => {
+                      const isCorrect = Boolean(
+                        c.correct_answer &&
+                        opt.trim() &&
+                        c.correct_answer.trim().toLowerCase() === opt.trim().toLowerCase()
+                      );
+                      return (
+                        <div key={optIdx} className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            title="To'g'ri javob sifatida belgilash"
+                            onClick={() => {
+                              if (opt.trim()) {
+                                handleCardChange(c.id, "correct_answer", opt.trim());
+                              }
+                            }}
+                            className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
+                              isCorrect
+                                ? "bg-emerald-500 border-emerald-400 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500"
+                            }`}
+                          >
+                            <Check className="w-4 h-4 font-bold" />
+                          </button>
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleOptionChange(c.id, optIdx, val);
+                              if (isCorrect) {
+                                handleCardChange(c.id, "correct_answer", val);
+                              }
+                            }}
+                            placeholder={`Variant ${String.fromCharCode(65 + optIdx)}`}
+                            className={`w-full px-3 py-1 rounded bg-slate-950 border text-xs text-slate-200 outline-none transition-all ${
+                              isCorrect
+                                ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 font-semibold"
+                                : "border-slate-800 focus:border-slate-600"
+                            }`}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                  <input
-                    type="text"
-                    value={c.correct_answer}
-                    onChange={(e) => handleCardChange(c.id, "correct_answer", e.target.value)}
-                    placeholder="To'g'ri javob matni..."
-                    className="w-full px-3 py-1 rounded bg-slate-950 border border-emerald-500/40 text-emerald-300 text-xs outline-none"
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-400 shrink-0 font-medium">To&apos;g&apos;ri javob:</span>
+                    <input
+                      type="text"
+                      value={c.correct_answer}
+                      onChange={(e) => handleCardChange(c.id, "correct_answer", e.target.value)}
+                      placeholder="Variant ustidagi ✓ ni bosing yoki to'g'ri javobni yozing..."
+                      className="w-full px-3 py-1 rounded bg-slate-950 border border-emerald-500/40 text-emerald-300 text-xs outline-none"
+                    />
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-slate-300 font-medium">{c.question_text}</p>
@@ -389,7 +652,7 @@ export function QuizDeckCreator({
           <Button
             type="submit"
             disabled={isSaving}
-            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl flex items-center gap-2"
+            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
           >
             <Save className="w-4 h-4" />
             <span>{isSaving ? "Saqlanmoqda..." : "Quiz To'plamini Saqlash"}</span>

@@ -109,6 +109,29 @@ def course_detail_view(request, course_id):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+def lessons_list_view(request):
+    """List all available lessons across courses for selectors and video feeds."""
+    lessons = Lesson.objects.select_related("course").order_by("order_index", "created_at")
+    result = []
+    for l in lessons:
+        deck_id = l.quiz_decks.filter(is_lesson_tied=True).values_list("id", flat=True).first()
+        result.append({
+            "id": l.id,
+            "title": l.title,
+            "description": l.description,
+            "duration": l.duration,
+            "order_index": l.order_index,
+            "xp_reward": l.xp_reward,
+            "course_id": l.course_id,
+            "course_title": l.course.title if l.course else None,
+            "has_quiz": bool(deck_id),
+            "bamboozle_deck_id": deck_id,
+        })
+    return success(result)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def lesson_stream_view(request, lesson_id):
     """Stream lesson video with strict HTTP Range support (206 Partial Content)."""
     try:

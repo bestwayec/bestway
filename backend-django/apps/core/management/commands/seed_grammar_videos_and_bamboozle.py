@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.models import CardType, Course, Lesson, QuizCard, QuizDeck
-from apps.legacy_schema.models import User
+from apps.legacy_schema.models import User, VideoLesson
 
 
 class Command(BaseCommand):
@@ -205,6 +205,19 @@ class Command(BaseCommand):
                         "duration": l_data["duration"],
                         "xp_reward": 50,
                         "video_file": l_data["video_file"],
+                    },
+                )
+                VideoLesson.objects.update_or_create(
+                    id=str(lesson.id),
+                    defaults={
+                        "title": l_data["title"],
+                        "description": l_data["description"],
+                        "price": 0,
+                        "is_free_for_approved": True,
+                        "file_key": l_data["video_file"],
+                        "mime_type": "video/mp4",
+                        "thumbnail_key": None,
+                        "created_at": timezone.now(),
                     },
                 )
                 self.stdout.write(f"  -> Lesson #{lesson.order_index}: {lesson.title}")

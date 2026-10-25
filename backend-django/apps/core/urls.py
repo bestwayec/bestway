@@ -468,6 +468,10 @@ urlpatterns = [
     path('vocabulary/user-words/add/', vocabulary.add_user_word_view),
     path('v1/vocabulary/user-words/add', vocabulary.add_user_word_view),
     path('v1/vocabulary/user-words/add/', vocabulary.add_user_word_view),
+    path('vocabulary/srs/add-word', vocabulary.add_user_word_view),
+    path('vocabulary/srs/add-word/', vocabulary.add_user_word_view),
+    path('v1/vocabulary/srs/add-word', vocabulary.add_user_word_view),
+    path('v1/vocabulary/srs/add-word/', vocabulary.add_user_word_view),
 
     # Live Vocab Battle (PIN / Kahoot Mode)
     path('vocabulary/battle/create', vocab_battle.battle_create_view),
@@ -521,6 +525,11 @@ urlpatterns = [
     path('courses/<str:course_id>/', lms.course_detail_view),
     path('v1/courses/<str:course_id>', lms.course_detail_view),
     path('v1/courses/<str:course_id>/', lms.course_detail_view),
+
+    path('lessons', lms.lessons_list_view),
+    path('lessons/', lms.lessons_list_view),
+    path('v1/lessons', lms.lessons_list_view),
+    path('v1/lessons/', lms.lessons_list_view),
 
     path('lessons/<str:lesson_id>/stream', lms.lesson_stream_view),
     path('lessons/<str:lesson_id>/stream/', lms.lesson_stream_view),

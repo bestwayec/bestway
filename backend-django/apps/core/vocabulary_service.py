@@ -591,9 +591,14 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
 
     for a in attempts:
         for w in (a.wrong_answers or []):
-            eng = w.get("english")
-            if eng:
-                hardest_words_counter[eng] = hardest_words_counter.get(eng, 0) + 1
+            eng = None
+            if isinstance(w, dict):
+                eng = w.get("english") or w.get("word")
+            elif isinstance(w, str):
+                eng = w
+            if eng and str(eng).strip():
+                eng_clean = str(eng).strip()
+                hardest_words_counter[eng_clean] = hardest_words_counter.get(eng_clean, 0) + 1
 
         if a.student_id in seen:
             continue
@@ -609,7 +614,7 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
             "percentage": round(a.percentage, 1),
             "pointsAwarded": a.points_awarded,
             "mode": a.mode,
-            "completedAt": a.completed_at.isoformat(),
+            "completedAt": a.completed_at.isoformat() if hasattr(a.completed_at, "isoformat") else str(a.completed_at),
             "wrongCount": len(a.wrong_answers or []),
         })
 
@@ -621,7 +626,7 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
         else 0.0
     )
 
-    hardest = sorted(hardest_words_counter.items(), key=lambda x: x[1], reverse=True)[:8]
+    hardest = [x for x in sorted(hardest_words_counter.items(), key=lambda x: x[1], reverse=True) if x[1] > 0][:8]
     hardest_words_list = []
     if hardest:
         words_map = {w.english.lower(): w for w in vocab_set.words.filter(english__in=[x[0] for x in hardest])}
@@ -646,12 +651,15 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
         "total_words": total_words,
         "totalAttempts": total_attempts,
         "total_attempts": total_attempts,
+        "submitted_count": total_attempts,
+        "submittedCount": total_attempts,
         "averagePercentage": average_percentage,
         "average_percentage": average_percentage,
         "groupName": vocab_set.group.name if vocab_set.group else "Umumiy",
         "totalStudentsSubmitted": total_attempts,
         "roster": student_roster,
         "hardestWords": hardest_words_list,
+        "hardest_words": hardest_words_list,
     }
 
 
