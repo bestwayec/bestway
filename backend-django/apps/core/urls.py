@@ -24,6 +24,7 @@ from . import video_views as videos
 from . import vocabulary_views as vocabulary
 from . import parent_views as parents
 from . import vocab_battle_views as vocab_battle
+from . import lms_views as lms
 from .mock_attempt_views import (
     advance_view,
     switch_section_view,
@@ -509,4 +510,55 @@ urlpatterns = [
     path('parents/send-weekly-digest/', parents.send_parent_weekly_digest_view),
     path('v1/parents/send-weekly-digest', parents.send_parent_weekly_digest_view),
     path('v1/parents/send-weekly-digest/', parents.send_parent_weekly_digest_view),
+
+    # Unified LMS Video Engine & Bamboozle Arena
+    path('courses', lms.courses_list_view),
+    path('courses/', lms.courses_list_view),
+    path('v1/courses', lms.courses_list_view),
+    path('v1/courses/', lms.courses_list_view),
+
+    path('courses/<str:course_id>', lms.course_detail_view),
+    path('courses/<str:course_id>/', lms.course_detail_view),
+    path('v1/courses/<str:course_id>', lms.course_detail_view),
+    path('v1/courses/<str:course_id>/', lms.course_detail_view),
+
+    path('lessons/<str:lesson_id>/stream', lms.lesson_stream_view),
+    path('lessons/<str:lesson_id>/stream/', lms.lesson_stream_view),
+    path('v1/lessons/<str:lesson_id>/stream', lms.lesson_stream_view),
+    path('v1/lessons/<str:lesson_id>/stream/', lms.lesson_stream_view),
+
+    path('lessons/<str:lesson_id>/progress', lms.lesson_progress_view),
+    path('lessons/<str:lesson_id>/progress/', lms.lesson_progress_view),
+    path('v1/lessons/<str:lesson_id>/progress', lms.lesson_progress_view),
+    path('v1/lessons/<str:lesson_id>/progress/', lms.lesson_progress_view),
+
+    path('lessons/<str:lesson_id>/complete', lms.lesson_complete_view),
+    path('lessons/<str:lesson_id>/complete/', lms.lesson_complete_view),
+    path('v1/lessons/<str:lesson_id>/complete', lms.lesson_complete_view),
+    path('v1/lessons/<str:lesson_id>/complete/', lms.lesson_complete_view),
+
+    path('quiz-decks', lms.quiz_decks_list_view),
+    path('quiz-decks/', lms.quiz_decks_list_view),
+    path('v1/quiz-decks', lms.quiz_decks_list_view),
+    path('v1/quiz-decks/', lms.quiz_decks_list_view),
+
+    path('quiz-decks/create', lms.quiz_deck_create_view),
+    path('quiz-decks/create/', lms.quiz_deck_create_view),
+    path('v1/quiz-decks/create', lms.quiz_deck_create_view),
+    path('v1/quiz-decks/create/', lms.quiz_deck_create_view),
+
+    path('quiz-decks/<str:deck_id>', lms.quiz_deck_detail_view),
+    path('quiz-decks/<str:deck_id>/', lms.quiz_deck_detail_view),
+    path('v1/quiz-decks/<str:deck_id>', lms.quiz_deck_detail_view),
+    path('v1/quiz-decks/<str:deck_id>/', lms.quiz_deck_detail_view),
+
+    path('bamboozle/card-turn', lms.bamboozle_card_turn_view),
+    path('bamboozle/card-turn/', lms.bamboozle_card_turn_view),
+    path('v1/bamboozle/card-turn', lms.bamboozle_card_turn_view),
+    path('v1/bamboozle/card-turn/', lms.bamboozle_card_turn_view),
+
+    path('gamification/leaderboard', lms.lms_leaderboard_view),
+    path('gamification/leaderboard/', lms.lms_leaderboard_view),
+    path('v1/gamification/leaderboard', lms.lms_leaderboard_view),
+    path('v1/gamification/leaderboard/', lms.lms_leaderboard_view),
 ]

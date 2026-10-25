@@ -1,3 +1,5 @@
+
+export { GamifiedVideoPlayer } from "./GamifiedVideoPlayer";
 "use client";
 
 import * as React from "react";

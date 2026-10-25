@@ -82,6 +82,7 @@
       "taskCoverage": "Task coverage",
       "grammar": "Grammar",
       "vocabulary": "Vocabulary",
+    "bamboozle": "Bamboozle Arena",
       "fluencyCohesion": "Fluency & cohesion",
       "ideaDevelopment": "Idea development",
       "register": "Register",
@@ -628,6 +629,7 @@
   "nav": {
     "mock": "Exams",
     "vocabulary": "Vocabulary",
+    "bamboozle": "Bamboozle Arena",
     "dashboard": "Dashboard",
     "attendance": "Attendance",
     "payments": "Payments",

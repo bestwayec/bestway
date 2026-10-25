@@ -243,6 +243,24 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ---
 
+### 15-BLOK: Unified LMS Video Engine & Bamboozle Game Arena
+1. **LMS Video Engine & HTTP Range Streaming**:
+   - `backend-django/apps/core/models.py` da `Course`, `Lesson`, `QuizDeck`, `QuizCard`, `UserLessonProgress` modellari va migratsiya (`0003`) yaratildi.
+   - `lms_services.py` da `stream_video_file` funksiyasi HTTP Range so'rovlarini (`bytes=start-end`) to'liq qo'llab-quvvatlaydi va `206 Partial Content` qaytaradi.
+   - Anti-cheat video kuzatuv: `GamifiedVideoPlayer.tsx` oldinga o'tkazishni (`maxWatchedTime`) cheklaydi, `visibilitychange` va oyna faolsizligida (`blur`) videoni avto-pauza qiladi.
+   - Video to'liq ko'rilganda `POST /api/v1/lessons/<id>/complete` orqali XP (`+50 XP`) beriladi, `PointsLog` ga qayd etiladi va darsga biriktirilgan Bamboozle testi avtomatik qulfdan chiqariladi.
+2. **Bamboozle Team Battle Engine (2 Jamoali O'yin Maydoni)**:
+   - `frontend/src/components/bamboozle/BamboozleArena.tsx`: Team 1 (Zumrad) vs Team 2 (Amber) navbatma-navbat 16/24 ta kartani tanlaydi.
+   - Savol kartalari (10, 15, 20 ball) va Syurpriz kartalar (`swap`, `steal`, `double`, `bomb`) to'liq Web Audio API ovoz effektlari va taymer bilan ishlaydi.
+   - Proyektor / Smart TV rejimi: katta shriftlar va fullscreen imkoniyati. O'yin yakunida g'olib jamoa uchun bayramona animatsiya.
+3. **Custom Quiz Creator & Free Play Arena Lobby**:
+   - `QuizDeckCreator.tsx`: Ustoz va adminlar uchun yangi test to'plamlari, savollar va syurpriz kartalarni konstruktor orqali kiritish.
+   - `BamboozleLobby.tsx` va `/bamboozle` sahifasi: Kategoriya (Vocabulary, Grammar, IELTS, General) bo'yicha mustaqil o'yinlar kutubxonasi.
+4. **Sifat Nazorati va Testlar**:
+   - Backend Pytest: **553 ta test 100% PASS** (`test_lms_and_bamboozle.py` da barcha Range streaming, anti-cheat va card outcome testlari muvaffaqiyatli o'tdi).
+   - Frontend Vitest: **56 ta test to'plami, 364 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik**.
+
 ## Jarayonda
 - Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
 
