@@ -360,8 +360,28 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - VPS (`169.58.58.229`): `docker compose up -d --build backend frontend` va `seed_grammar_videos_and_bamboozle` muvaffaqiyatli ishga tushirildi.
    - Ommaviy endpointlar (`https://bestwayec.uz/en/bamboozle`, `/api/backend/v1/quiz-decks`) `200 OK` bilan tasdiqlandi.
 
+### 20-BLOK: Dars Kartochkalari Uchun AI-Gradient Vizual Muqovalar va UI/UX To'qnashuvlar Bartaraf Etilishi (`/en/videos`)
+1. **Dinamik AI Course Card Thumbnails (`course-card-thumbnail.tsx`)**:
+   - Har bir grammatika darsi uchun mavzusiga moslangan unikal, obsidian-zumrad va neon aksentli vektor muqovalar yaratildi:
+     * **1. Nouns**: `[📦 Singular] ➔ [📚 Plural (-s/-es)]` va sanaladigan/sanalmaydigan otlar bo'yicha zumrad-teal fonli kartochka.
+     * **2. Noun Test**: `[A+ Analysis]` va `100% Mastery` nishonli imtihon tahlili dizayni.
+     * **3. Adjectives**: `Good ➔ Better ➔ ★ Best` bosqichlari hamda `OSASCOMP` qoidasiga asoslangan neon-oltin darajalar illyustratsiyasi.
+     * **4. Adverbs**: `Quick + ly ➔ ⚡️ Quickly` formulasi va dinamik harakat chiziqlari bilan kiber-cyan dizayn.
+     * **5. Numerals**: `1st, 2nd, 3rd, 2/3, 40th` matematik tipografik naqshli binafsha-zumrad karta.
+     * **6. Articles**: `A • AN • THE • Ø` to'rtlik qoidasi va zamonaviy neon-pushti/zumrad shaffof oynali plitalar.
+2. **UI Layout va Nishonlar To'qnashuvi To'liq Bartaraf Qilindi (`videos-view.tsx`)**:
+   - `Yangi` / `Ko'rilgan` va `Free` / Narx nishonlari kartaning pastki matn qismidan butunlay ajratilib, to'g'ridan-to'g'ri muqova ustki burchaklariga (`top-2.5 inset-x-2.5`) shaffof glassmorphism uslubida joylashtirildi.
+   - Sarlavha, tavsif va harakat tugmalari o'rtasida aniq vertikal masofalar o'rnatildi, hech qanday matn nishonlar bilan ustma-ust tushmaydi.
+3. **Silliq Animatsiyalar va Hover Effektlari**:
+   - Har bir kurs kartochkasiga `motion.div` orqali pog'onali (`staggered`) ochilish va `hover` da silliq ko'tarilish (`y: -4`, zumrad neon soya `shadow-[0_12px_35px_rgba(16,185,129,0.18)]`) qo'shildi.
+4. **Sifat Nazorati va Contabo VPS Relizi**:
+   - TypeScript `tsc --noEmit`: 0 ta xatolik.
+   - Frontend Vitest: 56 ta fayl, 364 ta test 100% PASS.
+   - Contabo VPS (`169.58.58.229`): `docker compose up -d --build frontend` muvaffaqiyatli yakunlandi.
+   - Ommaviy endpointlar (`https://bestwayec.uz/en/videos`) `200 OK` bilan to'liq tasdiqlandi.
+
 ## Jarayonda
-- Bamboozle o'yin maydoni va Lobby interfeysi v1.0.2 talablariga to'liq mos ravishda ishga tushirildi.
+- Video darslar sahifasi zamonaviy muqovalar va silliq UI/UX bilan to'liq yangilandi.
 
 ---
 
