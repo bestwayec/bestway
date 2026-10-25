@@ -320,8 +320,26 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Contabo VPS (`169.58.58.229`) da xizmatlar yangilandi, PostgreSQL `max_connections = 300` ga oshirildi, idle ulanishlar tozalandi va `seed_grammar_videos_and_bamboozle` muvaffaqiyatli ishga tushirildi.
    - Public endpointlar (`https://bestwayec.uz/`, `/en/videos`, `/en/bamboozle`, `/api/backend/videos`, `/api/backend/v1/lessons`) to'liq tasdiqlandi.
 
+### 18-BLOK: Video Pleyer Audio Oqimi va Bamboozle To'g'ridan-To'g'ri URL Yo'naltirish Tuzatishi
+1. **Gamified Video Player Ovoz Muammosi Yechildi (`GamifiedVideoPlayer.tsx`)**:
+   - Pleyer yuklanganda `videoRef.current.volume = 1.0` va `muted = false` bilan birga `audioTracks` (mavjud bo'lsa) barcha treklar faollashtirilishi ta'minlandi.
+   - Brauzerlarning qat'iy avtostart siyosati (`NotAllowedError`) ehtimoli uchun avtomatik `muted fallback` va video ustida bir marta bosish bilan ovozni yoquvchi qulay `[ 🔈 Ovozni yoqish ]` tugmasi joylashtirildi.
+   - Backend `lms_services.py` da HTTP Range (206 Partial Content) video oqimi uchun `Access-Control-Allow-Origin: *` va `Access-Control-Expose-Headers: Content-Range, Content-Length, Accept-Ranges` to'liq ulandi.
+2. **Bamboozle URL Query Parametrlari Integratsiyasi (`?deck=<uuid>`)**:
+   - `/en/bamboozle?deck=<id>` manzili orqali kirilganda to'plamlar ro'yxatini kutib o'tirmasdan, to'g'ridan-to'g'ri `startDeckById(deckId)` orqali `/v1/quiz-decks/<id>` yuklab olinadi va o'yin (Team Battle) darhol ishga tushadi.
+   - O'yindan chiqqanda URL avtomatik tozalanishi (`router.replace("/bamboozle")`) ta'minlandi.
+   - Backend `list_quiz_decks` va `get_quiz_deck_detail` da ID'lar satr (`str(d.id)`) ko'rinishida qaytarilishi mustahkamlandi.
+3. **Sifat Nazorati (QA Gate: 100% PASS)**:
+   - Backend Pytest: **553 ta test 100% PASS** (4 ta legacy skipped, 0 xato).
+   - Frontend Vitest: **56 ta fayl, 364 ta test 100% PASS**.
+   - TypeScript `tsc --noEmit`: **0 ta xatolik**.
+4. **Deploy va Tekshiruv (Contabo VPS `169.58.58.229`)**:
+   - Git commit: `fix(lms): enhance video audio playback and support direct bamboozle deck routing` muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`.
+   - `main` ga push qilindi va serverda `education-backend`, `education-frontend` konteynerlari yangilandi.
+   - Ommaviy endpointlar (`https://bestwayec.uz`, `/en/videos`, `/en/bamboozle?deck=...`) `200 OK` bilan to'liq tasdiqlandi.
+
 ## Jarayonda
-- Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
+- Barcha grammatika darslari va Bamboozle o'yinlari pleyer hamda to'g'ridan-to'g'ri link orqali mukammal ishlamoqda.
 
 ---
 
