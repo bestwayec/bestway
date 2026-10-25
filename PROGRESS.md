@@ -261,6 +261,37 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Frontend Vitest: **56 ta test to'plami, 364 ta test 100% PASS**.
    - TypeScript `tsc --noEmit`: **0 ta xatolik**.
 
+### 16-BLOK: Grammatika Video Darslari (Nouns -> Articles), 100% Bexato Bamboozle Seeding va RBAC Cheklovlari (Deploy v1.0.0)
+1. **Lokal Videolar Integratsiyasi va Serverga Yuklash**:
+   - Lokal diskdagi barcha 7 ta grammatika video fayllari aniqlandi, davomiyliklari aniq hisoblandi va Contabo VPS (`169.58.58.229`) ning `/app/storage/videos/grammar/` papkasiga to'liq yuklandi (jami 310 MB):
+     * `1_nouns.mp4` (80 MB, 1337s / 22m 17s)
+     * `1_1_noun_test.mp4` (30 MB, 446s / 7m 26s)
+     * `2_adjectives.mp4` (40 MB, 1124s / 18m 44s)
+     * `2_1_adjective_test.mp4` (22 MB)
+     * `3_adverbs.mp4` (30 MB, 909s / 15m 9s)
+     * `4_numerals.mp4` (61 MB, 1097s / 18m 17s)
+     * `5_articles.mp4` (51 MB, 1436s / 23m 56s)
+2. **Backend Video Streaming Kengaytmasi (`lms_views.py`)**:
+   - `lesson_stream_view` bir nechta montaj va saqlash yo'llarini (`/app/storage`, `/app/media`, `/opt/bestway/backend-django/media`) avtomatik aniqlaydigan qilib kengaytirildi va `HTTP Range Requests (206 Partial Content)` orqali uzluksiz streaming ta'minlandi.
+3. **100% Bexato Bamboozle Grammatika Savollari & Kurs Seeding (`seed_grammar_videos_and_bamboozle.py`)**:
+   - Kurs yaratildi: `"English Grammar Foundation: Nouns to Articles"`.
+   - 6 ta dars va ularga bog'langan 5 ta Bamboozle to'plami yaratildi:
+     * Dars 1: *1. Nouns: Countable, Uncountable & Plural Forms* -> Deck: *Nouns (Otlar — Countable, Uncountable & Plurals)* (16 kartochka: 12 ta bexato grammatik savol + 4 ta syurpriz: swap, steal, double, bomb).
+     * Dars 2: *2. Noun Test & Practical Analysis* -> Deck: *Noun Test & Practical Mastery* (16 kartochka).
+     * Dars 3: *3. Adjectives & Degrees of Comparison* -> Deck: *Adjectives & Degrees of Comparison* (16 kartochka).
+     * Dars 4: *4. Adverbs: Formation, Types & Usage* -> Deck: *Adverbs & Sentence Positions* (16 kartochka).
+     * Dars 5: *5. Numerals: Cardinal, Ordinal & Fractions* -> Deck: *Numerals (Sonlar — Cardinal, Ordinal & Fractions)* (16 kartochka).
+     * Dars 6: *6. Articles: A, An, The & Zero Article* -> Deck: *Articles (a / an / the / zero article)* (16 kartochka).
+   - Har bir savol aniq 1 ta to'g'ri javobga ega, grammatik qoidaga 100% mos va har bir to'plamda 3, 7, 11, 15-o'rinlarda syurpriz kartalar (`swap`, `steal`, `double`, `bomb`) joylashtirildi.
+4. **RBAC Cheklovi (Role-Based Access Control)**:
+   - `frontend/src/components/bamboozle/BamboozleLobby.tsx` da `useMe()` orqali faqat `teacher`, `admin`, `super_admin` rollariga `+ Yangi Deck Yaratish` va bo'sh holatdagi konstruktor tugmalari ko'rsatilishi ta'minlandi. `student` roli faqat mavjud to'plamlarni o'ynash imkoniyatiga ega.
+5. **Sifat Nazorati va Zero-Downtime Deploy**:
+   - Backend Django Pytest: **13/13 ta test 100% PASS**.
+   - Frontend Vitest: **56 ta test to'plami, 364 ta test 100% PASS**.
+   - TypeScript: `tsc --noEmit` **0 ta xatolik**.
+   - Git Commit & Push: `feat(grammar): add grammar video lessons, bamboozle decks and rbac lobby guard` muallif: `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI attribution).
+   - Contabo VPS (`169.58.58.229`): Xizmat darajasida build qilindi (`docker compose up -d --build backend frontend`), barcha video fayllar Docker storage hajmiga kiritildi, seed skripti muvaffaqiyatli ishga tushirildi va public endpointlar (`bestwayec.uz`, `/en/videos`, `/en/bamboozle`) `HTTP 200 OK` bilan tasdiqlandi.
+
 ## Jarayonda
 - Barcha rejalar va yangi Vocabulary Engine funksionali VPS serverida barqaror va uzilishlarsiz ishga tushirildi.
 
