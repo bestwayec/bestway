@@ -37,6 +37,7 @@ class Command(BaseCommand):
                     "duration": 1337,
                     "order_index": 1,
                     "video_file": "videos/grammar/1_nouns.mp4",
+                    "thumbnail_key": "thumbnails/grammar/noun.jpg",
                     "deck_title": "Nouns (Otlar — Countable, Uncountable & Plurals)",
                     "category": "Grammar",
                     "cards": [
@@ -64,6 +65,7 @@ class Command(BaseCommand):
                     "duration": 446,
                     "order_index": 2,
                     "video_file": "videos/grammar/1_1_noun_test.mp4",
+                    "thumbnail_key": "thumbnails/grammar/noun_test.jpg",
                     "deck_title": "Noun Test & Practical Mastery",
                     "category": "Grammar",
                     "cards": [
@@ -91,6 +93,7 @@ class Command(BaseCommand):
                     "duration": 1124,
                     "order_index": 3,
                     "video_file": "videos/grammar/2_adjectives.mp4",
+                    "thumbnail_key": "thumbnails/grammar/adjective.jpg",
                     "deck_title": "Adjectives & Degrees of Comparison (2.1. Adjective Test)",
                     "category": "Grammar",
                     "cards": [
@@ -118,6 +121,7 @@ class Command(BaseCommand):
                     "duration": 909,
                     "order_index": 4,
                     "video_file": "videos/grammar/3_adverbs.mp4",
+                    "thumbnail_key": "thumbnails/grammar/adverb.jpg",
                     "deck_title": "Adverbs & Sentence Positions (3. Adverbs)",
                     "category": "Grammar",
                     "cards": [
@@ -145,6 +149,7 @@ class Command(BaseCommand):
                     "duration": 1097,
                     "order_index": 5,
                     "video_file": "videos/grammar/4_numerals.mp4",
+                    "thumbnail_key": "thumbnails/grammar/numeral.jpg",
                     "deck_title": "Numerals (Sonlar — Cardinal, Ordinal & Fractions)",
                     "category": "Grammar",
                     "cards": [
@@ -172,6 +177,7 @@ class Command(BaseCommand):
                     "duration": 1436,
                     "order_index": 6,
                     "video_file": "videos/grammar/5_articles.mp4",
+                    "thumbnail_key": "thumbnails/grammar/article.jpg",
                     "deck_title": "Articles (a / an / the / zero article)",
                     "category": "Grammar",
                     "cards": [
@@ -216,7 +222,7 @@ class Command(BaseCommand):
                         "is_free_for_approved": True,
                         "file_key": l_data["video_file"],
                         "mime_type": "video/mp4",
-                        "thumbnail_key": None,
+                        "thumbnail_key": l_data.get("thumbnail_key"),
                         "created_at": timezone.now(),
                     },
                 )

@@ -5,6 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  FileText,
   Gamepad2,
   Lock,
   Play,
@@ -29,6 +30,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { VideoCreateDialog } from "@/components/videos/video-create-dialog";
 import { GamifiedVideoPlayer } from "@/components/videos/GamifiedVideoPlayer";
 import { CourseCardThumbnail } from "@/components/videos/course-card-thumbnail";
+import { LessonQuizModal } from "@/components/videos/LessonQuizModal";
 import { motion } from "motion/react";
 import {
   useVideos,
@@ -41,6 +43,25 @@ import {
 import { useMe } from "@/hooks/use-me";
 import type { VideoLessonItem } from "@/lib/types";
 import { formatMoney, formatPhone, isSafeHref } from "@/lib/utils";
+
+
+function VideoCardImage({ src, title }: { src?: string | null; title: string }) {
+  const [error, setError] = React.useState(false);
+  if (!src || error) {
+    return <CourseCardThumbnail title={title} />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={title}
+      loading="lazy"
+      decoding="async"
+      onError={() => setError(true)}
+      className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+    />
+  );
+}
 
 export function VideosView() {
   const t = useTranslations("videos");
@@ -62,6 +83,8 @@ export function VideosView() {
     tiedDeckId?: string;
     tiedDeckTitle?: string;
   } | null>(null);
+  const [quizLesson, setQuizLesson] = React.useState<VideoLessonItem | null>(null);
+  const [quizModalOpen, setQuizModalOpen] = React.useState(false);
 
   const videosQ = useVideos();
   const stream = useStreamUrl();
@@ -179,6 +202,7 @@ export function VideosView() {
             const duration = (v as any).durationFormatted || "15:00";
             const xpReward = (v as any).xpReward || 50;
             const isCompleted = Boolean((v as any).isCompleted);
+            const isUnlocked = Boolean((v as any).isUnlocked ?? (idx === 0 || isCompleted || isOffice));
             const tiedDeckId = (v as any).bamboozleDeckId;
 
             return (
@@ -194,18 +218,7 @@ export function VideosView() {
                   <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800/80 bg-[#0B0F17] p-0 hover:border-emerald-500/50 hover:shadow-[0_12px_35px_rgba(16,185,129,0.18)] transition-all duration-300">
                     {/* Muqova / Artwork Banner */}
                     <div className="relative aspect-video overflow-hidden bg-slate-900 border-b border-slate-800/80">
-                      {v.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={v.thumbnailUrl}
-                          alt={v.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <CourseCardThumbnail title={v.title} />
-                      )}
+                      <VideoCardImage src={v.thumbnailUrl} title={v.title} />
 
                       {/* Vignette Overlay */}
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 opacity-70" />
@@ -283,28 +296,73 @@ export function VideosView() {
                       </div>
 
                       {/* Harakat tugmalari */}
-                      <div className="pt-2 flex flex-wrap items-center gap-2">
+                      <div className="pt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
                         {v.access === "granted" ? (
                           <>
+                            {/* 1. Watch Action */}
                             <Button
                               size="sm"
-                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                              className="flex-1 min-w-[90px] bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                               loading={stream.isPending}
                               onClick={() => onWatch(v)}
                             >
                               <PlaySquare className="w-4 h-4 mr-1.5" />
                               {t("watch")}
                             </Button>
+
+                            {/* 2. Solo Test Action */}
+                            {(tiedDeckId || (v as any).hasQuiz) && (
+                              isUnlocked ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setQuizLesson(v);
+                                    setQuizModalOpen(true);
+                                  }}
+                                  className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 text-xs font-bold shadow-sm"
+                                >
+                                  <FileText className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                                  <span>📝 Test</span>
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled
+                                  title="Avval videoni ko'ring"
+                                  className="opacity-40 cursor-not-allowed border-slate-800 text-slate-500 text-xs font-bold"
+                                >
+                                  <Lock className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                                  <span>Test</span>
+                                </Button>
+                              )
+                            )}
+
+                            {/* 3. Bamboozle Team Battle Arena Action */}
                             {tiedDeckId && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => router.push(`/bamboozle?deck=${tiedDeckId}`)}
-                                className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold"
-                              >
-                                <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400" />
-                                <span>🎮 Bamboozle</span>
-                              </Button>
+                              isUnlocked ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/bamboozle?deck=${tiedDeckId}`)}
+                                  className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold shadow-sm"
+                                >
+                                  <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400" />
+                                  <span>🎮 Bamboozle</span>
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled
+                                  title="Avval videoni ko'ring"
+                                  className="opacity-40 cursor-not-allowed border-slate-800 text-slate-500 text-xs font-bold"
+                                >
+                                  <Lock className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                                  <span>Arena</span>
+                                </Button>
+                              )
                             )}
                           </>
                         ) : v.access === "pending_confirmation" ? (
@@ -370,6 +428,18 @@ export function VideosView() {
       {/* Admin Video Create Dialog */}
       {isOffice && (
         <VideoCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      )}
+      {/* Solo Grammar Quiz Runner Modal */}
+      {quizLesson && (
+        <LessonQuizModal
+          isOpen={quizModalOpen}
+          onClose={() => setQuizModalOpen(false)}
+          lessonId={quizLesson.id}
+          lessonTitle={quizLesson.title}
+          onQuizCompleted={(_earnedXp) => {
+            videosQ.refetch();
+          }}
+        />
       )}
     </div>
   );
@@ -439,6 +509,7 @@ function PurchasesPanel() {
           ))}
         </div>
       )}
+
     </div>
   );
 }

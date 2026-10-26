@@ -105,7 +105,10 @@ def listing(actor=None):
     # 1. LMS Video Lessons
     try:
         lessons = Lesson.objects.select_related("course").order_by("order_index", "created_at")
+        video_lessons = {vl.id: vl for vl in VideoLesson.objects.all()}
         for idx, l in enumerate(lessons, start=1):
+            vl = video_lessons.get(str(l.id))
+            thumb_url = f"{public_url()}/v1/videos/{l.id}/thumbnail" if (vl and vl.thumbnail_key) else (l.course.thumbnail_url if l.course else None)
             is_completed = l.id in completed_ids
             deck = l.quiz_decks.filter(is_lesson_tied=True).first()
             item = {
@@ -114,7 +117,7 @@ def listing(actor=None):
                 "description": l.description or (l.course.title if l.course else None),
                 "price": 0,
                 "isFreeForApproved": True,
-                "thumbnailUrl": l.course.thumbnail_url if l.course else None,
+                "thumbnailUrl": thumb_url,
                 "createdAt": l.created_at.isoformat() if l.created_at else timezone.now().isoformat(),
                 "access": "granted",
                 "durationSeconds": l.duration or 0,
@@ -210,9 +213,17 @@ def stream(token,range_header=None):
 
 def thumbnail(identifier):
     row=get(identifier);key=row.thumbnail_key
-    if not key or not storage_path(key).is_file():fail('FILE_NOT_FOUND','Muqova topilmadi',404)
-    mime={'.png':'image/png','.webp':'image/webp','.gif':'image/gif'}.get(Path(key).suffix.lower(),'image/jpeg')
-    response=FileResponse(storage_path(key).open('rb'),content_type=mime);response['Cache-Control']='public, max-age=86400';return response
+    if not key:fail('FILE_NOT_FOUND','Muqova topilmadi',404)
+    path=storage_path(key)
+    if not path.is_file():
+        alt_key = key.replace("thumbnails/", "media/thumbnails/") if "thumbnails/" in key else f"thumbnails/{key}"
+        try:
+            alt_path = storage_path(alt_key)
+            if alt_path.is_file():path = alt_path
+        except Exception:pass
+    if not path.is_file():fail('FILE_NOT_FOUND','Muqova topilmadi',404)
+    mime={'.png':'image/png','.webp':'image/webp','.gif':'image/gif'}.get(path.suffix.lower(),'image/jpeg')
+    response=FileResponse(path.open('rb'),content_type=mime);response['Cache-Control']='public, max-age=86400';return response
 
 
 def purchase(actor,identifier):
