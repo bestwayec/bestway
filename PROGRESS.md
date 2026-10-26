@@ -412,8 +412,47 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Pytest: `test_lms_and_bamboozle.py` 16/16 test 100% PASS, umumiy backend 556 ta test 100% PASS.
    - Contabo VPS (`169.58.58.229`): `docker compose up -d --build backend frontend` bilan zero-downtime deploy qilindi va barcha endpointlar `200 OK` bilan tasdiqlandi.
 
+### 22-BLOK: Qolgan 23 ta Video Darslar, 276 ta CEFR Grammatika Testi, 15 ta Optimizatsiya Qilingan Muqovalar va Idempotent Thumbnail Sync Relizi (v1.0.4)
+1. **15 ta Thumbnail Rasmlar Optimallashtirildi va Serverga Joylashtirildi**:
+   - C:\Users\user\Desktop\bwww\thumbanial\qolganthumbinal papkasidagi 15 ta .jpg fayllar Pillow kutubxonasi yordamida sifatini yo'qotmagan holda 1280px max-width, quality 82 bilan optimallashtirildi (~2.4 MB dan ~100 KB gacha siqildi).
+   - Barcha 15 ta rasm Contabo VPS hostidagi /opt/bestway/backend-django/media/thumbnails/grammar/ va backend konteynerining /app/storage/thumbnails/grammar/ papkalariga yuklandi.
+2. **23 ta Video Darslar VPS Media Storage'ga O'tkazildi**:
+   - C:\Users\user\Desktop\bwww\qolgandarslar papkasidagi 23 ta video dars (.mp4, jami 571 MB) tar arxivi orqali xavfsiz VPS ga yuklandi va /opt/bestway/backend-django/media/videos/grammar/ hamda konteyner ichidagi /app/storage/videos/grammar/ ga joylashtirildi.
+   - Har bir videoning aniq davomiyligi (duration) sekundlarigacha hisoblab chiqildi va bazaga kiritildi.
+3. **Idempotent Management Buyruqlari**:
+   - seed_remaining_lessons_and_quizzes.py: 7-dan 29-gacha bo'lgan 23 ta dars, 23 ta QuizDeck va 276 ta yuqori sifatli CEFR grammatika savollari (har bir savolda 4 ta variant, 1 ta to'g'ri javob, 10/15/20 ball) hamda jamoaviy Bamboozle arenasi uchun 4 tadan syurpriz kartalari bilan muvaffaqiyatli kiritildi.
+   - ttach_thumbnails.py: Dars muqovalarini order_index bo'yicha bog'laydigan, har qanday paytda qayta ishga tushirishga xavfsiz (idempotent) buyruq yaratildi.
+4. **Dars va Muqovalar To'liq Taxt Qilindi (Jami 29 ta Dars, 464 ta Kartochka)**:
+   - Mavjud 15 ta dars uchun muqovalar to'liq biriktirildi:
+     * #8: Future Perfect Continuous -> utureperfectconteniues.jpg
+     * #9: Future Perfect -> utureperfect.jpg
+     * #10: Future Simple -> uturesimple.jpg
+     * #11: Gerund va Infinitive -> geroundvainfinitive.jpg
+     * #12: If Conditionals -> if.jpg
+     * #13: Indirect Speech -> indirectspeech.jpg
+     * #14: Modal verbs -> modalverbs.jpg
+     * #15: Numerals part 2 -> 
+umeralspart2.jpg
+     * #16: Passive Voice -> passivevoice.jpg
+     * #17: Past Continuous -> pastconteniues.jpg
+     * #18: Past Perfect Continuous -> pastperfectconteniues.jpg
+     * #19: Past Perfect -> pastperfect.jpg
+     * #20: Past Simple -> pastsimple.jpg
+     * #21: Personal and Possessive Pronouns -> personalpossesivepronouns.jpg
+     * #22: Prepositions -> prepositions.jpg
+   - Muqovasi ertaga tayyor bo'ladigan 8 ta dars (#7 Future Continuous, #23 Present Continuous, #24 Present Perfect Continuous, #25 Present Perfect, #26 Present Simple, #27 so/such/too/enough/high/tall, #28 Some va Any, #29 Tag questions) uchun 	humbnail_key = None qilib yaratildi, frontendda xatosiz chiroyli SVG/gradient muqova ko'rinib turadi va ertaga rasmlar kelganda ttach_thumbnails buyrug'i orqali avtomatik ulanadi.
+5. **Sifat Nazorati (100% PASS Gate)**:
+   - Backend Pytest: 	est_remaining_grammar_lessons.py 5/5 PASS, 	est_lms_and_bamboozle.py 16/16 PASS.
+   - Frontend: 
+px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
+6. **Ma'lumotlar Bazasi Zaxirasi va Zero-Downtime Deploy**:
+   - 19 MB li to'liq PostgreSQL backup olindi: /opt/bestway/backup_pre_remaining_lessons_20261026_172426.sql.
+   - education-postgres idle connection'lari tozalanib me'yoriga keltirildi.
+   - VPS da barcha 29 ta dars, 29 ta to'plam va 464 ta savol kartochkasi ishga tushirildi.
+   - Ommaviy endpointlar (https://bestwayec.uz/, https://bestwayec.uz/en/login, https://bestwayec.uz/api/backend/health) 200 OK qaytardi.
+
 ## Jarayonda
-- Video darslar sahifasi zamonaviy muqovalar va silliq UI/UX bilan to'liq yangilandi.
+- Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 
 ---
 
