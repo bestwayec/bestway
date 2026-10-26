@@ -380,6 +380,38 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
    - Contabo VPS (`169.58.58.229`): `docker compose up -d --build frontend` muvaffaqiyatli yakunlandi.
    - Ommaviy endpointlar (`https://bestwayec.uz/en/videos`) `200 OK` bilan to'liq tasdiqlandi.
 
+
+
+### 21-BLOK: Haqiqiy Grammar Muqovalar (Media Storage), Solo Grammatika Testi Runneri (Quiz Modal +30 XP), 3-Harakatli Video Kartalar va Access Control Relizi (v1.0.3)
+1. **Haqiqiy Thumbnail Rasmlar VPS Storage'ga Joylashtirildi va Integratsiya Qilindi**:
+   - `C:\Users\user\Desktop\bwww\thumbanial` papkasidagi 6 ta rasmlar VPS serveridagi `/opt/bestway/backend-django/media/thumbnails/grammar/` va konteyner ichidagi `/app/storage/thumbnails/grammar/` papkalariga yuklandi.
+   - `Lesson` va `VideoLesson` larning `thumbnail_key` maydonlariga biriktirildi:
+     * `1. Nouns` -> `thumbnails/grammar/noun.jpg`
+     * `2. Noun Test` -> `thumbnails/grammar/noun_test.jpg`
+     * `3. Adjectives` -> `thumbnails/grammar/adjective.jpg`
+     * `4. Adverbs` -> `thumbnails/grammar/adverb.jpg`
+     * `5. Numerals` -> `thumbnails/grammar/numeral.jpg`
+     * `6. Articles` -> `thumbnails/grammar/article.jpg`
+   - Agar tarmoqda rasm yuklanmasa yoki xatolik bo'lsa, `VideoCardImage` avtomatik tarzda `CourseCardThumbnail` SVG/gradient foniga qaytuvchi mustahkam `onError` fallback tizimi o'rnatildi.
+2. **Individual Grammatika Testi (Solo Quiz Runner — `LessonQuizModal.tsx`)**:
+   - Darsga bog'langan savollardan syurpriz kartalarsiz (faqat `card_type == 'question'`), sof 4-variantli test o'tkazuvchi obsidian-zumrad dialog yaratildi.
+   - Savollar navigatsiyasi, progress bar, jonli javob belgilash.
+   - Natija >= 80% bo'lganda: **+30 XP** beriladi, `PointsLog` ga qayd etiladi, `StudentProfile` balansi yangilanadi, `UserLessonProgress.is_completed = True` qilinadi va g'alaba konfettisi (`ConfettiCanvas`) otiladi!
+   - To'liq savol va javoblar tahlili (talaba javobi va to'g'ri javob solishtiruvi).
+3. **3-Harakatli Video Kartalar va Access Control (`videos-view.tsx`)**:
+   - Har bir video dars kartasida 3 ta harakat tugmasi: `[ ▶ Watch ]`, `[ 📝 Test ]` va `[ 🎮 Bamboozle ]`.
+   - Video ko'rilmagan bo'lsa (`!isCompleted` va `idx > 0` va admin bo'lmasa), `[ 📝 Test ]` va `[ 🎮 Bamboozle ]` tugmalari qulflangan (`locked`) turadi.
+   - Video ko'rib bo'lingach yoki test topshirilgach, avtomatik ravishda ochiladi (`auto-unlock`).
+4. **Backend API**:
+   - `GET /v1/lessons/<id>/quiz` — solo savollarni olish (12 ta sof savol).
+   - `POST /v1/lessons/<id>/quiz-submit` — javoblarni baholash va XP taqdim etish.
+   - `GET /v1/videos/<id>/thumbnail` — dars muqovasini FileResponse orqali uzatish.
+5. **Sifat Nazorati (100% PASS Gate)**:
+   - TypeScript `tsc --noEmit`: 0 ta xatolik.
+   - Vitest: `GamifiedVideoPlayer`, `BamboozleArena`, `LessonQuizModal` 6/6 test 100% PASS.
+   - Pytest: `test_lms_and_bamboozle.py` 16/16 test 100% PASS, umumiy backend 556 ta test 100% PASS.
+   - Contabo VPS (`169.58.58.229`): `docker compose up -d --build backend frontend` bilan zero-downtime deploy qilindi va barcha endpointlar `200 OK` bilan tasdiqlandi.
+
 ## Jarayonda
 - Video darslar sahifasi zamonaviy muqovalar va silliq UI/UX bilan to'liq yangilandi.
 
