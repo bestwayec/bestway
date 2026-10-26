@@ -449,3 +449,173 @@ def get_lms_leaderboard(period: str = "weekly", limit: int = 20) -> List[Dict[st
             "badges": ["Top Performer"] if rank <= 3 else ["Active Learner"],
         })
     return leaderboard
+
+
+
+# ============================================================================
+# 5. SOLO GRAMMAR QUIZ RUNNER
+# ============================================================================
+
+def get_lesson_solo_quiz(lesson_id: str) -> Dict[str, Any]:
+    """Retrieve question cards for solo grammar practice without surprise cards."""
+    try:
+        lesson = Lesson.objects.get(id=lesson_id)
+    except Lesson.DoesNotExist:
+        raise Http404("Dars topilmadi")
+
+    deck = None
+    if hasattr(lesson, "quiz_decks"):
+        try:
+            deck = lesson.quiz_decks.filter(is_lesson_tied=True).first() or lesson.quiz_decks.first()
+        except Exception:
+            pass
+    if not deck:
+        deck = QuizDeck.objects.filter(lesson_id=lesson.id).first()
+
+    if not deck:
+        return {
+            "lesson_id": str(lesson.id),
+            "lesson_title": lesson.title,
+            "deck_id": None,
+            "deck_title": "Grammar Test",
+            "category": "Grammar",
+            "total_questions": 0,
+            "passing_percentage": 80,
+            "xp_reward": 30,
+            "questions": [],
+        }
+
+    question_cards = list(deck.cards.filter(card_type=CardType.QUESTION).order_by("order_index", "id"))
+    questions_data = [
+        {
+            "id": str(c.id),
+            "question": c.question_text,
+            "options": c.options,
+            "points": c.points,
+            "order_index": c.order_index,
+        }
+        for c in question_cards
+    ]
+
+    return {
+        "lesson_id": str(lesson.id),
+        "lesson_title": lesson.title,
+        "deck_id": str(deck.id),
+        "deck_title": deck.title,
+        "category": deck.category,
+        "total_questions": len(questions_data),
+        "passing_percentage": 80,
+        "xp_reward": 30,
+        "questions": questions_data,
+    }
+
+
+def submit_lesson_solo_quiz(user, lesson_id: str, answers: Dict[str, Any]) -> Dict[str, Any]:
+    """Evaluate solo quiz submission; award +30 XP and mark completion if percentage >= 80%."""
+    try:
+        lesson = Lesson.objects.get(id=lesson_id)
+    except Lesson.DoesNotExist:
+        raise Http404("Dars topilmadi")
+
+    deck = None
+    if hasattr(lesson, "quiz_decks"):
+        try:
+            deck = lesson.quiz_decks.filter(is_lesson_tied=True).first() or lesson.quiz_decks.first()
+        except Exception:
+            pass
+    if not deck:
+        deck = QuizDeck.objects.filter(lesson_id=lesson.id).first()
+
+    if not deck:
+        return {
+            "success": False,
+            "error": "DECK_NOT_FOUND",
+            "message": "Ushbu dars uchun test savollari topilmadi",
+        }
+
+    question_cards = list(deck.cards.filter(card_type=CardType.QUESTION).order_by("order_index", "id"))
+    total_questions = len(question_cards)
+
+    correct_count = 0
+    review = []
+
+    for c in question_cards:
+        user_answer = str(answers.get(str(c.id), "")).strip()
+        correct_answer = str(c.correct_answer).strip()
+        is_correct = bool(user_answer and user_answer.lower() == correct_answer.lower())
+        if is_correct:
+            correct_count += 1
+        review.append({
+            "id": str(c.id),
+            "question": c.question_text,
+            "options": c.options,
+            "user_answer": user_answer,
+            "correct_answer": correct_answer,
+            "is_correct": is_correct,
+            "points": c.points,
+        })
+
+    percentage = round((correct_count / total_questions) * 100, 1) if total_questions > 0 else 0
+    passed = percentage >= 80
+    xp_awarded = 0
+
+    if user and getattr(user, "is_authenticated", False):
+        progress, _ = UserLessonProgress.objects.get_or_create(
+            user_id=user.id,
+            lesson=lesson,
+            defaults={
+                "watched_seconds": lesson.duration or 60,
+                "max_watched_seconds": lesson.duration or 60,
+                "is_completed": False,
+                "earned_xp": 0,
+            },
+        )
+
+        if passed:
+            xp_awarded = 30
+            progress.is_completed = True
+            if not progress.completed_at:
+                progress.completed_at = timezone.now()
+            progress.earned_xp = max(progress.earned_xp, 30)
+            progress.save()
+
+            try:
+                with transaction.atomic():
+                    profile_exists = StudentProfile.objects.filter(user_id=user.id).exists()
+                    if profile_exists:
+                        StudentProfile.objects.filter(user_id=user.id).update(
+                            current_points=F("current_points") + xp_awarded
+                        )
+                    else:
+                        StudentProfile.objects.create(
+                            user_id=user.id,
+                            current_points=xp_awarded,
+                            is_approved=True,
+                            link_code=f"SP-{uuid.uuid4().hex[:6].upper()}",
+                            created_at=timezone.now(),
+                            available_programs=["IELTS"],
+                        )
+                    PointsLog.objects.create(
+                        id=str(uuid.uuid4()),
+                        student_id=user.id,
+                        change=xp_awarded,
+                        reason=f"Grammatika solo testidan o'tildi ({percentage}%): {lesson.title}",
+                        created_at=timezone.now(),
+                    )
+            except Exception as exc:
+                logger.warning("Failed to record PointsLog for solo quiz user %s: %s", user.id, exc)
+
+    return {
+        "success": True,
+        "score": correct_count,
+        "total": total_questions,
+        "percentage": percentage,
+        "passed": passed,
+        "xp_awarded": xp_awarded,
+        "message": (
+            "Ajoyib natija! Dars muvaffaqiyatli o'zlashtirildi va +30 XP taqdim etildi!"
+            if passed
+            else "Natija 80% dan past bo'ldi. Darsni qayta ko'rib chiqib, yana urinib ko'ring!"
+        ),
+        "review": review,
+    }

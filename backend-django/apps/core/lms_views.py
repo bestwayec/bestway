@@ -19,6 +19,8 @@ from .lms_services import (
     list_quiz_decks,
     stream_video_file,
     update_watch_time,
+    get_lesson_solo_quiz,
+    submit_lesson_solo_quiz,
 )
 from .views import require_authenticated, require_role, success
 
@@ -288,3 +290,26 @@ def lms_leaderboard_view(request):
     limit = int(request.query_params.get("limit", 20))
     data = get_lms_leaderboard(period=period, limit=limit)
     return success(data)
+
+
+
+# ============================================================================
+# SOLO GRAMMAR QUIZ VIEWS
+# ============================================================================
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def lesson_quiz_view(request, lesson_id):
+    """Retrieve question cards for solo grammar practice without surprise cards."""
+    data = get_lesson_solo_quiz(lesson_id)
+    return success(data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def lesson_quiz_submit_view(request, lesson_id):
+    """Submit quiz answers, evaluate, award +30 XP if >= 80%, and update completion."""
+    user = request.user if request.user and request.user.is_authenticated else None
+    answers = request.data.get("answers", {}) if isinstance(request.data, dict) else {}
+    result = submit_lesson_solo_quiz(user, lesson_id, answers)
+    return success(result)
