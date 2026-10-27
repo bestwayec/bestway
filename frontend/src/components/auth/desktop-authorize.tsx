@@ -15,6 +15,9 @@ import { api, ApiError } from "@/lib/api-client";
 const ALLOWED_CALLBACKS = [
   "bestway-exam://auth/callback",
   "bestway://auth/callback",
+  "bestwayapp://auth",
+  "bestwayapp://auth/callback",
+  "bestway://auth",
 ] as const;
 const DEFAULT_DESKTOP_CALLBACK = "bestway-exam://auth/callback";
 

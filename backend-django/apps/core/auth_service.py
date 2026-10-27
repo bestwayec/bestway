@@ -178,6 +178,12 @@ def authorize_desktop(user_id: str, *, device_id: str, state: str, challenge: st
         "bestway://auth/callback",
         "bestway-exam://auth/callback/",
         "bestway://auth/callback/",
+        "bestwayapp://auth",
+        "bestwayapp://auth/",
+        "bestwayapp://auth/callback",
+        "bestwayapp://auth/callback/",
+        "bestway://auth",
+        "bestway://auth/",
     }
     if hasattr(settings, "DESKTOP_REDIRECT_URIS"):
         for r in settings.DESKTOP_REDIRECT_URIS:

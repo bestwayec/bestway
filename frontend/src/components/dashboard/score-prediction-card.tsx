@@ -196,7 +196,7 @@ export function ScorePredictionCard({
   const historyPoints = data.history ?? [];
 
   return (
-    <Card className={cn("mb-5 overflow-hidden border-slate-800 bg-[#0B0F17]/90 backdrop-blur-md shadow-2xl transition-all", className)}>
+    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-[#111827]/90 backdrop-blur-md shadow-2xl transition-all", className)}>
       <CardHeader className="border-b border-slate-800/80 bg-slate-900/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -418,12 +418,12 @@ export function ScorePredictionCard({
                   </h4>
                 </div>
                 <div className="text-right">
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-amber-500/15 px-3 py-1.5 border border-amber-500/30">
-                    <span className="text-2xl font-black text-amber-400 tabular-nums">
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-1.5 border border-emerald-500/25">
+                    <span className="text-2xl font-black text-emerald-400 tabular-nums">
                       {Math.round(multilevel.predictedScore || 0)}
                     </span>
                     <span className="text-xs font-bold text-fg-muted">/ 75</span>
-                    <Badge variant="warning" className="ml-1 font-black">
+                    <Badge variant="brand" className="ml-1 font-black">
                       {multilevel.cefrLevel || "B2"}
                     </Badge>
                   </div>
@@ -439,7 +439,7 @@ export function ScorePredictionCard({
                   <span className="font-medium text-fg-muted">
                     Maqsad: <strong className="text-fg">{multilevel.targetScore || 65} ball</strong>
                   </span>
-                  <span className="font-bold text-amber-400 tabular-nums">
+                  <span className="font-bold text-emerald-400 tabular-nums">
                     Maqsadga erishish foizi: {Math.min(100, Math.max(0, Math.round(multilevel.targetProgressPercent || 0)))}%
                   </span>
                 </div>
@@ -453,7 +453,7 @@ export function ScorePredictionCard({
                         className={cn(
                           "rounded-md border px-1.5 py-1 transition-all",
                           isActiveLevel
-                            ? "border-amber-400 bg-amber-400/20 text-amber-300 font-bold shadow-xs"
+                            ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 font-bold shadow-xs"
                             : "border-border bg-surface text-fg-muted",
                         )}
                       >
@@ -511,7 +511,7 @@ export function ScorePredictionCard({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Flame className="size-3.5 text-amber-400" />
+              <Flame className="size-3.5 text-emerald-400" />
               Zaif Nuqtalar Xaritasi (Weak Points Map — Savol turlari bo&apos;yicha)
             </h4>
             {(!data.weakModules || data.weakModules.length === 0) ? (
@@ -566,7 +566,7 @@ export function ScorePredictionCard({
                           <div
                             className={cn(
                               "h-full rounded-full transition-all",
-                              isHigh ? "bg-rose-500" : isMed ? "bg-amber-400" : "bg-emerald-400",
+                              isHigh ? "bg-rose-500" : isMed ? "bg-teal-400" : "bg-emerald-400",
                             )}
                             style={{
                               width: `${Math.min(100, Math.max(6, Math.round(wm.errorRatePercent)))}%`,
@@ -576,7 +576,7 @@ export function ScorePredictionCard({
 
                         {wm.recommendation && (
                           <p className="text-[11px] text-slate-400 leading-relaxed flex items-start gap-1.5">
-                            <AlertTriangle className="size-3.5 shrink-0 text-amber-400 mt-0.5" />
+                            <AlertTriangle className="size-3.5 shrink-0 text-emerald-400 mt-0.5" />
                             <span>{wm.recommendation}</span>
                           </p>
                         )}

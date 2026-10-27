@@ -99,6 +99,7 @@ export function LoginForm() {
     const hash = params?.get("hash");
     const sso_token = params?.get("sso_token");
     const tgAuthResult = params?.get("tgAuthResult");
+    const client = params?.get("client");
 
     if (hash || sso_token || tgAuthResult) {
       const payload: Record<string, unknown> = {};
@@ -109,7 +110,14 @@ export function LoginForm() {
       setIsTelegramLoggingIn(true);
       authApi
         .telegramLogin(payload)
-        .then((user) => {
+        .then((res: any) => {
+          const user = res?.user || res;
+          const isMobileClient = client === "mobile" || params?.get("redirect_to_app") === "true";
+          const deepLink = res?.deepLink || (res?.accessToken ? `bestwayapp://auth?token=${encodeURIComponent(res.accessToken)}&refresh=${encodeURIComponent(res.refreshToken || "")}` : null);
+          if (isMobileClient && deepLink) {
+            window.location.href = deepLink;
+            return;
+          }
           toast.success(t("welcomeBack"));
           redirectAfterLogin(user.role);
         })

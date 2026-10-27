@@ -74,7 +74,7 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
   const monthlyPercent = plan?.monthlyProgress?.percent ?? 0;
 
   return (
-    <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/95 text-slate-100 shadow-xl overflow-hidden", className)}>
+    <Card className={cn("border-emerald-500/15 bg-[#111827]/90 text-slate-100 shadow-xl overflow-hidden", className)}>
       <CardHeader className="pb-3 border-b border-slate-800/80">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
@@ -95,7 +95,7 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
                   ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
                   : plan?.intensityLevel === "balanced"
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                  : "border-sky-500/40 bg-sky-500/10 text-sky-300"
+                  : "border-teal-500/40 bg-teal-500/10 text-teal-300"
               )}
             >
               <Zap className="mr-1 size-3" />
@@ -252,15 +252,15 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
           <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-3 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-300 font-medium flex items-center gap-1">
-                <Calendar className="size-3 text-sky-400" />
+                <Calendar className="size-3 text-teal-400" />
                 Oylik reja:
               </span>
-              <span className="font-bold text-sky-400 tabular-nums">{monthlyPercent}%</span>
+              <span className="font-bold text-teal-400 tabular-nums">{monthlyPercent}%</span>
             </div>
             {/* Progress bar */}
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
               <div
-                className="h-full bg-sky-500 transition-all duration-500 rounded-full"
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 rounded-full"
                 style={{ width: `${Math.min(100, Math.max(4, monthlyPercent))}%` }}
               />
             </div>

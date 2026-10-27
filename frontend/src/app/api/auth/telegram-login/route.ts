@@ -33,5 +33,18 @@ export async function POST(req: NextRequest) {
   const { user, accessToken, refreshToken } = json.data;
   await setSessionCookies({ accessToken, refreshToken, role: user.role }, req);
 
-  return NextResponse.json({ success: true, data: { user } });
+  const isMobile = body?.client === "mobile" || req.nextUrl.searchParams.get("client") === "mobile";
+  return NextResponse.json({
+    success: true,
+    data: {
+      user,
+      ...(isMobile
+        ? {
+            accessToken,
+            refreshToken,
+            deepLink: `bestwayapp://auth?token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken || "")}`,
+          }
+        : {}),
+    },
+  });
 }

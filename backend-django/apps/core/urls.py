@@ -57,6 +57,7 @@ from .mock_media import group_audio_view, group_image_view, group_media_view
 from .views import (
     desktop_authorize_view,
     desktop_exchange_view,
+    desktop_update_check,
     desktop_update_json,
     desktop_version,
     health,
@@ -249,6 +250,10 @@ urlpatterns = [
     path("desktop-update.json", desktop_update_json),
     path("desktop/update", desktop_update_json),
     path("desktop/update/", desktop_update_json),
+    path("desktop/update/<str:target>/<str:current_version>", desktop_update_check),
+    path("desktop/update/<str:target>/<str:current_version>/", desktop_update_check),
+    path("v1/desktop/update/<str:target>/<str:current_version>", desktop_update_check),
+    path("v1/desktop/update/<str:target>/<str:current_version>/", desktop_update_check),
     path("auth/register", register_view), path("auth/login", login_view),
     path("auth/google", auth_views.google_auth_view),
     path("auth/google/", auth_views.google_auth_view),

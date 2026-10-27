@@ -86,7 +86,7 @@ export function MistakeVault({ className }: { className?: string }) {
 
   return (
     <>
-      <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/90 text-slate-100 shadow-xl", className)}>
+      <Card className={cn("border-emerald-500/15 bg-[#111827]/90 text-slate-100 shadow-xl", className)}>
         <CardHeader className="pb-3 border-b border-slate-800/80">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">

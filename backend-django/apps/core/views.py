@@ -82,6 +82,64 @@ def desktop_version(request):
     return success({"version": version, "downloadUrl": download_url, "prerelease": prerelease, "updateChannel": update_channel})
 
 
+def _compare_semver(v1: str, v2: str) -> int:
+    """Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2."""
+    p1 = [int(x) if x.isdigit() else 0 for x in str(v1).split(".")]
+    p2 = [int(x) if x.isdigit() else 0 for x in str(v2).split(".")]
+    n = max(len(p1), len(p2))
+    p1 += [0] * (n - len(p1))
+    p2 += [0] * (n - len(p2))
+    for a, b in zip(p1, p2):
+        if a < b:
+            return -1
+        if a > b:
+            return 1
+    return 0
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def desktop_update_check(request, target: str = "", current_version: str = ""):
+    """
+    Tauri v2 target-specific updater endpoint:
+    GET /v1/desktop/update/<target>/<current_version>
+    If current_version >= latest_version -> 204 No Content.
+    If current_version < latest_version -> Returns 200 with manifest.
+    """
+    latest_version = getattr(settings, "DESKTOP_LATEST_VERSION", None) or "0.8.5"
+    if latest_version in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0"):
+        latest_version = "0.8.5"
+
+    download_url = getattr(settings, "DESKTOP_DOWNLOAD_URL", None) or "https://bestwayec.uz/media/downloads/Bestway.App_0.8.5_x64-setup.exe"
+    for old_v in ("0.8.4", "0.8.3", "0.8.0", "0.7.1", "0.7.0", "0.5.6"):
+        if old_v in download_url:
+            download_url = download_url.replace(old_v, latest_version)
+
+    curr_v = (current_version or request.GET.get("current_version") or "").strip()
+    if curr_v and _compare_semver(curr_v, latest_version) >= 0:
+        from django.http import HttpResponse
+        resp = HttpResponse(status=204)
+        resp["Access-Control-Allow-Origin"] = "*"
+        return resp
+
+    manifest = {
+        "version": latest_version,
+        "notes": f"BestWay Exam Platform v{latest_version}",
+        "pub_date": now().isoformat().replace("+00:00", "Z"),
+        "url": download_url,
+        "signature": "",
+        "platforms": {
+            target or "windows-x86_64": {
+                "signature": "",
+                "url": download_url,
+            }
+        }
+    }
+    response = Response(manifest, status=200)
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def desktop_update_json(request):

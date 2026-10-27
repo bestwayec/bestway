@@ -250,13 +250,36 @@ def telegram_login(data: dict):
     }
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def telegram_login_view(request):
-    data = request.data if isinstance(request.data, dict) else {}
+    if request.method == 'GET':
+        data = request.GET.dict()
+    else:
+        data = request.data if isinstance(request.data, dict) else {}
+        if not data and request.GET:
+            data = request.GET.dict()
+
+    client = (data.get('client') or request.GET.get('client') or '').lower()
+    ua = request.META.get('HTTP_USER_AGENT', '').lower()
+    is_mobile = client == 'mobile' or 'bestwayapp' in ua or 'bestway' in client
+
     try:
-        return success(telegram_login(data))
+        res = telegram_login(data)
+        access_tok = res.get('accessToken') or res.get('tokens', {}).get('accessToken', '')
+        refresh_tok = res.get('refreshToken') or res.get('tokens', {}).get('refreshToken', '')
+        deep_link = f"bestwayapp://auth?token={urllib.parse.quote(str(access_tok))}&refresh={urllib.parse.quote(str(refresh_tok))}"
+        res['deepLink'] = deep_link
+
+        if request.method == 'GET' or data.get('redirect') == '1' or request.GET.get('redirect') == '1':
+            from django.http import HttpResponseRedirect
+            if is_mobile:
+                return HttpResponseRedirect(deep_link)
+            frontend_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
+            return HttpResponseRedirect(f"{frontend_url}/en/dashboard?token={access_tok}")
+
+        return success(res)
     except ContractAPIException:
         raise
     except Exception as e:
