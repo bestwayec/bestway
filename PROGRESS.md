@@ -493,6 +493,40 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.5` -> `204 No Content` (mijoz eng so'nggi versiyada)
      * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.0` -> `200 OK` (manifest JSON to'g'ri qaytdi)
 
+
+### 26-BLOK: Foydalanuvchini Qaytarish (Retention Engine), Telegram Streak Bot, 1v1 Bamboozle Arenasi va Zaif Nuqtalarni Darsliklarga Bog'lash
+
+1. **Telegram Streak & Xabarnoma Boti (`apps/notifications/telegram_tasks.py` & `run_streak_bot.py`)**:
+   - Har kuni kechki soat 20:00 da o'quvchining kunlik faolligi (dars ko'rish yoki test topshirish) tekshiriladi.
+   - Agar o'quvchi bugun dars ko'rmagan bo'lsa, Telegram bot orqali unga shaxsiy rag'batlantiruvchi xabar yuboriladi:
+     *"🔥 {Ism}, bugungi 1 ta darsingiz qoldi! {X} kunlik zanjiringiz uzilib ketmasin. Hoziroq bitta mashq ishlang: [Platformaga kirish]"*.
+   - Har yakshanba soat 20:00 da eng faol 10 ta o'quvchining haftalik reytingi (Top-10 Leaderboard) Telegram kanal/guruhiga avtomatik hisobot tariqasida yuboriladi.
+   - Celery Beat va `game-scheduler` foniy demoni orqali rejalashtirish to'liq avtomatlashtirildi.
+
+2. **Bamboozle 1v1 Arena va Virusli Taklif Mexanizmi (`apps/bamboozle/views.py`, `BamboozleLobby.tsx`, `BamboozleArena.tsx`)**:
+   - Yangi "🎮 Do'st bilan 1v1 Bellashish" rejimi joriy etildi.
+   - Har bir bellashuv uchun unikal xona kodi (masalan, `F2Y3KR`) va havolasi (`https://bestwayec.uz/en/bamboozle?room=F2Y3KR&deck=...`) yaratiladi.
+   - "Telegram orqali do'stga yuborish" (`https://t.me/share/url?...`) tugmasi orqali do'stga bir marta bosishda taklif yuborish imkoniyati berildi.
+   - Do'st havolani ochganda to'g'ridan-to'g'ri o'yin arenasiga ulanadi, ikki jamoa nomlari ("O'yinchi 1" vs "Do'st") va jonli hisob-kitoblar ko'rsatiladi.
+
+3. **Zaif Nuqtalarni Darsliklarga Aqlli Yo'naltirish (`apps/exams/analytics_service.py`, `exam-feedback-modal.tsx`, `mistake-vault.tsx`)**:
+   - Mock imtihoni natijalari va Xatolar Banki (Mistake Vault) dagi grammatik xatolar platformadagi 29 ta video darslikka avtomatik xaritalanadi (masalan, Past Perfect xatosi -> 19-dars, Passive Voice -> 16-dars, Conditionals -> 12-dars).
+   - Tahlil ekranida aniq tavsiya ko'rsatiladi:
+     *"Sizda ushbu mavzuda xatolik ko'p: [▶️ 19-dars: Past Perfect Tense darsini ko'rish]"*.
+   - Tugma bosilganda o'quvchi to'g'ridan-to'g'ri kerakli darslikka o'tadi.
+
+4. **Sifat Nazorati va CI/PR Gate (100% PASS Gate)**:
+   - Frontend: Vitest 57 ta test fayli, 366/366 test 100% PASS; `tsc --noEmit` 0 ta xatolik.
+   - Backend: Pytest 23/23 ta test 100% PASS (`test_telegram_streak_and_notifications.py` 7/7, `test_bamboozle_1v1_arena.py` 4/4, `test_weak_points_and_analytics.py` 4/4, `test_hls_streaming_and_audio_optimization.py` 8/8).
+   - Mualliflik: `Komiljon Roziyev <kruziyev0@gmail.com>` (`zero-ai-attribution`).
+
+5. **VPS Zero-Downtime Deploy va Jonli Verifikatsiya**:
+   - Contabo VPS (`169.58.58.229`) da `backend`, `frontend`, `game-scheduler`, `telegram-bot`, `assessment-worker` konteynerlari uzilishsiz yangilandi.
+   - `https://bestwayec.uz/` -> `HTTP/2 200 OK`
+   - `https://api.bestwayec.uz/v1/health` -> `200 OK (status: ok)`
+   - `POST /v1/bamboozle/rooms/create` -> `200 OK (room_code, share_url, telegram_share_url)`
+   - `python manage.py run_streak_bot --check` -> `200 OK (Streak check complete)`
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 - Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
