@@ -12,6 +12,7 @@ import {
   Lightbulb,
   Mic,
   PenTool,
+  Play,
   Sparkles,
   Target,
   TrendingUp,
@@ -55,6 +56,77 @@ interface SpeechDiagnostics {
   }>;
 }
 
+
+export interface WeakPointLessonRecommendation {
+  lesson_id: string;
+  lesson_title: string;
+  order_index: number;
+  topic: string;
+  url: string;
+  button_text: string;
+  description: string;
+}
+
+const TOPIC_LESSON_MATCHERS = [
+  { match: /past\s*perfect/i, order: 19, title: "Past Perfect Tense", topic: "Past Perfect", desc: "Past Perfect zamonida xatolik aniqlandi. Zamonlar ketma-ketligini o'rganing." },
+  { match: /passive/i, order: 16, title: "Passive Voice & Causative Forms", topic: "Passive Voice", desc: "Majhul nisbat shakllari bo'yicha mustahkamlovchi mashqlar." },
+  { match: /conditional|if\s*clause/i, order: 12, title: "Conditionals (0, 1st, 2nd, 3rd & Mixed)", topic: "Conditionals", desc: "Shart ergash gaplar va taxminiy tuzilmalar qoidasi." },
+  { match: /gerund|infinitive/i, order: 11, title: "Gerund and Infinitive", topic: "Gerund & Infinitive", desc: "Fe'llardan keyin Gerund yoki To-Infinitive ishlatilish qoidalari." },
+  { match: /preposition/i, order: 28, title: "Prepositions of Place, Time & Movement", topic: "Prepositions", desc: "Predloglar (in, on, at, by) to'g'ri qo'llanilishi." },
+  { match: /article/i, order: 6, title: "Articles (a, an, the)", topic: "Articles", desc: "Aniq va noaniq artikllarni to'g'ri ishlatish." },
+  { match: /modal/i, order: 14, title: "Modal Verbs & Modal Perfects", topic: "Modal Verbs", desc: "Modal fe'llar va ularning o'tgan zamon shakllari (must, should have)." },
+  { match: /indirect|reported/i, order: 13, title: "Reported / Indirect Speech", topic: "Reported Speech", desc: "O'zlashtirma gap va zamonlar o'zgarishi." },
+  { match: /pronoun/i, order: 21, title: "Personal & Possessive Pronouns", topic: "Pronouns", desc: "Kishilik va egalik olmoshlari." },
+  { match: /conjunction|linking|transition/i, order: 29, title: "Conjunctions & Linking Words", topic: "Linking Words", desc: "Bog'lovchilar va mantiqiy matn vositalari." },
+];
+
+function deriveRecommendationsFromFeedback(fb?: DiagnosticFeedback | null): WeakPointLessonRecommendation[] {
+  if (!fb) return [];
+  const weaknesses = (fb as unknown as { weaknesses?: string[] })?.weaknesses || [];
+  const textCorpus = [
+    ...weaknesses,
+    ...(fb.action_plan || []),
+    ...(fb.mistakes_and_fixes || []).map((m) => `${m.original} ${m.explanation || ""}`),
+  ].join(" ");
+
+  const results: WeakPointLessonRecommendation[] = [];
+  const seenOrders = new Set<number>();
+
+  for (const item of TOPIC_LESSON_MATCHERS) {
+    if (item.match.test(textCorpus) && !seenOrders.has(item.order)) {
+      seenOrders.add(item.order);
+      results.push({
+        lesson_id: `lesson-${item.order}`,
+        lesson_title: item.title,
+        order_index: item.order,
+        topic: item.topic,
+        url: `/en/videos?lesson=lesson-${item.order}`,
+        button_text: `▶️ ${item.order}-dars: ${item.title} darsini ko'rish`,
+        description: `Sizda ushbu mavzuda xatolik ko'p: ${item.desc}`,
+      });
+    }
+  }
+
+  // Fallback core foundation recommendations if none matched
+  if (results.length === 0) {
+    const defaultIndices = [19, 16, 12];
+    for (const item of TOPIC_LESSON_MATCHERS) {
+      if (defaultIndices.includes(item.order)) {
+        results.push({
+          lesson_id: `lesson-${item.order}`,
+          lesson_title: item.title,
+          order_index: item.order,
+          topic: item.topic,
+          url: `/en/videos?lesson=lesson-${item.order}`,
+          button_text: `▶️ ${item.order}-dars: ${item.title} darsini ko'rish`,
+          description: `Sizda ushbu mavzuda xatolik ko'p: ${item.desc}`,
+        });
+      }
+    }
+  }
+
+  return results;
+}
 interface ExamFeedbackModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,6 +134,7 @@ interface ExamFeedbackModalProps {
   speechDiagnostics?: Record<string, SpeechDiagnostics> | null;
   overallScore?: number | null;
   examType?: string;
+  recommendations?: WeakPointLessonRecommendation[];
 }
 
 export function ExamFeedbackModal({
@@ -71,10 +144,15 @@ export function ExamFeedbackModal({
   speechDiagnostics = {},
   overallScore,
   examType = "ielts",
+  recommendations: externalRecs,
 }: ExamFeedbackModalProps) {
   const skills = Object.keys(skillFeedbacks).filter((s) => Boolean(skillFeedbacks[s]));
   const defaultSkill = skills[0] || "writing";
   const [activeSkill, setActiveSkill] = React.useState<string>(defaultSkill);
+  const activeFeedback = skillFeedbacks[activeSkill] || null;
+  const activeRecommendations = (externalRecs && externalRecs.length > 0)
+    ? externalRecs
+    : deriveRecommendationsFromFeedback(activeFeedback);
   const [copied, setCopied] = React.useState(false);
 
   React.useEffect(() => {
@@ -386,6 +464,45 @@ export function ExamFeedbackModal({
                           {idx + 1}
                         </span>
                         <span className="leading-relaxed">{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* 5. Smart Video Lesson Recommendations for Weak Points */}
+              {activeRecommendations && activeRecommendations.length > 0 && (
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                    <Sparkles className="size-4 text-emerald-400" />
+                    Zaif Nuqtalarni Yopish Uchun Tavsiya Etilgan Video Darslar
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {activeRecommendations.map((rec, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4 flex flex-col justify-between space-y-3"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-white">{rec.topic}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                              {rec.order_index}-Dars
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            {rec.description}
+                          </p>
+                        </div>
+
+                        <a
+                          href={rec.url}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-2 text-xs shadow-md transition-all hover:scale-[1.02]"
+                        >
+                          <Play className="size-3.5 fill-current" />
+                          <span>{rec.button_text}</span>
+                        </a>
                       </div>
                     ))}
                   </div>

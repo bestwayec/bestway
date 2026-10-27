@@ -18,6 +18,8 @@ export interface MistakeCategory {
   accuracy: number;
   lastTrained?: string;
   recommendedFocus: string;
+  videoUrl?: string;
+  videoButtonText?: string;
 }
 
 const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
@@ -30,6 +32,8 @@ const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
     accuracy: 66,
     lastTrained: "2 kun oldin",
     recommendedFocus: "Matnda to'g'ridan-to'g'ri berilmagan ma'lumotlarni taxmin qilmaslik (Not Given vs False).",
+    videoUrl: "/en/videos?lesson=lesson-29",
+    videoButtonText: "▶️ 29-dars: Linking Words",
   },
   {
     id: "headings",
@@ -40,6 +44,8 @@ const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
     accuracy: 72,
     lastTrained: "Kecha",
     recommendedFocus: "Paragrafning birinchi va oxirgi jumlalariga emas, umumiy g'oyasiga e'tibor qaratish.",
+    videoUrl: "/en/videos?lesson=lesson-26",
+    videoButtonText: "▶️ 26-dars: Relative Clauses",
   },
   {
     id: "info-matching",
@@ -50,6 +56,8 @@ const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
     accuracy: 65,
     lastTrained: "3 kun oldin",
     recommendedFocus: "Spikerning fikrini o'zgartiruvchi 'However', 'Actually' kabi signallarni payqash.",
+    videoUrl: "/en/videos?lesson=lesson-13",
+    videoButtonText: "▶️ 13-dars: Reported Speech",
   },
   {
     id: "summary",
@@ -60,6 +68,8 @@ const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
     accuracy: 81,
     lastTrained: "Bugun",
     recommendedFocus: "Grammatik shakl (ot, fe'l, sifat) va so'z chegarasi (NO MORE THAN TWO WORDS) qoidasi.",
+    videoUrl: "/en/videos?lesson=lesson-1",
+    videoButtonText: "▶️ 1-dars: Nouns (Otlar)",
   },
 ];
 
@@ -176,11 +186,16 @@ export function MistakeVault({ className }: { className?: string }) {
                     </p>
                   </div>
 
-                  {/* Re-test CTA Button */}
-                  <div className="pt-3 mt-3 border-t border-slate-800/60 flex items-center justify-between">
-                    <span className="text-[10px] text-emerald-400/90 font-medium flex items-center gap-1">
-                      <Sparkles className="size-3" /> 10 ta maxsus savol
-                    </span>
+                  {/* Re-test & Video Lesson Routing CTA */}
+                  <div className="pt-3 mt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2">
+                    <a
+                      href={cat.videoUrl || "/en/videos"}
+                      className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold transition-all hover:scale-[1.02]"
+                    >
+                      <Play className="size-3 fill-current" />
+                      <span>{cat.videoButtonText || "▶️ Darsni ko'rish"}</span>
+                    </a>
+
                     <Button
                       type="button"
                       size="sm"
@@ -188,7 +203,7 @@ export function MistakeVault({ className }: { className?: string }) {
                       onClick={() => handleStartReTest(cat)}
                       className="h-8 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white text-xs font-semibold shadow-sm transition-all"
                     >
-                      <Play className="size-3 fill-current mr-1" />
+                      <Sparkles className="size-3 mr-1" />
                       Bo&apos;shliqlarni yopish (10 ta)
                     </Button>
                   </div>

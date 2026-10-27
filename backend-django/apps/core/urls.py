@@ -1,3 +1,5 @@
+from apps.exams import analytics_service
+from apps.bamboozle import views as bamboozle_views
 from django.urls import path
 
 from . import article_views as articles
@@ -596,4 +598,28 @@ urlpatterns = [
     path('gamification/leaderboard/', lms.lms_leaderboard_view),
     path('v1/gamification/leaderboard', lms.lms_leaderboard_view),
     path('v1/gamification/leaderboard/', lms.lms_leaderboard_view),
+    path('bamboozle/rooms/create', bamboozle_views.create_room_view),
+    path('bamboozle/rooms/create/', bamboozle_views.create_room_view),
+    path('v1/bamboozle/rooms/create', bamboozle_views.create_room_view),
+    path('v1/bamboozle/rooms/create/', bamboozle_views.create_room_view),
+    path('bamboozle/rooms/<str:room_code>', bamboozle_views.get_room_view),
+    path('bamboozle/rooms/<str:room_code>/', bamboozle_views.get_room_view),
+    path('v1/bamboozle/rooms/<str:room_code>', bamboozle_views.get_room_view),
+    path('v1/bamboozle/rooms/<str:room_code>/', bamboozle_views.get_room_view),
+    path('bamboozle/rooms/<str:room_code>/join', bamboozle_views.join_room_view),
+    path('bamboozle/rooms/<str:room_code>/join/', bamboozle_views.join_room_view),
+    path('v1/bamboozle/rooms/<str:room_code>/join', bamboozle_views.join_room_view),
+    path('v1/bamboozle/rooms/<str:room_code>/join/', bamboozle_views.join_room_view),
+    path('bamboozle/rooms/<str:room_code>/play', bamboozle_views.play_room_action_view),
+    path('bamboozle/rooms/<str:room_code>/play/', bamboozle_views.play_room_action_view),
+    path('v1/bamboozle/rooms/<str:room_code>/play', bamboozle_views.play_room_action_view),
+    path('v1/bamboozle/rooms/<str:room_code>/play/', bamboozle_views.play_room_action_view),
+    path('mock/attempts/<str:attempt_id>/recommendations', analytics_service.attempt_recommendations_view),
+    path('mock/attempts/<str:attempt_id>/recommendations/', analytics_service.attempt_recommendations_view),
+    path('v1/mock/attempts/<str:attempt_id>/recommendations', analytics_service.attempt_recommendations_view),
+    path('v1/mock/attempts/<str:attempt_id>/recommendations/', analytics_service.attempt_recommendations_view),
+    path('analytics/weak-points/recommendations', analytics_service.weak_points_recommendations_view),
+    path('analytics/weak-points/recommendations/', analytics_service.weak_points_recommendations_view),
+    path('v1/analytics/weak-points/recommendations', analytics_service.weak_points_recommendations_view),
+    path('v1/analytics/weak-points/recommendations/', analytics_service.weak_points_recommendations_view),
 ]

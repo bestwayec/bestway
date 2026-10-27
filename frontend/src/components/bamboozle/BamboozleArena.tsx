@@ -13,6 +13,8 @@ import {
   RefreshCw,
   Sparkles,
   Swords,
+  Send,
+  Copy,
   Trophy,
   Volume2,
   VolumeX,
@@ -38,6 +40,11 @@ export interface BamboozleArenaProps {
   deckTitle: string;
   category?: string;
   cards: BamboozleCard[];
+  roomCode?: string;
+  shareUrl?: string;
+  telegramShareUrl?: string;
+  team1Name?: string;
+  team2Name?: string;
   onExit?: () => void;
   onGameEnd?: (winner: { team: number; score: number }) => void;
 }
@@ -206,6 +213,11 @@ export function BamboozleArena({
   deckTitle,
   category = "Umumiy",
   cards: initialCards,
+  roomCode,
+  shareUrl,
+  telegramShareUrl,
+  team1Name = "Team 1",
+  team2Name = "Team 2",
   onExit,
   onGameEnd,
 }: BamboozleArenaProps) {
@@ -474,6 +486,23 @@ export function BamboozleArena({
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-red-400" />}
           </Button>
 
+          {roomCode && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs">
+              <span className="text-slate-400 font-mono">Xona:</span>
+              <span className="font-mono font-bold text-emerald-400 tracking-wider">{roomCode}</span>
+              {telegramShareUrl && (
+                <a
+                  href={telegramShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-[11px] shadow-sm transition-all"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Telegram</span>
+                </a>
+              )}
+            </div>
+          )}
           <Button
             type="button"
             size="sm"
@@ -521,7 +550,7 @@ export function BamboozleArena({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
-              <h4 className="font-black text-emerald-400 text-lg uppercase tracking-wider">Team 1</h4>
+              <h4 className="font-black text-emerald-400 text-lg uppercase tracking-wider">{team1Name || "Team 1"}</h4>
               {team1Double && (
                 <Badge variant="neutral" className="bg-amber-500/20 text-amber-300 text-xs font-bold animate-bounce">
                   ⚡️ 2X FAOL
@@ -550,7 +579,7 @@ export function BamboozleArena({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
-              <h4 className="font-black text-amber-400 text-lg uppercase tracking-wider">Team 2</h4>
+              <h4 className="font-black text-amber-400 text-lg uppercase tracking-wider">{team2Name || "Team 2"}</h4>
               {team2Double && (
                 <Badge variant="neutral" className="bg-amber-500/20 text-amber-300 text-xs font-bold animate-bounce">
                   ⚡️ 2X FAOL

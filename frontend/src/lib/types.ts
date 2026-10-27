@@ -920,6 +920,7 @@ export interface DiagnosticFeedback {
   vocabulary_upgrades: { original: string; alternative: string; explanation?: string }[];
   action_plan: string[];
   band_8_rewrite: string;
+  weaknesses?: string[];
 }
 
 export interface MockAttemptDetail extends MockAttemptSummary {
