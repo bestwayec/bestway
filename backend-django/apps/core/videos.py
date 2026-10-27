@@ -92,6 +92,11 @@ def format_duration(seconds):
 
 
 def listing(actor=None):
+    from django.core.cache import cache
+    if actor is None:
+        cached = cache.get("lms:video_lessons:public")
+        if cached is not None:
+            return cached
     from apps.core.models import Lesson, UserLessonProgress
     purchases=dict(VideoPurchase.objects.filter(user_id=actor.id).values_list('video_id','status')) if actor else {}
     completed_ids = set()
@@ -129,6 +134,7 @@ def listing(actor=None):
                 "hasQuiz": deck is not None,
                 "bamboozleDeckId": str(deck.id) if deck else None,
                 "streamUrl": f"{public_url()}/v1/lessons/{l.id}/stream",
+                "hlsPlaylistUrl": f"{public_url()}/v1/lessons/{l.id}/hls/playlist.m3u8",
             }
             result.append(item)
     except Exception:
@@ -142,6 +148,12 @@ def listing(actor=None):
         value=shape(row)
         if actor:value['access']=access(actor,row,purchases.get(row.id))
         result.append(value)
+    if actor is None:
+        try:
+            from django.core.cache import cache
+            cache.set("lms:video_lessons:public", result, 300)
+        except Exception:
+            pass
     return result
 
 

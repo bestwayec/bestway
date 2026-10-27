@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Hls from "hls.js";
 import {
   AlertTriangle,
   Award,
@@ -11,6 +12,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Settings,
   Sparkles,
   Volume1,
   Volume2,
@@ -22,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 
 export interface GamifiedVideoPlayerProps {
   src: string;
+  hlsSrc?: string;
   lessonId: string;
   lessonTitle: string;
   lessonDuration?: number;
@@ -34,6 +37,13 @@ export interface GamifiedVideoPlayerProps {
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
 
+export interface VideoQualityOption {
+  index: number;
+  label: string;
+  height: number;
+  bitrate?: number;
+}
+
 function formatSeconds(val: number): string {
   if (!Number.isFinite(val) || val < 0) return "00:00";
   const m = Math.floor(val / 60);
@@ -43,6 +53,7 @@ function formatSeconds(val: number): string {
 
 export function GamifiedVideoPlayer({
   src,
+  hlsSrc,
   lessonId,
   lessonTitle,
   lessonDuration = 0,
@@ -54,6 +65,7 @@ export function GamifiedVideoPlayer({
 }: GamifiedVideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const hlsRef = React.useRef<Hls | null>(null);
 
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -62,6 +74,13 @@ export function GamifiedVideoPlayer({
   const [muted, setMuted] = React.useState(false);
   const [playbackRate, setPlaybackRate] = React.useState<number>(1);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+
+  // HLS Adaptive Streaming & Quality States
+  const [qualities, setQualities] = React.useState<VideoQualityOption[]>([]);
+  const [selectedQuality, setSelectedQuality] = React.useState<number>(-1); // -1 = Auto
+  const [activeQualityLabel, setActiveQualityLabel] = React.useState<string>("Auto");
+  const [showQualityMenu, setShowQualityMenu] = React.useState<boolean>(false);
+  const [isHlsActive, setIsHlsActive] = React.useState<boolean>(false);
 
   // Anti-cheat state
   const maxWatchedRef = React.useRef(0);
@@ -77,15 +96,103 @@ export function GamifiedVideoPlayer({
   } | null>(null);
   const [isSubmittingCompletion, setIsSubmittingCompletion] = React.useState(false);
 
-    React.useEffect(() => {
+  // Setup HLS or Fallback Video Source
+  React.useEffect(() => {
     const video = videoRef.current;
-    if (video) {
-      video.volume = 1.0;
-      video.muted = false;
-      setVolume(1.0);
-      setMuted(false);
+    if (!video) return;
+
+    video.volume = 1.0;
+    video.muted = false;
+    setVolume(1.0);
+    setMuted(false);
+
+    const streamCandidate = hlsSrc || (src && src.includes(".m3u8") ? src : null);
+
+    if (streamCandidate && Hls.isSupported()) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+      }
+
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 90,
+      });
+
+      hls.loadSource(streamCandidate);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        setIsHlsActive(true);
+        if (data.levels && data.levels.length > 0) {
+          const parsed: VideoQualityOption[] = data.levels.map((lvl, idx) => ({
+            index: idx,
+            label: lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`,
+            height: lvl.height || 0,
+            bitrate: lvl.bitrate,
+          }));
+          setQualities(parsed);
+        } else {
+          setQualities([
+            { index: 0, label: "480p", height: 480 },
+            { index: 1, label: "720p", height: 720 },
+            { index: 2, label: "1080p", height: 1080 },
+          ]);
+        }
+      });
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        if (selectedQuality === -1) {
+          const lvl = hls.levels[data.level];
+          if (lvl && lvl.height) {
+            setActiveQualityLabel(`Auto (${lvl.height}p)`);
+          } else {
+            setActiveQualityLabel("Auto");
+          }
+        }
+      });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              hlsRef.current = null;
+              setIsHlsActive(false);
+              if (video && src && !src.includes(".m3u8")) {
+                video.src = src;
+              }
+              break;
+          }
+        }
+      });
+
+      hlsRef.current = hls;
+
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    } else if (streamCandidate && video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = streamCandidate;
+      setIsHlsActive(true);
+      setQualities([
+        { index: 0, label: "480p", height: 480 },
+        { index: 1, label: "720p", height: 720 },
+        { index: 2, label: "1080p", height: 1080 },
+      ]);
+    } else if (src) {
+      video.src = src;
+      setIsHlsActive(false);
+      setQualities([]);
     }
-  }, [src]);
+  }, [src, hlsSrc, selectedQuality]);
 
   // Synchronize duration from video metadata and enforce unmuted audio
   const handleLoadedMetadata = () => {
@@ -109,6 +216,21 @@ export function GamifiedVideoPlayer({
       } catch {
         // audioTracks API not supported across all browsers
       }
+    }
+  };
+
+  // Quality Switching Handler
+  const handleQualitySelect = (index: number) => {
+    setSelectedQuality(index);
+    setShowQualityMenu(false);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = index;
+    }
+    if (index === -1) {
+      setActiveQualityLabel("Auto");
+    } else {
+      const opt = qualities.find((q) => q.index === index);
+      setActiveQualityLabel(opt ? opt.label : "Manual");
     }
   };
 
@@ -174,70 +296,84 @@ export function GamifiedVideoPlayer({
     };
   }, []);
 
+  // Periodic watch progress sync
+  React.useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(async () => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      try {
+        await api.post(`/v1/lessons/${lessonId}/progress`, {
+          currentTime: Math.floor(video.currentTime),
+          maxWatched: Math.floor(maxWatchedRef.current),
+        });
+      } catch {
+        // Silent catch for background progress sync
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, lessonId]);
+
+  // Controls Handlers
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    setTabPausedNotice(false);
     if (video.paused) {
-      video.volume = muted ? 0 : (volume || 1.0);
-      video.muted = muted;
-      video
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {
-          // If browser policy prevents unmuted playback without prior interaction, fallback to muted
-          video.muted = true;
-          setMuted(true);
-          video
-            .play()
-            .then(() => setIsPlaying(true))
-            .catch(() => setIsPlaying(false));
-        });
+      video.muted = false;
+      video.volume = volume > 0 ? volume : 1.0;
+      video.play().then(() => {
+        setIsPlaying(true);
+        setTabPausedNotice(false);
+      }).catch(() => {
+        setIsPlaying(false);
+      });
     } else {
       video.pause();
       setIsPlaying(false);
     }
   };
 
-  const handleRewind = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = Math.max(0, video.currentTime - 10);
-  };
-
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const targetTime = Number(e.target.value);
     const video = videoRef.current;
     if (!video) return;
 
-    if (targetTime > maxWatchedRef.current + 2) {
-      // Deny seeking forward
-      video.currentTime = maxWatchedRef.current;
-      setAntiCheatWarning(true);
-      setTimeout(() => setAntiCheatWarning(false), 3000);
-    } else {
+    const targetTime = parseFloat(e.target.value);
+    if (targetTime <= maxWatchedRef.current + 2) {
       video.currentTime = targetTime;
       setCurrentTime(targetTime);
+    } else {
+      video.currentTime = maxWatchedRef.current;
+      setCurrentTime(maxWatchedRef.current);
+      setAntiCheatWarning(true);
+      setTimeout(() => setAntiCheatWarning(false), 3000);
     }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
+    const val = parseFloat(e.target.value);
     setVolume(val);
-    setMuted(val === 0);
     if (videoRef.current) {
       videoRef.current.volume = val;
       videoRef.current.muted = val === 0;
     }
+    setMuted(val === 0);
   };
 
   const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
+
     const nextMuted = !muted;
     setMuted(nextMuted);
     video.muted = nextMuted;
+    if (!nextMuted && volume === 0) {
+      setVolume(0.5);
+      video.volume = 0.5;
+    }
   };
 
   const handleRateChange = (rate: number) => {
@@ -249,36 +385,50 @@ export function GamifiedVideoPlayer({
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
+
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      containerRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(() => {});
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch(() => {});
     }
   };
 
-  // Submit lesson completion
+  const handleRewind = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const target = Math.max(0, video.currentTime - 10);
+    video.currentTime = target;
+    setCurrentTime(target);
+  };
+
+  // Completion Trigger
   const handleCompleteLesson = async () => {
     if (completedRef.current || isSubmittingCompletion) return;
     completedRef.current = true;
     setIsSubmittingCompletion(true);
 
-    const sessionDuration = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
-    const watchedSeconds = Math.round(maxWatchedRef.current);
+    const timeSpent = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
 
     try {
-      const res = await api.post<any>(`/v1/lessons/${lessonId}/complete`, {
-        sessionDuration,
-        watchedSeconds,
+      const res = await api.post(`/v1/lessons/${lessonId}/complete`, {
+        watchSeconds: Math.floor(maxWatchedRef.current),
+        timeSpentSeconds: timeSpent,
       });
 
-      const payload = res.data?.data || res.data || {};
-      const earnedXp = payload.earned_xp || xpReward;
-      const unlocked = payload.unlocked_deck || (tiedDeckId ? { id: tiedDeckId, title: tiedDeckTitle || "Bamboozle Testi" } : null);
+      const payload = (res as any)?.data?.data || (res as any)?.data || (res as any) || {};
+      setCompletionData({
+        earnedXp: payload.earnedXp ?? xpReward,
+        unlockedDeck: payload.unlockedDeck || (tiedDeckId ? { id: tiedDeckId, title: tiedDeckTitle || "Bamboozle Testi" } : null),
+      });
 
-      setCompletionData({ earnedXp, unlockedDeck: unlocked });
-      if (onComplete) onComplete(payload);
+      if (onComplete) {
+        onComplete(payload);
+      }
     } catch {
-      // In case of error, still show completion if completedRef was marked
       setCompletionData({
         earnedXp: xpReward,
         unlockedDeck: tiedDeckId ? { id: tiedDeckId, title: tiedDeckTitle || "Bamboozle Testi" } : null,
@@ -296,7 +446,7 @@ export function GamifiedVideoPlayer({
       {/* Video Element */}
       <video
         ref={videoRef}
-        src={src}
+        src={isHlsActive ? undefined : src}
         className="w-full aspect-video object-contain bg-black cursor-pointer"
         onClick={togglePlay}
         onLoadedMetadata={handleLoadedMetadata}
@@ -359,6 +509,11 @@ export function GamifiedVideoPlayer({
           <Badge variant="neutral" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
             LMS Protected
           </Badge>
+          {isHlsActive && (
+            <Badge variant="neutral" className="bg-teal-500/20 text-teal-300 border-teal-500/30 text-[10px]">
+              HLS Adaptive
+            </Badge>
+          )}
           <span className="text-sm font-semibold text-white drop-shadow truncate max-w-md">
             {lessonTitle}
           </span>
@@ -419,7 +574,54 @@ export function GamifiedVideoPlayer({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* HLS Quality Selector Menu */}
+            {(isHlsActive || qualities.length > 0) && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowQualityMenu((prev) => !prev)}
+                  className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all shadow-sm"
+                  title="Video sifatini tanlash (1080p / 720p / 480p / Auto)"
+                >
+                  <Settings className="w-3 h-3 text-emerald-400" />
+                  <span>{activeQualityLabel}</span>
+                </button>
+
+                {showQualityMenu && (
+                  <div className="absolute bottom-8 right-0 z-40 min-w-[100px] rounded-xl bg-slate-950/95 border border-emerald-500/30 p-1 shadow-2xl backdrop-blur-md flex flex-col gap-0.5 animate-in fade-in zoom-in duration-150">
+                    <button
+                      type="button"
+                      onClick={() => handleQualitySelect(-1)}
+                      className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg transition-all flex items-center justify-between ${
+                        selectedQuality === -1
+                          ? "bg-emerald-500 text-slate-950 font-bold"
+                          : "text-slate-300 hover:text-white hover:bg-emerald-500/15"
+                      }`}
+                    >
+                      <span>Auto</span>
+                      {selectedQuality === -1 && <span className="text-[10px]">✓</span>}
+                    </button>
+                    {qualities.map((q) => (
+                      <button
+                        key={q.index}
+                        type="button"
+                        onClick={() => handleQualitySelect(q.index)}
+                        className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg transition-all flex items-center justify-between ${
+                          selectedQuality === q.index
+                            ? "bg-emerald-500 text-slate-950 font-bold"
+                            : "text-slate-300 hover:text-white hover:bg-emerald-500/15"
+                        }`}
+                      >
+                        <span>{q.label}</span>
+                        {selectedQuality === q.index && <span className="text-[10px]">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Playback Speed */}
             <div className="flex items-center gap-1">
               {SPEEDS.map((s) => (
@@ -519,7 +721,7 @@ export function GamifiedVideoPlayer({
             type="button"
             variant="ghost"
             onClick={() => setCompletionData(null)}
-            className="text-slate-400 hover:text-white text-sm"
+            className="text-xs text-slate-400 hover:text-white"
           >
             Yopish
           </Button>

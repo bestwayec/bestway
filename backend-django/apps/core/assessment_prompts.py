@@ -8,7 +8,19 @@ Grammar corrections quote only short relevant excerpts. Provide practical streng
 Pronunciation evidence is {input['pronunciationEvidence']}. A transcript, punctuation, timestamps and ASR word confidence are NOT acoustic pronunciation evidence. When unavailable, explicitly state this limitation, never assign a pronunciation criterion score, and do not claim an IELTS Speaking band is complete. Do not infer reliable pauses, speed or fluency from plain text alone; explain limits."""
     if input['program']!='MULTILEVEL':
         if input['skill']=='writing':return common+f"""
-IELTS {'Academic' if input['program']=='IELTS_ACADEMIC' else 'General Training'} Writing: assess each task using ta (Task Achievement for Task 1, Task Response for Task 2), cc (Coherence/Cohesion), lr (Lexical Resource), gra (Grammar Range/Accuracy). Each criterion uses 0..9 half-bands with equal weight within a task. Task 2 has twice Task 1's weight; the application calculates this. Preserve Academic report versus General Training letter genre, purpose/register and audience. Do not invent unseen visual data: reduce confidence/identify missing context."""
+IELTS {'Academic' if input['program']=='IELTS_ACADEMIC' else 'General Training'} Writing: rigorously assess each task using the 4 official international criteria with equal 25% weight per task:
+1. Task Achievement (Task 1) / Task Response (Task 2) [25%]:
+   - Task 1: Check whether all key features and main trends are accurately reported and compared; check clear overview; enforce minimum 150 words.
+   - Task 2: Check whether all parts of the question are addressed; check clear position maintained throughout; check well-supported main ideas with reasons and examples; enforce minimum 250 words.
+   - Penalize underlength answers and off-topic or memorized template responses.
+2. Coherence and Cohesion [25%]:
+   - Evaluate logical paragraphing, topic progression, appropriate cohesive devices, referencing, and linking words without mechanical overuse.
+3. Lexical Resource [25%]:
+   - Evaluate academic and varied vocabulary, natural collocations, C1/C2 advanced expressions, precise word choice, paraphrasing skill, and spelling control.
+4. Grammatical Range and Accuracy [25%]:
+   - Evaluate variety of complex sentence structures (subordination, conditionals, passives, modals, relative clauses), tense consistency, punctuation, and frequency of error-free sentences.
+Each criterion uses 0.0..9.0 in exact 0.5 half-band increments (e.g. 5.5, 6.0, 6.5, 7.0, 7.5, 8.0). Task 2 has twice Task 1's weight; application arithmetic calculates the combined band.
+Must provide actionable inline grammarCorrections (with original excerpt, corrected form, and explanation) and vocabularyUpgrades (with original word, advanced alternative, and explanation) directly quoting candidate text."""
         return common+"""
 IELTS Speaking: assess all Part 1/2/3 responses holistically across fluency, lexical, grammar and pronunciation, each 0..9 in half-band steps and equally weighted. Include part-specific task coverage from supplied response part numbers. Without genuine acoustic pronunciation evidence, pronunciation must be null and formal rawScore must be null; provide the other criterion evidence as provisional feedback. Do not fabricate acoustic observations."""
     if input['skill']=='writing':return common+"""

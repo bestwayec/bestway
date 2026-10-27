@@ -540,6 +540,13 @@ urlpatterns = [
     path('lessons/<str:lesson_id>/stream/', lms.lesson_stream_view),
     path('v1/lessons/<str:lesson_id>/stream', lms.lesson_stream_view),
     path('v1/lessons/<str:lesson_id>/stream/', lms.lesson_stream_view),
+    path('lessons/<str:lesson_id>/hls/playlist.m3u8', lms.lesson_hls_playlist_view),
+    path('v1/lessons/<str:lesson_id>/hls/playlist.m3u8', lms.lesson_hls_playlist_view),
+    path('lessons/<str:lesson_id>/hls/<str:filename>', lms.lesson_hls_file_view),
+    path('v1/lessons/<str:lesson_id>/hls/<str:filename>', lms.lesson_hls_file_view),
+    path('media/videos/hls/<str:lesson_id>/<str:filename>', lms.lesson_hls_file_view),
+    path('lessons/<str:lesson_id>/hls/transcode', lms.lesson_hls_transcode_trigger_view),
+    path('v1/lessons/<str:lesson_id>/hls/transcode', lms.lesson_hls_transcode_trigger_view),
 
     path('lessons/<str:lesson_id>/progress', lms.lesson_progress_view),
     path('lessons/<str:lesson_id>/progress/', lms.lesson_progress_view),

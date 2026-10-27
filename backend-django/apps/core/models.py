@@ -236,6 +236,7 @@ class Lesson(models.Model):
     description = models.TextField(blank=True, default="")
     video_file = models.CharField(max_length=500, blank=True, default="")
     video_url = models.CharField(max_length=500, blank=True, default="")
+    hls_playlist_url = models.CharField(max_length=500, blank=True, default="")
     duration = models.IntegerField(default=0)  # in seconds
     xp_reward = models.IntegerField(default=50)
     order_index = models.IntegerField(default=1)

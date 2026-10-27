@@ -885,6 +885,13 @@ def upload_speaking(actor, attempt_id, question_id, upload):
             MockAnswer.objects.update_or_create(attempt_id=attempt_id, question_id=question_id,
                 defaults=dict(audio_key=created_key, updated_at=timezone.now()),
                 create_defaults=dict(id=new_id(), audio_key=created_key, response='', is_graded=False, updated_at=timezone.now()))
+            if created_key:
+                try:
+                    from apps.exams.audio_service import compress_speaking_audio_async
+                    c_key = created_key
+                    transaction.on_commit(lambda: compress_speaking_audio_async(c_key, attempt_id, question_id), robust=True)
+                except Exception:
+                    pass
             if prior and prior.audio_key:
                 transaction.on_commit(lambda: delete_unreferenced(prior.audio_key), robust=True)
         return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id), **({'audioDurationMs': duration} if duration is not None else {}))

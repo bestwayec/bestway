@@ -5,32 +5,32 @@ from apps.core.views import _compare_semver
 
 
 def test_compare_semver():
+    assert _compare_semver("1.0.6", "1.0.6") == 0
+    assert _compare_semver("0.8.5", "1.0.6") == -1
+    assert _compare_semver("1.0.7", "1.0.6") == 1
+    assert _compare_semver("1.0", "1.0.0") == 0
     assert _compare_semver("0.8.5", "0.8.5") == 0
-    assert _compare_semver("0.8.4", "0.8.5") == -1
-    assert _compare_semver("0.8.6", "0.8.5") == 1
-    assert _compare_semver("0.8", "0.8.0") == 0
-    assert _compare_semver("0.7.9", "0.8.0") == -1
 
 
 @pytest.mark.django_db
 def test_desktop_update_check_current_version_returns_204():
     c = Client()
-    # When client version is equal or newer than 0.8.5
-    resp = c.get("/v1/desktop/update/windows-x86_64/0.8.5")
+    # When client version is equal or newer than 1.0.6
+    resp = c.get("/v1/desktop/update/windows-x86_64/1.0.6")
     assert resp.status_code == 204
 
-    resp_newer = c.get("/v1/desktop/update/windows-x86_64/0.8.6")
+    resp_newer = c.get("/v1/desktop/update/windows-x86_64/1.0.7")
     assert resp_newer.status_code == 204
 
 
 @pytest.mark.django_db
 def test_desktop_update_check_old_version_returns_manifest():
     c = Client()
-    # When client version is older than 0.8.5
-    resp = c.get("/v1/desktop/update/windows-x86_64/0.8.0")
+    # When client version is older than 1.0.6
+    resp = c.get("/v1/desktop/update/windows-x86_64/0.8.5")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["version"] == "0.8.5"
+    assert data["version"] == "1.0.6"
     assert "notes" in data
     assert "pub_date" in data
     assert "url" in data

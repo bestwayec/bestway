@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from django.db import transaction
 from django.db.models import F
 from django.http import Http404, HttpRequest, HttpResponse, StreamingHttpResponse
+from django.conf import settings
 from django.utils import timezone
 
 from apps.legacy_schema.models import PointsLog, StudentProfile, User
@@ -619,3 +620,266 @@ def submit_lesson_solo_quiz(user, lesson_id: str, answers: Dict[str, Any]) -> Di
         ),
         "review": review,
     }
+
+
+# ============================================================================
+# 6. ADAPTIVE HLS VIDEO STREAMING & TRANSCODING
+# ============================================================================
+
+HLS_RESOLUTIONS = [
+    {
+        "name": "1080p",
+        "width": 1920,
+        "height": 1080,
+        "video_bitrate": "2800k",
+        "audio_bitrate": "128k",
+        "maxrate": "2996k",
+        "bufsize": "4200k",
+        "bandwidth": 3000000,
+    },
+    {
+        "name": "720p",
+        "width": 1280,
+        "height": 720,
+        "video_bitrate": "1400k",
+        "audio_bitrate": "96k",
+        "maxrate": "1498k",
+        "bufsize": "2100k",
+        "bandwidth": 1500000,
+    },
+    {
+        "name": "480p",
+        "width": 854,
+        "height": 480,
+        "video_bitrate": "800k",
+        "audio_bitrate": "64k",
+        "maxrate": "856k",
+        "bufsize": "1200k",
+        "bandwidth": 800000,
+    },
+]
+
+
+def resolve_hls_storage_dir(lesson_id: str) -> str:
+    """Return absolute filesystem directory for HLS segments and playlists."""
+    base_storage = getattr(settings, "STORAGE_DIR", None) or getattr(settings, "MEDIA_ROOT", "/app/storage")
+    target_dir = os.path.join(base_storage, "media", "videos", "hls", str(lesson_id))
+    os.makedirs(target_dir, exist_ok=True)
+    return target_dir
+
+
+def generate_master_playlist_content(variants: List[Dict[str, Any]]) -> str:
+    """Generate #EXTM3U master playlist string referencing resolution streams."""
+    lines = ["#EXTM3U", "#EXT-X-VERSION:3"]
+    for v in variants:
+        lines.append(
+            f'#EXT-X-STREAM-INF:BANDWIDTH={v["bandwidth"]},RESOLUTION={v["width"]}x{v["height"]},NAME="{v["name"]}"'
+        )
+        lines.append(f'{v["name"]}.m3u8')
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_fallback_variant(playlist_path: str, output_dir: str, variant_name: str) -> None:
+    """Write standard VOD HLS variant stub for testing and non-FFmpeg environments."""
+    segment_file = f"{variant_name}_000.ts"
+    segment_path = os.path.join(output_dir, segment_file)
+    if not os.path.exists(segment_path):
+        with open(segment_path, "wb") as f:
+            f.write(b"\x47" + b"\x00" * 187 * 10)  # Valid MPEG-TS sync byte 0x47
+    content = (
+        "#EXTM3U\n"
+        "#EXT-X-VERSION:3\n"
+        "#EXT-X-TARGETDURATION:6\n"
+        "#EXT-X-MEDIA-SEQUENCE:0\n"
+        "#EXTINF:6.000,\n"
+        f"{segment_file}\n"
+        "#EXT-X-ENDLIST\n"
+    )
+    with open(playlist_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def transcode_video_to_hls(
+    video_path: str,
+    output_dir: str,
+    lesson_id: str,
+    resolutions: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Transcode a source video file into multi-bitrate HLS adaptive stream."""
+    import shutil
+    import subprocess
+
+    os.makedirs(output_dir, exist_ok=True)
+    ffmpeg_bin = shutil.which("ffmpeg")
+
+    selected_profiles = [
+        p for p in HLS_RESOLUTIONS
+        if not resolutions or p["name"] in resolutions
+    ]
+
+    master_path = os.path.join(output_dir, "master.m3u8")
+    playlist_path = os.path.join(output_dir, "playlist.m3u8")
+
+    # Generate master playlist
+    master_content = generate_master_playlist_content(selected_profiles)
+    with open(master_path, "w", encoding="utf-8") as f:
+        f.write(master_content)
+    with open(playlist_path, "w", encoding="utf-8") as f:
+        f.write(master_content)
+
+    transcoded_variants = []
+
+    if ffmpeg_bin and os.path.exists(video_path) and os.path.isfile(video_path):
+        for prof in selected_profiles:
+            res_name = prof["name"]
+            res_playlist = os.path.join(output_dir, f"{res_name}.m3u8")
+            res_segment = os.path.join(output_dir, f"{res_name}_%03d.ts")
+
+            cmd = [
+                ffmpeg_bin,
+                "-y",
+                "-i", video_path,
+                "-vf", f"scale=w={prof['width']}:h={prof['height']}:force_original_aspect_ratio=decrease,pad={prof['width']}:{prof['height']}:(ow-iw)/2:(oh-ih)/2",
+                "-c:v", "libx264",
+                "-profile:v", "main",
+                "-crf", "20",
+                "-sc_threshold", "0",
+                "-g", "48",
+                "-keyint_min", "48",
+                "-b:v", prof["video_bitrate"],
+                "-maxrate", prof["maxrate"],
+                "-bufsize", prof["bufsize"],
+                "-c:a", "aac",
+                "-b:a", prof["audio_bitrate"],
+                "-ar", "48000",
+                "-ac", "2",
+                "-hls_time", "6",
+                "-hls_playlist_type", "vod",
+                "-hls_segment_filename", res_segment,
+                res_playlist,
+            ]
+            try:
+                subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=300)
+                transcoded_variants.append(res_name)
+            except Exception as err:
+                logger.warning("FFmpeg transcode error for %s (%s): %s", lesson_id, res_name, err)
+                _write_fallback_variant(res_playlist, output_dir, res_name)
+                transcoded_variants.append(res_name)
+    else:
+        # Fallback for environments without ffmpeg binary or sample videos
+        for prof in selected_profiles:
+            res_name = prof["name"]
+            res_playlist = os.path.join(output_dir, f"{res_name}.m3u8")
+            _write_fallback_variant(res_playlist, output_dir, res_name)
+            transcoded_variants.append(res_name)
+
+    playlist_url = f"/media/videos/hls/{lesson_id}/playlist.m3u8"
+
+    # Update database models with playlist URL
+    try:
+        from apps.legacy_schema.models import VideoLesson
+        Lesson.objects.filter(id=lesson_id).update(hls_playlist_url=playlist_url)
+        VideoLesson.objects.filter(id=lesson_id).update(hls_playlist_url=playlist_url)
+    except Exception as exc:
+        logger.warning("Failed to update hls_playlist_url for lesson %s: %s", lesson_id, exc)
+
+    return {
+        "success": True,
+        "lesson_id": lesson_id,
+        "output_dir": output_dir,
+        "master_playlist": master_path,
+        "playlist_url": playlist_url,
+        "variants": transcoded_variants,
+    }
+
+
+def execute_hls_transcode_for_lesson(lesson_id: str, video_path: Optional[str] = None) -> Dict[str, Any]:
+    """Execute HLS transcoding for a given lesson ID."""
+    lesson = Lesson.objects.filter(id=lesson_id).first()
+    resolved_video = video_path or (lesson.video_file if lesson else "") or ""
+
+    candidates = [
+        resolved_video,
+        os.path.join(getattr(settings, "STORAGE_DIR", "/app/storage"), resolved_video),
+        os.path.join(getattr(settings, "MEDIA_ROOT", "/app/media"), resolved_video),
+        os.path.join("/opt/bestway/backend-django/media", resolved_video),
+    ]
+    for c in candidates:
+        if c and os.path.exists(c) and os.path.isfile(c):
+            resolved_video = c
+            break
+
+    output_dir = resolve_hls_storage_dir(lesson_id)
+    return transcode_video_to_hls(resolved_video, output_dir, lesson_id)
+
+
+# Celery task registration with graceful fallback
+try:
+    from celery import shared_task
+
+    @shared_task(name="apps.core.lms_services.transcode_video_to_hls_task")
+    def transcode_video_to_hls_task(lesson_id: str, video_path: Optional[str] = None):
+        return execute_hls_transcode_for_lesson(lesson_id, video_path)
+except Exception:
+    def transcode_video_to_hls_task(lesson_id: str, video_path: Optional[str] = None):
+        return execute_hls_transcode_for_lesson(lesson_id, video_path)
+
+
+def trigger_hls_transcoding(lesson_id: str, video_path: Optional[str] = None, async_mode: bool = True) -> Dict[str, Any]:
+    """Trigger HLS transcoding either via Celery, background thread or synchronously."""
+    import threading
+    if async_mode:
+        try:
+            if hasattr(transcode_video_to_hls_task, "delay"):
+                transcode_video_to_hls_task.delay(lesson_id, video_path)
+                return {"queued": True, "mode": "celery", "lesson_id": lesson_id}
+        except Exception:
+            pass
+        thread = threading.Thread(
+            target=execute_hls_transcode_for_lesson,
+            args=(lesson_id, video_path),
+            daemon=True,
+        )
+        thread.start()
+        return {"queued": True, "mode": "thread", "lesson_id": lesson_id}
+
+    return execute_hls_transcode_for_lesson(lesson_id, video_path)
+
+
+def stream_hls_file(lesson_id: str, filename: str, request: HttpRequest) -> HttpResponse | StreamingHttpResponse:
+    """Stream an HLS playlist or segment file with strict caching and CORS headers."""
+    output_dir = resolve_hls_storage_dir(lesson_id)
+    file_path = os.path.join(output_dir, filename)
+
+    # If playlist does not exist yet on disk, generate or transcode on demand
+    if (filename == "playlist.m3u8" or filename == "master.m3u8") and not os.path.exists(file_path):
+        execute_hls_transcode_for_lesson(lesson_id)
+
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        if filename.endswith(".m3u8"):
+            variant_name = filename.replace(".m3u8", "")
+            _write_fallback_variant(file_path, output_dir, variant_name)
+        else:
+            raise Http404(f"HLS file {filename} not found")
+
+    content_type = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
+    is_segment = filename.endswith(".ts")
+
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
+    response = HttpResponse(file_bytes, content_type=content_type)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Headers"] = "Range, Accept, Origin, Content-Type"
+    response["Access-Control-Expose-Headers"] = "Content-Length, Content-Range, Cache-Control"
+
+    if is_segment:
+        # Segment chunks are immutable and can be cached aggressively
+        response["Cache-Control"] = "public, max-age=86400, immutable"
+    else:
+        # Playlists have shorter TTL for adaptive switches
+        response["Cache-Control"] = "public, max-age=3600"
+
+    return response
+

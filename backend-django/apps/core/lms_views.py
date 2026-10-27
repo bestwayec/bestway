@@ -18,6 +18,8 @@ from .lms_services import (
     get_quiz_deck_detail,
     list_quiz_decks,
     stream_video_file,
+    stream_hls_file,
+    trigger_hls_transcoding,
     update_watch_time,
     get_lesson_solo_quiz,
     submit_lesson_solo_quiz,
@@ -98,6 +100,8 @@ def course_detail_view(request, course_id):
             "is_completed": is_completed,
             "is_unlocked": is_unlocked,
             "has_quiz": l.quiz_decks.filter(is_lesson_tied=True).exists(),
+            "hls_playlist_url": l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8",
+            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8",
         })
 
     return success({
@@ -128,6 +132,8 @@ def lessons_list_view(request):
             "course_title": l.course.title if l.course else None,
             "has_quiz": bool(deck_id),
             "bamboozle_deck_id": deck_id,
+            "hls_playlist_url": l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8",
+            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8",
         })
     return success(result)
 
@@ -158,6 +164,30 @@ def lesson_stream_view(request, lesson_id):
             break
 
     return stream_video_file(resolved_path, request)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def lesson_hls_playlist_view(request, lesson_id):
+    """Serve HLS master playlist for adaptive video streaming."""
+    return stream_hls_file(lesson_id, "playlist.m3u8", request)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def lesson_hls_file_view(request, lesson_id, filename):
+    """Serve specific HLS playlist or segment chunk."""
+    return stream_hls_file(lesson_id, filename, request)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def lesson_hls_transcode_trigger_view(request, lesson_id):
+    """Trigger background HLS transcoding for a lesson."""
+    user = require_authenticated(request)
+    require_role(user, ["admin", "super_admin", "teacher"])
+    result = trigger_hls_transcoding(lesson_id, async_mode=True)
+    return success(result)
 
 
 @api_view(["GET", "POST"])
