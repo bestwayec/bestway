@@ -451,8 +451,54 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - VPS da barcha 29 ta dars, 29 ta to'plam va 464 ta savol kartochkasi ishga tushirildi.
    - Ommaviy endpointlar (https://bestwayec.uz/, https://bestwayec.uz/en/login, https://bestwayec.uz/api/backend/health) 200 OK qaytardi.
 
+### 23-BLOK: Web & Desktop UI Harmonization, Mobile Telegram Auth Deep-Linking & Tauri Auto-Updater Engine (v1.0.5)
+1. **Web Dashboard Obsidian-Emerald Rang Tizimiga Keltirildi**:
+   - `frontend/src/components/dashboard/`:
+     * `score-prediction-card.tsx`: Moviy (`sky-500`) va sariq ranglar Obsidian-Emerald palitrasiga (`#0B0F17`, `#111827`, `border-emerald-500/15`, `text-emerald-400`, `from-emerald-400 to-teal-500`) to'liq o'tkazildi.
+     * `adaptive-study-plan.tsx`: Zaif nuqtalar xaritasi va o'quv rejasi kartalari zumrad va teal gradientlariga moslashtirildi.
+     * `mistake-vault.tsx`: Xatolar banki kartochkasi `#111827` fon va `border-emerald-500/15` bilan yagona qat'iy standartga keltirildi.
+2. **Desktop App (Tauri) UI Harmonizatsiyasi**:
+   - `bw-tauri/src/styles.css`: `--accent`, `--highlight`, `--bw-green` ranglari eski lime (`#89F336`) dan zumrad (`#10B981` / `#34D399`) ga o'tkazildi.
+   - `bw-tauri/src/components/Sidebar.tsx`: Qanotli "B" emblemasi va faol menyu pillalari zamonaviy Obsidian-Emerald gradientiga keltirildi.
+   - `bw-tauri/src/pages/Settings.tsx` va `Profile.tsx`: Switch toggle tugmalari `bg-emerald-500` va neon zumrad soya bilan uyg'unlashtirildi.
+   - `bw-tauri/src/App.tsx`: Tarmoq onlayn indikatori (`OnlineDot`), fon zarrachalari (`particleColors`) va uchqun effektlari zumrad palitrasiga o'tkazildi.
+3. **Mobil Telegram Auth Deep-Linking Yechimi (`bestwayapp://`)**:
+   - Muammo: Mobil ilovada Telegram orqali kirilganda foydalanuvchi ilova ichida qolmasdan tashqi brauzer veb-sahifasiga o'tib ketayotgan edi.
+   - Backend (`backend-django/apps/core/telegram_views.py`):
+     * Agar so'rov mobil mijozdan bo'lsa (`client=mobile` yoki mobil User-Agent), `deepLink: bestwayapp://auth?token={accessToken}&refresh={refreshToken}` qaytariladi.
+     * GET so'rovlari va brauzer orqali ochilganda to'g'ridan-to'g'ri `bestwayapp://auth?...` manziliga 302 redirect beriladi.
+   - Frontend Next.js (`login-form.tsx` va `telegram-login/route.ts`): Mobil qurilmadan Telegram SSO muvaffaqiyatli o'tganda `window.location.href = deepLink` orqali ilovaga qaytarish ta'minlandi.
+   - Desktop & Android mijoz (`bw-tauri`):
+     * `AndroidManifest.xml` ga `<data android:scheme="bestwayapp" />` intent filter qo'shildi.
+     * `lib/oauth.ts` va `tauri.conf.json` da `bestwayapp` sxemasi ruxsat etildi (`ALLOWED_SCHEMES`, `ALLOWED_CALLBACKS`).
+     * `Login.tsx` ga to'g'ridan-to'g'ri tokenli avtorizatsiya handler qo'shildi — seans ilova ichida avtomatik o'rnatiladi.
+4. **Tauri Desktop Avto-Yangilanish Tizimi (Auto-Updater)**:
+   - Tarixiy relizlar, `.msi`, `.exe` va git teglar to'liq saqlab qolindi.
+   - `tauri.conf.json` da updater tekshirish manzili sozlandi: `https://bestwayec.uz/api/v1/desktop/update/{{target}}/{{current_version}}`.
+   - Backend (`views.py` & `urls.py`):
+     * `desktop_update_check(request, target, current_version)` endpointi yaratildi.
+     * Semver solishtirish: mijoz versiyasi joriy eng so'nggi versiya bilan teng yoki undan yuqori bo'lsa `204 No Content` qaytaradi.
+     * Yangilanish mavjud bo'lsa, Tauri v2 standartidagi JSON manifest (`200 OK`) va yangi reliz fayli havolasini uzatadi.
+5. **Sifat Nazorati va CI/PR Gate (100% PASS Gate)**:
+   - `bw-tauri`: `tsc --noEmit` 0 ta xatolik, `npm test` 41 ta test fayli, 327/327 test 100% PASS.
+   - `bestway/frontend`: `tsc --noEmit` 0 ta xatolik, `npm test` 57 ta test fayli, 366/366 test 100% PASS.
+   - `bestway/backend-django`: Pytest 560 ta test 100% PASS (`test_desktop_update_and_mobile_auth.py` 4/4 PASS).
+   - Mualliflik qat'iy tekshirildi: `Komiljon Roziyev <kruziyev0@gmail.com>`, nol sun'iy intellekt atributi (`zero-ai-attribution`).
+6. **VPS Zero-Downtime Deploy va 200/204 OK Verifikatsiya**:
+   - Contabo VPS (`169.58.58.229`) ga kod `origin/main` dan tortildi.
+   - `education-backend` va `education-frontend` konteynerlari granular tarzda qayta yuklandi.
+   - Post-deploy tekshiruvlar:
+     * `https://bestwayec.uz/` -> `200 OK`
+     * `https://bestwayec.uz/api/v1/health` -> `200 OK`
+     * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.5` -> `204 No Content` (mijoz eng so'nggi versiyada)
+     * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.0` -> `200 OK` (manifest JSON to'g'ri qaytdi)
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
+- Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
+- Mobil Telegram avtorizatsiyasi `bestwayapp://` deep-linking orqali to'g'ridan-to'g'ri ilovaga kirish rejimiga o'tkazildi.
+- Tauri avto-yangilanishi tekshirildi va VPS da 200 OK / 204 No Content holatlari tasdiqlandi.
+ va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 
 ---
 
