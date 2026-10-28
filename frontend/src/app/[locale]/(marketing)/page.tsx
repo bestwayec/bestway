@@ -21,7 +21,6 @@ import { TiltCard } from "@/components/ui/tilt-card";
 import { Reveal } from "@/components/marketing/reveal";
 import { CountUp } from "@/components/marketing/count-up";
 import { HeroShowcase } from "@/components/marketing/hero-showcase";
-import { HeroCta } from "@/components/marketing/hero-cta";
 import { TeachersCarousel } from "@/components/marketing/teachers-carousel";
 import type { TeacherProfile } from "@/components/marketing/teacher-card";
 import PixelCard from "@/components/ui/pixel-card-dynamic";
@@ -66,7 +65,7 @@ const COURSE_PIXEL: Record<
   (typeof COURSES)[number]["key"],
   { variant: "default" | "blue" | "yellow" | "pink"; gap: number; speed: number; colors: string; active: string }
 > = {
-  ielts: { variant: "blue", gap: 12, speed: 32, colors: "#213416,#89F336,#B9FF83", active: "#89F336" },
+  ielts: { variant: "blue", gap: 12, speed: 32, colors: "#064E3B,#10B981,#34D399", active: "#10B981" },
   multilevel: { variant: "yellow", gap: 10, speed: 28, colors: "#3A3510,#FFED29,#FFF580", active: "#FFED29" },
   sat: { variant: "pink", gap: 10, speed: 55, colors: "#3C260D,#FF991C,#FFC268", active: "#FF991C" },
 };
@@ -122,7 +121,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
         <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 py-8 sm:gap-10 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_1fr] lg:gap-8 lg:py-24 xl:max-w-7xl">
           <div className="order-2 text-center lg:order-1 lg:text-left">
-            <h1 className="mt-5 min-h-[2.2em] overflow-visible pt-1 text-[2rem] leading-[1.1] font-bold tracking-tight text-pretty text-fg sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold tracking-wide uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)] mb-4">
+              <span>✨ BestWay LMS</span>
+              <span className="text-slate-500">•</span>
+              <span>Do your best, forget the rest!</span>
+            </div>
+            <h1 className="mt-2 min-h-[2.2em] overflow-visible pt-1 text-[2rem] leading-[1.1] font-extrabold tracking-tight text-pretty bg-gradient-to-r from-white via-emerald-100 to-emerald-400 bg-clip-text text-transparent sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
               <HeroTitle text={t("heroTitle")} />
             </h1>
             <Reveal delay={180}>

@@ -1097,8 +1097,8 @@
     "partOfQuestions": "Part {a} of {b} questions"
   },
   "marketing": {
-    "heroTitle": "Assess your English level in 10 minutes with Artificial Intelligence",
-    "heroSubtitle": "Diagnostic aligned with Uzbekistan National Certificate (0-75) and IELTS (0-9.0) criteria. Objectively evaluate grammar, vocabulary and reading in 10 minutes.",
+    "heroTitle": "Do Your Best, Forget The Rest!",
+    "heroSubtitle": "Assess your English level in 10 minutes with AI-driven diagnostic aligned with National Certificate (0-75) and IELTS criteria.",
     "heroBadge": "Shofirkon, Bukhara · since 2007",
     "navCourses": "Courses",
     "navTeachers": "Teachers",
@@ -1234,7 +1234,8 @@
       "f2Text": "Computer-delivered format (Listening, Reading, Writing, Speaking) with Vision OCR for handwritten essays.",
       "f3Title": "Teacher Workspace",
       "f3Text": "Cohort homework assignments, handwritten essay manual override, and personalized MistakeVault diagnostics."
-    }
+    },
+    "heroMotto": "Do your best, forget the rest!"
   },
   "errors": {
     "notFound": "Page not found",

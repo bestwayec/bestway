@@ -100,7 +100,7 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
     authoring/grading contexts."""
     result = {
         "id": exam.id, "type": exam.type, "speakingProfileVersion": exam.speaking_profile_version,
-        "profile": exam.profile, "title": exam.title if answers else student_title(exam.title), "description": exam.description, "level": exam.level,
+        "profile": ("full_mock" if exam.profile == "full_mock" else "practice"), "rawProfile": exam.profile, "title": exam.title if answers else student_title(exam.title), "description": exam.description, "level": exam.level,
         "practiceLevel": exam.practice_level, "isPublished": exam.is_published, "isDemo": exam.is_demo,
         "createdAt": exam.created_at, "updatedAt": exam.updated_at, "contentVersion": exam.content_version,
         "questionCount": 0, "sections": [],
@@ -173,7 +173,7 @@ def list_exams(user, *, program=None, exam_type=None, practice_level=None):
         from apps.legacy_schema.models import MockExamImport
         latest = MockExamImport.objects.filter(exam_id=exam.id).order_by('-revision').first()
         data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": total_duration(exam, data['sections']), "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": start_ready(exam), "imported": dict(packageId=latest.package_id, revision=latest.revision, importedAt=latest.created_at) if latest else None})
-        data = {k: data[k] for k in ('id', 'type', 'profile', 'title', 'description', 'level', 'practiceLevel', 'isDemo', 'isPublished', 'ready', 'canEdit', 'skills', 'questionCount', 'durationMinutes', 'price', 'access', 'imported')}
+        data = {k: data[k] for k in ('id', 'type', 'profile', 'rawProfile', 'title', 'description', 'level', 'practiceLevel', 'isDemo', 'isPublished', 'ready', 'canEdit', 'skills', 'questionCount', 'durationMinutes', 'price', 'access', 'imported')}
         if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
             data.update(metadata(exam))
         items.append(data)

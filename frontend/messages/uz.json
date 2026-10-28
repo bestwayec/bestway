@@ -1096,8 +1096,8 @@
     "partOfQuestions": "{a}-qism, jami {b} savol"
   },
   "marketing": {
-    "heroTitle": "Ingliz tili darajangizni 10 daqiqada sun’iy intellekt orqali aniqlang",
-    "heroSubtitle": "O'zbekiston Milliy sertifikati (0-75) va IELTS (0-9.0) mezonlariga mos diagnostika. Grammatika, lug'at va reading ko'nikmalaringizni 10 daqiqada xolis baholang.",
+    "heroTitle": "Do Your Best, Forget The Rest!",
+    "heroSubtitle": "Ingliz tili darajangizni 10 daqiqada sun’iy intellekt orqali aniqlang — O'zbekiston Milliy sertifikati (0-75) va IELTS (0-9.0) mezonlariga mos AI diagnostika.",
     "heroBadge": "Shofirkon, Buxoro · 2007-yildan beri",
     "navCourses": "Kurslar",
     "navTeachers": "O'qituvchilar",
@@ -1233,7 +1233,8 @@
       "f2Text": "DTM CEFR va IELTS kompyuter formati (Listening, Reading, Writing, Speaking) hamda qo'lyozma insholar uchun Vision OCR.",
       "f3Title": "Teacher Workspace",
       "f3Text": "Ustozlar uchun guruhlar tahlili, kohort uy vazifalari, qo'lyozma insholarni qayta baholash va MistakeVault diagnostikasi."
-    }
+    },
+    "heroMotto": "Do your best, forget the rest!"
   },
   "errors": {
     "notFound": "Sahifa topilmadi",

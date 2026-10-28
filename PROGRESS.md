@@ -631,7 +631,8 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - **Zod Schema Sinxronizatsiyasi (src/lib/schemas.ts, src/lib/mocks.ts)**: MockExamListItemSchema da profile maydoni writing_speaking, partial_practice, single_skill hamda 
 ull qiymatlarini qabul qiladigan qilib kengaytirildi (SCHEMA_MISMATCH xatosi bartaraf etildi).
    - **Skeleton Loader va Track Auto-Fallback (src/pages/Exams.tsx, src/pages/Dashboard.tsx, src/pages/History.tsx)**: TanStack Query v5 da isPending o'rniga isLoading va 4.5 soniyalik watchdog taymeri joriy qilindi; asosiy yo'nalishda (IELTS / MULTILEVEL) imtihon bo'lmaganda ikkinchi yo'nalishdagi faol imtihonlar avtomatik yuklanishi va sahifaning o'zida 1-bosishda yo'nalish almashtirish tugmalari qo'shildi.
-   - **Filtrlar va Empty State (src/lib/catalogue.ts, src/pages/Exams.tsx)**: All, A1, A2, B1, B2, C1 va mahorat turlari (ll, ull_mock, listening, eading, writing, speaking) mijoz tomonida (matchesCatalogue) xatosiz filtrlanadigan qilindi; bo'sh holatda Obsidian-Emerald Empty State (*"Hozircha faol imtihonlar mavjud emas. Yangi mock e'lon qilinganda bu yerda ko'rinadi."*) chiqarildi.
+   - **Filtrlar va Empty State (src/lib/catalogue.ts, src/pages/Exams.tsx)**: All, A1, A2, B1, B2, C1 va mahorat turlari (ll, ull_mock, listening, 
+eading, writing, speaking) mijoz tomonida (matchesCatalogue) xatosiz filtrlanadigan qilindi; bo'sh holatda Obsidian-Emerald Empty State (*"Hozircha faol imtihonlar mavjud emas. Yangi mock e'lon qilinganda bu yerda ko'rinadi."*) chiqarildi.
    - **Backend Katalog va Kesh Tuzatishlari (pps/core/mock_catalog.py, pps/core/exam_programs.py, pps/core/views.py)**: SELF_SELECT rejimida o'quvchilarga ham IELTS, ham MULTILEVEL yo'nalishlariga ruxsat berildi; mock_exams_view kesh kalitiga user.id qo'shildi.
 
 2. **O'qituvchi (	eacher / instructor) Avtorizatsiyasi va Role-Based Routing**:
@@ -646,6 +647,20 @@ px tsc --noEmit (0 xato),
 px vitest run (41 ta test fayli, 328/328 test 100% PASS) va 
 ode --test tools/release-platforms.test.mjs (10/10 PASS) tasdiqlandi.
    - Versiya 1.0.7 ga ko'tarilib, 1.0.7 tegi GitHub (estwayec/bw-tauri) ga push qilindi (33de46).
+
+### 31-BLOK: "Do your best, forget the rest!" Shiorini Tiklash, Desktop SCHEMA_MISMATCH Himoyasi va 100% Obsidian-Emerald UI
+1. **Veb Bosh Sahifa (`bestway/frontend`)**:
+   - `frontend/src/app/[locale]/(marketing)/page.tsx` Hero qismiga maxsus zumrad-neon nishon (`✨ BestWay LMS • Do your best, forget the rest!`) va yirik Obsidian-Emerald gradient `H1` sarlavha (**"Do Your Best, Forget The Rest!"**) qo'shildi.
+   - `messages/en.json` va `messages/uz.json` fayllarida brend shiori (`heroMotto`, `heroTitle`) va AI diagnostika sub-sarlavhasi (`heroSubtitle`) sinxronlashtirildi.
+2. **Desktop `SCHEMA_MISMATCH` Fatal Xatosini Bartaraf Etish (`bw-tauri` & `backend-django`)**:
+   - `bw-tauri/src/lib/schemas.ts` da `MockExamListItemSchema` va `TestListItemSchema` dagi `profile`, `type`, `track`, `status`, `difficulty`, `target_level`, `practiceLevel`, `skills`, `access` maydonlariga `.catch(...)` va `.default(...)` himoyalari qo'shildi.
+   - `bw-tauri/src/lib/mocks.ts` (`listMockExams`) va `bw-tauri/src/lib/tests.ts` (`listTests`) ga `try / catch` xom ma'lumot (raw fallback) bloklari qo'shildi.
+   - `backend-django/apps/core/mock_catalog.py` (`shape_exam` / `list_exams`) da `profile` maydoni barcha desktop versiyalar (`0.8.5`, `1.0.6`, `1.0.7`) bilan 100% mos bo'lishi uchun `"full_mock"` yoki `"practice"` sifatida normallashtirilib, asl qiymat `rawProfile` da saqlanadigan qilindi.
+3. **Desktop UI 100% Obsidian-Emerald Polishing (`bw-tauri`)**:
+   - `Sidebar.tsx` va `Login.tsx` dagi `"B"` logotipi `bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold` ko'rinishiga keltirildi.
+   - `Sidebar.tsx` aktiv menyu elementi `bg-emerald-500/10 border-l-2 border-emerald-500 text-emerald-400` ga o'tkazildi.
+   - `Exams.tsx` dagi barcha filtr tugmalari (`All`, `A1`–`C1`, `Writing`, `Listening` va boshqalar) aktiv holatda `bg-emerald-500 text-slate-950 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]`, noaktiv holatda `bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700` dizayniga o'tkazildi.
+   - `App.tsx` dagi `"Online"` holat nuqtasi toza zumrad `#10B981` ga o'tkazildi.
 
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
