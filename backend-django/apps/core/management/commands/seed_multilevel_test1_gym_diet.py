@@ -528,6 +528,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
             id="ml-test01-grp-r1",
             defaults={
                 "section": r_section,
+                "audio_play_limit": 0,
                 "sort_order": 0,
                 "part_number": 1,
                 "title": "Part 1 — Club Member Notice & Update",
@@ -588,6 +589,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
             id="ml-test01-grp-r2",
             defaults={
                 "section": r_section,
+                "audio_play_limit": 0,
                 "sort_order": 1,
                 "part_number": 2,
                 "title": "Part 2 — Choosing a Fitness & Wellness Facility",
@@ -655,6 +657,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
             id="ml-test01-grp-r3",
             defaults={
                 "section": r_section,
+                "audio_play_limit": 0,
                 "sort_order": 2,
                 "part_number": 3,
                 "title": "Part 3 — Plant-Based Nutrition and Athletic Performance",
@@ -711,6 +714,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
             id="ml-test01-grp-r4",
             defaults={
                 "section": r_section,
+                "audio_play_limit": 0,
                 "sort_order": 3,
                 "part_number": 4,
                 "title": "Part 4 — The Economics and Psychology of Gym Memberships",
@@ -829,6 +833,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
             id="ml-test01-grp-r5",
             defaults={
                 "section": r_section,
+                "audio_play_limit": 0,
                 "sort_order": 4,
                 "part_number": 5,
                 "title": "Part 5 — Preventative Public Health and Workplace Wellness",
