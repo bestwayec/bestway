@@ -217,6 +217,29 @@ def get_student_mistake_vault(student_user: User) -> Dict[str, Any]:
         },
     ]
 
+    # Enrich with diagnostic weak topics from Express Placement Test if student took it
+    try:
+        from apps.core.models import PlacementTestResult
+        placement = PlacementTestResult.objects.filter(student_id=student_user.id, is_claimed=True).order_by("-created_at").first()
+        if placement and placement.weak_topics:
+            for wt in placement.weak_topics:
+                t_name = wt.get("topic", "")
+                if t_name and not any(c.get("name") == t_name for c in categories):
+                    m_count = wt.get("mistakes_count", 2) or 2
+                    categories.append({
+                        "id": "pt_" + "".join(ch for ch in t_name.lower() if ch.isalnum() or ch == "_")[:20],
+                        "name": t_name,
+                        "skill": "grammar",
+                        "wrongCount": m_count,
+                        "totalAttempted": 5,
+                        "accuracy": max(25, 100 - (m_count * 25)),
+                        "severity": "high" if m_count >= 2 else "medium",
+                        "recommendedFocus": wt.get("recommendation", f"{t_name} qoidalarini video darslar orqali ko'rib chiqish tavsiya etiladi."),
+                        "sampleQuestion": f"Placement Diagnostic: {t_name} mavzusidagi diagnostik savol tahlili.",
+                    })
+    except Exception:
+        pass
+
     total_mistakes = sum(c["wrongCount"] for c in categories)
     average_accuracy = int(sum(c["accuracy"] for c in categories) / len(categories))
 

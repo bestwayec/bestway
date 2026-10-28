@@ -464,3 +464,37 @@ class HomeworkSubmission(models.Model):
     def __str__(self):
         status = "PASSED" if self.is_passed else "FAILED"
         return f"{self.student_id} - {self.assignment.title}: {self.score_percent}% ({status})"
+
+
+class PlacementTestResult(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        related_name="placement_results",
+    )
+    guest_session_id = models.CharField(max_length=255, db_index=True)
+    result_token = models.CharField(max_length=255, unique=True, db_index=True)
+    cefr_level = models.CharField(max_length=10)
+    cefr_label = models.CharField(max_length=100)
+    estimated_ielts_band = models.CharField(max_length=50)
+    score = models.IntegerField(default=0)
+    total_questions = models.IntegerField(default=20)
+    score_percent = models.IntegerField(default=0)
+    weak_topics = models.JSONField(default=list)
+    analysis = models.TextField(default="", blank=True)
+    answers = models.JSONField(default=dict)
+    is_claimed = models.BooleanField(default=False)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "PlacementTestResult"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        status = "CLAIMED" if self.is_claimed else "GUEST"
+        return f"Placement {self.result_token[:8]} - {self.cefr_level} ({self.score}/{self.total_questions}) [{status}]"

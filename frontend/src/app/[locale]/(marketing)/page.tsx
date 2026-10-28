@@ -1,3 +1,5 @@
+import { ExpressPlacementTest } from "@/components/placement/ExpressPlacementTest";
+import { Play, Zap } from "lucide-react";
 import {
   ArrowRight,
   Award,
@@ -130,14 +132,21 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             </Reveal>
             <Reveal delay={270}>
               <div className="mt-8 flex w-full flex-col flex-wrap items-center justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
-                <HeroCta label={t("heroCta")} />
+                <a
+                  href="#placement-test"
+                  className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-7 py-3.5 text-base font-bold text-white shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.03] active:scale-95"
+                >
+                  <Zap className="size-5 fill-current" />
+                  <span>{t("heroCta")}</span>
+                </a>
                 <Link
-                  href="/demo"
+                  href="/mock"
                   className={cn(
                     buttonVariants({ size: "lg", variant: "outline" }),
-                    "transition-all duration-200 hover:scale-[1.03] active:scale-95",
+                    "rounded-2xl border-slate-700 bg-slate-900/60 px-6 py-3.5 text-slate-200 hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-200 hover:scale-[1.03] active:scale-95",
                   )}
                 >
+                  <Award className="size-4 text-emerald-400 mr-2" />
                   {t("heroSecondary")}
                 </Link>
               </div>
@@ -165,6 +174,126 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </div>
         </div>
       </section>
+      {/* ── 10-Minute Express Placement Test (Phase 4) ──────────────────── */}
+      <section id="placement-test" className="marketing-section scroll-mt-20">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-16">
+          <ExpressPlacementTest isAuthenticated={isAuthenticated} />
+        </div>
+      </section>
+
+      {/* ── Ekotizim Vitrinasi & Social Proof ─────────────────────────── */}
+      <section className="marketing-section marketing-section--tint scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <Reveal>
+            <SectionHeading
+              title={t("ecosystem.title")}
+              subtitle={t("ecosystem.subtitle")}
+            />
+          </Reveal>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Feature 1: 29+ Video Lessons */}
+            <Reveal delay={0} className="h-full">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"
+                />
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 transition-transform duration-300 group-hover:scale-110">
+                      <Play className="size-6 fill-current" />
+                    </span>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-950/50 px-3 py-1 text-xs font-semibold text-emerald-400">
+                      v1.0.6
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f1Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                    {t("ecosystem.f1Text")}
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                  <Link
+                    href="/videos"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                  >
+                    <span>Darslar katalogiga o'tish</span>
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Feature 2: CDI & Multi-Level Simulator */}
+            <Reveal delay={100} className="h-full">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-teal-500/50 hover:shadow-2xl hover:shadow-teal-950/30">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-600 transition-transform duration-300 group-hover:scale-x-100"
+                />
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-teal-950/60 border border-teal-500/30 text-teal-400 transition-transform duration-300 group-hover:scale-110">
+                      <Award className="size-6" />
+                    </span>
+                    <span className="rounded-full border border-teal-500/30 bg-teal-950/50 px-3 py-1 text-xs font-semibold text-teal-300">
+                      Vision OCR
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f2Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                    {t("ecosystem.f2Text")}
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                  <Link
+                    href="/mock"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-teal-400 hover:text-teal-300 transition"
+                  >
+                    <span>Imtihon topshirish</span>
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Feature 3: Teacher Workspace */}
+            <Reveal delay={200} className="h-full">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"
+                />
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 transition-transform duration-300 group-hover:scale-110">
+                      <GraduationCap className="size-6" />
+                    </span>
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-950/50 px-3 py-1 text-xs font-semibold text-emerald-400">
+                      Smart Analytics
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f3Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                    {t("ecosystem.f3Text")}
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                  >
+                    <span>Kabinetga kirish</span>
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
 
       {/* ── Kurslar ──────────────────────────────────────────────────────── */}
       <section id="courses" className="marketing-section marketing-section--tint scroll-mt-16">

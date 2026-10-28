@@ -1,3 +1,4 @@
+from apps.exams import placement_views
 from . import teacher_views
 from apps.exams import analytics_service
 from apps.bamboozle import views as bamboozle_views
@@ -648,4 +649,17 @@ urlpatterns = [
     path('student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
     path('v1/student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
     path('v1/student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
+    # Adaptive Express Placement Test (Phase 4)
+    path('placement-test/questions', placement_views.placement_questions_view),
+    path('placement-test/questions/', placement_views.placement_questions_view),
+    path('v1/placement-test/questions', placement_views.placement_questions_view),
+    path('v1/placement-test/questions/', placement_views.placement_questions_view),
+    path('placement-test/submit', placement_views.placement_submit_view),
+    path('placement-test/submit/', placement_views.placement_submit_view),
+    path('v1/placement-test/submit', placement_views.placement_submit_view),
+    path('v1/placement-test/submit/', placement_views.placement_submit_view),
+    path('placement-test/claim', placement_views.placement_claim_view),
+    path('placement-test/claim/', placement_views.placement_claim_view),
+    path('v1/placement-test/claim', placement_views.placement_claim_view),
+    path('v1/placement-test/claim/', placement_views.placement_claim_view),
 ]

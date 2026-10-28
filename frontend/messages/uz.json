@@ -1096,8 +1096,8 @@
     "partOfQuestions": "{a}-qism, jami {b} savol"
   },
   "marketing": {
-    "heroTitle": "Do your best, forget the rest!",
-    "heroSubtitle": "IELTS, Multilevel va umumiy ingliz tili kurslari. Har bir o'quvchi uchun shaffof davomat, ball va natija tizimi.",
+    "heroTitle": "Ingliz tili darajangizni 10 daqiqada sun’iy intellekt orqali aniqlang",
+    "heroSubtitle": "O'zbekiston Milliy sertifikati (0-75) va IELTS (0-9.0) mezonlariga mos diagnostika. Grammatika, lug'at va reading ko'nikmalaringizni 10 daqiqada xolis baholang.",
     "heroBadge": "Shofirkon, Buxoro · 2007-yildan beri",
     "navCourses": "Kurslar",
     "navTeachers": "O'qituvchilar",
@@ -1116,8 +1116,8 @@
     "founderLabel": "Asoschi",
     "foundedLabel": "Tashkil etilgan",
     "writeUs": "Xat yozing",
-    "heroCta": "Ro'yxatdan o'tish",
-    "heroSecondary": "Demo test topshirish",
+    "heroCta": "⚡️ Bepul Darajangizni Aniqlang (10 daqiqa)",
+    "heroSecondary": "Imtihon Simulyatori",
     "heroProgressTitle": "O'quv yo'li",
     "heroProgressSubtitle": "IELTS · Multilevel · SAT",
     "heroProgressSpeaking": "Nutq",
@@ -1223,6 +1223,16 @@
       "testsText": "IELTS va Multilevel formatidagi testlar, avtomatik va o'qituvchi baholovi bilan.",
       "paymentsTitle": "To'lov nazorati",
       "paymentsText": "Qaysi oy to'langan, qaysi biri qolgan — bir qarashda ko'rinadi."
+    },
+    "ecosystem": {
+      "title": "BestWay Ekotizim Vitrinasi",
+      "subtitle": "O'quvchilar, ustozlar va ota-onalar uchun to'liq integratsiyalashgan ta'lim muhiti",
+      "f1Title": "29+ Gamified Video Darslar",
+      "f1Text": "Interaktiv video oqimi, har bir mavzu bo'yicha quizlar, XP ballari va do'stlar bilan 1v1 Bamboozle lug'at janglari.",
+      "f2Title": "CDI & Multi-Level Simulyatori",
+      "f2Text": "DTM CEFR va IELTS kompyuter formati (Listening, Reading, Writing, Speaking) hamda qo'lyozma insholar uchun Vision OCR.",
+      "f3Title": "Teacher Workspace",
+      "f3Text": "Ustozlar uchun guruhlar tahlili, kohort uy vazifalari, qo'lyozma insholarni qayta baholash va MistakeVault diagnostikasi."
     }
   },
   "errors": {
@@ -1564,7 +1574,7 @@
     "numberingNote": "Question numbers run across the whole exam without repeats — new questions continue automatically.",
     "emptyGroupHint": "Questions belong to this part and are numbered across the whole exam. Add them one by one, or paste a whole batch with Import — numbering continues automatically.",
     "examsSubtitle": "Drafts and published exams in one place — create, edit, preview, duplicate.",
-        "deleteExamConfirm": "Imtihon, uning topshiriqlari, audio va rasmlari, o‘quvchilar urinishlari, natijalari, yozuvlari, xarid yozuvlari va imtihonga kirish huquqlari butunlay o‘chiriladi. Buni qaytarib bo‘lmaydi.",
+    "deleteExamConfirm": "Imtihon, uning topshiriqlari, audio va rasmlari, o‘quvchilar urinishlari, natijalari, yozuvlari, xarid yozuvlari va imtihonga kirish huquqlari butunlay o‘chiriladi. Buni qaytarib bo‘lmaydi.",
     "uploadAudioHint": "One audio file per part. Students hear it during the exam; the replay limit below controls how many times.",
     "record": "record",
     "addPart": "Add Part",

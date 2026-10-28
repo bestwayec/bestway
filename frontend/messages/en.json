@@ -82,7 +82,7 @@
       "taskCoverage": "Task coverage",
       "grammar": "Grammar",
       "vocabulary": "Vocabulary",
-    "bamboozle": "Bamboozle Arena",
+      "bamboozle": "Bamboozle Arena",
       "fluencyCohesion": "Fluency & cohesion",
       "ideaDevelopment": "Idea development",
       "register": "Register",
@@ -1097,8 +1097,8 @@
     "partOfQuestions": "Part {a} of {b} questions"
   },
   "marketing": {
-    "heroTitle": "Do your best, forget the rest!",
-    "heroSubtitle": "IELTS, Multilevel and general English courses. Transparent attendance, points and results for every student.",
+    "heroTitle": "Assess your English level in 10 minutes with Artificial Intelligence",
+    "heroSubtitle": "Diagnostic aligned with Uzbekistan National Certificate (0-75) and IELTS (0-9.0) criteria. Objectively evaluate grammar, vocabulary and reading in 10 minutes.",
     "heroBadge": "Shofirkon, Bukhara · since 2007",
     "navCourses": "Courses",
     "navTeachers": "Teachers",
@@ -1117,8 +1117,8 @@
     "founderLabel": "Founder",
     "foundedLabel": "Established",
     "writeUs": "Write to us",
-    "heroCta": "Get started",
-    "heroSecondary": "Try a demo test",
+    "heroCta": "⚡️ Free Level Assessment (10 mins)",
+    "heroSecondary": "Exam Simulator",
     "heroProgressTitle": "Learning path",
     "heroProgressSubtitle": "IELTS · Multilevel · SAT",
     "heroProgressSpeaking": "Speaking",
@@ -1224,6 +1224,16 @@
       "testsText": "IELTS and Multilevel format tests with automatic and teacher grading.",
       "paymentsTitle": "Payment control",
       "paymentsText": "Which month is paid and which is not — visible at a glance."
+    },
+    "ecosystem": {
+      "title": "BestWay Ecosystem Showcase",
+      "subtitle": "Fully integrated modern learning ecosystem for students, teachers and parents",
+      "f1Title": "29+ Gamified Video Lessons",
+      "f1Text": "Adaptive video streaming, topic quizzes, XP points and competitive 1v1 Bamboozle vocabulary battles.",
+      "f2Title": "CDI & Multi-Level Simulator",
+      "f2Text": "Computer-delivered format (Listening, Reading, Writing, Speaking) with Vision OCR for handwritten essays.",
+      "f3Title": "Teacher Workspace",
+      "f3Text": "Cohort homework assignments, handwritten essay manual override, and personalized MistakeVault diagnostics."
     }
   },
   "errors": {
@@ -1565,7 +1575,7 @@
     "numberingNote": "Question numbers run across the whole exam without repeats — new questions continue automatically.",
     "emptyGroupHint": "Questions belong to this part and are numbered across the whole exam. Add them one by one, or paste a whole batch with Import — numbering continues automatically.",
     "examsSubtitle": "Drafts and published exams in one place — create, edit, preview, duplicate.",
-        "deleteExamConfirm": "Permanently deletes this exam, its content, audio and images, learner attempts, results, recordings, purchase records and exam access. This cannot be undone.",
+    "deleteExamConfirm": "Permanently deletes this exam, its content, audio and images, learner attempts, results, recordings, purchase records and exam access. This cannot be undone.",
     "uploadAudioHint": "One audio file per part. Students hear it during the exam; the replay limit below controls how many times.",
     "record": "record",
     "addPart": "Add Part",

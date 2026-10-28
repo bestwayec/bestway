@@ -44,6 +44,27 @@ export function StudentDashboard() {
     }
   }
 
+  // Auto-migrate guest placement test result to student profile
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !me?.user) return;
+    const token = localStorage.getItem("bestway_placement_result_token");
+    if (!token) return;
+
+    fetch("/api/backend/placement-test/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ result_token: token }),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.success) {
+          localStorage.removeItem("bestway_placement_result_token");
+          toast.success("🎉 Express Placement Test natijangiz profilingizga bog'landi!");
+        }
+      })
+      .catch(() => {});
+  }, [me?.user]);
+
   if (isLoading || !profile) {
     return (
       <div className="mx-auto max-w-4xl">
