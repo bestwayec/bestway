@@ -144,7 +144,8 @@ try:
     check(resumed['attemptId'] == attempt_id and resumed['resumed'], 'Matching selection resumes the frozen scope')
     # Scope changes now auto-close old in-progress attempts instead of returning 409
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': excluded, 'response': 'Forged'}, format='json'), 400, 'QUESTION_NOT_IN_EXAM')
-    data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json'), 403, 'SECTION_LOCKED')
+    bulk_excluded = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json'), 201)
+    check(bulk_excluded == {'saved': False}, 'Bulk answer ignores out-of-scope question without persisting')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}/start', {}, format='json'), 403, 'QUESTION_NOT_IN_EXAM')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}', {'audio': audio()}, format='multipart'), 400, 'QUESTION_NOT_IN_EXAM')
     # Incomplete submissions now use zero-score fallback instead of returning 400
