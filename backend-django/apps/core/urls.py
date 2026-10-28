@@ -28,6 +28,7 @@ from . import video_views as videos
 from . import vocabulary_views as vocabulary
 from . import parent_views as parents
 from . import vocab_battle_views as vocab_battle
+from . import runner_game_views as runner_game
 from . import lms_views as lms
 from .mock_attempt_views import (
     advance_view,
@@ -688,4 +689,18 @@ urlpatterns = [
     path('placement-test/claim/', placement_views.placement_claim_view),
     path('v1/placement-test/claim', placement_views.placement_claim_view),
     path('v1/placement-test/claim/', placement_views.placement_claim_view),
+
+    # Subway Vocab Runner Game (Phase 31)
+    path('games/runner/questions', runner_game.runner_questions_view),
+    path('games/runner/questions/', runner_game.runner_questions_view),
+    path('v1/games/runner/questions', runner_game.runner_questions_view),
+    path('v1/games/runner/questions/', runner_game.runner_questions_view),
+    path('games/runner/submit-score', runner_game.runner_submit_score_view),
+    path('games/runner/submit-score/', runner_game.runner_submit_score_view),
+    path('v1/games/runner/submit-score', runner_game.runner_submit_score_view),
+    path('v1/games/runner/submit-score/', runner_game.runner_submit_score_view),
+    path('games/runner/leaderboard', runner_game.runner_leaderboard_view),
+    path('games/runner/leaderboard/', runner_game.runner_leaderboard_view),
+    path('v1/games/runner/leaderboard', runner_game.runner_leaderboard_view),
+    path('v1/games/runner/leaderboard/', runner_game.runner_leaderboard_view),
 ]
