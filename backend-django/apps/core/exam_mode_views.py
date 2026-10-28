@@ -218,13 +218,20 @@ def live_rooms_view(request):
     return success(live_exam_service.create_session(request.user, data), status=201)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([Authenticated])
 def live_room_join_view(request):
-    data = request.data if isinstance(request.data, dict) else {}
-    pin = data.get("pin") or request.query_params.get("pin") or ""
-    sim_mode = data.get("simulatorMode") or data.get("mode")
-    return success(live_exam_service.join_by_pin(request.user, pin=str(pin), simulator_mode_override=sim_mode), status=201)
+    if request.method == "GET":
+        pin = request.query_params.get("pin") or ""
+        sim_mode = request.query_params.get("simulatorMode") or request.query_params.get("mode")
+    else:
+        data = request.data if isinstance(request.data, dict) else {}
+        pin = data.get("pin") or request.query_params.get("pin") or ""
+        sim_mode = data.get("simulatorMode") or data.get("mode")
+    return success(
+        live_exam_service.join_by_pin(request.user, pin=str(pin), simulator_mode_override=sim_mode),
+        status=200 if request.method == "GET" else 201,
+    )
 
 
 @api_view(["GET"])

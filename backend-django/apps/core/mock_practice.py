@@ -210,6 +210,17 @@ def practice_plan(exam, _auto_seed=True):
             return practice_plan(exam, _auto_seed=False)
         except Exception:
             pass
+    if _auto_seed and getattr(exam, 'id', None) == 'ielts-academic-mock-01' and len(plan.get('skills') or []) < 4:
+        try:
+            import io
+            from apps.exams.management.commands.seed_ielts_mock1_academic import (
+                seed_ielts_mock_1,
+            )
+            seed_ielts_mock_1(io.StringIO())
+            exam.refresh_from_db()
+            return practice_plan(exam, _auto_seed=False)
+        except Exception:
+            pass
     return plan
 
 

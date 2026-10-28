@@ -191,6 +191,7 @@ def seed_mock_test_1(stdout, style=None) -> MockExam:
                 "price": 0,
                 "is_free_for_approved": True,
                 "created_by_id": creator_id,
+                "created_at": now,
                 "updated_at": now,
                 "profile": "full_mock",
                 "content_version": 2,
