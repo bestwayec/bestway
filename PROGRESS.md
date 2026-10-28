@@ -565,6 +565,42 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - `https://api.bestwayec.uz/v1/health` -> `200 OK (status: ok)`
    - `https://bestwayec.uz/en/teacher` -> `307 Redirect (Protected route)`
 
+### 28-BLOK: High-Converting Hero Landing, 10-Daqiqalik Adaptiv CEFR Express Placement Test & Guest-to-User State Migratsiyasi (v1.0.6)
+
+1. **Backend Placement Test & Guest Engine (`apps/exams/placement_views.py`)**:
+   - **Savollar Banki va Kalibratsiya**: 20 ta puxta kalibratsiyalangan CEFR savollari (4 ta A1/A2, 6 ta B1, 6 ta B2, 4 ta C1) Grammatika, Lug'at va Reading comprehension bo'yicha tuzildi.
+   - `GET /api/v1/placement-test/questions`: Har bir sessiya uchun anonim `guest_session_id` (UUID) va 20 ta savolni to'g'ri javoblarsiz qaytaradi. Redis IP rate limit (soatiga 5 ta so'rov) orqali suiiste'molliklardan himoyalandi.
+   - `POST /api/v1/placement-test/submit`: Foydalanuvchi javoblarini baholab, CEFR darajasi (A2, B1, B2, C1), taxminiy IELTS Band (4.0 - 8.0) va O'zbekiston Milliy baholash shkalasini (20 - 75 ball) hisoblaydi.
+   - **Zaif Grammatik Nuqtalar Diagnostikasi**: Xato qilingan mavzular tahlil qilinib, platformadagi 29 ta video darslikka avtomatik bog'lanadi (`analytics_service.find_matching_lesson_for_topic`).
+   - **Guest Sessionni Foydalanuvchiga Bog'lash (Claim / State Migration)**:
+     - `PlacementTestResult` modeli va migratsiya (`0006`) yaratildi.
+     - `POST /api/v1/placement-test/claim`: Login bo'lgan o'quvchining `StudentProfile.initial_level`, `diagnostic_cefr_score` hamda `MistakeVault` xatolar bazasiga test natijalari avtomatik ko'chiriladi.
+
+2. **Frontend High-Converting Hero Landing (`frontend/src/app/[locale]/(marketing)/page.tsx`)**:
+   - **Neon Hero Sektsiyasi**: Obsidian-Emerald dizayn tizimida katta sarlavha: *"Ingliz tili darajangizni 10 daqiqada sun’iy intellekt orqali aniqlang"*, O'zbekiston Milliy sertifikati (0-75) va IELTS (0-9.0) diagnostikasi tushuntirishi.
+   - **Markaziy Emerald CTA**: `[ ⚡️ Bepul Darajangizni Aniqlang (10 daqiqa) ]` tugmasi bosilganda to'g'ridan-to'g'ri test runner blokiga silliq siljitadi (`smooth scroll`).
+   - **Ekotizim Vitrinasi**: 3 ta Obsidian kartochka (*"29+ Gamified Video Darslar"*, *"CDI & Multi-Level Simulyatori"*, *"Teacher Workspace"*).
+
+3. **10-Daqiqalik Express Placement Test Moduli (`ExpressPlacementTest.tsx`)**:
+   - **Test Runner**: Sticky 10-daqiqalik orqaga sanovchi taymer (`MM:SS`), Obsidian-Emerald progress bar (`Savol X / 20`), 4 ta variant (`A`, `B`, `C`, `D`), `Keyingisi ➔` va `Yakunlash` tugmalari.
+   - **Natijalar Ekrani**: Olingan daraja (`B2 — Upper-Intermediate`, `Taxminiy IELTS: 6.0 - 6.5`), ball foizi, 3 ta zaif grammatik mavzu va ularga tavsiya etilgan video darslar.
+   - **Frictionless Auth Funnel**: Natijalarni saqlab qolish va shaxsiy o'quv rejasiga o'tish uchun Telegram 1-click SSO va Google OAuth tugmalari.
+   - **Avto-Migratsiya**: O'quvchi tizimga kirishi bilan `student-dashboard.tsx` orqali `localStorage` dagi `bestway_placement_result_token` avtomatik tarzda `/claim` qilinadi.
+
+4. **Sifat Nazorati va CI/PR Gate (100% PASS Gate)**:
+   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
+   - Frontend Vitest: 58 ta test fayli, 369/369 test 100% PASS (shu jumladan `ExpressPlacementTest.spec.ts`).
+   - Backend Django Pytest: 18 ta test 100% PASS (shu jumladan yangi `test_placement_test.py` 8/8 test).
+   - Git Authorship: `Komiljon Roziyev <kruziyev0@gmail.com>`, nol AI attribution (`zero-ai-attribution`).
+
+5. **Contabo VPS Zero-Downtime Deploy va Jonli Sinov**:
+   - Contabo VPS (`169.58.58.229`) da `backend` va `frontend` konteynerlari uzilishsiz yangilandi.
+   - Migratsiya `0006_placementtestresult_and_student_profile_fields` bazada muvaffaqiyatli qo'llanildi.
+   - Public endpointlar HTTP 200 OK:
+     * `https://bestwayec.uz/` -> `HTTP/1.1 200 OK`
+     * `https://bestwayec.uz/api/backend/v1/placement-test/questions` -> `200 OK` (20 calibrated questions)
+     * `https://bestwayec.uz/api/backend/v1/placement-test/submit` -> `200 OK` (evaluated & result_token generated)
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 - Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
