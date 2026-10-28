@@ -240,3 +240,28 @@ class LiveProctoringTelemetryTests(TestCase):
             self.assertTrue(response.data['success'])
             self.assertEqual(response.data['data']['action'], 'disqualify_student')
             self.assertEqual(response.data['data']['studentId'], 's1')
+    def test_proctor_action_teacher_extend_time(self):
+        self.client.force_authenticate(SimpleNamespace(id='t1', role='teacher', is_authenticated=True))
+        with patch('apps.core.live_exam_service.get_session_detail') as mock_session,              patch('django.db.connection.cursor') as mock_cursor:
+            mock_session.return_value = {
+                'id': 'room-1',
+                'pin': '123456',
+                'teacherId': 't1',
+                'status': 'active',
+                'examTitle': 'IELTS Mock 1',
+                'examType': 'ielts_academic',
+                'simulatorMode': 'cdi',
+                'durationMinutes': 60,
+            }
+            cursor = Mock()
+            mock_cursor.return_value.__enter__.return_value = cursor
+
+            response = self.client.post('/v1/live-room/123456/action', {
+                'action': 'extend_time',
+                'minutes': 10,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data['success'])
+            self.assertEqual(response.data['data']['action'], 'extend_time')
+            self.assertEqual(response.data['data']['minutes'], 10)
+

@@ -1146,6 +1146,38 @@ def handle_proctor_action(actor, room_pin_or_id: str, data: dict) -> dict:
                 return {"success": True, "action": "warn_student", "studentId": student_id, "strikesCount": strikes_val, "status": stat_val}
         return {"success": True, "action": "warn_student", "studentId": student_id}
 
+    elif action == "extend_time":
+        minutes = int(data.get("minutes") or 5)
+        seconds_to_add = max(60, minutes * 60)
+        with connection.cursor() as cursor:
+            if student_id:
+                cursor.execute(
+                    """
+                    UPDATE "LiveExamParticipant"
+                    SET "time_remaining_seconds" = COALESCE("time_remaining_seconds", 3600) + %s,
+                        "updated_at" = NOW()
+                    WHERE "session_id" = %s AND "student_id" = %s
+                    """,
+                    [seconds_to_add, session["id"], student_id],
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE "LiveExamParticipant"
+                    SET "time_remaining_seconds" = COALESCE("time_remaining_seconds", 3600) + %s,
+                        "updated_at" = NOW()
+                    WHERE "session_id" = %s
+                    """,
+                    [seconds_to_add, session["id"]],
+                )
+        return {
+            "success": True,
+            "action": "extend_time",
+            "minutes": minutes,
+            "studentId": student_id or None,
+            "message": f"{minutes} daqiqa vaqt qo'shildi",
+        }
+
     elif action == "end_room":
         return close_session(actor, session["id"])
 
