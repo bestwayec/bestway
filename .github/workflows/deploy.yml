@@ -10,20 +10,17 @@ name: Deploy to VPS
 #   VPS_PATH     — repo path on VPS (default /opt/bestway if unset)
 #
 # VPS prerequisites (one-time, see docs/vps-cloudflare-runbook.md):
-#   - repo cloned at $VPS_PATH, backend/.env + root .env present (chmod 600)
+#   - repo cloned at $VPS_PATH, backend-django/.env + root .env present (chmod 600)
 #   - host Nginx vhosts installed (*.cf-origin.conf + direct-api conf)
 #   - docker compose up -d --build run at least once + seed:init done
 #
 # Safety notes:
-#   - Migrations run automatically via the backend image entrypoint
-#     (npx prisma migrate deploy && node dist/main.js). No separate migrate
-#     step here, so there is exactly ONE migration runner (no race).
-#   - Never `docker compose down` in CI — only up --wait (no dropped volumes).
+#   - Never `docker compose down` in CI — only incremental service-level rebuilds.
 #   - Rollback = git revert + push (re-deploys previous image).
 #   - If main's history is ever rewritten (force-push), --ff-only can NEVER
 #     succeed again; the script falls back to hard-syncing the checkout to
 #     origin/main instead of wedging every future deploy. Untracked files
-#     (backend/.env, root .env) are preserved because reset --hard does not
+#     (backend-django/.env, root .env) are preserved because reset --hard does not
 #     touch them.
 
 on:
@@ -83,11 +80,10 @@ jobs:
               echo "      checkout after:  $(git rev-parse --short HEAD)"
             fi
             export BUILD_COMMIT="$(git rev-parse HEAD)"
-            docker compose up -d --build --wait --wait-timeout 180
-            # Local gates (fatal): reach services over the compose network.
-            DC="docker compose"
-            $DC exec -T backend wget -qO- http://localhost:3001/v1/health > /dev/null
-            $DC exec -T frontend wget -qO- http://localhost:3000/ > /dev/null
+            docker compose up -d --build backend frontend assessment-worker game-scheduler telegram-bot
+            # Local gates (fatal): reach services over host loopback ports.
+            curl -fsS --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:3001/v1/health > /dev/null
+            curl -fsS --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:3005/ > /dev/null
             # Public gates (warn-only): fail before DNS cutover / tunnel setup.
             curl -fsS --max-time 30 https://api.bestwayec.uz/v1/health > /dev/null \
               || echo "WARN: public api.bestwayec.uz not reachable (DNS/tunnel pending?)"

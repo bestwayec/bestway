@@ -601,6 +601,30 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `https://bestwayec.uz/api/backend/v1/placement-test/questions` -> `200 OK` (20 calibrated questions)
      * `https://bestwayec.uz/api/backend/v1/placement-test/submit` -> `200 OK` (evaluated & result_token generated)
 
+### 29-BLOK: GitHub Actions CI/CD Diagnostikasi va 100% Yashil Holatga Keltirish (`bestwayec/bestway` & `bestwayec/bw-tauri`)
+
+1. **`bestwayec/bw-tauri` CI va Desktop/Android Release Workflow Tuzatishlari**:
+   - **Aniqlangan sabablar**:
+     * `package-lock.json` faylidagi ildiz `"version": "0.8.4"` qiymati `package.json` va `tauri.conf.json` dagi `"1.0.6"` bilan mos emasligi sababli `tools/release-platforms.test.mjs` (`CI` workflow) xatolik berib to'xtagan.
+     * `tools/validate-release.mjs` skripti faqat `bestway-app-v1.0.6` formatidagi git tegni qabul qilib, `v1.0.6` formatidagi tegda `Release Desktop` va `Release Android` workflowlarini to'xtatib qo'ygan.
+   - **Amalga oshirilgan yechim**:
+     * `package-lock.json` ildiz versiyasi `"1.0.6"` ga sinxronlashtirildi.
+     * `tools/validate-release.mjs` skripti ham `bestway-app-v${version}`, ham `v${version}` teg formatlarini qo'llab-quvvatlaydigan qilib yangilandi (`399c2f0`).
+     * Natija: `CI` (`main`), `Release Android (bestway-app)` (`v1.0.6`) va `Release Desktop (bestway-app)` (`v1.0.6` ? Linux x64, Windows x64, macOS Apple Silicon, macOS Intel, Publish) 100% `completed / success` holatiga o'tdi.
+
+2. **`bestwayec/bestway` Frontend & Django CI Workflow Tuzatishlari**:
+   - **Frontend (`frontend` job)**:
+     * `frontend/eslint.config.mjs` da TypeScript ESLint va React Hooks qoidalari loyiha konvensiyasiga moslashtirildi hamda `ExpressPlacementTest.tsx` da funksiya e'lon qilish tartibi to'g'rilandi (177 ta linter xatosi -> 0 xato).
+     * `npm run lint`, `npx tsc --noEmit`, `npm test` (58 ta test fayli, 369 ta test) va `npm run build` 100% PASS.
+   - **Backend (`django` job)**:
+     * `.github/workflows/ci.yml` ga Prisma migratsiyalaridan so'ng `python manage.py migrate --noinput` qadami qo'shildi, shuningdek `0006` migratsiyasiga `VideoLesson.hlsPlaylistUrl` ustunini idempotent qo'shish (`ADD COLUMN IF NOT EXISTS`) kiritildi.
+     * `config/settings/base.py` va `test_telemetry_and_exam_parity.py` da desktop reliz versiyasi `1.0.6` ga moslashtirildi; `test_live_monitoring.py` da 47 ball uchun CEFR `B2` darajasi tasdiqlandi (615 ta pytest 100% PASS).
+     * `apps/core/assessment_worker.py` da `AssessmentEvaluation` yaratishdan oldin `input` obyektiga `speechDiagnostics` qo'shilishi natijasida yuzaga kelgan `input_hash` tafovuti bartaraf etildi (`aiPracticeGrade == practiceGrade` tekshiruvi tiklandi).
+     * `verify_partial_practice_postgres.py` (65/65 PASS) va `verify_grading_consistency_postgres.py` skriptlari moslashuvchan topshirish (zero-score fallback) va amaliyot PDF sertifikatlari qoidalariga muvofiqlashtirildi.
+   - **Deploy to VPS (`deploy.yml`)**:
+     * GitHub Actions Secrets (`VPS_HOST`, `VPS_USER`, `VPS_PATH`, `VPS_SSH_KEY`) Contabo VPS (`169.58.58.229`) ma'lumotlariga yangilandi.
+     * `.github/workflows/deploy.yml` zero-downtime service-level rebuild (`backend frontend assessment-worker game-scheduler telegram-bot`) va host `curl` health-check (`127.0.0.1:3001/v1/health`, `127.0.0.1:3005/`) standartiga o'tkazildi.
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 - Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
