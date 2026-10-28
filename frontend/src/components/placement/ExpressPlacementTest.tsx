@@ -126,6 +126,33 @@ export function ExpressPlacementTest({
     }
   }, [autoStart, startTest, status, questions.length]);
 
+  // Claim placement result to authenticated user account
+  const claimPlacementResult = React.useCallback(async (token?: string) => {
+    const targetToken = token || result?.result_token;
+    if (!targetToken) return;
+
+    setIsClaiming(true);
+    try {
+      const res = await fetch("/api/backend/placement-test/claim", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ result_token: targetToken }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setHasClaimed(true);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(LOCAL_STORAGE_PLACEMENT_KEY);
+        }
+        toast.success("🎉 Natijangiz shaxsiy profilingizga muvaffaqiyatli bog'landi!");
+      }
+    } catch {
+      // Background claim can be retried on dashboard
+    } finally {
+      setIsClaiming(false);
+    }
+  }, [result?.result_token]);
+
   // Submit test answers
   const handleSubmitTest = React.useCallback(async () => {
     if (status === "submitting" || status === "result") return;
@@ -166,7 +193,7 @@ export function ExpressPlacementTest({
       toast.error(err?.message || "Xatolik yuz berdi");
       setStatus("running");
     }
-  }, [answers, guestSessionId, isAuthenticated, status]);
+  }, [answers, claimPlacementResult, guestSessionId, isAuthenticated, status]);
 
   // Sticky 10-Minute Countdown Timer
   React.useEffect(() => {
@@ -192,32 +219,7 @@ export function ExpressPlacementTest({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Claim placement result to authenticated user account
-  const claimPlacementResult = async (token?: string) => {
-    const targetToken = token || result?.result_token;
-    if (!targetToken) return;
 
-    setIsClaiming(true);
-    try {
-      const res = await fetch("/api/backend/placement-test/claim", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result_token: targetToken }),
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setHasClaimed(true);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(LOCAL_STORAGE_PLACEMENT_KEY);
-        }
-        toast.success("🎉 Natijangiz shaxsiy profilingizga muvaffaqiyatli bog'landi!");
-      }
-    } catch {
-      // Background claim can be retried on dashboard
-    } finally {
-      setIsClaiming(false);
-    }
-  };
 
   const handleSelectOption = (questionId: string, optionKey: string) => {
     setAnswers((prev) => ({
