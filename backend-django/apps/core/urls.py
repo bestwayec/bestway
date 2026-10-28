@@ -372,6 +372,28 @@ urlpatterns = [
     path("mock/live-rooms/<str:room_id>/export/excel", exam_mode_views.live_room_export_excel_view),
     path("mock/live-rooms/<str:room_id>/export/excel/", exam_mode_views.live_room_export_excel_view),
 
+    # Live Exam Telemetry & Proctoring Status / Actions (Phase 30)
+    path("live-room/telemetry", exam_mode_views.live_room_telemetry_view),
+    path("live-room/telemetry/", exam_mode_views.live_room_telemetry_view),
+    path("v1/live-room/telemetry", exam_mode_views.live_room_telemetry_view),
+    path("v1/live-room/telemetry/", exam_mode_views.live_room_telemetry_view),
+    path("mock/live-rooms/telemetry", exam_mode_views.live_room_telemetry_view),
+    path("mock/live-rooms/telemetry/", exam_mode_views.live_room_telemetry_view),
+
+    path("live-room/<str:room_pin>/proctor-status", exam_mode_views.live_room_proctor_status_view),
+    path("live-room/<str:room_pin>/proctor-status/", exam_mode_views.live_room_proctor_status_view),
+    path("v1/live-room/<str:room_pin>/proctor-status", exam_mode_views.live_room_proctor_status_view),
+    path("v1/live-room/<str:room_pin>/proctor-status/", exam_mode_views.live_room_proctor_status_view),
+    path("mock/live-rooms/<str:room_pin>/proctor-status", exam_mode_views.live_room_proctor_status_view),
+    path("mock/live-rooms/<str:room_pin>/proctor-status/", exam_mode_views.live_room_proctor_status_view),
+
+    path("live-room/<str:room_pin>/action", exam_mode_views.live_room_proctor_action_view),
+    path("live-room/<str:room_pin>/action/", exam_mode_views.live_room_proctor_action_view),
+    path("v1/live-room/<str:room_pin>/action", exam_mode_views.live_room_proctor_action_view),
+    path("v1/live-room/<str:room_pin>/action/", exam_mode_views.live_room_proctor_action_view),
+    path("mock/live-rooms/<str:room_pin>/action", exam_mode_views.live_room_proctor_action_view),
+    path("mock/live-rooms/<str:room_pin>/action/", exam_mode_views.live_room_proctor_action_view),
+
     path('attendance/group-summary', attendance.group_summary_view),
     path('attendance/group-summary/', attendance.group_summary_view),
     path('v1/attendance/group-summary', attendance.group_summary_view),

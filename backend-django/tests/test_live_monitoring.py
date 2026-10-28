@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
 from apps.core import mock_scoring
@@ -154,3 +154,89 @@ class SingleSkillScoringTests(SimpleTestCase):
         self.assertIsNone(result['overallBand'])
         self.assertIsNone(result['cefrLevel'])
         self.assertEqual(result['scoreMethod'], 'PRACTICE_PARTIAL')
+
+
+class LiveProctoringTelemetryTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_telemetry_anonymous_denied(self):
+        response = self.client.post('/v1/live-room/telemetry', {})
+        self.assertEqual(response.status_code, 401)
+
+    def test_telemetry_normal_heartbeat_returns_continue(self):
+        self.client.force_authenticate(SimpleNamespace(id='s1', role='student', is_authenticated=True))
+        with patch('django.db.connection.cursor') as mock_cursor:
+            cursor = Mock()
+            mock_cursor.return_value.__enter__.return_value = cursor
+            # Session select returns room row
+            cursor.fetchone.side_effect = [
+                ('room-1', 'active'),  # session lookup by pin
+                ('part-1', 'room-1', 'in_progress', 0, 0, 'att-1'),  # participant lookup
+            ]
+            response = self.client.post('/v1/live-room/telemetry', {
+                'room_pin': '123456',
+                'current_question': 12,
+                'current_section': 'reading',
+                'time_remaining': 2400,
+                'strikes_count': 0,
+                'is_focused': True,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data['success'])
+            self.assertEqual(response.data['data']['action'], 'continue')
+            self.assertEqual(response.data['data']['strikesCount'], 0)
+
+    def test_telemetry_three_strikes_triggers_disqualification(self):
+        self.client.force_authenticate(SimpleNamespace(id='s1', role='student', is_authenticated=True))
+        with patch('django.db.connection.cursor') as mock_cursor,              patch('apps.legacy_schema.models.MockAttempt.objects.filter') as mock_att_filter:
+            cursor = Mock()
+            mock_cursor.return_value.__enter__.return_value = cursor
+            cursor.fetchone.side_effect = [
+                ('room-1', 'active'),  # session lookup
+                ('part-1', 'room-1', 'in_progress', 2, 2, 'att-1'),  # participant has 2 strikes
+            ]
+            mock_att_filter.return_value.update.return_value = 1
+            response = self.client.post('/v1/live-room/telemetry', {
+                'room_pin': '123456',
+                'current_question': 14,
+                'strikes_count': 3,
+                'is_focused': False,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data['success'])
+            self.assertEqual(response.data['data']['action'], 'disqualified')
+            self.assertEqual(response.data['data']['status'], 'disqualified')
+            self.assertEqual(response.data['data']['strikesCount'], 3)
+
+    def test_proctor_action_student_denied(self):
+        self.client.force_authenticate(SimpleNamespace(id='s1', role='student', is_authenticated=True))
+        response = self.client.post('/v1/live-room/123456/action', {'action': 'start_exam'})
+        self.assertEqual(response.status_code, 403)
+
+    def test_proctor_action_teacher_disqualify_student(self):
+        self.client.force_authenticate(SimpleNamespace(id='t1', role='teacher', is_authenticated=True))
+        with patch('apps.core.live_exam_service.get_session_detail') as mock_session,              patch('django.db.connection.cursor') as mock_cursor,              patch('apps.legacy_schema.models.MockAttempt.objects.filter') as mock_att_filter:
+            mock_session.return_value = {
+                'id': 'room-1',
+                'pin': '123456',
+                'teacherId': 't1',
+                'status': 'active',
+                'examTitle': 'IELTS Mock 1',
+                'examType': 'ielts_academic',
+                'simulatorMode': 'cdi',
+                'durationMinutes': 60,
+            }
+            cursor = Mock()
+            mock_cursor.return_value.__enter__.return_value = cursor
+            cursor.fetchone.return_value = ('att-1',)  # RETURNING attempt_id
+            mock_att_filter.return_value.update.return_value = 1
+
+            response = self.client.post('/v1/live-room/123456/action', {
+                'action': 'disqualify_student',
+                'student_id': 's1',
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data['success'])
+            self.assertEqual(response.data['data']['action'], 'disqualify_student')
+            self.assertEqual(response.data['data']['studentId'], 's1')

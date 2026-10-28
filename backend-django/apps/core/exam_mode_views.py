@@ -278,3 +278,24 @@ def live_room_export_excel_view(request, room_id: str):
     )
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def live_room_telemetry_view(request):
+    data = request.data if isinstance(request.data, dict) else {}
+    return success(live_exam_service.record_telemetry(request.user, data))
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def live_room_proctor_status_view(request, room_pin: str):
+    return success(live_exam_service.get_proctor_status(request.user, room_pin))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def live_room_proctor_action_view(request, room_pin: str):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = request.data if isinstance(request.data, dict) else {}
+    return success(live_exam_service.handle_proctor_action(request.user, room_pin, data))

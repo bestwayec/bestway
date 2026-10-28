@@ -1,5 +1,6 @@
 import json
 import pytest
+from django.conf import settings
 from django.test import Client
 from apps.core.views import _compare_semver
 
@@ -15,22 +16,22 @@ def test_compare_semver():
 @pytest.mark.django_db
 def test_desktop_update_check_current_version_returns_204():
     c = Client()
-    # When client version is equal or newer than 1.0.7
-    resp = c.get("/v1/desktop/update/windows-x86_64/1.0.7")
+    # When client version is equal or newer than latest
+    resp = c.get(f"/v1/desktop/update/windows-x86_64/{settings.DESKTOP_LATEST_VERSION}")
     assert resp.status_code == 204
 
-    resp_newer = c.get("/v1/desktop/update/windows-x86_64/1.0.8")
+    resp_newer = c.get("/v1/desktop/update/windows-x86_64/2.0.0")
     assert resp_newer.status_code == 204
 
 
 @pytest.mark.django_db
 def test_desktop_update_check_old_version_returns_manifest():
     c = Client()
-    # When client version is older than 1.0.7
+    # When client version is older than latest
     resp = c.get("/v1/desktop/update/windows-x86_64/0.8.5")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["version"] == "1.0.7"
+    assert data["version"] == settings.DESKTOP_LATEST_VERSION
     assert "notes" in data
     assert "pub_date" in data
     assert "url" in data

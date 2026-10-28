@@ -76,6 +76,12 @@ def ensure_live_exam_tables() -> None:
                     "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS "idx_live_participant_unique" ON "LiveExamParticipant" ("session_id", "student_id");
+
+                ALTER TABLE "LiveExamParticipant" ADD COLUMN IF NOT EXISTS "time_remaining_seconds" INTEGER;
+                ALTER TABLE "LiveExamParticipant" ADD COLUMN IF NOT EXISTS "strikes_count" INTEGER DEFAULT 0;
+                ALTER TABLE "LiveExamParticipant" ADD COLUMN IF NOT EXISTS "last_heartbeat" TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+                ALTER TABLE "LiveExamParticipant" ADD COLUMN IF NOT EXISTS "is_focused" BOOLEAN DEFAULT TRUE;
+                ALTER TABLE "LiveExamSession" ADD COLUMN IF NOT EXISTS "exam_state" VARCHAR(20) DEFAULT 'waiting';
                 """
             )
         else:
@@ -121,6 +127,21 @@ def ensure_live_exam_tables() -> None:
                 );
                 """
             )
+            cursor.execute('PRAGMA table_info("LiveExamParticipant")')
+            p_cols = {row[1] for row in cursor.fetchall()}
+            if "time_remaining_seconds" not in p_cols:
+                cursor.execute('ALTER TABLE "LiveExamParticipant" ADD COLUMN "time_remaining_seconds" INTEGER')
+            if "strikes_count" not in p_cols:
+                cursor.execute('ALTER TABLE "LiveExamParticipant" ADD COLUMN "strikes_count" INTEGER DEFAULT 0')
+            if "last_heartbeat" not in p_cols:
+                cursor.execute('ALTER TABLE "LiveExamParticipant" ADD COLUMN "last_heartbeat" TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+            if "is_focused" not in p_cols:
+                cursor.execute('ALTER TABLE "LiveExamParticipant" ADD COLUMN "is_focused" BOOLEAN DEFAULT 1')
+
+            cursor.execute('PRAGMA table_info("LiveExamSession")')
+            s_cols = {row[1] for row in cursor.fetchall()}
+            if "exam_state" not in s_cols:
+                cursor.execute('ALTER TABLE "LiveExamSession" ADD COLUMN "exam_state" VARCHAR(20) DEFAULT \'waiting\'')
     _live_tables_ensured = True
 
 
@@ -771,3 +792,362 @@ def export_session_excel(actor, room_id: str) -> tuple[bytes, str]:
     safe_title = re.sub(r"[^a-zA-Z0-9_\-]+", "_", session.get("title") or "live_exam").strip("_") or "live_exam"
     filename = f"bestway_{safe_title}_pin_{session['pin']}.xlsx"
     return buf.getvalue(), filename
+
+
+def record_telemetry(user, data: dict) -> dict:
+    """Record heartbeat, focus state, active question, and strikes telemetry from student client."""
+    ensure_live_exam_tables()
+    if not user or not getattr(user, "is_authenticated", False):
+        raise ContractAPIException("UNAUTHORIZED", "Avval tizimga kiring", 401)
+
+    pin = str(data.get("room_pin") or data.get("roomPin") or data.get("pin") or "").strip()
+    attempt_id = str(data.get("attempt_id") or data.get("attemptId") or "").strip()
+    current_q = data.get("current_question") or data.get("currentQuestion") or data.get("currentQuestionNumber") or 1
+    current_section = str(data.get("current_section") or data.get("currentSection") or data.get("currentSkill") or "reading").strip().lower()
+    time_remaining = data.get("time_remaining") or data.get("timeRemaining") or data.get("timeRemainingSeconds")
+    strikes_count = int(data.get("strikes_count") or data.get("strikesCount") or 0)
+    is_focused = bool(data.get("is_focused") if "is_focused" in data else data.get("isFocused", True))
+
+    session_id = None
+    if pin:
+        clean_pin = re.sub(r"\D+", "", pin)
+        if len(clean_pin) == 6:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    'SELECT "id", "status" FROM "LiveExamSession" WHERE "pin"=%s ORDER BY "created_at" DESC LIMIT 1',
+                    [clean_pin],
+                )
+                s_row = cursor.fetchone()
+                if s_row:
+                    session_id, session_status = s_row[0], s_row[1]
+                    if session_status == "completed":
+                        return {
+                            "success": True,
+                            "action": "end_exam",
+                            "status": "completed",
+                            "message": "Imtihon xonasi o'qituvchi tomonidan yakunlangan",
+                        }
+
+    # Find participant record
+    part_row = None
+    with connection.cursor() as cursor:
+        if session_id:
+            cursor.execute(
+                """
+                SELECT "id", "session_id", "status", "strikes_count", "anti_cheat_count", "attempt_id"
+                FROM "LiveExamParticipant"
+                WHERE "session_id"=%s AND "student_id"=%s
+                """,
+                [session_id, user.id],
+            )
+            part_row = cursor.fetchone()
+        if not part_row and attempt_id:
+            cursor.execute(
+                """
+                SELECT "id", "session_id", "status", "strikes_count", "anti_cheat_count", "attempt_id"
+                FROM "LiveExamParticipant"
+                WHERE "attempt_id"=%s AND "student_id"=%s
+                """,
+                [attempt_id, user.id],
+            )
+            part_row = cursor.fetchone()
+
+    if not part_row:
+        if attempt_id:
+            att = MockAttempt.objects.filter(id=attempt_id, student_id=user.id).first()
+            if att:
+                cheat_cnt = max(att.anti_cheat_count or 0, strikes_count)
+                if strikes_count > (att.anti_cheat_count or 0):
+                    att.anti_cheat_count = cheat_cnt
+                    if cheat_cnt >= 3:
+                        att.status = "completed"
+                    att.save(update_fields=["anti_cheat_count", "status"])
+                return {
+                    "success": True,
+                    "action": "disqualified" if cheat_cnt >= 3 else "continue",
+                    "status": "disqualified" if cheat_cnt >= 3 else att.status,
+                    "strikesCount": cheat_cnt,
+                }
+        return {"success": True, "action": "continue", "status": "in_progress", "strikesCount": strikes_count}
+
+    p_id, p_session_id, p_status, p_strikes, p_anti_cheat, p_attempt_id = part_row
+    effective_strikes = max(int(p_strikes or 0), int(p_anti_cheat or 0), strikes_count)
+
+    # Check if participant is disqualified
+    if p_status == "disqualified" or effective_strikes >= 3:
+        effective_status = "disqualified"
+        effective_strikes = max(effective_strikes, 3)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE "LiveExamParticipant"
+                SET "status"='disqualified', "strikes_count"=%s, "anti_cheat_count"=%s,
+                    "last_heartbeat"=CURRENT_TIMESTAMP, "updated_at"=CURRENT_TIMESTAMP
+                WHERE "id"=%s
+                """,
+                [effective_strikes, effective_strikes, p_id],
+            )
+        target_att = p_attempt_id or attempt_id
+        if target_att:
+            MockAttempt.objects.filter(id=target_att).update(status="completed", anti_cheat_count=effective_strikes)
+        return {
+            "success": True,
+            "action": "disqualified",
+            "status": "disqualified",
+            "strikesCount": effective_strikes,
+            "message": "3 marta qoidabuzarlik sodir etildi. Imtihondan chetlatildingiz.",
+        }
+
+    new_status = "warning" if effective_strikes > 0 else (p_status or "in_progress")
+    time_rem_val = int(time_remaining) if time_remaining is not None else None
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE "LiveExamParticipant"
+            SET "current_question_number"=%s,
+                "current_skill"=%s,
+                "time_remaining_seconds"=COALESCE(%s, "time_remaining_seconds"),
+                "strikes_count"=%s,
+                "anti_cheat_count"=%s,
+                "is_focused"=%s,
+                "status"=%s,
+                "last_heartbeat"=CURRENT_TIMESTAMP,
+                "updated_at"=CURRENT_TIMESTAMP
+            WHERE "id"=%s
+            """,
+            [
+                max(1, int(current_q)),
+                current_section,
+                time_rem_val,
+                effective_strikes,
+                effective_strikes,
+                is_focused,
+                new_status,
+                p_id,
+            ],
+        )
+
+    target_att = p_attempt_id or attempt_id
+    if target_att and effective_strikes != (p_anti_cheat or 0):
+        MockAttempt.objects.filter(id=target_att).update(anti_cheat_count=effective_strikes)
+
+    return {
+        "success": True,
+        "action": "continue",
+        "status": new_status,
+        "strikesCount": effective_strikes,
+        "isFocused": is_focused,
+    }
+
+
+def get_proctor_status(actor, room_pin_or_id: str) -> dict:
+    """Return real-time participant matrix with strikes, focus, online status, and time remaining."""
+    ensure_live_exam_tables()
+    session = get_session_detail(actor, room_pin_or_id)
+
+    total_exam_questions = (
+        MockQuestion.objects.filter(group__section__exam_id=session["examId"]).count() or 40
+    )
+
+    now = timezone.now()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT p."id", p."student_id", u."name", u."phone", p."attempt_id", p."status",
+                   p."current_skill", p."current_question_number", p."answered_count",
+                   p."flagged_count", p."total_questions", p."anti_cheat_count",
+                   p."strikes_count", p."time_remaining_seconds", p."is_focused", p."last_heartbeat",
+                   p."joined_at", p."finished_at", p."updated_at"
+            FROM "LiveExamParticipant" p
+            JOIN "User" u ON u."id" = p."student_id"
+            WHERE p."session_id"=%s
+            ORDER BY p."joined_at" ASC
+            """,
+            [session["id"]],
+        )
+        rows = cursor.fetchall()
+
+    participants: list[dict] = []
+    active_cnt = 0
+    warning_cnt = 0
+    disqualified_cnt = 0
+    completed_cnt = 0
+    offline_cnt = 0
+
+    for r in rows:
+        (
+            p_id, s_id, s_name, s_phone, att_id, p_status,
+            curr_skill, curr_q, ans_cnt, flag_cnt, tot_q,
+            anti_cheat, strikes, time_rem, is_focused, last_hb,
+            joined_at, finished_at, updated_at
+        ) = r
+
+        effective_strikes = max(int(strikes or 0), int(anti_cheat or 0))
+
+        is_online = False
+        if last_hb:
+            if hasattr(last_hb, "tzinfo") and last_hb.tzinfo is None:
+                last_hb = timezone.make_aware(last_hb)
+            diff_seconds = (now - last_hb).total_seconds()
+            is_online = diff_seconds <= 30
+        elif updated_at:
+            if hasattr(updated_at, "tzinfo") and updated_at.tzinfo is None:
+                updated_at = timezone.make_aware(updated_at)
+            is_online = (now - updated_at).total_seconds() <= 30
+
+        final_status = p_status or "in_progress"
+        if effective_strikes >= 3 or p_status == "disqualified":
+            final_status = "disqualified"
+            disqualified_cnt += 1
+        elif p_status == "completed":
+            final_status = "completed"
+            completed_cnt += 1
+        elif not is_online:
+            final_status = "offline"
+            offline_cnt += 1
+        elif effective_strikes > 0 or (is_focused is False):
+            final_status = "warning"
+            warning_cnt += 1
+        else:
+            final_status = "in_progress"
+            active_cnt += 1
+
+        tot_q = int(tot_q or total_exam_questions or 40)
+        progress_pct = min(100, round(((ans_cnt or 0) / max(1, tot_q)) * 100))
+
+        participants.append({
+            "participantId": p_id,
+            "studentId": s_id,
+            "studentName": s_name,
+            "name": s_name,
+            "phone": s_phone,
+            "attemptId": att_id,
+            "status": final_status,
+            "currentSkill": curr_skill or "reading",
+            "currentSection": curr_skill or "reading",
+            "currentQuestionNumber": int(curr_q or 1),
+            "currentQuestionIndex": int(curr_q or 1),
+            "answeredCount": int(ans_cnt or 0),
+            "flaggedCount": int(flag_cnt or 0),
+            "totalQuestions": tot_q,
+            "progressPercent": progress_pct,
+            "strikesCount": effective_strikes,
+            "antiCheatCount": effective_strikes,
+            "timeRemainingSeconds": int(time_rem) if time_rem is not None else None,
+            "isFocused": bool(is_focused) if is_focused is not None else True,
+            "isOnline": is_online,
+            "joinedAt": _iso(joined_at),
+            "finishedAt": _iso(finished_at),
+            "lastHeartbeat": _iso(last_hb),
+            "updatedAt": _iso(updated_at),
+        })
+
+    return {
+        "room": session,
+        "roomId": session["id"],
+        "pin": session["pin"],
+        "examTitle": session["examTitle"],
+        "examType": session["examType"],
+        "simulatorMode": session["simulatorMode"],
+        "status": session["status"],
+        "durationMinutes": session["durationMinutes"],
+        "participants": participants,
+        "totalCount": len(participants),
+        "activeCount": active_cnt,
+        "warningCount": warning_cnt,
+        "disqualifiedCount": disqualified_cnt,
+        "completedCount": completed_cnt,
+        "offlineCount": offline_cnt,
+    }
+
+
+def handle_proctor_action(actor, room_pin_or_id: str, data: dict) -> dict:
+    """Execute teacher live invigilation actions (start_exam, disqualify_student, warn_student, end_room)."""
+    ensure_live_exam_tables()
+    session = get_session_detail(actor, room_pin_or_id)
+    if actor.role not in ("admin", "super_admin") and session["teacherId"] != actor.id:
+        raise ContractAPIException("FORBIDDEN", "Faqat xona egasi yoki admin buyruq bera oladi", 403)
+
+    action = str(data.get("action") or "").strip().lower()
+    student_id = str(data.get("student_id") or data.get("studentId") or "").strip()
+
+    if action == "start_exam":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE "LiveExamSession"
+                SET "status"='active', "exam_state"='in_progress'
+                WHERE "id"=%s
+                """,
+                [session["id"]],
+            )
+            cursor.execute(
+                """
+                UPDATE "LiveExamParticipant"
+                SET "status"='in_progress', "updated_at"=CURRENT_TIMESTAMP
+                WHERE "session_id"=%s AND "status" IN ('joined', 'waiting')
+                """,
+                [session["id"]],
+            )
+        return {"success": True, "action": "start_exam", "session": get_session_detail(actor, session["id"])}
+
+    elif action == "disqualify_student":
+        if not student_id:
+            raise ContractAPIException("VALIDATION_ERROR", "student_id ko'rsatilishi shart", 400)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE "LiveExamParticipant"
+                SET "status"='disqualified', "strikes_count"=3, "anti_cheat_count"=3, "updated_at"=CURRENT_TIMESTAMP
+                WHERE "session_id"=%s AND "student_id"=%s
+                """,
+                [session["id"], student_id],
+            )
+            cursor.execute(
+                """
+                SELECT "attempt_id" FROM "LiveExamParticipant"
+                WHERE "session_id"=%s AND "student_id"=%s
+                """,
+                [session["id"], student_id],
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                MockAttempt.objects.filter(id=row[0]).update(status="completed", anti_cheat_count=3)
+        return {"success": True, "action": "disqualify_student", "studentId": student_id, "status": "disqualified"}
+
+    elif action == "warn_student":
+        if not student_id:
+            raise ContractAPIException("VALIDATION_ERROR", "student_id ko'rsatilishi shart", 400)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE "LiveExamParticipant"
+                SET "strikes_count"=COALESCE("strikes_count", 0) + 1,
+                    "anti_cheat_count"=COALESCE("anti_cheat_count", 0) + 1,
+                    "status"=CASE WHEN COALESCE("strikes_count", 0) + 1 >= 3 THEN 'disqualified' ELSE 'warning' END,
+                    "updated_at"=CURRENT_TIMESTAMP
+                WHERE "session_id"=%s AND "student_id"=%s
+                """,
+                [session["id"], student_id],
+            )
+            cursor.execute(
+                """
+                SELECT "strikes_count", "status", "attempt_id" FROM "LiveExamParticipant"
+                WHERE "session_id"=%s AND "student_id"=%s
+                """,
+                [session["id"], student_id],
+            )
+            row = cursor.fetchone()
+            if row:
+                strikes_val, stat_val, att_id_val = row
+                if stat_val == "disqualified" and att_id_val:
+                    MockAttempt.objects.filter(id=att_id_val).update(status="completed", anti_cheat_count=3)
+                return {"success": True, "action": "warn_student", "studentId": student_id, "strikesCount": strikes_val, "status": stat_val}
+        return {"success": True, "action": "warn_student", "studentId": student_id}
+
+    elif action == "end_room":
+        return close_session(actor, session["id"])
+
+    else:
+        raise ContractAPIException("INVALID_ACTION", f"Noma'lum buyruq: {action}", 400)
