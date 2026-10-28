@@ -691,6 +691,32 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `https://bestwayec.uz/api/v1/mock/exams/ielts-academic-mock-01` -> `HTTP 200 OK`, `practiceSkills: ["listening", "reading", "writing", "speaking"]`, `ready: true`, `practiceReady: true`.
      * `https://bestwayec.uz/api/v1/placement-test/questions` -> `HTTP 200 OK`, 20 ta savol va unikal `guest_session_id`.
 
+### 30-BLOK: Desktop CBT Anti-Cheat Kiosk Mode & Real-Time Live Proctoring Dashboard (v1.0.9 Reliz)
+1. **Desktop CBT Anti-Cheat Kiosk Rejimi (`bw-tauri`)**:
+   - `setKioskLock`: Imtihon boshlanishi bilan oyna to'liq ekranga qulflanadi (`fullscreen: true`), o'lchami qotiriladi (`resizable: false`) va doim eng ustki qatlamda turishi ta'minlanadi (`alwaysOnTop: true`). Tauri bo'lmagan muhitlar uchun HTML5 Fullscreen API fallback joriy etildi.
+   - `useAntiCheatGuard`:
+     * Barcha xavfli hodisalar to'xtatildi: kontekst menyu (o'ng tugma), nusxalash (`copy`, `cut`, `paste`), matn tanlash (`selectstart`), sudrash (`dragstart`).
+     * Klaviaturaning barcha xavfli kombinatsiyalari bloklandi: `Alt+Tab`, `Meta / Win`, `F11`, `F12`, `PrintScreen`, brauzer inspektori (`Ctrl+Shift+I/J/C`) hamda matn amallari (`Ctrl+C/V/A/U/P/S`).
+     * `Focus Loss / Window Blur`: Talaba imtihon oynasidan chiqishga uringanda yoki dastur fokusni yo'qotganda zudlik bilan Obsidian-Emerald + Qizil ogohlantirish modali ochiladi (`AntiCheatWarningModal.tsx`), 10 soniyalik teskari hisob taymeri ishga tushadi va qoidabuzarlik "Strike" sifatida hisoblanadi.
+     * 3-qoidabuzarlikda (Strikes: 3/3) imtihon avtomatik `PROCTOR_TERMINATED` / `auto_submit_due_to_violation` holatida yakunlanadi va serverga telemetriya yuboriladi.
+     * Imtihon topshirilganda yoki chiqilganda Kiosk rejimi va barcha hodisa tinglovchilari toza yechiladi (`unlockKiosk`).
+2. **Backend Telemetriya va Jonli Monitoring API (`bestway/backend-django`)**:
+   - `LiveExamParticipant` va `LiveExamSession` jadvallariga yangi ustunlar qo'shildi (`time_remaining_seconds`, `strikes_count`, `last_heartbeat`, `is_focused`, `exam_state`).
+   - `POST /api/v1/live-room/telemetry`: Har 6 soniyada talaba mijozidan yurak urishi (heartbeat), qolgan vaqt, joriy bo'lim/savol raqami, fokus holati va strikelarni qabul qiladi; agar ustoz chetlatgan bo'lsa darhol `disqualified` buyrug'ini qaytaradi.
+   - `GET /api/v1/live-room/<pin>/proctor-status`: Ustoz uchun barcha ulangan talabalarning real vaqt holati matritsasi (onlayn/oflayn indikator 30 soniyalik chegara bilan, strikelar 0/3..3/3, joriy savol va modul, qolgan vaqt).
+   - `POST /api/v1/live-room/<pin>/action`: Ustoz boshqaruv amallari (`start_exam`, `end_room`, `warn_student`, `disqualify_student`).
+3. **Ustoz Jonli Imtihon Monitoringi (`bw-tauri/src/pages/LiveProctoring.tsx`)**:
+   - Har 3 soniyada fon rejimida serverdan talabalar holatini yangilab turuvchi avto-polling tsikli o'rnatildi.
+   - Guruh boshqaruv pulti: "Barcha uchun imtihonni boshlash" va "Imtihonni to'xtatish" tugmalari.
+   - Har bir talaba kartochkasi bo'yicha mustaqil harakatlar: `[ ⚠️ Ogohlantirish ]` (+1 strike berish) va `[ ⛔️ Chetlatish ]` (talabani darhol 3-strike bilan imtihondan chetlatish).
+4. **v1.0.9 Reliz, Sinxronizatsiya va 100% CI Muvaffaqiyati**:
+   - Versiya `1.0.9` ga oshirildi (`bw-tauri/package.json`, `package-lock.json`, `Cargo.toml`, `Cargo.lock`, `tauri.conf.json`, `version.ts`, `settings/base.py`).
+   - Desktop ilovadagi barcha 42 ta test fayli (341 ta test) 100% muvaffaqiyatli o'tdi (PASS).
+   - Backend Django testlari (620 ta test) 100% muvaffaqiyatli o'tdi.
+   - Frontend Next.js testlari (58 ta fayl, 369 ta test) 100% muvaffaqiyatli o'tdi.
+   - GitHub Actions CI ikkala repozitoriyda ham to'liq YASHIL (100% SUCCESS) bo'ldi va Contabo VPS (`169.58.58.229`) ga avtomatik uzilishsiz yetkazildi (`Deploy to VPS` workflow success).
+   - Ishlab chiqarish serverida `https://bestwayec.uz/api/v1/desktop-version` yangi `1.0.9` versiyasini e'lon qilmoqda va `https://bestwayec.uz/api/v1/health` HTTP 200 OK holatida barqaror ishlamoqda.
+
 
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
