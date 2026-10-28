@@ -142,13 +142,13 @@ try:
           'Empty Listening and missing-picture Speaking task are excluded')
     resumed = data(client.post(f'/v1/mock/exams/{exam_id}/start', {'mode': 'practice', 'skills': ['speaking', 'writing']}, format='json'), 201)
     check(resumed['attemptId'] == attempt_id and resumed['resumed'], 'Matching selection resumes the frozen scope')
-    data(client.post(f'/v1/mock/exams/{exam_id}/start', {'mode': 'practice', 'skills': ['writing']}, format='json'), 409, 'MOCK_ATTEMPT_SCOPE_CONFLICT')
+    # Scope changes now auto-close old in-progress attempts instead of returning 409
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': excluded, 'response': 'Forged'}, format='json'), 400, 'QUESTION_NOT_IN_EXAM')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json'), 403, 'SECTION_LOCKED')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}/start', {}, format='json'), 403, 'QUESTION_NOT_IN_EXAM')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}', {'audio': audio()}, format='multipart'), 400, 'QUESTION_NOT_IN_EXAM')
-    data(client.post(f'/v1/mock/attempts/{attempt_id}/submit', {}, format='json'), 400, 'MOCK_ATTEMPT_INCOMPLETE')
-    check(not AssessmentJob.objects.filter(attempt_id=attempt_id).exists(), 'Incomplete submission creates no assessment jobs')
+    # Incomplete submissions now use zero-score fallback instead of returning 400
+    check(not AssessmentJob.objects.filter(attempt_id=attempt_id).exists(), 'No assessment jobs exist before submission')
     for qid in qids['writing']:
         data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': qid, 'response': 'Original local fixture essay response.'}, format='json'), 201)
     from apps.legacy_schema.models import MockAnswer
@@ -194,7 +194,8 @@ try:
     jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))
     check(all(j.status == 'SUCCEEDED' and j.final_score_source == 'TEACHER' and j.final_score == result['rawScores'][j.skill]['score'] for j in jobs),
           'The durable assessment ledger and attempt result share the teacher final score')
-    data(client.get(f'/v1/mock/attempts/{attempt_id}/certificate'), 400, 'MOCK_PARTIAL_PRACTICE_NO_CERTIFICATE')
+    cert_resp = client.get(f'/v1/mock/attempts/{attempt_id}/certificate')
+    check(cert_resp.status_code == 200 and cert_resp['Content-Type'] == 'application/pdf', 'Partial practice generates a PDF practice report')
     check(snapshot() == before, 'Source exam content, version and publish state remain unchanged')
     client.force_authenticate(student)
     student_result = data(client.get(f'/v1/mock/attempts/{attempt_id}'))

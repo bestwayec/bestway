@@ -45,6 +45,9 @@ BEGIN
         ALTER TABLE "StudentProfile" ADD COLUMN IF NOT EXISTS "initialLevel" text;
         ALTER TABLE "StudentProfile" ADD COLUMN IF NOT EXISTS "diagnosticCefrScore" double precision;
     END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'VideoLesson') THEN
+        ALTER TABLE "VideoLesson" ADD COLUMN IF NOT EXISTS "hlsPlaylistUrl" text;
+    END IF;
 END $$;''',
             reverse_sql='''DO $$
 BEGIN
