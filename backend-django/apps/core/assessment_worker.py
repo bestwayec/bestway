@@ -89,7 +89,6 @@ def transcribe(job,input,speech):
                 completed_at=timezone.now()
             )
             response['transcript']=output['text']
-            response['speechDiagnostics']=diag
             if enabled(input):response.update(transcriptConfidence=output['confidence'],audioDurationMs=output['durationMs'])
             try:
                 qid = response['questionId']
