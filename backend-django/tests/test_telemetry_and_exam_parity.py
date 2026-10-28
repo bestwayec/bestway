@@ -188,18 +188,18 @@ class DesktopVersionAndAuthParityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["success"])
         data = response.data["data"]
-        self.assertEqual(data["version"], "1.0.6")
-        self.assertIn("1.0.6", data["downloadUrl"])
-        self.assertEqual(data["downloadUrl"], "https://bestwayec.uz/media/downloads/Bestway.App_1.0.6_x64-setup.exe")
+        self.assertEqual(data["version"], "1.0.7")
+        self.assertIn("1.0.7", data["downloadUrl"])
+        self.assertEqual(data["downloadUrl"], "https://bestwayec.uz/media/downloads/Bestway.App_1.0.7_x64-setup.exe")
 
     def test_desktop_update_json_manifest_returns_0_8_5(self):
         """Verify GET /v1/desktop/update.json returns Tauri v2 manifest for latest version."""
         response = self.client.get("/v1/desktop/update.json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["version"], "1.0.6")
-        self.assertIn("1.0.6", response.data["notes"])
+        self.assertEqual(response.data["version"], "1.0.7")
+        self.assertIn("1.0.7", response.data["notes"])
         windows_platform = response.data["platforms"]["windows-x86_64"]
-        self.assertEqual(windows_platform["url"], "https://bestwayec.uz/media/downloads/Bestway.App_1.0.6_x64-setup.exe")
+        self.assertEqual(windows_platform["url"], "https://bestwayec.uz/media/downloads/Bestway.App_1.0.7_x64-setup.exe")
 
     def test_desktop_auth_both_schemes_for_all_roles(self):
         """Verify both bestway-exam:// and bestway:// schemes work for student, teacher, admin, super_admin."""

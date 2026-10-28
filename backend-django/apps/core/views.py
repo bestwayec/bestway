@@ -235,7 +235,7 @@ def register_view(request):
         if data["role"] == "student":
             points = auth_service.initial_points(cursor)
             link_code = auth_service.unique_link_code(cursor)
-            cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") VALUES (%s,ARRAY[\'IELTS\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",false,%s,%s,NOW(),false)', [user_id, points, link_code])
+            cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",false,%s,%s,NOW(),false)', [user_id, points, link_code])
             cursor.execute('INSERT INTO "PointsLog" ("id","studentId","change","reason","createdAt") VALUES (%s,%s,%s,%s,NOW())', [str(uuid.uuid4()), user_id, points, "Boshlang'ich ball"])
             cursor.execute('INSERT INTO "Notification" ("id","userId","type","text","read","createdAt") VALUES (%s,%s,\'points\'::"NotificationType",%s,false,NOW())', [str(uuid.uuid4()), user_id, f"Xush kelibsiz! Sizga boshlang'ich {points} ball berildi."])
     return success(auth_service.login(data["phone"], data["password"]), status=201)
@@ -295,7 +295,7 @@ def link_child_view(request):
 @api_view(["POST"])
 @permission_classes([Authenticated])
 def desktop_authorize_view(request):
-    require_role(request, "student", "teacher", "admin", "super_admin")
+    require_role(request, "student", "teacher", "instructor", "admin", "super_admin")
     data = body(request, {"deviceId", "state", "codeChallenge", "redirect"}); required(data, "deviceId", "state", "codeChallenge", "redirect")
     if not 8 <= len(data["deviceId"]) <= 128 or not 16 <= len(data["state"]) <= 128 or not re.fullmatch(r"[A-Za-z0-9_-]{43}", data["codeChallenge"]) or len(data["redirect"]) > 256:
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
@@ -316,7 +316,7 @@ def desktop_exchange_view(request):
 @permission_classes([Authenticated])
 def my_exam_programs_view(request):
     if request.method == "GET":
-        if getattr(request.user, "role", None) in {"teacher", "admin", "super_admin"}:
+        if getattr(request.user, "role", None) in {"teacher", "instructor", "admin", "super_admin"}:
             return success({
                 "availablePrograms": ["IELTS", "MULTILEVEL"],
                 "activeProgram": "IELTS",
@@ -363,7 +363,7 @@ def mock_exams_view(request):
     user = request.user if getattr(request.user, "is_authenticated", False) else None
     role = getattr(user, "role", None)
     should_cache = user is None or role == "student"
-    cache_key = f"mock_exams_list_{role or 'anon'}_{program}_{exam_type}_{practice}"
+    cache_key = f"mock_exams_list_{getattr(user, 'id', 'anon')}_{role or 'anon'}_{program}_{exam_type}_{practice}"
     if should_cache:
         try:
             from django.core.cache import cache
@@ -726,7 +726,7 @@ def users_view(request):
         cursor.execute('INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","createdAt","updatedAt") VALUES (%s,%s,%s,%s,%s,true,NOW(),NOW())', [target, data["name"], data["phone"], hashed, data["role"]])
         if data["role"] == "student":
             points = auth_service.initial_points(cursor); link = auth_service.unique_link_code(cursor)
-            cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","groupId","isApproved","currentPoints","linkCode","createdAt","gameQualified") VALUES (%s,ARRAY[\'IELTS\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",%s,false,%s,%s,NOW(),false)', [target, group_id, points, link])
+            cursor.execute('INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","groupId","isApproved","currentPoints","linkCode","createdAt","gameQualified") VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",%s,false,%s,%s,NOW(),false)', [target, group_id, points, link])
             cursor.execute('INSERT INTO "PointsLog" ("id","studentId","change","reason","createdAt") VALUES (%s,%s,%s,%s,NOW())', [str(uuid.uuid4()), target, points, "Boshlang'ich ball"])
         auth_service.audit(cursor, request.user.id, "user.create", "user", target, new={"name": data["name"], "phone": data["phone"], "role": data["role"]})
         return success(_user_detail(cursor, request.user, target), status=201)

@@ -49,7 +49,7 @@ def state(cursor, student_id: str):
             row = None
     if not row:
         return {"availablePrograms": ["IELTS", "MULTILEVEL"], "activeProgram": "IELTS", "accessPolicy": access_policy(cursor)}
-    return {"availablePrograms": programs_value(row[0]), "activeProgram": row[1], "accessPolicy": access_policy(cursor)}
+    pol = access_policy(cursor); avail = list(dict.fromkeys([*programs_value(row[0]), "IELTS", "MULTILEVEL"])) if pol == "SELF_SELECT" else programs_value(row[0]); return {"availablePrograms": avail, "activeProgram": row[1], "accessPolicy": pol}
 
 
 def assert_staff_scope(cursor, actor, student_id: str):

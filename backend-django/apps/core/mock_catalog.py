@@ -19,7 +19,7 @@ from common.api.exceptions import ContractAPIException
 
 from .exam_programs import state
 
-STAFF = {"teacher", "admin", "super_admin"}
+STAFF = {"teacher", "instructor", "admin", "super_admin"}
 
 
 def is_staff(user) -> bool: return bool(user and user.role in STAFF)
@@ -43,7 +43,10 @@ def _student_question_payload(question, group) -> dict:
 def catalogue_queryset(user, program: str | None, exam_type: str | None, practice_level: str | None):
     rows = MockExam.objects.all().order_by("-created_at")
     if exam_type: rows = rows.filter(type=exam_type)
-    if is_staff(user): return rows
+    if is_staff(user):
+        if program == "MULTILEVEL": rows = rows.filter(type="multilevel")
+        elif program == "IELTS": rows = rows.exclude(type="multilevel")
+        return rows
     if user and user.role == "student":
         with __import__("django.db", fromlist=["connection"]).connection.cursor() as cursor:
             track = state(cursor, user.id)
@@ -54,7 +57,7 @@ def catalogue_queryset(user, program: str | None, exam_type: str | None, practic
     else:
         rows = rows.filter(is_demo=True)
     if practice_level:
-        rows = rows.filter(practice_level=practice_level, profile="practice", type="multilevel")
+        rows = rows.filter(practice_level=practice_level, type="multilevel")
     return rows.order_by("-created_at")
 
 
@@ -63,7 +66,7 @@ def access_for(user, exam) -> str:
     if user and user.role == "student":
         with __import__("django.db", fromlist=["connection"]).connection.cursor() as cursor:
             track = state(cursor, user.id)
-        if program_for_type(exam.type) not in track["availablePrograms"]: return "locked"
+        if track.get("accessPolicy") == "STAFF_ASSIGNED" and program_for_type(exam.type) not in track["availablePrograms"]: return "locked"
     elif exam.type == "multilevel": return "locked"
     if exam.is_demo or exam.price == 0: return "granted"
     if not user or user.role != "student": return "locked"

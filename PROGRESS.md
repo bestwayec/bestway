@@ -625,6 +625,28 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * GitHub Actions Secrets (`VPS_HOST`, `VPS_USER`, `VPS_PATH`, `VPS_SSH_KEY`) Contabo VPS (`169.58.58.229`) ma'lumotlariga yangilandi.
      * `.github/workflows/deploy.yml` zero-downtime service-level rebuild (`backend frontend assessment-worker game-scheduler telegram-bot`) va host `curl` health-check (`127.0.0.1:3001/v1/health`, `127.0.0.1:3005/`) standartiga o'tkazildi.
 
+### 30-BLOK: Desktop App Deep Audit (w-tauri v1.0.7) — Publish Qilingan Imtihonlar, O'qituvchi Roli va Obsidian-Emerald UI
+
+1. **Publish Qilingan Imtihonlar Ko'rinmasligi va Muzlab Qolgan Skeletonlar Bartaraf Etildi (w-tauri & ackend-django)**:
+   - **Zod Schema Sinxronizatsiyasi (src/lib/schemas.ts, src/lib/mocks.ts)**: MockExamListItemSchema da profile maydoni writing_speaking, partial_practice, single_skill hamda 
+ull qiymatlarini qabul qiladigan qilib kengaytirildi (SCHEMA_MISMATCH xatosi bartaraf etildi).
+   - **Skeleton Loader va Track Auto-Fallback (src/pages/Exams.tsx, src/pages/Dashboard.tsx, src/pages/History.tsx)**: TanStack Query v5 da isPending o'rniga isLoading va 4.5 soniyalik watchdog taymeri joriy qilindi; asosiy yo'nalishda (IELTS / MULTILEVEL) imtihon bo'lmaganda ikkinchi yo'nalishdagi faol imtihonlar avtomatik yuklanishi va sahifaning o'zida 1-bosishda yo'nalish almashtirish tugmalari qo'shildi.
+   - **Filtrlar va Empty State (src/lib/catalogue.ts, src/pages/Exams.tsx)**: All, A1, A2, B1, B2, C1 va mahorat turlari (ll, ull_mock, listening, eading, writing, speaking) mijoz tomonida (matchesCatalogue) xatosiz filtrlanadigan qilindi; bo'sh holatda Obsidian-Emerald Empty State (*"Hozircha faol imtihonlar mavjud emas. Yangi mock e'lon qilinganda bu yerda ko'rinadi."*) chiqarildi.
+   - **Backend Katalog va Kesh Tuzatishlari (pps/core/mock_catalog.py, pps/core/exam_programs.py, pps/core/views.py)**: SELF_SELECT rejimida o'quvchilarga ham IELTS, ham MULTILEVEL yo'nalishlariga ruxsat berildi; mock_exams_view kesh kalitiga user.id qo'shildi.
+
+2. **O'qituvchi (	eacher / instructor) Avtorizatsiyasi va Role-Based Routing**:
+   - **src/lib/auth.ts**: Rol tekshiruv funksiyalari (isTeacherRole, isInstructorRole, isAdminRole, isStaffRole, getClientRoleBadge) yaratildi.
+   - **Dinamik Nishon va Menyular (src/components/Sidebar.tsx, src/App.tsx, src/pages/Login.tsx, src/lib/session-store.ts)**: 	eacher uchun **"TEACHER WORKSPACE"**, instructor uchun **"INSTRUCTOR CLIENT"**, dmin uchun **"ADMIN CENTER"** nishonlari va Live Proctoring (Imtihonlar monitoringi), Grading Queue, Groups & Results (Guruhlarim / Cohorts), Imtihonlar bazasi bo'limlari ochildi.
+   - **src/pages/GroupsResults.tsx**: Ham /v1/groups, ham /v1/teacher/cohorts/ endpointlaridan guruhlar yuklanishi qo'llab-quvvatlandi.
+
+3. **Obsidian-Emerald UI Polishing va v1.0.7 Relizi**:
+   - src/styles.css va barcha sahifalardagi eski lime-green (#89F336) qoldiqlari toza Obsidian (#0B0F17), Slate-900 (#111827), order-emerald-500/15 va Zumrad (#10B981) ranglariga o'tkazildi.
+   - 
+px tsc --noEmit (0 xato), 
+px vitest run (41 ta test fayli, 328/328 test 100% PASS) va 
+ode --test tools/release-platforms.test.mjs (10/10 PASS) tasdiqlandi.
+   - Versiya 1.0.7 ga ko'tarilib, 1.0.7 tegi GitHub (estwayec/bw-tauri) ga push qilindi (33de46).
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 - Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
