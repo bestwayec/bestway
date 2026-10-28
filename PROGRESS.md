@@ -700,6 +700,14 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `Focus Loss / Window Blur`: Talaba imtihon oynasidan chiqishga uringanda yoki dastur fokusni yo'qotganda zudlik bilan Obsidian-Emerald + Qizil ogohlantirish modali ochiladi (`AntiCheatWarningModal.tsx`), 10 soniyalik teskari hisob taymeri ishga tushadi va qoidabuzarlik "Strike" sifatida hisoblanadi.
      * 3-qoidabuzarlikda (Strikes: 3/3) imtihon avtomatik `PROCTOR_TERMINATED` / `auto_submit_due_to_violation` holatida yakunlanadi va serverga telemetriya yuboriladi.
      * Imtihon topshirilganda yoki chiqilganda Kiosk rejimi va barcha hodisa tinglovchilari toza yechiladi (`unlockKiosk`).
+     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
+     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
+     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
+     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
+     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
+     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
+     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
+     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
 2. **Backend Telemetriya va Jonli Monitoring API (`bestway/backend-django`)**:
    - `LiveExamParticipant` va `LiveExamSession` jadvallariga yangi ustunlar qo'shildi (`time_remaining_seconds`, `strikes_count`, `last_heartbeat`, `is_focused`, `exam_state`).
    - `POST /api/v1/live-room/telemetry`: Har 6 soniyada talaba mijozidan yurak urishi (heartbeat), qolgan vaqt, joriy bo'lim/savol raqami, fokus holati va strikelarni qabul qiladi; agar ustoz chetlatgan bo'lsa darhol `disqualified` buyrug'ini qaytaradi.
