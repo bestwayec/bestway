@@ -726,6 +726,42 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - Ishlab chiqarish serverida `https://bestwayec.uz/api/v1/desktop-version` yangi `1.0.9` versiyasini e'lon qilmoqda va `https://bestwayec.uz/api/v1/health` HTTP 200 OK holatida barqaror ishlamoqda.
 
 
+### 8-BLOK: Phase 31 — "Subway Vocab Runner": 2.5D Endless English Runner Game & Gamification Engine
+1. **Backend Savollar Banki, Anti-Cheat va XP Sinxronizatsiyasi (`backend-django/apps/core/`)**:
+   - `apps/core/runner_game_service.py` xizmati yaratildi:
+     * CEFR A1, A2, B1, B2, C1, Irregular Verbs, Prepositions va Collocations toifalaridagi 50 dan ortiq mualliflik savollari banki.
+     * Dinamik aralashtirish (shuffle) mexanizmi: 3 ta yo'lak uchun 1 ta to'g'ri va 2 ta chalg'ituvchi variantlarni tasodifiy joylashtiradi.
+     * Qat'iy Anti-Cheat Sanity Check: masofa va vaqt nisbati jismonan mumkin bo'lgan maksimal tezlikdan (<= 45 m/s) oshmasligi, maksimal ball chegarasi (<= 1,000,000) va elapsed vaqt nazorati.
+     * XP hisoblash va xavfsiz qo'shish: Har 100 ball uchun 1 XP (maksimal 150 XP), `StudentProfile.current_points` ga qo'shiladi va `PointsLog` ga tranzaksiya yoziladi.
+     * Noto'g'ri so'zlarni talabaning `MistakeVault` / `UserWeakWord` (SRS Xatolar banki) ga avtomatik yozish (`mistake_count += 1`, `is_mastered = False`).
+     * Yetakchilar jadvali (`get_runner_leaderboard`): haftalik va barcha davrlarning eng yuqori ballari ro'yxati.
+   - `apps/core/runner_game_views.py` va `apps/core/urls.py`:
+     * `GET /api/v1/games/runner/questions` (va `/games/runner/questions`)
+     * `POST /api/v1/games/runner/submit-score` (va `/games/runner/submit-score`)
+     * `GET /api/v1/games/runner/leaderboard` (va `/games/runner/leaderboard`)
+   - Pytest unit testlari: `tests/test_runner_game.py` da 9 ta test to'liq 100% PASS qildi.
+
+2. **Frontend 2.5D HTML5 Canvas Cheksiz Yugurish O'yini (`VocabRunnerGame.tsx`)**:
+   - `frontend/src/components/vocabulary/runner/VocabRunnerGame.tsx`:
+     * 60 FPS silliq Canvas renderlash tsikli (`requestAnimationFrame`), Obsidian-Emerald ranglar gammasi (`#0B0F17`, `#10B981`, `#064E3B`).
+     * 3 yo'lakli 3D perspektiv proyeksiya: gorizontga intiluvchi zumrad chiziqlar, tezlikka mos er belgilari, neonga burkangan fon va yulduzlar/zarralar.
+     * Gologramma neondan yasalgan darvozalar: har bir darvoza ustida so'z varianti va savol matni aniq suzib turadi.
+     * O'yinchi personaji va dinamik harakatlar: yugurish tebranishi, sakrash trayektoriyasi (Squash & Stretch), sirg'alib o'tish (crouch/slide) va orqada neon iz qoldirish.
+     * Dinamik to'siqlar va bonuslar: sakrab o'tiladigan qizil lazer to'siqlari, sirg'alib o'tiladigan baland plitalar va yig'ib olinadigan zumrad kristallar (kristallar combo multiplikatorini oshiradi).
+     * Web Audio API sintizatori (`RunnerSoundEngine`): hech qanday tashqi audio fayllarga bog'lanmagan sof brauzer sintezi (sakrash, sirg'alish, to'g'ri darvoza, to'qnashuv, game over).
+     * Boshqaruv: Klaviatura (Arrow keys, WASD, Space/Up sakrash, Down/S sirg'alish) va Mobil sensorli ekranlar uchun Touch Swipe imo-ishoralari.
+     * HUD va Modal: 3 ta jon, combo multiplikatori, masofa hisoblagich, savol kartasi, o'yin yakunida yangi rekord nishoni, +XP hisoboti, xatolar ro'yxati va 1 ta bosishda Telegramda ulashish.
+
+3. **Marshrut va Katalog Bosh Sahifasi Integratsiyasi**:
+   - Maxsus sahifa yaratildi: `frontend/src/app/[locale]/(app)/vocabulary/runner/page.tsx` (`/vocabulary/runner`).
+   - Lug'atlar katalogida (`frontend/src/components/vocabulary/VocabularyCatalogView.tsx`) Obsidian-Emerald uslubidagi jozibador Subway Vocab Runner hero banneri o'rnatildi va `[ 🎮 Hoziroq O'ynash ]` tugmasi bilan bog'landi.
+
+4. **Qat'iy QA Tekshiruvi va 100% Yashil Gate**:
+   - Backend Pytest: 9 ta yangi test, barchasi 100% PASS.
+   - Frontend TypeScript: `npx tsc --noEmit` 0 ta xato bilan toza o'tdi.
+   - Frontend Vitest: 58 ta test fayli, 369 ta test 100% PASS.
+   - Git commit va merge: Mualliflik strictly `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI Attribution).
+
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
 - Speaking audiolarni Opus formatida siqish foni faollashtirildi.
