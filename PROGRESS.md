@@ -527,6 +527,44 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - `POST /v1/bamboozle/rooms/create` -> `200 OK (room_code, share_url, telegram_share_url)`
    - `python manage.py run_streak_bot --check` -> `200 OK (Streak check complete)`
 
+
+### 27-BLOK: O'qituvchi Kabineti (Teacher Workspace), Guruhlar (Cohorts), Uyga Vazifalar va O'quvchilar Tahlili
+
+1. **Backend Ma'lumotlar Modeli (`apps/core/models.py` & Migratsiya `0005`)**:
+   - `Cohort`: O'qituvchining guruhi (`id`, `teacher`, `name`, `invite_code` (unique, e.g. `BW-7892`), `description`, `created_at`).
+   - `CohortMembership`: O'quvchining guruhga a'zoligi (`cohort`, `student`, `status='active'|'archived'`, `joined_at`).
+   - `HomeworkAssignment`: Guruhga biriktirilgan uyga vazifa (`cohort`, `title`, `lesson` (29 ta darsdan biri), `exam` (IELTS/CEFR Mock), `deadline`, `min_pass_percent=80`).
+   - `HomeworkSubmission`: O'quvchining topshirgan vazifasi (`assignment`, `student`, `score_percent`, `is_passed`, `completed_at`).
+   - PostgreSQL migratsiyasi (`0005_cohort_homeworkassignment_cohortmembership_and_more.py`) muvaffaqiyatli qo'llanildi.
+
+2. **API Endpointlar (`apps/core/teacher_views.py` & `apps/core/urls.py`)**:
+   - `GET /v1/teacher/cohorts` — O'qituvchining barcha guruhlari, har biridagi o'quvchilar va vazifalar soni.
+   - `POST /v1/teacher/cohorts` — Yangi guruh ochish va unikal 6 xonali taklif kodini (`BW-XXXX`) yaratish.
+   - `GET /v1/teacher/cohorts/<id>/analytics` — Guruhdagi barcha o'quvchilarning progress matritsasi (ko'rilgan darslar, topshirgan vazifalar va o'rtacha ball).
+   - `POST /v1/teacher/assignments` — Guruhga video darslik yoki mock testdan muddatli vazifa biriktirish.
+   - `POST /v1/student/join-cohort` — O'quvchi 6 xonali kod orqali guruhga bir zumda a'zo bo'lishi.
+   - `GET /v1/student/my-assignments` — O'quvchining barcha faol, topshirilgan yoki muddati o'tgan vazifalari ro'yxati.
+   - `POST /v1/student/assignments/<id>/submit` — Vazifa natijasini saqlash va o'tish ballini hisoblash.
+
+3. **Frontend: O'qituvchi Kabineti va Talaba Vidjeti (`frontend/src/components/teacher/`)**:
+   - Chap navigatsiyada `teacher`, `admin`, `super_admin` rollari uchun **"Teacher Workspace"** bo'limi ulandi (`/en/teacher`).
+   - `TeacherCohortList.tsx`: Obsidian-Emerald uslubidagi guruh kartochkalari, o'quvchilar soni, taklif kodini bir bosishda nusxalash va Telegram orqali o'quvchilarga ulashish havolasi.
+   - `CreateAssignmentModal.tsx`: 29 ta grammatika video darslari yoki IELTS/CEFR testlaridan tanlab, deadline va o'tish balli bilan vazifa biriktirish modali.
+   - `CohortProgressTable.tsx`: Tahliliy jonli matritsa — ustunlarda vazifalar, qatorlarda o'quvchilar, katakchalarda esa aniq holat nishonlari (`85% ✓`, `Kutilmoqda ⏳`, `Topshirmadi ✕`).
+   - `StudentAssignmentsWidget.tsx`: O'quvchi dashboardida o'qituvchidan kelgan topshiriqlar vidjeti va "Guruhga qo'shilish" (kod kiritish) modali.
+
+4. **Sifat Nazorati va CI/PR Gate (100% PASS Gate)**:
+   - Backend: Pytest `test_teacher_workspace.py` 15/15 ta test 100% PASS (guruh yaratish, taklif kodi generatsiyasi, qo'shilish, vazifa biriktirish, progress matritsasi va RBAC tekshiruvlari).
+   - Frontend: Vitest 57 ta test fayli, 366/366 test 100% PASS; `tsc --noEmit` 0 ta TypeScript xatoligi.
+   - Mualliflik: `Komiljon Roziyev <kruziyev0@gmail.com>` (`zero-ai-attribution`).
+
+5. **VPS Zero-Downtime Deploy va Jonli Sinov**:
+   - Contabo VPS (`169.58.58.229`) da `backend` va `frontend` konteynerlari uzilishsiz yangilandi.
+   - Barcha yangi migratsiyalar bazada qo'llanildi.
+   - `https://bestwayec.uz/` -> `HTTP/2 200 OK`
+   - `https://api.bestwayec.uz/v1/health` -> `200 OK (status: ok)`
+   - `https://bestwayec.uz/en/teacher` -> `307 Redirect (Protected route)`
+
 ## Jarayonda
 - Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
 - Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
