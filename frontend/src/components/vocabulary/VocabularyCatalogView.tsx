@@ -170,6 +170,38 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         </div>
       </div>
 
+      {/* Subway Vocab Runner Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-[#0B0F17] to-emerald-900/20 p-6 md:p-7 shadow-xl shadow-emerald-950/20">
+        <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+              <Zap className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+              <span>Yangi 3D Gamifikatsiya • Subway Vocab Runner</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+              ⚡️ Subway Vocab Runner — So'zlarni yugurib o'rganing!
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              3 yo'lakli dinamik yugurish trassasi, 60 FPS silliq harakat, CEFR (A1–C1) so'z boyligi, Irregular Verbs va kollokatsiyalar! To'g'ri darvozani tanlang, xavfli to'siqlardan sakrab o'ting va o'z rekordingizni o'rnating.
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center">
+            <Link href="/vocabulary/runner">
+              <Button
+                size="lg"
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-emerald-500/25 transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
+              >
+                <Gamepad2 className="h-5 w-5" />
+                <span>Hoziroq O'ynash</span>
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* SRS Quick Alert Banner (if user has weak words) */}
       {srsStats && srsStats.totalWeakWords > 0 && (
         <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-card to-emerald-500/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
