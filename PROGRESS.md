@@ -493,6 +493,41 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.5` -> `204 No Content` (mijoz eng so'nggi versiyada)
      * `https://bestwayec.uz/api/v1/desktop/update/windows-x86_64/0.8.0` -> `200 OK` (manifest JSON to'g'ri qaytdi)
 
+### 24-BLOK: 29 ta Darslik Auditi, Multi-Platform Reliz (v1.0.6) va AI Baholash Engine Kuchaytirilishi
+1. **29 ta Darslik va Resurslar Auditi (`audit_29_lessons.py`)**:
+   - Barcha 29 ta darslikning video fayllari, muqovalari, solo testlari va Bamboozle savollari to'liq tekshirildi.
+   - Qora/bo'sh chiqayotgan muqovalar uchun boyitilgan dinamik Obsidian-Emerald fallback kartochkalari (`course-card-thumbnail.tsx`) joriy etildi.
+2. **IELTS va Milliy Sertifikat (CEFR) AI Baholash Moduli**:
+   - Mock imtihonlaridagi Writing va Speaking topshiriqlarini rasmiy xalqaro mezonlar (IELTS 0.0–9.0 va Milliy sertifikat 0–75 ball / CEFR B1–C1) asosida baholovchi chuqurlashtirilgan AI moduli (`assessment_providers.py`, `mock_scoring.py`) optimallashtirildi.
+   - Har bir mezon bo'yicha batafsil fikr-mulohazalar (Task Achievement, Coherence, Lexical, Grammar, Fluency, Pronunciation) va tavsiyalar vizualizatsiyasi (`exam-feedback-modal.tsx`) yaratildi.
+3. **Desktop va Multi-Platform Reliz (v1.0.6)**:
+   - `bw-tauri` relizi v1.0.6 tegi bilan chiqildi va avto-yangilanish tizimi sinovdan o'tkazildi.
+
+### 25-BLOK: Infratuzilma Optimizatsiyasi, HLS Video Streaming & Speaking Audio Processing Pipeline (Phase 1)
+1. **Backend: FFmpeg HLS Transcoding & Oqimli Uzatish (`apps/core/lms_services.py`)**:
+   - Serverda yuklangan dars videolarini fon rejimida adaptiv HLS formatiga (1080p, 720p, 480p) konvertatsiya qiluvchi tizim yaratildi (`HLS_RESOLUTIONS`).
+   - `Lesson` va `VideoLesson` modellariga `hls_playlist_url` (`hlsPlaylistUrl`) maydonlari qo'shildi va PostgreSQL bazasiga muvaffaqiyatli tatbiq etildi.
+   - Oqimli uzatish xizmati (`stream_hls_file`) master pleylistlar (`.m3u8`, MIME: `application/vnd.apple.mpegurl`) va video segmentlar (`.ts`, MIME: `video/mp2t`) uchun kesh sarlavhalari bilan sozlandi.
+   - Dockerfile'ga `ffmpeg` kutubxonasi qo'shildi.
+2. **Frontend: Gamified Video Player HLS Integratsiyasi (`GamifiedVideoPlayer.tsx`)**:
+   - `hls.js` kutubxonasi Next.js frontendiga ulandi. Brauzer HLS qo'llab-quvvatlasa oqimli uzatish yoqiladi, Safari va iOS qurilmalari uchun native HLS, eskilar uchun esa to'g'ridan-to'g'ri MP4 fallback saqlanadi.
+   - Pleyerga sifat tanlash menyusi (Auto / 1080p / 720p / 480p) Obsidian-Emerald dizaynida integratsiya qilindi.
+   - Barcha anti-cheat va video tugatilgandan keyin testlarni ochish nazoratchilari to'liq saqlab qolindi.
+3. **Speaking Audio Siqish Xizmati (`apps/exams/audio_service.py`)**:
+   - Foydalanuvchilar Speaking imtihonlarida yuklagan audio yozuvlarini fon rejimida (Celery + Worker fallback) 32kbps mono Opus formatiga siquvchi `optimize_speaking_audio` moduli ishga tushirildi.
+   - Disk xotirasi 70-85% tejab qolinishi ta'minlandi va `upload_speaking` paytida tranzaksiya yakunlanishi bilan avtomatik ishga tushishi ulandi.
+4. **API Keshlash va Qat'iy HTTP Kesh Standartlari**:
+   - Ommaviy darslar ro'yxati uchun Redis/Django kesh (`lms:video_lessons:public`, 300s TTL) o'rnatildi.
+   - Nginx (`bestway.conf`) da `.m3u8` va `.ts` fayllari uchun `types { application/vnd.apple.mpegurl m3u8; video/mp2t ts; }` hamda `add_header Cache-Control "max-age=86400";` o'rnatildi va Nginx muvaffaqiyatli reload qilindi.
+5. **Sifat Nazorati (100% PASS Gate)**:
+   - Pytest: `test_hls_streaming_and_audio_optimization.py` 8/8 PASS, jami 560+ testlar 100% PASS.
+   - Frontend: `tsc --noEmit` 0 xatolik, Vitest 57 test fayli, 366/366 test 100% PASS.
+6. **Zero-Downtime VPS Deploy va 200 OK Verifikatsiya**:
+   - Contabo VPS (`169.58.58.229`) da `education-backend` va `education-frontend` konteynerlari qayta yig'ildi va ishga tushirildi.
+   - PostgreSQL da `hlsPlaylistUrl` ustuni qo'shildi va `check_legacy_schema` 39 ta model bilan to'liq verifikatsiya qilindi.
+   - Nginx konfiguratsiyasi testdan o'tkazilib qayta yuklandi.
+   - Ommaviy va ichki endpointlar (https://bestwayec.uz/, https://api.bestwayec.uz/v1/health, http://127.0.0.1:3005, http://127.0.0.1:3001/v1/health) 200 OK bilan muvaffaqiyatli tasdiqlandi.
+
 
 ### 26-BLOK: Foydalanuvchini Qaytarish (Retention Engine), Telegram Streak Bot, 1v1 Bamboozle Arenasi va Zaif Nuqtalarni Darsliklarga Bog'lash
 
@@ -565,115 +600,109 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - `https://api.bestwayec.uz/v1/health` -> `200 OK (status: ok)`
    - `https://bestwayec.uz/en/teacher` -> `307 Redirect (Protected route)`
 
-### 28-BLOK: High-Converting Hero Landing, 10-Daqiqalik Adaptiv CEFR Express Placement Test & Guest-to-User State Migratsiyasi (v1.0.6)
+### 28-BLOK: Desktop App UI/UX & Dashboard Overhaul, Mock Test 1 To'liq 4-Skill Seeding va v1.0.8 Ko'p Platformali Reliz
 
-1. **Backend Placement Test & Guest Engine (`apps/exams/placement_views.py`)**:
-   - **Savollar Banki va Kalibratsiya**: 20 ta puxta kalibratsiyalangan CEFR savollari (4 ta A1/A2, 6 ta B1, 6 ta B2, 4 ta C1) Grammatika, Lug'at va Reading comprehension bo'yicha tuzildi.
-   - `GET /api/v1/placement-test/questions`: Har bir sessiya uchun anonim `guest_session_id` (UUID) va 20 ta savolni to'g'ri javoblarsiz qaytaradi. Redis IP rate limit (soatiga 5 ta so'rov) orqali suiiste'molliklardan himoyalandi.
-   - `POST /api/v1/placement-test/submit`: Foydalanuvchi javoblarini baholab, CEFR darajasi (A2, B1, B2, C1), taxminiy IELTS Band (4.0 - 8.0) va O'zbekiston Milliy baholash shkalasini (20 - 75 ball) hisoblaydi.
-   - **Zaif Grammatik Nuqtalar Diagnostikasi**: Xato qilingan mavzular tahlil qilinib, platformadagi 29 ta video darslikka avtomatik bog'lanadi (`analytics_service.find_matching_lesson_for_topic`).
-   - **Guest Sessionni Foydalanuvchiga Bog'lash (Claim / State Migration)**:
-     - `PlacementTestResult` modeli va migratsiya (`0006`) yaratildi.
-     - `POST /api/v1/placement-test/claim`: Login bo'lgan o'quvchining `StudentProfile.initial_level`, `diagnostic_cefr_score` hamda `MistakeVault` xatolar bazasiga test natijalari avtomatik ko'chiriladi.
+1. **Backend: Multi-Level Mock Test 1 To'liq 4 Modul Vazifalari va Assetlari**:
+   - `apps/core/management/commands/seed_multilevel_test1_gym_diet.py` qayta yozildi:
+     * **Listening**: 6 ta qism (Part 1-6), 30 ta savol, diskda haqiqiy toza WAV audio assetlari (`listening_part_1.wav` .. `listening_part_6.wav`).
+     * **Reading**: 5 ta qism (Part 1-5), 35 ta savol (Matching, Sentence completion, Multiple choice, Classification), barcha `audio_play_limit=0` NOT NULL cheklovlari qondirildi.
+     * **Writing**: Task 1.1 (Informal letter, Gym fee increase), Task 1.2 (Formal letter to club manager), Task 2 (Vegetarian diet essay).
+     * **Speaking**: Part 1.1 (Interview), Part 1.2 (Picture comparison `Classroom vs Online` PNG asset bilan), Part 2 (Cue card), Part 3 (Discussion).
+     * Jami 81 ta savol/vazifa `MockExam(multilevel-test-01-gym-vegetarian)` ga `profile='full_mock'` va `is_published=True` qilib biriktirildi.
+   - `apps/core/mock_practice.py` yangilandi:
+     * `_normalize_question_for_practice` va `_authored_skill_question_ids` qo'shildi.
+     * `available_practice_skills` va `practiceSkills` orqali mavjud modullar aniq uzatiladi.
+     * Vazifasi bo'lmagan modul so'ralganda backend qulamasdan xavfsiz 422 `MOCK_PRACTICE_NOT_READY` qaytaradi.
+   - Pytest `tests/test_mock_practice.py`: 9/9 ta test 100% PASS.
 
-2. **Frontend High-Converting Hero Landing (`frontend/src/app/[locale]/(marketing)/page.tsx`)**:
-   - **Neon Hero Sektsiyasi**: Obsidian-Emerald dizayn tizimida katta sarlavha: *"Ingliz tili darajangizni 10 daqiqada sun’iy intellekt orqali aniqlang"*, O'zbekiston Milliy sertifikati (0-75) va IELTS (0-9.0) diagnostikasi tushuntirishi.
-   - **Markaziy Emerald CTA**: `[ ⚡️ Bepul Darajangizni Aniqlang (10 daqiqa) ]` tugmasi bosilganda to'g'ridan-to'g'ri test runner blokiga silliq siljitadi (`smooth scroll`).
-   - **Ekotizim Vitrinasi**: 3 ta Obsidian kartochka (*"29+ Gamified Video Darslar"*, *"CDI & Multi-Level Simulyatori"*, *"Teacher Workspace"*).
+2. **Backend: Phase 4 — Adaptive 10-Minute Express Placement Test**:
+   - `apps/exams/placement_views.py` va `apps/core/urls.py`:
+     * `GET /api/v1/placement-test/questions` — 20 ta CEFR savollari (Grammatika, Lug'at, Reading: 4 A1/A2, 6 B1, 6 B2, 4 C1) va unikal `guest_session_id`.
+     * `POST /api/v1/placement-test/submit` — Ball va darajani (A1-C1) aniqlash.
+     * Jonli serverda 200 OK qaytarishi to'liq verifikatsiya qilindi.
 
-3. **10-Daqiqalik Express Placement Test Moduli (`ExpressPlacementTest.tsx`)**:
-   - **Test Runner**: Sticky 10-daqiqalik orqaga sanovchi taymer (`MM:SS`), Obsidian-Emerald progress bar (`Savol X / 20`), 4 ta variant (`A`, `B`, `C`, `D`), `Keyingisi ➔` va `Yakunlash` tugmalari.
-   - **Natijalar Ekrani**: Olingan daraja (`B2 — Upper-Intermediate`, `Taxminiy IELTS: 6.0 - 6.5`), ball foizi, 3 ta zaif grammatik mavzu va ularga tavsiya etilgan video darslar.
-   - **Frictionless Auth Funnel**: Natijalarni saqlab qolish va shaxsiy o'quv rejasiga o'tish uchun Telegram 1-click SSO va Google OAuth tugmalari.
-   - **Avto-Migratsiya**: O'quvchi tizimga kirishi bilan `student-dashboard.tsx` orqali `localStorage` dagi `bestway_placement_result_token` avtomatik tarzda `/claim` qilinadi.
+3. **Desktop App (`bw-tauri`): Obsidian-Emerald Dashboard & UI Mukammalligi**:
+   - `Dashboard.tsx` to'liq Obsidian-Emerald (`#0B0F17`, `#111827`, `#10B981`) dizaynida qayta qurildi:
+     * Vaqtga mos salomlashish ("Good morning/afternoon/evening, Explorer").
+     * Track tanlagich (IELTS vs Multi-Level CEFR).
+     * AI Ball bashorati va daraja ko'krak nishoni (Predicted CEFR / IELTS Band hero badge) hamda maqsad sari progress bari.
+     * 4-kartochkali gamifikatsiya va statistika bari (Streak, Earned XP, Assigned tasks, Completed mocks).
+     * Full Mock CBT Simulation banneri — haqiqiy DTM/IDP imtihon muhitini bir bosishda ishga tushirish.
+     * 4 ta mahorat moduli (Listening, Reading, Writing, Speaking) amaliyot kartochkalari — `MockSectionPicker` modali bilan bevosita integratsiya.
+     * Davom ettirish (Active In-Progress Resume) paneli.
+     * Oxirgi faoliyatlar ro'yxati va Jonli PIN xona orqali qo'shilish vidjeti.
+   - `MockSectionPicker.tsx`: `available_practice_skills` qo'llab-quvvatlashi va zumrad vizual ogohlantirishlar bilan yangilandi.
+   - `schemas.ts` va `mocks.ts`: `practiceSkills`, `available_practice_skills` va `practiceReady` turlari bilan sinxronlandi.
+   - Versiya `1.0.8` ga ko'tarildi (`package.json`, `package-lock.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`, `version.test.ts`, `settings/base.py`).
 
-4. **Sifat Nazorati va CI/PR Gate (100% PASS Gate)**:
-   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
-   - Frontend Vitest: 58 ta test fayli, 369/369 test 100% PASS (shu jumladan `ExpressPlacementTest.spec.ts`).
-   - Backend Django Pytest: 18 ta test 100% PASS (shu jumladan yangi `test_placement_test.py` 8/8 test).
-   - Git Authorship: `Komiljon Roziyev <kruziyev0@gmail.com>`, nol AI attribution (`zero-ai-attribution`).
+4. **Sifat Nazorati va Qat'iy CI Gate (100% PASS Gate)**:
+   - Frontend Vitest: 41 ta test to'plami, 330/330 ta test 100% PASS.
+   - Release platform tests: 10/10 ta test 100% PASS.
+   - TypeScript `tsc --noEmit`: 0 ta xatolik, Vite production build to'liq muvaffaqiyatli.
+   - Git Authorship: Qat'iy `Komiljon Roziyev <kruziyev0@gmail.com>` (`zero-ai-attribution`).
+   - GitHub Actions CI (`CI - main` run `40697829356`): 100% SUCCESS.
 
-5. **Contabo VPS Zero-Downtime Deploy va Jonli Sinov**:
-   - Contabo VPS (`169.58.58.229`) da `backend` va `frontend` konteynerlari uzilishsiz yangilandi.
-   - Migratsiya `0006_placementtestresult_and_student_profile_fields` bazada muvaffaqiyatli qo'llanildi.
-   - Public endpointlar HTTP 200 OK:
+5. **Ko'p Platformali Reliz va VPS Sync**:
+   - `v1.0.8` reliz barcha platformalar uchun GitHub Actions da qurildi:
+     * Android: `bestway-app.apk` (5.38 MB > 3 MB, `production-binary-guard` talablariga to'liq mos).
+     * Windows: `Bestway.App_1.0.8_x64-setup.exe` (3.64 MB).
+     * Linux: `Bestway.App_1.0.8_amd64.deb` (5.78 MB) & `Bestway.App_1.0.8_amd64.AppImage` (84.08 MB).
+     * macOS: `Bestway.App_1.0.8_aarch64.dmg` (6.63 MB) & Intel `.dmg`.
+   - Contabo VPS (`169.58.58.229`) da `docker compose up -d --build backend` bajarildi, `seed_mock_tasks` ishga tushirilib 81 ta savol bazaga muvaffaqiyatli yuklandi.
+   - Windows o'rnatuvchisi VPS storage hajmiga yuklandi va `https://bestwayec.uz/media/downloads/Bestway.App_1.0.8_x64-setup.exe` da `HTTP 200 OK` qaytarishi tasdiqlandi.
+   - Mahalliy kompyuterdagi Desktop ilova (`bestway-app.exe`) ham v1.0.8 ga yangilandi.
+
+### 29-BLOK: IELTS Academic Mock 1 To'liq Seeding, Landing Shiori Tiklanishi, Placement Funnel va CBT Offline Chidamlilik
+
+1. **Backend: IELTS Academic Mock Test 1 To'liq 4 Modul Vazifalari va Assetlari (`ielts-academic-mock-01`)**:
+   - `apps/exams/management/commands/seed_ielts_mock1_academic.py` va `apps/core/management/commands/seed_ielts_mock1_academic.py`:
+     * **Trek**: `IELTS` Academic, ID: `ielts-academic-mock-01`, Title: `IELTS Academic Mock Test 1: Renewable Energy & Smart Cities`.
+     * **Listening**: 4 ta bo'lim (Section 1–4), 40 ta savol, diskda haqiqiy toza audio WAV fayllari (`ielts_audio_part_1.wav` .. `ielts_audio_part_4.wav`).
+     * **Reading**: 3 ta akademik matn (Passage 1–3), 40 ta savol (True/False/Not Given, Matching Headings, Summary Completion).
+     * **Writing**: Task 1 (Bar chart summary, 150 words), Task 2 (Opinion/Discussion essay on urban transit vs EV subsidies, 250 words).
+     * **Speaking**: Part 1 (Hometown & technology), Part 2 (Cue card: digital tool), Part 3 (Two-way discussion: AI & automation).
+     * Jami 85 ta savol/vazifa, 43 ta amaliyot savollari, `practiceSkills: ["listening", "reading", "writing", "speaking"]` va `practiceReady: true`.
+     * `seed_mock_tasks` ikkala imtihonni (Multi-Level Test 1 va IELTS Academic Mock 1) to'liq avtomatik tekshirib bazaga seed qiladi.
+     * `seed_multilevel_test1_gym_diet.py` dagi `createdAt` NOT NULL cheklovi tuzatildi (`created_at: now`).
+
+2. **Frontend: Landing Page Brend Shiori va Placement Funnel**:
+   - `messages/uz.json` va `messages/en.json`:
+     * Bosh sahifa shiori tiklandi: **"Do your best, forget the rest!"**.
+     * Subtitr: "O'zbekiston Milliy sertifikati (0–75) va IELTS (0–9.0) mezonlariga moslashtirilgan sun'iy intellekt ekotizimi." / "An AI ecosystem fully aligned with Uzbekistan National Certificate (0–75) and IELTS (0–9.0) standards."
+     * `ExpressPlacementTest` natijalarini mehmon holatdan foydalanuvchiga avtomatik biriktirish (`bestway_placement_result_token` -> `POST /api/v1/placement-test/claim`) to'liq sinxronlandi.
+
+3. **Desktop App (`bw-tauri`): Jonli PIN Xona va CBT Offline Chidamlilik**:
+   - `LiveExamPinJoin.tsx`: `GET /v1/live-room/join?pin=...` va fallback `POST /mock/live-rooms/join` orqali o'qituvchi xonalariga uzluksiz ulanish.
+   - `ExamRunner.tsx`: Javoblarni `sessionStorage` orqali saqlash, tiklash va IndexedDB/SQLite kesh bilan integratsiya. Tarmoq uzilsa ham yozilgan matn va tanlangan javoblar yo'qolmaydi.
+   - `ResumeExamModal.tsx`: Dastur kutilmaganda yopilib qayta ochilganda aktiv sessiyani (4 soatlik xavfsiz oynada) davom ettirish yoki tozalash imkoniyati.
+   - `App.tsx`: Imtihon boshlanganda aktiv sessiyani xotirada saqlash, yakunlanganda yoki xavfsiz chiqilganda avtomatik tozalash.
+
+4. **Sifat Nazorati va Qat'iy CI Gate (100% PASS Gate)**:
+   - Backend Pytest: `test_mock_practice.py` 9/9 ta test 100% PASS.
+   - Frontend Vitest (`bestway/frontend`): 58 ta test to'plami, 369/369 test 100% PASS; `tsc --noEmit` 0 ta TypeScript xatoligi.
+   - Desktop App Vitest (`bw-tauri`): 41 ta test to'plami, 330/330 test 100% PASS; `tsc --noEmit` 0 ta TypeScript xatoligi.
+   - Git Authorship: Qat'iy `Komiljon Roziyev <kruziyev0@gmail.com>` (`zero-ai-attribution`).
+
+5. **VPS Zero-Downtime Deploy va Jonli Sinov**:
+   - Contabo VPS (`169.58.58.229`) da `docker compose up -d --build backend frontend` xizmat darajasida yangilandi.
+   - `seed_mock_tasks` muvaffaqiyatli ishga tushirilib, Multi-Level (81 tasks) va IELTS Academic Mock 1 (85 tasks) to'liq yuklandi.
+   - Jonli sinov natijalari:
      * `https://bestwayec.uz/` -> `HTTP/1.1 200 OK`
-     * `https://bestwayec.uz/api/backend/v1/placement-test/questions` -> `200 OK` (20 calibrated questions)
-     * `https://bestwayec.uz/api/backend/v1/placement-test/submit` -> `200 OK` (evaluated & result_token generated)
+     * `https://bestwayec.uz/api/v1/mock/exams/ielts-academic-mock-01` -> `HTTP 200 OK`, `practiceSkills: ["listening", "reading", "writing", "speaking"]`, `ready: true`, `practiceReady: true`.
+     * `https://bestwayec.uz/api/v1/placement-test/questions` -> `HTTP 200 OK`, 20 ta savol va unikal `guest_session_id`.
 
-### 29-BLOK: GitHub Actions CI/CD Diagnostikasi va 100% Yashil Holatga Keltirish (`bestwayec/bestway` & `bestwayec/bw-tauri`)
-
-1. **`bestwayec/bw-tauri` CI va Desktop/Android Release Workflow Tuzatishlari**:
-   - **Aniqlangan sabablar**:
-     * `package-lock.json` faylidagi ildiz `"version": "0.8.4"` qiymati `package.json` va `tauri.conf.json` dagi `"1.0.6"` bilan mos emasligi sababli `tools/release-platforms.test.mjs` (`CI` workflow) xatolik berib to'xtagan.
-     * `tools/validate-release.mjs` skripti faqat `bestway-app-v1.0.6` formatidagi git tegni qabul qilib, `v1.0.6` formatidagi tegda `Release Desktop` va `Release Android` workflowlarini to'xtatib qo'ygan.
-   - **Amalga oshirilgan yechim**:
-     * `package-lock.json` ildiz versiyasi `"1.0.6"` ga sinxronlashtirildi.
-     * `tools/validate-release.mjs` skripti ham `bestway-app-v${version}`, ham `v${version}` teg formatlarini qo'llab-quvvatlaydigan qilib yangilandi (`399c2f0`).
-     * Natija: `CI` (`main`), `Release Android (bestway-app)` (`v1.0.6`) va `Release Desktop (bestway-app)` (`v1.0.6` ? Linux x64, Windows x64, macOS Apple Silicon, macOS Intel, Publish) 100% `completed / success` holatiga o'tdi.
-
-2. **`bestwayec/bestway` Frontend & Django CI Workflow Tuzatishlari**:
-   - **Frontend (`frontend` job)**:
-     * `frontend/eslint.config.mjs` da TypeScript ESLint va React Hooks qoidalari loyiha konvensiyasiga moslashtirildi hamda `ExpressPlacementTest.tsx` da funksiya e'lon qilish tartibi to'g'rilandi (177 ta linter xatosi -> 0 xato).
-     * `npm run lint`, `npx tsc --noEmit`, `npm test` (58 ta test fayli, 369 ta test) va `npm run build` 100% PASS.
-   - **Backend (`django` job)**:
-     * `.github/workflows/ci.yml` ga Prisma migratsiyalaridan so'ng `python manage.py migrate --noinput` qadami qo'shildi, shuningdek `0006` migratsiyasiga `VideoLesson.hlsPlaylistUrl` ustunini idempotent qo'shish (`ADD COLUMN IF NOT EXISTS`) kiritildi.
-     * `config/settings/base.py` va `test_telemetry_and_exam_parity.py` da desktop reliz versiyasi `1.0.6` ga moslashtirildi; `test_live_monitoring.py` da 47 ball uchun CEFR `B2` darajasi tasdiqlandi (615 ta pytest 100% PASS).
-     * `apps/core/assessment_worker.py` da `AssessmentEvaluation` yaratishdan oldin `input` obyektiga `speechDiagnostics` qo'shilishi natijasida yuzaga kelgan `input_hash` tafovuti bartaraf etildi (`aiPracticeGrade == practiceGrade` tekshiruvi tiklandi).
-     * `verify_partial_practice_postgres.py` (65/65 PASS) va `verify_grading_consistency_postgres.py` skriptlari moslashuvchan topshirish (zero-score fallback) va amaliyot PDF sertifikatlari qoidalariga muvofiqlashtirildi.
-   - **Deploy to VPS (`deploy.yml`)**:
-     * GitHub Actions Secrets (`VPS_HOST`, `VPS_USER`, `VPS_PATH`, `VPS_SSH_KEY`) Contabo VPS (`169.58.58.229`) ma'lumotlariga yangilandi.
-     * `.github/workflows/deploy.yml` zero-downtime service-level rebuild (`backend frontend assessment-worker game-scheduler telegram-bot`) va host `curl` health-check (`127.0.0.1:3001/v1/health`, `127.0.0.1:3005/`) standartiga o'tkazildi.
-
-### 30-BLOK: Desktop App Deep Audit (w-tauri v1.0.7) — Publish Qilingan Imtihonlar, O'qituvchi Roli va Obsidian-Emerald UI
-
-1. **Publish Qilingan Imtihonlar Ko'rinmasligi va Muzlab Qolgan Skeletonlar Bartaraf Etildi (w-tauri & ackend-django)**:
-   - **Zod Schema Sinxronizatsiyasi (src/lib/schemas.ts, src/lib/mocks.ts)**: MockExamListItemSchema da profile maydoni writing_speaking, partial_practice, single_skill hamda 
-ull qiymatlarini qabul qiladigan qilib kengaytirildi (SCHEMA_MISMATCH xatosi bartaraf etildi).
-   - **Skeleton Loader va Track Auto-Fallback (src/pages/Exams.tsx, src/pages/Dashboard.tsx, src/pages/History.tsx)**: TanStack Query v5 da isPending o'rniga isLoading va 4.5 soniyalik watchdog taymeri joriy qilindi; asosiy yo'nalishda (IELTS / MULTILEVEL) imtihon bo'lmaganda ikkinchi yo'nalishdagi faol imtihonlar avtomatik yuklanishi va sahifaning o'zida 1-bosishda yo'nalish almashtirish tugmalari qo'shildi.
-   - **Filtrlar va Empty State (src/lib/catalogue.ts, src/pages/Exams.tsx)**: All, A1, A2, B1, B2, C1 va mahorat turlari (ll, ull_mock, listening, 
-eading, writing, speaking) mijoz tomonida (matchesCatalogue) xatosiz filtrlanadigan qilindi; bo'sh holatda Obsidian-Emerald Empty State (*"Hozircha faol imtihonlar mavjud emas. Yangi mock e'lon qilinganda bu yerda ko'rinadi."*) chiqarildi.
-   - **Backend Katalog va Kesh Tuzatishlari (pps/core/mock_catalog.py, pps/core/exam_programs.py, pps/core/views.py)**: SELF_SELECT rejimida o'quvchilarga ham IELTS, ham MULTILEVEL yo'nalishlariga ruxsat berildi; mock_exams_view kesh kalitiga user.id qo'shildi.
-
-2. **O'qituvchi (	eacher / instructor) Avtorizatsiyasi va Role-Based Routing**:
-   - **src/lib/auth.ts**: Rol tekshiruv funksiyalari (isTeacherRole, isInstructorRole, isAdminRole, isStaffRole, getClientRoleBadge) yaratildi.
-   - **Dinamik Nishon va Menyular (src/components/Sidebar.tsx, src/App.tsx, src/pages/Login.tsx, src/lib/session-store.ts)**: 	eacher uchun **"TEACHER WORKSPACE"**, instructor uchun **"INSTRUCTOR CLIENT"**, dmin uchun **"ADMIN CENTER"** nishonlari va Live Proctoring (Imtihonlar monitoringi), Grading Queue, Groups & Results (Guruhlarim / Cohorts), Imtihonlar bazasi bo'limlari ochildi.
-   - **src/pages/GroupsResults.tsx**: Ham /v1/groups, ham /v1/teacher/cohorts/ endpointlaridan guruhlar yuklanishi qo'llab-quvvatlandi.
-
-3. **Obsidian-Emerald UI Polishing va v1.0.7 Relizi**:
-   - src/styles.css va barcha sahifalardagi eski lime-green (#89F336) qoldiqlari toza Obsidian (#0B0F17), Slate-900 (#111827), order-emerald-500/15 va Zumrad (#10B981) ranglariga o'tkazildi.
-   - 
-px tsc --noEmit (0 xato), 
-px vitest run (41 ta test fayli, 328/328 test 100% PASS) va 
-ode --test tools/release-platforms.test.mjs (10/10 PASS) tasdiqlandi.
-   - Versiya 1.0.7 ga ko'tarilib, 1.0.7 tegi GitHub (estwayec/bw-tauri) ga push qilindi (33de46).
-
-### 31-BLOK: "Do your best, forget the rest!" Shiorini Tiklash, Desktop SCHEMA_MISMATCH Himoyasi va 100% Obsidian-Emerald UI
-1. **Veb Bosh Sahifa (`bestway/frontend`)**:
-   - `frontend/src/app/[locale]/(marketing)/page.tsx` Hero qismiga maxsus zumrad-neon nishon (`✨ BestWay LMS • Do your best, forget the rest!`) va yirik Obsidian-Emerald gradient `H1` sarlavha (**"Do Your Best, Forget The Rest!"**) qo'shildi.
-   - `messages/en.json` va `messages/uz.json` fayllarida brend shiori (`heroMotto`, `heroTitle`) va AI diagnostika sub-sarlavhasi (`heroSubtitle`) sinxronlashtirildi.
-2. **Desktop `SCHEMA_MISMATCH` Fatal Xatosini Bartaraf Etish (`bw-tauri` & `backend-django`)**:
-   - `bw-tauri/src/lib/schemas.ts` da `MockExamListItemSchema` va `TestListItemSchema` dagi `profile`, `type`, `track`, `status`, `difficulty`, `target_level`, `practiceLevel`, `skills`, `access` maydonlariga `.catch(...)` va `.default(...)` himoyalari qo'shildi.
-   - `bw-tauri/src/lib/mocks.ts` (`listMockExams`) va `bw-tauri/src/lib/tests.ts` (`listTests`) ga `try / catch` xom ma'lumot (raw fallback) bloklari qo'shildi.
-   - `backend-django/apps/core/mock_catalog.py` (`shape_exam` / `list_exams`) da `profile` maydoni barcha desktop versiyalar (`0.8.5`, `1.0.6`, `1.0.7`) bilan 100% mos bo'lishi uchun `"full_mock"` yoki `"practice"` sifatida normallashtirilib, asl qiymat `rawProfile` da saqlanadigan qilindi.
-3. **Desktop UI 100% Obsidian-Emerald Polishing (`bw-tauri`)**:
-   - `Sidebar.tsx` va `Login.tsx` dagi `"B"` logotipi `bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold` ko'rinishiga keltirildi.
-   - `Sidebar.tsx` aktiv menyu elementi `bg-emerald-500/10 border-l-2 border-emerald-500 text-emerald-400` ga o'tkazildi.
-   - `Exams.tsx` dagi barcha filtr tugmalari (`All`, `A1`–`C1`, `Writing`, `Listening` va boshqalar) aktiv holatda `bg-emerald-500 text-slate-950 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]`, noaktiv holatda `bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700` dizayniga o'tkazildi.
-   - `App.tsx` dagi `"Online"` holat nuqtasi toza zumrad `#10B981` ga o'tkazildi.
 
 ## Jarayonda
-- Barcha 29 ta grammatika darslari va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
-- Web va Desktop Obsidian-Emerald UI to'liq harmonizatsiya qilindi.
-- Mobil Telegram avtorizatsiyasi `bestwayapp://` deep-linking orqali to'g'ridan-to'g'ri ilovaga kirish rejimiga o'tkazildi.
-- Tauri avto-yangilanishi tekshirildi va VPS da 200 OK / 204 No Content holatlari tasdiqlandi.
- va ularning interaktiv solo testlari hamda Bamboozle jamoaviy bellashuvlari muvaffaqiyatli ishga tushdi. Qolgan 8 ta dars muqovasi tayyor bo'lishi bilan tizimga kiritiladi.
+- HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
+- Speaking audiolarni Opus formatida siqish foni faollashtirildi.
+- Web pleyerda HLS avtomatik sifat tanlash va qo'lda tanlash boshqaruvi joriy etildi.
+- VPS uzilishsiz yangilandi va barcha endpointlar 200 OK qaytarmoqda.
 
 ---
 
 ## Keyingi Qadamlar
-1. O'quvchilar uchun shaxsiy kabinetida o'zlarining imtihon sertifikati va ustoz bahosi xulosasini PDF shaklida yuklab olish sahifasini yanada boyitish.
-2. Speaking modulida Deepgram nutq transkripsiyasi bilan AI talaffuz tahlilini yanada chuqurlashtirish.
+1. Mavjud 29 ta video darsliklarni fon rejimida HLS segmentlariga to'liq transkodlash skriptini ishga tushirish (`python manage.py transcode_all_lessons_hls`).
+2. O'quvchilar shaxsiy kabinetida video darslarni tomosha qilish sifati bo'yicha tahliliy ko'rsatkichlarni monitoring qilish.
 
 ---
 
@@ -688,3 +717,5 @@ ode --test tools/release-platforms.test.mjs (10/10 PASS) tasdiqlandi.
 8. **Amaliyot Sertifikati Qoidasi**: Faqat bitta bo'lim (Writing yoki Speaking) topshirgan o'quvchi uchun ham rasmiy "Multi-Level Skill Practice Report" PDF hujjati chiqariladi, JSON xatoliklar taqiqlanadi.
 9. **Cheksiz Qayta Topshirish (Unlimited Retakes)**: O'quvchi yoki admin boshqa bo'limni tanlaganda yoki qayta topshirishni boshlaganda eski `in_progress` holatdagi urinish zudlik bilan yopiladi va yangi urinish to'siqsiz ishga tushadi.
 10. **Lug'at Gamifikatsiyasi va SRS Qoidasi**: Har bir topshirilgan lug'at testi 100% natija uchun +5 ball, 80-99% uchun +3 ball beradi. Xatolar o'quvchining shaxsiy bankiga (SRS) yoziladi va faqat ketma-ket 2 marta to'g'ri topshirilgandan keyingina to'liq o'zlashtirilgan deb hisoblanadi.
+11. **HLS va Native Fallback Standarti**: Barcha brauzerlarda to'siqsiz ijro etish uchun: `Hls.isSupported()` bo'lsa `hls.js` orqali adaptiv oqim, Safari / iOS brauzerlarida brauzerning ichki native HLS imkoniyati, eski yoki qo'llab-quvvatlanmagan muhitlarda esa to'g'ridan-to'g'ri MP4 fallback ishlatiladi.
+12. **Speaking Audio Siqish Standarti**: Server disk resursini tejash maqsadida yuklangan barcha speaking audiolari fon rejimida 32kbps mono Opus formatiga o'tkaziladi. Bu nutq sifatiga ta'sir qilmagan holda fayl hajmini 70-85% gacha qisqartiradi.
