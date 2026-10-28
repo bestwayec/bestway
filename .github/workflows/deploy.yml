@@ -8,20 +8,6 @@ name: Deploy to VPS
 #   VPS_USER     — SSH user on VPS (e.g. deploy)
 #   VPS_SSH_KEY  — private OpenSSH key for VPS_USER (no passphrase)
 #   VPS_PATH     — repo path on VPS (default /opt/bestway if unset)
-#
-# VPS prerequisites (one-time, see docs/vps-cloudflare-runbook.md):
-#   - repo cloned at $VPS_PATH, backend-django/.env + root .env present (chmod 600)
-#   - host Nginx vhosts installed (*.cf-origin.conf + direct-api conf)
-#   - docker compose up -d --build run at least once + seed:init done
-#
-# Safety notes:
-#   - Never `docker compose down` in CI — only incremental service-level rebuilds.
-#   - Rollback = git revert + push (re-deploys previous image).
-#   - If main's history is ever rewritten (force-push), --ff-only can NEVER
-#     succeed again; the script falls back to hard-syncing the checkout to
-#     origin/main instead of wedging every future deploy. Untracked files
-#     (backend-django/.env, root .env) are preserved because reset --hard does not
-#     touch them.
 
 on:
   workflow_run:
@@ -68,6 +54,7 @@ jobs:
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
             test -f ./backend-django/.env || { echo "backend-django/.env missing on VPS"; exit 1; }
+            git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
             git fetch origin main
             test "$(git rev-parse origin/main)" = "$DEPLOY_SHA" \
               || { echo "main advanced beyond the verified commit; wait for its CI"; exit 1; }
@@ -82,8 +69,8 @@ jobs:
             export BUILD_COMMIT="$(git rev-parse HEAD)"
             docker compose up -d --build backend frontend assessment-worker game-scheduler telegram-bot
             # Local gates (fatal): reach services over host loopback ports.
-            curl -fsS --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:3001/v1/health > /dev/null
-            curl -fsS --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:3005/ > /dev/null
+            curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3001/v1/health > /dev/null
+            curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3005/ > /dev/null
             # Public gates (warn-only): fail before DNS cutover / tunnel setup.
             curl -fsS --max-time 30 https://api.bestwayec.uz/v1/health > /dev/null \
               || echo "WARN: public api.bestwayec.uz not reachable (DNS/tunnel pending?)"
