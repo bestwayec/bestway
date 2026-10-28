@@ -46,6 +46,7 @@ const NAV: NavItem[] = [
   { href: "/payments", key: "payments", icon: Wallet, roles: STAFF, mobile: true },
   { href: "/students", key: "students", icon: Users, roles: OFFICE, mobile: true },
   { href: "/groups", key: "groups", icon: BookOpen, roles: STAFF },
+  { href: "/teacher", key: "teacherWorkspace", icon: GraduationCap, roles: STAFF, mobile: true },
   { href: "/staff", key: "staff", icon: UserCog, roles: OFFICE },
   { href: "/mock", key: "mock", icon: Target, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },
   { href: "/vocabulary", key: "vocabulary", icon: BookA, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },

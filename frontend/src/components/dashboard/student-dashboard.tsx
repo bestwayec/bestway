@@ -7,6 +7,7 @@ import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
 import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
 import { AdaptiveStudyPlan } from "@/components/dashboard/adaptive-study-plan";
 import { MistakeVault } from "@/components/dashboard/mistake-vault";
+import { StudentAssignmentsWidget } from "@/components/dashboard/StudentAssignmentsWidget";
 import { AlertCircle, BookOpen, Check, Copy, Star, Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -60,6 +61,7 @@ export function StudentDashboard() {
       <PageHeader title={t("greeting", { name: firstName })} />
 
       <LiveExamPinCard />
+      <div className="mt-4 mb-4"><StudentAssignmentsWidget /></div>
       <ScorePredictionCard />
       <AdaptiveStudyPlan className="mt-4 mb-4" />
       <MistakeVault className="mt-4 mb-4" />

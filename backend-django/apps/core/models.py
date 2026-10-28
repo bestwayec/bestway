@@ -1,7 +1,7 @@
 """Vocabulary and Spaced Repetition (SRS) models."""
 import uuid
 from django.db import models
-from apps.legacy_schema.models import Group, User
+from apps.legacy_schema.models import Group, User, MockExam
 
 
 def uuid4_str() -> str:
@@ -346,3 +346,121 @@ class UserLessonProgress(models.Model):
     def __str__(self):
         status = "COMPLETED" if self.is_completed else f"{self.watched_seconds}s"
         return f"{self.user_id} - {self.lesson.title} ({status})"
+
+
+# ============================================================================
+# TEACHER WORKSPACE: COHORTS & HOMEWORK ASSIGNMENTS
+# ============================================================================
+
+class Cohort(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    teacher = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="teacher_cohorts",
+    )
+    name = models.CharField(max_length=255)
+    invite_code = models.CharField(max_length=16, unique=True, db_index=True)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "Cohort"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.invite_code})"
+
+
+class CohortMembership(models.Model):
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("archived", "Archived"),
+    ]
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    cohort = models.ForeignKey(
+        Cohort,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="cohort_memberships",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "CohortMembership"
+        unique_together = [("cohort", "student")]
+        ordering = ["-joined_at"]
+
+    def __str__(self):
+        return f"{self.student_id} in {self.cohort.name} ({self.status})"
+
+
+class HomeworkAssignment(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    cohort = models.ForeignKey(
+        Cohort,
+        on_delete=models.CASCADE,
+        related_name="assignments",
+    )
+    title = models.CharField(max_length=255)
+    lesson = models.ForeignKey(
+        Lesson,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="homework_assignments",
+    )
+    exam = models.ForeignKey(
+        MockExam,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+        related_name="homework_assignments",
+    )
+    deadline = models.DateTimeField()
+    min_pass_percent = models.IntegerField(default=80)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "HomeworkAssignment"
+        ordering = ["-deadline", "-created_at"]
+
+    def __str__(self):
+        return f"{self.cohort.name} - {self.title}"
+
+
+class HomeworkSubmission(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    assignment = models.ForeignKey(
+        HomeworkAssignment,
+        on_delete=models.CASCADE,
+        related_name="submissions",
+    )
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name="homework_submissions",
+    )
+    score_percent = models.IntegerField(default=0)
+    is_passed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "HomeworkSubmission"
+        unique_together = [("assignment", "student")]
+        ordering = ["-completed_at"]
+
+    def __str__(self):
+        status = "PASSED" if self.is_passed else "FAILED"
+        return f"{self.student_id} - {self.assignment.title}: {self.score_percent}% ({status})"

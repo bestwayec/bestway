@@ -159,6 +159,7 @@ async function requestPaged<T>(
 }
 
 export const api = {
+
   get: <T>(path: string, query?: RequestOptions["query"]) =>
     request<T>(path, { method: "GET", query }),
 
@@ -203,6 +204,8 @@ export const api = {
     return { blob, filename };
   },
 };
+
+export const apiClient = api;
 
 /** Auth route'lari proxy orqali emas, alohida handler'lar orqali ketadi */
 export const authApi = {

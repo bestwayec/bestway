@@ -1,3 +1,4 @@
+from . import teacher_views
 from apps.exams import analytics_service
 from apps.bamboozle import views as bamboozle_views
 from django.urls import path
@@ -622,4 +623,29 @@ urlpatterns = [
     path('analytics/weak-points/recommendations/', analytics_service.weak_points_recommendations_view),
     path('v1/analytics/weak-points/recommendations', analytics_service.weak_points_recommendations_view),
     path('v1/analytics/weak-points/recommendations/', analytics_service.weak_points_recommendations_view),
+    # Teacher Workspace & Student Cohorts
+    path('teacher/cohorts', teacher_views.teacher_cohorts_view),
+    path('teacher/cohorts/', teacher_views.teacher_cohorts_view),
+    path('v1/teacher/cohorts', teacher_views.teacher_cohorts_view),
+    path('v1/teacher/cohorts/', teacher_views.teacher_cohorts_view),
+    path('teacher/cohorts/<str:cohort_id>/analytics', teacher_views.cohort_analytics_view),
+    path('teacher/cohorts/<str:cohort_id>/analytics/', teacher_views.cohort_analytics_view),
+    path('v1/teacher/cohorts/<str:cohort_id>/analytics', teacher_views.cohort_analytics_view),
+    path('v1/teacher/cohorts/<str:cohort_id>/analytics/', teacher_views.cohort_analytics_view),
+    path('teacher/assignments', teacher_views.teacher_assignments_view),
+    path('teacher/assignments/', teacher_views.teacher_assignments_view),
+    path('v1/teacher/assignments', teacher_views.teacher_assignments_view),
+    path('v1/teacher/assignments/', teacher_views.teacher_assignments_view),
+    path('student/join-cohort', teacher_views.student_join_cohort_view),
+    path('student/join-cohort/', teacher_views.student_join_cohort_view),
+    path('v1/student/join-cohort', teacher_views.student_join_cohort_view),
+    path('v1/student/join-cohort/', teacher_views.student_join_cohort_view),
+    path('student/my-assignments', teacher_views.student_my_assignments_view),
+    path('student/my-assignments/', teacher_views.student_my_assignments_view),
+    path('v1/student/my-assignments', teacher_views.student_my_assignments_view),
+    path('v1/student/my-assignments/', teacher_views.student_my_assignments_view),
+    path('student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
+    path('student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
+    path('v1/student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
+    path('v1/student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
 ]
