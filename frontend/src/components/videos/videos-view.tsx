@@ -109,7 +109,8 @@ export function VideosView() {
   function onWatch(v: VideoLessonItem) {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.bestwayec.uz";
     const directUrl = (v as any).streamUrl || `${apiBase}/v1/lessons/${v.id}/stream`;
-    const hlsUrl = (v as any).hlsPlaylistUrl || (v as any).hls_playlist_url || `${apiBase}/v1/lessons/${v.id}/hls/playlist.m3u8`;
+    // Only use HLS when the server reports a validated stream; otherwise play the verified MP4 directly.
+    const hlsUrl: string | undefined = (v as any).hlsPlaylistUrl || undefined;
 
     stream.mutate(v.id, {
       onSuccess: (res) => {

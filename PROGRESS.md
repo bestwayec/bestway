@@ -865,6 +865,27 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - TypeScript `tsc --noEmit` 0 xato bilan yakunlandi.
    - Backend Django testlari: 626 ta test 100% muvaffaqiyat bilan o'tdi.
 
+### 9-BLOK: Video Yarim Joyda To'xtashi va "Dars Yakunlandi!" Xatosining Ildizini Tuzatish (Phase 35)
+1. **VPS Audit Natijalari (read-only, `ffprobe` + PostgreSQL)**:
+   - 30 ta manba MP4 fayl butun va `ffprobe` davomiyligi to'g'ri (masalan, `4_numerals.mp4` = 1097 s).
+   - Faqat 5 ta darsda HLS papkasi bor (1, 2, 5, 10, 26-darslar). Ularning `1080p/720p/480p.m3u8` fayllari 115-116 baytlik soxta qoldiq: bitta `#EXTINF:6.000` segment va darhol `#EXT-X-ENDLIST`.
+   - Pleyer HLS ni 6 soniya o'ynab, "video tugadi" deb hisoblab `onEnded` -> "Dars Yakunlandi! +50 XP" ni chiqargan.
+2. **Ildiz Sabablari (kod)**:
+   - `lms_services._write_fallback_variant` ffmpeg xatosi yoki 300 s timeout bo'lganda soxta 6 soniyalik playlist yozardi (1000+ soniyalik videolar timeoutga tushardi).
+   - `stream_hls_file` har bir yo'q `.m3u8` uchun soxta playlist yaratib, so'rov ichida sinxron transkodlashni ishga tushirardi.
+   - `videos.py` va `videos-view.tsx` har bir dars uchun (HLS yo'q bo'lsa ham) HLS URL ni o'zi hosil qilardi, shuning uchun barcha 29 dars HLS orqali o'ynardi.
+   - Pleyerda `onEnded` va 95% avto-yakunlash qisqa HLS davomiyligiga ishonardi.
+3. **Backend Tuzatishlari**:
+   - Soxta playlistlar butunlay olib tashlandi. Transkod vaqtinchalik `.building` papkada bajariladi, `validate_hls_directory` har bir variantni (ENDLIST, barcha segmentlar, davomiylik >= 97% manba) tekshiradi va faqat keyin atomik almashtiriladi.
+   - `.complete.json` marker oxirida yoziladi. `hls_is_ready()` shu markerga tayanadi. Marker yo'q (yoki buzuq) HLS hech qachon berilmaydi (404) va API `hlsPlaylistUrl=null` qaytaradi, pleyer tekshirilgan MP4 ga o'tadi.
+   - Timeout manba davomiyligiga qarab hisoblanadi (`max(900, 3 x davomiylik)`), `-preset veryfast`, yo'l-yo'lakay xavfsizlik (path traversal rad etiladi).
+   - Yangi `manage.py transcode_all_lessons_hls --audit` (faqat hisobot) va qayta qurish buyrug'i.
+4. **Frontend Tuzatishlari**:
+   - `isStreamTruncated()` HLS davomiyligi dars davomiyligining 80% idan qisqa bo'lsa oqimni yaroqsiz deb topadi, `onEnded`/`durationchange`/`timeupdate` da MP4 ga o'tib, joriy joydan davom ettiradi va darsni yakunlamaydi.
+   - "Dars Pauzada" qatlami va tab almashganda avto-pauza olib tashlandi.
+   - `videos-view.tsx` endi HLS URL ni o'zi yasamaydi, faqat server tasdiqlagan URL ni ishlatadi.
+5. **Testlar**: backend 633 passed (5 skipped), frontend 378 passed, `tsc --noEmit` 0 xato.
+
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
 - Speaking audiolarni Opus formatida siqish foni faollashtirildi.

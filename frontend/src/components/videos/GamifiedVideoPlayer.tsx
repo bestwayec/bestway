@@ -45,6 +45,20 @@ export interface VideoQualityOption {
   bitrate?: number;
 }
 
+/**
+ * True when an adaptive (HLS) stream is much shorter than the lesson it should
+ * contain, e.g. a placeholder playlist. Such a stream must never count as
+ * "lesson finished"; the player falls back to the verified direct MP4 instead.
+ */
+export function isStreamTruncated(mediaDuration: number, lessonDuration: number): boolean {
+  return (
+    lessonDuration > 30 &&
+    Number.isFinite(mediaDuration) &&
+    mediaDuration > 0 &&
+    mediaDuration < lessonDuration * 0.8
+  );
+}
+
 function formatSeconds(val: number): string {
   if (!Number.isFinite(val) || val < 0) return "00:00";
   const m = Math.floor(val / 60);
@@ -93,7 +107,6 @@ export function GamifiedVideoPlayer({
   // Anti-cheat state
   const maxWatchedRef = React.useRef(0);
   const [antiCheatWarning, setAntiCheatWarning] = React.useState(false);
-  const [tabPausedNotice, setTabPausedNotice] = React.useState(false);
   const sessionStartTimeRef = React.useRef<number>(Date.now());
   const completedRef = React.useRef(false);
 
@@ -109,6 +122,8 @@ export function GamifiedVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    hlsFallbackDoneRef.current = false;
+    pendingResumeRef.current = null;
     video.volume = 1.0;
     video.muted = false;
     setVolume(1.0);
@@ -262,6 +277,53 @@ export function GamifiedVideoPlayer({
     return () => clearTimeout(timer);
   }, [isLoading, hasMetadata, duration, isHlsActive, src]);
 
+  // A valid HLS stream must cover the lesson's known duration. A much shorter
+  // stream (e.g. a 6s placeholder) is treated as broken, never as "lesson ended".
+  const pendingResumeRef = React.useRef<number | null>(null);
+  const hlsFallbackDoneRef = React.useRef(false);
+
+  const isHlsTruncated = (video: HTMLVideoElement): boolean => {
+    if (!hlsRef.current && !isHlsActive) return false;
+    return isStreamTruncated(video.duration, lessonDuration);
+  };
+
+  const fallbackToDirectMp4 = (resumeAt: number, autoplay: boolean) => {
+    const video = videoRef.current;
+    if (!video || !src || hlsFallbackDoneRef.current) return;
+    hlsFallbackDoneRef.current = true;
+    console.warn("HLS stream is shorter than the lesson; switching to the direct MP4 stream.");
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    setIsHlsActive(false);
+    setQualities([]);
+    setStreamError(null);
+    setIsLoading(true);
+    pendingResumeRef.current = autoplay ? Math.max(0, resumeAt) : -Math.max(0, resumeAt) - 1;
+    video.removeAttribute("src");
+    video.src = src;
+    video.load();
+  };
+
+  const handleVideoEnded = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isHlsTruncated(video)) {
+      fallbackToDirectMp4(maxWatchedRef.current, true);
+      return;
+    }
+    handleCompleteLesson();
+  };
+
+  const handleDurationChange = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isHlsTruncated(video)) {
+      fallbackToDirectMp4(video.currentTime, !video.paused);
+    }
+  };
+
   // Handlers for Fallback Recovery
   const handleRetry = () => {
     setStreamError(null);
@@ -318,6 +380,14 @@ export function GamifiedVideoPlayer({
       v.muted = false;
       setVolume(1.0);
       setMuted(false);
+      if (pendingResumeRef.current !== null) {
+        const marker = pendingResumeRef.current;
+        pendingResumeRef.current = null;
+        const shouldPlay = marker >= 0;
+        const resumeAt = shouldPlay ? marker : -marker - 1;
+        if (Number.isFinite(dur) && resumeAt > 0 && resumeAt < dur) v.currentTime = resumeAt;
+        if (shouldPlay) void v.play().catch(() => {});
+      }
       try {
         const anyVideo = v as any;
         if (anyVideo.audioTracks && anyVideo.audioTracks.length > 0) {
@@ -389,9 +459,14 @@ export function GamifiedVideoPlayer({
       maxWatchedRef.current = cur;
     }
 
-    // Auto-complete if reached end
-    const safeDur = duration > 0 ? duration : lessonDuration;
-    if (safeDur > 5 && cur >= safeDur * 0.95 && !completedRef.current) {
+    // Auto-complete only when the real media (not a truncated stream) is nearly finished
+    if (isHlsTruncated(video)) {
+      fallbackToDirectMp4(cur, !video.paused);
+      return;
+    }
+    const mediaDur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+    const safeDur = mediaDur || lessonDuration;
+    if (safeDur > 30 && cur >= safeDur * 0.95 && !completedRef.current) {
       handleCompleteLesson();
     }
   };
@@ -409,24 +484,6 @@ export function GamifiedVideoPlayer({
       setTimeout(() => setAntiCheatWarning(false), 3000);
     }
   };
-
-  // Anti-cheat: Auto-pause when tab becomes inactive (only if user actively started watching)
-  React.useEffect(() => {
-    const handleVisibilityChange = () => {
-      const video = videoRef.current;
-      if (document.hidden && video && !video.paused && hasStartedPlayingRef.current) {
-        video.pause();
-        setIsPlaying(false);
-        setTabPausedNotice(true);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   // Periodic watch progress sync
   React.useEffect(() => {
@@ -456,7 +513,6 @@ export function GamifiedVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    setTabPausedNotice(false);
 
     try {
       video.muted = false;
@@ -464,7 +520,6 @@ export function GamifiedVideoPlayer({
       await video.play();
       setIsPlaying(true);
       hasStartedPlayingRef.current = true;
-      setTabPausedNotice(false);
     } catch (err) {
       console.warn("Autoplay unmuted blocked by browser policy, falling back to muted play:", err);
       try {
@@ -473,8 +528,7 @@ export function GamifiedVideoPlayer({
         await video.play();
         setIsPlaying(true);
         hasStartedPlayingRef.current = true;
-        setTabPausedNotice(false);
-      } catch (innerErr) {
+        } catch (innerErr) {
         console.error("Manual playback failed:", innerErr);
         setIsPlaying(false);
       }
@@ -485,7 +539,6 @@ export function GamifiedVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    setTabPausedNotice(false);
     setIsLoading(false);
     setIsBuffering(false);
 
@@ -611,12 +664,12 @@ export function GamifiedVideoPlayer({
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
-        onEnded={handleCompleteLesson}
+        onEnded={handleVideoEnded}
+        onDurationChange={handleDurationChange}
         onPlay={() => {
           setIsPlaying(true);
           hasStartedPlayingRef.current = true;
-          setTabPausedNotice(false);
-          setIsBuffering(false);
+              setIsBuffering(false);
           setIsLoading(false);
           setStreamError(null);
         }}
@@ -701,7 +754,7 @@ export function GamifiedVideoPlayer({
       )}
 
       {/* Center Big Play Button (Initial / Paused without blur) */}
-      {!isPlaying && !tabPausedNotice && !completionData && !streamError && (!isLoading || hasMetadata || duration > 0) && (
+      {!isPlaying && !completionData && !streamError && (!isLoading || hasMetadata || duration > 0) && (
         <div
           onClick={handleManualStart}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] cursor-pointer group/play transition-all"
@@ -740,33 +793,6 @@ export function GamifiedVideoPlayer({
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/90 text-slate-950 font-semibold shadow-lg text-sm backdrop-blur-md animate-bounce">
           <AlertTriangle className="w-4 h-4" />
           <span>Oldinga o&apos;tkazish taqiqlangan! Darsni to&apos;liq tomosha qiling.</span>
-        </div>
-      )}
-
-      {/* Tab Inactive Auto-Pause Notice */}
-      {tabPausedNotice && !isPlaying && !completionData && (
-        <div
-          onClick={togglePlay}
-          className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer text-center p-6 animate-in fade-in duration-200"
-        >
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mb-3 animate-pulse">
-            <Play className="w-8 h-8 fill-emerald-400 ml-1" />
-          </div>
-          <h4 className="text-lg font-bold text-white mb-1">Dars Pauzada</h4>
-          <p className="text-sm text-slate-300 max-w-sm mb-4">
-            Boshqa oynaga o&apos;tilgani uchun video to&apos;xtatildi. Davom ettirish uchun tugmani bosing.
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePlay();
-            }}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2 rounded-xl shadow-lg hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all"
-          >
-            Davom ettirish
-          </Button>
         </div>
       )}
 

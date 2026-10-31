@@ -98,6 +98,7 @@ def listing(actor=None):
         if cached is not None:
             return cached
     from apps.core.models import Lesson, UserLessonProgress
+    from apps.core.lms_services import hls_is_ready
     purchases=dict(VideoPurchase.objects.filter(user_id=actor.id).values_list('video_id','status')) if actor else {}
     completed_ids = set()
     if actor and actor.is_authenticated:
@@ -134,7 +135,7 @@ def listing(actor=None):
                 "hasQuiz": deck is not None,
                 "bamboozleDeckId": str(deck.id) if deck else None,
                 "streamUrl": f"{public_url()}/v1/lessons/{l.id}/stream",
-                "hlsPlaylistUrl": f"{public_url()}/v1/lessons/{l.id}/hls/playlist.m3u8",
+                "hlsPlaylistUrl": f"{public_url()}/v1/lessons/{l.id}/hls/playlist.m3u8" if hls_is_ready(str(l.id)) else None,
             }
             result.append(item)
     except Exception:

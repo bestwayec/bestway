@@ -767,8 +767,7 @@ HLS_RESOLUTIONS = [
 
 def resolve_hls_storage_dir(lesson_id: str) -> str:
     """Return absolute filesystem directory for HLS segments and playlists."""
-    base_storage = getattr(settings, "STORAGE_DIR", None) or getattr(settings, "MEDIA_ROOT", "/app/storage")
-    target_dir = os.path.join(base_storage, "media", "videos", "hls", str(lesson_id))
+    target_dir = os.path.join(_hls_root_dir(), str(lesson_id))
     os.makedirs(target_dir, exist_ok=True)
     return target_dir
 
@@ -785,24 +784,126 @@ def generate_master_playlist_content(variants: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _write_fallback_variant(playlist_path: str, output_dir: str, variant_name: str) -> None:
-    """Write standard VOD HLS variant stub for testing and non-FFmpeg environments."""
-    segment_file = f"{variant_name}_000.ts"
-    segment_path = os.path.join(output_dir, segment_file)
-    if not os.path.exists(segment_path):
-        with open(segment_path, "wb") as f:
-            f.write(b"\x47" + b"\x00" * 187 * 10)  # Valid MPEG-TS sync byte 0x47
-    content = (
-        "#EXTM3U\n"
-        "#EXT-X-VERSION:3\n"
-        "#EXT-X-TARGETDURATION:6\n"
-        "#EXT-X-MEDIA-SEQUENCE:0\n"
-        "#EXTINF:6.000,\n"
-        f"{segment_file}\n"
-        "#EXT-X-ENDLIST\n"
+HLS_COMPLETE_MARKER = ".complete.json"
+_HLS_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _hls_root_dir() -> str:
+    base_storage = getattr(settings, "STORAGE_DIR", None) or getattr(settings, "MEDIA_ROOT", "/app/storage")
+    return os.path.join(base_storage, "media", "videos", "hls")
+
+
+def hls_directory_path(lesson_id: str) -> str:
+    """Return the HLS directory path for a lesson without creating it."""
+    return os.path.join(_hls_root_dir(), str(lesson_id))
+
+
+def hls_is_ready(lesson_id: str) -> bool:
+    """True only when a transcode finished and passed validation (marker written last)."""
+    if not _HLS_SAFE_NAME.match(str(lesson_id or "")):
+        return False
+    target = hls_directory_path(lesson_id)
+    return os.path.isfile(os.path.join(target, HLS_COMPLETE_MARKER)) and os.path.isfile(
+        os.path.join(target, "master.m3u8")
     )
-    with open(playlist_path, "w", encoding="utf-8") as f:
-        f.write(content)
+
+
+def probe_media_duration(path: str) -> float:
+    """Return media duration in seconds via ffprobe, or 0.0 when it cannot be determined."""
+    import math
+    import shutil
+    import subprocess
+
+    ffprobe_bin = shutil.which("ffprobe")
+    if not ffprobe_bin or not path or not os.path.isfile(path):
+        return 0.0
+    try:
+        proc = subprocess.run(
+            [ffprobe_bin, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=60,
+        )
+        value = float(proc.stdout.decode("utf-8", "ignore").strip().splitlines()[0])
+        return value if math.isfinite(value) and value > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def _parse_variant_playlist(playlist_path: str) -> Tuple[List[str], float, bool]:
+    """Return (segment names, total EXTINF seconds, has ENDLIST) for a media playlist."""
+    segments: List[str] = []
+    total = 0.0
+    ended = False
+    pending = 0.0
+    with open(playlist_path, "r", encoding="utf-8", errors="ignore") as fh:
+        for raw_line in fh:
+            line = raw_line.strip()
+            if line.startswith("#EXTINF:"):
+                try:
+                    pending = float(line[len("#EXTINF:"):].split(",")[0])
+                except ValueError:
+                    pending = 0.0
+            elif line == "#EXT-X-ENDLIST":
+                ended = True
+            elif line and not line.startswith("#"):
+                segments.append(os.path.basename(line))
+                total += pending
+                pending = 0.0
+    return segments, total, ended
+
+
+def validate_hls_directory(
+    output_dir: str,
+    expected_duration: float = 0.0,
+    tolerance: float = 0.97,
+) -> Dict[str, Any]:
+    """Check that every variant in master.m3u8 is complete and covers the source duration."""
+    result: Dict[str, Any] = {"valid": False, "reason": "", "variants": [], "duration": 0.0}
+    master_path = os.path.join(output_dir, "master.m3u8")
+    if not os.path.isfile(master_path):
+        result["reason"] = "master.m3u8 missing"
+        return result
+
+    with open(master_path, "r", encoding="utf-8", errors="ignore") as fh:
+        names = [
+            os.path.basename(line.strip())[: -len(".m3u8")]
+            for line in fh
+            if line.strip() and not line.startswith("#") and line.strip().endswith(".m3u8")
+        ]
+    if not names:
+        result["reason"] = "master.m3u8 lists no variants"
+        return result
+
+    durations: List[float] = []
+    for name in names:
+        variant_path = os.path.join(output_dir, f"{name}.m3u8")
+        if not os.path.isfile(variant_path):
+            result["reason"] = f"{name}.m3u8 missing"
+            return result
+        segments, total, ended = _parse_variant_playlist(variant_path)
+        if not segments or not ended:
+            result["reason"] = f"{name}.m3u8 has no segments or no ENDLIST"
+            return result
+        for seg in segments:
+            seg_path = os.path.join(output_dir, seg)
+            if not os.path.isfile(seg_path) or os.path.getsize(seg_path) == 0:
+                result["reason"] = f"{name}: segment {seg} missing or empty"
+                return result
+        durations.append(total)
+        result["variants"].append(name)
+
+    shortest = min(durations)
+    result["duration"] = shortest
+    if expected_duration > 0 and shortest < expected_duration * tolerance:
+        result["reason"] = (
+            f"playlist covers {shortest:.1f}s but source is {expected_duration:.1f}s"
+        )
+        return result
+
+    result["valid"] = True
+    return result
 
 
 def transcode_video_to_hls(
@@ -811,77 +912,118 @@ def transcode_video_to_hls(
     lesson_id: str,
     resolutions: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Transcode a source video file into multi-bitrate HLS adaptive stream."""
+    """Transcode a source video into a validated multi-bitrate HLS stream.
+
+    The stream is built in a temporary directory and swapped in only after every
+    variant is verified against the source duration. Failures never leave
+    placeholder playlists behind; callers fall back to the direct MP4 stream.
+    """
+    import json
     import shutil
     import subprocess
 
-    os.makedirs(output_dir, exist_ok=True)
     ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin or not video_path or not os.path.isfile(video_path):
+        logger.warning("HLS transcode skipped for %s: ffmpeg or source file unavailable", lesson_id)
+        return {"success": False, "lesson_id": lesson_id, "error": "SOURCE_OR_FFMPEG_UNAVAILABLE"}
+
+    final_dir = output_dir.rstrip("/\\")
+    build_dir = final_dir + ".building"
+    if os.path.isdir(build_dir):
+        age = timezone.now().timestamp() - os.path.getmtime(build_dir)
+        if age < 4 * 3600:
+            return {"success": False, "lesson_id": lesson_id, "error": "TRANSCODE_IN_PROGRESS"}
+        shutil.rmtree(build_dir, ignore_errors=True)
+    os.makedirs(build_dir, exist_ok=True)
+
+    source_duration = probe_media_duration(video_path)
+    per_variant_timeout = max(900, int(source_duration * 3)) if source_duration else 3600
 
     selected_profiles = [
         p for p in HLS_RESOLUTIONS
         if not resolutions or p["name"] in resolutions
     ]
 
-    master_path = os.path.join(output_dir, "master.m3u8")
-    playlist_path = os.path.join(output_dir, "playlist.m3u8")
+    built_profiles: List[Dict[str, Any]] = []
+    for prof in selected_profiles:
+        res_name = prof["name"]
+        res_playlist = os.path.join(build_dir, f"{res_name}.m3u8")
+        res_segment = os.path.join(build_dir, f"{res_name}_%03d.ts")
+        cmd = [
+            ffmpeg_bin,
+            "-y",
+            "-i", video_path,
+            "-vf", f"scale=w={prof['width']}:h={prof['height']}:force_original_aspect_ratio=decrease,pad={prof['width']}:{prof['height']}:(ow-iw)/2:(oh-ih)/2",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-profile:v", "main",
+            "-crf", "20",
+            "-sc_threshold", "0",
+            "-g", "48",
+            "-keyint_min", "48",
+            "-b:v", prof["video_bitrate"],
+            "-maxrate", prof["maxrate"],
+            "-bufsize", prof["bufsize"],
+            "-c:a", "aac",
+            "-b:a", prof["audio_bitrate"],
+            "-ar", "48000",
+            "-ac", "2",
+            "-hls_time", "6",
+            "-hls_list_size", "0",
+            "-hls_playlist_type", "vod",
+            "-hls_segment_filename", res_segment,
+            res_playlist,
+        ]
+        try:
+            subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                timeout=per_variant_timeout,
+            )
+        except Exception as err:
+            logger.warning("FFmpeg transcode error for %s (%s): %s", lesson_id, res_name, err)
+            continue
+        built_profiles.append(prof)
 
-    # Generate master playlist
-    master_content = generate_master_playlist_content(selected_profiles)
-    with open(master_path, "w", encoding="utf-8") as f:
-        f.write(master_content)
-    with open(playlist_path, "w", encoding="utf-8") as f:
-        f.write(master_content)
+    if not built_profiles:
+        shutil.rmtree(build_dir, ignore_errors=True)
+        return {"success": False, "lesson_id": lesson_id, "error": "NO_VARIANT_TRANSCODED"}
 
-    transcoded_variants = []
+    master_content = generate_master_playlist_content(built_profiles)
+    for name in ("master.m3u8", "playlist.m3u8"):
+        with open(os.path.join(build_dir, name), "w", encoding="utf-8") as fh:
+            fh.write(master_content)
 
-    if ffmpeg_bin and os.path.exists(video_path) and os.path.isfile(video_path):
-        for prof in selected_profiles:
-            res_name = prof["name"]
-            res_playlist = os.path.join(output_dir, f"{res_name}.m3u8")
-            res_segment = os.path.join(output_dir, f"{res_name}_%03d.ts")
+    check = validate_hls_directory(build_dir, expected_duration=source_duration)
+    if not check["valid"]:
+        logger.warning("HLS validation failed for %s: %s", lesson_id, check["reason"])
+        shutil.rmtree(build_dir, ignore_errors=True)
+        return {"success": False, "lesson_id": lesson_id, "error": "VALIDATION_FAILED", "reason": check["reason"]}
 
-            cmd = [
-                ffmpeg_bin,
-                "-y",
-                "-i", video_path,
-                "-vf", f"scale=w={prof['width']}:h={prof['height']}:force_original_aspect_ratio=decrease,pad={prof['width']}:{prof['height']}:(ow-iw)/2:(oh-ih)/2",
-                "-c:v", "libx264",
-                "-profile:v", "main",
-                "-crf", "20",
-                "-sc_threshold", "0",
-                "-g", "48",
-                "-keyint_min", "48",
-                "-b:v", prof["video_bitrate"],
-                "-maxrate", prof["maxrate"],
-                "-bufsize", prof["bufsize"],
-                "-c:a", "aac",
-                "-b:a", prof["audio_bitrate"],
-                "-ar", "48000",
-                "-ac", "2",
-                "-hls_time", "6",
-                "-hls_playlist_type", "vod",
-                "-hls_segment_filename", res_segment,
-                res_playlist,
-            ]
-            try:
-                subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=300)
-                transcoded_variants.append(res_name)
-            except Exception as err:
-                logger.warning("FFmpeg transcode error for %s (%s): %s", lesson_id, res_name, err)
-                _write_fallback_variant(res_playlist, output_dir, res_name)
-                transcoded_variants.append(res_name)
-    else:
-        # Fallback for environments without ffmpeg binary or sample videos
-        for prof in selected_profiles:
-            res_name = prof["name"]
-            res_playlist = os.path.join(output_dir, f"{res_name}.m3u8")
-            _write_fallback_variant(res_playlist, output_dir, res_name)
-            transcoded_variants.append(res_name)
+    with open(os.path.join(build_dir, HLS_COMPLETE_MARKER), "w", encoding="utf-8") as fh:
+        json.dump(
+            {
+                "lesson_id": str(lesson_id),
+                "variants": check["variants"],
+                "source_duration": source_duration,
+                "playlist_duration": check["duration"],
+                "created_at": timezone.now().isoformat(),
+            },
+            fh,
+        )
+
+    backup_dir = None
+    if os.path.isdir(final_dir):
+        backup_dir = final_dir + ".replaced"
+        shutil.rmtree(backup_dir, ignore_errors=True)
+        os.rename(final_dir, backup_dir)
+    os.rename(build_dir, final_dir)
+    if backup_dir:
+        shutil.rmtree(backup_dir, ignore_errors=True)
 
     playlist_url = f"/media/videos/hls/{lesson_id}/playlist.m3u8"
-
-    # Update database models with playlist URL
     try:
         from apps.legacy_schema.models import VideoLesson
         Lesson.objects.filter(id=lesson_id).update(hls_playlist_url=playlist_url)
@@ -892,30 +1034,38 @@ def transcode_video_to_hls(
     return {
         "success": True,
         "lesson_id": lesson_id,
-        "output_dir": output_dir,
-        "master_playlist": master_path,
+        "output_dir": final_dir,
+        "master_playlist": os.path.join(final_dir, "master.m3u8"),
         "playlist_url": playlist_url,
-        "variants": transcoded_variants,
+        "variants": check["variants"],
+        "duration": check["duration"],
     }
+
+
+def resolve_lesson_video_path(lesson_id: str, video_path: Optional[str] = None) -> str:
+    """Resolve the on-disk source video for a lesson, or an empty string."""
+    lesson = Lesson.objects.filter(id=lesson_id).first()
+    resolved_video = video_path or (lesson.video_file if lesson else "") or ""
+    basename = os.path.basename(resolved_video) if resolved_video else ""
+    storage_dir = getattr(settings, "STORAGE_DIR", "/app/storage")
+    candidates = [
+        resolved_video,
+        os.path.join(storage_dir, resolved_video),
+        os.path.join(getattr(settings, "MEDIA_ROOT", "/app/media"), resolved_video),
+        os.path.join(storage_dir, "videos", basename),
+        os.path.join(storage_dir, "videos", "grammar", basename),
+        os.path.join("/opt/bestway/backend-django/media", resolved_video),
+    ]
+    for c in candidates:
+        if c and os.path.isfile(c):
+            return c
+    return ""
 
 
 def execute_hls_transcode_for_lesson(lesson_id: str, video_path: Optional[str] = None) -> Dict[str, Any]:
     """Execute HLS transcoding for a given lesson ID."""
-    lesson = Lesson.objects.filter(id=lesson_id).first()
-    resolved_video = video_path or (lesson.video_file if lesson else "") or ""
-
-    candidates = [
-        resolved_video,
-        os.path.join(getattr(settings, "STORAGE_DIR", "/app/storage"), resolved_video),
-        os.path.join(getattr(settings, "MEDIA_ROOT", "/app/media"), resolved_video),
-        os.path.join("/opt/bestway/backend-django/media", resolved_video),
-    ]
-    for c in candidates:
-        if c and os.path.exists(c) and os.path.isfile(c):
-            resolved_video = c
-            break
-
-    output_dir = resolve_hls_storage_dir(lesson_id)
+    resolved_video = resolve_lesson_video_path(lesson_id, video_path)
+    output_dir = hls_directory_path(lesson_id)
     return transcode_video_to_hls(resolved_video, output_dir, lesson_id)
 
 
@@ -953,20 +1103,21 @@ def trigger_hls_transcoding(lesson_id: str, video_path: Optional[str] = None, as
 
 
 def stream_hls_file(lesson_id: str, filename: str, request: HttpRequest) -> HttpResponse | StreamingHttpResponse:
-    """Stream an HLS playlist or segment file with strict caching and CORS headers."""
-    output_dir = resolve_hls_storage_dir(lesson_id)
-    file_path = os.path.join(output_dir, filename)
+    """Serve a validated HLS playlist or segment; never synthesize placeholders.
 
-    # If playlist does not exist yet on disk, generate or transcode on demand
-    if (filename == "playlist.m3u8" or filename == "master.m3u8") and not os.path.exists(file_path):
-        execute_hls_transcode_for_lesson(lesson_id)
+    A missing or incomplete stream returns 404 so the player falls back to the
+    verified direct MP4 stream instead of playing a truncated placeholder.
+    """
+    if not _HLS_SAFE_NAME.match(str(lesson_id or "")) or not _HLS_SAFE_NAME.match(filename or ""):
+        raise Http404("Invalid HLS path")
+    if not (filename.endswith(".m3u8") or filename.endswith(".ts")):
+        raise Http404("Unsupported HLS file type")
+    if not hls_is_ready(lesson_id):
+        raise Http404("HLS stream is not ready")
 
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
-        if filename.endswith(".m3u8"):
-            variant_name = filename.replace(".m3u8", "")
-            _write_fallback_variant(file_path, output_dir, variant_name)
-        else:
-            raise Http404(f"HLS file {filename} not found")
+    file_path = os.path.join(hls_directory_path(lesson_id), filename)
+    if not os.path.isfile(file_path):
+        raise Http404(f"HLS file {filename} not found")
 
     content_type = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
     is_segment = filename.endswith(".ts")
@@ -983,8 +1134,7 @@ def stream_hls_file(lesson_id: str, filename: str, request: HttpRequest) -> Http
         # Segment chunks are immutable and can be cached aggressively
         response["Cache-Control"] = "public, max-age=86400, immutable"
     else:
-        # Playlists have shorter TTL for adaptive switches
-        response["Cache-Control"] = "public, max-age=3600"
+        # Playlists stay short-lived so a rebuilt stream is picked up quickly
+        response["Cache-Control"] = "public, max-age=60"
 
     return response
-

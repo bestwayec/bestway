@@ -18,6 +18,7 @@ from .lms_services import (
     get_quiz_deck_detail,
     list_quiz_decks,
     stream_video_file,
+    hls_is_ready,
     stream_hls_file,
     trigger_hls_transcoding,
     update_watch_time,
@@ -100,8 +101,8 @@ def course_detail_view(request, course_id):
             "is_completed": is_completed,
             "is_unlocked": is_unlocked,
             "has_quiz": l.quiz_decks.filter(is_lesson_tied=True).exists(),
-            "hls_playlist_url": l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8",
-            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8",
+            "hls_playlist_url": (l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8") if hls_is_ready(l.id) else None,
+            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8" if hls_is_ready(l.id) else None,
         })
 
     return success({
@@ -132,8 +133,8 @@ def lessons_list_view(request):
             "course_title": l.course.title if l.course else None,
             "has_quiz": bool(deck_id),
             "bamboozle_deck_id": deck_id,
-            "hls_playlist_url": l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8",
-            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8",
+            "hls_playlist_url": (l.hls_playlist_url or f"/media/videos/hls/{l.id}/playlist.m3u8") if hls_is_ready(l.id) else None,
+            "hls_url": f"/v1/lessons/{l.id}/hls/playlist.m3u8" if hls_is_ready(l.id) else None,
         })
     return success(result)
 
