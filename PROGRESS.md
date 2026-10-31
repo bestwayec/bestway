@@ -821,6 +821,28 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
    - `.github/workflows/deploy.yml` ga VPS konteynerida `seed_all_29_grammar_quizzes` ni avtomatik bajarish qo'shildi.
 
+### 7-BLOK: Video Pleyer Abadiy "Video yuklanmoqda..." Qatlamini Butunlay Yo'qotish va Autoplay / Audio Unlock (Phase 33)
+1. **Muammo Ildizi Tahlili**:
+   - Brauzerlar autoplay siyosati sababli avtomatik ovozli ijroni to'xtatganda, `<video>` elementi `waiting` hodisasini yuborardi.
+   - `GamifiedVideoPlayer.tsx` da `isBuffering = true` holati `loadedmetadata` yoki `canplay` hodisalarida `false` bo'lmagan, natijada video davomiyligi (masalan, `00:00 / 22:17`) yuklangan bo'lsa ham markazdagi qora shaffof yuklanish spinneri ekranni to'sib turardi.
+   - Markazda foydalanuvchi bir marta bosishi bilan videoni ishga tushiruvchi katta interaktiv Play (▶️) tugmasi yo'q edi.
+2. **`GamifiedVideoPlayer.tsx` dagi Yechimlar**:
+   - **`isLoading`, `hasMetadata` va `isBuffering` Holatlari Qat'iy Ajratildi**:
+     * `handleLoadedMetadata`: `setIsLoading(false)`, `setIsBuffering(false)`, `setHasMetadata(true)`.
+     * `handleCanPlay` & `handleLoadedData`: `setIsLoading(false)`, `setIsBuffering(false)`, `setStreamError(null)`.
+     * `handlePlaying`: `setIsLoading(false)`, `setIsBuffering(false)`, `setIsPlaying(true)`.
+     * `handleTimeUpdate`: agar video vaqti o'tayotgan bo'lsa (`cur > 0`), loading/buffering darhol `false` qilinadi.
+   - **Yuklanish Spinneri Qoidasi**:
+     * "Video yuklanmoqda..." spinneri FAQAT `isLoading && !hasMetadata && duration <= 0` bo'lgandagina (dastlabki 1-2 soniyada) ko'rinadi.
+     * `duration > 0` bo'lganda ushbu spinner HECH QACHON ekranni to'smaydi!
+   - **Obsidian-Emerald Katta Boshlash Tugmasi (Center Play Button)**:
+     * Video to'xtab turganda yoki pauzada bo'lsa, markazda Obsidian-Emerald uslubidagi nur taratuvchi katta `[ ▶️ Darsni Boshlash ]` (yoki `[ ▶️ Darsni davom ettirish ]`) tugmasi paydo bo'ladi.
+     * Bosilganda `handleManualStart` ishga tushadi: ovozli ijro etishga urinadi, agar brauzer ovozli autoplay'ni bloklasa, darhol `muted=true` bilan xatosiz ishga tushiradi va tepada miltillovchi `[ Ovozni yoqish ]` tugmasini chiqaradi.
+3. **Backend Public Ruxsati Tekshirildi**:
+   - `backend-django/apps/core/lms_views.py` dagi `lesson_stream_view`, `lesson_hls_playlist_view` va `lesson_hls_file_view` barchasi `@permission_classes([AllowAny])` bilan himoyalangan, brauzerning HTML5 `<video>` tegi token yubormasdan ham 206 Partial Content video baytlarini erkin oladi.
+4. **Avtomatlashgan Testlar**:
+   - `GamifiedVideoPlayer.spec.ts` ga `lessonDuration > 0` bo'lganda "Darsni boshlash" tugmasi chiqishi va "Video yuklanmoqda..." spinneri ko'rinmasligi bo'yicha regressiya testlari qo'shildi (100% PASS).
+
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
 - Speaking audiolarni Opus formatida siqish foni faollashtirildi.

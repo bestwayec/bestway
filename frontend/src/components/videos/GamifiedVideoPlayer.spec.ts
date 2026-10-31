@@ -19,6 +19,8 @@ describe("GamifiedVideoPlayer Component", () => {
     expect(html).toContain("+50 XP");
     expect(html).toContain("LMS Protected");
     expect(html).toContain("<video");
+    expect(html).toContain("Darsni boshlash");
+    expect(html).not.toContain("Video yuklanmoqda...");
   });
 
   it("renders custom XP reward when provided", () => {

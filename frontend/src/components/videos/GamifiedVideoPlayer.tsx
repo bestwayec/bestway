@@ -71,6 +71,7 @@ export function GamifiedVideoPlayer({
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(0);
   const [duration, setDuration] = React.useState(lessonDuration);
+  const [hasMetadata, setHasMetadata] = React.useState(lessonDuration > 0);
   const [volume, setVolume] = React.useState(1);
   const [muted, setMuted] = React.useState(false);
   const [playbackRate, setPlaybackRate] = React.useState<number>(1);
@@ -83,7 +84,8 @@ export function GamifiedVideoPlayer({
   const [showQualityMenu, setShowQualityMenu] = React.useState<boolean>(false);
   const [isHlsActive, setIsHlsActive] = React.useState<boolean>(false);
 
-  // Buffering, stream error and playback tracking
+  // Loading, Buffering, stream error and playback tracking
+  const [isLoading, setIsLoading] = React.useState(true);
   const [isBuffering, setIsBuffering] = React.useState(false);
   const [streamError, setStreamError] = React.useState<string | null>(null);
   const hasStartedPlayingRef = React.useRef(false);
@@ -112,6 +114,14 @@ export function GamifiedVideoPlayer({
     setVolume(1.0);
     setMuted(false);
     setStreamError(null);
+    setIsLoading(true);
+    setIsBuffering(false);
+    if (lessonDuration > 0) {
+      setHasMetadata(true);
+      setDuration(lessonDuration);
+    } else {
+      setHasMetadata(false);
+    }
 
     const streamCandidate = hlsSrc || (src && src.includes(".m3u8") ? src : null);
 
@@ -132,6 +142,8 @@ export function GamifiedVideoPlayer({
 
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         setIsHlsActive(true);
+        setIsLoading(false);
+        setIsBuffering(false);
         if (data.levels && data.levels.length > 0) {
           const parsed: VideoQualityOption[] = data.levels.map((lvl, idx) => ({
             index: idx,
@@ -219,13 +231,15 @@ export function GamifiedVideoPlayer({
     }
   }, [src, hlsSrc]);
 
-  // 6-Second Timeout Watchdog for Video Buffering / Stalling
+  // 6-Second Timeout Watchdog for Video Metadata / Stream Stalling
   React.useEffect(() => {
-    if (!isBuffering) return;
+    // Only watchdog if loading AND metadata has NOT arrived yet
+    if (!isLoading || hasMetadata || duration > 0) return;
 
     const timer = setTimeout(() => {
-      if (isBuffering) {
-        console.warn("Video buffering timed out after 6 seconds; attempting stream recovery.");
+      if (isLoading && !hasMetadata && duration <= 0) {
+        console.warn("Video metadata loading timed out after 6 seconds; attempting stream recovery.");
+        setIsLoading(false);
         setIsBuffering(false);
 
         const video = videoRef.current;
@@ -246,12 +260,13 @@ export function GamifiedVideoPlayer({
     }, 6000);
 
     return () => clearTimeout(timer);
-  }, [isBuffering, isHlsActive, src]);
+  }, [isLoading, hasMetadata, duration, isHlsActive, src]);
 
   // Handlers for Fallback Recovery
   const handleRetry = () => {
     setStreamError(null);
-    setIsBuffering(true);
+    setIsLoading(true);
+    setIsBuffering(false);
     const video = videoRef.current;
     if (!video) return;
 
@@ -264,12 +279,13 @@ export function GamifiedVideoPlayer({
     if (src) {
       video.src = src;
       video.load();
-      video.play().catch(() => {});
+      handleManualStart();
     }
   };
 
   const handlePlaySample = () => {
     setStreamError(null);
+    setIsLoading(false);
     setIsBuffering(false);
     const video = videoRef.current;
     if (!video) return;
@@ -284,18 +300,21 @@ export function GamifiedVideoPlayer({
     const sampleUrl = "https://api.bestwayec.uz/v1/lessons/aac8a929-43f3-4516-8a79-09588c2787ba/stream";
     video.src = sampleUrl;
     video.load();
-    video.play().catch(() => {});
+    handleManualStart();
   };
 
   // Synchronize duration from video metadata and enforce unmuted audio
   const handleLoadedMetadata = () => {
+    setIsLoading(false);
+    setIsBuffering(false);
     if (videoRef.current) {
       const v = videoRef.current;
       const dur = v.duration;
       if (Number.isFinite(dur) && dur > 0) {
         setDuration(dur);
+        setHasMetadata(true);
       }
-      v.volume = 1.0;
+      v.volume = volume > 0 ? volume : 1.0;
       v.muted = false;
       setVolume(1.0);
       setMuted(false);
@@ -310,6 +329,33 @@ export function GamifiedVideoPlayer({
         // audioTracks API not supported across all browsers
       }
     }
+  };
+
+  const handleCanPlay = () => {
+    setIsLoading(false);
+    setIsBuffering(false);
+    setStreamError(null);
+    if (videoRef.current && Number.isFinite(videoRef.current.duration) && videoRef.current.duration > 0) {
+      setHasMetadata(true);
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleLoadedData = () => {
+    setIsLoading(false);
+    setIsBuffering(false);
+    setStreamError(null);
+    if (videoRef.current && Number.isFinite(videoRef.current.duration) && videoRef.current.duration > 0) {
+      setHasMetadata(true);
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handlePlaying = () => {
+    setIsLoading(false);
+    setIsBuffering(false);
+    setIsPlaying(true);
+    setStreamError(null);
   };
 
   // Quality Switching Handler
@@ -331,6 +377,10 @@ export function GamifiedVideoPlayer({
   const handleTimeUpdate = () => {
     const video = videoRef.current;
     if (!video) return;
+
+    // Agar vaqt ketyapti ekan, demak video o'ynayapti, loading/buffering bo'lishi mumkin emas!
+    if (isLoading) setIsLoading(false);
+    if (isBuffering) setIsBuffering(false);
 
     const cur = video.currentTime;
     setCurrentTime(cur);
@@ -400,39 +450,47 @@ export function GamifiedVideoPlayer({
   }, [isPlaying, lessonId]);
 
   // Controls Handlers
-  const togglePlay = () => {
+  const handleManualStart = async () => {
+    setIsLoading(false);
+    setIsBuffering(false);
     const video = videoRef.current;
     if (!video) return;
 
     setTabPausedNotice(false);
 
-    if (video.paused) {
+    try {
       video.muted = false;
       video.volume = volume > 0 ? volume : 1.0;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-            hasStartedPlayingRef.current = true;
-            setTabPausedNotice(false);
-          })
-          .catch((err) => {
-            console.warn("Autoplay unmuted blocked, falling back to muted play", err);
-            video.muted = true;
-            setMuted(true);
-            video
-              .play()
-              .then(() => {
-                setIsPlaying(true);
-                hasStartedPlayingRef.current = true;
-                setTabPausedNotice(false);
-              })
-              .catch(() => {
-                setIsPlaying(false);
-              });
-          });
+      await video.play();
+      setIsPlaying(true);
+      hasStartedPlayingRef.current = true;
+      setTabPausedNotice(false);
+    } catch (err) {
+      console.warn("Autoplay unmuted blocked by browser policy, falling back to muted play:", err);
+      try {
+        video.muted = true;
+        setMuted(true);
+        await video.play();
+        setIsPlaying(true);
+        hasStartedPlayingRef.current = true;
+        setTabPausedNotice(false);
+      } catch (innerErr) {
+        console.error("Manual playback failed:", innerErr);
+        setIsPlaying(false);
       }
+    }
+  };
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    setTabPausedNotice(false);
+    setIsLoading(false);
+    setIsBuffering(false);
+
+    if (video.paused) {
+      handleManualStart();
     } else {
       video.pause();
       setIsPlaying(false);
@@ -559,25 +617,21 @@ export function GamifiedVideoPlayer({
           hasStartedPlayingRef.current = true;
           setTabPausedNotice(false);
           setIsBuffering(false);
+          setIsLoading(false);
           setStreamError(null);
         }}
         onPause={() => setIsPlaying(false)}
-        onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => {
-          setIsBuffering(false);
-          setIsPlaying(true);
-          setStreamError(null);
+        onWaiting={() => {
+          if (isPlaying) {
+            setIsBuffering(true);
+          }
         }}
-        onCanPlay={() => {
-          setIsBuffering(false);
-          setStreamError(null);
-        }}
-        onLoadedData={() => {
-          setIsBuffering(false);
-          setStreamError(null);
-        }}
+        onPlaying={handlePlaying}
+        onCanPlay={handleCanPlay}
+        onLoadedData={handleLoadedData}
         onError={(e) => {
           setIsBuffering(false);
+          setIsLoading(false);
           console.warn("Video element playback error caught:", e);
           if (isHlsActive && hlsRef.current) {
             hlsRef.current.destroy();
@@ -597,11 +651,18 @@ export function GamifiedVideoPlayer({
         preload="metadata"
       />
 
-      {/* Buffering Spinner */}
-      {isBuffering && !streamError && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+      {/* Initial Loading Spinner (FAQAT duration <= 0 va !hasMetadata bo'lganda ko'rinsin) */}
+      {isLoading && !hasMetadata && duration <= 0 && !streamError && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
           <Loader2 className="size-12 animate-spin text-emerald-400" />
           <span className="text-xs font-semibold text-slate-300 mt-2">Video yuklanmoqda...</span>
+        </div>
+      )}
+
+      {/* Mid-Playback Buffering Spinner (Faqat video o'ynayotganda kutilmagan to'xtash bo'lsa) */}
+      {isPlaying && isBuffering && !streamError && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/20 backdrop-blur-[1px]">
+          <Loader2 className="size-10 animate-spin text-emerald-400" />
         </div>
       )}
 
@@ -640,16 +701,16 @@ export function GamifiedVideoPlayer({
       )}
 
       {/* Center Big Play Button (Initial / Paused without blur) */}
-      {!isPlaying && !tabPausedNotice && !completionData && !isBuffering && !streamError && (!hasStartedPlayingRef.current || currentTime === 0) && (
+      {!isPlaying && !tabPausedNotice && !completionData && !streamError && (!isLoading || hasMetadata || duration > 0) && (
         <div
-          onClick={togglePlay}
+          onClick={handleManualStart}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] cursor-pointer group/play transition-all"
         >
           <div className="size-20 rounded-full bg-emerald-500/90 border-2 border-emerald-400 flex items-center justify-center text-slate-950 shadow-[0_0_35px_rgba(16,185,129,0.7)] group-hover/play:scale-110 transition-transform">
             <Play className="size-9 fill-slate-950 ml-1" />
           </div>
           <span className="text-white font-bold text-sm mt-3 bg-slate-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 backdrop-blur shadow-lg">
-            Darsni boshlash
+            {currentTime > 0 ? "Darsni davom ettirish" : "Darsni boshlash"}
           </span>
         </div>
       )}
