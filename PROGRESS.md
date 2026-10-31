@@ -843,6 +843,28 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
 4. **Avtomatlashgan Testlar**:
    - `GamifiedVideoPlayer.spec.ts` ga `lessonDuration > 0` bo'lganda "Darsni boshlash" tugmasi chiqishi va "Video yuklanmoqda..." spinneri ko'rinmasligi bo'yicha regressiya testlari qo'shildi (100% PASS).
 
+### 8-BLOK: Exam Builder UI Fix, Smart Bulk Question Importer & Profil Emerald Polish (Phase 34)
+1. **Exam Builder Jadvalidagi Kesilishni To'g'rilash (`ExamBuilderList.tsx`)**:
+   - Desktop jadval kengligi `min-w-[900px]` ga oshirildi.
+   - Sarlavha ustuniga aniq `min-w-[260px] max-w-[340px] px-4 py-3` o'lchamlari berildi, kesilishlar to'liq bartaraf etildi.
+   - Sarlavha yozuvi "EXAM TITLE" ga o'tkazilib, tagida imtihon ID si (`ID: {e.id}`) ko'rinadigan qilindi.
+   - Aralash tillar (masalan, "Savollar", "Unpublish") to'liq xalqaro i18n (`tx(t, "unpublish", "Unpublish")` va `tx(t, "questionsTitle", "Questions")`) tizimiga ulandi.
+   - "+ Create Exam" tugmasi Obsidian-Emerald (`bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold`) rangiga, "Edit" tugmasi esa Obsidian zumrad konturli (`bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20`) uslubga o'tkazildi.
+2. **Smart Bulk Question Importer (`bulk-question-parser.ts` & `BulkQuestionImporterModal.tsx`)**:
+   - Word yoki Telegram'dan ko'chirilgan testlarni avtomatik aniqlovchi regex parser ishlab chiqildi (`parseBulkQuestions`).
+   - Raqamlash (`1.`, `2)`, `3 -`), variantlar (`A)`, `B)`, `C)`, `D)`), to'g'ri javob belgilari (`*`, `[x]`, `[X]`, `(x)`, `correct`) avtomatik ajratib olinadi.
+   - O'qituvchilar uchun jonli ko'rish (Live Preview), to'g'ri javobni interaktiv tanlash va bir marta bosish bilan imtihonga saqlash (`POST /mock/exams/{id}/quick-content`) imkoniyati yaratildi.
+   - Imtihonlar ro'yxatida va `ExamQuestionsEditorDialog` ichida `[ ⚡️ Tezkor Kiritish (Bulk Paste) ]` tugmalari o'rnatildi.
+3. **Profil va Zaif Nuqtalar Xaritasi Ranglari hamda Tillarini Tozalash**:
+   - `score-prediction-card.tsx` dagi matnlar `en.json` va `uz.json` ga ko'chirilib, `useTranslations("profile")` ga ulandi.
+   - SVG grafikdagi och sariq `#89F336` ranglar Obsidian zumrad `#10B981` ga almashtirildi.
+   - `profile-view.tsx` dagi "Telegramni ulash" tugmasi toza Obsidian-Emerald (`bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold`) ga o'tkazildi.
+4. **Avtomatlashgan Testlar va Sifat Nazorati**:
+   - `bulk-question-parser.spec.ts` regressiya testlari (4/4 test passed).
+   - Frontend Vitest to'plami: 59 ta fayl, 373 ta test 100% muvaffaqiyat bilan o'tdi.
+   - TypeScript `tsc --noEmit` 0 xato bilan yakunlandi.
+   - Backend Django testlari: 626 ta test 100% muvaffaqiyat bilan o'tdi.
+
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
 - Speaking audiolarni Opus formatida siqish foni faollashtirildi.

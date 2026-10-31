@@ -213,7 +213,12 @@ export function ProfileView() {
           ) : (
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-fg-muted">{t("telegramNotLinked")}</span>
-              <Button size="sm" loading={linkToken.isPending} onClick={onLink}>
+              <Button
+                size="sm"
+                loading={linkToken.isPending}
+                onClick={onLink}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-500/20"
+              >
                 {linkToken.isPending ? <Loader2 className="animate-spin" /> : <Link2 />}
                 {t("linkTelegram")}
               </Button>

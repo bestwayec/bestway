@@ -12,6 +12,7 @@ import {
   Sparkles,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { api, ApiError } from "@/lib/api-client";
 import type { MockExamListItem } from "@/lib/types";
+import { BulkQuestionImporterModal } from "./BulkQuestionImporterModal";
+import type { ParsedQuestionItem } from "./bulk-question-parser";
 
 interface ExamQuestionsEditorDialogProps {
   open: boolean;
@@ -126,6 +129,27 @@ export function ExamQuestionsEditorDialog({
   ]);
 
   const [saving, setSaving] = React.useState(false);
+  const [bulkImporterOpen, setBulkImporterOpen] = React.useState(false);
+
+  const handleBulkImport = (
+    newQuestions: ParsedQuestionItem[],
+    targetSkill: "reading" | "listening",
+  ) => {
+    const mapped: ObjectiveQ[] = newQuestions.map((q, idx) => ({
+      id: `${targetSkill[0]}_${Date.now()}_${idx + 1}`,
+      prompt: q.prompt,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+    }));
+
+    if (targetSkill === "reading") {
+      setReadingQuestions((prev) => [...prev, ...mapped]);
+      setActiveTab("reading");
+    } else {
+      setListeningQuestions((prev) => [...prev, ...mapped]);
+      setActiveTab("listening");
+    }
+  };
 
   // Load Preset Template
   const handleLoadStandardTemplate = () => {
@@ -238,16 +262,27 @@ export function ExamQuestionsEditorDialog({
                 Savollarni to&apos;g&apos;ridan-to&apos;g&apos;ri tahrirlang yoki standart shablonni yuklab, 1-klikda nashr qiling.
               </DialogDescription>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleLoadStandardTemplate}
-              className="border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 hover:text-emerald-100"
-            >
-              <Sparkles className="size-3.5" />
-              Standart Shablonni Yuklash
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setBulkImporterOpen(true)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-500/20"
+              >
+                <Zap className="size-3.5 fill-slate-950" />
+                ⚡️ Tezkor Matn Orqali Kiritish (Bulk Paste)
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleLoadStandardTemplate}
+                className="border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 hover:text-emerald-100"
+              >
+                <Sparkles className="size-3.5" />
+                Standart Shablonni Yuklash
+              </Button>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -499,25 +534,37 @@ export function ExamQuestionsEditorDialog({
                 <p className="text-xs text-slate-400">
                   Multiple Choice savollari: savol matni, 4 ta variant va to&apos;g&apos;ri javob kaliti.
                 </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setReadingQuestions((prev) => [
-                      ...prev,
-                      {
-                        id: `r_${Date.now()}`,
-                        prompt: "Yangi reading savoli matni...",
-                        options: ["Variant A", "Variant B", "Variant C", "Variant D"],
-                        correctAnswer: "A",
-                      },
-                    ])
-                  }
-                  className="border-slate-700 bg-slate-800 text-xs text-slate-200"
-                >
-                  <Plus className="size-3.5" /> Savol Qo&apos;shish
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setBulkImporterOpen(true)}
+                    className="border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 text-xs"
+                  >
+                    <Zap className="size-3.5 mr-1 text-emerald-400" />
+                    ⚡️ Bulk Paste
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setReadingQuestions((prev) => [
+                        ...prev,
+                        {
+                          id: `r_${Date.now()}`,
+                          prompt: "Yangi reading savoli matni...",
+                          options: ["Variant A", "Variant B", "Variant C", "Variant D"],
+                          correctAnswer: "A",
+                        },
+                      ])
+                    }
+                    className="border-slate-700 bg-slate-800 text-xs text-slate-200"
+                  >
+                    <Plus className="size-3.5" /> Savol Qo&apos;shish
+                  </Button>
+                </div>
               </div>
 
               {readingQuestions.map((q, idx) => (
@@ -592,25 +639,37 @@ export function ExamQuestionsEditorDialog({
                 <p className="text-xs text-slate-400">
                   Listening Multiple Choice savollari: audio asosidagi savollar va javob kalitlari.
                 </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setListeningQuestions((prev) => [
-                      ...prev,
-                      {
-                        id: `l_${Date.now()}`,
-                        prompt: "Yangi listening savoli...",
-                        options: ["Variant A", "Variant B", "Variant C", "Variant D"],
-                        correctAnswer: "A",
-                      },
-                    ])
-                  }
-                  className="border-slate-700 bg-slate-800 text-xs text-slate-200"
-                >
-                  <Plus className="size-3.5" /> Savol Qo&apos;shish
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setBulkImporterOpen(true)}
+                    className="border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 text-xs"
+                  >
+                    <Zap className="size-3.5 mr-1 text-emerald-400" />
+                    ⚡️ Bulk Paste
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setListeningQuestions((prev) => [
+                        ...prev,
+                        {
+                          id: `l_${Date.now()}`,
+                          prompt: "Yangi listening savoli...",
+                          options: ["Variant A", "Variant B", "Variant C", "Variant D"],
+                          correctAnswer: "A",
+                        },
+                      ])
+                    }
+                    className="border-slate-700 bg-slate-800 text-xs text-slate-200"
+                  >
+                    <Plus className="size-3.5" /> Savol Qo&apos;shish
+                  </Button>
+                </div>
               </div>
 
               {listeningQuestions.map((q, idx) => (
@@ -701,6 +760,17 @@ export function ExamQuestionsEditorDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {bulkImporterOpen && (
+        <BulkQuestionImporterModal
+          open={bulkImporterOpen}
+          onClose={() => setBulkImporterOpen(false)}
+          examId={exam.id}
+          examTitle={exam.title}
+          initialSkill={activeTab === "listening" ? "listening" : "reading"}
+          onQuestionsImported={handleBulkImport}
+        />
+      )}
     </Dialog>
   );
 }

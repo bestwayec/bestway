@@ -294,7 +294,15 @@
     "telegramNotLinked": "Telegram ulanmagan",
     "linkTelegram": "Telegramni ulash",
     "unlinkTelegram": "Uzish",
-    "telegramHint": "Bildirishnomalar Telegramga ham keladi"
+    "telegramHint": "Bildirishnomalar Telegramga ham keladi",
+    "weak_points_map": "Zaif Nuqtalar Xaritasi (Savol turlari bo'yicha)",
+    "weak_points_benchmark": "Diagnostik Benchmark (4 ta asosiy savol turi)",
+    "weak_points_sub": "Eng ko'p xato qilingan modul va savol toifalari",
+    "weak_points_note": "Mock imtihonini yakunlaganingiz sari ushbu xarita sizning real javoblaringiz asosida aniq yangilanadi. Hozirda ta'lim standartidagi asosiy zaif nuqtalar monitoring qilinmoqda:",
+    "accuracy": "Aniqlik",
+    "correct": "to'g'ri",
+    "error_rate": "xato",
+    "recommendation": "Tavsiya"
   },
   "broadcast": {
     "title": "E'lon yuborish",
@@ -1657,7 +1665,9 @@
     "resolved": "Resolved",
     "open": "Open",
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
-    "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions."
+    "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
+    "bulkImportTitle": "⚡️ Tezkor Kiritish (Bulk Paste)",
+    "bulkImportHint": "Word yoki Telegram'dan test matnini joylashtiring"
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",

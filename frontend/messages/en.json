@@ -295,7 +295,15 @@
     "telegramNotLinked": "Telegram not linked",
     "linkTelegram": "Link Telegram",
     "unlinkTelegram": "Unlink",
-    "telegramHint": "Notifications will also arrive in Telegram"
+    "telegramHint": "Notifications will also arrive in Telegram",
+    "weak_points_map": "Weak Points Map (By Question Types)",
+    "weak_points_benchmark": "Diagnostic Benchmark (4 core question types)",
+    "weak_points_sub": "Most frequent error modules and question categories",
+    "weak_points_note": "As you complete mock exams, this map automatically updates based on your real responses. Currently monitoring standard educational benchmarks:",
+    "accuracy": "Accuracy",
+    "correct": "correct",
+    "error_rate": "error",
+    "recommendation": "Recommendation"
   },
   "broadcast": {
     "title": "Send announcement",
@@ -1658,7 +1666,9 @@
     "resolved": "Resolved",
     "open": "Open",
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
-    "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions."
+    "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
+    "bulkImportTitle": "⚡️ Bulk Import",
+    "bulkImportHint": "Paste questions from Word or Telegram"
   },
   "teacherAiRanking": {
     "title": "Writing and Speaking AI ranking",

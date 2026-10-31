@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Award,
@@ -117,6 +118,7 @@ export function ScorePredictionCard({
   readOnlyTarget?: boolean;
   className?: string;
 }) {
+  const tp = useTranslations("profile");
   const predQ = useStudentScorePrediction(studentId, true);
   const updateTarget = useUpdatePredictionTarget();
 
@@ -512,15 +514,15 @@ export function ScorePredictionCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Flame className="size-3.5 text-emerald-400" />
-              Zaif Nuqtalar Xaritasi (Weak Points Map — Savol turlari bo&apos;yicha)
+              {tp("weak_points_map")}
             </h4>
             {(!data.weakModules || data.weakModules.length === 0) ? (
               <Badge variant="neutral" className="text-[10px] bg-slate-800/80 border-slate-700 text-slate-300">
-                Diagnostik Benchmark (4 ta asosiy savol turi)
+                {tp("weak_points_benchmark")}
               </Badge>
             ) : (
               <span className="text-[11px] text-slate-400">
-                Eng ko&apos;p xato qilingan modul va savol toifalari
+                {tp("weak_points_sub")}
               </span>
             )}
           </div>
@@ -535,7 +537,7 @@ export function ScorePredictionCard({
               <div className="space-y-2.5">
                 {isBenchmark && (
                   <p className="text-[11px] text-slate-400 italic">
-                    Mock imtihonini yakunlaganingiz sari ushbu xarita sizning real javoblaringiz asosida aniq yangilanadi. Hozirda ta&apos;lim standartidagi asosiy zaif nuqtalar monitoring qilinmoqda:
+                    {tp("weak_points_note")}
                   </p>
                 )}
                 <div className="grid gap-2.5 sm:grid-cols-2">
@@ -551,14 +553,14 @@ export function ScorePredictionCard({
                           <div className="min-w-0">
                             <p className="truncate text-xs font-bold text-slate-100">{wm.module}</p>
                             <p className="text-[11px] text-slate-400">
-                              Aniqlik: <strong className="text-emerald-400">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} to&apos;g&apos;ri)
+                              {tp("accuracy")}: <strong className="text-emerald-400">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} {tp("correct")})
                             </p>
                           </div>
                           <Badge
                             variant={isHigh ? "danger" : isMed ? "warning" : "info"}
                             className="shrink-0 text-[10px]"
                           >
-                            {Math.round(wm.errorRatePercent)}% xato
+                            {Math.round(wm.errorRatePercent)}% {tp("error_rate")}
                           </Badge>
                         </div>
 
@@ -636,8 +638,8 @@ function PredictionSvgChart({
       >
         <defs>
           <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#89F336" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#89F336" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -664,7 +666,7 @@ function PredictionSvgChart({
         {points.length > 1 && (
           <polyline
             fill="none"
-            stroke="#89F336"
+            stroke="#10B981"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -678,8 +680,8 @@ function PredictionSvgChart({
               cx={p.x}
               cy={p.y}
               r="4.5"
-              fill="#89F336"
-              stroke="#101704"
+              fill="#10B981"
+              stroke="#0B0F17"
               strokeWidth="2"
             />
             <text

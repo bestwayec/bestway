@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Copy, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -30,7 +30,9 @@ import {
   useUpdateMockExamAny,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
-import { ApiError } from "@/lib/api-client";
+import { api, ApiError } from "@/lib/api-client";
+import { BulkQuestionImporterModal } from "./BulkQuestionImporterModal";
+import type { ParsedQuestionItem } from "./bulk-question-parser";
 import type { MockExamListItem, MockExamType } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { EXAM_TYPE_LABEL, EXAM_TYPES, tx } from "./types";
@@ -65,6 +67,33 @@ export function ExamBuilderList() {
   const [deleteTarget, setDeleteTarget] = React.useState<MockExamListItem | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [quickEditTarget, setQuickEditTarget] = React.useState<MockExamListItem | null>(null);
+  const [bulkImportTarget, setBulkImportTarget] = React.useState<MockExamListItem | null>(null);
+
+  const handleDirectBulkImport = async (
+    questions: ParsedQuestionItem[],
+    targetSkill: "reading" | "listening",
+  ) => {
+    if (!bulkImportTarget) return;
+    try {
+      const payload: Record<string, any> = {
+        [targetSkill]: questions.map((q) => ({
+          prompt: q.prompt.trim(),
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          points: 1,
+        })),
+      };
+      await api.post(`/mock/exams/${bulkImportTarget.id}/quick-content`, payload);
+      toast.success(
+        `${questions.length} ta savol “${bulkImportTarget.title}” (${targetSkill}) ga muvaffaqiyatli saqlandi!`,
+      );
+      setBulkImportTarget(null);
+      examsQ.refetch();
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "Savollarni saqlashda xatolik yuz berdi";
+      toast.error(msg);
+    }
+  };
   const examsQ = useMockExams();
   const clone = useCloneMockExam();
   const del = useDeleteMockExam();
@@ -158,13 +187,33 @@ export function ExamBuilderList() {
           "Drafts and published exams in one place — create, edit, preview, duplicate.",
         )}
         actions={
-          <span className="flex flex-wrap items-center gap-1.5">
+          <span className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (items.length > 0) {
+                  setBulkImportTarget(items[0]);
+                } else if (all.length > 0) {
+                  setBulkImportTarget(all[0]);
+                } else {
+                  toast.info(tx(t, "emptyHint", "Iltimos, avval imtihon yarating"));
+                }
+              }}
+              className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-medium"
+            >
+              <Zap className="size-3.5 mr-1 text-emerald-400" aria-hidden />
+              {tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
               <FileUp aria-hidden />
               {tx(t, "jsonImportTitle", "Import JSON")}
             </Button>
             <Link href="/exam-builder/new">
-              <Button size="sm">
+              <Button
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-sm shadow-emerald-500/20"
+              >
                 <Plus aria-hidden />
                 {tx(t, "createExam", "Create Exam")}
               </Button>
@@ -319,23 +368,37 @@ export function ExamBuilderList() {
                   className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
                   loading={updateExam.isPending && updateExam.variables?.id === e.id}
                   onClick={() => handleTogglePublish(e)}
-                  title={e.isPublished ? "Unpublish exam" : "Publish exam to make it live"}
+                  title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}
                 >
                   <Globe className="size-3.5 shrink-0" aria-hidden />
-                  <span className="truncate">{e.isPublished ? "Unpublish" : "Publish"}</span>
+                  <span className="truncate">{e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="subtle"
                   className="min-h-9 w-full justify-center text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
                   onClick={() => setQuickEditTarget(e)}
-                  title="Savollarni tahrirlash va tezkor nashr qilish"
+                  title={tx(t, "questionsTitle", "Questions")}
                 >
                   <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
-                  <span className="truncate">Savollar</span>
+                  <span className="truncate">{tx(t, "questionsTitle", "Questions")}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  className="min-h-9 w-full justify-center text-xs border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/40"
+                  onClick={() => setBulkImportTarget(e)}
+                  title={tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
+                >
+                  <Zap className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  <span className="truncate">Bulk Paste</span>
                 </Button>
                 <Link href={`/exam-builder/${e.id}`} className="min-w-0">
-                  <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`} className="min-h-9 w-full justify-center">
+                  <Button
+                    size="sm"
+                    aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
+                    className="min-h-9 w-full justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                  >
                     <Pencil className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">{tx(t, "edit", "Edit")}</span>
                   </Button>
@@ -381,15 +444,17 @@ export function ExamBuilderList() {
           ))}
         </div>
         <div className="hidden overflow-x-auto rounded-[12px] border border-border md:block">
-          <table className="w-full min-w-[760px] border-collapse bg-surface text-left text-sm">
+          <table className="w-full min-w-[900px] border-collapse bg-surface text-left text-sm">
             <thead className="sticky top-0 bg-surface">
               <tr className="border-b border-border text-xs uppercase tracking-wide text-fg-subtle">
-                <th scope="col" className="px-3 py-2.5 font-semibold">{tx(t, "colTitle", "Title")}</th>
-                <th scope="col" className="px-3 py-2.5 font-semibold">{tx(t, "colType", "Type")}</th>
-                <th scope="col" className="px-3 py-2.5 font-semibold">{tx(t, "colLevel", "Level")}</th>
-                <th scope="col" className="px-3 py-2.5 font-semibold">{tx(t, "colStatus", "Status")}</th>
-                <th scope="col" className="px-3 py-2.5 font-semibold">{tx(t, "colSummary", "Summary")}</th>
-                <th scope="col" className="px-3 py-2.5 font-semibold">
+                <th scope="col" className="min-w-[260px] max-w-[340px] px-4 py-3 font-semibold">
+                  EXAM TITLE
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colType", "Type")}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colLevel", "Level")}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colStatus", "Status")}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colSummary", "Summary")}</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
                   <span className="sr-only">{tx(t, "colActions", "Actions")}</span>
                 </th>
               </tr>
@@ -400,9 +465,12 @@ export function ExamBuilderList() {
                   key={e.id}
                   className="border-b border-border/60 transition-colors last:border-0 hover:bg-surface-hover"
                 >
-                  <td className="max-w-56 px-3 py-2.5">
+                  <td className="min-w-[260px] max-w-[340px] px-4 py-3">
                     <span className="block truncate font-medium text-fg" title={e.title}>
                       {e.title}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] font-mono text-fg-subtle">
+                      ID: {e.id}
                     </span>
                     {e.isDemo && (
                       <span className="mt-0.5 inline-block text-[11px] text-fg-subtle">
@@ -410,13 +478,13 @@ export function ExamBuilderList() {
                       </span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-fg-muted">
+                  <td className="whitespace-nowrap px-4 py-3 text-fg-muted">
                     {EXAM_TYPE_LABEL[e.type]}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-fg-muted">
+                  <td className="whitespace-nowrap px-4 py-3 text-fg-muted">
                     {e.level?.trim() || "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5">
+                  <td className="whitespace-nowrap px-4 py-3">
                     <span className="inline-flex items-center gap-1.5">
                       <Badge variant={e.isPublished ? "success" : "warning"}>
                         {e.isPublished
@@ -435,37 +503,51 @@ export function ExamBuilderList() {
                       )}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-fg-muted tabular-nums">
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-fg-muted tabular-nums">
                     {e.skills.length} {tx(t, "sections", "sections")} · {e.questionCount}{" "}
                     {tx(t, "questions", "questions")}
                     {e.durationMinutes != null && <span> · {e.durationMinutes} min</span>}
                     <span> · {e.price > 0 ? formatMoney(e.price) : tx(t, "free", "Free")}</span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5">
-                    <span className="flex items-center justify-end gap-1">
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className="flex items-center justify-end gap-1.5">
                       <Button
                         size="sm"
                         variant={e.isPublished ? "outline" : "primary"}
                         className={e.isPublished ? "text-xs" : "text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
                         loading={updateExam.isPending && updateExam.variables?.id === e.id}
                         onClick={() => handleTogglePublish(e)}
-                        title={e.isPublished ? "Unpublish exam" : "Publish exam to make it live for students"}
+                        title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}
                       >
                         <Globe className="size-3.5 shrink-0" aria-hidden />
-                        <span>{e.isPublished ? "Unpublish" : "Publish"}</span>
+                        <span>{e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="subtle"
                         className="text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
                         onClick={() => setQuickEditTarget(e)}
-                        title="Savollarni tahrirlash va tezkor nashr qilish"
+                        title={tx(t, "questionsTitle", "Questions")}
                       >
                         <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
-                        <span>Savollar</span>
+                        <span>{tx(t, "questionsTitle", "Questions")}</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="subtle"
+                        className="text-xs border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/40"
+                        onClick={() => setBulkImportTarget(e)}
+                        title={tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
+                      >
+                        <Zap className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <span>Bulk</span>
                       </Button>
                       <Link href={`/exam-builder/${e.id}`}>
-                        <Button size="sm" aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}>
+                        <Button
+                          size="sm"
+                          aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
+                          className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                        >
                           <Pencil className="size-3.5" aria-hidden />
                           {tx(t, "edit", "Edit")}
                         </Button>
@@ -521,6 +603,16 @@ export function ExamBuilderList() {
           onClose={() => setQuickEditTarget(null)}
           exam={quickEditTarget}
           onSuccess={() => examsQ.refetch()}
+        />
+      )}
+
+      {bulkImportTarget && (
+        <BulkQuestionImporterModal
+          open={!!bulkImportTarget}
+          onClose={() => setBulkImportTarget(null)}
+          examId={bulkImportTarget.id}
+          examTitle={bulkImportTarget.title}
+          onQuestionsImported={handleDirectBulkImport}
         />
       )}
 
