@@ -432,7 +432,7 @@ export function VocabRunnerGame() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [moveLane, jump, slide]);
 
-  // Touch / Mobile Swipe Gesture Controls
+  // Touch / Mobile Swipe & Tap Gesture Controls (Clean 60 FPS Mobile Engine)
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -445,14 +445,32 @@ export function VocabRunnerGame() {
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStartRef.current.x;
     const dy = t.clientY - touchStartRef.current.y;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touchX = t.clientX - rect.left;
+    const touchY = t.clientY - rect.top;
+    const width = rect.width;
+    const height = rect.height;
     touchStartRef.current = null;
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx < -30) moveLane(-1);
-      else if (dx > 30) moveLane(1);
+    // Check if Swipe gesture
+    if (Math.abs(dx) > 22 || Math.abs(dy) > 22) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx < -22) moveLane(-1);
+        else if (dx > 22) moveLane(1);
+      } else {
+        if (dy < -22) jump();
+        else if (dy > 22) slide();
+      }
     } else {
-      if (dy < -30) jump();
-      else if (dy > 30) slide();
+      // Tap navigation: Left 35% -> Move Left | Right 35% -> Move Right | Center -> Jump/Slide
+      if (touchX < width * 0.35) {
+        moveLane(-1);
+      } else if (touchX > width * 0.65) {
+        moveLane(1);
+      } else {
+        if (touchY < height * 0.5) jump();
+        else slide();
+      }
     }
   };
 
@@ -809,23 +827,23 @@ export function VocabRunnerGame() {
 
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center select-none">
-      {/* Top HUD Header */}
-      <div className="mb-3 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-[#0B0F17]/90 px-5 py-3 shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-6">
+      {/* Top HUD Header (Responsive & Compact) */}
+      <div className="mb-2 sm:mb-3 flex w-full items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0B0F17]/90 px-3 sm:px-5 py-2 sm:py-3 shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/vocabulary"
-            className="flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white transition"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Lug&apos;atga qaytish</span>
+            <span className="hidden sm:inline">Lug&apos;atga qaytish</span>
           </Link>
 
           {/* Hearts (Lives) */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {[1, 2, 3].map((heart) => (
               <Heart
                 key={heart}
-                className={`h-5 w-5 transition-all duration-300 ${
+                className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-300 ${
                   heart <= lives
                     ? "fill-red-500 text-red-500 scale-100 filter drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]"
                     : "fill-gray-800 text-gray-800 scale-90"
@@ -836,28 +854,28 @@ export function VocabRunnerGame() {
 
           {/* Combo Multiplier Badge */}
           {combo > 1 && (
-            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-0.5 text-xs font-black text-emerald-400 animate-pulse">
-              <Zap className="h-3.5 w-3.5 fill-current" />
-              <span>COMBO {combo}x</span>
+            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-emerald-400 animate-pulse">
+              <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current" />
+              <span>{combo}x</span>
             </div>
           )}
         </div>
 
         {/* Live Score & Distance */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           <div className="text-right">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Masofa</span>
-            <p className="font-mono text-sm font-bold text-teal-400">{distance} m</p>
+            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-gray-400">Masofa</span>
+            <p className="font-mono text-xs sm:text-sm font-bold text-teal-400">{distance}m</p>
           </div>
           <div className="text-right">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Ball</span>
-            <p className="font-mono text-xl font-black text-emerald-400">{score}</p>
+            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-gray-400">Ball</span>
+            <p className="font-mono text-base sm:text-xl font-black text-emerald-400">{score}</p>
           </div>
 
           <button
             type="button"
             onClick={() => setSoundEnabled((v) => !v)}
-            className="rounded-xl border border-white/10 p-2 text-gray-400 hover:bg-white/10 hover:text-white transition"
+            className="rounded-lg sm:rounded-xl border border-white/10 p-1.5 sm:p-2 text-gray-400 hover:bg-white/10 hover:text-white transition"
             title="Ovozni yoqish / o'chirish"
           >
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -865,29 +883,26 @@ export function VocabRunnerGame() {
         </div>
       </div>
 
-      {/* Target Question Floating HUD Card */}
+      {/* Target Question Floating HUD Card (Compact & High Contrast) */}
       {isPlaying && !isGameOver && currentQuestion && (
-        <div className="mb-3 w-full rounded-2xl border border-emerald-500/30 bg-[#111827]/95 p-4 text-center shadow-2xl backdrop-blur-md animate-fadeIn">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+        <div className="mb-2 sm:mb-3 w-full rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-[#111827]/95 px-3 py-2 sm:p-4 text-center shadow-xl backdrop-blur-md animate-fadeIn">
+          <div className="flex items-center justify-center gap-2 mb-0.5">
+            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-400">
               {currentQuestion.category}
             </span>
-            <span className="text-xs text-gray-400 font-mono">
-              Savol {currentQIndex + 1}/{questions.length}
+            <span className="text-[10px] sm:text-xs text-gray-400 font-mono">
+              {currentQIndex + 1}/{questions.length}
             </span>
           </div>
-          <h2 className="text-lg md:text-xl font-extrabold text-white tracking-wide">
+          <h2 className="text-base sm:text-xl font-black text-white tracking-wide truncate max-w-xl mx-auto">
             {currentQuestion.prompt}
           </h2>
-          <p className="mt-1 text-[11px] text-gray-400">
-            To&apos;g&apos;ri javob joylashgan yo&apos;lakka (1, 2 yoki 3) o&apos;ting!
-          </p>
         </div>
       )}
 
-      {/* Main Canvas Viewport with Touch Listener */}
+      {/* Main Canvas Viewport with Touch Listener (Full Mobile Touch Optimized) */}
       <div
-        className="relative w-full aspect-[16/9] max-h-[580px] overflow-hidden rounded-3xl border border-white/15 shadow-2xl bg-[#0B0F17]"
+        className="relative w-full aspect-[16/9] max-h-[65dvh] sm:max-h-[580px] overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-2xl bg-[#0B0F17] touch-none select-none"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -931,6 +946,21 @@ export function VocabRunnerGame() {
               <Play className="h-5 w-5 fill-current" />
               <span>O&apos;yinni Boshlash</span>
             </button>
+          </div>
+        )}
+
+                {/* Floating Mobile Gesture Guide Pill (Clean Overlay, Zero Button Clutter) */}
+        {isPlaying && !isGameOver && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2.5 sm:bottom-3 flex justify-center px-4">
+            <div className="inline-flex items-center gap-2 sm:gap-3 rounded-full bg-black/70 px-3.5 py-1 text-[10px] sm:text-xs font-semibold text-slate-300 border border-white/10 backdrop-blur-md shadow-lg">
+              <span>👈 Chapga</span>
+              <span className="text-white/20">|</span>
+              <span>👆 Sakrash</span>
+              <span className="text-white/20">|</span>
+              <span>👉 O&apos;ngga</span>
+              <span className="text-white/20">|</span>
+              <span>👇 Sirpanish</span>
+            </div>
           </div>
         )}
 
@@ -1047,39 +1077,7 @@ export function VocabRunnerGame() {
         )}
       </div>
 
-      {/* On-Screen Mobile Action Buttons */}
-      <div className="mt-4 flex w-full items-center justify-between gap-3 md:hidden">
-        <button
-          type="button"
-          onClick={() => moveLane(-1)}
-          className="flex-1 flex items-center justify-center rounded-2xl bg-[#111827] border border-white/10 p-4 text-white active:bg-emerald-600/30 transition"
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <button
-          type="button"
-          onClick={jump}
-          className="flex-1 flex flex-col items-center justify-center rounded-2xl bg-[#111827] border border-white/10 p-4 text-white active:bg-emerald-600/30 transition text-xs font-bold"
-        >
-          <ArrowUp className="h-6 w-6" />
-          <span>Sakrash</span>
-        </button>
-        <button
-          type="button"
-          onClick={slide}
-          className="flex-1 flex flex-col items-center justify-center rounded-2xl bg-[#111827] border border-white/10 p-4 text-white active:bg-emerald-600/30 transition text-xs font-bold"
-        >
-          <ArrowDown className="h-6 w-6" />
-          <span>Sirpanish</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => moveLane(1)}
-          className="flex-1 flex items-center justify-center rounded-2xl bg-[#111827] border border-white/10 p-4 text-white active:bg-emerald-600/30 transition"
-        >
-          <ArrowRight className="h-6 w-6" />
-        </button>
-      </div>
+
     </div>
   );
 }

@@ -454,7 +454,7 @@ export function BamboozleArena({
   return (
     <div
       ref={containerRef}
-      className={`w-full min-h-[600px] bg-[#0B0F17] text-white rounded-2xl border border-emerald-500/20 p-6 flex flex-col justify-between select-none relative overflow-hidden ${
+      className={`w-full min-h-[500px] md:min-h-[600px] bg-[#0B0F17] text-white rounded-2xl border border-emerald-500/20 p-4 sm:p-6 pb-12 sm:pb-6 flex flex-col justify-between select-none relative overflow-hidden ${
         isProjectorMode ? "p-8 max-w-full" : ""
       }`}
     >

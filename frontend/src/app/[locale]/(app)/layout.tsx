@@ -32,7 +32,7 @@ export default async function AppLayout({
       <AppSidebar role={role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar role={role} />
-        <main className="flex-1 px-4 pt-6 pb-24 sm:px-6 lg:pb-8">{children}</main>
+        <main className="flex-1 px-4 pt-6 pb-32 sm:px-6 sm:pb-36 lg:pb-8">{children}</main>
       </div>
       <MobileNav role={role} />
     </div>
