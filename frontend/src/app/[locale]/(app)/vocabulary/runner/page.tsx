@@ -16,7 +16,7 @@ export default async function VocabRunnerPage({
   setRequestLocale(locale);
 
   return (
-    <div className="container max-w-6xl mx-auto px-4 py-6">
+    <div className="w-full max-w-6xl mx-auto px-1 sm:px-4 py-2 sm:py-6">
       <VocabRunnerGame />
     </div>
   );

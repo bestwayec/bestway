@@ -105,7 +105,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
   }, [sets, selectedLevel, searchQuery]);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12 sm:pb-6">
       {/* Top Banner / Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>

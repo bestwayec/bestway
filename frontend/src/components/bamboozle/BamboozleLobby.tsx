@@ -341,7 +341,7 @@ export function BamboozleLobby() {
   });
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 pb-12 sm:pb-6">
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#0B0F17] to-slate-900 border border-emerald-500/20 p-6 sm:p-8">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

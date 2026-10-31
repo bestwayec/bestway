@@ -39,7 +39,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
 
-  const title = "BestWay — IELTS va Multi-Level (CEFR) Mock Imtihon Platformasi";
+  const title =
+    locale === "en"
+      ? "BestWay — Official IELTS & Multi-Level (CEFR) Mock Platform | Do your best, forget the rest!"
+      : "BestWay — IELTS va Multi-Level (CEFR) Mock Imtihon Platformasi | Do your best, forget the rest!";
   const description =
     locale === "en"
       ? "BestWay Education Center — Advanced Computer-Based IELTS and Multi-Level (CEFR) mock testing platform with AI assessment, score prediction, and comprehensive exam analytics."
@@ -57,21 +60,31 @@ export async function generateMetadata({
     description,
     applicationName: CENTER.name,
     keywords: [
-      "bestwayec",
       "bestway",
-      "bestway uz",
+      "best way",
+      "bestwayec",
+      "bestwayec.uz",
       "bestway education",
       "bestway o'quv markazi",
+      "best way english",
+      "bestway shofirkon",
+      "bestway buxoro",
+      "bestway ilova",
+      "bestway yuklab olish",
       "ielts mock test",
       "ielts mock imtihon",
+      "ielts cbt",
       "multilevel mock",
       "cefr mock test",
       "dtm milliy sertifikat",
+      "bmb milliy sertifikat",
       "speaking ai tekshirish",
       "writing ai baholash",
       "shofirkon ingliz tili",
       "buxoro ielts",
       "computer based test",
+      "subway vocab runner",
+      "bamboozle arena",
     ],
     authors: [{ name: CENTER.founder }],
     creator: CENTER.name,
@@ -142,13 +155,42 @@ export default async function LocaleLayout({
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "WebSite",
+        "@id": "https://bestwayec.uz/#website",
+        url: "https://bestwayec.uz",
+        name: "BestWay",
+        alternateName: [
+          "BestWay Education",
+          "BestWay EC",
+          "bestwayec.uz",
+          "Best Way",
+          "BestWay O'quv Markazi",
+        ],
+        description:
+          "IELTS va Multi-Level (CEFR) kompyuterlashtirilgan mock imtihon va o'quv platformasi.",
+        inLanguage: ["uz", "en"],
+        publisher: {
+          "@id": "https://bestwayec.uz/#organization",
+        },
+      },
+      {
         "@type": "EducationalOrganization",
         "@id": "https://bestwayec.uz/#organization",
-        name: "BestWay Education Center",
-        alternateName: ["BestWay", "bestwayec", "Best Way O'quv Markazi"],
+        name: "BestWay",
+        legalName: "BestWay Education Center",
+        alternateName: [
+          "BestWay",
+          "bestway",
+          "bestwayec",
+          "Best Way",
+          "BestWay EC",
+          "Best Way O'quv Markazi",
+        ],
         url: "https://bestwayec.uz",
         logo: "https://bestwayec.uz/logo-800.png",
-        description: "Ingliz tili, IELTS va Multi-Level (CEFR) xalqaro imtihonlariga tayyorlov platformasi va o'quv markazi.",
+        slogan: "Do your best, forget the rest!",
+        description:
+          "Ingliz tili, IELTS va Multi-Level (CEFR) xalqaro imtihonlariga tayyorlov platformasi va o'quv markazi.",
         founder: {
           "@type": "Person",
           name: CENTER.founder,
@@ -163,16 +205,14 @@ export default async function LocaleLayout({
         },
         telephone: CENTER.phone,
         email: CENTER.email,
-        sameAs: [
-          CENTER.telegram,
-          CENTER.instagram,
-        ],
+        sameAs: [CENTER.telegram, CENTER.instagram],
       },
       {
         "@type": "Course",
         "@id": "https://bestwayec.uz/#course-ielts-multilevel",
         name: "IELTS & Multi-Level (CEFR) Mock Exam CBT Platform",
-        description: "Real imtihon muhiti (Computer-Based Test), AI asosidagi tezkor Speaking va Writing tekshiruv tizimi, ball bashorati va zaif nuqtalar xaritasi.",
+        description:
+          "Real imtihon muhiti (Computer-Based Test), AI asosidagi tezkor Speaking va Writing tekshiruv tizimi, ball bashorati va zaif nuqtalar xaritasi.",
         provider: {
           "@id": "https://bestwayec.uz/#organization",
         },
@@ -188,7 +228,12 @@ export default async function LocaleLayout({
 
   return (
     // Dark-only — white/light theme deleted. `<html>` is always `dark`.
-    <html lang={locale} data-scroll-behavior="smooth" className={`${inter.variable} dark h-full`} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} dark h-full`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           type="application/ld+json"

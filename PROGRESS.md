@@ -762,6 +762,33 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - Frontend Vitest: 58 ta test fayli, 369 ta test 100% PASS.
    - Git commit va merge: Mualliflik strictly `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI Attribution).
 
+### 9-BLOK: Phase 32 — Mobil Optimizatsiya, SEO Dvigateli, Dinamik APK/iOS Routeri va Subway Runner Mobil Redizayni
+1. **Google SEO & Discovery Dvigateli (Discovery & Organic Search)**:
+   - Next.js Metadata to'liq optimizatsiya qilindi: ildiz tartibi (`src/app/[locale]/layout.tsx`), marketing sahifasi (`src/app/[locale]/(marketing)/page.tsx`) va yuklab olish sahifasida boyitilgan sarlavhalar, kalit so'zlar ("bestway", "best way", "bestwayec", "bestwayec.uz", "bestway education", "bestway o'quv markazi") va meta tavsiflar o'rnatildi.
+   - `sitemap.ts`: Barcha asosiy yo'nalishlar (`/`, `/mock`, `/download`, `/desktop`, `/vocabulary`, `/vocabulary/runner`, `/bamboozle`, `/news`, `/login`, `/register`) uz va en tillari uchun ustuvorlik koeffitsientlari (0.7–1.0) bilan xaritalashtirildi.
+   - `robots.ts`: Googlebot va barcha qidiruv botlari uchun to'siqsiz indekslash yo'lga qo'yildi (`allow: "/"`), faqat xususiy dashboard va APIlar berkitildi.
+   - Schema.org JSON-LD: `WebSite` va `EducationalOrganization` tuzilgan ma'lumotlari (`@type: EducationalOrganization`, `name: BestWay`, `legalName: BestWay Education Center`, `slogan: "Do your best, forget the rest!"`) qo'shildi.
+
+2. **Dinamik Download Sahifasi & Smart Router (`/download` va `/desktop`)**:
+   - `desktop-download.tsx` to'liq qayta ishlandi: eskirgan "Siz telefondasiz — kompyuterda oching" blokerlari olib tashlandi.
+   - **Android Smart Card**: Android qurilmasi aniqlanganda to'g'ridan-to'g'ri `BestWay APK Yuklab Olish (v1.0.9)` tugmasi chiqadi, hajm (~45 MB), `minSdkVersion 24` va `v1+v2+v3` rasmiy imzo tekshiruvi hamda 3 bosqichli o'rnatish qo'llanmasi taqdim etiladi.
+   - **iOS / PWA Smart Card**: iPhone yoki iPad aniqlanganda Safari orqali Bosh Ekranga qo'shish (Add to Home Screen) bo'yicha vizual qo'llanma va veb-platformaga kirish ko'rsatiladi.
+   - **Desktop Relizlar v1.0.9 ga Sinxronlandi**: Windows (`.exe` va `.msi`), macOS (Apple Silicon va Intel) va Linux (`.deb` va `.AppImage`) installerlari `v1.0.9` versiyasiga yangilandi.
+
+3. **Subway Vocab Runner Mobil Redizayni (`VocabRunnerGame.tsx`)**:
+   - Ekranning 40% ini qoplab, HUD va canvasni to'sib qo'ygan bahaybat qora tugmalar olib tashlandi.
+   - O'yin toza 60 FPS Touch Swipe (surish) va Touch Zone (sensorli hududlar) dvigateliga o'tkazildi:
+     * Chapga surish / chap tomonga teginish -> Chap yo'lakka o'tish
+     * O'ngga surish / o'ng tomonga teginish -> O'ng yo'lakka o'tish
+     * Yuqoriga surish / o'rtaga teginish -> Sakrash
+     * Pastga surish / pastga teginish -> Sirg'alish (slide)
+   - Sahifa siljishining oldini olish uchun `touch-none` (`touch-action: none`) o'rnatildi.
+   - HUD va Savol matni to'liq ekranga moslashtirildi, pastki qismda nafis yarim-shaffof imo-ishoralar ko'rsatgichi qo'shildi.
+
+4. **Bamboozle Arena & Global Mobil UI Bottom Padding**:
+   - Asosiy ilova maketida (`AppLayout`) mobil padding `pb-24` dan `pb-32 sm:pb-36 lg:pb-8` ga oshirildi.
+   - `BamboozleLobby`, `BamboozleArena` va `VocabularyCatalogView` pastki qismiga qo'shimcha `pb-12` kiritilib, mobil pastki menyu (Bottom Navigation Bar) kartochkalar va "Jamoalar Jangini Boshlash" tugmalarini to'sib qo'yishi butunlay bartaraf etildi.
+
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
 - Speaking audiolarni Opus formatida siqish foni faollashtirildi.

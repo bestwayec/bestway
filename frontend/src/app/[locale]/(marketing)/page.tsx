@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ExpressPlacementTest } from "@/components/placement/ExpressPlacementTest";
 import { Play, Zap } from "lucide-react";
 import {
@@ -69,6 +70,56 @@ const COURSE_PIXEL: Record<
   multilevel: { variant: "yellow", gap: 10, speed: 28, colors: "#3A3510,#FFED29,#FFF580", active: "#FFED29" },
   sat: { variant: "pink", gap: 10, speed: 55, colors: "#3C260D,#FF991C,#FFC268", active: "#FF991C" },
 };
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const isEn = locale === "en";
+  const title = isEn
+    ? "BestWay — Official IELTS and Multi-Level CEFR Mock Exam Platform | Do your best, forget the rest!"
+    : "BestWay — IELTS va Multi-Level (CEFR) Mock Imtihon Platformasi | Do your best, forget the rest!";
+  const description = isEn
+    ? "BestWay Education Center — Advanced Computer-Based Testing (CBT) for IELTS and CEFR with real-time AI Speaking/Writing assessment, score prediction, and Subway Vocab Runner."
+    : "BestWay o'quv markazi — IELTS va Milliy Sertifikat (Multi-Level CEFR) kompyuterlashtirilgan (CBT) mock imtihonlari, AI Speaking va Writing baholash, va Subway Vocab Runner gamifikatsiyasi.";
+
+  return {
+    title,
+    description,
+    keywords: [
+      "bestway",
+      "best way",
+      "bestwayec",
+      "bestwayec.uz",
+      "bestway education",
+      "bestway o'quv markazi",
+      "best way english",
+      "ielts mock test",
+      "cefr mock test",
+      "dtm milliy sertifikat",
+      "bmb milliy sertifikat",
+      "speaking ai tekshirish",
+      "writing ai baholash",
+    ],
+    alternates: {
+      canonical: isEn ? "https://bestwayec.uz/en" : "https://bestwayec.uz",
+      languages: {
+        uz: "https://bestwayec.uz",
+        en: "https://bestwayec.uz/en",
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      url: isEn ? "https://bestwayec.uz/en" : "https://bestwayec.uz",
+      siteName: "BestWay Education",
+      images: [{ url: "/logo-800.png", width: 800, height: 800, alt: "BestWay Education Center" }],
+    },
+  };
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
