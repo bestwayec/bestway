@@ -289,7 +289,7 @@ export function LessonQuizModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-hidden flex flex-col bg-[#0B0F17] border-slate-800 text-white p-0 gap-0 shadow-2xl rounded-2xl">
+      <DialogContent className="w-[96vw] max-w-3xl max-h-[92dvh] sm:max-h-[88vh] overflow-hidden flex flex-col bg-[#0B0F17] border-slate-800 text-white p-0 gap-0 shadow-2xl rounded-2xl">
         <ConfettiCanvas active={confettiActive} />
 
         {/* Header */}
@@ -466,7 +466,24 @@ export function LessonQuizModal({
           ) : totalQuestions === 0 ? (
             <div className="py-16 text-center space-y-3">
               <HelpCircle className="size-10 text-slate-500 mx-auto" />
-              <p className="text-sm text-slate-400">Ushbu dars uchun test savollari topilmadi</p>
+              <p className="text-sm text-slate-400">Ushbu dars uchun test savollari tayyorlanmoqda...</p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setLoading(true);
+                  api
+                    .get<{ data?: SoloQuizData } | SoloQuizData>(`/v1/lessons/${lessonId}/quiz`)
+                    .then((res: any) => {
+                      const data = res?.data || res;
+                      if (data && Array.isArray(data.questions)) setQuizData(data);
+                    })
+                    .finally(() => setLoading(false));
+                }}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-1.5 text-xs rounded-xl mt-2"
+              >
+                Savollarni qayta yuklash
+              </Button>
             </div>
           ) : (
             /* Active Question Screen */

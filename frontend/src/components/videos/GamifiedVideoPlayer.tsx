@@ -7,6 +7,7 @@ import {
   Award,
   CheckCircle2,
   Gamepad2,
+  Loader2,
   Maximize,
   Minimize,
   Pause,
@@ -82,6 +83,10 @@ export function GamifiedVideoPlayer({
   const [showQualityMenu, setShowQualityMenu] = React.useState<boolean>(false);
   const [isHlsActive, setIsHlsActive] = React.useState<boolean>(false);
 
+  // Buffering and playback tracking
+  const [isBuffering, setIsBuffering] = React.useState(false);
+  const hasStartedPlayingRef = React.useRef(false);
+
   // Anti-cheat state
   const maxWatchedRef = React.useRef(0);
   const [antiCheatWarning, setAntiCheatWarning] = React.useState(false);
@@ -152,11 +157,24 @@ export function GamifiedVideoPlayer({
         }
       });
 
+      let networkRetryCount = 0;
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
+              networkRetryCount += 1;
+              if (networkRetryCount <= 2) {
+                hls.startLoad();
+              } else {
+                // Fallback to direct MP4 stream on network / 404 playlist failure
+                hls.destroy();
+                hlsRef.current = null;
+                setIsHlsActive(false);
+                if (video && src) {
+                  video.src = src;
+                  video.load();
+                }
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               hls.recoverMediaError();
@@ -165,8 +183,9 @@ export function GamifiedVideoPlayer({
               hls.destroy();
               hlsRef.current = null;
               setIsHlsActive(false);
-              if (video && src && !src.includes(".m3u8")) {
+              if (video && src) {
                 video.src = src;
+                video.load();
               }
               break;
           }
@@ -267,20 +286,11 @@ export function GamifiedVideoPlayer({
     }
   };
 
-  // Anti-cheat: Auto-pause when tab/window becomes inactive
+  // Anti-cheat: Auto-pause when tab becomes inactive (only if user actively started watching)
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       const video = videoRef.current;
-      if (document.hidden && video && !video.paused) {
-        video.pause();
-        setIsPlaying(false);
-        setTabPausedNotice(true);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      const video = videoRef.current;
-      if (video && !video.paused) {
+      if (document.hidden && video && !video.paused && hasStartedPlayingRef.current) {
         video.pause();
         setIsPlaying(false);
         setTabPausedNotice(true);
@@ -288,11 +298,9 @@ export function GamifiedVideoPlayer({
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
     };
   }, []);
 
@@ -322,15 +330,35 @@ export function GamifiedVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    setTabPausedNotice(false);
+
     if (video.paused) {
       video.muted = false;
       video.volume = volume > 0 ? volume : 1.0;
-      video.play().then(() => {
-        setIsPlaying(true);
-        setTabPausedNotice(false);
-      }).catch(() => {
-        setIsPlaying(false);
-      });
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            hasStartedPlayingRef.current = true;
+            setTabPausedNotice(false);
+          })
+          .catch((err) => {
+            console.warn("Autoplay unmuted blocked, falling back to muted play", err);
+            video.muted = true;
+            setMuted(true);
+            video
+              .play()
+              .then(() => {
+                setIsPlaying(true);
+                hasStartedPlayingRef.current = true;
+                setTabPausedNotice(false);
+              })
+              .catch(() => {
+                setIsPlaying(false);
+              });
+          });
+      }
     } else {
       video.pause();
       setIsPlaying(false);
@@ -453,11 +481,54 @@ export function GamifiedVideoPlayer({
         onTimeUpdate={handleTimeUpdate}
         onSeeking={handleSeeking}
         onEnded={handleCompleteLesson}
+        onPlay={() => {
+          setIsPlaying(true);
+          hasStartedPlayingRef.current = true;
+          setTabPausedNotice(false);
+          setIsBuffering(false);
+        }}
+        onPause={() => setIsPlaying(false)}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => {
+          setIsBuffering(false);
+          setIsPlaying(true);
+        }}
+        onCanPlay={() => setIsBuffering(false)}
+        onError={() => {
+          setIsBuffering(false);
+          if (videoRef.current && src && videoRef.current.src !== src) {
+            videoRef.current.src = src;
+            videoRef.current.load();
+          }
+        }}
         playsInline
         autoPlay={false}
         muted={muted}
         preload="auto"
       />
+
+      {/* Buffering Spinner */}
+      {isBuffering && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <Loader2 className="size-12 animate-spin text-emerald-400" />
+          <span className="text-xs font-semibold text-slate-300 mt-2">Video yuklanmoqda...</span>
+        </div>
+      )}
+
+      {/* Center Big Play Button (Initial / Paused without blur) */}
+      {!isPlaying && !tabPausedNotice && !completionData && !isBuffering && (!hasStartedPlayingRef.current || currentTime === 0) && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] cursor-pointer group/play transition-all"
+        >
+          <div className="size-20 rounded-full bg-emerald-500/90 border-2 border-emerald-400 flex items-center justify-center text-slate-950 shadow-[0_0_35px_rgba(16,185,129,0.7)] group-hover/play:scale-110 transition-transform">
+            <Play className="size-9 fill-slate-950 ml-1" />
+          </div>
+          <span className="text-white font-bold text-sm mt-3 bg-slate-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 backdrop-blur shadow-lg">
+            Darsni boshlash
+          </span>
+        </div>
+      )}
 
       {/* Unmute button if browser enforced muted playback */}
       {isPlaying && muted && (
@@ -491,15 +562,26 @@ export function GamifiedVideoPlayer({
       {tabPausedNotice && !isPlaying && !completionData && (
         <div
           onClick={togglePlay}
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm cursor-pointer text-center p-6"
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer text-center p-6 animate-in fade-in duration-200"
         >
           <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mb-3 animate-pulse">
             <Play className="w-8 h-8 fill-emerald-400 ml-1" />
           </div>
           <h4 className="text-lg font-bold text-white mb-1">Dars Pauzada</h4>
-          <p className="text-sm text-slate-300 max-w-sm">
-            Boshqa oynaga o&apos;tilgani uchun video to&apos;xtatildi. Davom ettirish uchun ekranni bosing.
+          <p className="text-sm text-slate-300 max-w-sm mb-4">
+            Boshqa oynaga o&apos;tilgani uchun video to&apos;xtatildi. Davom ettirish uchun tugmani bosing.
           </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePlay();
+            }}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2 rounded-xl shadow-lg hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all"
+          >
+            Davom ettirish
+          </Button>
         </div>
       )}
 

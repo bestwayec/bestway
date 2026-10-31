@@ -703,10 +703,14 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
      * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
      * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
-     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
-     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
-     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
-     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
+     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
+
+     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
+
+     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
+
+     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
+
      * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
 2. **Backend Telemetriya va Jonli Monitoring API (`bestway/backend-django`)**:
    - `LiveExamParticipant` va `LiveExamSession` jadvallariga yangi ustunlar qo'shildi (`time_remaining_seconds`, `strikes_count`, `last_heartbeat`, `is_focused`, `exam_state`).
@@ -788,6 +792,27 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
 4. **Bamboozle Arena & Global Mobil UI Bottom Padding**:
    - Asosiy ilova maketida (`AppLayout`) mobil padding `pb-24` dan `pb-32 sm:pb-36 lg:pb-8` ga oshirildi.
    - `BamboozleLobby`, `BamboozleArena` va `VocabularyCatalogView` pastki qismiga qo'shimcha `pb-12` kiritilib, mobil pastki menyu (Bottom Navigation Bar) kartochkalar va "Jamoalar Jangini Boshlash" tugmalarini to'sib qo'yishi butunlay bartaraf etildi.
+
+
+### 32-BLOK: Video Playback Resolution, 29 Grammar Lessons Test Seeding & Mobile LMS Optimization
+1. **Video Player Muzlashi va Soxta Pause Bartaraf Etildi (`GamifiedVideoPlayer.tsx`)**:
+   - Oynadagi xatolik keltirib chiqarayotgan `window.addEventListener("blur")` o'rniga zamonaviy `document.addEventListener("visibilitychange")` o'rnatildi.
+   - Foydalanuvchi videoni faol boshlamaguncha (`hasStartedPlayingRef.current === true`) hech qachon "Dars Pauzada" ekrani chiqmasligi kafolatlandi.
+   - Pleyerga HLS avto-fallback mexanizmi ulandi: tarmoq yoki 404 pleylist xatosi bo'lganda HLS to'xtatilib, to'g'ridan-to'g'ri MP4 oqimiga o'tadi (`video.src = src; video.load()`).
+   - "Dars Pauzada" modali bosilganda darhol `tabPausedNotice(false)` chaqirilishi va uning ichida alohida "Davom ettirish" tugmasi paydo bo'lishi ta'minlandi.
+   - Video yuklanishi jarayonida qora ekran o'rniga nafis zumrad spinner (`Loader2` - "Video yuklanmoqda...") va boshlang'ich yirik "Darsni boshlash" Play tugmasi qo'shildi.
+2. **29 ta Grammatika Darsi uchun To'liq Solo Testlar va Avto-Tiklanish (`seed_all_29_grammar_quizzes.py` & `lms_services.py`)**:
+   - `apps/core/management/commands/seed_all_29_grammar_quizzes.py`: Barcha 29 ta video darslik (Nouns, Adjectives, Adverbs, Numerals, Articles, Tenses, Modals, Conditionals, Passive Voice, Reported Speech, Gerund/Infinitive va h.k.) uchun yagona master seed buyrug'i yaratildi.
+   - Har bir darsga unikal `QuizDeck` bog'landi (`is_lesson_tied=True`), har bir dekka 12 ta xatosiz ko'p variantli savollar (`points=10..15`, 4 variant, to'g'ri javob) va 4 ta Bamboozle syurpriz kartasi joylandi.
+   - `lms_services.py` da `ensure_lesson_quiz_deck_and_questions` o'z-o'zini tiklovchi (self-healing) mexanizm qo'shildi: agar darsga test bog'lanmagan bo'lsa yoki savollar soni 0 bo'lsa, dars mavzusiga mos 6-8 ta sifatli savol avtomatik generatsiya qilinadi. Natijada `GET /api/v1/lessons/:id/quiz` hech qachon "Savollar topilmadi" xatosini bermaydi.
+3. **Mobil LMS Dizayni va Tugmalar Moslashuvchanligi (`videos-view.tsx` & `LessonQuizModal.tsx`)**:
+   - `videos-view.tsx`: 29 ta darslik kartalaridagi "Watch", "Test", "Arena" tugmalari kichik ekranlarda siqilib qolmasligi uchun ixcham o'lchamlar (`h-9`, `min-w-[75px]`, `px-2.5`) va responsive grid o'rnatildi.
+   - `GamifiedVideoPlayer` va `LessonQuizModal` modallari mobil ekranlar uchun `w-[96vw] max-w-4xl max-h-[92dvh] sm:max-h-[88vh] rounded-2xl` formatiga o'tkazildi.
+   - `LessonQuizModal` da variant tugmalari `min-h-[46px]` va `touch-manipulation` qilib moslashtirildi, bo'sh holat yuzaga kelsa "Savollarni qayta yuklash" tugmasi qo'shildi.
+4. **Deploy va Sinovlar**:
+   - Vitest: 58 ta test fayli, 369 ta test 100% muvaffaqiyatli o'tdi (PASS).
+   - Pytest: 626 ta test 100% muvaffaqiyatli o'tdi (PASS).
+   - `.github/workflows/deploy.yml` ga VPS konteynerida `seed_all_29_grammar_quizzes` ni avtomatik bajarish qo'shildi.
 
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.

@@ -457,13 +457,60 @@ def get_lms_leaderboard(period: str = "weekly", limit: int = 20) -> List[Dict[st
 # 5. SOLO GRAMMAR QUIZ RUNNER
 # ============================================================================
 
-def get_lesson_solo_quiz(lesson_id: str) -> Dict[str, Any]:
-    """Retrieve question cards for solo grammar practice without surprise cards."""
-    try:
-        lesson = Lesson.objects.get(id=lesson_id)
-    except Lesson.DoesNotExist:
-        raise Http404("Dars topilmadi")
+TOPIC_FALLBACK_QUESTIONS = {
+    "noun": [
+        {"text": "Which of the following nouns is UNCOUNTABLE?", "options": ["furniture", "chair", "table", "coin"], "correct": "furniture", "points": 10},
+        {"text": "Choose the correct plural form of 'child':", "options": ["children", "childs", "childrens", "childes"], "correct": "children", "points": 10},
+        {"text": "Choose the correct sentence:", "options": ["The news is very surprising.", "The news are very surprising.", "A news is very surprising.", "Many news are surprising."], "correct": "The news is very surprising.", "points": 15},
+        {"text": "What is the plural form of 'crisis'?", "options": ["crises", "crisises", "crisis", "crisi"], "correct": "crises", "points": 15},
+        {"text": "Choose the correct possessive form: 'The ___ room is tidy.' (two girls)", "options": ["girls'", "girl's", "girls's", "girls"], "correct": "girls'", "points": 10},
+        {"text": "Which pair has the SAME singular and plural form?", "options": ["sheep / sheep", "tooth / teeth", "ox / oxen", "mouse / mice"], "correct": "sheep / sheep", "points": 10},
+    ],
+    "adjective": [
+        {"text": "Choose the correct comparative: 'This task is ___ than the previous one.'", "options": ["more difficult", "difficulter", "most difficult", "as difficult"], "correct": "more difficult", "points": 10},
+        {"text": "Mount Everest is the ___ mountain on Earth.", "options": ["highest", "higher", "most high", "high"], "correct": "highest", "points": 10},
+        {"text": "The ___ you practice, the ___ you will perform.", "options": ["more / better", "most / best", "much / good", "more / best"], "correct": "more / better", "points": 15},
+        {"text": "Choose the correct adjective order: 'a ___ car'", "options": ["fast modern German", "German fast modern", "modern German fast", "German modern fast"], "correct": "fast modern German", "points": 15},
+        {"text": "Of the two candidates, she is the ___ suited for this role.", "options": ["better", "best", "more good", "most good"], "correct": "better", "points": 10},
+        {"text": "Gold is significantly ___ than copper.", "options": ["heavier", "more heavier", "most heavy", "heaviest"], "correct": "heavier", "points": 10},
+    ],
+    "adverb": [
+        {"text": "She finished the examination very ___.", "options": ["quickly", "quick", "quicker", "quickness"], "correct": "quickly", "points": 10},
+        {"text": "He worked ___ all semester, but his brother ___ touched a book.", "options": ["hard / hardly", "hardly / hard", "hard / hard", "harder / hardly"], "correct": "hard / hardly", "points": 15},
+        {"text": "The dish smells ___.", "options": ["delicious", "deliciously", "more deliciously", "deliciousness"], "correct": "delicious", "points": 10},
+        {"text": "Choose the correct adverb of frequency position:", "options": ["She always arrives on time.", "She arrives always on time.", "Always she arrives on time.", "She arrives on time always."], "correct": "She always arrives on time.", "points": 10},
+        {"text": "He drives as ___ as a professional racer.", "options": ["fast", "fastly", "faster", "fastest"], "correct": "fast", "points": 10},
+        {"text": "Have you heard from him ___?", "options": ["lately", "late", "latest", "later"], "correct": "lately", "points": 15},
+    ],
+    "article": [
+        {"text": "He studies at ___ university in ___ United Kingdom.", "options": ["a / the", "an / the", "the / -", "a / -"], "correct": "a / the", "points": 10},
+        {"text": "She plays ___ piano while her brother plays ___ tennis.", "options": ["the / -", "a / a", "- / -", "the / the"], "correct": "the / -", "points": 10},
+        {"text": "___ Moon orbits ___ Earth.", "options": ["The / the", "A / the", "- / -", "The / an"], "correct": "The / the", "points": 10},
+        {"text": "We reached the airport in ___ hour and ___ half.", "options": ["an / a", "a / a", "the / a", "an / an"], "correct": "an / a", "points": 10},
+        {"text": "___ Alps are known for world-class skiing.", "options": ["The", "A", "An", "-"], "correct": "The", "points": 10},
+        {"text": "I usually have ___ breakfast at 8:00 AM.", "options": ["-", "a", "the", "an"], "correct": "-", "points": 10},
+    ],
+    "tense": [
+        {"text": "By the time we arrive, the concert ___ .", "options": ["will have started", "will start", "started", "starts"], "correct": "will have started", "points": 10},
+        {"text": "While she was cooking dinner, the doorbell ___ .", "options": ["rang", "was ringing", "rings", "has rung"], "correct": "rang", "points": 10},
+        {"text": "I ___ in this city since 2018.", "options": ["have lived", "lived", "am living", "was living"], "correct": "have lived", "points": 10},
+        {"text": "Look at those dark storm clouds! It ___ rain.", "options": ["is going to", "will", "shall", "would"], "correct": "is going to", "points": 10},
+        {"text": "If he ___ harder, he would have passed the exam.", "options": ["had studied", "studied", "studies", "would study"], "correct": "had studied", "points": 15},
+        {"text": "The reports ___ reviewed by the director yesterday.", "options": ["were", "was", "are", "have been"], "correct": "were", "points": 10},
+    ],
+    "general": [
+        {"text": "Choose the grammatically correct option: 'Neither of the students ___ present.'", "options": ["was", "were", "are", "have been"], "correct": "was", "points": 10},
+        {"text": "She decided ___ for the scholarship immediately.", "options": ["to apply", "applying", "apply", "applied"], "correct": "to apply", "points": 10},
+        {"text": "He asked me where I ___ my holiday.", "options": ["had spent", "did spend", "spent have", "was spending"], "correct": "had spent", "points": 15},
+        {"text": "You shouldn't have ___ the confidential email.", "options": ["opened", "open", "opening", "opens"], "correct": "opened", "points": 10},
+        {"text": "She is accustomed to ___ early in the morning.", "options": ["waking up", "wake up", "woke up", "wakes up"], "correct": "waking up", "points": 15},
+        {"text": "Hardly ___ entered the room when the lights went out.", "options": ["had I", "I had", "did I", "I did"], "correct": "had I", "points": 15},
+    ],
+}
 
+
+def ensure_lesson_quiz_deck_and_questions(lesson: Lesson) -> QuizDeck:
+    """Ensure a lesson always has a valid tied QuizDeck with high-quality multiple-choice questions."""
     deck = None
     if hasattr(lesson, "quiz_decks"):
         try:
@@ -474,18 +521,59 @@ def get_lesson_solo_quiz(lesson_id: str) -> Dict[str, Any]:
         deck = QuizDeck.objects.filter(lesson_id=lesson.id).first()
 
     if not deck:
-        return {
-            "lesson_id": str(lesson.id),
-            "lesson_title": lesson.title,
-            "deck_id": None,
-            "deck_title": "Grammar Test",
-            "category": "Grammar",
-            "total_questions": 0,
-            "passing_percentage": 80,
-            "xp_reward": 30,
-            "questions": [],
-        }
+        # Check by matching title
+        deck = QuizDeck.objects.filter(title__icontains=lesson.title[:25]).first()
+        if deck:
+            deck.lesson = lesson
+            deck.is_lesson_tied = True
+            deck.save(update_fields=["lesson", "is_lesson_tied"])
 
+    if not deck:
+        deck = QuizDeck.objects.create(
+            title=f"{lesson.title} - Grammar Test",
+            category="Grammar",
+            is_lesson_tied=True,
+            lesson=lesson,
+        )
+
+    # Ensure question cards exist
+    q_cards = deck.cards.filter(card_type=CardType.QUESTION)
+    if not q_cards.exists():
+        title_lower = lesson.title.lower()
+        topic_key = "general"
+        if "noun" in title_lower:
+            topic_key = "noun"
+        elif "adjective" in title_lower or "comparison" in title_lower:
+            topic_key = "adjective"
+        elif "adverb" in title_lower:
+            topic_key = "adverb"
+        elif "article" in title_lower:
+            topic_key = "article"
+        elif any(t in title_lower for t in ["tense", "past", "present", "future", "perfect", "continuous", "simple"]):
+            topic_key = "tense"
+
+        questions = TOPIC_FALLBACK_QUESTIONS.get(topic_key, TOPIC_FALLBACK_QUESTIONS["general"])
+        for idx, q_data in enumerate(questions, start=1):
+            QuizCard.objects.create(
+                quiz_deck=deck,
+                question_text=q_data["text"],
+                points=q_data.get("points", 10),
+                options=q_data["options"],
+                correct_answer=q_data["correct"],
+                card_type=CardType.QUESTION,
+                order_index=idx,
+            )
+
+    return deck
+
+def get_lesson_solo_quiz(lesson_id: str) -> Dict[str, Any]:
+    """Retrieve question cards for solo grammar practice without surprise cards."""
+    try:
+        lesson = Lesson.objects.get(id=lesson_id)
+    except Lesson.DoesNotExist:
+        raise Http404("Dars topilmadi")
+
+    deck = ensure_lesson_quiz_deck_and_questions(lesson)
     question_cards = list(deck.cards.filter(card_type=CardType.QUESTION).order_by("order_index", "id"))
     questions_data = [
         {
@@ -518,21 +606,7 @@ def submit_lesson_solo_quiz(user, lesson_id: str, answers: Dict[str, Any]) -> Di
     except Lesson.DoesNotExist:
         raise Http404("Dars topilmadi")
 
-    deck = None
-    if hasattr(lesson, "quiz_decks"):
-        try:
-            deck = lesson.quiz_decks.filter(is_lesson_tied=True).first() or lesson.quiz_decks.first()
-        except Exception:
-            pass
-    if not deck:
-        deck = QuizDeck.objects.filter(lesson_id=lesson.id).first()
-
-    if not deck:
-        return {
-            "success": False,
-            "error": "DECK_NOT_FOUND",
-            "message": "Ushbu dars uchun test savollari topilmadi",
-        }
+    deck = ensure_lesson_quiz_deck_and_questions(lesson)
 
     question_cards = list(deck.cards.filter(card_type=CardType.QUESTION).order_by("order_index", "id"))
     total_questions = len(question_cards)
