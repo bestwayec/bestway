@@ -87,12 +87,13 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   // (brauzer→Next→backend) — 8s default ularga yetmaydi.
   // 500MB sekin tarmoqda bir necha daqiqa olishi mumkin.
   const isUpload = (req.headers.get("content-type") ?? "").includes("multipart/form-data");
+  const isStream = req.nextUrl.pathname.includes("/stream") || req.headers.has("range");
   // AI JSON import (max 200 savol) validatsiyasi 8s dan oshishi mumkin —
   // faqat shu route uchun 60s (boshqa route'lar o'zgarmaydi).
   const isExamImport =
     req.nextUrl.pathname.includes("/mock/exam-imports") &&
     req.method !== "GET";
-  const timeoutMs = isUpload ? 600_000 : isExamImport ? 60_000 : 8_000;
+  const timeoutMs = isUpload || isStream ? 600_000 : isExamImport ? 60_000 : 8_000;
 
   const send = (token?: string) =>
     fetch(target, {
@@ -140,7 +141,13 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
 
   const headers = new Headers();
   upstream.headers.forEach((value, key) => {
-    if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) headers.set(key, value);
+    const lowerKey = key.toLowerCase();
+    // Do not strip content-length on video streams and range responses
+    if (isStream && lowerKey === "content-length") {
+      headers.set(key, value);
+    } else if (!STRIPPED_RESPONSE_HEADERS.has(lowerKey)) {
+      headers.set(key, value);
+    }
   });
 
   const response = new NextResponse(upstream.body, {

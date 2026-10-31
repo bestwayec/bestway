@@ -489,7 +489,7 @@ export function LessonQuizModal({
             /* Active Question Screen */
             <div className="space-y-5">
               {/* Question Navigation Bubbles */}
-              <div className="flex flex-wrap gap-1.5 pb-1">
+              <div className="flex flex-wrap gap-1 sm:gap-1.5 pb-1 max-h-24 overflow-y-auto">
                 {questions.map((q, idx) => {
                   const isCurrent = idx === currentIndex;
                   const isAnswered = !!answers[q.id];
@@ -497,7 +497,7 @@ export function LessonQuizModal({
                     <button
                       key={q.id || idx}
                       onClick={() => setCurrentIndex(idx)}
-                      className={`size-7 rounded-lg text-xs font-bold transition-all ${
+                      className={`size-6 sm:size-7 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center ${
                         isCurrent
                           ? "bg-emerald-500 text-slate-950 shadow-md ring-2 ring-emerald-400/50"
                           : isAnswered

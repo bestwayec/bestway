@@ -107,13 +107,16 @@ export function VideosView() {
   const del = useDeleteVideo();
 
   function onWatch(v: VideoLessonItem) {
-    const directUrl = (v as any).streamUrl || `/api/backend/v1/lessons/${v.id}/stream`;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.bestwayec.uz";
+    const directUrl = (v as any).streamUrl || `${apiBase}/v1/lessons/${v.id}/stream`;
+    const hlsUrl = (v as any).hlsPlaylistUrl || (v as any).hls_playlist_url || `${apiBase}/v1/lessons/${v.id}/hls/playlist.m3u8`;
+
     stream.mutate(v.id, {
       onSuccess: (res) => {
         const streamUrl = isSafeHref(res?.url) ? res.url : directUrl;
         setPlaying({
           url: streamUrl,
-          hlsUrl: (v as any).hlsPlaylistUrl || (v as any).hls_playlist_url || `/api/v1/lessons/${v.id}/hls/playlist.m3u8`,
+          hlsUrl,
           title: v.title,
           lessonId: (res as any)?.lessonId || v.id,
           duration: (v as any).durationSeconds || 0,
@@ -126,7 +129,7 @@ export function VideosView() {
         // Fallback to direct LMS stream URL
         setPlaying({
           url: directUrl,
-          hlsUrl: (v as any).hlsPlaylistUrl || (v as any).hls_playlist_url || `/api/v1/lessons/${v.id}/hls/playlist.m3u8`,
+          hlsUrl,
           title: v.title,
           lessonId: v.id,
           duration: (v as any).durationSeconds || 0,

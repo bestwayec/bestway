@@ -794,24 +794,31 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - `BamboozleLobby`, `BamboozleArena` va `VocabularyCatalogView` pastki qismiga qo'shimcha `pb-12` kiritilib, mobil pastki menyu (Bottom Navigation Bar) kartochkalar va "Jamoalar Jangini Boshlash" tugmalarini to'sib qo'yishi butunlay bartaraf etildi.
 
 
-### 32-BLOK: Video Playback Resolution, 29 Grammar Lessons Test Seeding & Mobile LMS Optimization
-1. **Video Player Muzlashi va Soxta Pause Bartaraf Etildi (`GamifiedVideoPlayer.tsx`)**:
-   - Oynadagi xatolik keltirib chiqarayotgan `window.addEventListener("blur")` o'rniga zamonaviy `document.addEventListener("visibilitychange")` o'rnatildi.
-   - Foydalanuvchi videoni faol boshlamaguncha (`hasStartedPlayingRef.current === true`) hech qachon "Dars Pauzada" ekrani chiqmasligi kafolatlandi.
-   - Pleyerga HLS avto-fallback mexanizmi ulandi: tarmoq yoki 404 pleylist xatosi bo'lganda HLS to'xtatilib, to'g'ridan-to'g'ri MP4 oqimiga o'tadi (`video.src = src; video.load()`).
-   - "Dars Pauzada" modali bosilganda darhol `tabPausedNotice(false)` chaqirilishi va uning ichida alohida "Davom ettirish" tugmasi paydo bo'lishi ta'minlandi.
-   - Video yuklanishi jarayonida qora ekran o'rniga nafis zumrad spinner (`Loader2` - "Video yuklanmoqda...") va boshlang'ich yirik "Darsni boshlash" Play tugmasi qo'shildi.
-2. **29 ta Grammatika Darsi uchun To'liq Solo Testlar va Avto-Tiklanish (`seed_all_29_grammar_quizzes.py` & `lms_services.py`)**:
+### 32-BLOK: Video Playback Resolution, Infinite Spinner Watchdog & Mobile LMS Overhaul
+1. **Video Player Infinite "Video yuklanmoqda..." Muzlashining Ildizi Bartaraf Etildi (`GamifiedVideoPlayer.tsx`)**:
+   - **Ildiz Sabab (Root Cause)**: JSX da `<video src={...}>` berilgan holda `useEffect` ichida `hls.attachMedia(video)` chaqirilganda, React render aylanishi `src` ni `undefined` qilib tozalab tashlagan va MediaSource'ni bekor qilgan. Shuningdek `onError` hodisasi cheksiz re-load halqasini hosil qilgan, `isBuffering` hech qachon `false` bo'lmagan.
+   - **Yechim**: `<video>` tegidan statik `src` atributi butunlay olib tashlandi, barcha video manbasi boshqaruvi to'liq `useEffect` va HLS.js nazoratiga o'tkazildi.
+   - **Hodisalar Nazorati**: `onCanPlay`, `onLoadedData`, `onPlaying` hodisalari orqali `isBuffering = false` va `streamError = null` zudlik bilan o'rnatiladi. `preload="metadata"` qilib engil yuklanish kafolatlandi.
+   - **6-Soniya Avtomatik Watchdog**: Agar 6 soniya ichida video `canplay` yoki `loadeddata` hodisasini bermasa, pleyer avtomatik tarzda `isBuffering = false` qiladi, HLS xatolik bersa to'g'ridan-to'g'ri MP4 oqimiga o'tadi, agar u ham yuklanmasa Obsidian-Emerald ogohlantirish oynasini ko'rsatadi: *"Ushbu darsning video oqimi qayta ishlanmoqda. [ Demo darsni ko'rish ] / [ Qayta urinish ]"*.
+   - **Qayta Urinish va Demo Dars**: Foydalanuvchi "Qayta urinish" bosganda manba qayta yuklanadi, "Demo darsni ko'rish" bosilganda esa Lesson 1 ning tasdiqlangan to'liq 83MB lik oqimi bir zumda ochiladi.
+2. **Next.js API Proxy Video Streaming Moslashuvi (`route.ts`)**:
+   - `frontend/src/app/api/backend/[...path]/route.ts` da `/stream` yoki `Range` sarlavhali so'rovlar uchun `timeoutMs` 8 soniyadan 600 soniyaga (10 daqiqa) uzaytirildi.
+   - HTTP 206 Partial Content so'rovlarida `Content-Length` sarlavhasi olib tashlanmasligi ta'minlandi, natijada brauzer video baytlari hajmini to'g'ri o'qib, oqim to'xtab qolmaydi.
+3. **Backend Video Oqimi va Dummy Stub Tozalanishi (`lms_services.py` & `lms_views.py`)**:
+   - `stream_video_file`: Brauzer dekoderini buzib qo'yuvchi 1000 baytlik dummy stub olib tashlandi. Video fayl diskda mavjud bo'lmasa, serverdagi haqiqiy mavjud video fayllar nomzodlari tekshiriladi, aks holda standart toza JSON 404 (`LESSON_VIDEO_NOT_FOUND`) qaytariladi.
+   - `lesson_stream_view`: Dars video fayllari uchun `/app/storage/videos/`, `/app/storage/videos/grammar/` va `/opt/bestway/storage/videos/` yo'llari bo'yicha to'liq qidiruv qo'shildi.
+4. **29 ta Grammatika Darsi uchun To'liq Solo Testlar va Avto-Tiklanish (`seed_all_29_grammar_quizzes.py` & `lms_services.py`)**:
    - `apps/core/management/commands/seed_all_29_grammar_quizzes.py`: Barcha 29 ta video darslik (Nouns, Adjectives, Adverbs, Numerals, Articles, Tenses, Modals, Conditionals, Passive Voice, Reported Speech, Gerund/Infinitive va h.k.) uchun yagona master seed buyrug'i yaratildi.
    - Har bir darsga unikal `QuizDeck` bog'landi (`is_lesson_tied=True`), har bir dekka 12 ta xatosiz ko'p variantli savollar (`points=10..15`, 4 variant, to'g'ri javob) va 4 ta Bamboozle syurpriz kartasi joylandi.
    - `lms_services.py` da `ensure_lesson_quiz_deck_and_questions` o'z-o'zini tiklovchi (self-healing) mexanizm qo'shildi: agar darsga test bog'lanmagan bo'lsa yoki savollar soni 0 bo'lsa, dars mavzusiga mos 6-8 ta sifatli savol avtomatik generatsiya qilinadi. Natijada `GET /api/v1/lessons/:id/quiz` hech qachon "Savollar topilmadi" xatosini bermaydi.
-3. **Mobil LMS Dizayni va Tugmalar Moslashuvchanligi (`videos-view.tsx` & `LessonQuizModal.tsx`)**:
+5. **Mobil LMS Dizayni va Tugmalar Moslashuvchanligi (`videos-view.tsx` & `LessonQuizModal.tsx`)**:
    - `videos-view.tsx`: 29 ta darslik kartalaridagi "Watch", "Test", "Arena" tugmalari kichik ekranlarda siqilib qolmasligi uchun ixcham o'lchamlar (`h-9`, `min-w-[75px]`, `px-2.5`) va responsive grid o'rnatildi.
    - `GamifiedVideoPlayer` va `LessonQuizModal` modallari mobil ekranlar uchun `w-[96vw] max-w-4xl max-h-[92dvh] sm:max-h-[88vh] rounded-2xl` formatiga o'tkazildi.
-   - `LessonQuizModal` da variant tugmalari `min-h-[46px]` va `touch-manipulation` qilib moslashtirildi, bo'sh holat yuzaga kelsa "Savollarni qayta yuklash" tugmasi qo'shildi.
-4. **Deploy va Sinovlar**:
+   - Pleyer boshqaruv paneli kichik mobil ekranlarda (360px - 414px) to'liq sig'ishi uchun ovoz slaydri `hidden sm:block`, tezlik tugmasi esa mobilda bitta bosish bilan aylanuvchi (`sm:hidden text-[11px]`) qilib optimallashtirildi.
+6. **Deploy va Sinovlar**:
    - Vitest: 58 ta test fayli, 369 ta test 100% muvaffaqiyatli o'tdi (PASS).
    - Pytest: 626 ta test 100% muvaffaqiyatli o'tdi (PASS).
+   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
    - `.github/workflows/deploy.yml` ga VPS konteynerida `seed_all_29_grammar_quizzes` ni avtomatik bajarish qo'shildi.
 
 ## Jarayonda

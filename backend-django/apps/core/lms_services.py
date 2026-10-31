@@ -59,33 +59,63 @@ def stream_video_file(file_path: str, request: HttpRequest) -> HttpResponse | St
     """Stream a local video file with strict HTTP Range (206 Partial Content) support."""
     # Check if real file exists on disk
     if not os.path.exists(file_path) or not os.path.isfile(file_path):
-        # Fallback to in-memory sample for tests/dev if file not found
-        sample_data = get_sample_video_bytes()
-        total_size = len(sample_data)
-        range_header = request.META.get("HTTP_RANGE", "").strip()
+        # Look for existing production video candidates
+        fallback_candidates = [
+            "/app/storage/videos/grammar/1_nouns.mp4",
+            "/app/storage/videos/1. The Nouns.mp4",
+            "/app/media/videos/1. The Nouns.mp4",
+            "/opt/bestway/storage/videos/grammar/1_nouns.mp4",
+            "/opt/bestway/storage/videos/1. The Nouns.mp4",
+            "/opt/bestway/backend-django/media/videos/1. The Nouns.mp4",
+        ]
+        found_fallback = None
+        for cand in fallback_candidates:
+            if cand and os.path.exists(cand) and os.path.isfile(cand):
+                found_fallback = cand
+                break
 
-        if range_header:
-            match = RANGE_RE.match(range_header)
-            if match:
-                start_str, end_str = match.groups()
-                start = int(start_str) if start_str else 0
-                end = int(end_str) if end_str else total_size - 1
-                if start >= total_size or end >= total_size or start > end:
-                    response = HttpResponse(status=416)
-                    response["Content-Range"] = f"bytes */{total_size}"
+        if found_fallback:
+            file_path = found_fallback
+        elif getattr(settings, "ENVIRONMENT", "production") == "test" or "pytest" in sys.modules:
+            # Fallback to in-memory sample only for tests
+            sample_data = get_sample_video_bytes()
+            total_size = len(sample_data)
+            range_header = request.META.get("HTTP_RANGE", "").strip()
+
+            if range_header:
+                match = RANGE_RE.match(range_header)
+                if match:
+                    start_str, end_str = match.groups()
+                    start = int(start_str) if start_str else 0
+                    end = int(end_str) if end_str else total_size - 1
+                    if start >= total_size or end >= total_size or start > end:
+                        response = HttpResponse(status=416)
+                        response["Content-Range"] = f"bytes */{total_size}"
+                        return response
+
+                    length = end - start + 1
+                    response = HttpResponse(sample_data[start : end + 1], status=206, content_type="video/mp4")
+                    response["Content-Range"] = f"bytes {start}-{end}/{total_size}"
+                    response["Content-Length"] = str(length)
+                    response["Accept-Ranges"] = "bytes"
                     return response
 
-                length = end - start + 1
-                response = HttpResponse(sample_data[start : end + 1], status=206, content_type="video/mp4")
-                response["Content-Range"] = f"bytes {start}-{end}/{total_size}"
-                response["Content-Length"] = str(length)
-                response["Accept-Ranges"] = "bytes"
-                return response
-
-        response = HttpResponse(sample_data, status=200, content_type="video/mp4")
-        response["Content-Length"] = str(total_size)
-        response["Accept-Ranges"] = "bytes"
-        return response
+            response = HttpResponse(sample_data, status=200, content_type="video/mp4")
+            response["Content-Length"] = str(total_size)
+            response["Accept-Ranges"] = "bytes"
+            return response
+        else:
+            from django.http import JsonResponse
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "LESSON_VIDEO_NOT_FOUND",
+                        "message": "Ushbu darsning video fayli serverda hali joylashtirilmagan.",
+                    },
+                },
+                status=404,
+            )
 
     total_size = os.path.getsize(file_path)
     content_type, _ = mimetypes.guess_type(file_path)

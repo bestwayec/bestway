@@ -83,8 +83,9 @@ export function GamifiedVideoPlayer({
   const [showQualityMenu, setShowQualityMenu] = React.useState<boolean>(false);
   const [isHlsActive, setIsHlsActive] = React.useState<boolean>(false);
 
-  // Buffering and playback tracking
+  // Buffering, stream error and playback tracking
   const [isBuffering, setIsBuffering] = React.useState(false);
+  const [streamError, setStreamError] = React.useState<string | null>(null);
   const hasStartedPlayingRef = React.useRef(false);
 
   // Anti-cheat state
@@ -110,12 +111,14 @@ export function GamifiedVideoPlayer({
     video.muted = false;
     setVolume(1.0);
     setMuted(false);
+    setStreamError(null);
 
     const streamCandidate = hlsSrc || (src && src.includes(".m3u8") ? src : null);
 
     if (streamCandidate && Hls.isSupported()) {
       if (hlsRef.current) {
         hlsRef.current.destroy();
+        hlsRef.current = null;
       }
 
       const hls = new Hls({
@@ -195,8 +198,10 @@ export function GamifiedVideoPlayer({
       hlsRef.current = hls;
 
       return () => {
-        hls.destroy();
-        hlsRef.current = null;
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
       };
     } else if (streamCandidate && video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamCandidate;
@@ -208,10 +213,79 @@ export function GamifiedVideoPlayer({
       ]);
     } else if (src) {
       video.src = src;
+      video.load();
       setIsHlsActive(false);
       setQualities([]);
     }
-  }, [src, hlsSrc, selectedQuality]);
+  }, [src, hlsSrc]);
+
+  // 6-Second Timeout Watchdog for Video Buffering / Stalling
+  React.useEffect(() => {
+    if (!isBuffering) return;
+
+    const timer = setTimeout(() => {
+      if (isBuffering) {
+        console.warn("Video buffering timed out after 6 seconds; attempting stream recovery.");
+        setIsBuffering(false);
+
+        const video = videoRef.current;
+        if (isHlsActive && hlsRef.current) {
+          console.warn("HLS timed out; switching directly to direct MP4 stream.");
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+          setIsHlsActive(false);
+          if (video && src) {
+            video.src = src;
+            video.load();
+            return;
+          }
+        }
+
+        setStreamError("Ushbu darsning video oqimi qayta ishlanmoqda.");
+      }
+    }, 6000);
+
+    return () => clearTimeout(timer);
+  }, [isBuffering, isHlsActive, src]);
+
+  // Handlers for Fallback Recovery
+  const handleRetry = () => {
+    setStreamError(null);
+    setIsBuffering(true);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    setIsHlsActive(false);
+
+    if (src) {
+      video.src = src;
+      video.load();
+      video.play().catch(() => {});
+    }
+  };
+
+  const handlePlaySample = () => {
+    setStreamError(null);
+    setIsBuffering(false);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    setIsHlsActive(false);
+
+    // Verified production stream (Lesson 1 - 83MB MP4)
+    const sampleUrl = "https://api.bestwayec.uz/v1/lessons/aac8a929-43f3-4516-8a79-09588c2787ba/stream";
+    video.src = sampleUrl;
+    video.load();
+    video.play().catch(() => {});
+  };
 
   // Synchronize duration from video metadata and enforce unmuted audio
   const handleLoadedMetadata = () => {
@@ -474,7 +548,6 @@ export function GamifiedVideoPlayer({
       {/* Video Element */}
       <video
         ref={videoRef}
-        src={isHlsActive ? undefined : src}
         className="w-full aspect-video object-contain bg-black cursor-pointer"
         onClick={togglePlay}
         onLoadedMetadata={handleLoadedMetadata}
@@ -486,37 +559,88 @@ export function GamifiedVideoPlayer({
           hasStartedPlayingRef.current = true;
           setTabPausedNotice(false);
           setIsBuffering(false);
+          setStreamError(null);
         }}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => {
           setIsBuffering(false);
           setIsPlaying(true);
+          setStreamError(null);
         }}
-        onCanPlay={() => setIsBuffering(false)}
-        onError={() => {
+        onCanPlay={() => {
           setIsBuffering(false);
-          if (videoRef.current && src && videoRef.current.src !== src) {
-            videoRef.current.src = src;
-            videoRef.current.load();
+          setStreamError(null);
+        }}
+        onLoadedData={() => {
+          setIsBuffering(false);
+          setStreamError(null);
+        }}
+        onError={(e) => {
+          setIsBuffering(false);
+          console.warn("Video element playback error caught:", e);
+          if (isHlsActive && hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
+            setIsHlsActive(false);
+            if (videoRef.current && src) {
+              videoRef.current.src = src;
+              videoRef.current.load();
+              return;
+            }
           }
+          setStreamError("Video oqimini yuklashda xatolik yuz berdi");
         }}
         playsInline
         autoPlay={false}
         muted={muted}
-        preload="auto"
+        preload="metadata"
       />
 
       {/* Buffering Spinner */}
-      {isBuffering && (
+      {isBuffering && !streamError && (
         <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
           <Loader2 className="size-12 animate-spin text-emerald-400" />
           <span className="text-xs font-semibold text-slate-300 mt-2">Video yuklanmoqda...</span>
         </div>
       )}
 
+      {/* Obsidian-Emerald Fallback / Stream Recovery Card */}
+      {streamError && !completionData && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#0B0F17]/95 p-6 text-center backdrop-blur-md animate-in fade-in duration-300">
+          <div className="size-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+            <AlertTriangle className="size-8" />
+          </div>
+          <h4 className="text-lg font-bold text-white mb-2">Video oqimi qayta ishlanmoqda</h4>
+          <p className="text-xs text-slate-300 max-w-sm mb-6 leading-relaxed">
+            {streamError}. Serverda video oqimi tayyorlanmoqda yoki tarmoq uzildi.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleRetry}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all"
+            >
+              <RotateCcw className="size-4 mr-2" />
+              Qayta urinish
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handlePlaySample}
+              className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 font-medium px-5 py-2 rounded-xl"
+            >
+              <Play className="size-4 mr-2 fill-emerald-300" />
+              Demo darsni ko&apos;rish
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Center Big Play Button (Initial / Paused without blur) */}
-      {!isPlaying && !tabPausedNotice && !completionData && !isBuffering && (!hasStartedPlayingRef.current || currentTime === 0) && (
+      {!isPlaying && !tabPausedNotice && !completionData && !isBuffering && !streamError && (!hasStartedPlayingRef.current || currentTime === 0) && (
         <div
           onClick={togglePlay}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] cursor-pointer group/play transition-all"
@@ -704,8 +828,19 @@ export function GamifiedVideoPlayer({
               </div>
             )}
 
-            {/* Playback Speed */}
-            <div className="flex items-center gap-1">
+            {/* Playback Speed (Compact cycle on mobile, full row on desktop) */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextIdx = (SPEEDS.indexOf(playbackRate as any) + 1) % SPEEDS.length;
+                handleRateChange(SPEEDS[nextIdx]);
+              }}
+              title="Tezlikni o'zgartirish"
+              className="flex sm:hidden text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-300 border border-slate-700 hover:bg-slate-700"
+            >
+              {playbackRate}x
+            </button>
+            <div className="hidden sm:flex items-center gap-1">
               {SPEEDS.map((s) => (
                 <button
                   key={s}
