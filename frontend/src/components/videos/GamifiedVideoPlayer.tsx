@@ -81,6 +81,7 @@ export function GamifiedVideoPlayer({
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const hlsRef = React.useRef<Hls | null>(null);
+  const activeBlobUrlRef = React.useRef<string | null>(null);
 
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -226,6 +227,8 @@ export function GamifiedVideoPlayer({
 
       return () => {
         if (hlsRef.current) {
+          hlsRef.current.stopLoad();
+          hlsRef.current.detachMedia();
           hlsRef.current.destroy();
           hlsRef.current = null;
         }
@@ -244,6 +247,25 @@ export function GamifiedVideoPlayer({
       setIsHlsActive(false);
       setQualities([]);
     }
+
+    return () => {
+      if (src && src.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(src);
+        } catch (_) {}
+      }
+      if (hlsRef.current) {
+        hlsRef.current.stopLoad();
+        hlsRef.current.detachMedia();
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    };
   }, [src, hlsSrc]);
 
   // 6-Second Timeout Watchdog for Video Metadata / Stream Stalling

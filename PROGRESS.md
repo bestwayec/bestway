@@ -7,6 +7,31 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 37-BOSQICH: HLS Transcoding Race Condition Fix, Video Memory Leak Prevention, Bamboozle Force-Sync & Tauri Custom Protocol
+1. **HLS Transkodlashda Race Condition Bartaraf Etildi (Backend)**:
+   - `apps/core/lms_services.py` da 4 holatli holatlar mashinasi joriy etildi: `idle`, `processing`, `ready`, `failed`.
+   - Transkodlash vaqtida `.building` katalogida izolyatsiyalangan holda generatsiya qilinadi va 100% validatsiyadan o'tgachgina atomik `os.rename` orqali almashtiriladi.
+   - Segmentlar tayyor bo'lmaganda `stream_hls_file` orqali so'rov yuborilsa, soxta 404 yoki bo'sh m3u8 o'rniga qat'iy **`HTTP 423 Locked`** (`Retry-After: 5`) qaytariladi.
+   - Real vaqtda statusni tekshirish uchun `GET /v1/lessons/<lesson_id>/hls/status` endpointi qo'shildi.
+   - `tests/test_hls_status_and_locking.py` unit testlari yozildi va 100% o'tdi.
+2. **Video Player Xotira Sizishi (Memory Leaks) To'liq Yopildi (Frontend)**:
+   - `GamifiedVideoPlayer.tsx` va `video-player.tsx` komponentlarida qat'iy lifecycle unmount tozalash mantiqi o'rnatildi.
+   - Barcha `blob:` obyekt URLlari `URL.revokeObjectURL()` orqali xotiradan to'liq tozalanadi.
+   - `Hls.js` nusxalari unmount bo'lganda `stopLoad()`, `detachMedia()` va `destroy()` orqali to'xtatiladi.
+   - Video elementi unmount bo'lganda apparat dekodlash buferlari bo'shatilishi uchun `video.removeAttribute('src')` va `video.load()` bajariladi.
+3. **Bamboozle Arena WebSocket Holat Desinxronizatsiyasi Yechildi (Frontend & ASGI)**:
+   - `apps/bamboozle/consumers.py`: Nol tashqi kutubxonasiz (pure ASGI) yuqori tezlikdagi WebSocket consumer yaratildi.
+   - Qayta ulanishda (`onReconnect` / `onopen`) mijoz darhol `{"type": "SYNC_STATE"}` signalini yuboradi va serverdagi Redis'dan olingan eng oxirgi aniq holat `STATE_SYNC` orqali mijozga yetkaziladi.
+   - `config/asgi.py` da `/ws/bamboozle/` marshrutlash ulandi.
+4. **BW-Tauri Custom Protocol Video Streaming (`bway://`)**:
+   - `bw-tauri/src-tauri/src/video_stream.rs`: IPC serialize qilish o'rniga Tauri 2 ning `custom_protocol` mexanizmi orqali HTTP 206 Partial Content (Range bytes) oqimi o'rnatildi.
+   - UI thread bloklanishi va xotira ko'tarilishi butunlay bartaraf etildi.
+5. **100% Test Gate**:
+   - Rust: 15 ta unit test 100% PASS.
+   - Desktop frontend: 42 fayl, 343 ta test 100% PASS.
+   - Backend Django: 20+ ta test 100% PASS.
+   - Web frontend: 59 fayl, 378 ta test 100% PASS, `tsc --noEmit` 0 xato.
+
 ### 36-BOSQICH: Instant AI Writing/Speaking Evaluation Engine & Weak Points Target Practice Drills
 1. **Instant AI Baholash va "Pending" / "Grading" Qotib Qolishini Butunlay Yo'qotish**:
    - `backend-django/apps/core/mock_submission_snapshots.py` da standart assessment siyosati `MANUAL_ONLY` dan `PRACTICE_AUTO_AI` ga o'zgartirildi (natijada `manual_failure = 'MANUAL_POLICY'` xatosi bartaraf etildi).

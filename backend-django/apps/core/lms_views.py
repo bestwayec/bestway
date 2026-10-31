@@ -20,6 +20,7 @@ from .lms_services import (
     stream_video_file,
     hls_is_ready,
     stream_hls_file,
+    get_hls_transcode_status,
     trigger_hls_transcoding,
     update_watch_time,
     get_lesson_solo_quiz,
@@ -184,6 +185,13 @@ def lesson_hls_playlist_view(request, lesson_id):
 def lesson_hls_file_view(request, lesson_id, filename):
     """Serve specific HLS playlist or segment chunk."""
     return stream_hls_file(lesson_id, filename, request)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def lesson_hls_status_view(request, lesson_id):
+    """Return real-time HLS transcode status for player polling."""
+    return success(get_hls_transcode_status(lesson_id))
 
 
 @api_view(["POST"])

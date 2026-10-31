@@ -29,6 +29,7 @@ function formatTime(value: number): string {
 export function VideoPlayer({ src, autoPlay = false, title }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const hideTimer = React.useRef<number | null>(null);
+  const blobRef = React.useRef<string | null>(null);
 
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [duration, setDuration] = React.useState(0);
@@ -56,7 +57,26 @@ export function VideoPlayer({ src, autoPlay = false, title }: VideoPlayerProps) 
     }, HIDE_DELAY_MS);
   }, [clearHideTimer]);
 
-  React.useEffect(() => () => clearHideTimer(), [clearHideTimer]);
+  React.useEffect(() => {
+    if (src && src.startsWith("blob:")) {
+      blobRef.current = src;
+    }
+    return () => {
+      clearHideTimer();
+      if (blobRef.current) {
+        try {
+          URL.revokeObjectURL(blobRef.current);
+        } catch (_) {}
+        blobRef.current = null;
+      }
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    };
+  }, [src, clearHideTimer]);
 
   React.useEffect(() => {
     const video = videoRef.current;

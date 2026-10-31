@@ -784,6 +784,11 @@ def generate_master_playlist_content(variants: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+HLS_STATUS_IDLE = "idle"
+HLS_STATUS_PROCESSING = "processing"
+HLS_STATUS_READY = "ready"
+HLS_STATUS_FAILED = "failed"
+HLS_STATUS_MARKER = ".status.json"
 HLS_COMPLETE_MARKER = ".complete.json"
 _HLS_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -806,6 +811,47 @@ def hls_is_ready(lesson_id: str) -> bool:
     return os.path.isfile(os.path.join(target, HLS_COMPLETE_MARKER)) and os.path.isfile(
         os.path.join(target, "master.m3u8")
     )
+
+
+def get_hls_transcode_status(lesson_id: str) -> Dict[str, Any]:
+    """Return the strict atomic transcoding status for a given lesson."""
+    if not _HLS_SAFE_NAME.match(str(lesson_id or "")):
+        return {"status": HLS_STATUS_IDLE, "is_ready": False}
+
+    from django.core.cache import cache
+    cache_key = f"hls_transcode_status:{lesson_id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    target_dir = hls_directory_path(lesson_id)
+    building_dir = target_dir + ".building"
+
+    if hls_is_ready(lesson_id):
+        info = {"status": HLS_STATUS_READY, "is_ready": True, "lesson_id": str(lesson_id)}
+        cache.set(cache_key, info, timeout=300)
+        return info
+
+    if os.path.isdir(building_dir):
+        return {"status": HLS_STATUS_PROCESSING, "is_ready": False, "lesson_id": str(lesson_id), "retry_after": 5}
+
+    status_file = os.path.join(target_dir, HLS_STATUS_MARKER)
+    if os.path.isfile(status_file):
+        try:
+            import json
+            with open(status_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    return {"status": HLS_STATUS_IDLE, "is_ready": False, "lesson_id": str(lesson_id)}
+
+
+def set_hls_transcode_status(lesson_id: str, status_payload: Dict[str, Any], timeout: int = 3600):
+    """Persist the transcode status in Redis cache."""
+    from django.core.cache import cache
+    cache_key = f"hls_transcode_status:{lesson_id}"
+    cache.set(cache_key, status_payload, timeout=timeout)
 
 
 def probe_media_duration(path: str) -> float:
@@ -932,9 +978,23 @@ def transcode_video_to_hls(
     if os.path.isdir(build_dir):
         age = timezone.now().timestamp() - os.path.getmtime(build_dir)
         if age < 4 * 3600:
+            set_hls_transcode_status(lesson_id, {
+                "status": HLS_STATUS_PROCESSING,
+                "is_ready": False,
+                "lesson_id": str(lesson_id),
+                "retry_after": 5,
+            })
             return {"success": False, "lesson_id": lesson_id, "error": "TRANSCODE_IN_PROGRESS"}
         shutil.rmtree(build_dir, ignore_errors=True)
     os.makedirs(build_dir, exist_ok=True)
+
+    set_hls_transcode_status(lesson_id, {
+        "status": HLS_STATUS_PROCESSING,
+        "is_ready": False,
+        "lesson_id": str(lesson_id),
+        "started_at": timezone.now().isoformat(),
+        "retry_after": 5,
+    })
 
     source_duration = probe_media_duration(video_path)
     per_variant_timeout = max(900, int(source_duration * 3)) if source_duration else 3600
@@ -988,6 +1048,7 @@ def transcode_video_to_hls(
         built_profiles.append(prof)
 
     if not built_profiles:
+        set_hls_transcode_status(lesson_id, {"status": HLS_STATUS_FAILED, "is_ready": False, "lesson_id": str(lesson_id), "error": "NO_VARIANT_TRANSCODED"})
         shutil.rmtree(build_dir, ignore_errors=True)
         return {"success": False, "lesson_id": lesson_id, "error": "NO_VARIANT_TRANSCODED"}
 
@@ -999,6 +1060,7 @@ def transcode_video_to_hls(
     check = validate_hls_directory(build_dir, expected_duration=source_duration)
     if not check["valid"]:
         logger.warning("HLS validation failed for %s: %s", lesson_id, check["reason"])
+        set_hls_transcode_status(lesson_id, {"status": HLS_STATUS_FAILED, "is_ready": False, "lesson_id": str(lesson_id), "error": "VALIDATION_FAILED", "reason": check["reason"]})
         shutil.rmtree(build_dir, ignore_errors=True)
         return {"success": False, "lesson_id": lesson_id, "error": "VALIDATION_FAILED", "reason": check["reason"]}
 
@@ -1030,6 +1092,16 @@ def transcode_video_to_hls(
         VideoLesson.objects.filter(id=lesson_id).update(hls_playlist_url=playlist_url)
     except Exception as exc:
         logger.warning("Failed to update hls_playlist_url for lesson %s: %s", lesson_id, exc)
+
+    set_hls_transcode_status(lesson_id, {
+        "status": HLS_STATUS_READY,
+        "is_ready": True,
+        "lesson_id": str(lesson_id),
+        "playlist_url": playlist_url,
+        "variants": check["variants"],
+        "duration": check["duration"],
+        "completed_at": timezone.now().isoformat(),
+    })
 
     return {
         "success": True,
@@ -1112,6 +1184,22 @@ def stream_hls_file(lesson_id: str, filename: str, request: HttpRequest) -> Http
         raise Http404("Invalid HLS path")
     if not (filename.endswith(".m3u8") or filename.endswith(".ts")):
         raise Http404("Unsupported HLS file type")
+
+    status_info = get_hls_transcode_status(lesson_id)
+    if status_info.get("status") == HLS_STATUS_PROCESSING:
+        from django.http import JsonResponse
+        return JsonResponse(
+            {
+                "success": False,
+                "code": "HLS_TRANSCODING_IN_PROGRESS",
+                "status": "processing",
+                "message": "Video HLS transkodlash jarayonida. Segmentlar to'liq tayyor bo'lishini kuting.",
+                "retry_after": 5,
+            },
+            status=423,
+            headers={"Retry-After": "5", "Access-Control-Allow-Origin": "*"},
+        )
+
     if not hls_is_ready(lesson_id):
         raise Http404("HLS stream is not ready")
 

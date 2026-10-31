@@ -252,6 +252,88 @@ export function BamboozleArena({
 
   // Smart TV / Projector mode
   const [isProjectorMode, setIsProjectorMode] = React.useState(false);
+
+  // WebSocket State Synchronization with Force-Sync on Reconnect
+  const wsRef = React.useRef<WebSocket | null>(null);
+
+  React.useEffect(() => {
+    if (!roomCode) return;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: any = null;
+    let isDisposed = false;
+
+    function connect() {
+      if (isDisposed) return;
+      const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
+      const wsUrl = `${protocol}//${host}/ws/bamboozle/${roomCode}/`;
+
+      try {
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          // FORCE-SYNC TRIGGER: Immediately request latest authoritative full state upon connection or reconnection
+          ws?.send(
+            JSON.stringify({
+              type: "SYNC_STATE",
+              room_code: roomCode,
+              timestamp: Date.now(),
+            })
+          );
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "STATE_SYNC" || data.type === "GAME_UPDATE") {
+              const room = data.room;
+              if (room && !isDisposed) {
+                if (typeof room.team1_score === "number") setTeam1Score(room.team1_score);
+                if (typeof room.team2_score === "number") setTeam2Score(room.team2_score);
+                if (room.active_turn) setActiveTeam(room.active_turn as 1 | 2);
+                if (Array.isArray(room.cards) && room.cards.length > 0) {
+                  setCards(room.cards);
+                }
+                if (room.status === "finished") {
+                  setGameOver(true);
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Bamboozle WebSocket message error:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isDisposed) {
+            reconnectTimer = setTimeout(connect, 2000);
+          }
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch (_) {
+        if (!isDisposed) {
+          reconnectTimer = setTimeout(connect, 3000);
+        }
+      }
+    }
+
+    connect();
+
+    return () => {
+      isDisposed = true;
+      clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      wsRef.current = null;
+    };
+  }, [roomCode]);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
   // Game over state
