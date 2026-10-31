@@ -7,6 +7,30 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 36-BOSQICH: Instant AI Writing/Speaking Evaluation Engine & Weak Points Target Practice Drills
+1. **Instant AI Baholash va "Pending" / "Grading" Qotib Qolishini Butunlay Yo'qotish**:
+   - `backend-django/apps/core/mock_submission_snapshots.py` da standart assessment siyosati `MANUAL_ONLY` dan `PRACTICE_AUTO_AI` ga o'zgartirildi (natijada `manual_failure = 'MANUAL_POLICY'` xatosi bartaraf etildi).
+   - `backend-django/apps/core/mock_submissions.py` da topshirish zahoti fonda `assessment_worker.tick()` chaqirilib, zudlik bilan baholash boshlanadi.
+   - `backend-django/apps/core/assessment_views.py` da `attempt()` so'rovi kelganda, har qanday kutilayotgan (`PENDING` / `RETRY`) topshiriqlar joyida zudlik bilan baholanib yakunlanadi.
+2. **Instant AI Essay & Speech Checker Dvigateli (`apps/core/instant_evaluator.py`)**:
+   - `POST /api/v1/assessment/instant-evaluate` yangi rasmiy API yaratildi.
+   - 4 ta rasmiy mezon bo'yicha to'liq tahlil: `Task Achievement`, `Coherence & Cohesion`, `Lexical Resource`, `Grammatical Range & Accuracy`.
+   - Grammatik xatolarni aniqlash va qizil/yashil formatda tushuntirish berish (`grammar_corrections`).
+   - C1/C2 darajasidagi akademik so'z boyligi muqobillari (`vocabulary_upgrades`).
+   - 4 paragraflik rasmiy C1 Namuna Javob (C1 Academic Model Answer) generatsiyasi.
+3. **Zaif Nuqtalar Xaritasidan 1-Klikda "Xatolarni Tuzatish" Mashqi (Target Practice Drills)**:
+   - `frontend/src/components/dashboard/WeakPointsTargetDrillModal.tsx`: Obsidian-Emerald uslubidagi 10 talik interaktiv diagnostik mashq oynasi.
+   - Profil sahifasidagi Zaif nuqtalar xaritasidagi (`score-prediction-card.tsx`) har bir kartochkaga **`[ ⚡️ Xatolar ustida ishlash ]`** tugmasi biriktirildi.
+   - `GET /api/v1/study-plan/targeted-practice?category=<category>` va `POST /api/v1/study-plan/targeted-practice/submit` endpointlari orqali savollar yuklanadi, javoblar tekshiriladi va talaba hisobiga **+50 XP** avtomatik ravishda qo'shiladi (`PointsLog`).
+4. **UI/UX Qizil/Yashil va C1 Namuna Dizayn Tizimi**:
+   - `frontend/src/components/mock/assessment-panel.tsx` da `grammarCorrections` qizil ustidan chizilgan asl nusxa va zumrad yashil to'g'ri variant bilan bezatildi.
+   - `improvedExamples` bo'limi C1 Namuna Javob (Model Answer) banneri bilan Obsidian-Emerald dizayniga o'tkazildi.
+   - `frontend/src/components/dashboard/InstantAiCheckerModal.tsx` yaratildi: istalgan vaqtda matnni tekshirish imkoniyati.
+5. **100% Test Qamrovi & Barqarorlik**:
+   - Yangi `tests/test_instant_ai_evaluation_and_drills.py` qo'shildi (5 ta test, 100% PASS).
+   - Backend pytest: 638 ta test 100% muvaffaqiyatli o'tdi.
+   - Frontend vitest: 378 ta test 100% muvaffaqiyatli o'tdi, TypeScript xatolarsiz (`npx tsc --noEmit` 0 errors).
+
 ### 1-BLOK: Mustaqil Writing va Speaking Imtihonlari (Standalone W&S Exams)
 1. **Multilevel Readiness Validatsiya Blokeri Olib Tashlandi**:
    - `backend-django/apps/core/multilevel.py` dagi `readiness()` funksiyasi yangilandi: agar imtihon profili `writing_speaking`, `partial_practice` yoki `single_skill` bo'lsa, to'liq 4-bo'lim (Listening, Reading, Writing, Speaking) va 2 ta rasm talablari tekshirilmaydi, imtihon darhol `supported=True, issues=[]` bilan topshirishga ruxsat etiladi.

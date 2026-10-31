@@ -129,6 +129,9 @@ def submit(actor, attempt_id, skills=None, *, force=False):
             pass
     try:
         enqueue(attempt, skills)
+        import threading
+        from . import assessment_worker
+        threading.Thread(target=assessment_worker.tick, daemon=True).start()
     except Exception:
         pass
     try:

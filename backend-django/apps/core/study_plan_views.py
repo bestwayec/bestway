@@ -1,4 +1,4 @@
-"""API endpoints for Adaptive Study Plan and Mistake Vault Diagnostics."""
+"""API endpoints for Adaptive Study Plan, Mistake Vault Diagnostics, and Targeted Practice Drills."""
 from __future__ import annotations
 
 from rest_framework.decorators import api_view, permission_classes
@@ -42,10 +42,45 @@ def mistake_vault_view(request):
     return success(data)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([Authenticated])
 def targeted_practice_view(request):
     """1-Click launch of targeted 10-question practice set for specific mistake category."""
-    category_id = (request.data or {}).get("categoryId", "tfng")
+    if request.method == "GET":
+        category_id = (
+            request.query_params.get("category")
+            or request.query_params.get("categoryId")
+            or "tfng"
+        )
+        data = study_plan_service.generate_targeted_practice(request.user, category_id=category_id)
+        return success(data)
+
+    payload = request.data or {}
+    category_id = (
+        payload.get("categoryId")
+        or payload.get("category")
+        or request.query_params.get("category")
+        or "tfng"
+    )
+    answers = payload.get("answers")
+    if isinstance(answers, list) and answers:
+        data = study_plan_service.submit_targeted_practice(
+            request.user, category_id=category_id, submitted_answers=answers
+        )
+        return success(data)
+
     data = study_plan_service.generate_targeted_practice(request.user, category_id=category_id)
+    return success(data)
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def submit_targeted_practice_view(request):
+    """Submit targeted practice answers, compute score and award +50 XP."""
+    payload = request.data or {}
+    category_id = payload.get("categoryId") or payload.get("category") or "tfng"
+    answers = payload.get("answers") or []
+    data = study_plan_service.submit_targeted_practice(
+        request.user, category_id=category_id, submitted_answers=answers
+    )
     return success(data)

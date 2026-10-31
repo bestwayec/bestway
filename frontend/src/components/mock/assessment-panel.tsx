@@ -382,11 +382,20 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               </div>)}</dl>
               <PartFeedbackView feedback={partResult.feedback} t={t} />
             </div>}
-            {result?.improvedExamples.filter((example) => example.partId === part.id).map((example, index) => <div key={index} className="rounded-[10px] border border-brand/20 bg-brand-subtle p-4">
-              <h5 className="text-xs font-semibold uppercase tracking-wide text-brand-subtle-fg">{t("example")}</h5>
-              <p className="mt-1 text-xs text-fg-muted">{t("exampleNotice")}</p>
-              <p className="mt-2 whitespace-pre-wrap break-words text-sm text-fg">{example.text}</p>
-            </div>)}
+            {result?.improvedExamples.filter((example) => example.partId === part.id).map((example, index) => (
+              <div key={index} className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-emerald-500/5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">
+                    <Sparkles className="size-3" /> C1 Namuna Javob (Model Answer)
+                  </span>
+                  <span className="text-[11px] text-slate-400">Band 8.0+ Namuna</span>
+                </div>
+                <p className="text-xs text-slate-400">{t("exampleNotice")}</p>
+                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-[#0B0F17]/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-slate-200">
+                  {example.text}
+                </div>
+              </div>
+            ))}
           </section>;
         })}
         {result && <OverallFeedback result={result} t={t} />}
@@ -428,17 +437,76 @@ function PartFeedbackView({ feedback, t }: { feedback: AssessmentPartFeedback; t
 }
 
 function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate }) {
-  return <div className="space-y-4 border-t border-border pt-4">
-    <FeedbackList title={t("strengths")} values={result.overallStrengths} />
-    <FeedbackList title={t("priorities")} values={result.priorityImprovements} />
-    {!!result.grammarCorrections.length && <div><h5 className="text-sm font-semibold">{t("corrections")}</h5><ul className="mt-2 space-y-2">{result.grammarCorrections.map((item, index) => <li key={index} className="rounded-[8px] bg-bg-subtle p-3 text-sm">
-      <p className="whitespace-pre-wrap text-fg-muted">{t("original")}: {item.original}</p><p className="mt-1 whitespace-pre-wrap text-fg">{t("suggestion")}: {item.corrected}</p><p className="mt-1 text-xs text-fg-muted">{item.explanation}</p>
-    </li>)}</ul></div>}
-    {!!result.vocabularyUpgrades.length && <div><h5 className="text-sm font-semibold">{t("vocabularyUpgrades")}</h5><ul className="mt-2 space-y-2">{result.vocabularyUpgrades.map((item, index) => <li key={index} className="rounded-[8px] bg-bg-subtle p-3 text-sm">
-      <p className="whitespace-pre-wrap text-fg-muted">{item.original} → <span className="font-medium text-fg">{item.alternative}</span></p><p className="mt-1 text-xs text-fg-muted">{item.explanation}</p>
-    </li>)}</ul></div>}
-    <FeedbackList title={t("practice")} values={result.recommendedPractice} />
-  </div>;
+  return (
+    <div className="space-y-5 border-t border-border pt-5">
+      <FeedbackList title={t("strengths")} values={result.overallStrengths} />
+      <FeedbackList title={t("priorities")} values={result.priorityImprovements} />
+
+      {!!result.grammarCorrections.length && (
+        <div className="space-y-2.5">
+          <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-rose-500" />
+            {t("corrections")} ({result.grammarCorrections.length} ta)
+          </h5>
+          <ul className="space-y-2.5">
+            {result.grammarCorrections.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-md border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 text-xs font-mono font-medium text-rose-300 line-through">
+                    {item.original}
+                  </span>
+                  <span className="text-slate-500 text-xs">→</span>
+                  <span className="rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-mono font-bold text-emerald-300">
+                    {item.corrected}
+                  </span>
+                </div>
+                {item.explanation && (
+                  <p className="text-xs text-slate-400 leading-relaxed pt-0.5">
+                    {item.explanation}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!!result.vocabularyUpgrades.length && (
+        <div className="space-y-2.5">
+          <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
+            <span className="inline-block size-2 rounded-full bg-teal-400" />
+            {t("vocabularyUpgrades")} ({result.vocabularyUpgrades.length} ta)
+          </h5>
+          <ul className="space-y-2.5">
+            {result.vocabularyUpgrades.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-slate-400 font-mono text-xs">{item.original}</span>
+                  <span className="text-teal-400 text-xs">→</span>
+                  <span className="rounded-md border border-teal-500/30 bg-teal-500/15 px-2 py-0.5 text-xs font-mono font-bold text-teal-300">
+                    {item.alternative}
+                  </span>
+                </div>
+                {item.explanation && (
+                  <p className="text-xs text-slate-400 leading-relaxed pt-0.5">
+                    {item.explanation}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <FeedbackList title={t("practice")} values={result.recommendedPractice} />
+    </div>
+  );
 }
 
 function initialOverrideValues(job: AssessmentJobView): Record<string, Record<string, string>> {

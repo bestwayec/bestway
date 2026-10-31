@@ -38,7 +38,44 @@ def validate_review(data):
 
 @api_view(['GET'])
 @permission_classes([Authenticated])
-def attempt(request,attempt_id):return success(assessment.for_attempt(request.user,attempt_id))
+def attempt(request,attempt_id):
+    try:
+        from apps.legacy_schema.models import AssessmentJob
+        pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
+        if pending_jobs.exists():
+            from . import assessment_worker
+            for _ in range(min(5, pending_jobs.count())):
+                if not assessment_worker.run_once():
+                    break
+    except Exception:
+        pass
+    return success(assessment.for_attempt(request.user,attempt_id))
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def instant_evaluate_view(request):
+    """Direct instant evaluation of student writing or speaking responses."""
+    from . import instant_evaluator
+    data = request.data or {}
+    text = data.get('text', '')
+    prompt = data.get('prompt', '')
+    skill = data.get('skill', 'writing')
+    task_type = data.get('task_type') or data.get('taskType') or 'task2'
+    program = data.get('program', 'IELTS')
+
+    if not isinstance(text, str) or not text.strip():
+        from .domain_contracts import invalid
+        invalid('text should not be empty')
+
+    result = instant_evaluator.evaluate_text_instant(
+        text=text,
+        prompt=prompt,
+        skill=skill,
+        task_type=task_type,
+        program=program,
+    )
+    return success(result)
 
 @api_view(['POST'])
 @permission_classes([roles('teacher', 'admin', 'super_admin')])

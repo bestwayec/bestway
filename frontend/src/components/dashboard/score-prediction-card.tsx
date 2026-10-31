@@ -14,7 +14,9 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
+  Zap,
 } from "lucide-react";
+import { WeakPointsTargetDrillModal } from "./WeakPointsTargetDrillModal";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +37,17 @@ const DEFAULT_MULTILEVEL_BANDS = [
   { level: "B2", min: 51, max: 64 },
   { level: "C1", min: 65, max: 75 },
 ];
+
+
+function resolveCategory(moduleName: string): string {
+  const lower = moduleName.toLowerCase();
+  if (lower.includes("true") || lower.includes("tfng")) return "tfng";
+  if (lower.includes("heading")) return "headings";
+  if (lower.includes("info") || lower.includes("listening")) return "info_matching";
+  if (lower.includes("summary") || lower.includes("note")) return "summary_completion";
+  if (lower.includes("grammar") || lower.includes("writing")) return "grammar_cohesion";
+  return "tfng";
+}
 
 const BENCHMARK_QUESTION_TYPES = [
   {
@@ -127,6 +140,7 @@ export function ScorePredictionCard({
   const [targetBandInput, setTargetBandInput] = React.useState("7.5");
   const [targetScoreInput, setTargetScoreInput] = React.useState("65");
   const [targetCefrInput, setTargetCefrInput] = React.useState("C1");
+  const [activeDrill, setActiveDrill] = React.useState<{ module: string; categoryId: string } | null>(null);
 
   const data = predQ.data ?? FALLBACK_PREDICTION;
   const ielts = data.ielts ?? FALLBACK_PREDICTION.ielts;
@@ -582,6 +596,16 @@ export function ScorePredictionCard({
                             <span>{wm.recommendation}</span>
                           </p>
                         )}
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setActiveDrill({ module: wm.module, categoryId: resolveCategory(wm.module) })}
+                          className="w-full mt-2 h-8 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                        >
+                          <Zap className="size-3.5 fill-emerald-400 text-emerald-400" />
+                          <span>[ ⚡️ Xatolar ustida ishlash ]</span>
+                        </Button>
                       </div>
                     );
                   })}
@@ -590,6 +614,18 @@ export function ScorePredictionCard({
             );
           })()}
         </div>
+
+        {activeDrill && (
+          <WeakPointsTargetDrillModal
+            isOpen={Boolean(activeDrill)}
+            onClose={() => setActiveDrill(null)}
+            moduleTitle={activeDrill.module}
+            categoryId={activeDrill.categoryId}
+            onCompleted={() => {
+              predQ.refetch();
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );
