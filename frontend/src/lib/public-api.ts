@@ -20,8 +20,13 @@ async function publicGet<T>(
       signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as ApiResponse<T>;
-    return json.success ? json.data : null;
+    const json = (await res.json()) as any;
+    if (json && typeof json === "object") {
+      if (json.success === false) return null;
+      if (json.data !== undefined) return json.data;
+      return json;
+    }
+    return null;
   } catch {
     // Backend o'chiq / tarmoq xatosi — sahifa baribir ishlashi kerak
     return null;

@@ -17,7 +17,7 @@ export default async function SimulatorPage({
   setRequestLocale(locale);
 
   let exam = await getActiveCdExam();
-  if (!exam) {
+  if (!exam || !exam.sections || exam.sections.length === 0) {
     const demos = await getDemoMockExams();
     if (demos.length > 0) {
       exam = await getDemoMockExam(demos[0].id);

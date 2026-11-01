@@ -178,6 +178,7 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
         "sections": sections_data,
     }
     return JsonResponse({
+        "success": True,
         "data": {
             "exam": exam_payload,
             "id": exam.id,
@@ -269,6 +270,7 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
         "sections": sections_data,
     }
     return JsonResponse({
+        "success": True,
         "data": {
             "exam": exam_payload,
             "id": legacy.id,
