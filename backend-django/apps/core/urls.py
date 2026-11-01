@@ -1,3 +1,4 @@
+from . import cd_exam_views
 from apps.exams import placement_views
 from . import teacher_views
 from apps.exams import analytics_service
@@ -310,6 +311,12 @@ urlpatterns = [
     path("mock/exams/<str:exam_id>/clone-corrected-multilevel", mock_exam_corrected_clone_view),
     path("mock/exams/<str:exam_id>/repair-multilevel", mock_exam_repair_view),
     path("mock/exams/<str:exam_id>/preview", mock_exam_preview_view),
+    path("mock/exams/<str:exam_id>/cd-session", cd_exam_views.get_cd_exam_session),
+    path("mock/exams/<str:exam_id>/cd-session/", cd_exam_views.get_cd_exam_session),
+    path("exams/<str:exam_id>/cd-session", cd_exam_views.get_cd_exam_session),
+    path("exams/<str:exam_id>/cd-session/", cd_exam_views.get_cd_exam_session),
+    path("v1/exams/<str:exam_id>/cd-session", cd_exam_views.get_cd_exam_session),
+    path("v1/exams/<str:exam_id>/cd-session/", cd_exam_views.get_cd_exam_session),
     path("mock/exams/<str:exam_id>/sections", mock_exam_sections_view),
     path("mock/sections/<str:section_id>", mock_section_view),
     path("mock/sections/<str:section_id>/groups", mock_section_groups_view),

@@ -41,6 +41,15 @@ export function useMockExam(id: string) {
   });
 }
 
+export function useCdExamSession(examId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["cd-exam-session", examId],
+    queryFn: () => api.get<any>(`/api/v1/exams/${encodeURIComponent(examId)}/cd-session/`),
+    enabled: !!examId && enabled,
+    staleTime: 60_000,
+  });
+}
+
 export function useCreateMockExam() {
   const qc = useQueryClient();
   return useMutation({

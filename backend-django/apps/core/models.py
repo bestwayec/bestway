@@ -498,3 +498,162 @@ class PlacementTestResult(models.Model):
     def __str__(self):
         status = "CLAIMED" if self.is_claimed else "GUEST"
         return f"Placement {self.result_token[:8]} - {self.cefr_level} ({self.score}/{self.total_questions}) [{status}]"
+
+
+# =============================================================================
+# Computer-Delivered (CD) Exam Models (100% Dynamic, PostgreSQL Driven)
+# =============================================================================
+
+class Exam(models.Model):
+    """Dynamic Computer-Delivered Exam definition for CEFR Multi-Level & IELTS."""
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    title = models.CharField(max_length=255)
+    code = models.CharField(max_length=100, unique=True, db_index=True, help_text="Unique exam identifier e.g. MOCK-RECORD-01")
+    exam_type = models.CharField(
+        max_length=50,
+        default="CEFR_MULTILEVEL",
+        choices=[
+            ("CEFR_MULTILEVEL", "CEFR Multi-Level"),
+            ("IELTS_ACADEMIC", "IELTS Academic"),
+            ("IELTS_GENERAL", "IELTS General Training"),
+        ],
+    )
+    duration_minutes = models.IntegerField(default=150, help_text="Total exam duration in minutes")
+    is_cd_format = models.BooleanField(default=True, help_text="Computer-Delivered IELTS/Multi-Level split UI")
+    is_published = models.BooleanField(default=True)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cd_exams"
+        ordering = ["code"]
+        verbose_name = "CD Exam"
+        verbose_name_plural = "CD Exams"
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+
+CDExam = Exam
+
+
+class Section(models.Model):
+    """Exam section (Listening, Reading, Writing, Speaking)."""
+    SECTION_TYPES = [
+        ("listening", "Listening"),
+        ("reading", "Reading"),
+        ("writing", "Writing"),
+        ("speaking", "Speaking"),
+    ]
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="sections")
+    section_type = models.CharField(max_length=30, choices=SECTION_TYPES)
+    title = models.CharField(max_length=255)
+    time_limit = models.IntegerField(default=35, help_text="Time limit for this section in minutes")
+    order = models.IntegerField(default=0)
+    instructions = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cd_sections"
+        ordering = ["exam", "order"]
+        verbose_name = "CD Section"
+        verbose_name_plural = "CD Sections"
+
+    def __str__(self):
+        return f"{self.exam.code} - {self.title} ({self.get_section_type_display()})"
+
+
+CDSection = Section
+
+
+class QuestionGroup(models.Model):
+    """Passage or Question Group (split-screen context pane)."""
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="groups")
+    title = models.CharField(max_length=255, blank=True, default="")
+    part_number = models.IntegerField(default=1)
+    sort_order = models.IntegerField(default=0)
+    audio_url = models.CharField(max_length=500, blank=True, default="", help_text="Path to audio file e.g. /media/multilevel/assets/...")
+    media_image = models.CharField(max_length=500, blank=True, default="", help_text="Path to image file e.g. /media/exams/record_mock_1/...")
+    passage_html = models.TextField(blank=True, default="", help_text="Full passage or reading text with paragraphs / gap templates")
+    instructions = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cd_question_groups"
+        ordering = ["section", "sort_order", "part_number"]
+        verbose_name = "CD Question Group / Passage"
+        verbose_name_plural = "CD Question Groups / Passages"
+
+    def __str__(self):
+        return f"{self.section.exam.code} {self.section.section_type.title()} Part {self.part_number}: {self.title or 'Untitled'}"
+
+
+Passage = QuestionGroup
+CDQuestionGroup = QuestionGroup
+
+
+class Question(models.Model):
+    """Individual Question item with prompt, payload and scoring parameters."""
+    QUESTION_TYPES = [
+        ("single_choice", "Multiple Choice (Single Option A/B/C/D)"),
+        ("in_text_blank", "In-text Blank / Gap Fill"),
+        ("speaker_matching", "Speaker Matching Dropdown"),
+        ("map_labeling", "Map / Diagram Labeling"),
+        ("matching_statements", "Matching Statements / Paragraphs"),
+        ("matching_headings", "Matching Headings"),
+        ("true_false_ng", "True / False / Not Given"),
+        ("summary_completion", "Summary Note Completion"),
+        ("essay", "Writing Essay (Task 1 / Task 2)"),
+        ("speaking_prompt", "Speaking Prompt / Cue Card"),
+    ]
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    group = models.ForeignKey(QuestionGroup, on_delete=models.CASCADE, related_name="questions")
+    order = models.IntegerField(default=1, help_text="1-based question number across section (e.g. 1 to 35)")
+    question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
+    prompt = models.TextField(blank=True, default="")
+    points = models.FloatField(default=1.0)
+    word_limit = models.IntegerField(null=True, blank=True, help_text="Maximum word limit (e.g. 1 for ONE WORD ONLY)")
+    payload_json = models.JSONField(default=dict, blank=True, help_text="Options array, map pins, timing, or guidance")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cd_questions"
+        ordering = ["group", "order"]
+        verbose_name = "CD Question"
+        verbose_name_plural = "CD Questions"
+
+    def __str__(self):
+        return f"Q{self.order} [{self.get_question_type_display()}]: {self.prompt[:40] if self.prompt else self.id}"
+
+
+CDQuestion = Question
+
+
+class AnswerKey(models.Model):
+    """Official answer key and scoring criteria for a Question."""
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    question = models.OneToOneField(Question, on_delete=models.CASCADE, related_name="answer_key")
+    valid_answers_list = models.JSONField(default=list, help_text="List of acceptable answer strings e.g. ['C']")
+    case_sensitive = models.BooleanField(default=False, help_text="Whether letter case matters")
+    explanation = models.TextField(blank=True, default="", help_text="Pedagogical explanation or rubric notes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cd_answer_keys"
+        verbose_name = "CD Answer Key"
+        verbose_name_plural = "CD Answer Keys"
+
+    def __str__(self):
+        return f"Key for Q{self.question.order}: {self.valid_answers_list}"
+
+
+CDAnswerKey = AnswerKey
