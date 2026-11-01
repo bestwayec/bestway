@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { MobileNav } from "@/components/app/mobile-nav";
-import type { Role } from "@/types";
+import type { Role } from "@/lib/types";
 
 export function AppLayoutShell({
   role,
