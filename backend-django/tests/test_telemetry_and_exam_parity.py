@@ -202,6 +202,13 @@ class DesktopVersionAndAuthParityTests(TestCase):
         windows_platform = response.data["platforms"]["windows-x86_64"]
         self.assertEqual(windows_platform["url"], settings.DESKTOP_DOWNLOAD_URL)
 
+    def test_desktop_updates_json_manifest(self):
+        """Verify GET /v1/desktop/updates.json returns Tauri v2 manifest."""
+        response = self.client.get("/v1/desktop/updates.json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["version"], settings.DESKTOP_LATEST_VERSION)
+        self.assertIn("windows-x86_64", response.data["platforms"])
+
     def test_desktop_auth_both_schemes_for_all_roles(self):
         """Verify both bestway-exam:// and bestway:// schemes work for student, teacher, admin, super_admin."""
         verifier = "verifier_test_string_xyz_987"

@@ -7,6 +7,26 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 38-BOSQICH: AES-256 Offline Video Encryption, On-the-Fly Range Decryption & Tauri Auto-Updater
+1. **AES-256-CTR Oflayn Video Shifrlash Dvigateli (Rust `src-tauri/src/encryption.rs`)**:
+   - `aes`, `ctr`, `cipher`, `rand`, `sha2` kutubxonalari ulandi.
+   - 32-baytli maxsus `.bway` konteyner sarlavhasi (`BWAY` magic, versiya, original fayl hajmi, 16-baytli unikal IV) joriy etildi.
+   - Oflayn videolarni xotiraga (RAM) to'liq yuklamasdan 64 KB li oqimli buferlar bilan diskka yozuvchi streaming shifrlash (`download_and_encrypt_video`) yaratildi (2GB+ fayllar bilan samarali ishlaydi).
+   - Har bir qurilma uchun operatsion tizim darajasidagi `MachineGuid` / apparat identifikatori va OS `keyring` (Credential Manager / Keychain) orqali qurilmaga bog'langan unikal 256-bitli simmetrik kalit ishlab chiqildi.
+2. **Custom Protocol (`bway://`) da On-the-Fly Sekundlik Shifrdan Chiqarish (Rust `src-tauri/src/video_stream.rs`)**:
+   - `.bway` fayllar so'ralganda vaqtinchalik ochiq `.mp4` fayl yaratmasdan, bevosita xotirada HTTP 206 Partial Content `Range: bytes=start-end` bo'yicha dekriptsiya qiluvchi mexanizm ulandi.
+   - AES-CTR rejimining `cipher.seek(start)` imkoniyati orqali istalgan sekundga/baytga intilish (random access seek) O(1) vaqtda ishlaydi.
+   - 7 ta yangi Rust unit testi yozildi: `cargo test` da barcha 22 ta test 100% PASS.
+3. **Tauri Auto-Updater va Maxsus UI Modal (`useAutoUpdater` & `UpdateModal.tsx`)**:
+   - `tauri.conf.json` da `"dialog": false` qilindi, `pubkey` va endpoints `https://bestwayec.uz/api/v1/desktop/updates.json` ga yo'naltirildi.
+   - Frontendda dastur ishga tushganda orqa fonda tekshiruvchi `useAutoUpdater` hooki va Obsidian-Emerald uslubidagi `UpdateModal` yaratildi.
+   - Foydalanuvchi "Yangilash va qayta yuklash" tugmasini bosganda progress bar bilan yuklab olib, `installUpdate()` va `relaunch()` orqali dasturni o'zi qayta ishga tushiradi. Imtihon vaqtida yangilanish avtomatik ravishda kechiktiriladi.
+   - Backend `apps/core/urls.py` da `/v1/desktop/updates.json` marshrutlari ulandi va testlandi.
+4. **100% QA Test Gate**:
+   - Rust: 22 ta unit test 100% PASS.
+   - Desktop frontend: 42 fayl, 343 ta test 100% PASS, `tsc --noEmit` 0 xato.
+   - Django backend: 11 ta telemetry va desktop testi 100% PASS.
+
 ### 37-BOSQICH: HLS Transcoding Race Condition Fix, Video Memory Leak Prevention, Bamboozle Force-Sync & Tauri Custom Protocol
 1. **HLS Transkodlashda Race Condition Bartaraf Etildi (Backend)**:
    - `apps/core/lms_services.py` da 4 holatli holatlar mashinasi joriy etildi: `idle`, `processing`, `ready`, `failed`.
