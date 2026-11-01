@@ -86,7 +86,11 @@ export function MockExamDetailView({ examId }: { examId: string }) {
       return;
     }
     start.mutate(
-      { examId, mode, ...(skills ? { skills } : {}) },
+      {
+        examId,
+        mode,
+        ...(skills && skills.length > 0 ? { skills } : { flow: "full_test" }),
+      },
       {
         onSuccess: (res) => router.push(`/mock/attempt/${res.attemptId}`),
         onError: (e) => toast.error(exam?.type === "multilevel" ? studentStartMessage(e) : (e instanceof Error ? e.message : tc("unknownError"))),

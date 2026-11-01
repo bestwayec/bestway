@@ -56,24 +56,27 @@ export function practiceExam(
 
   if (targetSkill) {
     const ids = new Set(attempt.practiceScope?.questionIds ?? []);
-    const sections = exam.sections
-      .filter((section) => section.skill === targetSkill)
-      .map((section) => ({
-        ...section,
-        groups: section.groups
-          .map((group) => ({
-            ...group,
-            questions: ids.size > 0 ? group.questions.filter((q) => ids.has(q.id)) : group.questions,
-          }))
-          .filter((group) => group.questions.length > 0),
-      }))
-      .filter((section) => section.groups.length > 0);
+    const sections = (exam.sections || [])
+      .filter((section) => section?.skill === targetSkill)
+      .map((section) => {
+        const rawGroups = section?.groups || (section as any)?.parts || [];
+        return {
+          ...section,
+          groups: rawGroups
+            .map((group: any) => ({
+              ...group,
+              questions: ids.size > 0 ? (group?.questions || []).filter((q: any) => ids.has(q.id)) : (group?.questions || []),
+            }))
+            .filter((group: any) => (group?.questions || []).length > 0),
+        };
+      })
+      .filter((section) => (section?.groups || []).length > 0);
 
     return {
       ...exam,
       sections,
       questionCount: sections.reduce(
-        (count, section) => count + section.groups.reduce((n, group) => n + group.questions.length, 0),
+        (count, section) => count + (section?.groups || []).reduce((n: number, group: any) => n + (group?.questions || []).length, 0),
         0
       ),
     };
@@ -81,23 +84,26 @@ export function practiceExam(
 
   const skills = new Set(attempt.practiceScope?.skills ?? []);
   const ids = new Set(attempt.practiceScope?.questionIds ?? []);
-  const sections = exam.sections
-    .filter((section) => skills.has(section.skill as MockPracticeSkill))
-    .map((section) => ({
-      ...section,
-      groups: section.groups
-        .map((group) => ({
-          ...group,
-          questions: ids.size > 0 ? group.questions.filter((question) => ids.has(question.id)) : group.questions,
-        }))
-        .filter((group) => group.questions.length > 0),
-    }))
-    .filter((section) => section.groups.length > 0);
+  const sections = (exam.sections || [])
+    .filter((section) => skills.has(section?.skill as MockPracticeSkill))
+    .map((section) => {
+      const rawGroups = section?.groups || (section as any)?.parts || [];
+      return {
+        ...section,
+        groups: rawGroups
+          .map((group: any) => ({
+            ...group,
+            questions: ids.size > 0 ? (group?.questions || []).filter((question: any) => ids.has(question.id)) : (group?.questions || []),
+          }))
+          .filter((group: any) => (group?.questions || []).length > 0),
+      };
+    })
+    .filter((section) => (section?.groups || []).length > 0);
   return {
     ...exam,
     sections,
     questionCount: sections.reduce(
-      (count, section) => count + section.groups.reduce((n, group) => n + group.questions.length, 0),
+      (count, section) => count + (section?.groups || []).reduce((n: number, group: any) => n + (group?.questions || []).length, 0),
       0
     ),
   };

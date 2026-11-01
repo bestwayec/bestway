@@ -86,12 +86,28 @@ def _questions(group): return list(MockQuestion.objects.filter(group_id=group.id
 
 
 def shape_question(question, answers: bool):
-    value = {"id": question.id, "number": question.number, "sortOrder": question.sort_order, "type": question.type, "prompt": question.prompt, "options": question.options, "points": question.points, "wordLimit": question.word_limit, "answerRule": question.answer_rule}
+    prompt_str = question.prompt or ""
+    value = {
+        "id": question.id,
+        "number": question.number,
+        "sortOrder": question.sort_order,
+        "type": question.type,
+        "questionType": question.type,
+        "kind": question.type,
+        "prompt": prompt_str,
+        "text": prompt_str,
+        "options": question.options if isinstance(question.options, list) else [],
+        "points": question.points,
+        "score": question.points,
+        "maxScore": question.points,
+        "wordLimit": question.word_limit,
+        "answerRule": question.answer_rule,
+    }
     from .mock_rules import canonical_decision
-    value['options'] = question.options if isinstance(question.options, list) else None
-    if question.type in ('true_false_notgiven', 'yes_no_notgiven') and value['options'] is not None:
+    if question.type in ('true_false_notgiven', 'yes_no_notgiven') and value['options']:
         value['options'] = ['NOT GIVEN' if canonical_decision(o) == 'NOT_GIVEN' else canonical_decision(o) for o in value['options']]
-    if answers: value.update({"correctAnswers": question.correct_answers if isinstance(question.correct_answers, list) else None, "acceptedVariants": question.accepted_variants if isinstance(question.accepted_variants, list) else None})
+    if answers:
+        value.update({"correctAnswers": question.correct_answers if isinstance(question.correct_answers, list) else None, "acceptedVariants": question.accepted_variants if isinstance(question.accepted_variants, list) else None})
     return value
 
 
@@ -136,10 +152,16 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
                 "audioUrl": media_url(group.id, 'audio') if group.audio_key else None,
                 "imageUrl": media_url(group.id, 'image') if group.image_key else None,
                 "partNumber": group.part_number, "audioDurationSec": group.audio_duration_sec,
-                "audioPlayLimit": 2 if specification and section.skill == 'listening' else group.audio_play_limit, "questions": questions,
+                "audioPlayLimit": 2 if specification and section.skill == 'listening' else group.audio_play_limit,
+                "questions": questions,
+                "items": questions,
                 **({"audioScript": group.audio_script, "maxScore": group.max_score, "stimulusRef": group.stimulus_ref} if answers else {}),
             })
+        shaped["parts"] = shaped["groups"]
+        shaped["questions"] = [q for g in shaped["groups"] for q in g.get("questions", [])]
+        shaped["questionCount"] = sum(len(g.get("questions", [])) for g in shaped["groups"])
         result["sections"].append(shaped)
+    result["totalQuestions"] = result["questionCount"]
     return result
 
 

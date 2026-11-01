@@ -90,7 +90,11 @@ export function MockExamsView() {
 
   function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) {
     start.mutate(
-      { examId, mode, ...(skills ? { skills } : {}) },
+      {
+        examId,
+        mode,
+        ...(skills && skills.length > 0 ? { skills } : { flow: "full_test" }),
+      },
       {
         onSuccess: (res) =>
           router.push(

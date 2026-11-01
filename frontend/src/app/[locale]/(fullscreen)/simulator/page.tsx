@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
+import { CDLayout } from "@/components/simulator/CDLayout";
 import { CdExamView } from "@/components/demo/cd-exam-view";
 import { getActiveCdExam, getDemoMockExams, getDemoMockExam } from "@/lib/public-api";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Multi-Level (CEFR) Mock Test 1 — Computer-Delivered Simulator",
@@ -37,5 +40,5 @@ export default async function SimulatorPage({
     );
   }
 
-  return <CdExamView exam={exam} />;
+  return <CDLayout exam={exam} />;
 }

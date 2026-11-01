@@ -240,7 +240,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       const found = exam.sections.findIndex((s) => s.skill === attempt.currentSkill);
       if (found >= 0) return found;
     }
-    return 0;
+    const listeningIdx = exam.sections.findIndex((s) => s.skill === "listening");
+    return listeningIdx >= 0 ? listeningIdx : 0;
   }, [exam?.sections, attempt.currentSkill]);
 
   const activeSection = isSingleSection
@@ -359,6 +360,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const doSubmit = React.useCallback(
     async (auto = false, confirmed = false) => {
       if (submittingRef.current) return;
+      if (total <= 0) {
+        toast.error("Savollar yuklanmadi yoki mavjud emas (0/0). Topshirib bo'lmaydi.");
+        return;
+      }
       if (versioned) {
         try {
           if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
@@ -474,7 +479,17 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     setActiveSection(index);
   }, [exam, flush]);
 
-  const total = exam?.questionCount ?? 0;
+  const total =
+    exam?.questionCount ||
+    (exam?.sections || []).reduce(
+      (sum, s) =>
+        sum +
+        (s?.groups || (s as any)?.parts || []).reduce(
+          (n: number, g: any) => n + (g?.questions || (g as any)?.items || []).length,
+          0
+        ),
+      0
+    );
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
 

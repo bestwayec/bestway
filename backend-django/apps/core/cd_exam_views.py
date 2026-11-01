@@ -119,15 +119,20 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
                 }
                 payload = q.payload_json or {}
                 options = payload.get("options")
+                prompt_text = q.prompt or ""
                 
                 q_list.append({
                     "id": q.id,
                     "number": q.order,
+                    "type": q.question_type,
                     "kind": kind_map.get(q.question_type, "single_choice"),
                     "questionType": q.question_type,
-                    "prompt": q.prompt,
-                    "options": options,
+                    "prompt": prompt_text,
+                    "text": prompt_text,
+                    "options": options if isinstance(options, list) else [],
                     "points": q.points,
+                    "score": q.points,
+                    "maxScore": q.points,
                     "wordLimit": q.word_limit,
                     "answerRule": payload.get("answerRule"),
                     "guidance": payload.get("guidance"),
@@ -143,15 +148,18 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
                 "title": grp.title or f"Part {grp.part_number}",
                 "instructions": grp.instructions or "",
                 "passageText": grp.passage_html or "",
+                "passageHtml": grp.passage_html or "",
                 "contentHtml": grp.passage_html or "",
                 "audioUrl": grp.audio_url or "",
                 "imageUrl": grp.media_image or "",
                 "strictAudio": sec.section_type == "listening",
                 "questions": q_list,
+                "items": q_list,
             }
             sec_parts.append(part_dict)
             all_parts.append(part_dict)
             
+        sec_questions = [q for p in sec_parts for q in p["questions"]]
         sections_data.append({
             "id": sec.id,
             "skill": sec.section_type,
@@ -163,8 +171,11 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
             "instructions": sec.instructions or "",
             "parts": sec_parts,
             "groups": sec_parts,
+            "questions": sec_questions,
+            "questionCount": len(sec_questions),
         })
         
+    total_questions = sum(len(p.get("questions", [])) for p in all_parts)
     exam_payload = {
         "id": exam.id,
         "code": exam.code,
@@ -175,6 +186,8 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
         "isCdFormat": exam.is_cd_format,
         "isPublished": exam.is_published,
         "description": exam.description or "",
+        "questionCount": total_questions,
+        "totalQuestions": total_questions,
         "sections": sections_data,
     }
     return JsonResponse({
@@ -187,12 +200,16 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
             "type": "multilevel",
             "examType": exam.exam_type,
             "durationMinutes": exam.duration_minutes,
+            "questionCount": total_questions,
+            "totalQuestions": total_questions,
             "sections": sections_data,
             "parts": all_parts,
         },
         "exam": exam_payload,
         "sections": sections_data,
         "parts": all_parts,
+        "questionCount": total_questions,
+        "totalQuestions": total_questions,
     })
 
 
@@ -208,14 +225,19 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
         for grp in sec.get("groups", []):
             q_list = []
             for q in grp.get("questions", []):
+                p_text = q.get("prompt") or q.get("text") or ""
                 q_list.append({
                     "id": q["id"],
                     "number": q["number"],
+                    "type": q["type"],
                     "kind": _ui_kind(q["type"]),
                     "questionType": q["type"],
-                    "prompt": q["prompt"],
-                    "options": q.get("options"),
+                    "prompt": p_text,
+                    "text": p_text,
+                    "options": q.get("options") if isinstance(q.get("options"), list) else [],
                     "points": q["points"],
+                    "score": q["points"],
+                    "maxScore": q["points"],
                     "wordLimit": q.get("wordLimit"),
                     "answerRule": q.get("answerRule"),
                     "guidance": q.get("guidance"),
@@ -240,10 +262,12 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
                 "imageUrl": img_url or "",
                 "strictAudio": sec.get("skill") == "listening",
                 "questions": q_list,
+                "items": q_list,
             }
             sec_parts.append(part_dict)
             all_parts.append(part_dict)
             
+        sec_questions = [q for p in sec_parts for q in p["questions"]]
         sections_data.append({
             "id": sec["id"],
             "skill": sec["skill"],
@@ -255,8 +279,11 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
             "instructions": sec.get("instructions", ""),
             "parts": sec_parts,
             "groups": sec_parts,
+            "questions": sec_questions,
+            "questionCount": len(sec_questions),
         })
         
+    total_questions = sum(len(p.get("questions", [])) for p in all_parts)
     exam_payload = {
         "id": legacy.id,
         "code": legacy.id,
@@ -267,6 +294,8 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
         "isCdFormat": True,
         "isPublished": legacy.is_published,
         "description": legacy.title,
+        "questionCount": total_questions,
+        "totalQuestions": total_questions,
         "sections": sections_data,
     }
     return JsonResponse({
@@ -279,12 +308,16 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
             "type": legacy.type,
             "examType": legacy.type,
             "durationMinutes": 150,
+            "questionCount": total_questions,
+            "totalQuestions": total_questions,
             "sections": sections_data,
             "parts": all_parts,
         },
         "exam": exam_payload,
         "sections": sections_data,
         "parts": all_parts,
+        "questionCount": total_questions,
+        "totalQuestions": total_questions,
     })
 
 

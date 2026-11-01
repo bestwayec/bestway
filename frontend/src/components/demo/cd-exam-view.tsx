@@ -86,7 +86,8 @@ function formatLeft(totalSeconds: number): string {
 }
 
 /** Split "Write ___ here" into text / blank segments for inline inputs. */
-function splitBlank(prompt: string): (string | null)[] {
+function splitBlank(prompt?: string | null): (string | null)[] {
+  if (!prompt || typeof prompt !== "string") return [""];
   if (!prompt.includes("___")) return [prompt];
   return prompt.split("___") as (string | null)[];
 }
@@ -331,37 +332,40 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
           )}
           <div className="mt-4 rounded-[12px] border border-border-strong/60 bg-surface p-4">
             <div className="space-y-5">
-              {part.group.questions.map((q, qi) => (
-                <div key={q.id} id={`cd-q-${q.id}`} className="scroll-mt-32">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 flex-1 text-sm font-semibold text-fg">
-                      <span className="mr-1.5 inline-grid size-5 place-items-center rounded-full border border-fg-subtle align-middle text-[11px] text-fg-muted tabular-nums">
-                        {part.startIndex + qi + 1}
-                      </span>
-                      {q.type !== "multiple_choice" && q.prompt.includes("___") ? null : q.prompt}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => toggleFlag(q.id)}
-                      aria-pressed={!!flagged[q.id]}
-                      aria-label={flagged[q.id] ? "Unflag question" : "Flag for review"}
-                      className={cn(
-                        "grid size-7 shrink-0 place-items-center rounded-full border transition-colors",
-                        flagged[q.id]
-                          ? "border-warning bg-warning/15 text-warning"
-                          : "border-border text-fg-subtle hover:border-warning/60 hover:text-warning",
-                      )}
-                    >
-                      <Flag className="size-3.5" aria-hidden />
-                    </button>
+              {(part.group.questions || []).map((q, qi) => {
+                const promptText = q.prompt || (q as any).text || "";
+                return (
+                  <div key={q.id} id={`cd-q-${q.id}`} className="scroll-mt-32">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="min-w-0 flex-1 text-sm font-semibold text-fg">
+                        <span className="mr-1.5 inline-grid size-5 place-items-center rounded-full border border-fg-subtle align-middle text-[11px] text-fg-muted tabular-nums">
+                          {part.startIndex + qi + 1}
+                        </span>
+                        {q.type !== "multiple_choice" && promptText.includes("___") ? null : promptText}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => toggleFlag(q.id)}
+                        aria-pressed={!!flagged[q.id]}
+                        aria-label={flagged[q.id] ? "Unflag question" : "Flag for review"}
+                        className={cn(
+                          "grid size-7 shrink-0 place-items-center rounded-full border transition-colors",
+                          flagged[q.id]
+                            ? "border-warning bg-warning/15 text-warning"
+                            : "border-border text-fg-subtle hover:border-warning/60 hover:text-warning",
+                        )}
+                      >
+                        <Flag className="size-3.5" aria-hidden />
+                      </button>
+                    </div>
+                    <CdAnswerInput
+                      q={q}
+                      value={answers[q.id] ?? ""}
+                      onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
+                    />
                   </div>
-                  <CdAnswerInput
-                    q={q}
-                    value={answers[q.id] ?? ""}
-                    onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -396,8 +400,9 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
           </Button>
           <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-0.5" role="navigation" aria-label="Parts">
             {parts.map((p, i) => {
-              const answered = p.group.questions.filter((q) => (answers[q.id] ?? "").trim() !== "").length;
-              const total = p.group.questions.length;
+              const qs = p?.group?.questions || [];
+              const answered = qs.filter((q) => (answers[q.id] ?? "").trim() !== "").length;
+              const total = qs.length;
               return (
                 <button
                   key={p.group.id}
@@ -509,9 +514,11 @@ function CdAnswerInput({
       </div>
     );
   }
+  const promptText = q.prompt || (q as any).text || "";
+
   if (q.options && q.options.length > 0) {
     return (
-      <div className="mt-2 space-y-1.5" role="radiogroup" aria-label={q.prompt}>
+      <div className="mt-2 space-y-1.5" role="radiogroup" aria-label={promptText}>
         {q.options.map((opt) => {
           const selected = value === opt;
           return (
@@ -545,7 +552,7 @@ function CdAnswerInput({
     );
   }
   // Gap-fill style: prompt with ___ renders an inline blank (IELTS CD style).
-  const parts = splitBlank(q.prompt);
+  const parts = splitBlank(promptText);
   if (parts.length > 1) {
     return (
       <p className="mt-2 text-sm leading-loose text-fg">
@@ -558,7 +565,7 @@ function CdAnswerInput({
               <input
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                aria-label={q.prompt.replaceAll("___", "___answer___")}
+                aria-label={promptText.replaceAll("___", "___answer___")}
                 className="mx-1 inline-block w-36 rounded-[6px] border border-border-strong bg-bg px-2 py-1 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
               />
             </span>
@@ -572,7 +579,7 @@ function CdAnswerInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Type your answer…"
-      aria-label={q.prompt}
+      aria-label={promptText}
       className="mt-2 w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
     />
   );

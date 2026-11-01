@@ -126,7 +126,7 @@ export function useStartMock() {
     mutationFn: (v: {
       examId: string;
       mode?: "practice" | "timed";
-      flow?: "full_test" | "single_skill";
+      flow?: "full_test" | "single_skill" | "partial_practice";
       skills?: import("@/lib/types").MockPracticeSkill[];
       retake?: boolean;
       force?: boolean;

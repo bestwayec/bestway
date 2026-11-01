@@ -37,7 +37,7 @@ export function AppLayoutShell({
   if (isExamAttempt) {
     return (
       <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-bg">
-        <main className="h-full w-full overflow-hidden">{children}</main>
+        <main className="h-full w-full overflow-y-auto">{children}</main>
       </div>
     );
   }

@@ -116,11 +116,7 @@ def assert_question(attempt, question_id):
     rows = questions(attempt, [question_id])
     if not rows:
         fail('QUESTION_NOT_IN_EXAM', 'Savol bu imtihonga tegishli emas')
-    q = rows[0]
-    if attempt.flow_mode == 'full_test' and attempt.current_skill and q.group.section.skill != attempt.current_skill:
-        attempt.current_skill = q.group.section.skill
-        attempt.save(update_fields=['current_skill'])
-    return q
+    return rows[0]
 
 
 def partial_skill_seconds(skill, section, exam_type):
@@ -308,18 +304,21 @@ def start(actor, exam_id, data):
         if shaped['questionCount'] == 0:
             fail('MOCK_EXAM_EMPTY', "Bu imtihonda hali savollar yo'q")
         is_single = partial and len(data['skills']) == 1
-        flow = 'single_skill' if is_single else ('partial_practice' if partial else ('full_test' if data.get('flow') == 'full_test' else 'single_skill'))
+        flow = 'single_skill' if is_single else ('partial_practice' if partial else 'full_test')
         if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
         at = timezone.now()
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
+        first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
+        if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):
+            first_skill = 'listening'
         attempt = MockAttempt.objects.create(id=new_id(), exam_id=exam_id, student_id=actor.id,
             specification_version=exam.specification_version, speaking_profile_version=exam.speaking_profile_version,
             status='in_progress', started_at=at, mode=mode, deadline_at=overall,
             overall_deadline_at=overall, section_deadlines=deadlines,
             flow_mode=flow,
-            current_skill=data['skills'][0] if partial else (('listening' if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])) else (shaped.get('sections', [{}])[0].get('skill') if shaped.get('sections') else 'writing')) if flow == 'full_test' else None),
+            current_skill=data['skills'][0] if partial else (first_skill if flow == 'full_test' else first_skill),
             media_state={SCOPE_KEY: practice} if partial else None,
             anti_cheat_count=0, audio_plays={} if flow == 'full_test' else None,
             submitted_sections=[] if flow == 'full_test' else None)
@@ -341,13 +340,6 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
         if not bulk:
             assert_question(attempt, items[0]['questionId'])
         valid = questions(attempt, [a['questionId'] for a in items])
-        if attempt.flow_mode == 'full_test' and attempt.current_skill:
-            q_skills = {q.group.section.skill for q in valid}
-            if len(q_skills) == 1:
-                target_sec_skill = next(iter(q_skills))
-                if target_sec_skill != attempt.current_skill:
-                    attempt.current_skill = target_sec_skill
-                    attempt.save(update_fields=['current_skill'])
         valid_ids = {q.id for q in valid}
         selected = [a for a in items if a['questionId'] in valid_ids]
         if not selected:
