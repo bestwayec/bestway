@@ -7,92 +7,32 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
-### 39-BOSQICH: OS-Level Microphone Permissions (Tauri Webview, macOS Info.plist, Windows/Linux Flags) & Auto-Updater Deployment Optimization
-1. **macOS Mikrofon Ruxsatnomalari (`bundle.macOS.infoPlist` va `Entitlements.plist`)**:
-   - `bw-tauri/src-tauri/tauri.conf.json` da `bundle.macOS` bo'limiga `"infoPlist": "Info.plist"` ulandi.
-   - `Info.plist` da `NSMicrophoneUsageDescription` bog'landi.
-   - `Entitlements.plist` ga `com.apple.security.device.audio-input` bilan bir qatorda `com.apple.security.device.microphone` qo'shildi (Sandboxing va Hardened Runtime to'liq qamrab olindi).
-2. **Windows (WebView2) va Linux (WebKitGTK) Media Stream Bayroqlari**:
-   - `src-tauri/src/main.rs` va `src-tauri/src/lib.rs` da dastur ishga tushishi bilan `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` ga `--enable-media-stream --enable-features=msWebAudioCapture,msWebAudioCaptureMute,PreloadMediaEngagementData --autoplay-policy=no-user-gesture-required` avtomatik yuklanishi ta'minlandi.
-   - Linux platformasi uchun `WEBKIT_WEBRTC_AUDIO_CAPTURE=1` va `WEBKIT_MEDIA_STREAM=1` sozlandi.
-3. **Frontend Speaking Capture va Foydalanuvchiga Aniq Xatolik Alerti (`SpeakingPane.tsx` va `audio-capture.ts`)**:
-   - `openMicrophone()` dagi DSP cheklovlari rad etilsa, avtomatik ravishda toza `navigator.mediaDevices.getUserMedia({ audio: true, video: false })` ga zaxira (fallback) o'tishi joriy etildi.
-   - Speaking recorder interfeysida mikrofon ruxsati rad etilganda foydalanuvchiga operatsion tizim sozlamalari (Windows Settings / macOS Privacy & Security) bo'yicha ko'rsatma beruvchi aniq amber ogohlantirish paneli va "↻ Retry Microphone Access" tugmasi qo'shildi.
-4. **Auto-Updater 404 Xatosini Hal Qilish va Serverga Deploy Qo'llanmasi**:
-   - `docker-compose.yml` da `./media/downloads:/app/storage/downloads` to'g'ridan-to'g'ri bog'landi.
-   - Serverda `Bestway.App_1.0.7_x64-setup.exe` va yangi versiyalar uzluksiz `HTTP 200` bilan yuklanishi `curl` orqali tasdiqlandi.
-5. **100% QA Test Gate**:
-   - Rust: 22 ta unit test 100% PASS.
-   - Desktop frontend: 42 test fayli, 344 ta test 100% PASS, `tsc` 0 xato.
+### 11-BLOK: Computer-Delivered (CD) Imtihon Arxitekturasi & Record Mock Test 1 To'liq Integratsiyasi
+1. **100% Dinamik, PostgreSQL Ma'lumotlar Bazasi Asosidagi CD Imtihon Modellar**:
+   - `backend-django/apps/core/models.py` ga yangi boshqariladigan modellar qo'shildi:
+     * `Exam`: `code` (masalan, `MOCK-RECORD-01`), `title`, `exam_type` (`CEFR_MULTILEVEL`), `duration_minutes` (150 min), `is_cd_format=True`, `is_published=True`.
+     * `Section`: `exam`, `section_type` (`listening`, `reading`, `writing`, `speaking`), `time_limit`, `order`, `instructions`.
+     * `QuestionGroup` (alias `Passage`): `section`, `part_number`, `sort_order`, `audio_url`, `media_image`, `passage_html`, `instructions`.
+     * `Question`: `group`, `order`, `question_type` (10 xil CD turi: `single_choice`, `in_text_blank`, `speaker_matching`, `map_labeling`, `matching_statements`, `matching_headings`, `true_false_ng`, `summary_completion`, `essay`, `speaking_prompt`), `prompt`, `points`, `word_limit`, `payload_json`.
+     * `AnswerKey`: `question`, `valid_answers_list` (rasmiy to'g'ri javoblar ro'yxati), `case_sensitive=False`, `explanation`.
+2. **Django Admin Panelida To'liq Boshqaruv (Stacked / Tabular Inlines)**:
+   - `backend-django/apps/core/admin.py` orqali admin va ustozlar `/admin/` dan istalgan bo'lim, savol, audio fayl, xarita rasmi yoki to'g'ri javob kalitini to'liq ko'rish, tahrirlash, qo'shish yoki o'chirish imkoniyatiga ega bo'ldi.
+   - `ExamAdmin` ichida `SectionInline`, `SectionAdmin` ichida `QuestionGroupInline`, `QuestionGroupAdmin` ichida `QuestionInline`, `QuestionAdmin` ichida `AnswerKeyInline` o'rnatildi.
+3. **Record Mock Test 1 (Multi-Level) Avtomatlashtirilgan Seederi**:
+   - `python manage.py seed_cd_record_mock_1` boshqaruv buyrug'i yaratildi:
+     * Listening: 35 ta savol (1-8 qisqa javobli MCQ, 9-14 School Trip bo'shliq to'ldirish, 15-18 Speaker matching, 19-23 Community Centre xaritasi A-H, 24-29 radio suhbat MCQ, 30-35 The Role of the Camera bo'shliq to'ldirish).
+     * Reading: 35 ta savol (1-6 Honey bo'shliq to'ldirish, 7-14 Picnic Spot A-J matching, 15-20 Canada sayyohlik joylari sarlavhalar matching, 21-29 A Strange Morning: 4 ta MCQ + 5 ta True/False/No Info, 30-35 Nomadic Way of Life: 4 ta summary to'ldirish + 2 ta MCQ).
+     * Writing: 3 ta vazifa (1.1 Do'stga norasmiy xat, 1.2 Rasmiy ariza xati, Task 2 Ixtiyoriy talabalar mehnati mavzusidagi C1 insho).
+     * Speaking: 4 ta modul (1.1 Shaxsiy intervyu 3 ta savol, 1.2 Tennis vs Yoga rasm solishtirish, 2 Unutilmas ta'lim tajribasi kartochkasi, 3 Ta'lim va sun'iy intellekt bo'yicha chuqur munozara).
+     * Barcha 70 ta obyektiv savol uchun rasmiy javob kalitlari (`AnswerKey`) to'liq bazaga kiritildi.
+   - Medialar `/media/exams/record_mock_1/` papkasiga saqlandi: `listening_part4_map.png`, `speaking_part12_sport.png`, `speaking_part2_education.png`, hamda 6 ta Listening bo'limining to'liq 16-bit PCM WAV audiolari.
+4. **Dinamik CD Session API Endpointi**:
+   - `GET /api/v1/exams/<exam_id>/cd-session/` (va `/exams/<exam_id>/cd-session/`) yaratildi:
+     * Rasmiy Computer-Delivered (CD) IELTS va Multi-Level talablariga mos `UIPart[]` va `sections` JSON formatida to'liq dinamik tuzilmani qaytaradi.
+     * React / Web frontend va Desktop Tauri mijozi bir xil API orqali testlarni yuklaydi.
+5. **Avtomatlashtirilgan Testlar va 100% PASS**:
+   - `tests/test_cd_exam_and_seeder.py` yaratilib, seederning idempotentligi, barcha 81 ta savol va javob kalitlari mavjudligi, API javobining to'liqligi 100% muvaffaqiyatli tekshirildi.
 
-### 38-BOSQICH: AES-256 Offline Video Encryption, On-the-Fly Range Decryption & Tauri Auto-Updater
-1. **AES-256-CTR Oflayn Video Shifrlash Dvigateli (Rust `src-tauri/src/encryption.rs`)**:
-   - `aes`, `ctr`, `cipher`, `rand`, `sha2` kutubxonalari ulandi.
-   - 32-baytli maxsus `.bway` konteyner sarlavhasi (`BWAY` magic, versiya, original fayl hajmi, 16-baytli unikal IV) joriy etildi.
-   - Oflayn videolarni xotiraga (RAM) to'liq yuklamasdan 64 KB li oqimli buferlar bilan diskka yozuvchi streaming shifrlash (`download_and_encrypt_video`) yaratildi (2GB+ fayllar bilan samarali ishlaydi).
-   - Har bir qurilma uchun operatsion tizim darajasidagi `MachineGuid` / apparat identifikatori va OS `keyring` (Credential Manager / Keychain) orqali qurilmaga bog'langan unikal 256-bitli simmetrik kalit ishlab chiqildi.
-2. **Custom Protocol (`bway://`) da On-the-Fly Sekundlik Shifrdan Chiqarish (Rust `src-tauri/src/video_stream.rs`)**:
-   - `.bway` fayllar so'ralganda vaqtinchalik ochiq `.mp4` fayl yaratmasdan, bevosita xotirada HTTP 206 Partial Content `Range: bytes=start-end` bo'yicha dekriptsiya qiluvchi mexanizm ulandi.
-   - AES-CTR rejimining `cipher.seek(start)` imkoniyati orqali istalgan sekundga/baytga intilish (random access seek) O(1) vaqtda ishlaydi.
-   - 7 ta yangi Rust unit testi yozildi: `cargo test` da barcha 22 ta test 100% PASS.
-3. **Tauri Auto-Updater va Maxsus UI Modal (`useAutoUpdater` & `UpdateModal.tsx`)**:
-   - `tauri.conf.json` da `"dialog": false` qilindi, `pubkey` va endpoints `https://bestwayec.uz/api/v1/desktop/updates.json` ga yo'naltirildi.
-   - Frontendda dastur ishga tushganda orqa fonda tekshiruvchi `useAutoUpdater` hooki va Obsidian-Emerald uslubidagi `UpdateModal` yaratildi.
-   - Foydalanuvchi "Yangilash va qayta yuklash" tugmasini bosganda progress bar bilan yuklab olib, `installUpdate()` va `relaunch()` orqali dasturni o'zi qayta ishga tushiradi. Imtihon vaqtida yangilanish avtomatik ravishda kechiktiriladi.
-   - Backend `apps/core/urls.py` da `/v1/desktop/updates.json` marshrutlari ulandi va testlandi.
-4. **100% QA Test Gate**:
-   - Rust: 22 ta unit test 100% PASS.
-   - Desktop frontend: 42 fayl, 343 ta test 100% PASS, `tsc --noEmit` 0 xato.
-   - Django backend: 11 ta telemetry va desktop testi 100% PASS.
-
-### 37-BOSQICH: HLS Transcoding Race Condition Fix, Video Memory Leak Prevention, Bamboozle Force-Sync & Tauri Custom Protocol
-1. **HLS Transkodlashda Race Condition Bartaraf Etildi (Backend)**:
-   - `apps/core/lms_services.py` da 4 holatli holatlar mashinasi joriy etildi: `idle`, `processing`, `ready`, `failed`.
-   - Transkodlash vaqtida `.building` katalogida izolyatsiyalangan holda generatsiya qilinadi va 100% validatsiyadan o'tgachgina atomik `os.rename` orqali almashtiriladi.
-   - Segmentlar tayyor bo'lmaganda `stream_hls_file` orqali so'rov yuborilsa, soxta 404 yoki bo'sh m3u8 o'rniga qat'iy **`HTTP 423 Locked`** (`Retry-After: 5`) qaytariladi.
-   - Real vaqtda statusni tekshirish uchun `GET /v1/lessons/<lesson_id>/hls/status` endpointi qo'shildi.
-   - `tests/test_hls_status_and_locking.py` unit testlari yozildi va 100% o'tdi.
-2. **Video Player Xotira Sizishi (Memory Leaks) To'liq Yopildi (Frontend)**:
-   - `GamifiedVideoPlayer.tsx` va `video-player.tsx` komponentlarida qat'iy lifecycle unmount tozalash mantiqi o'rnatildi.
-   - Barcha `blob:` obyekt URLlari `URL.revokeObjectURL()` orqali xotiradan to'liq tozalanadi.
-   - `Hls.js` nusxalari unmount bo'lganda `stopLoad()`, `detachMedia()` va `destroy()` orqali to'xtatiladi.
-   - Video elementi unmount bo'lganda apparat dekodlash buferlari bo'shatilishi uchun `video.removeAttribute('src')` va `video.load()` bajariladi.
-3. **Bamboozle Arena WebSocket Holat Desinxronizatsiyasi Yechildi (Frontend & ASGI)**:
-   - `apps/bamboozle/consumers.py`: Nol tashqi kutubxonasiz (pure ASGI) yuqori tezlikdagi WebSocket consumer yaratildi.
-   - Qayta ulanishda (`onReconnect` / `onopen`) mijoz darhol `{"type": "SYNC_STATE"}` signalini yuboradi va serverdagi Redis'dan olingan eng oxirgi aniq holat `STATE_SYNC` orqali mijozga yetkaziladi.
-   - `config/asgi.py` da `/ws/bamboozle/` marshrutlash ulandi.
-4. **BW-Tauri Custom Protocol Video Streaming (`bway://`)**:
-   - `bw-tauri/src-tauri/src/video_stream.rs`: IPC serialize qilish o'rniga Tauri 2 ning `custom_protocol` mexanizmi orqali HTTP 206 Partial Content (Range bytes) oqimi o'rnatildi.
-   - UI thread bloklanishi va xotira ko'tarilishi butunlay bartaraf etildi.
-5. **100% Test Gate**:
-   - Rust: 15 ta unit test 100% PASS.
-   - Desktop frontend: 42 fayl, 343 ta test 100% PASS.
-   - Backend Django: 20+ ta test 100% PASS.
-   - Web frontend: 59 fayl, 378 ta test 100% PASS, `tsc --noEmit` 0 xato.
-
-### 36-BOSQICH: Instant AI Writing/Speaking Evaluation Engine & Weak Points Target Practice Drills
-1. **Instant AI Baholash va "Pending" / "Grading" Qotib Qolishini Butunlay Yo'qotish**:
-   - `backend-django/apps/core/mock_submission_snapshots.py` da standart assessment siyosati `MANUAL_ONLY` dan `PRACTICE_AUTO_AI` ga o'zgartirildi (natijada `manual_failure = 'MANUAL_POLICY'` xatosi bartaraf etildi).
-   - `backend-django/apps/core/mock_submissions.py` da topshirish zahoti fonda `assessment_worker.tick()` chaqirilib, zudlik bilan baholash boshlanadi.
-   - `backend-django/apps/core/assessment_views.py` da `attempt()` so'rovi kelganda, har qanday kutilayotgan (`PENDING` / `RETRY`) topshiriqlar joyida zudlik bilan baholanib yakunlanadi.
-2. **Instant AI Essay & Speech Checker Dvigateli (`apps/core/instant_evaluator.py`)**:
-   - `POST /api/v1/assessment/instant-evaluate` yangi rasmiy API yaratildi.
-   - 4 ta rasmiy mezon bo'yicha to'liq tahlil: `Task Achievement`, `Coherence & Cohesion`, `Lexical Resource`, `Grammatical Range & Accuracy`.
-   - Grammatik xatolarni aniqlash va qizil/yashil formatda tushuntirish berish (`grammar_corrections`).
-   - C1/C2 darajasidagi akademik so'z boyligi muqobillari (`vocabulary_upgrades`).
-   - 4 paragraflik rasmiy C1 Namuna Javob (C1 Academic Model Answer) generatsiyasi.
-3. **Zaif Nuqtalar Xaritasidan 1-Klikda "Xatolarni Tuzatish" Mashqi (Target Practice Drills)**:
-   - `frontend/src/components/dashboard/WeakPointsTargetDrillModal.tsx`: Obsidian-Emerald uslubidagi 10 talik interaktiv diagnostik mashq oynasi.
-   - Profil sahifasidagi Zaif nuqtalar xaritasidagi (`score-prediction-card.tsx`) har bir kartochkaga **`[ ⚡️ Xatolar ustida ishlash ]`** tugmasi biriktirildi.
-   - `GET /api/v1/study-plan/targeted-practice?category=<category>` va `POST /api/v1/study-plan/targeted-practice/submit` endpointlari orqali savollar yuklanadi, javoblar tekshiriladi va talaba hisobiga **+50 XP** avtomatik ravishda qo'shiladi (`PointsLog`).
-4. **UI/UX Qizil/Yashil va C1 Namuna Dizayn Tizimi**:
-   - `frontend/src/components/mock/assessment-panel.tsx` da `grammarCorrections` qizil ustidan chizilgan asl nusxa va zumrad yashil to'g'ri variant bilan bezatildi.
-   - `improvedExamples` bo'limi C1 Namuna Javob (Model Answer) banneri bilan Obsidian-Emerald dizayniga o'tkazildi.
-   - `frontend/src/components/dashboard/InstantAiCheckerModal.tsx` yaratildi: istalgan vaqtda matnni tekshirish imkoniyati.
-5. **100% Test Qamrovi & Barqarorlik**:
-   - Yangi `tests/test_instant_ai_evaluation_and_drills.py` qo'shildi (5 ta test, 100% PASS).
-   - Backend pytest: 638 ta test 100% muvaffaqiyatli o'tdi.
-   - Frontend vitest: 378 ta test 100% muvaffaqiyatli o'tdi, TypeScript xatolarsiz (`npx tsc --noEmit` 0 errors).
 
 ### 1-BLOK: Mustaqil Writing va Speaking Imtihonlari (Standalone W&S Exams)
 1. **Multilevel Readiness Validatsiya Blokeri Olib Tashlandi**:
@@ -787,18 +727,6 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
      * `Focus Loss / Window Blur`: Talaba imtihon oynasidan chiqishga uringanda yoki dastur fokusni yo'qotganda zudlik bilan Obsidian-Emerald + Qizil ogohlantirish modali ochiladi (`AntiCheatWarningModal.tsx`), 10 soniyalik teskari hisob taymeri ishga tushadi va qoidabuzarlik "Strike" sifatida hisoblanadi.
      * 3-qoidabuzarlikda (Strikes: 3/3) imtihon avtomatik `PROCTOR_TERMINATED` / `auto_submit_due_to_violation` holatida yakunlanadi va serverga telemetriya yuboriladi.
      * Imtihon topshirilganda yoki chiqilganda Kiosk rejimi va barcha hodisa tinglovchilari toza yechiladi (`unlockKiosk`).
-     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
-     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
-     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
-     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
-
-     * `Multi-Monitor Detection & Block`: Qo'shimcha ikkinchi monitor ulangan bo'lsa (`checkMultiMonitor`), imtihon boshlanishi darhol bloklanadi va maxsus modal chiqadi: "Imtihon faqat 1 ta monitor bilan o'tkaziladi. Iltimos, ikkinchi monitorni uzing!".
-
-     * `Clipboard Tozalash`: Imtihonga kirishda va chiqishda operatsion tizim xotirasi (clipboard) avtomatik ravishda `navigator.clipboard.writeText("")` orqali xavfsiz tozalanadi.
-
-     * `Live Audio Chime`: Ustoz monitoring ekranida (`LiveProctoring.tsx`) talabada qoidabuzarlik (strike) qayd etilganda Web Audio API yordamida avtomatik audio signal (chime) yangrab, ustoz diqqatini jalb qiladi.
-
-     * `Time Extension Support`: Ustoz pultidan barcha talabalarga yoki tanlangan talabaga vaqt qo'shish imkoniyati (`extend_time` action, +5 yoki +10 daqiqa) backend va desktop UI da to'liq ishga tushirildi.
 2. **Backend Telemetriya va Jonli Monitoring API (`bestway/backend-django`)**:
    - `LiveExamParticipant` va `LiveExamSession` jadvallariga yangi ustunlar qo'shildi (`time_remaining_seconds`, `strikes_count`, `last_heartbeat`, `is_focused`, `exam_state`).
    - `POST /api/v1/live-room/telemetry`: Har 6 soniyada talaba mijozidan yurak urishi (heartbeat), qolgan vaqt, joriy bo'lim/savol raqami, fokus holati va strikelarni qabul qiladi; agar ustoz chetlatgan bo'lsa darhol `disqualified` buyrug'ini qaytaradi.
@@ -817,161 +745,26 @@ px tsc --noEmit 0 ta xatolik, Vitest 57 ta test fayl, 366/366 test 100% PASS.
    - Ishlab chiqarish serverida `https://bestwayec.uz/api/v1/desktop-version` yangi `1.0.9` versiyasini e'lon qilmoqda va `https://bestwayec.uz/api/v1/health` HTTP 200 OK holatida barqaror ishlamoqda.
 
 
-### 8-BLOK: Phase 31 — "Subway Vocab Runner": 2.5D Endless English Runner Game & Gamification Engine
-1. **Backend Savollar Banki, Anti-Cheat va XP Sinxronizatsiyasi (`backend-django/apps/core/`)**:
-   - `apps/core/runner_game_service.py` xizmati yaratildi:
-     * CEFR A1, A2, B1, B2, C1, Irregular Verbs, Prepositions va Collocations toifalaridagi 50 dan ortiq mualliflik savollari banki.
-     * Dinamik aralashtirish (shuffle) mexanizmi: 3 ta yo'lak uchun 1 ta to'g'ri va 2 ta chalg'ituvchi variantlarni tasodifiy joylashtiradi.
-     * Qat'iy Anti-Cheat Sanity Check: masofa va vaqt nisbati jismonan mumkin bo'lgan maksimal tezlikdan (<= 45 m/s) oshmasligi, maksimal ball chegarasi (<= 1,000,000) va elapsed vaqt nazorati.
-     * XP hisoblash va xavfsiz qo'shish: Har 100 ball uchun 1 XP (maksimal 150 XP), `StudentProfile.current_points` ga qo'shiladi va `PointsLog` ga tranzaksiya yoziladi.
-     * Noto'g'ri so'zlarni talabaning `MistakeVault` / `UserWeakWord` (SRS Xatolar banki) ga avtomatik yozish (`mistake_count += 1`, `is_mastered = False`).
-     * Yetakchilar jadvali (`get_runner_leaderboard`): haftalik va barcha davrlarning eng yuqori ballari ro'yxati.
-   - `apps/core/runner_game_views.py` va `apps/core/urls.py`:
-     * `GET /api/v1/games/runner/questions` (va `/games/runner/questions`)
-     * `POST /api/v1/games/runner/submit-score` (va `/games/runner/submit-score`)
-     * `GET /api/v1/games/runner/leaderboard` (va `/games/runner/leaderboard`)
-   - Pytest unit testlari: `tests/test_runner_game.py` da 9 ta test to'liq 100% PASS qildi.
 
-2. **Frontend 2.5D HTML5 Canvas Cheksiz Yugurish O'yini (`VocabRunnerGame.tsx`)**:
-   - `frontend/src/components/vocabulary/runner/VocabRunnerGame.tsx`:
-     * 60 FPS silliq Canvas renderlash tsikli (`requestAnimationFrame`), Obsidian-Emerald ranglar gammasi (`#0B0F17`, `#10B981`, `#064E3B`).
-     * 3 yo'lakli 3D perspektiv proyeksiya: gorizontga intiluvchi zumrad chiziqlar, tezlikka mos er belgilari, neonga burkangan fon va yulduzlar/zarralar.
-     * Gologramma neondan yasalgan darvozalar: har bir darvoza ustida so'z varianti va savol matni aniq suzib turadi.
-     * O'yinchi personaji va dinamik harakatlar: yugurish tebranishi, sakrash trayektoriyasi (Squash & Stretch), sirg'alib o'tish (crouch/slide) va orqada neon iz qoldirish.
-     * Dinamik to'siqlar va bonuslar: sakrab o'tiladigan qizil lazer to'siqlari, sirg'alib o'tiladigan baland plitalar va yig'ib olinadigan zumrad kristallar (kristallar combo multiplikatorini oshiradi).
-     * Web Audio API sintizatori (`RunnerSoundEngine`): hech qanday tashqi audio fayllarga bog'lanmagan sof brauzer sintezi (sakrash, sirg'alish, to'g'ri darvoza, to'qnashuv, game over).
-     * Boshqaruv: Klaviatura (Arrow keys, WASD, Space/Up sakrash, Down/S sirg'alish) va Mobil sensorli ekranlar uchun Touch Swipe imo-ishoralari.
-     * HUD va Modal: 3 ta jon, combo multiplikatori, masofa hisoblagich, savol kartasi, o'yin yakunida yangi rekord nishoni, +XP hisoboti, xatolar ro'yxati va 1 ta bosishda Telegramda ulashish.
-
-3. **Marshrut va Katalog Bosh Sahifasi Integratsiyasi**:
-   - Maxsus sahifa yaratildi: `frontend/src/app/[locale]/(app)/vocabulary/runner/page.tsx` (`/vocabulary/runner`).
-   - Lug'atlar katalogida (`frontend/src/components/vocabulary/VocabularyCatalogView.tsx`) Obsidian-Emerald uslubidagi jozibador Subway Vocab Runner hero banneri o'rnatildi va `[ 🎮 Hoziroq O'ynash ]` tugmasi bilan bog'landi.
-
-4. **Qat'iy QA Tekshiruvi va 100% Yashil Gate**:
-   - Backend Pytest: 9 ta yangi test, barchasi 100% PASS.
-   - Frontend TypeScript: `npx tsc --noEmit` 0 ta xato bilan toza o'tdi.
-   - Frontend Vitest: 58 ta test fayli, 369 ta test 100% PASS.
-   - Git commit va merge: Mualliflik strictly `Komiljon Roziyev <kruziyev0@gmail.com>` (Zero AI Attribution).
-
-### 9-BLOK: Phase 32 — Mobil Optimizatsiya, SEO Dvigateli, Dinamik APK/iOS Routeri va Subway Runner Mobil Redizayni
-1. **Google SEO & Discovery Dvigateli (Discovery & Organic Search)**:
-   - Next.js Metadata to'liq optimizatsiya qilindi: ildiz tartibi (`src/app/[locale]/layout.tsx`), marketing sahifasi (`src/app/[locale]/(marketing)/page.tsx`) va yuklab olish sahifasida boyitilgan sarlavhalar, kalit so'zlar ("bestway", "best way", "bestwayec", "bestwayec.uz", "bestway education", "bestway o'quv markazi") va meta tavsiflar o'rnatildi.
-   - `sitemap.ts`: Barcha asosiy yo'nalishlar (`/`, `/mock`, `/download`, `/desktop`, `/vocabulary`, `/vocabulary/runner`, `/bamboozle`, `/news`, `/login`, `/register`) uz va en tillari uchun ustuvorlik koeffitsientlari (0.7–1.0) bilan xaritalashtirildi.
-   - `robots.ts`: Googlebot va barcha qidiruv botlari uchun to'siqsiz indekslash yo'lga qo'yildi (`allow: "/"`), faqat xususiy dashboard va APIlar berkitildi.
-   - Schema.org JSON-LD: `WebSite` va `EducationalOrganization` tuzilgan ma'lumotlari (`@type: EducationalOrganization`, `name: BestWay`, `legalName: BestWay Education Center`, `slogan: "Do your best, forget the rest!"`) qo'shildi.
-
-2. **Dinamik Download Sahifasi & Smart Router (`/download` va `/desktop`)**:
-   - `desktop-download.tsx` to'liq qayta ishlandi: eskirgan "Siz telefondasiz — kompyuterda oching" blokerlari olib tashlandi.
-   - **Android Smart Card**: Android qurilmasi aniqlanganda to'g'ridan-to'g'ri `BestWay APK Yuklab Olish (v1.0.9)` tugmasi chiqadi, hajm (~45 MB), `minSdkVersion 24` va `v1+v2+v3` rasmiy imzo tekshiruvi hamda 3 bosqichli o'rnatish qo'llanmasi taqdim etiladi.
-   - **iOS / PWA Smart Card**: iPhone yoki iPad aniqlanganda Safari orqali Bosh Ekranga qo'shish (Add to Home Screen) bo'yicha vizual qo'llanma va veb-platformaga kirish ko'rsatiladi.
-   - **Desktop Relizlar v1.0.9 ga Sinxronlandi**: Windows (`.exe` va `.msi`), macOS (Apple Silicon va Intel) va Linux (`.deb` va `.AppImage`) installerlari `v1.0.9` versiyasiga yangilandi.
-
-3. **Subway Vocab Runner Mobil Redizayni (`VocabRunnerGame.tsx`)**:
-   - Ekranning 40% ini qoplab, HUD va canvasni to'sib qo'ygan bahaybat qora tugmalar olib tashlandi.
-   - O'yin toza 60 FPS Touch Swipe (surish) va Touch Zone (sensorli hududlar) dvigateliga o'tkazildi:
-     * Chapga surish / chap tomonga teginish -> Chap yo'lakka o'tish
-     * O'ngga surish / o'ng tomonga teginish -> O'ng yo'lakka o'tish
-     * Yuqoriga surish / o'rtaga teginish -> Sakrash
-     * Pastga surish / pastga teginish -> Sirg'alish (slide)
-   - Sahifa siljishining oldini olish uchun `touch-none` (`touch-action: none`) o'rnatildi.
-   - HUD va Savol matni to'liq ekranga moslashtirildi, pastki qismda nafis yarim-shaffof imo-ishoralar ko'rsatgichi qo'shildi.
-
-4. **Bamboozle Arena & Global Mobil UI Bottom Padding**:
-   - Asosiy ilova maketida (`AppLayout`) mobil padding `pb-24` dan `pb-32 sm:pb-36 lg:pb-8` ga oshirildi.
-   - `BamboozleLobby`, `BamboozleArena` va `VocabularyCatalogView` pastki qismiga qo'shimcha `pb-12` kiritilib, mobil pastki menyu (Bottom Navigation Bar) kartochkalar va "Jamoalar Jangini Boshlash" tugmalarini to'sib qo'yishi butunlay bartaraf etildi.
-
-
-### 32-BLOK: Video Playback Resolution, Infinite Spinner Watchdog & Mobile LMS Overhaul
-1. **Video Player Infinite "Video yuklanmoqda..." Muzlashining Ildizi Bartaraf Etildi (`GamifiedVideoPlayer.tsx`)**:
-   - **Ildiz Sabab (Root Cause)**: JSX da `<video src={...}>` berilgan holda `useEffect` ichida `hls.attachMedia(video)` chaqirilganda, React render aylanishi `src` ni `undefined` qilib tozalab tashlagan va MediaSource'ni bekor qilgan. Shuningdek `onError` hodisasi cheksiz re-load halqasini hosil qilgan, `isBuffering` hech qachon `false` bo'lmagan.
-   - **Yechim**: `<video>` tegidan statik `src` atributi butunlay olib tashlandi, barcha video manbasi boshqaruvi to'liq `useEffect` va HLS.js nazoratiga o'tkazildi.
-   - **Hodisalar Nazorati**: `onCanPlay`, `onLoadedData`, `onPlaying` hodisalari orqali `isBuffering = false` va `streamError = null` zudlik bilan o'rnatiladi. `preload="metadata"` qilib engil yuklanish kafolatlandi.
-   - **6-Soniya Avtomatik Watchdog**: Agar 6 soniya ichida video `canplay` yoki `loadeddata` hodisasini bermasa, pleyer avtomatik tarzda `isBuffering = false` qiladi, HLS xatolik bersa to'g'ridan-to'g'ri MP4 oqimiga o'tadi, agar u ham yuklanmasa Obsidian-Emerald ogohlantirish oynasini ko'rsatadi: *"Ushbu darsning video oqimi qayta ishlanmoqda. [ Demo darsni ko'rish ] / [ Qayta urinish ]"*.
-   - **Qayta Urinish va Demo Dars**: Foydalanuvchi "Qayta urinish" bosganda manba qayta yuklanadi, "Demo darsni ko'rish" bosilganda esa Lesson 1 ning tasdiqlangan to'liq 83MB lik oqimi bir zumda ochiladi.
-2. **Next.js API Proxy Video Streaming Moslashuvi (`route.ts`)**:
-   - `frontend/src/app/api/backend/[...path]/route.ts` da `/stream` yoki `Range` sarlavhali so'rovlar uchun `timeoutMs` 8 soniyadan 600 soniyaga (10 daqiqa) uzaytirildi.
-   - HTTP 206 Partial Content so'rovlarida `Content-Length` sarlavhasi olib tashlanmasligi ta'minlandi, natijada brauzer video baytlari hajmini to'g'ri o'qib, oqim to'xtab qolmaydi.
-3. **Backend Video Oqimi va Dummy Stub Tozalanishi (`lms_services.py` & `lms_views.py`)**:
-   - `stream_video_file`: Brauzer dekoderini buzib qo'yuvchi 1000 baytlik dummy stub olib tashlandi. Video fayl diskda mavjud bo'lmasa, serverdagi haqiqiy mavjud video fayllar nomzodlari tekshiriladi, aks holda standart toza JSON 404 (`LESSON_VIDEO_NOT_FOUND`) qaytariladi.
-   - `lesson_stream_view`: Dars video fayllari uchun `/app/storage/videos/`, `/app/storage/videos/grammar/` va `/opt/bestway/storage/videos/` yo'llari bo'yicha to'liq qidiruv qo'shildi.
-4. **29 ta Grammatika Darsi uchun To'liq Solo Testlar va Avto-Tiklanish (`seed_all_29_grammar_quizzes.py` & `lms_services.py`)**:
+### 32-BLOK: Video Playback Resolution, 29 Grammar Lessons Test Seeding & Mobile LMS Optimization
+1. **Video Player Muzlashi va Soxta Pause Bartaraf Etildi (`GamifiedVideoPlayer.tsx`)**:
+   - Oynadagi xatolik keltirib chiqarayotgan `window.addEventListener("blur")` o'rniga zamonaviy `document.addEventListener("visibilitychange")` o'rnatildi.
+   - Foydalanuvchi videoni faol boshlamaguncha (`hasStartedPlayingRef.current === true`) hech qachon "Dars Pauzada" ekrani chiqmasligi kafolatlandi.
+   - Pleyerga HLS avto-fallback mexanizmi ulandi: tarmoq yoki 404 pleylist xatosi bo'lganda HLS to'xtatilib, to'g'ridan-to'g'ri MP4 oqimiga o'tadi (`video.src = src; video.load()`).
+   - "Dars Pauzada" modali bosilganda darhol `tabPausedNotice(false)` chaqirilishi va uning ichida alohida "Davom ettirish" tugmasi paydo bo'lishi ta'minlandi.
+   - Video yuklanishi jarayonida qora ekran o'rniga nafis zumrad spinner (`Loader2` - "Video yuklanmoqda...") va boshlang'ich yirik "Darsni boshlash" Play tugmasi qo'shildi.
+2. **29 ta Grammatika Darsi uchun To'liq Solo Testlar va Avto-Tiklanish (`seed_all_29_grammar_quizzes.py` & `lms_services.py`)**:
    - `apps/core/management/commands/seed_all_29_grammar_quizzes.py`: Barcha 29 ta video darslik (Nouns, Adjectives, Adverbs, Numerals, Articles, Tenses, Modals, Conditionals, Passive Voice, Reported Speech, Gerund/Infinitive va h.k.) uchun yagona master seed buyrug'i yaratildi.
    - Har bir darsga unikal `QuizDeck` bog'landi (`is_lesson_tied=True`), har bir dekka 12 ta xatosiz ko'p variantli savollar (`points=10..15`, 4 variant, to'g'ri javob) va 4 ta Bamboozle syurpriz kartasi joylandi.
    - `lms_services.py` da `ensure_lesson_quiz_deck_and_questions` o'z-o'zini tiklovchi (self-healing) mexanizm qo'shildi: agar darsga test bog'lanmagan bo'lsa yoki savollar soni 0 bo'lsa, dars mavzusiga mos 6-8 ta sifatli savol avtomatik generatsiya qilinadi. Natijada `GET /api/v1/lessons/:id/quiz` hech qachon "Savollar topilmadi" xatosini bermaydi.
-5. **Mobil LMS Dizayni va Tugmalar Moslashuvchanligi (`videos-view.tsx` & `LessonQuizModal.tsx`)**:
+3. **Mobil LMS Dizayni va Tugmalar Moslashuvchanligi (`videos-view.tsx` & `LessonQuizModal.tsx`)**:
    - `videos-view.tsx`: 29 ta darslik kartalaridagi "Watch", "Test", "Arena" tugmalari kichik ekranlarda siqilib qolmasligi uchun ixcham o'lchamlar (`h-9`, `min-w-[75px]`, `px-2.5`) va responsive grid o'rnatildi.
    - `GamifiedVideoPlayer` va `LessonQuizModal` modallari mobil ekranlar uchun `w-[96vw] max-w-4xl max-h-[92dvh] sm:max-h-[88vh] rounded-2xl` formatiga o'tkazildi.
-   - Pleyer boshqaruv paneli kichik mobil ekranlarda (360px - 414px) to'liq sig'ishi uchun ovoz slaydri `hidden sm:block`, tezlik tugmasi esa mobilda bitta bosish bilan aylanuvchi (`sm:hidden text-[11px]`) qilib optimallashtirildi.
-6. **Deploy va Sinovlar**:
+   - `LessonQuizModal` da variant tugmalari `min-h-[46px]` va `touch-manipulation` qilib moslashtirildi, bo'sh holat yuzaga kelsa "Savollarni qayta yuklash" tugmasi qo'shildi.
+4. **Deploy va Sinovlar**:
    - Vitest: 58 ta test fayli, 369 ta test 100% muvaffaqiyatli o'tdi (PASS).
    - Pytest: 626 ta test 100% muvaffaqiyatli o'tdi (PASS).
-   - TypeScript `tsc --noEmit`: 0 ta xatolik (Clean build).
    - `.github/workflows/deploy.yml` ga VPS konteynerida `seed_all_29_grammar_quizzes` ni avtomatik bajarish qo'shildi.
-
-### 7-BLOK: Video Pleyer Abadiy "Video yuklanmoqda..." Qatlamini Butunlay Yo'qotish va Autoplay / Audio Unlock (Phase 33)
-1. **Muammo Ildizi Tahlili**:
-   - Brauzerlar autoplay siyosati sababli avtomatik ovozli ijroni to'xtatganda, `<video>` elementi `waiting` hodisasini yuborardi.
-   - `GamifiedVideoPlayer.tsx` da `isBuffering = true` holati `loadedmetadata` yoki `canplay` hodisalarida `false` bo'lmagan, natijada video davomiyligi (masalan, `00:00 / 22:17`) yuklangan bo'lsa ham markazdagi qora shaffof yuklanish spinneri ekranni to'sib turardi.
-   - Markazda foydalanuvchi bir marta bosishi bilan videoni ishga tushiruvchi katta interaktiv Play (▶️) tugmasi yo'q edi.
-2. **`GamifiedVideoPlayer.tsx` dagi Yechimlar**:
-   - **`isLoading`, `hasMetadata` va `isBuffering` Holatlari Qat'iy Ajratildi**:
-     * `handleLoadedMetadata`: `setIsLoading(false)`, `setIsBuffering(false)`, `setHasMetadata(true)`.
-     * `handleCanPlay` & `handleLoadedData`: `setIsLoading(false)`, `setIsBuffering(false)`, `setStreamError(null)`.
-     * `handlePlaying`: `setIsLoading(false)`, `setIsBuffering(false)`, `setIsPlaying(true)`.
-     * `handleTimeUpdate`: agar video vaqti o'tayotgan bo'lsa (`cur > 0`), loading/buffering darhol `false` qilinadi.
-   - **Yuklanish Spinneri Qoidasi**:
-     * "Video yuklanmoqda..." spinneri FAQAT `isLoading && !hasMetadata && duration <= 0` bo'lgandagina (dastlabki 1-2 soniyada) ko'rinadi.
-     * `duration > 0` bo'lganda ushbu spinner HECH QACHON ekranni to'smaydi!
-   - **Obsidian-Emerald Katta Boshlash Tugmasi (Center Play Button)**:
-     * Video to'xtab turganda yoki pauzada bo'lsa, markazda Obsidian-Emerald uslubidagi nur taratuvchi katta `[ ▶️ Darsni Boshlash ]` (yoki `[ ▶️ Darsni davom ettirish ]`) tugmasi paydo bo'ladi.
-     * Bosilganda `handleManualStart` ishga tushadi: ovozli ijro etishga urinadi, agar brauzer ovozli autoplay'ni bloklasa, darhol `muted=true` bilan xatosiz ishga tushiradi va tepada miltillovchi `[ Ovozni yoqish ]` tugmasini chiqaradi.
-3. **Backend Public Ruxsati Tekshirildi**:
-   - `backend-django/apps/core/lms_views.py` dagi `lesson_stream_view`, `lesson_hls_playlist_view` va `lesson_hls_file_view` barchasi `@permission_classes([AllowAny])` bilan himoyalangan, brauzerning HTML5 `<video>` tegi token yubormasdan ham 206 Partial Content video baytlarini erkin oladi.
-4. **Avtomatlashgan Testlar**:
-   - `GamifiedVideoPlayer.spec.ts` ga `lessonDuration > 0` bo'lganda "Darsni boshlash" tugmasi chiqishi va "Video yuklanmoqda..." spinneri ko'rinmasligi bo'yicha regressiya testlari qo'shildi (100% PASS).
-
-### 8-BLOK: Exam Builder UI Fix, Smart Bulk Question Importer & Profil Emerald Polish (Phase 34)
-1. **Exam Builder Jadvalidagi Kesilishni To'g'rilash (`ExamBuilderList.tsx`)**:
-   - Desktop jadval kengligi `min-w-[900px]` ga oshirildi.
-   - Sarlavha ustuniga aniq `min-w-[260px] max-w-[340px] px-4 py-3` o'lchamlari berildi, kesilishlar to'liq bartaraf etildi.
-   - Sarlavha yozuvi "EXAM TITLE" ga o'tkazilib, tagida imtihon ID si (`ID: {e.id}`) ko'rinadigan qilindi.
-   - Aralash tillar (masalan, "Savollar", "Unpublish") to'liq xalqaro i18n (`tx(t, "unpublish", "Unpublish")` va `tx(t, "questionsTitle", "Questions")`) tizimiga ulandi.
-   - "+ Create Exam" tugmasi Obsidian-Emerald (`bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold`) rangiga, "Edit" tugmasi esa Obsidian zumrad konturli (`bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20`) uslubga o'tkazildi.
-2. **Smart Bulk Question Importer (`bulk-question-parser.ts` & `BulkQuestionImporterModal.tsx`)**:
-   - Word yoki Telegram'dan ko'chirilgan testlarni avtomatik aniqlovchi regex parser ishlab chiqildi (`parseBulkQuestions`).
-   - Raqamlash (`1.`, `2)`, `3 -`), variantlar (`A)`, `B)`, `C)`, `D)`), to'g'ri javob belgilari (`*`, `[x]`, `[X]`, `(x)`, `correct`) avtomatik ajratib olinadi.
-   - O'qituvchilar uchun jonli ko'rish (Live Preview), to'g'ri javobni interaktiv tanlash va bir marta bosish bilan imtihonga saqlash (`POST /mock/exams/{id}/quick-content`) imkoniyati yaratildi.
-   - Imtihonlar ro'yxatida va `ExamQuestionsEditorDialog` ichida `[ ⚡️ Tezkor Kiritish (Bulk Paste) ]` tugmalari o'rnatildi.
-3. **Profil va Zaif Nuqtalar Xaritasi Ranglari hamda Tillarini Tozalash**:
-   - `score-prediction-card.tsx` dagi matnlar `en.json` va `uz.json` ga ko'chirilib, `useTranslations("profile")` ga ulandi.
-   - SVG grafikdagi och sariq `#89F336` ranglar Obsidian zumrad `#10B981` ga almashtirildi.
-   - `profile-view.tsx` dagi "Telegramni ulash" tugmasi toza Obsidian-Emerald (`bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold`) ga o'tkazildi.
-4. **Avtomatlashgan Testlar va Sifat Nazorati**:
-   - `bulk-question-parser.spec.ts` regressiya testlari (4/4 test passed).
-   - Frontend Vitest to'plami: 59 ta fayl, 373 ta test 100% muvaffaqiyat bilan o'tdi.
-   - TypeScript `tsc --noEmit` 0 xato bilan yakunlandi.
-   - Backend Django testlari: 626 ta test 100% muvaffaqiyat bilan o'tdi.
-
-### 9-BLOK: Video Yarim Joyda To'xtashi va "Dars Yakunlandi!" Xatosining Ildizini Tuzatish (Phase 35)
-1. **VPS Audit Natijalari (read-only, `ffprobe` + PostgreSQL)**:
-   - 30 ta manba MP4 fayl butun va `ffprobe` davomiyligi to'g'ri (masalan, `4_numerals.mp4` = 1097 s).
-   - Faqat 5 ta darsda HLS papkasi bor (1, 2, 5, 10, 26-darslar). Ularning `1080p/720p/480p.m3u8` fayllari 115-116 baytlik soxta qoldiq: bitta `#EXTINF:6.000` segment va darhol `#EXT-X-ENDLIST`.
-   - Pleyer HLS ni 6 soniya o'ynab, "video tugadi" deb hisoblab `onEnded` -> "Dars Yakunlandi! +50 XP" ni chiqargan.
-2. **Ildiz Sabablari (kod)**:
-   - `lms_services._write_fallback_variant` ffmpeg xatosi yoki 300 s timeout bo'lganda soxta 6 soniyalik playlist yozardi (1000+ soniyalik videolar timeoutga tushardi).
-   - `stream_hls_file` har bir yo'q `.m3u8` uchun soxta playlist yaratib, so'rov ichida sinxron transkodlashni ishga tushirardi.
-   - `videos.py` va `videos-view.tsx` har bir dars uchun (HLS yo'q bo'lsa ham) HLS URL ni o'zi hosil qilardi, shuning uchun barcha 29 dars HLS orqali o'ynardi.
-   - Pleyerda `onEnded` va 95% avto-yakunlash qisqa HLS davomiyligiga ishonardi.
-3. **Backend Tuzatishlari**:
-   - Soxta playlistlar butunlay olib tashlandi. Transkod vaqtinchalik `.building` papkada bajariladi, `validate_hls_directory` har bir variantni (ENDLIST, barcha segmentlar, davomiylik >= 97% manba) tekshiradi va faqat keyin atomik almashtiriladi.
-   - `.complete.json` marker oxirida yoziladi. `hls_is_ready()` shu markerga tayanadi. Marker yo'q (yoki buzuq) HLS hech qachon berilmaydi (404) va API `hlsPlaylistUrl=null` qaytaradi, pleyer tekshirilgan MP4 ga o'tadi.
-   - Timeout manba davomiyligiga qarab hisoblanadi (`max(900, 3 x davomiylik)`), `-preset veryfast`, yo'l-yo'lakay xavfsizlik (path traversal rad etiladi).
-   - Yangi `manage.py transcode_all_lessons_hls --audit` (faqat hisobot) va qayta qurish buyrug'i.
-4. **Frontend Tuzatishlari**:
-   - `isStreamTruncated()` HLS davomiyligi dars davomiyligining 80% idan qisqa bo'lsa oqimni yaroqsiz deb topadi, `onEnded`/`durationchange`/`timeupdate` da MP4 ga o'tib, joriy joydan davom ettiradi va darsni yakunlamaydi.
-   - "Dars Pauzada" qatlami va tab almashganda avto-pauza olib tashlandi.
-   - `videos-view.tsx` endi HLS URL ni o'zi yasamaydi, faqat server tasdiqlagan URL ni ishlatadi.
-5. **Testlar**: backend 633 passed (5 skipped), frontend 378 passed, `tsc --noEmit` 0 xato.
 
 ## Jarayonda
 - HLS video transcoding infratuzilmasi va pleylist marshrutlari to'liq ishga tushirildi.
