@@ -112,6 +112,7 @@ services:
       - "127.0.0.1:8001:3001"
     volumes:
       - backend_storage:/app/storage
+      - ./media/downloads:/app/storage/downloads
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:3001/v1/health || exit 1"]
       interval: 10s
