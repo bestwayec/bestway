@@ -7,6 +7,32 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 14-BLOK: React Render Crash (White/Black Screen) Bartaraf Etilishi, ErrorBoundary & Multi-Platform Zero-Downtime Deployment
+1. **React Render Crash va Data Mismatch Bartaraf Etildi**:
+   - `bestway/backend-django/apps/core/cd_exam_views.py` da API javoblariga `"success": True` bayrog'i qo'shildi, `sections_data` da ham `parts`, ham `groups` strukturasi to'liq shakllantirildi, savollarda `prompt`, `text`, `kind`, `type`, `questionType` maydonlari sinxronlashtirildi.
+   - `bestway/frontend/src/lib/public-api.ts` kengaytirildi: `publicGet` endi `{ success: true }` yoki to'g'ridan-to'g'ri `{ data: ... }` qaytgan barcha javoblarni qabul qiladi. `getActiveCdExam()` backenddan bo'sh qaytsa, mavjud demo mock imtihonini xavfsiz yuklab beradi.
+2. **Global va Qism-darajasidagi ErrorBoundary**:
+   - Web frontend uchun `bestway/frontend/src/components/common/error-boundary.tsx` va Desktop uchun `bw-tauri/src/components/common/ErrorBoundary.tsx` yaratildi.
+   - `ExamRunner.tsx`, `cd-exam-view.tsx`, va `mock-runner.tsx` dagi har bir mustaqil bo'lim (left/right split panes, audio pleer, savollar palitrasi) alohida `ErrorBoundary` bilan o'raldi. Natijada xatolik yuz berganda ham butun sahifa qora/oq ekranga aylanmaydi, qayta urinish tugmasi bilan chiroyli fallback ko'rinadi.
+3. **Frontend va Desktop Type Safety & Optional Chaining**:
+   - `bw-tauri/src/components/exam-ui/model.ts` da `mockKindOf` barcha savol turlari (`single_choice`, `mcq`, `multi_select`, `tfng`, `ynng`, `matching`, `speaker_matching`, `matching_headings`, `map_label`, `map_dropdown`, `completion`, `essay`, `speaking`) bo'yicha mustahkamlandi.
+   - `mockSectionToParts` da `(section?.groups || section?.parts || [])` orqali va `toUIQuestion` da `q.prompt ?? q.text ?? ""` orqali undefined xatolari yo'qotildi.
+   - `QuestionGroup.tsx` da xarita rasmi mavjud bo'lganda (`p.part.imageUrl`) split-screen xarita avtomatik faollashishi ta'minlandi.
+4. **`/simulator` Marshruti va Kiosk Rejimi**:
+   - `bestway/frontend/src/app/[locale]/(fullscreen)/simulator/page.tsx` yaratildi va `next.config.ts` dagi 307 loop chaqiruvchi ortiqcha redirect olib tashlandi.
+   - `app-layout-shell.tsx` da `/simulator` sahifasida ham sidebar va navigatsiya yashirilib, to'liq kiosk rejimi ta'minlandi.
+5. **100% Test PASS Kafolati**:
+   - `bw-tauri`: `npx vitest run` — 42 test fayli, 344 ta test 100% muvaffaqiyatli o'tdi.
+   - `bestway/frontend`: `npx tsc --noEmit` (0 xato), `npm test` — 59 test fayli, 378 ta test 100% muvaffaqiyatli o'tdi.
+   - `bestway/backend-django`: `pytest` — 6 ta test 100% muvaffaqiyatli o'tdi.
+6. **Contabo VPS (169.58.58.229 / bestwayec.uz) Zero-Downtime Deployment**:
+   - Yangi kodlar (`551ca22`, `4579ea2`) serverga yuklandi.
+   - `backend` va `frontend` konteynerlari yangidan build qilindi (`docker compose up -d --build backend`, `docker compose up -d --build frontend`).
+   - Redis kesh tozalandi.
+   - `https://bestwayec.uz/simulator` tekshirildi: HTTP 200 OK, barcha savollar va xaritalar bazadan real vaqtda to'liq yuklanmoqda.
+
+---
+
 ### 13-BLOK: Real CD Record Mock Test 1 Ingestion, UI Split-Screen Map & Zero-Downtime VPS Production Deployment
 1. **Real PDF dan Ma'lumotlarni Bazaga Kiritish (`import_cd_record_mock_1`)**:
    - `RECORD MOCK _ TEST 1 - Multi-Level Record .pdf` (18 sahifalik rasmiy imtihon) to'liq tahlil qilinib, `backend-django/apps/core/management/commands/import_cd_record_mock_1.py` boshqaruv buyrug'i orqali PostgreSQL bazasiga kiritildi.
