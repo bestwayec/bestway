@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
-import { AppSidebar } from "@/components/app/app-sidebar";
-import { AppTopbar } from "@/components/app/app-topbar";
-import { MobileNav } from "@/components/app/mobile-nav";
+import { AppLayoutShell } from "@/components/app/app-layout-shell";
 import { getRefreshToken, getSessionRole } from "@/lib/auth";
 import { getPathname } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -27,14 +25,5 @@ export default async function AppLayout({
     redirect(`${getPathname({ locale: locale as Locale, href: "/login" })}?reauth=1`);
   }
 
-  return (
-    <div className="flex min-h-dvh bg-bg">
-      <AppSidebar role={role} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopbar role={role} />
-        <main className="flex-1 px-4 pt-6 pb-32 sm:px-6 sm:pb-36 lg:pb-8">{children}</main>
-      </div>
-      <MobileNav role={role} />
-    </div>
-  );
+  return <AppLayoutShell role={role}>{children}</AppLayoutShell>;
 }

@@ -17,17 +17,29 @@ from .system_settings import audit
 
 
 def storage_path(key):
+    if not key:
+        raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
     base = Path(os.environ.get('STORAGE_DIR', settings.MEDIA_ROOT))
-    if not base.is_absolute():base=Path(settings.BASE_DIR).parent/'backend'/base
-    base=base.resolve()
-    target = (base / key).resolve()
+    if not base.is_absolute():
+        base = Path(settings.BASE_DIR).parent / 'backend' / base
+    base = base.resolve()
+    clean_key = str(key).replace('\\', '/').strip('/')
+    if clean_key.startswith('media/'):
+        clean_key = clean_key[len('media/'):]
+    target = (base / clean_key).resolve()
     if target != base and base not in target.parents:
         raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
+    if not target.exists():
+        fname = Path(clean_key).name
+        for sub in ('speaking_submissions', 'mock'):
+            candidate = base / sub / fname
+            if candidate.is_file():
+                return candidate
     return target
 
 
 def initialize_storage():
-    for directory in ('videos', 'thumbnails', 'teachers', 'gallery'):
+    for directory in ('videos', 'thumbnails', 'teachers', 'gallery', 'speaking_submissions'):
         storage_path(directory).mkdir(parents=True, exist_ok=True)
 
 

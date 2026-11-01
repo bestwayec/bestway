@@ -211,7 +211,8 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                 {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
               </span>
             )}
-            <Button size="sm" loading={submit.isPending} onClick={() => setConfirmOpen(true)} className="hidden sm:inline-flex">
+            <Button size="sm" disabled={total <= 0}
+              loading={submit.isPending} onClick={() => setConfirmOpen(true)} className="hidden sm:inline-flex">
               <Send />
               {tFallback(t, "submit", "Submit")}
             </Button>
@@ -468,13 +469,15 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
       />
 
       <div className="mt-4 flex justify-end gap-2 sm:hidden">
-        <Button size="lg" className="w-full" loading={submit.isPending} onClick={() => setConfirmOpen(true)}>
+        <Button size="lg" className="w-full" disabled={total <= 0}
+              loading={submit.isPending} onClick={() => setConfirmOpen(true)}>
           <Send />
           {tFallback(t, "submit", "Submit test")}
         </Button>
       </div>
       <div className="mt-6 hidden justify-end sm:flex">
-        <Button size="lg" loading={submit.isPending} onClick={() => setConfirmOpen(true)}>
+        <Button size="lg" disabled={total <= 0}
+              loading={submit.isPending} onClick={() => setConfirmOpen(true)}>
           <Send />
           {tFallback(t, "submit", "Submit test")}
         </Button>
@@ -492,7 +495,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                 "Submit the test? You can't change it afterwards.",
               )}{" "}
               <span className="mt-2 block text-xs">
-                {answeredCount}/{total} answered. {total - answeredCount > 0 ? tFallback(t, "unansweredWarning", "Unanswered questions will be counted as 0.") : tFallback(t, "allAnswered", "All questions answered — great job!")}
+                {total <= 0 ? "Savollar yuklanmadi (0/0). Topshirib bo'lmaydi." : `${answeredCount}/${total} answered. ${total - answeredCount > 0 ? tFallback(t, "unansweredWarning", "Unanswered questions will be counted as 0.") : tFallback(t, "allAnswered", "All questions answered — great job!")}`}
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -501,6 +504,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
               {tc("cancel")}
             </Button>
             <Button
+              disabled={total <= 0}
               loading={submit.isPending}
               onClick={() => {
                 setConfirmOpen(false);

@@ -47,11 +47,21 @@ def media_url(group_id, kind):
 
 
 def resolve_key(key):
-    root = Path(settings.MEDIA_ROOT).resolve()
-    key = key.replace('\\', '/')
-    target = (root / key).resolve()
-    if not key or target == root or not target.is_relative_to(root) or re.match(r'^[A-Za-z]:', key):
+    if not key:
         raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
+    root = Path(settings.MEDIA_ROOT).resolve()
+    clean_key = str(key).replace('\\', '/').strip('/')
+    if clean_key.startswith('media/'):
+        clean_key = clean_key[len('media/'):]
+    target = (root / clean_key).resolve()
+    if target == root or not target.is_relative_to(root) or re.match(r'^[A-Za-z]:', clean_key):
+        raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
+    if not target.exists():
+        fname = Path(clean_key).name
+        for sub in ('speaking_submissions', 'mock'):
+            candidate = root / sub / fname
+            if candidate.is_file():
+                return candidate
     return target
 
 
@@ -106,9 +116,9 @@ def validate_upload(upload, field='file', *, staged=False):
         raise ContractAPIException('FILE_TOO_LARGE', 'Fayl hajmi ruxsat etilganidan katta', 400)
 
 
-def store_upload(upload, field='file', *, staged=False):
+def store_upload(upload, field='file', *, staged=False, folder='mock'):
     validate_upload(upload, field, staged=staged)
-    key = f'mock/{uuid4()}{Path(upload.name).suffix.lower()}'
+    key = f'{folder}/{uuid4()}{Path(upload.name).suffix.lower()}'
     path = resolve_key(key)
     path.parent.mkdir(parents=True, exist_ok=True)
     try:

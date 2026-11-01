@@ -33,8 +33,9 @@ export function SubmitConfirmModal({
   skillName,
   isSingleSection,
 }: SubmitConfirmModalProps) {
+  const hasQuestions = total > 0;
   const missing = Math.max(0, total - answered);
-  const isAllAnswered = missing === 0;
+  const isAllAnswered = hasQuestions && missing === 0 && answered >= total;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,7 +58,19 @@ export function SubmitConfirmModal({
             </span>
           </div>
 
-          {isAllAnswered ? (
+          {!hasQuestions ? (
+            <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500 dark:text-red-400">
+              <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-400">
+                  Savollar yuklanmadi yoki mavjud emas (0 / 0)
+                </p>
+                <p className="mt-1 text-fg-muted">
+                  Savollar ro&apos;yxati yuklanmaganligi sababli imtihonni topshirib bo&apos;lmaydi. Iltimos, sahifani yangilang yoki administratorga murojaat qiling.
+                </p>
+              </div>
+            </div>
+          ) : isAllAnswered ? (
             <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
               <p>Siz barcha topshiriqlarga to&apos;liq javob berdingiz. Ishingizni xotirjam topshirishingiz mumkin.</p>
@@ -90,6 +103,7 @@ export function SubmitConfirmModal({
           <Button
             type="button"
             className="flex-1 bg-brand font-bold text-white hover:bg-brand-hover"
+            disabled={!hasQuestions}
             loading={isSubmitting}
             onClick={onConfirm}
           >

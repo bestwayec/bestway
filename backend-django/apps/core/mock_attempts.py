@@ -535,9 +535,16 @@ def switch_section(actor, attempt_id, target_skill):
         sec = MockSection.objects.filter(exam_id=attempt.exam_id, skill=target_skill).first()
         if not sec:
             fail('SECTION_NOT_FOUND', f"Section with skill '{target_skill}' not found in exam", 404)
+        if attempt.flow_mode == 'full_test' and target_skill != attempt.current_skill:
+            existing_skills = [s.skill for s in MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order')]
+            order = [s for s in SKILLS if s in existing_skills] or existing_skills or list(SKILLS)
+            curr_idx = order.index(attempt.current_skill) if attempt.current_skill in order else 0
+            target_idx = order.index(target_skill) if target_skill in order else -1
+            if target_idx > curr_idx:
+                fail('SECTION_LOCKED', 'Full Mock imtihonda bo‘limlarni ketma-ketlikda topshirish shart', 403)
         attempt.current_skill = target_skill
         attempt.save(update_fields=['current_skill'])
-        return {'saved': True, 'currentSkill': attempt.current_skill}
+        return {'saved': True, 'currentSkill': attempt.current_skill, 'sessionSignature': attempt_signature.sign(attempt), 'attemptId': attempt.id}
 
 
 def advance(actor, attempt_id):
@@ -577,7 +584,8 @@ def advance(actor, attempt_id):
             fields += ['overall_deadline_at', 'deadline_at']
         attempt.save(update_fields=fields)
         return dict(saved=True, currentSkill=attempt.current_skill, submittedSections=submitted,
-            serverTime=timezone.now(), sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at)
+            serverTime=timezone.now(), sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
+            sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
 
 
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
@@ -605,11 +613,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         if is_partial(attempt) and len(qs) != len(ids):
             fail('QUESTION_NOT_IN_EXAM', 'Media task is outside the selected practice scope', 403)
         if attempt.flow_mode == 'full_test' and any(q.group.section.skill != attempt.current_skill for q in qs):
-            if kind in ('listening', 'speaking') and all(q.group.section.skill == kind for q in qs):
-                attempt.current_skill = kind
-                attempt.save(update_fields=['current_skill'])
-            else:
-                fail('SECTION_LOCKED', 'Question outside current section', 403)
+            fail('SECTION_LOCKED', 'Question outside current section', 403)
         at = timezone.now()
         state = dict(attempt.media_state or {})
         phase = state.get(entity_id)
@@ -770,7 +774,8 @@ def detail(actor, attempt_id):
     if staff:
         result['examTitle'] = attempt.exam.title
         result['cheatEvents'] = [dict(event=e.event, date=e.created_at) for e in MockCheatEvent.objects.filter(attempt_id=attempt_id).order_by('created_at')]
-    result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections))
+    result.update(serverTime=timezone.now(), annotations=attempt.annotations or [], sections=scope_sections(attempt, sections),
+        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
     try:
         from apps.legacy_schema.models import AssessmentEvaluation, AssessmentJob
 
@@ -843,6 +848,8 @@ def upload_speaking(actor, attempt_id, question_id, upload):
     if upload is None:
         fail('NO_FILE', 'Audio fayl yuklanmadi')
     validate_upload(upload, 'audio')
+    if upload.size < 10240:
+        fail('FILE_TOO_SMALL', 'Ovozli javob hajmi juda kichik (kamida 10 KB bo‘lishi kerak)')
     if upload.size > 25*1024*1024:
         fail('FILE_TOO_LARGE', 'Fayl hajmi ruxsat etilganidan katta')
     created_key = None
@@ -872,7 +879,7 @@ def upload_speaking(actor, attempt_id, question_id, upload):
             prior = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
             if prior and prior.audio_key and versioned(attempt) and attempt.mode == 'timed' and not speaking.strict(attempt):
                 return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id))
-            created_key = store_upload(upload, 'audio')
+            created_key = store_upload(upload, 'audio', folder='speaking_submissions')
             duration = speaking.verify_stored(attempt, q, created_key) if speaking.strict(attempt) else None
             if prior and prior.audio_key and speaking.strict(attempt) and attempt.mode == 'timed':
                 # Validate even a retry's bytes, but preserve the first accepted
