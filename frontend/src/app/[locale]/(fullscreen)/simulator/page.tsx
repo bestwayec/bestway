@@ -27,18 +27,5 @@ export default async function SimulatorPage({
     }
   }
 
-  if (!exam) {
-    return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-bg p-4 text-center">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
-          <h1 className="text-xl font-bold text-fg">Imtihon faollashtirilmoqda...</h1>
-          <p className="mt-2 text-xs text-fg-muted">
-            Hozirda faol CD imtihon yuklanmoqda. Iltimos, bir necha soniyadan so&apos;ng sahifani yangilang.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return <CDLayout exam={exam} />;
 }

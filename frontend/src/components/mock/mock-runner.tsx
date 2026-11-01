@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  AlertTriangle,
   Camera,
   CheckCircle2,
   Keyboard,
@@ -11,11 +12,13 @@ import {
   Maximize2,
   Minimize2,
   Monitor,
+  RefreshCw,
   Send,
   StickyNote,
   Trash2,
   X,
 } from "lucide-react";
+import { StrictErrorBoundary } from "@/components/common/StrictErrorBoundary";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -541,6 +544,33 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     );
   }
 
+  // Defensive fallback: if sections array is empty or undefined, render a clear UI error message, NOT a black screen
+  if (!exam || !exam.sections || exam.sections.length === 0) {
+    console.error("[MockRunner] Failed to load questions from server: sections is empty", {
+      examId: attempt.examId,
+      rawExam: examQ.data,
+    });
+    return (
+      <div className="mx-auto flex min-h-[400px] max-w-lg items-center justify-center p-6 text-center">
+        <div className="w-full rounded-2xl border-2 border-red-500/50 bg-surface p-6 shadow-2xl">
+          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-red-500/20 text-red-500">
+            <AlertTriangle className="size-6" />
+          </div>
+          <h2 className="text-lg font-bold text-red-600">Failed to load questions from server</h2>
+          <p className="mt-2 text-xs text-fg-muted">
+            Ushbu imtihon topshiriqlari serverdan yuklanmadi yoki bo&apos;sh keldi (0 bo&apos;lim). Iltimos, qayta urinib ko&apos;ring.
+          </p>
+          <div className="mt-4 flex justify-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => examQ.refetch()} className="gap-2">
+              <RefreshCw className="size-3.5" />
+              Qayta yuklash (Retry)
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const guidedMultilevel = versioned && exam.type === "multilevel" && (section?.skill === "writing" || section?.skill === "speaking");
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
@@ -556,12 +586,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const sharedSingleAudioUrl = audioTimestampsQ.data?.audioUrl ?? null;
 
   return (
-    <ExamLocker
-      active={strict}
-      attemptId={attempt.id}
-      onAnomaly={(event) => flagMutate(event)}
-      onForceSubmit={() => void doSubmit(true)}
-    >
+    <StrictErrorBoundary fallbackTitle="Mock Runner Render Crash">
+      <ExamLocker
+        active={strict}
+        attemptId={attempt.id}
+        onAnomaly={(event) => flagMutate(event)}
+        onForceSubmit={() => void doSubmit(true)}
+      >
       <NetworkBanner />
       <div
         className={cn(
@@ -900,6 +931,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         />
       </div>
     </ExamLocker>
+    </StrictErrorBoundary>
   );
 }
 

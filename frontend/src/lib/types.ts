@@ -717,11 +717,17 @@ export interface MockQuestion {
   sortOrder: number;
   type: MockQuestionType;
   prompt: string;
+  text?: string;
+  kind?: string;
+  questionType?: string;
   options: string[] | null;
   points: number;
+  score?: number;
+  maxScore?: number;
   wordLimit: number | null;
   answerRule?: ObjectiveAnswerRule | null;
   guidance?: TaskGuidance;
+  payload?: Record<string, any>;
   correctAnswers?: string[] | null;
   acceptedVariants?: string[] | null;
 }
@@ -730,15 +736,19 @@ export interface MockGroup {
   id: string;
   sortOrder: number;
   sourcePartIndex?: number;
+  key?: string;
+  label?: string;
   title: string | null;
   instructions: string | null;
   passageText: string | null;
   contentHtml: string | null;
+  passageHtml?: string | null;
   contentLayout: string | null;
   optionsReusable?: boolean | null;
   /** Staff authoring responses only; omitted from student-shaped exams. */
   audioScript?: string | null;
   hasAudio: boolean;
+  strictAudio?: boolean;
   audioUrl: string | null;
   imageUrl: string | null;
   /** Staff-only semantic Multilevel task/part cap. */
@@ -751,6 +761,7 @@ export interface MockGroup {
   startSec?: number | null;
   endSec?: number | null;
   questions: MockQuestion[];
+  items?: MockQuestion[];
 }
 
 export interface MockSection {
@@ -758,17 +769,23 @@ export interface MockSection {
   skill: MockSkill;
   title: string | null;
   sortOrder: number;
+  order?: number;
   durationMinutes: number | null;
+  timeLimit?: number;
   instructions: string | null;
   audioUrl?: string | null;
   audioTimestamps?: AudioTimestampItem[] | null;
   groups: MockGroup[];
+  parts?: MockGroup[];
+  questionCount?: number;
 }
 
 /** shapeExam natijasi (start javobidagi `exam`) — narx/access YO'Q */
 export interface MockExamStructure {
   id: string;
+  code?: string;
   type: MockExamType;
+  examType?: string;
   specificationVersion?: string;
   specification?: Record<MockSkill, { durationSeconds: number; parts: PartSpecification[] }>;
   /** practice = 1–4 skill, full_mock = strict IELTS blueprint. */
@@ -779,13 +796,17 @@ export interface MockExamStructure {
   practiceLevel?: PracticeLevel | null;
   isPublished: boolean;
   isDemo: boolean;
+  isCdFormat?: boolean;
   createdAt: string;
   updatedAt: string;
   /** Optimistic content version (stale-tab save guard). */
   contentVersion: number;
   questionCount: number;
+  totalQuestions?: number;
+  durationMinutes?: number | null;
   audioTimestamps?: AudioTimestampItem[] | null;
   sections: MockSection[];
+  parts?: MockGroup[];
 }
 
 /** GET /mock/exams/:id */
