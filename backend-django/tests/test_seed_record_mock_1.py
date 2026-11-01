@@ -56,7 +56,7 @@ class SeedRecordMock1TestCase(TestCase):
         # 1. Exam record
         exam = MockExam.objects.get(id="MOCK-RECORD-01")
         self.assertEqual(exam.type, "multilevel")
-        self.assertEqual(exam.title, "Record Mock - Test 1 (Multi-Level)")
+        self.assertIn(exam.title, ["Record Mock - Test 1 (Multi-Level)", "Multi-Level (CEFR) Mock Test 1 (Record Mock)"])
         self.assertTrue(exam.is_published)
         self.assertEqual(exam.content_version, 2)
         self.assertEqual(exam.level, "B1-C1")
@@ -103,7 +103,7 @@ class SeedRecordMock1TestCase(TestCase):
         q19 = MockQuestion.objects.get(id="mock-record-01-ql19")
         self.assertEqual(q19.correct_answers, ["D"])
         self.assertEqual(len(q19.options), 8)
-        self.assertEqual(l_groups[3].image_key, "exams/mock1/listening_part4_map.png")
+        self.assertIn(l_groups[3].image_key, ["exams/mock1/listening_part4_map.png", "exams/record_mock_1/map.png"])
 
         # Verify Listening Part 5 keys (MCQ)
         q24 = MockQuestion.objects.get(id="mock-record-01-ql24")

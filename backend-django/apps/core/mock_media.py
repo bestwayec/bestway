@@ -49,12 +49,15 @@ def media_url(group_id, kind):
 def resolve_key(key):
     if not key:
         raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
+    str_key = str(key).replace('\\', '/')
+    if str_key.startswith('/') and not str_key.startswith('/media/'):
+        raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
     root = Path(settings.MEDIA_ROOT).resolve()
-    clean_key = str(key).replace('\\', '/').strip('/')
+    clean_key = str_key.strip('/')
     if clean_key.startswith('media/'):
         clean_key = clean_key[len('media/'):]
     target = (root / clean_key).resolve()
-    if target == root or not target.is_relative_to(root) or re.match(r'^[A-Za-z]:', clean_key):
+    if target == root or not target.is_relative_to(root) or re.match(r'^[A-Za-z]:', str_key):
         raise ContractAPIException('INVALID_FILE_KEY', "Fayl manzili noto'g'ri", 400)
     if not target.exists():
         fname = Path(clean_key).name
@@ -63,7 +66,6 @@ def resolve_key(key):
             if candidate.is_file():
                 return candidate
     return target
-
 
 def delete_created(key):
     """Only for fresh random files produced by this request before DB commit."""

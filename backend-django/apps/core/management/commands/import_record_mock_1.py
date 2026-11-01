@@ -28,8 +28,8 @@ from apps.legacy_schema.models import (
 )
 
 EXAM_ID = "MOCK-RECORD-01"
-EXAM_TITLE = "Record Mock - Test 1 (Multi-Level)"
-MAP_IMAGE_PATH = "exams/mock1/listening_part4_map.png"
+EXAM_TITLE = "Multi-Level (CEFR) Mock Test 1 (Record Mock)"
+MAP_IMAGE_PATH = "exams/record_mock_1/map.png"
 SPEAKING_SPORT_IMAGE_PATH = "exams/mock1/speaking_part12_sport.png"
 SPEAKING_EDU_IMAGE_PATH = "exams/mock1/speaking_part2_education.png"
 
@@ -87,6 +87,17 @@ def ensure_media_assets(stdout) -> dict[int, str]:
         if not dst.is_file() and src.is_file():
             shutil.copyfile(str(src), str(dst))
 
+        # Also ensure map.png exists in exams/record_mock_1/
+    rec1_dir = media_root / "exams/record_mock_1"
+    rec1_dir.mkdir(parents=True, exist_ok=True)
+    map_dst = rec1_dir / "map.png"
+    map_src = mock1_dir / "listening_part4_map.png"
+    if map_src.is_file() and not map_dst.is_file():
+        shutil.copyfile(str(map_src), str(map_dst))
+    rec1_map = rec1_dir / "listening_part4_map.png"
+    if rec1_map.is_file() and not map_dst.is_file():
+        shutil.copyfile(str(rec1_map), str(map_dst))
+
     stdout.write(f"Verified media assets in {media_root}")
     return audio_keys
 
@@ -114,6 +125,9 @@ def seed_record_mock_1(stdout, style=None):
 
     with transaction.atomic():
         now = timezone.now()
+        # 0. Unpublish old Gym & Vegetarian mock test so Record Mock is default
+        MockExam.objects.filter(id="multilevel-test-01-gym-vegetarian").update(is_published=False, is_demo=False)
+
 
         # =========================================================================
         # EXAM ROOT RECORD
@@ -136,7 +150,7 @@ def seed_record_mock_1(stdout, style=None):
                 "speaking_profile_version": CURRENT_SPEAKING_PROFILE,
                 "assessment_policy": "FULL_MOCK_AI_WITH_REVIEW",
                 "is_published": True,
-                "is_demo": False,
+                "is_demo": True,
                 "is_free_for_approved": True,
                 "price": 0,
                 "created_by_id": admin_user.id,
@@ -186,14 +200,14 @@ def seed_record_mock_1(stdout, style=None):
         )
 
         l_q_data_1 = [
-            (1, "Choose the correct reply to sentence 1", ["C"], ["c"], ["A  Me too.", "B  Can you?", "C  Sure, you can."]),
-            (2, "Choose the correct reply to sentence 2", ["A"], ["a"], ["A  Take bus 6.", "B  It starts at 9 a.m. tomorrow.", "C  It’s in the center."]),
-            (3, "Choose the correct reply to sentence 3", ["C"], ["c"], ["A  OK, here it is.", "B  No, that doesn’t suit you.", "C  Sure, I’ll wait here."]),
-            (4, "Choose the correct reply to sentence 4", ["B"], ["b"], ["A  In the school library.", "B  Since 1997.", "C  Before I was born."]),
-            (5, "Choose the correct reply to sentence 5", ["A"], ["a"], ["A  You should take a short break.", "B  Let’s get to work right now!", "C  Don’t worry, they haven’t."]),
-            (6, "Choose the correct reply to sentence 6", ["A"], ["a"], ["A  How about an ice-cream?", "B  You need to wear your sweater.", "C  Let’s eat some fresh pizza and chips."]),
-            (7, "Choose the correct reply to sentence 7", ["C"], ["c"], ["A  When does it happen?", "B  Where did you see that?", "C  Who told you that?"]),
-            (8, "Choose the correct reply to sentence 8", ["B"], ["b"], ["A  My hands are also firm.", "B  Sounds like a boring person.", "C  Can you expect anything?"]),
+            (1, "", ["C"], ["c"], ["A  Me too.", "B  Can you?", "C  Sure, you can."]),
+            (2, "", ["A"], ["a"], ["A  Take bus 6.", "B  It starts at 9 a.m. tomorrow.", "C  It’s in the center."]),
+            (3, "", ["C"], ["c"], ["A  OK, here it is.", "B  No, that doesn’t suit you.", "C  Sure, I’ll wait here."]),
+            (4, "", ["B"], ["b"], ["A  In the school library.", "B  Since 1997.", "C  Before I was born."]),
+            (5, "", ["A"], ["a"], ["A  You should take a short break.", "B  Let’s get to work right now!", "C  Don’t worry, they haven’t."]),
+            (6, "", ["A"], ["a"], ["A  How about an ice-cream?", "B  You need to wear your sweater.", "C  Let’s eat some fresh pizza and chips."]),
+            (7, "", ["C"], ["c"], ["A  When does it happen?", "B  Where did you see that?", "C  Who told you that?"]),
+            (8, "", ["B"], ["b"], ["A  My hands are also firm.", "B  Sounds like a boring person.", "C  Can you expect anything?"]),
         ]
         for num, prompt, answers, variants, options in l_q_data_1:
             MockQuestion.objects.update_or_create(

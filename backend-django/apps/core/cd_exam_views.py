@@ -34,6 +34,65 @@ def get_cd_exam_session(request, exam_id: str):
     )
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_active_cd_exam(request):
+    """
+    Returns the default active CD Exam session payload (MOCK-RECORD-01).
+    """
+    exam = Exam.objects.filter(is_published=True, code="MOCK-RECORD-01").first()
+    if not exam:
+        exam = Exam.objects.filter(is_published=True).first()
+    if exam:
+        return _serialize_cd_exam(exam)
+    legacy = MockExam.objects.filter(is_published=True, id="MOCK-RECORD-01").first()
+    if not legacy:
+        legacy = MockExam.objects.filter(is_published=True).exclude(id="multilevel-test-01-gym-vegetarian").first()
+    if legacy:
+        return _serialize_legacy_mock_exam(legacy)
+    return JsonResponse(
+        {"error": {"code": "NO_ACTIVE_EXAM", "message": "No active exam found"}},
+        status=404
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_mock_list(request):
+    """
+    Returns a list of published active mock exams for candidate selection.
+    """
+    items = []
+    cd_exams = Exam.objects.filter(is_published=True).order_by("code")
+    for e in cd_exams:
+        items.append({
+            "id": e.code,
+            "code": e.code,
+            "title": e.title,
+            "examType": e.exam_type,
+            "durationMinutes": e.duration_minutes,
+            "isCdFormat": e.is_cd_format,
+            "isPublished": e.is_published,
+            "isActive": True,
+            "description": e.description,
+        })
+    legacy_exams = MockExam.objects.filter(is_published=True).exclude(id="multilevel-test-01-gym-vegetarian").order_by("-created_at")
+    for le in legacy_exams:
+        if not any(item["code"] == le.id for item in items):
+            items.append({
+                "id": le.id,
+                "code": le.id,
+                "title": le.title,
+                "examType": le.type,
+                "durationMinutes": 150,
+                "isCdFormat": True,
+                "isPublished": le.is_published,
+                "isActive": True,
+                "description": le.description,
+            })
+    return JsonResponse({"data": items, "results": items, "count": len(items)})
+
+
 def _serialize_cd_exam(exam: Exam) -> JsonResponse:
     sections_data = []
     all_parts = []

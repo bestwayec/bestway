@@ -15,7 +15,10 @@ export function AppLayoutShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname() || "";
-  const isExamAttempt = pathname.includes("/mock/attempt") || pathname.includes("/tests/attempt");
+  const isExamAttempt =
+    pathname.includes("/mock/attempt") ||
+    pathname.includes("/tests/attempt") ||
+    pathname.includes("/demo/mock");
 
   // Prevent accidental navigation away during exam attempt
   React.useEffect(() => {

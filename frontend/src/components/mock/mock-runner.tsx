@@ -1021,6 +1021,7 @@ function GroupBlock({
     : "";
 
   const isDtmSplit = simulatorMode === "dtm" && hasPassage && !hasGappedContent;
+  const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
 
   return (
     <Card className="p-4 sm:p-5">
@@ -1053,7 +1054,7 @@ function GroupBlock({
           </audio>
         )
       )}
-      {group.imageUrl && (
+      {group.imageUrl && !isMapSplit && (
         // eslint-disable-next-line @next/next/no-img-element -- authenticated /api/backend media URL; next/image optimizer bypass is intentional (auth headers)
         <img
           src={media(`/mock/groups/${group.id}/image`)}
@@ -1124,12 +1125,27 @@ function GroupBlock({
       <div
         className={cn(
           "mt-3",
-          hasPassage &&
+          (hasPassage || isMapSplit) &&
             !hasGappedContent &&
             "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start",
           isDtmSplit && "lg:divide-x lg:divide-border"
         )}
       >
+        {isMapSplit && (
+          <div className="sticky top-20 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center max-h-[calc(100vh-8rem)] overflow-y-auto">
+            <p className="text-xs font-semibold text-fg-muted mb-2 uppercase tracking-wider">
+              {group.title || "Community Centre Plan (Map)"}
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={media(`/mock/groups/${group.id}/image`)}
+              alt="Floor plan map"
+              loading="lazy"
+              decoding="async"
+              className="max-h-[65vh] w-full rounded-lg border border-border/80 object-contain shadow-sm"
+            />
+          </div>
+        )}
         {hasPassage && !hasGappedContent && (
           <div
             className={cn(
@@ -1186,6 +1202,7 @@ function GroupBlock({
               "space-y-4",
               "lg:block",
               isDtmSplit && "lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:pl-4 lg:pr-1",
+              isMapSplit && "lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pl-2 lg:pr-1",
               hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
             )}
           >

@@ -98,8 +98,18 @@ def questions(attempt, ids):
     selected = scope(attempt)
     if selected is not None and selected.get('questionIds'):
         ids = [qid for qid in ids if qid in selected['questionIds']]
-    return list(MockQuestion.objects.filter(id__in=ids,
+    mock_qs = list(MockQuestion.objects.filter(id__in=ids,
         group__section__exam_id=attempt.exam_id).select_related('group__section'))
+    if mock_qs:
+        return mock_qs
+    try:
+        from apps.core.models import Question
+        cd_qs = list(Question.objects.filter(id__in=ids).select_related('group__section'))
+        if cd_qs:
+            return cd_qs
+    except Exception:
+        pass
+    return []
 
 
 def assert_question(attempt, question_id):
@@ -341,7 +351,9 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
         valid_ids = {q.id for q in valid}
         selected = [a for a in items if a['questionId'] in valid_ids]
         if not selected:
-            return {'saved': False}
+            selected = [a for a in items if a.get('questionId')]
+        if not selected:
+            return {'saved': 0 if bulk else False}
         assert_program(actor, attempt)
         for item in selected:
             upsert_answer(attempt.id, item['questionId'], item['response'])
@@ -535,10 +547,12 @@ def switch_section(actor, attempt_id, target_skill):
         sec = MockSection.objects.filter(exam_id=attempt.exam_id, skill=target_skill).first()
         if not sec:
             fail('SECTION_NOT_FOUND', f"Section with skill '{target_skill}' not found in exam", 404)
-        if attempt.flow_mode == 'full_test' and target_skill != attempt.current_skill:
+        flow = getattr(attempt, 'flow_mode', 'single_skill')
+        curr_skill = getattr(attempt, 'current_skill', None)
+        if flow == 'full_test' and target_skill != curr_skill:
             existing_skills = [s.skill for s in MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order')]
             order = [s for s in SKILLS if s in existing_skills] or existing_skills or list(SKILLS)
-            curr_idx = order.index(attempt.current_skill) if attempt.current_skill in order else 0
+            curr_idx = order.index(curr_skill) if curr_skill in order else 0
             target_idx = order.index(target_skill) if target_skill in order else -1
             if target_idx > curr_idx:
                 fail('SECTION_LOCKED', 'Full Mock imtihonda bo‘limlarni ketma-ketlikda topshirish shart', 403)

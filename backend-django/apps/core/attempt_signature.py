@@ -31,7 +31,7 @@ def _message(attempt_id, student_id, started_at) -> bytes:
 
 
 def sign(attempt) -> str:
-    return hmac.new(_key(), _message(attempt.id, attempt.student_id, attempt.started_at), hashlib.sha256).hexdigest()
+    return hmac.new(_key(), _message(attempt.id, getattr(attempt, 'student_id', None), getattr(attempt, 'started_at', None)), hashlib.sha256).hexdigest()
 
 
 def verify_request(request, attempt_id) -> None:
