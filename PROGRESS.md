@@ -7,6 +7,24 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 39-BOSQICH: OS-Level Microphone Permissions (Tauri Webview, macOS Info.plist, Windows/Linux Flags) & Auto-Updater Deployment Optimization
+1. **macOS Mikrofon Ruxsatnomalari (`bundle.macOS.infoPlist` va `Entitlements.plist`)**:
+   - `bw-tauri/src-tauri/tauri.conf.json` da `bundle.macOS` bo'limiga `"infoPlist": "Info.plist"` ulandi.
+   - `Info.plist` da `NSMicrophoneUsageDescription` bog'landi.
+   - `Entitlements.plist` ga `com.apple.security.device.audio-input` bilan bir qatorda `com.apple.security.device.microphone` qo'shildi (Sandboxing va Hardened Runtime to'liq qamrab olindi).
+2. **Windows (WebView2) va Linux (WebKitGTK) Media Stream Bayroqlari**:
+   - `src-tauri/src/main.rs` va `src-tauri/src/lib.rs` da dastur ishga tushishi bilan `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` ga `--enable-media-stream --enable-features=msWebAudioCapture,msWebAudioCaptureMute,PreloadMediaEngagementData --autoplay-policy=no-user-gesture-required` avtomatik yuklanishi ta'minlandi.
+   - Linux platformasi uchun `WEBKIT_WEBRTC_AUDIO_CAPTURE=1` va `WEBKIT_MEDIA_STREAM=1` sozlandi.
+3. **Frontend Speaking Capture va Foydalanuvchiga Aniq Xatolik Alerti (`SpeakingPane.tsx` va `audio-capture.ts`)**:
+   - `openMicrophone()` dagi DSP cheklovlari rad etilsa, avtomatik ravishda toza `navigator.mediaDevices.getUserMedia({ audio: true, video: false })` ga zaxira (fallback) o'tishi joriy etildi.
+   - Speaking recorder interfeysida mikrofon ruxsati rad etilganda foydalanuvchiga operatsion tizim sozlamalari (Windows Settings / macOS Privacy & Security) bo'yicha ko'rsatma beruvchi aniq amber ogohlantirish paneli va "↻ Retry Microphone Access" tugmasi qo'shildi.
+4. **Auto-Updater 404 Xatosini Hal Qilish va Serverga Deploy Qo'llanmasi**:
+   - `docker-compose.yml` da `./media/downloads:/app/storage/downloads` to'g'ridan-to'g'ri bog'landi.
+   - Serverda `Bestway.App_1.0.7_x64-setup.exe` va yangi versiyalar uzluksiz `HTTP 200` bilan yuklanishi `curl` orqali tasdiqlandi.
+5. **100% QA Test Gate**:
+   - Rust: 22 ta unit test 100% PASS.
+   - Desktop frontend: 42 test fayli, 344 ta test 100% PASS, `tsc` 0 xato.
+
 ### 38-BOSQICH: AES-256 Offline Video Encryption, On-the-Fly Range Decryption & Tauri Auto-Updater
 1. **AES-256-CTR Oflayn Video Shifrlash Dvigateli (Rust `src-tauri/src/encryption.rs`)**:
    - `aes`, `ctr`, `cipher`, `rand`, `sha2` kutubxonalari ulandi.
