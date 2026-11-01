@@ -18,7 +18,8 @@ export function AppLayoutShell({
   const isExamAttempt =
     pathname.includes("/mock/attempt") ||
     pathname.includes("/tests/attempt") ||
-    pathname.includes("/demo/mock");
+    pathname.includes("/demo/mock") ||
+    pathname.includes("/simulator");
 
   // Prevent accidental navigation away during exam attempt
   React.useEffect(() => {

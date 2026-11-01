@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/simulator',
+        destination: '/uz/simulator',
+        permanent: false,
+      },
+      {
         source: '/download',
         destination: '/desktop',
         permanent: false,

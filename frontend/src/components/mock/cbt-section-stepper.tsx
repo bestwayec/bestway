@@ -46,6 +46,7 @@ export function CbtSectionStepper({
   isLastSection = false,
   isFullTest = false,
 }: CbtSectionStepperProps) {
+  const safeGroups = groups || [];
   const [activePartIndex, setActivePartIndex] = React.useState(0);
   const [internalFlags, setInternalFlags] = React.useState<Set<string>>(new Set());
   const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(null);
@@ -55,8 +56,8 @@ export function CbtSectionStepper({
   // Flatten questions with global 1-based sequential index
   const flattenedQuestions = React.useMemo(() => {
     let globalNum = 1;
-    return groups.flatMap((group, groupIdx) =>
-      group.questions.map((q) => ({
+    return safeGroups.flatMap((group, groupIdx) =>
+      (group?.questions || []).map((q) => ({
         ...q,
         globalIndex: globalNum++,
         groupIndex: groupIdx,
@@ -65,7 +66,7 @@ export function CbtSectionStepper({
           (skill === "reading" ? `Passage ${groupIdx + 1}` : `Part ${groupIdx + 1}`),
       }))
     );
-  }, [groups, skill]);
+  }, [safeGroups, skill]);
 
   // Set initial active question
   React.useEffect(() => {
@@ -124,18 +125,18 @@ export function CbtSectionStepper({
     }, 50);
   };
 
-  const activeGroup = groups[activePartIndex] ?? groups[0];
+  const activeGroup = safeGroups[activePartIndex] ?? safeGroups[0];
 
   // Part stats for tabs
   const partStats = React.useMemo(() => {
-    return groups.map((group, idx) => {
-      const qs = group.questions;
+    return safeGroups.map((group, idx) => {
+      const qs = group?.questions || [];
       const answeredCount = qs.filter((q) =>
         multilevelQuestionAnswered(q, answers, audioSet)
       ).length;
       const isComplete = qs.length > 0 && answeredCount === qs.length;
       const label =
-        group.title ||
+        group?.title ||
         (skill === "reading" ? `Passage ${idx + 1}` : `Part ${idx + 1}`);
       return {
         label,
@@ -144,7 +145,7 @@ export function CbtSectionStepper({
         isComplete,
       };
     });
-  }, [groups, skill, answers, audioSet]);
+  }, [safeGroups, skill, answers, audioSet]);
 
   const currentFlagged = activeQuestionId
     ? flaggedQuestions.has(activeQuestionId)
@@ -154,7 +155,7 @@ export function CbtSectionStepper({
   return (
     <div className="space-y-4">
       {/* 1. Part-by-Part Tabs Stepper */}
-      {groups.length > 1 && (
+      {safeGroups.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md">
           {partStats.map((part, idx) => {
             const isActive = idx === activePartIndex;
@@ -344,7 +345,7 @@ export function CbtSectionStepper({
             </div>
 
             <div className="flex items-center gap-2">
-              {activePartIndex < groups.length - 1 ? (
+              {activePartIndex < safeGroups.length - 1 ? (
                 <Button
                   type="button"
                   size="sm"

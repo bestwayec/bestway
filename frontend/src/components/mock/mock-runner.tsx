@@ -72,6 +72,7 @@ import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
+import { ErrorBoundary } from "@/components/common/error-boundary";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -84,13 +85,16 @@ const media = (path: string) => `/api/backend${path}`;
 
 function countAnswered(exam: MockExamDetail, answers: Record<string, string>, audio: Set<string>): number {
   let n = 0;
-  for (const s of exam.sections)
-    for (const g of s.groups)
-      for (const q of g.questions) {
-        if (q.type === "speaking_task") {
+  for (const s of (exam?.sections || [])) {
+    const groups = s?.groups || (s as any)?.parts || [];
+    for (const g of groups) {
+      for (const q of (g?.questions || [])) {
+        if ((q.type as string) === "speaking_task" || (q.type as string) === "speaking" || (q as any).questionType === "speaking_prompt") {
           if (audio.has(q.id)) n++;
         } else if ((answers[q.id] ?? "").trim()) n++;
       }
+    }
+  }
   return n;
 }
 
@@ -201,13 +205,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ans: Record<string, string> = {};
     const audio = new Set<string>();
     const durations: Record<string, number> = {};
-    for (const s of attempt.sections)
-      for (const g of s.groups)
-        for (const q of g.questions) {
+    for (const s of (attempt?.sections || [])) {
+      const groups = s?.groups || (s as any)?.parts || [];
+      for (const g of groups) {
+        for (const q of (g?.questions || [])) {
           ans[q.id] = q.response ?? "";
           if (q.hasAudio) audio.add(q.id);
           if (q.hasAudio && q.audioDurationMs != null) durations[q.id] = q.audioDurationMs;
         }
+      }
+    }
     return { ans, audio, durations };
   }, [attempt]);
 
@@ -274,7 +281,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const flush = React.useCallback(() => {
     if (saveInFlight.current || submittingRef.current) return;
-    const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === id)));
+    const targetSection = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
+    const targetGroups = targetSection?.groups || (targetSection as any)?.parts || [];
+    const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
     if (!ids.length) return;
     const snapshot = { ...answersRef.current };
     if (versioned) setSaveState("saving");
@@ -371,8 +380,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         try {
           await saveInFlight.current;
         } catch {}
+        const targetSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
+        const targetGrps = targetSec?.groups || (targetSec as any)?.parts || [];
         const all = Object.entries(answersRef.current)
-          .filter(([qid, v]) => versioned ? (!isFullTest || attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.some((g) => g.questions.some((q) => q.id === qid))) : v !== '')
+          .filter(([qid, v]) => versioned ? (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))) : v !== '')
           .map(([questionId, response]) => ({ questionId, response }));
         if (all.length && (!versioned || !auto)) {
           try {
@@ -427,9 +438,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     try {
       if (versioned) {
         await saveInFlight.current;
-        const ids = attempt.sections.find((s) => s.skill === attempt.currentSkill)?.groups.flatMap((g) => g.questions.map((q) => q.id)) ?? [];
-        await bulkMutateAsync(ids.map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
-        ids.forEach((id) => dirty.current.delete(id));
+        const curSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
+        const curGrps = curSec?.groups || (curSec as any)?.parts || [];
+        const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) ?? [];
+        await bulkMutateAsync(ids.map((questionId: string) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
+        ids.forEach((id: string) => dirty.current.delete(id));
       } else flush();
       const currentSkill = attempt.currentSkill;
       await advanceMutateAsync();
@@ -758,19 +771,20 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
         {partialPractice && !isSingleSection && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
         {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
-          const questions = item.groups.flatMap((group) => group.questions);
+          const questions = (item.groups || (item as any).parts || []).flatMap((group: any) => group?.questions || []);
           return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
         }).map((item) => item.skill)} /></div>}
 
         {section && (
+          <ErrorBoundary fallbackTitle={`${section.title || section.skill} bo'limini yuklashda xatolik yuz berdi`}>
           <div className="space-y-4">
             {section.instructions && (
               <p className="text-sm text-fg-muted">{section.instructions}</p>
             )}
             {guidedMultilevel && (section.skill === "writing" || section.skill === "speaking") ? <GuidedMultilevelGroups
               skill={section.skill}
-              groups={section.groups}
-              activeTask={Math.min(activeTask, Math.max(0, section.groups.length - 1))}
+              groups={section.groups || (section as any).parts || []}
+              activeTask={Math.min(activeTask, Math.max(0, (section.groups || (section as any).parts || []).length - 1))}
               setActiveTask={(index) => setActiveTaskBySkill((current) => ({ ...current, [section.skill]: index }))}
               strict={strict}
               timed={strict}
@@ -785,7 +799,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               onToggleFlag={toggleQuestionFlag}
             /> : <CbtSectionStepper
               skill={section.skill}
-              groups={section.groups}
+              groups={section.groups || (section as any).parts || []}
               answers={answers}
               audioSet={audioSet}
               audioDurations={audioDurations}
@@ -826,6 +840,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               isFullTest={isFullTest}
             />}
           </div>
+          </ErrorBoundary>
         )}
 
         {review && missingWork && (
@@ -928,19 +943,20 @@ export function GuidedMultilevelGroups({
   flaggedQuestions?: Set<string>;
   onToggleFlag?: (qid: string) => void;
 }) {
-  const group = groups[activeTask];
+  const safeGroups = groups || [];
+  const group = safeGroups[activeTask] ?? safeGroups[0];
   if (!group) return null;
-  const labels = groups.map((candidate, index) => {
-    const key = multilevelTaskLabels(candidate.questions)[0] ?? String(index + 1);
+  const labels = safeGroups.map((candidate, index) => {
+    const key = multilevelTaskLabels(candidate?.questions || [])[0] ?? String(index + 1);
     if (skill !== "writing") return key;
     return ({ informal_email: "1.1", formal_email: "1.2", publication: "2" } as Record<string, string>)[key] ?? key;
   });
   const sharedWritingStimulus = skill === "writing"
-    ? groups.slice(0, 2).map((candidate) => candidate.passageText || candidate.instructions).find((value) => !!value?.trim()) ?? undefined
+    ? safeGroups.slice(0, 2).map((candidate) => candidate.passageText || candidate.instructions).find((value) => !!value?.trim()) ?? undefined
     : undefined;
-  const completed = groups.flatMap((candidate, index) => candidate.questions.length > 0 && candidate.questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet)) ? [index] : []);
+  const completed = safeGroups.flatMap((candidate, index) => (candidate?.questions || []).length > 0 && candidate.questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet)) ? [index] : []);
   return <div className="space-y-4">
-    <MultilevelTaskProgress skill={skill} current={activeTask} total={groups.length} labels={labels} onSelect={setActiveTask} practice={practice} completed={completed} rawMaximum={practice ? groups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={safeGroups.length} labels={labels} onSelect={setActiveTask} practice={practice} completed={completed} rawMaximum={practice ? safeGroups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
     <GroupBlock
       group={group}
       skill={skill}
@@ -959,7 +975,7 @@ export function GuidedMultilevelGroups({
     />
     <div className="flex items-center justify-between gap-3">
       <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
-      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === groups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === safeGroups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
     </div>
   </div>;
 }
@@ -1117,7 +1133,7 @@ function GroupBlock({
                 : "text-fg-muted hover:text-fg"
             )}
           >
-            ❓ Savollar ({group.questions.length})
+            ❓ Savollar ({(group?.questions || []).length})
           </button>
         </div>
       )}
@@ -1138,7 +1154,7 @@ function GroupBlock({
             </p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={media(`/mock/groups/${group.id}/image`)}
+              src={group.imageUrl && (group.imageUrl.startsWith("http") || group.imageUrl.startsWith("/media")) ? group.imageUrl : media(`/mock/groups/${group.id}/image`)}
               alt="Floor plan map"
               loading="lazy"
               decoding="async"
@@ -1208,7 +1224,7 @@ function GroupBlock({
           >
             {hasPassage && !hasGappedContent && (
               <div className="mb-2 flex items-center justify-between pb-2 border-b border-border/60 lg:hidden">
-                <span className="text-xs font-medium text-fg-muted">{group.questions.length} ta savol</span>
+                <span className="text-xs font-medium text-fg-muted">{(group?.questions || []).length} ta savol</span>
                 <button
                   type="button"
                   onClick={() => setReadingMobileTab("passage")}
@@ -1218,7 +1234,7 @@ function GroupBlock({
                 </button>
               </div>
             )}
-            {group.questions.map((q) => (
+            {(group?.questions || []).map((q) => (
               <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28">
                 <QuestionInput
                   key={q.id}

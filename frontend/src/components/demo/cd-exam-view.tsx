@@ -28,6 +28,7 @@ import {
 import { buttonVariants } from "@/components/ui/button-variants";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/common/error-boundary";
 import type {
   MockExamDetail,
   MockGroup,
@@ -52,15 +53,17 @@ interface FlatGroup {
 function flattenGroups(exam: MockExamDetail): FlatGroup[] {
   const out: FlatGroup[] = [];
   let n = 0;
-  for (const s of exam.sections) {
-    for (const g of s.groups) {
-      const count = g.questions.length;
+  for (const s of (exam?.sections || [])) {
+    const groups = s?.groups || (s as any)?.parts || [];
+    for (const g of groups) {
+      const questions = g?.questions || [];
+      const count = questions.length;
       out.push({
         sectionId: s.id,
         skill: s.skill,
         group: g,
         startIndex: n,
-        endIndex: n + count - 1,
+        endIndex: n + Math.max(0, count - 1),
       });
       n += count;
     }
@@ -100,7 +103,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
 
   const parts = React.useMemo(() => flattenGroups(exam), [exam]);
   const totalMinutes = React.useMemo(
-    () => exam.sections.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0),
+    () => (exam?.sections || []).reduce((sum, s) => sum + (s.durationMinutes ?? (s as any).timeLimit ?? 0), 0),
     [exam],
   );
   const totalQuestions = parts.length > 0 ? parts[parts.length - 1].endIndex + 1 : 0;
@@ -179,7 +182,16 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
     setFlagged((f) => ({ ...f, [id]: !f[id] }));
   }
 
-  if (!part) return null;
+  if (!part) {
+    return (
+      <div className="flex min-h-[500px] w-full items-center justify-center bg-bg p-8 text-center">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+          <h2 className="text-lg font-bold text-fg">Imtihon topshiriqlari tayyorlanmoqda...</h2>
+          <p className="mt-2 text-xs text-fg-muted">Agar bir necha soniyada ochilmasa, iltimos sahifani yangilang.</p>
+        </div>
+      </div>
+    );
+  }
 
   const urgent = totalMinutes > 0 && secondsLeft <= 5 * 60 && secondsLeft > 0;
   const warn = totalMinutes > 0 && secondsLeft <= 10 * 60 && secondsLeft > 5 * 60;
@@ -250,7 +262,8 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
       </div>
 
       {/* ── Split panes ── */}
-      <div className="grid w-full gap-0 px-3 sm:px-5 lg:grid-cols-2 lg:gap-5">
+      <ErrorBoundary fallbackTitle={`Part ${partIdx + 1} ni yuklashda xatolik yuz berdi`}>
+        <div className="grid w-full gap-0 px-3 sm:px-5 lg:grid-cols-2 lg:gap-5">
         {/* Left: context */}
         <div ref={leftRef} className="min-w-0 py-4 lg:h-[calc(100dvh-150px)] lg:overflow-y-auto lg:py-5 lg:pr-2">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -423,6 +436,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
           </Button>
         </div>
       </div>
+      </ErrorBoundary>
 
       {/* ── Help dialog ── */}
       <Dialog open={helpOpen} onOpenChange={(o) => !o && setHelpOpen(false)}>
@@ -469,7 +483,7 @@ function CdAnswerInput({
   value: string;
   onChange: (v: string) => void;
 }) {
-  if (q.type === "essay_task1" || q.type === "essay_task2") {
+  if ((q.type as string) === "essay" || q.type === "essay_task1" || q.type === "essay_task2" || (q as any).questionType === "essay") {
     const n = wordCount(value);
     const min = q.type === "essay_task1" ? 150 : 250;
     return (
@@ -484,6 +498,14 @@ function CdAnswerInput({
         <p className={cn("mt-1 text-xs tabular-nums", n >= min ? "text-brand" : "text-fg-subtle")}>
           {n} words{min ? ` (minimum ${min})` : ""}
         </p>
+      </div>
+    );
+  }
+  if ((q.type as string) === "speaking" || q.type === "speaking_task" || (q as any).questionType === "speaking_prompt") {
+    return (
+      <div className="mt-3 rounded-xl border border-border bg-surface p-4 text-center">
+        <p className="text-xs font-semibold text-fg-muted mb-1">🎤 Speaking Topshirig'i</p>
+        <p className="text-xs text-fg-muted">Haqiqiy imtihon rejimida mikrofon orqali audio yozib olinadi.</p>
       </div>
     );
   }

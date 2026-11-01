@@ -105,3 +105,23 @@ export async function getDemoMockExam(id: string): Promise<MockExamDetail | null
     tags: [MOCK_EXAMS_TAG],
   });
 }
+
+/** Hozirgi aktiv CD Record Mock imtihonini olish */
+export async function getActiveCdExam(): Promise<MockExamDetail | null> {
+  const res = await publicGet<any>("/api/v1/exams/active/", {
+    revalidate: 30,
+    tags: [MOCK_EXAMS_TAG],
+  });
+  if (!res) {
+    const demos = await getDemoMockExams();
+    if (demos.length > 0) return getDemoMockExam(demos[0].id);
+    return null;
+  }
+  const payload = res.data ?? res;
+  const exam = payload.exam ?? payload;
+  const sections = payload.sections ?? exam.sections ?? [];
+  return {
+    ...exam,
+    sections,
+  } as MockExamDetail;
+}

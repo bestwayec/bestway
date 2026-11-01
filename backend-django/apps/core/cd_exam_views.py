@@ -135,15 +135,17 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
                 })
             
             part_dict = {
+                "id": grp.id,
                 "key": grp.id,
                 "label": f"Part {grp.part_number}",
                 "partNumber": grp.part_number,
-                "title": grp.title,
-                "instructions": grp.instructions,
-                "passageText": grp.passage_html,
-                "contentHtml": grp.passage_html,
-                "audioUrl": grp.audio_url,
-                "imageUrl": grp.media_image,
+                "sortOrder": grp.sort_order,
+                "title": grp.title or f"Part {grp.part_number}",
+                "instructions": grp.instructions or "",
+                "passageText": grp.passage_html or "",
+                "contentHtml": grp.passage_html or "",
+                "audioUrl": grp.audio_url or "",
+                "imageUrl": grp.media_image or "",
                 "strictAudio": sec.section_type == "listening",
                 "questions": q_list,
             }
@@ -153,28 +155,43 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
         sections_data.append({
             "id": sec.id,
             "skill": sec.section_type,
-            "title": sec.title,
+            "title": sec.title or sec.section_type.title(),
             "timeLimit": sec.time_limit,
+            "durationMinutes": sec.time_limit,
             "order": sec.order,
-            "instructions": sec.instructions,
+            "sortOrder": sec.order,
+            "instructions": sec.instructions or "",
             "parts": sec_parts,
+            "groups": sec_parts,
         })
         
+    exam_payload = {
+        "id": exam.id,
+        "code": exam.code,
+        "title": exam.title,
+        "type": "multilevel",
+        "examType": exam.exam_type,
+        "durationMinutes": exam.duration_minutes,
+        "isCdFormat": exam.is_cd_format,
+        "isPublished": exam.is_published,
+        "description": exam.description or "",
+        "sections": sections_data,
+    }
     return JsonResponse({
         "data": {
-            "exam": {
-                "id": exam.id,
-                "code": exam.code,
-                "title": exam.title,
-                "examType": exam.exam_type,
-                "durationMinutes": exam.duration_minutes,
-                "isCdFormat": exam.is_cd_format,
-                "isPublished": exam.is_published,
-                "description": exam.description,
-            },
+            "exam": exam_payload,
+            "id": exam.id,
+            "code": exam.code,
+            "title": exam.title,
+            "type": "multilevel",
+            "examType": exam.exam_type,
+            "durationMinutes": exam.duration_minutes,
             "sections": sections_data,
             "parts": all_parts,
-        }
+        },
+        "exam": exam_payload,
+        "sections": sections_data,
+        "parts": all_parts,
     })
 
 
@@ -209,15 +226,17 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
             img_url = f"/media/{img_key.lstrip('/')}" if img_key else None
             
             part_dict = {
+                "id": grp["id"],
                 "key": grp["id"],
                 "label": f"Part {grp.get('partNumber') or 1}",
                 "partNumber": grp.get("partNumber") or 1,
-                "title": grp.get("title"),
-                "instructions": grp.get("instructions"),
-                "passageText": grp.get("passageText") or grp.get("contentHtml"),
-                "contentHtml": grp.get("contentHtml") or grp.get("passageText"),
-                "audioUrl": audio_url,
-                "imageUrl": img_url,
+                "sortOrder": grp.get("sortOrder", 0),
+                "title": grp.get("title") or f"Part {grp.get('partNumber') or 1}",
+                "instructions": grp.get("instructions") or "",
+                "passageText": grp.get("passageText") or grp.get("contentHtml") or "",
+                "contentHtml": grp.get("contentHtml") or grp.get("passageText") or "",
+                "audioUrl": audio_url or "",
+                "imageUrl": img_url or "",
                 "strictAudio": sec.get("skill") == "listening",
                 "questions": q_list,
             }
@@ -229,26 +248,41 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
             "skill": sec["skill"],
             "title": sec.get("title", sec["skill"].title()),
             "timeLimit": sec.get("durationMinutes", 35),
+            "durationMinutes": sec.get("durationMinutes", 35),
             "order": sec.get("sortOrder", 0),
+            "sortOrder": sec.get("sortOrder", 0),
             "instructions": sec.get("instructions", ""),
             "parts": sec_parts,
+            "groups": sec_parts,
         })
         
+    exam_payload = {
+        "id": legacy.id,
+        "code": legacy.id,
+        "title": legacy.title,
+        "type": legacy.type,
+        "examType": legacy.type,
+        "durationMinutes": 150,
+        "isCdFormat": True,
+        "isPublished": legacy.is_published,
+        "description": legacy.title,
+        "sections": sections_data,
+    }
     return JsonResponse({
         "data": {
-            "exam": {
-                "id": legacy.id,
-                "code": legacy.id,
-                "title": legacy.title,
-                "examType": legacy.type,
-                "durationMinutes": 150,
-                "isCdFormat": True,
-                "isPublished": legacy.is_published,
-                "description": legacy.title,
-            },
+            "exam": exam_payload,
+            "id": legacy.id,
+            "code": legacy.id,
+            "title": legacy.title,
+            "type": legacy.type,
+            "examType": legacy.type,
+            "durationMinutes": 150,
             "sections": sections_data,
             "parts": all_parts,
-        }
+        },
+        "exam": exam_payload,
+        "sections": sections_data,
+        "parts": all_parts,
     })
 
 
