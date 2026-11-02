@@ -297,7 +297,10 @@ def run_once(grader=None,speech=None):
 
 def _process_one(grader, speech):
     close_old_connections()
-    return run_once(grader, speech)
+    try:
+        return run_once(grader, speech)
+    finally:
+        close_old_connections()
 
 def tick():
     if os.environ.get('ASSESSMENT_WORKER_ENABLED')=='false' or not _tick_lock.acquire(blocking=False):return
@@ -311,12 +314,16 @@ def tick():
                 if not any(results):
                     break
     except Exception:pass # Durable lease recovery owns operational failures.
-    finally:_tick_lock.release()
+    finally:
+        close_old_connections()
+        _tick_lock.release()
 
 def run(stop,once=False):
     try:
         if once:tick();return
         poll_interval=float(os.environ.get('ASSESSMENT_WORKER_POLL_INTERVAL','2'))
         while not stop.wait(poll_interval):
-            close_old_connections();tick()
+            close_old_connections()
+            tick()
+            close_old_connections()
     finally:close_old_connections()

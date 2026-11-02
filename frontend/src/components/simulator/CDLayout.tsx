@@ -289,16 +289,35 @@ export function CDLayout({
 
     async function loadActiveExam() {
       try {
-        console.log("[CDLayout] Fetching active exam from /api/v1/exams/active...");
-        const res = await fetch("/api/v1/exams/active").then(async (r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}: Failed to fetch active exam`);
-          return r.json();
-        });
+        console.log("[CDLayout] Fetching active exam with multi-tier fallback...");
+        let rawData: any = null;
+        // Tier 1: Next.js backend proxy
+        try {
+          const r1 = await fetch("/api/backend/exams/active");
+          if (r1.ok) rawData = await r1.json();
+        } catch {}
+        // Tier 2: Next.js direct /api/v1/exams/active route
+        if (!rawData) {
+          try {
+            const r2 = await fetch("/api/v1/exams/active");
+            if (r2.ok) rawData = await r2.json();
+          } catch {}
+        }
+        // Tier 3: Direct public backend origin
+        if (!rawData) {
+          try {
+            const r3 = await fetch("https://api.bestwayec.uz/v1/exams/active");
+            if (r3.ok) rawData = await r3.json();
+          } catch {}
+        }
         if (cancelled) return;
-        const parsed = normalizeExamPayload(res);
+        if (!rawData) {
+          throw new Error("Failed to load questions from server (endpoints unreachable).");
+        }
+        const parsed = normalizeExamPayload(rawData);
         if (!parsed || (parsed.questionCount ?? 0) === 0) {
           const err = "Failed to load questions from server (0 questions found in payload).";
-          console.error("[CDLayout]", err, res);
+          console.error("[CDLayout]", err, rawData);
           setFetchError(err);
           setIsLoading(false);
           return;

@@ -148,7 +148,11 @@ def refresh(raw: str):
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE', [token_hash(raw)])
         row = cursor.fetchone()
-        if not row or row[3] < db_now() or not row[11]:
+        if not row or not row[11]:
+            raise ContractAPIException("INVALID_REFRESH_TOKEN", "Sessiya muddati tugagan — qaytadan kiring", 401)
+        exp_dt = row[3]
+        now_dt = timezone.now() if getattr(exp_dt, "tzinfo", None) is not None else db_now()
+        if exp_dt < now_dt:
             raise ContractAPIException("INVALID_REFRESH_TOKEN", "Sessiya muddati tugagan — qaytadan kiring", 401)
         if row[4]:
             cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId" IS NOT DISTINCT FROM %s', [row[1], row[2]])
@@ -215,7 +219,9 @@ def exchange_desktop(code: str, verifier: str, device_id: str):
             raise ContractAPIException("INVALID_DESKTOP_CODE", "Desktop kodi noto‘g‘ri", 401)
         if row[5]:
             raise ContractAPIException("DESKTOP_CODE_USED", "Desktop kodi allaqachon ishlatilgan", 401)
-        if row[4] < db_now():
+        exp_dt = row[4]
+        now_dt = timezone.now() if getattr(exp_dt, "tzinfo", None) is not None else db_now()
+        if exp_dt < now_dt:
             raise ContractAPIException("DESKTOP_CODE_EXPIRED", "Desktop kodi muddati o‘tgan — qaytadan urinib ko‘ring", 401)
         cursor.execute('UPDATE "DesktopAuthCode" SET "usedAt"=NOW() WHERE "id"=%s', [row[0]])
         user = (row[6], row[7], row[8], row[9], row[10], row[11], row[12], row[13])

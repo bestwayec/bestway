@@ -29,4 +29,6 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
     if response is not None:
         msg = response.data.get("detail", "Request failed") if isinstance(response.data, dict) else "Request failed"
         return Response({"success":False,"error":{"code":STATUS_CODES.get(response.status_code,"ERROR"),"message":str(msg)}}, status=response.status_code, headers=response.headers)
+    import logging
+    logging.getLogger("django.request").exception("Unhandled API exception in %s: %s", context.get("view", "unknown_view"), exc)
     return Response({"success":False,"error":{"code":"INTERNAL_ERROR","message":"Serverda kutilmagan xatolik yuz berdi"}}, status=500)

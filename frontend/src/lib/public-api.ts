@@ -115,12 +115,19 @@ import { normalizeExamPayload } from "./normalize-exam";
 
 /** Hozirgi aktiv CD Record Mock imtihonini olish */
 export async function getActiveCdExam(): Promise<MockExamDetail | null> {
-  const res = await publicGet<any>("/api/v1/exams/active/", {
+  // Backend URL already has /v1 prefix; request /exams/active (without redundant /api/v1)
+  let res = await publicGet<any>("/exams/active", {
     revalidate: 30,
     tags: [MOCK_EXAMS_TAG],
   });
   if (!res) {
-    console.warn("[getActiveCdExam] Public GET /api/v1/exams/active/ returned null, checking demo mock exams");
+    res = await publicGet<any>("/exams/active/", {
+      revalidate: 30,
+      tags: [MOCK_EXAMS_TAG],
+    });
+  }
+  if (!res) {
+    console.warn("[getActiveCdExam] Public GET /exams/active returned null, checking demo mock exams");
     const demos = await getDemoMockExams();
     if (demos.length > 0) {
       const demoDetail = await getDemoMockExam(demos[0].id);
