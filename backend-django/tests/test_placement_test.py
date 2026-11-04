@@ -1,4 +1,5 @@
 """Comprehensive test suite for Adaptive 10-Minute Express Placement Test & Guest Session Engine."""
+from contextlib import nullcontext
 import json
 import uuid
 from unittest.mock import MagicMock, patch
@@ -176,14 +177,13 @@ class PlacementTestEngineTests(SimpleTestCase):
         self.assertEqual(data_c1["cefr_level"], "C1")
         self.assertEqual(data_c1["estimated_ielts_band"], "7.0 - 8.0")
 
-    @patch("apps.exams.placement_views.transaction.atomic")
+    @patch("apps.exams.placement_views._placement_claim_lock", return_value=nullcontext())
     @patch("apps.exams.placement_views._sync_profile_placement")
     @patch("apps.exams.placement_views.PlacementTestResult.objects.filter")
     @patch("apps.exams.placement_views.get_authenticated_user_from_request")
     def test_claim_placement_result_and_student_profile_migration(
         self, mock_get_user, mock_filter, mock_sync, mock_atomic
     ):
-        mock_atomic.return_value.__enter__.return_value = None
         """POST /api/v1/placement-test/claim links guest result to student profile."""
         mock_get_user.return_value = self.student_user
 
@@ -212,7 +212,7 @@ class PlacementTestEngineTests(SimpleTestCase):
         self.assertEqual(data["data"]["diagnostic_cefr_score"], 75)
         self.assertTrue(mock_record.is_claimed)
         mock_record.save.assert_called_once()
-        mock_sync.assert_called_once_with(self.student_user, "B2", 75)
+        mock_sync.assert_called_once_with(self.student_user, "B2", 75, strict=True)
 
     def test_claim_unauthenticated_fails(self):
         """Claim without authentication or valid user returns 401."""
@@ -226,9 +226,10 @@ class PlacementTestEngineTests(SimpleTestCase):
         data = json.loads(res.content.decode("utf-8"))
         self.assertFalse(data["success"])
 
+    @patch("apps.exams.placement_views._placement_claim_lock", return_value=nullcontext())
     @patch("apps.exams.placement_views.get_authenticated_user_from_request")
     @patch("apps.exams.placement_views.PlacementTestResult.objects.filter")
-    def test_claim_invalid_or_already_claimed_by_other_user(self, mock_filter, mock_get_user):
+    def test_claim_invalid_or_already_claimed_by_other_user(self, mock_filter, mock_get_user, mock_lock):
         """Claiming non-existent token returns 404, already claimed by other returns 409."""
         mock_get_user.return_value = self.student_user
 

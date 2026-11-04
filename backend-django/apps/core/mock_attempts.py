@@ -885,7 +885,7 @@ def upload_speaking(actor, attempt_id, question_id, upload):
             prior = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
             if prior and prior.audio_key and versioned(attempt) and attempt.mode == 'timed' and not speaking.strict(attempt):
                 return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id))
-            created_key = store_upload(upload, 'audio', folder='speaking_submissions')
+            created_key = store_upload(upload, 'audio', folder='private/speaking_submissions')
             duration = speaking.verify_stored(attempt, q, created_key) if speaking.strict(attempt) else None
             if prior and prior.audio_key and speaking.strict(attempt) and attempt.mode == 'timed':
                 # Validate even a retry's bytes, but preserve the first accepted
