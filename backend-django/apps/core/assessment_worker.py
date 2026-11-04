@@ -39,40 +39,40 @@ def transcribe(job,input,speech):
         refresh(job)
         audio_hash=response.get('audioHash') or ''
         mime_type=response.get('mimeType') or 'audio/webm'
+        if not audio_hash:
+            raise results.ProviderError('STT_AUDIO_HASH_MISSING')
+        try:
+            path = storage_path(response['audioKey'])
+            if not path.is_file():
+                from .mock_media import resolve_key
+                path = resolve_key(response['audioKey'])
+            if not path.is_file():
+                raise results.ProviderError('STT_AUDIO_UNAVAILABLE')
+            with path.open('rb') as audio:
+                if hashlib.file_digest(audio, 'sha256').hexdigest() != audio_hash:
+                    raise results.ProviderError('STT_AUDIO_HASH_MISMATCH')
+        except results.ProviderError:
+            raise
+        except Exception:
+            raise results.ProviderError('STT_AUDIO_UNAVAILABLE') from None
         if audio_hash:
             saved=SpeechTranscript.objects.filter(job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash,status='SUCCEEDED').order_by('-completed_at').first()
             if saved:
-                response['transcript']=saved.text or ''
+                if not isinstance(saved.text, str) or not saved.text.strip():
+                    raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
+                response['transcript']=saved.text
                 if enabled(input):response.update(transcriptConfidence=saved.confidence,audioDurationMs=saved.duration_ms)
                 continue
             cached=SpeechTranscript.objects.filter(job__attempt_id=job.attempt_id,job__student_id=job.student_id,question_id=response['questionId'],audio_hash=audio_hash,status='SUCCEEDED').order_by('-completed_at').first()
             now=timezone.now()
             if cached:
+                if not isinstance(cached.text, str) or not cached.text.strip():
+                    raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
                 values={k:getattr(cached,k) for k in ('text','segments','confidence','provider','model','duration_ms','pronunciation_evidence')}
                 SpeechTranscript.objects.create(id=str(uuid4()),job_id=job.id,question_id=response['questionId'],audio_hash=audio_hash,attempt_number=job.attempt_count,status='SUCCEEDED',uncertain=False,started_at=now,completed_at=now,**values)
                 response['transcript']=cached.text or ''
                 if enabled(input):response.update(transcriptConfidence=cached.confidence,audioDurationMs=cached.duration_ms)
                 continue
-        try:
-            try:
-                path = storage_path(response['audioKey'])
-            except Exception:
-                from .mock_media import resolve_key
-                path = resolve_key(response['audioKey'])
-            if not path.exists():
-                from .mock_media import resolve_key
-                path = resolve_key(response['audioKey'])
-            if not path.exists():
-                response['transcript'] = ''
-                continue
-            if audio_hash:
-                with path.open('rb') as audio:
-                    if hashlib.file_digest(audio,'sha256').hexdigest()!=audio_hash:
-                        # Non-matching hash fallback to empty transcript rather than aborting
-                        pass
-        except Exception:
-            response['transcript'] = ''
-            continue
         now=timezone.now()
         with transaction.atomic():
             service.require_lease(job)
@@ -81,6 +81,8 @@ def transcribe(job,input,speech):
                 provider=os.environ.get('STT_PROVIDER','deepgram'),model=os.environ.get('STT_MODEL','UNCONFIGURED'),pronunciation_evidence='UNAVAILABLE',uncertain=False,started_at=now)
         try:
             output=speech(path,mime_type,'en',response.get('durationMs'))
+            if not isinstance(output.get('text'), str) or not output['text'].strip():
+                raise results.ProviderError('STT_EMPTY_TRANSCRIPT')
             diag = output.get('speech_diagnostics') or {}
             import json as _json
             diag_str = _json.dumps(diag, ensure_ascii=False) if diag else 'UNAVAILABLE'
@@ -125,7 +127,7 @@ def transcribe(job,input,speech):
         except Exception as error:
             problem=failure(error)
             SpeechTranscript.objects.filter(id=transcript.id,status='STARTED').update(status='FAILED',failure_code=problem.code,uncertain=problem.uncertain,completed_at=timezone.now())
-            response['transcript'] = 'Student audio response recorded and verified.' if path and path.exists() and path.stat().st_size >= 10240 else ''
+            raise problem from None
     input['pronunciationEvidence']='UNAVAILABLE'
 
 def build_zero_result(input_data):

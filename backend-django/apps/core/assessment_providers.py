@@ -262,30 +262,10 @@ def _assess_gemini(input, role, model=None, allow_heuristic=True):
             outputTokens=out_tok if isinstance(out_tok, int) else None,
             latencyMs=js_round((time.monotonic() - started) * 1000),
         )
-    except ProviderError as err:
-        if err.code.startswith('RESULT_') or not allow_heuristic:
-            raise
-        result = _heuristic_assessment_result(input)
-        return dict(
-            result=result,
-            provider='gemini',
-            model=model,
-            inputTokens=None,
-            outputTokens=None,
-            latencyMs=js_round((time.monotonic() - started) * 1000),
-        )
+    except ProviderError:
+        raise
     except Exception:
-        if not allow_heuristic:
-            raise ProviderError('PROVIDER_NETWORK_FAILURE', True, True)
-        result = _heuristic_assessment_result(input)
-        return dict(
-            result=result,
-            provider='gemini',
-            model=model,
-            inputTokens=None,
-            outputTokens=None,
-            latencyMs=js_round((time.monotonic() - started) * 1000),
-        )
+        raise ProviderError('PROVIDER_NETWORK_FAILURE', True, True) from None
 
 
 def _sanitize_llm_result_for_validation(parsed, input):
@@ -496,8 +476,7 @@ def _assess_single(input,role,provider=None):
         result_text=content[0]['text']
     try:parsed=json.loads(result_text)
     except ValueError:raise ProviderError('PROVIDER_MALFORMED_JSON') from None
-    sanitized=_sanitize_llm_result_for_validation(parsed,input)
-    result=validate(sanitized,input)
+    result=validate(parsed,input)
     if any(p.get('imageKeys') for p in input['parts']):result['confidence']=min(result['confidence'],.79)
     if enabled(input) and input['skill']=='speaking':
         confidences=[r.get('transcriptConfidence') for p in input['parts'] for r in p['responses']]
@@ -874,21 +853,17 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
 
 def transcribe(path,mime,language='en',duration_ms=None):
     provider=os.environ.get('STT_PROVIDER','').strip().lower();key=os.environ.get('STT_API_KEY','').strip();model=os.environ.get('STT_MODEL','').strip()
-    if provider in ('openrouter', 'fish-audio', 'fish_audio') or os.environ.get('OPENROUTER_API_KEY'):
-        try:
-            return _transcribe_openrouter(path, mime, language, duration_ms)
-        except Exception:
-            if provider in ('faster_whisper', 'faster-whisper'):
-                from .assessment_local_stt import transcribe as local_transcribe
-                return local_transcribe(path, mime, language, duration_ms)
-            raise
-
     if provider in ('faster_whisper','faster-whisper'):
         from .assessment_local_stt import transcribe as local_transcribe
-        return local_transcribe(path,mime,language,duration_ms)
-    if provider!='deepgram' or not key or not model:
-        if os.environ.get('OPENROUTER_API_KEY') or os.environ.get('STT_API_KEY'):
-            return _transcribe_openrouter(path, mime, language, duration_ms)
+        try:
+            return local_transcribe(path,mime,language,duration_ms)
+        except ProviderError:
+            if os.environ.get('STT_ALLOW_REMOTE_FALLBACK','').strip().lower() not in ('1','true','yes'):
+                raise
+            return _transcribe_openrouter(path,mime,language,duration_ms)
+    if provider in ('openrouter', 'fish-audio', 'fish_audio') or (not provider and os.environ.get('OPENROUTER_API_KEY')):
+        return _transcribe_openrouter(path,mime,language,duration_ms)
+    if provider!='deepgram' or not key or not model:
         raise ProviderError('STT_NOT_CONFIGURED')
     url=provider_url(os.environ.get('STT_BASE_URL') or 'https://api.deepgram.com/v1','listen')
     if not re.fullmatch(r'audio/(webm|ogg|wav|mpeg|mp4|x-wav|x-m4a)(;.*)?',mime,re.IGNORECASE) or not re.fullmatch(r'[a-z]{2,3}(-[a-z]{2,4})?',language,re.IGNORECASE):raise ProviderError('STT_INPUT_INVALID')
