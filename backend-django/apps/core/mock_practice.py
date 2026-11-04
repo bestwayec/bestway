@@ -47,7 +47,7 @@ def scope_sections(attempt, sections):
             continue
         result = dict(section, groups=[])
         for index, group in enumerate(section['groups']):
-            questions = [q for q in group['questions'] if not ids or q['id'] in ids]
+            questions = [q for q in group['questions'] if q['id'] in ids]
             if questions:
                 result['groups'].append(dict(group, questions=questions,
                                              sourcePartIndex=group.get('sourcePartIndex', index)))

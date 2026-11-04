@@ -96,15 +96,17 @@ def assert_program(actor, attempt):
 
 def questions(attempt, ids):
     selected = scope(attempt)
-    if selected is not None and selected.get('questionIds'):
+    if selected is not None:
         ids = [qid for qid in ids if qid in selected['questionIds']]
+    if not ids:
+        return []
     mock_qs = list(MockQuestion.objects.filter(id__in=ids,
         group__section__exam_id=attempt.exam_id).select_related('group__section'))
     if mock_qs:
         return mock_qs
     try:
         from apps.core.models import Question
-        cd_qs = list(Question.objects.filter(id__in=ids).select_related('group__section'))
+        cd_qs = list(Question.objects.filter(id__in=ids, group__section__exam_id=attempt.exam_id).select_related('group__section'))
         if cd_qs:
             return cd_qs
     except Exception:
@@ -198,7 +200,7 @@ def start_response(attempt, exam, resumed, full_duration=None):
         exam=shaped, annotations=attempt.annotations or [] if resumed else [],
         savedAnswers={a.question_id: '[audio]' if a.audio_key else a.response
             for a in MockAnswer.objects.filter(attempt_id=attempt.id)
-            if not is_partial(attempt) or not scope(attempt)['questionIds'] or a.question_id in scope(attempt)['questionIds']} if resumed else {})
+            if not is_partial(attempt) or a.question_id in scope(attempt)['questionIds']} if resumed else {})
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
         skills = (result['practiceScope'] or {}).get('skills') or []
@@ -340,13 +342,16 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
         if not bulk:
             assert_question(attempt, items[0]['questionId'])
         valid = questions(attempt, [a['questionId'] for a in items])
+        assert_program(actor, attempt)
+        if attempt.flow_mode == 'full_test':
+            for question in valid:
+                skill = getattr(question.group.section, 'skill', None) or getattr(question.group.section, 'section_type', None)
+                if skill != attempt.current_skill or skill in (getattr(attempt, 'submitted_sections', None) or []):
+                    fail('SECTION_LOCKED', 'Question outside the active section', 403)
         valid_ids = {q.id for q in valid}
         selected = [a for a in items if a['questionId'] in valid_ids]
         if not selected:
-            selected = [a for a in items if a.get('questionId')]
-        if not selected:
             return {'saved': 0 if bulk else False}
-        assert_program(actor, attempt)
         for item in selected:
             upsert_answer(attempt.id, item['questionId'], item['response'])
         return {'saved': len(selected) if bulk else True}
@@ -539,15 +544,13 @@ def switch_section(actor, attempt_id, target_skill):
         sec = MockSection.objects.filter(exam_id=attempt.exam_id, skill=target_skill).first()
         if not sec:
             fail('SECTION_NOT_FOUND', f"Section with skill '{target_skill}' not found in exam", 404)
+        selected = scope(attempt)
+        if selected is not None and target_skill not in selected['skills']:
+            fail('SECTION_LOCKED', 'Section outside the selected practice scope', 403)
         flow = getattr(attempt, 'flow_mode', 'single_skill')
         curr_skill = getattr(attempt, 'current_skill', None)
-        if flow == 'full_test' and target_skill != curr_skill:
-            existing_skills = [s.skill for s in MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order')]
-            order = [s for s in SKILLS if s in existing_skills] or existing_skills or list(SKILLS)
-            curr_idx = order.index(curr_skill) if curr_skill in order else 0
-            target_idx = order.index(target_skill) if target_skill in order else -1
-            if target_idx > curr_idx:
-                fail('SECTION_LOCKED', 'Full Mock imtihonda bo‘limlarni ketma-ketlikda topshirish shart', 403)
+        if flow == 'full_test' and (target_skill != curr_skill or target_skill in (getattr(attempt, 'submitted_sections', None) or [])):
+            fail('SECTION_LOCKED', 'Full Mock imtihonda bo‘limlarni ketma-ketlikda topshirish shart', 403)
         attempt.current_skill = target_skill
         attempt.save(update_fields=['current_skill'])
         return {'saved': True, 'currentSkill': attempt.current_skill, 'sessionSignature': attempt_signature.sign(attempt), 'attemptId': attempt.id}
