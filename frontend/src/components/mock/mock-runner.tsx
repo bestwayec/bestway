@@ -292,7 +292,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const snapshot = { ...answersRef.current };
     if (versioned) setSaveState("saving");
     let succeeded = false;
-    saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then(() => {
+    saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then((result) => {
+      if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
       succeeded = true;
       ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
       if (versioned && !dirty.current.size) setSaveState("saved");
@@ -313,6 +314,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [answers, flush, saveRevision]);
 
   function setAnswer(qid: string, val: string) {
+    if (submittingRef.current) return;
     dirty.current.add(qid);
     const next = { ...answersRef.current, [qid]: val };
     answersRef.current = next;
@@ -367,11 +369,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error("Savollar yuklanmadi yoki mavjud emas (0/0). Topshirib bo'lmaydi.");
         return;
       }
-      if (versioned) {
-        try {
-          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) { toast.error('Finish recording and upload saved takes before submitting.'); return; }
-        } catch { toast.error('Recording recovery could not be checked. Keep this page open and retry.'); return; }
-      }
       if (!auto && !confirmed) {
         const isMockedConfirm = typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm.toString().includes('[native code]');
         if (isMockedConfirm) {
@@ -383,21 +380,35 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       }
       setShowSubmitConfirm(false);
       submittingRef.current = true;
+      if (versioned) {
+        try {
+          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) {
+            toast.error('Finish recording and upload saved takes before submitting.');
+            submittingRef.current = false;
+            return;
+          }
+        } catch {
+          toast.error('Recording recovery could not be checked. Keep this page open and retry.');
+          submittingRef.current = false;
+          return;
+        }
+      }
       window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
       try {
         try {
           await saveInFlight.current;
         } catch {}
         const targetSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
+        if (isFullTest && !targetSec) throw new Error('Current section could not be loaded. Keep this page open and retry.');
         const targetGrps = targetSec?.groups || (targetSec as any)?.parts || [];
         const all = Object.entries(answersRef.current)
-          .filter(([qid, v]) => versioned ? (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))) : v !== '')
+          .filter(([qid]) => (!auto || dirty.current.has(qid)) && (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))))
           .map(([questionId, response]) => ({ questionId, response }));
-        if (all.length && (!versioned || !auto)) {
-          try {
-            await bulkMutateAsync(all);
-          } catch (saveErr) {
-            console.warn("Autosave before submit error:", saveErr);
+        for (let offset = 0; offset < all.length; offset += 200) {
+          const batch = all.slice(offset, offset + 200);
+          const saved = await bulkMutateAsync(batch);
+          if (saved.saved !== batch.length) {
+            throw new Error("Some answers could not be saved. Keep this page open and retry.");
           }
         }
         await submitMutateAsync({ confirm: true, confirmed: true, force: true });
@@ -419,6 +430,37 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate],
   );
 
+  // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
+  const goNextSection = React.useCallback(async (automatic = false) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    try {
+      await saveInFlight.current;
+      const curSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
+      if (!curSec) throw new Error('Current section could not be loaded');
+      const curGrps = curSec?.groups || (curSec as any)?.parts || [];
+      const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) as string[];
+      const answers = ids.filter((id) => Object.hasOwn(answersRef.current, id) && (!automatic || dirty.current.has(id)))
+        .map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' }));
+      for (let offset = 0; offset < answers.length; offset += 200) {
+        const batch = answers.slice(offset, offset + 200);
+        const saved = await bulkMutateAsync(batch);
+        if (saved.saved !== batch.length) throw new Error('Some answers could not be saved');
+      }
+      ids.forEach((id) => dirty.current.delete(id));
+      const currentSkill = attempt.currentSkill;
+      await advanceMutateAsync();
+      const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
+      const nextSkill = exam?.sections[currentIdx + 1]?.skill;
+      if (currentSkill && nextSkill) {
+        setTransitionModal({ completedSkill: currentSkill, nextSkill });
+      }
+      toast.success("Next section");
+    } catch (e) {
+      toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
+    } finally { submittingRef.current = false; }
+  }, [advanceMutateAsync, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
+
   React.useEffect(() => {
     if (!deadline) return;
     const clock = setInterval(() => setServerNow(Date.now() + serverOffset), 1000);
@@ -431,39 +473,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         if (Date.now() < nextRetry || submittingRef.current) return;
         nextRetry = Date.now() + 10000;
         if (isFullTest && attempt.currentSkill !== 'speaking') {
-          submittingRef.current = true;
-          void advanceMutateAsync().catch(() => toast.error('Section transition failed. Retrying…')).finally(() => { submittingRef.current = false; });
+          void goNextSection(true);
         } else void doSubmit(true);
       }
     }, 1000);
     return () => { clearInterval(id); clearInterval(clock); };
-  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, advanceMutateAsync]);
-
-  // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
-  const goNextSection = React.useCallback(async () => {
-    if (versioned && submittingRef.current) return;
-    if (versioned) submittingRef.current = true;
-    try {
-      if (versioned) {
-        await saveInFlight.current;
-        const curSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-        const curGrps = curSec?.groups || (curSec as any)?.parts || [];
-        const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) ?? [];
-        await bulkMutateAsync(ids.map((questionId: string) => ({ questionId, response: answersRef.current[questionId] ?? '' })));
-        ids.forEach((id: string) => dirty.current.delete(id));
-      } else flush();
-      const currentSkill = attempt.currentSkill;
-      await advanceMutateAsync();
-      const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
-      const nextSkill = exam?.sections[currentIdx + 1]?.skill;
-      if (currentSkill && nextSkill) {
-        setTransitionModal({ completedSkill: currentSkill, nextSkill });
-      }
-      toast.success("Next section");
-    } catch (e) {
-      toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
-    } finally { if (versioned) submittingRef.current = false; }
-  }, [advanceMutateAsync, flush, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
+  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, goNextSection]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection

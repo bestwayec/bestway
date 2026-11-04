@@ -142,4 +142,78 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     for (let i = 0; i < 12; i++) await tick(1000);
     expect(hooks.save).toHaveBeenCalledTimes(2);
   });
+  it.each(['HTTP 500', 'offline'])('keeps answers and blocks submit when final save fails: %s', async (reason) => {
+    hooks.save.mockRejectedValueOnce(new Error(reason));
+    vi.stubGlobal('confirm', () => true);
+    await mount(false); await answer('keep my answer');
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => finish.click());
+    expect(hooks.other).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLInputElement>('input')!.value).toBe('keep my answer');
+    await act(async () => finish.click());
+    expect(hooks.save).toHaveBeenCalledTimes(2);
+    expect(hooks.other).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves a deliberately cleared response before submitting', async () => {
+    vi.stubGlobal('confirm', () => true);
+    await mount(false, 'old answer'); await answer('');
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => finish.click());
+    expect(hooks.save).toHaveBeenCalledWith([{ questionId: 'question', response: '' }]);
+    expect(hooks.other).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not submit when the server acknowledges only part of a batch', async () => {
+    hooks.save.mockResolvedValueOnce({ saved: 0 });
+    vi.stubGlobal('confirm', () => true);
+    await mount(false); await answer('retained');
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => finish.click());
+    expect(hooks.other).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLInputElement>('input')!.value).toBe('retained');
+  });
+
+  it('serializes duplicate clicks while the final save is pending', async () => {
+    let resolve!: (value: unknown) => void;
+    hooks.save.mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    vi.stubGlobal('confirm', () => true);
+    await mount(false); await answer('one');
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => { finish.click(); finish.click(); });
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    expect(hooks.other).not.toHaveBeenCalled();
+    await act(async () => resolve({saved:1}));
+    expect(hooks.other).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks timed submission when an unsaved answer cannot be persisted', async () => {
+    hooks.save.mockRejectedValue(new Error('offline'));
+    await mount(true); await answer('unsaved');
+    vi.setSystemTime(new Date('2026-10-08T11:00:01Z'));
+    await tick(1000);
+    expect(hooks.save).toHaveBeenCalled();
+    expect(hooks.other).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLInputElement>('input')!.value).toBe('unsaved');
+  });
+
+  it('allows timed submission of previously acknowledged answers without resaving after expiry', async () => {
+    await mount(true); await answer('saved'); await tick(1500);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(new Date('2026-10-08T11:00:01Z'));
+    await tick(1000);
+    expect(hooks.save).toHaveBeenCalledTimes(1);
+    expect(hooks.other).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps answers when the backend rejects finalization', async () => {
+    hooks.other.mockRejectedValueOnce(new Error('already finalized'));
+    vi.stubGlobal('confirm', () => true);
+    await mount(false); await answer('retained');
+    const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
+    await act(async () => finish.click());
+    expect(hooks.other).toHaveBeenCalledTimes(1);
+    expect(host.querySelector<HTMLInputElement>('input')!.value).toBe('retained');
+  });
+
 });
