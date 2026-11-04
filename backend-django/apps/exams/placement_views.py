@@ -6,6 +6,8 @@ scoring & weak grammar topics diagnostics, and frictionless claim migration to s
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import json
 import logging
 import uuid
@@ -638,30 +640,33 @@ def placement_submit_view(request):
     })
 
 
-def _sync_profile_placement(user: User, cefr_level: str, score_percent: int) -> None:
-    """Helper to ensure StudentProfile exists and sync placement test results."""
+def _sync_profile_placement(user: User, cefr_level: str, score_percent: int, *, strict=False) -> None:
+    """Sync atomically; claims must fail if their profile update cannot commit."""
     try:
-        profile = StudentProfile.objects.filter(user_id=user.id).first()
-        if not profile:
-            profile = StudentProfile.objects.create(
-                user_id=user.id,
-                current_points=100,
-                is_approved=True,
-                link_code=user.id[:8],
-                available_programs=["IELTS", "MULTILEVEL"],
-                active_program="IELTS",
-                created_at=timezone.now(),
-                game_qualified=False,
-                initial_level=cefr_level,
-                diagnostic_cefr_score=float(score_percent),
-            )
-        else:
-            StudentProfile.objects.filter(user_id=user.id).update(
-                initial_level=cefr_level,
-                diagnostic_cefr_score=float(score_percent),
-            )
-    except Exception as e:
-        logger.error("Failed to sync student profile placement: %s", e)
+        with transaction.atomic(), connection.cursor() as cursor:
+            # The legacy programs column is a PostgreSQL enum array, not varchar[].
+            cursor.execute('''INSERT INTO "StudentProfile"
+                ("userId","linkCode","availablePrograms","activeProgram","currentPoints",
+                 "isApproved","createdAt","gameQualified","initialLevel","diagnosticCefrScore")
+                VALUES (%s,%s,ARRAY['IELTS','MULTILEVEL']::"ExamProgram"[],'IELTS'::"ExamProgram",
+                        100,true,NOW(),false,%s,%s)
+                ON CONFLICT ("userId") DO UPDATE SET "initialLevel"=EXCLUDED."initialLevel",
+                    "diagnosticCefrScore"=EXCLUDED."diagnosticCefrScore"''',
+                [user.id, uuid.uuid4().hex[:16], cefr_level, float(score_percent)])
+    except Exception:
+        if strict:
+            raise
+        logger.exception("Failed to sync student profile placement")
+
+
+@contextmanager
+def _placement_claim_lock(result_token):
+    # A transaction-scoped per-token lock also serializes cache-only restoration:
+    # SELECT FOR UPDATE alone cannot lock a row which does not exist yet.
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [result_token])
+        yield
 
 
 @csrf_exempt
@@ -680,55 +685,52 @@ def placement_claim_view(request):
     except Exception:
         return JsonResponse({"success": False, "error": "Invalid JSON payload"}, status=400)
 
+    if not isinstance(body, dict):
+        return JsonResponse({"success": False, "error": "Invalid JSON payload"}, status=400)
     result_token = body.get("result_token")
-    if not result_token:
+    if not isinstance(result_token, str) or not result_token or len(result_token) > 255:
         return JsonResponse({"success": False, "error": "result_token is required"}, status=400)
 
     auth_user = get_authenticated_user_from_request(request)
     if not auth_user:
-        # Check if user_id passed explicitly for testing/internal calls
-        user_id = body.get("user_id")
-        if user_id:
-            auth_user = User.objects.filter(id=user_id).first()
-
-    if not auth_user:
         return JsonResponse({"success": False, "error": "Authentication required to claim result"}, status=401)
 
-    # Find result record from DB or cache
-    record = PlacementTestResult.objects.filter(result_token=result_token).first()
-    if not record:
-        cached = cache.get(f"{RESULT_PREFIX}{result_token}")
-        if not cached:
-            return JsonResponse({"success": False, "error": "Placement test result not found or expired"}, status=404)
+    with _placement_claim_lock(result_token):
+        # Find result record from DB or cache
+        record = PlacementTestResult.objects.filter(result_token=result_token).first()
+        if not record:
+            cached = cache.get(f"{RESULT_PREFIX}{result_token}")
+            if not cached:
+                return JsonResponse({"success": False, "error": "Placement test result not found or expired"}, status=404)
 
-        # Re-create DB record if only existed in cache
-        record = PlacementTestResult.objects.create(
-            guest_session_id=cached.get("guest_session_id", "guest"),
-            result_token=result_token,
-            cefr_level=cached.get("cefr_level", "B1"),
-            cefr_label=cached.get("cefr_label", "B1 — Intermediate"),
-            estimated_ielts_band=cached.get("estimated_ielts_band", "5.0 - 5.5"),
-            score=cached.get("score", 10),
-            total_questions=cached.get("total_questions", 20),
-            score_percent=cached.get("score_percent", 50),
-            weak_topics=cached.get("weak_topics", []),
-            analysis=cached.get("analysis", ""),
-            is_claimed=False,
-        )
+            # Re-create DB record if only existed in cache
+            record = PlacementTestResult.objects.create(
+                guest_session_id=cached.get("guest_session_id", "guest"),
+                result_token=result_token,
+                cefr_level=cached.get("cefr_level", "B1"),
+                cefr_label=cached.get("cefr_label", "B1 — Intermediate"),
+                estimated_ielts_band=cached.get("estimated_ielts_band", "5.0 - 5.5"),
+                score=cached.get("score", 10),
+                total_questions=cached.get("total_questions", 20),
+                score_percent=cached.get("score_percent", 50),
+                weak_topics=cached.get("weak_topics", []),
+                analysis=cached.get("analysis", ""),
+                is_claimed=bool(cached.get("is_claimed")),
+                student_id=cached.get("student_id"),
+            )
 
-    # Check if already claimed by another user
-    if record.is_claimed and record.student_id and record.student_id != auth_user.id:
-        return JsonResponse({"success": False, "error": "This result has already been claimed by another account"}, status=409)
+        # Check if already claimed by another user
+        if record.student_id and record.student_id != auth_user.id:
+            return JsonResponse({"success": False, "error": "This result has already been claimed by another account"}, status=409)
 
-    # Update record
-    with transaction.atomic():
+        # Update record
         record.student = auth_user
         record.is_claimed = True
         record.claimed_at = timezone.now()
         record.save()
 
         # Update StudentProfile
-        _sync_profile_placement(auth_user, record.cefr_level, record.score_percent)
+        _sync_profile_placement(auth_user, record.cefr_level, record.score_percent, strict=True)
 
     # Update cached version
     try:

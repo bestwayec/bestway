@@ -29,6 +29,19 @@ from . import telegram_links as links
 from .mock_attempt_views import success
 
 
+def telegram_auth_date(value):
+    try:
+        if isinstance(value, bool):
+            raise ValueError
+        timestamp = int(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ContractAPIException('INVALID_CREDENTIALS', 'Telegram auth_date yaroqsiz', 401) from None
+    age = time.time() - timestamp
+    if timestamp <= 0 or age > 86400 or age < -30:
+        raise ContractAPIException('INVALID_CREDENTIALS', 'Telegram avtorizatsiyasi eskirgan', 401)
+    return timestamp
+
+
 def verify_telegram_auth(data: dict) -> dict:
     """
     Validates Telegram Login Widget or WebApp initData HMAC-SHA256 hash.
@@ -57,7 +70,7 @@ def verify_telegram_auth(data: dict) -> dict:
                 user_info = json.loads(parsed['user'])
             except Exception:
                 pass
-        auth_date = int(parsed.get('auth_date', 0) or 0)
+        auth_date = telegram_auth_date(parsed.get('auth_date'))
         return {
             'id': user_info.get('id') or parsed.get('id'),
             'first_name': user_info.get('first_name', ''),
@@ -90,10 +103,7 @@ def verify_telegram_auth(data: dict) -> dict:
     if not (hmac.compare_digest(calc_widget, auth_hash) or hmac.compare_digest(calc_webapp, auth_hash)):
         raise ContractAPIException('INVALID_CREDENTIALS', "Telegram imzosi noto'g'ri", 401)
 
-    auth_date = int(data.get('auth_date', 0) or 0)
-    # Check freshness (allow up to 24 hours = 86400s; if auth_date is present)
-    if auth_date > 0 and abs(time.time() - auth_date) > 86400:
-        raise ContractAPIException('INVALID_CREDENTIALS', 'Telegram avtorizatsiyasi eskirgan', 401)
+    auth_date = telegram_auth_date(data.get('auth_date'))
 
     telegram_id = data.get('id') or data.get('telegram_id')
     return {

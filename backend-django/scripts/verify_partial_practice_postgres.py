@@ -33,6 +33,8 @@ from apps.legacy_schema.models import (
     AssessmentJob,
     AuditLog,
     MockExam,
+    MockAnswer,
+    MockAttempt,
     MockQuestion,
     MockQuestionGroup,
     MockSection,
@@ -145,14 +147,55 @@ try:
     # Scope changes now auto-close old in-progress attempts instead of returning 409
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': excluded, 'response': 'Forged'}, format='json'), 400, 'QUESTION_NOT_IN_EXAM')
     bulk_excluded = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json'), 201)
-    check(bulk_excluded == {'saved': False}, 'Bulk answer ignores out-of-scope question without persisting')
+    check(bulk_excluded == {'saved': 0} and type(bulk_excluded['saved']) is int, 'Bulk answer ignores out-of-scope question without persisting')
+    mixed = [{'questionId': qids['writing'][0], 'response': 'Scoped response'}, {'questionId': excluded, 'response': 'Out of scope'}]
+    for _ in range(2):
+        result = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed}, format='json'), 201)
+        check(result == {'saved': 1}, 'Mixed and repeated batches acknowledge only the valid question')
+    check(not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=excluded).exists(), 'Mixed batch never persists the out-of-scope question')
+    client.force_authenticate(SimpleNamespace(id=str(uuid4()), role='student', is_authenticated=True))
+    data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed[:1]}, format='json'), 404, 'MOCK_ATTEMPT_NOT_FOUND')
+    client.force_authenticate(student)
+
+    # Competing answer and advance requests serialize on the attempt row.
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from django.db import close_old_connections, connections
+    from apps.core import mock_attempts as engine
+    from common.api.exceptions import ContractAPIException
+    race_id = str(uuid4())
+    with connection.cursor() as cursor:
+        cursor.execute('''INSERT INTO "MockAttempt" (id,"examId","studentId",status,"startedAt",mode,"flowMode","currentSkill","submittedSections","antiCheatCount") VALUES (%s,%s,%s,'in_progress',NOW(),'practice','full_test','writing','[]'::jsonb,0)''', [race_id, exam_id, student.id])
+    barrier = Barrier(2)
+    def competing(operation):
+        close_old_connections()
+        try:
+            barrier.wait(timeout=10)
+            try:
+                return operation()
+            except ContractAPIException as error:
+                return {'error': error.contract_code}
+        finally:
+            connections.close_all()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        save_future = pool.submit(competing, lambda: engine.save_answers(student, race_id, [{'questionId': qids['writing'][0], 'response': 'Race response'}], bulk=True))
+        advance_future = pool.submit(competing, lambda: engine.advance(student, race_id))
+        save_result, advance_result = save_future.result(), advance_future.result()
+    check(advance_result.get('currentSkill') == 'speaking' and (save_result.get('saved') == 1 or save_result.get('error') == 'SECTION_LOCKED'), 'Concurrent answer and section advance serialize safely')
+    try:
+        engine.save_answers(student, race_id, [{'questionId': qids['writing'][0], 'response': 'Late mutation'}], bulk=True)
+    except ContractAPIException as error:
+        check(error.contract_code == 'SECTION_LOCKED', 'Closed section rejects all later writes')
+    else:
+        raise AssertionError('Closed section accepted a later write')
+    resumed_full = engine.start_response(MockAttempt.objects.get(id=race_id), MockExam.objects.get(id=exam_id), True)
+    check(resumed_full['resumed'] and resumed_full['currentSkill'] == 'speaking', 'Full-test resume restores the authoritative section after advance')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}/start', {}, format='json'), 403, 'QUESTION_NOT_IN_EXAM')
     data(client.post(f'/v1/mock/attempts/{attempt_id}/speaking/{excluded}', {'audio': audio()}, format='multipart'), 400, 'QUESTION_NOT_IN_EXAM')
     # Incomplete submissions now use zero-score fallback instead of returning 400
     check(not AssessmentJob.objects.filter(attempt_id=attempt_id).exists(), 'No assessment jobs exist before submission')
     for qid in qids['writing']:
         data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': qid, 'response': 'Original local fixture essay response.'}, format='json'), 201)
-    from apps.legacy_schema.models import MockAnswer
     task_clock = timezone.now() - timedelta(seconds=95)
     for qid in qids['speaking']:
         with patch('django.utils.timezone.now', return_value=task_clock):

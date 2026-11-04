@@ -17,18 +17,27 @@ admin.site.index_title = "Operations overview"
 
 
 def serve_media(request, path):
-    root = Path(os.environ.get("STORAGE_DIR", getattr(settings, "MEDIA_ROOT", "/app/storage")))
-    clean_path = path.lstrip("/")
-    for candidate_root in [root / "media", root]:
-        candidate_file = candidate_root / clean_path
-        if candidate_file.is_file():
-            return serve(request, clean_path, document_root=str(candidate_root))
-    if clean_path.startswith("media/"):
-        stripped = clean_path[len("media/"):]
+    root = Path(os.environ.get("STORAGE_DIR", settings.MEDIA_ROOT)).resolve()
+    # Public assets and candidate submissions must never share a download policy.
+    # Resolve before checking so encoded traversal and symlink aliases cannot expose
+    # either legacy recordings or newly separated private uploads.
+    clean = path.replace("\\", "/")
+    if clean.startswith("/") or ".." in Path(clean).parts:
+        raise Http404("Media file not found")
+    private_roots = [path.resolve() for path in (root / "private", root / "speaking_submissions",
+                     root / "media" / "private", root / "media" / "speaking_submissions")]
+    variants = [clean]
+    if clean.startswith("media/"):
+        variants.append(clean[len("media/"):])
+    for relative in variants:
         for candidate_root in [root / "media", root]:
-            candidate_file = candidate_root / stripped
-            if candidate_file.is_file():
-                return serve(request, stripped, document_root=str(candidate_root))
+            candidate = (candidate_root / relative).resolve()
+            if not candidate.is_relative_to(root):
+                continue
+            if any(candidate.is_relative_to(private) for private in private_roots):
+                continue
+            if candidate.is_file():
+                return serve(request, str(candidate.relative_to(root)), document_root=str(root))
     raise Http404("Media file not found")
 
 

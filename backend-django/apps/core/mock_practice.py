@@ -47,7 +47,7 @@ def scope_sections(attempt, sections):
             continue
         result = dict(section, groups=[])
         for index, group in enumerate(section['groups']):
-            questions = [q for q in group['questions'] if not ids or q['id'] in ids]
+            questions = [q for q in group['questions'] if q['id'] in ids]
             if questions:
                 result['groups'].append(dict(group, questions=questions,
                                              sourcePartIndex=group.get('sourcePartIndex', index)))
@@ -245,8 +245,8 @@ def metadata(exam):
     )
 
 
-def selected_scope(exam, skills):
-    value = practice_plan(exam)
+def selected_scope(exam, skills, *, _auto_seed=True):
+    value = practice_plan(exam, _auto_seed=_auto_seed)
     available_skills = list(value['skills'])
     question_ids = list(value['questionIds'])
     for skill in skills:

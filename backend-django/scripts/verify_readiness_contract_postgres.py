@@ -269,6 +269,25 @@ try:
         f"/v1/mock/exams/{speaking_id}/start", {"mode": "practice"}, format="json"), 201)
     check(bool(started.get("attemptId")), "a student can start the ready exam")
     attempt_ids.append(started["attemptId"])
+    check(started['flowMode'] == 'single_skill' and started['practiceScope']['skills'] == ['speaking'],
+          'legacy practice start freezes the validated single-skill scope')
+    check(len(started['practiceScope']['questionIds']) == sum(part[1] for part in SPECS[CURRENT_SPEC]['speaking']['parts']),
+          'legacy practice scope includes the authored Speaking questions')
+    resumed = response_data(client.post(
+        f"/v1/mock/exams/{speaking_id}/start", {"mode": "practice"}, format="json"), 201)
+    check(resumed['attemptId'] == started['attemptId'] and resumed['resumed'],
+          'legacy practice start resumes the same frozen attempt')
+    foreign_question = MockQuestion.objects.filter(group__section__exam_id=cefr_id).first()
+    denied = client.post(f"/v1/mock/attempts/{started['attemptId']}/answer",
+                         {'questionId': foreign_question.id, 'response': 'outside scope'}, format='json')
+    check(response_data(denied, 400).get('code') == 'QUESTION_NOT_IN_EXAM',
+          'inferred practice scope rejects questions from another exam')
+    explicit_full = client.post(f"/v1/mock/exams/{speaking_id}/start",
+                                {"mode": "practice", "flow": "full_test"}, format="json")
+    check(response_data(explicit_full, 400).get('code') == 'MOCK_FULL_TEST_UNAVAILABLE',
+          'explicit full-test flow remains unavailable on practice profiles')
+    check(MockAttempt.objects.get(id=started['attemptId']).status == 'in_progress',
+          'rejected full-test request does not close the existing practice attempt')
 
     # ── 4) IELTS keeps its NestJS catalogue semantics ───────────────────────
     client.force_authenticate(user=admin)
