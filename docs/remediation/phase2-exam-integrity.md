@@ -61,3 +61,31 @@ Changed files: `apps/core/mock_attempts.py`, `apps/core/mock_practice.py`,
 `scripts/verify_partial_practice_postgres.py` under `backend-django`;
 `src/components/mock/mock-runner.tsx` and `mock-runner-autosave.spec.ts` under
 `frontend`; and this report.
+
+## Follow-up: practice readiness and reproducible build
+
+A legacy `mode=practice` request with no selected skills on a `practice`
+profile previously entered the full-test path even when the exam was ready.
+It now checks the existing Multilevel start readiness and freezes only the
+validated authored skills as practice scope. Incomplete content stays blocked;
+explicit full-test requests on practice profiles are rejected before an active
+attempt can be closed. Resume uses the same inferred scope. Explicit skill
+selection and full-mock flows retain their existing behavior. Inference avoids
+running the legacy automatic seed path. No schema change is needed.
+
+The old test expecting a question lookup to mutate the active section now
+asserts that lookup leaves the section and database untouched; the separate
+section-lock regression tests continue to enforce the security rule.
+
+The frontend uses the pinned OFL-1.1 `@fontsource-variable/inter` package via
+`next/font/local`, avoiding a build-time Google Fonts network dependency while
+keeping Inter and the existing CSS variable. The lockfile pins its integrity.
+
+Follow-up validation: full Django 702 passed and 4 skipped; PostgreSQL
+readiness 62/62, partial practice 74/74, grading 65/65, AI rankings 35/35,
+Phase 0 security 17/17; frontend tests 390 passed; production build passed;
+ESLint 0 errors and 466 warnings. The independent PostgreSQL authoring suite
+still fails `delete_exam route is super-admin-only` (an admin can delete a
+synthetic draft). This pre-existing authorization finding blocks prerelease
+until its product contract and implementation are resolved. Earlier test counts
+and failures in this report describe the prior checkpoint.

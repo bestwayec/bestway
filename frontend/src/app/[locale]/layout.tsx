@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -17,14 +17,14 @@ export const viewport: Viewport = {
 };
 
 // Inter — lotin yozuvidagi uz/en uchun. globals.css uni --font-inter orqali oladi.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const inter = localFont({
+  src: "../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+  weight: "400 700",
   variable: "--font-inter",
   display: "swap",
   preload: true,
   fallback: ["system-ui", "sans-serif"],
-  adjustFontFallback: true,
+  adjustFontFallback: "Arial",
 });
 
 // Qo'llab-quvvatlanadigan tillarni build vaqtida oldindan render qilamiz.
