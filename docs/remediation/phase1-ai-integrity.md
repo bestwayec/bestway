@@ -32,23 +32,37 @@ and appropriate data handling before activation.
 
 ## Verification
 
-- Focused assessment suite: 84 passed and 41 subtests passed. Synthetic tests
+- Focused assessment suite: 86 passed and 41 subtests passed. Synthetic tests
   cover invalid/valid provider responses, failures, local routing and explicit
   fallback, audio hash/missing file/STT failures, retry states and no grading
   after failed evidence. Existing PostgreSQL grading checks exercise teacher
   authorization through their pre-failure portion.
 - Django `check` and `makemigrations --check --dry-run`: PASS.
-- Full pytest: 688 passed, 4 skipped, 1 failed. The failure is the unchanged
+- Full pytest: 690 passed, 4 skipped, 1 failed. The failure is the unchanged
   BW-09 `test_assert_question_updates_section_without_lock` baseline.
 - PostgreSQL AI ranking: 35/35 PASS. Readiness and partial-practice remain FAIL
   for pre-existing BW-15 and BW-08 respectively.
-- PostgreSQL grading consistency: FAIL at its existing silent-speech assertion.
-  The fixture expects `SUCCEEDED`, final score 0 and answers marked graded;
-  the new outcome is `NEEDS_REVIEW`, `STT_EMPTY_TRANSCRIPT`, no final score.
-  This is the deliberate fail-closed behavior, but the integration contract and
-  fixture need explicit product review and a subsequent approved update. The
-  script's preceding checks, including teacher authorization, passed. The test
-  was not modified to hide the changed behavior.
+- The grading consistency fixture originally asserted `SUCCEEDED`, zero final
+  score and graded-zero answers after a mocked empty STT output. That fixture
+  did not verify silence and contradicted its own “human review” description.
+  It now separately exercises actual decoded silent PCM (`STT_NO_SPEECH`), an
+  empty STT result (`STT_EMPTY_TRANSCRIPT`), unavailable microphone audio
+  (`STT_AUDIO_UNAVAILABLE`) and retryable STT timeout. Silence, empty output and
+  missing audio stay `NEEDS_REVIEW` with no final score; timeout stays `RETRY`.
+  The valid transcription case still checks the successful grading path.
+  Verified acoustic silence means no speech was captured, not that the candidate
+  intentionally submitted a blank answer: microphone failure may sound silent.
+  There is no verified intent/blank-submission signal in this contract, so human
+  review is required before applying any blank-answer scoring policy.
+- PostgreSQL grading consistency now passes 65/65 checks with no fabricated
+  successful transcript or graded answer in the failure scenarios.
+- PostgreSQL authoring verification fails its independent assertion that draft
+  deletion is super-admin-only: an admin received HTTP 200 and the synthetic
+  draft was deleted. The route passes a super-admin proxy actor for an exam
+  with no history. This code also exists at Phase 0 base `c6d19f9`; it was not
+  changed in this phase and requires a separate authorization fix or an explicit
+  product contract decision before release.
+
 
 ## Rollback
 

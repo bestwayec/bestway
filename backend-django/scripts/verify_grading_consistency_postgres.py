@@ -8,6 +8,7 @@ import copy
 import json
 import os
 import sys
+import wave
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -190,16 +191,61 @@ try:
         run_fixture(later)
         check(later.final_score_source=='TEACHER' and later.final_score==12 and later.final_result['practiceGrade']['score']==46.3,
             'late AI regrade preserves teacher-approved native and practice grades')
-        silent_id=prefix+'-silent-attempt'
-        insert('MockAttempt',id=silent_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
-            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['speaking'],questionIds=speaking)}))
-        for qid in speaking:insert('MockAnswer',id=str(uuid4()),attemptId=silent_id,questionId=qid,response='',audioKey=qid+'.wav',updatedAt=stamp)
-        silent_attempt=MockAttempt.objects.select_related('exam').get(id=silent_id);mock_submission_snapshots.enqueue(silent_attempt)
-        silent=AssessmentJob.objects.get(attempt_id=silent_id)
-        run_fixture(silent,lambda *args:dict(transcript(*args),text=''))
-        check(silent.status=='SUCCEEDED' and silent.final_score==0 and silent.failure_code is None,
-            'empty speech evidence stays ungraded for human review instead of receiving a fake minimum or maximum')
-        check(all(a.is_graded and a.score==0 for a in MockAnswer.objects.filter(attempt_id=silent_id)),'empty speech projects zero marks into student answers')
+        # A zero-amplitude decoded recording proves only that no speech was
+        # captured. It cannot distinguish deliberate silence from mic failure.
+        # An empty STT response is even weaker evidence. Neither is a grade.
+        from apps.core.assessment_local_stt import _decode_audio
+        from apps.core.assessment_results import ProviderError
+        from apps.legacy_schema.models import SpeechTranscript
+
+        def speech_case(label, audio_kind, stt):
+            attempt_id=prefix+'-'+label+'-attempt'
+            insert('MockAttempt',id=attempt_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
+                flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['speaking'],questionIds=speaking)}))
+            for qid in speaking:
+                key=label+'-'+qid+'.wav'
+                if audio_kind == 'silent':
+                    with wave.open(str(Path(storage)/key),'wb') as audio:
+                        audio.setnchannels(1);audio.setsampwidth(2);audio.setframerate(16000);audio.writeframes(b'\0\0'*16000)
+                elif audio_kind == 'recorded':
+                    (Path(storage)/key).write_bytes(b'RIFF-local-test-recording')
+                insert('MockAnswer',id=str(uuid4()),attemptId=attempt_id,questionId=qid,response='',audioKey=key,updatedAt=stamp)
+            mock_submission_snapshots.enqueue(MockAttempt.objects.select_related('exam').get(id=attempt_id))
+            job=AssessmentJob.objects.get(attempt_id=attempt_id)
+            run_fixture(job,stt)
+            return attempt_id,job
+
+        def assert_needs_review(label, audio_kind, stt, code):
+            attempt_id,job=speech_case(label,audio_kind,stt)
+            check(job.status=='NEEDS_REVIEW' and job.failure_code==code and job.final_score is None,
+                label+' is sent to review with no final score')
+            check(not MockAnswer.objects.filter(attempt_id=attempt_id,is_graded=True).exists(),
+                label+' has no fabricated graded answers')
+            check(not AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').exists(),
+                label+' has no successful evaluation')
+            check(not SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').exists(),
+                label+' has no successful transcript')
+            if audio_kind != 'missing':
+                check(SpeechTranscript.objects.filter(job_id=job.id,status='FAILED',failure_code=code).exists(),
+                    label+' records its specific transcript failure')
+
+        def silence(path,*args):
+            _decode_audio(path,600)  # Real PCM silence is detected before inference.
+            raise AssertionError('Expected silent audio to be detected')
+        assert_needs_review('verified-acoustic-silence','silent',silence,'STT_NO_SPEECH')
+        assert_needs_review('unverified-empty-transcript','recorded',lambda *args:dict(transcript(*args),text=''),'STT_EMPTY_TRANSCRIPT')
+        assert_needs_review('microphone-missing-audio','missing',transcript,'STT_AUDIO_UNAVAILABLE')
+        def timeout(*args):
+            raise ProviderError('STT_LOCAL_TIMEOUT',True,False)
+        timeout_id,timeout_job=speech_case('stt-timeout','recorded',timeout)
+        check(timeout_job.status=='RETRY' and timeout_job.failure_code=='STT_LOCAL_TIMEOUT' and timeout_job.final_score is None,
+            'STT timeout remains retryable without a final score')
+        check(not MockAnswer.objects.filter(attempt_id=timeout_id,is_graded=True).exists(),
+            'STT timeout has no fabricated graded answers')
+        check(not AssessmentEvaluation.objects.filter(job_id=timeout_job.id,status='SUCCEEDED').exists(),
+            'STT timeout has no successful evaluation')
+        check(SpeechTranscript.objects.filter(job_id=timeout_job.id,status='FAILED',failure_code='STT_LOCAL_TIMEOUT').exists(),
+            'STT timeout records the transcript failure for retry')
         ai.assert_not_called();speech.assert_not_called()
         transaction.set_rollback(True)
     check(not MockExam.objects.filter(id=ids['exam']).exists(),'all local fixtures and grading changes rolled back')

@@ -103,3 +103,29 @@ def test_failed_stt_cannot_call_grader():
         assert worker.run_once(grader,speech)
         grader.assert_not_called()
         assert fail.call_args.args[1]=='STT_AUDIO_HASH_MISMATCH'
+
+
+def test_actual_silent_pcm_is_detected_without_inventing_a_transcript():
+    import wave
+    from apps.core.assessment_local_stt import _decode_audio
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / 'silence.wav'
+        with wave.open(str(path), 'wb') as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(16000)
+            audio.writeframes(b'\0\0' * 16000)
+        with pytest.raises(ProviderError, match='STT_NO_SPEECH'):
+            _decode_audio(path, 600)
+
+
+def test_silence_and_empty_transcript_remain_distinct_review_reasons():
+    from apps.core import assessment
+    job = SimpleNamespace(id='job', lease_token='lease', attempt_count=1)
+    with patch.object(assessment.AssessmentJob.objects, 'filter') as jobs:
+        for code in ('STT_NO_SPEECH', 'STT_EMPTY_TRANSCRIPT', 'STT_AUDIO_UNAVAILABLE'):
+            assessment.fail_job(job, code, False, False)
+            values = jobs.return_value.update.call_args.kwargs
+            assert values['status'] == 'NEEDS_REVIEW'
+            assert values['failure_code'] == code
+            assert 'final_score' not in values
