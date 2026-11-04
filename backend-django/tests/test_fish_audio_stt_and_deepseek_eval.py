@@ -73,7 +73,7 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
             self.assertEqual(res["text"], "Transcribed text")
             mock_or_transcribe.assert_called_once()
 
-    def test_assert_question_updates_section_without_lock(self):
+    def test_assert_question_does_not_change_full_test_section(self):
         attempt = SimpleNamespace(
             flow_mode="full_test",
             current_skill="writing",
@@ -83,8 +83,8 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
         with patch("apps.core.mock_attempts.questions", return_value=[mock_q]):
             q = attempts.assert_question(attempt, "q-speak-1")
             self.assertEqual(q.id, "q-speak-1")
-            self.assertEqual(attempt.current_skill, "speaking")
-            attempt.save.assert_called_once_with(update_fields=["current_skill"])
+            self.assertEqual(attempt.current_skill, "writing")
+            attempt.save.assert_not_called()
 
     @patch("django.db.transaction.atomic")
     @patch("apps.core.mock_attempts.own")

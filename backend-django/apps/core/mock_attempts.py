@@ -31,6 +31,7 @@ from .mock_practice import (
     PRACTICE_SKILLS,
     SCOPE_KEY,
     is_partial,
+    practice_plan,
     scope,
     scope_sections,
     selected_scope,
@@ -262,6 +263,8 @@ def start(actor, exam_id, data):
         fail('MOCK_PURCHASE_PENDING', 'Xaridingiz tasdiqlanishini kuting', 402)
     if access != 'granted':
         fail('MOCK_PAYMENT_REQUIRED', "Bu imtihon uchun to'lov talab qilinadi", 402)
+    if data.get('flow') == 'full_test' and exam.profile == 'practice':
+        fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
     with transaction.atomic():
         current = MockExam.objects.select_for_update().filter(id=exam_id).first()
         if current is None:
@@ -270,6 +273,23 @@ def start(actor, exam_id, data):
             fail('MOCK_CONTENT_CONFLICT', 'Exam content changed. Reload before starting or resuming', 409)
         if not current.is_published and not current.is_demo:
             fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
+        # Legacy practice clients may omit skills. Infer only validated authored
+        # skills, after the same full-content readiness check used by Start.
+        # Explicit selections retain their narrower partial-practice contract.
+        implicit_practice = (not partial and exam.profile == 'practice'
+            and data.get('mode') == 'practice' and not data.get('flow'))
+        if implicit_practice:
+            if exam.type == 'multilevel':
+                checked = multilevel_readiness(_exam_tree(exam))
+                if not checked['supported']:
+                    fail('SPECIFICATION_UNSUPPORTED', checked['issues'][0])
+                if checked['issues']:
+                    fail('MOCK_NOT_READY', '; '.join(checked['issues']))
+            inferred = practice_plan(exam, _auto_seed=False)['skills']
+            if not inferred:
+                fail('MOCK_NOT_READY', 'No validated practice skills are available')
+            data = dict(data, skills=inferred)
+            partial = True
         existing = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').first()
         if existing:
             now = timezone.now()
@@ -286,7 +306,8 @@ def start(actor, exam_id, data):
                 existing = None
             else:
                 return start_response(existing, exam, True)
-        practice = selected_scope(exam, data['skills']) if partial else None
+        practice = (selected_scope(exam, data['skills'], _auto_seed=False) if implicit_practice
+                    else selected_scope(exam, data['skills']) if partial else None)
         if practice is not None and len(data['skills']) == 1:
             practice['single_section'] = data['skills'][0]
             practice['section_filter'] = data['skills'][0]

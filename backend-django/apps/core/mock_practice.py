@@ -245,8 +245,8 @@ def metadata(exam):
     )
 
 
-def selected_scope(exam, skills):
-    value = practice_plan(exam)
+def selected_scope(exam, skills, *, _auto_seed=True):
+    value = practice_plan(exam, _auto_seed=_auto_seed)
     available_skills = list(value['skills'])
     question_ids = list(value['questionIds'])
     for skill in skills:
