@@ -82,3 +82,18 @@ def test_legacy_session_http_authorization(actor, published, access, expected):
         response = cd.get_cd_exam_session(request, 'legacy')
     assert response.status_code == expected
     assert serialize.called is (expected == 200)
+
+
+def test_published_independent_cd_is_public_and_draft_is_not():
+    from django.http import JsonResponse
+    for published, expected in ((True, 200), (False, 404)):
+        request = RequestFactory().get('/v1/exams/CODE/cd-session')
+        exam = SimpleNamespace(id='cd', code='CODE', is_published=published)
+        with patch.object(cd.Exam.objects, 'filter') as exams, \
+             patch.object(cd.MockExam.objects, 'filter') as legacy_exams, \
+             patch.object(cd, '_serialize_cd_exam', return_value=JsonResponse({'ok': True})) as serialize:
+            exams.return_value.first.return_value = exam
+            legacy_exams.return_value.first.return_value = None
+            response = cd.get_cd_exam_session(request, 'CODE')
+        assert response.status_code == expected
+        assert serialize.called is (expected == 200)
