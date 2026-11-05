@@ -64,6 +64,9 @@ try:
     outcomes = parallel(lambda: auth_service.refresh(initial), lambda: auth_service.refresh(initial))
     successes = [r for r in outcomes if 'refreshToken' in r]
     errors = [r.get('error') for r in outcomes if 'error' in r]
+    if len(successes) == 1 and errors == ['REFRESH_IN_PROGRESS']:
+        print('FAIL BW-16: a simultaneous legitimate request receives REFRESH_IN_PROGRESS instead of session recovery')
+        raise SystemExit(1)
     if len(successes) == 1 and errors == ['SESSION_EXPIRED']:
         try:
             auth_service.refresh(successes[0]['refreshToken'])

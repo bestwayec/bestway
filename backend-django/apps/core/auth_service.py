@@ -10,7 +10,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import OperationalError, connection, transaction
 from django.utils import timezone
 
 from common.api.exceptions import ContractAPIException
@@ -144,9 +144,21 @@ def login(phone: str, password: str):
 
 
 def refresh(raw: str):
+    try:
+        return _refresh_locked(raw)
+    except OperationalError as error:
+        # PostgreSQL lock_not_available: another transaction is already rotating
+        # this token. Do not turn an overlapping request into a replay verdict.
+        cause = error.__cause__
+        if getattr(cause, "sqlstate", None) == "55P03" or getattr(cause, "pgcode", None) == "55P03":
+            raise ContractAPIException("REFRESH_IN_PROGRESS", "Sessiya yangilanmoqda; qayta urinib ko'ring", 409) from error
+        raise
+
+
+def _refresh_locked(raw: str):
     reused = False
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE', [token_hash(raw)])
+        cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE OF r NOWAIT', [token_hash(raw)])
         row = cursor.fetchone()
         if not row or not row[11]:
             raise ContractAPIException("INVALID_REFRESH_TOKEN", "Sessiya muddati tugagan — qaytadan kiring", 401)
