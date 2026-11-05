@@ -277,6 +277,14 @@ try:
         f"/v1/mock/exams/{speaking_id}/start", {"mode": "practice"}, format="json"), 201)
     check(resumed['attemptId'] == started['attemptId'] and resumed['resumed'],
           'legacy practice start resumes the same frozen attempt')
+    resumed_timed = response_data(client.post(
+        f"/v1/mock/exams/{speaking_id}/start", {"mode": "timed"}, format="json"), 201)
+    check(resumed_timed['attemptId'] == started['attemptId'] and resumed_timed['resumed']
+          and resumed_timed['mode'] == started['mode']
+          and resumed_timed['practiceScope'] == started['practiceScope'],
+          'mode-only resume preserves the owned practice attempt and frozen scope')
+    check(MockAttempt.objects.get(id=started['attemptId']).status == 'in_progress',
+          'mode-only resume does not finish the existing attempt')
     foreign_question = MockQuestion.objects.filter(group__section__exam_id=cefr_id).first()
     denied = client.post(f"/v1/mock/attempts/{started['attemptId']}/answer",
                          {'questionId': foreign_question.id, 'response': 'outside scope'}, format='json')

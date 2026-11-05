@@ -291,6 +291,13 @@ def start(actor, exam_id, data):
             data = dict(data, skills=inferred)
             partial = True
         existing = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').first()
+        # An omitted scope on a legacy resume request means the existing
+        # practice scope, regardless of the requested mode. Do not auto-submit
+        # an owned scoped attempt merely because its client sent another mode.
+        if (existing and not partial and exam.profile == 'practice' and not data.get('flow')
+                and is_partial(existing)):
+            data = dict(data, skills=scope(existing)['skills'])
+            partial = True
         if existing:
             now = timezone.now()
             exp = existing.overall_deadline_at or existing.deadline_at
