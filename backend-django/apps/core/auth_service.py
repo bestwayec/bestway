@@ -159,8 +159,9 @@ def refresh(raw: str):
             reused = True
         else:
             user = (row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12])
-            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "id"=%s', [row[0]])
-            tokens = issue_tokens(user, family_id=row[2] or new_family())
+            family_id = row[2] or new_family()
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW(), "familyId"=%s WHERE "id"=%s', [family_id, row[0]])
+            tokens = issue_tokens(user, family_id=family_id)
     # Raise after committing the family revocation; raising inside atomic rolls it back.
     if reused:
         raise ContractAPIException("SESSION_EXPIRED", "Sessiya xavfsizlik sababli bekor qilindi — qaytadan kiring", 401)

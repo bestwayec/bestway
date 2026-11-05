@@ -28,7 +28,7 @@ def battle_create_view(request):
         raise ContractAPIException("SET_ID_REQUIRED", "Lug'at to'plami tanlanmadi", 400)
 
     result = create_battle_session(user, set_id, question_count=question_count)
-    return success(result, status_code=201)
+    return success(result, status=201)
 
 
 @api_view(["POST"])

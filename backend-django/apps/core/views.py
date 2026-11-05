@@ -59,6 +59,7 @@ def require_role(request, *roles):
 def require_authenticated(request):
     if not getattr(request.user, "is_authenticated", False):
         raise ContractAPIException("UNAUTHORIZED", "Avval tizimga kiring", 401)
+    return request.user
 
 
 @api_view(["GET"])
@@ -209,11 +210,16 @@ def logout_view(request):
     token = data.get("refreshToken")
     if token is not None and not isinstance(token, str):
         raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
-    with connection.cursor() as cursor:
-        if token:
-            cursor.execute('DELETE FROM "RefreshToken" WHERE "userId"=%s AND "tokenHash"=%s', [request.user.id, auth_service.token_hash(token)])
-        else:
-            cursor.execute('DELETE FROM "RefreshToken" WHERE "userId"=%s', [request.user.id])
+    with transaction.atomic(), connection.cursor() as cursor:
+        if token:
+            cursor.execute('SELECT "familyId" FROM "RefreshToken" WHERE "userId"=%s AND "tokenHash"=%s FOR UPDATE', [request.user.id, auth_service.token_hash(token)])
+            row = cursor.fetchone()
+            if row and row[0] is not None:
+                cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId"=%s', [request.user.id, row[0]])
+            elif row:
+                cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "tokenHash"=%s', [request.user.id, auth_service.token_hash(token)])
+        else:
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s', [request.user.id])
     return success({"loggedOut": True})
 
 

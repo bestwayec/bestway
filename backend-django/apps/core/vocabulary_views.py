@@ -337,4 +337,4 @@ def add_user_word_view(request):
 
     from apps.core.vocabulary_service import add_word_to_user_srs
     result = add_word_to_user_srs(user.id, english=english, uzbek=uzbek)
-    return success(result, status_code=201)
+    return success(result, status=201)
