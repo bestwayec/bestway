@@ -675,6 +675,7 @@
     "parent": "Ota-ona"
   },
   "auth": {
+    "logoutUnconfirmed": "Serverdan chiqish tasdiqlanmadi. Sessiyalaringizni bekor qilish uchun administratorga murojaat qiling.",
     "loginTitle": "Tizimga kirish",
     "loginSubtitle": "Telefon raqamingiz va parolingizni kiriting",
     "registerTitle": "Ro'yxatdan o'tish",

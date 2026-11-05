@@ -106,6 +106,15 @@ describe("dashboard session recovery", () => {
     expect(location(response).href).toBe("https://bestwayec.uz/dashboard");
   });
 
+  it("preserves session cookies when another worker holds the refresh lock", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response("{}", { status: 409 })));
+    const response = await GET(request("/super-admin", "bw_rt=valid-refresh"));
+    expect(response.status).toBe(409);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("retry-after")).toBe("1");
+    expect((await response.json()).error.code).toBe("REFRESH_IN_PROGRESS");
+  });
+
   it("fails closed and preserves session cookies during a backend outage", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response("unavailable", { status: 503 })));
     const response = await GET(request("/super-admin", "bw_at=valid-access; bw_rt=valid-refresh"));

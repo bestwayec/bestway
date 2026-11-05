@@ -50,6 +50,12 @@ export async function GET(req: NextRequest) {
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
       });
+      if (refresh.status === 409) {
+        return NextResponse.json(
+          { success: false, error: { code: "REFRESH_IN_PROGRESS", message: "Sessiya yangilanmoqda; qayta urinib ko'ring" } },
+          { status: 409, headers: { "retry-after": "1", "cache-control": "no-store" } },
+        );
+      }
       if (refresh.status === 401 || refresh.status === 403) return loginResponse(req, next);
       if (!refresh.ok) throw new Error("Session backend unavailable");
       const json = (await refresh.json()) as ApiResponse<AuthTokens>;

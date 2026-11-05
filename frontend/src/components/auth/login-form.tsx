@@ -278,6 +278,12 @@ export function LoginForm() {
         </button>
       </div>
 
+      {params?.get("logout_unconfirmed") === "1" && (
+        <div role="alert" className="rounded-xl border border-amber-700/60 bg-amber-950/40 px-3.5 py-3 text-sm text-amber-200">
+          {t("logoutUnconfirmed")}
+        </div>
+      )}
+
       {serverError && (
         <div
           role="alert"

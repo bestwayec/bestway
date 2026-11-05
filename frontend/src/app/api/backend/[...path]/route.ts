@@ -51,7 +51,7 @@ function forwardHeaders(req: NextRequest, accessToken?: string): Headers {
 /** Backenddan yangi tokenlar so'rash. Muvaffaqiyatsiz bo'lsa — null. */
 async function refreshSession(
   refreshToken: string,
-): Promise<{ accessToken: string; refreshToken?: string } | null> {
+): Promise<{ accessToken: string; refreshToken?: string } | "pending" | "unavailable" | null> {
   try {
     const res = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
@@ -60,15 +60,17 @@ async function refreshSession(
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) return null;
+    if (res.status === 409) return "pending";
+    if (res.status === 401 || res.status === 403) return null;
+    if (!res.ok) return "unavailable";
     const json = (await res.json()) as {
       success: boolean;
       data?: { accessToken?: string; refreshToken?: string };
     };
-    if (!json.success || !json.data?.accessToken) return null;
+    if (!json.success || !json.data?.accessToken || !json.data.refreshToken) return "unavailable";
     return { accessToken: json.data.accessToken, refreshToken: json.data.refreshToken };
   } catch {
-    return null;
+    return "unavailable";
   }
 }
 
@@ -120,18 +122,33 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   let sessionExpired = false;
 
   if (upstream.status === 401) {
-    renewed = refreshToken ? await refreshSession(refreshToken) : null;
+    const result = refreshToken ? await refreshSession(refreshToken) : null;
+    if (result === "pending") {
+      // Another request is rotating this cookie. Do not clear or replace it.
+      return NextResponse.json(
+        { success: false, error: { code: "REFRESH_IN_PROGRESS", message: "Sessiya yangilanmoqda; qayta urinib ko'ring" } },
+        { status: 409, headers: { "retry-after": "1", "cache-control": "no-store" } },
+      );
+    }
+    if (result === "unavailable") {
+      return NextResponse.json(
+        { success: false, error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" } },
+        { status: 502, headers: { "cache-control": "no-store" } },
+      );
+    }
+    renewed = result;
     if (renewed) {
       try {
         upstream = await send(renewed.accessToken);
       } catch {
-        return NextResponse.json(
-          {
-            success: false,
-            error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" },
-          },
-          { status: 502 },
+        // Rotation consumed the old token. Keep the replacement on an outage.
+        const response = NextResponse.json(
+          { success: false, error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" } },
+          { status: 502, headers: { "cache-control": "no-store" } },
         );
+        response.cookies.set(COOKIE.access, renewed.accessToken, sessionCookieOptions(req, ACCESS_MAX_AGE));
+        if (renewed.refreshToken) response.cookies.set(COOKIE.refresh, renewed.refreshToken, sessionCookieOptions(req, REFRESH_MAX_AGE));
+        return response;
       }
     }
     if (upstream.status === 401) {

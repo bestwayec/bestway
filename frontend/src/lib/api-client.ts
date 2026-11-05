@@ -299,6 +299,9 @@ export const authApi = {
   },
 
   async logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const response = await fetch("/api/auth/logout", { method: "POST" });
+    if (!response.ok) {
+      throw new ApiError("LOGOUT_UNCONFIRMED", "Server-side logout could not be confirmed", response.status);
+    }
   },
 };

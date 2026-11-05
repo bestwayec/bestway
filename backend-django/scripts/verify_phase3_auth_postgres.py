@@ -93,9 +93,29 @@ with transaction.atomic():
     else:
         raise AssertionError('logout did not revoke replacement')
 
+    first = auth_service.issue_tokens(fixture_user)
+    rotated = auth_service.refresh(first['refreshToken'])
+    unrelated = auth_service.issue_tokens(fixture_user)
+    unauth_logout = views.logout_refresh_view(factory.post('/logout-refresh', {'refreshToken': first['refreshToken']}, format='json'))
+    check(unauth_logout.status_code == 200, 'refresh bearer can revoke its family without access token')
+    try:
+        auth_service.refresh(rotated['refreshToken'])
+    except ContractAPIException as exc:
+        check(exc.contract_code == 'SESSION_EXPIRED', 'refresh-bearer logout revokes rotated successor')
+    else:
+        raise AssertionError('refresh-bearer logout left successor active')
+    check(bool(auth_service.refresh(unrelated['refreshToken'])['refreshToken']), 'refresh-bearer logout does not revoke another family')
+    unknown = views.logout_refresh_view(factory.post('/logout-refresh', {'refreshToken': 'synthetic-unknown'}, format='json'))
+    check(unknown.status_code == 200, 'unknown refresh bearer gives non-enumerating response')
+
     expired = auth_service.issue_tokens(fixture_user)
     with connection.cursor() as cursor:
         cursor.execute("UPDATE \"RefreshToken\" SET \"expiresAt\"=NOW() - interval '1 second' WHERE \"tokenHash\"=%s", [auth_service.token_hash(expired['refreshToken'])])
+    response = views.logout_refresh_view(factory.post('/logout-refresh', {'refreshToken': expired['refreshToken']}, format='json'))
+    check(response.status_code == 200, 'expired refresh logout remains non-enumerating')
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT "revokedAt" FROM "RefreshToken" WHERE "tokenHash"=%s', [auth_service.token_hash(expired['refreshToken'])])
+        check(cursor.fetchone()[0] is None, 'expired refresh bearer cannot revoke a family')
     try:
         auth_service.refresh(expired['refreshToken'])
     except ContractAPIException as exc:

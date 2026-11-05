@@ -10,7 +10,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import OperationalError, connection, transaction
 from django.utils import timezone
 
 from common.api.exceptions import ContractAPIException
@@ -144,9 +144,21 @@ def login(phone: str, password: str):
 
 
 def refresh(raw: str):
+    try:
+        return _refresh_locked(raw)
+    except OperationalError as error:
+        # PostgreSQL lock_not_available: another transaction is already rotating
+        # this token. Do not turn an overlapping request into a replay verdict.
+        cause = error.__cause__
+        if getattr(cause, "sqlstate", None) == "55P03" or getattr(cause, "pgcode", None) == "55P03":
+            raise ContractAPIException("REFRESH_IN_PROGRESS", "Sessiya yangilanmoqda; qayta urinib ko'ring", 409) from error
+        raise
+
+
+def _refresh_locked(raw: str):
     reused = False
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE', [token_hash(raw)])
+        cursor.execute('SELECT r."id",r."userId",r."familyId",r."expiresAt",r."revokedAt",u."id",u."name",u."phone",u."role",u."createdAt",u."passwordHash",u."isActive",u."telegramChatId" FROM "RefreshToken" r JOIN "User" u ON u."id"=r."userId" WHERE r."tokenHash"=%s FOR UPDATE OF r NOWAIT', [token_hash(raw)])
         row = cursor.fetchone()
         if not row or not row[11]:
             raise ContractAPIException("INVALID_REFRESH_TOKEN", "Sessiya muddati tugagan — qaytadan kiring", 401)
@@ -167,6 +179,22 @@ def refresh(raw: str):
         raise ContractAPIException("SESSION_EXPIRED", "Sessiya xavfsizlik sababli bekor qilindi — qaytadan kiring", 401)
     return tokens
 
+
+
+def revoke_refresh_family(raw: str):
+    """Revoke the family proved by an unexpired refresh bearer, without disclosure."""
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute('SELECT "id","userId","familyId","expiresAt" FROM "RefreshToken" WHERE "tokenHash"=%s FOR UPDATE', [token_hash(raw)])
+        row = cursor.fetchone()
+        if not row:
+            return
+        now = timezone.now() if getattr(row[3], "tzinfo", None) is not None else db_now()
+        if row[3] < now:
+            return
+        if row[2] is None:
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "id"=%s', [row[0]])
+        else:
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId"=%s', [row[1], row[2]])
 
 def verify_challenge(verifier: str, challenge: str) -> bool:
     digest = hashlib.sha256(verifier.encode("utf-8")).digest()
