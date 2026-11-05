@@ -28,7 +28,7 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Require successful main CI for the deployment commit
         env:
@@ -49,6 +49,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 25m
           envs: VPS_PATH,DEPLOY_SHA
           script: |
             set -euo pipefail
@@ -58,16 +59,14 @@ jobs:
             git fetch origin main
             test "$(git rev-parse origin/main)" = "$DEPLOY_SHA" \
               || { echo "main advanced beyond the verified commit; wait for its CI"; exit 1; }
-            if git merge --ff-only origin/main; then
-              echo "checkout fast-forwarded to $(git rev-parse --short HEAD)"
-            else
-              echo "WARN: origin/main is not a fast-forward — history was rewritten upstream"
-              echo "      checkout before: $(git rev-parse --short HEAD)"
-              git reset --hard origin/main
-              echo "      checkout after:  $(git rev-parse --short HEAD)"
-            fi
+            git merge --ff-only origin/main || { echo "Checkout cannot fast-forward; deployment stopped without discarding local work"; exit 1; }
+            echo "checkout fast-forwarded to $(git rev-parse --short HEAD)"
             export BUILD_COMMIT="$(git rev-parse HEAD)"
-            docker compose up -d --build backend frontend assessment-worker game-scheduler telegram-bot
+            # Workers share bestway-django:local with backend; build it once.
+            echo "Building migrator, backend and frontend images"
+            timeout 15m docker compose build db-migrator backend frontend
+            echo "Starting services from the prebuilt images"
+            timeout 5m docker compose up -d --no-build --wait --wait-timeout 180 backend frontend assessment-worker game-scheduler telegram-bot
             # Local gates (fatal): reach services over host loopback ports.
             curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3001/v1/health > /dev/null
             curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3005/ > /dev/null
@@ -77,5 +76,4 @@ jobs:
               || echo "WARN: public api.bestwayec.uz not reachable (DNS/tunnel pending?)"
             curl -fsS --max-time 30 https://bestwayec.uz/ > /dev/null \
               || echo "WARN: public bestwayec.uz not reachable (DNS/tunnel pending?)"
-            docker image prune -f
             docker compose ps
