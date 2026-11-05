@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from types import SimpleNamespace
 from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase
@@ -79,6 +80,9 @@ class ImportCdRecordMock1Tests(TestCase):
 
         # 7. Test active CD exam endpoint: GET /api/v1/exams/active/
         client = APIClient()
+        # The mirrored Multilevel definition is not public without entitlement.
+        self.assertEqual(client.get("/api/v1/exams/active/").status_code, 404)
+        client.force_authenticate(SimpleNamespace(id='admin', role='admin', is_authenticated=True))
         resp_active = client.get("/api/v1/exams/active/")
         self.assertEqual(resp_active.status_code, 200)
         data_active = resp_active.json()["data"]
