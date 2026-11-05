@@ -668,24 +668,16 @@ def _transcribe_gemini_direct(path, mime, language='en', duration_ms=None):
             raw_text = "\n".join(t.strip() for t in texts if t.strip()).strip()
             if raw_text == '[SILENCE]' or raw_text.lower() == '[silence]':
                 raw_text = ''
-            words = raw_text.split()
-            calc_duration = duration_ms or (len(words) * 400 if words else 3000)
-            segments = []
-            if words:
-                step = (calc_duration / 1000.0) / len(words)
-                for idx, w in enumerate(words):
-                    segments.append({'start': round(idx * step, 2), 'end': round((idx + 1) * step, 2), 'text': w, 'confidence': 0.95})
-            diag = _generate_heuristic_speech_diagnostics(raw_text, calc_duration)
-            return {
-                'text': raw_text,
-                'confidence': 0.95 if raw_text else 0.0,
-                'segments': segments,
-                'provider': 'gemini_direct',
-                'model': model,
-                'durationMs': calc_duration,
-                'pronunciationEvidence': 'AVAILABLE' if diag.get('mispronounced_words') else 'UNAVAILABLE',
-                'speech_diagnostics': diag
-            }
+            return {
+                'text': raw_text,
+                'confidence': None,
+                'segments': [],
+                'provider': 'gemini_direct',
+                'model': model,
+                'durationMs': duration_ms,
+                'pronunciationEvidence': 'UNAVAILABLE',
+                'speech_diagnostics': {},
+            }
     except Exception as exc:
         logger.warning("Gemini direct audio STT failed: %s", exc)
         return None
@@ -792,42 +784,29 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
                             except Exception:
                                 pass
 
-                if isinstance(parsed_json, dict) and 'transcript' in parsed_json:
-                    transcript_text = str(parsed_json.get('transcript') or '').strip()
-                    speech_diagnostics = parsed_json.get('speech_diagnostics') or {}
-                    if not isinstance(speech_diagnostics, dict):
-                        speech_diagnostics = _generate_heuristic_speech_diagnostics(transcript_text, duration_ms or 3000)
-                else:
-                    transcript_text = raw_text
-                    if (transcript_text.startswith('"') and transcript_text.endswith('"')) or (transcript_text.startswith("'") and transcript_text.endswith("'")):
-                        transcript_text = transcript_text[1:-1].strip()
-                    words_cnt = len(transcript_text.split())
-                    calc_dur = duration_ms or (words_cnt * 400 if words_cnt else 3000)
-                    speech_diagnostics = _generate_heuristic_speech_diagnostics(transcript_text, calc_dur)
-
-                words = transcript_text.split()
-                segments = []
-                calc_duration = duration_ms or (len(words) * 400 if words else 3000)
-                if words:
-                    step = (calc_duration / 1000.0) / len(words)
-                    for idx, w in enumerate(words):
-                        segments.append({
-                            'start': round(idx * step, 2),
-                            'end': round((idx + 1) * step, 2),
-                            'text': w,
-                            'confidence': 0.95
-                        })
-
-                return {
-                    'text': transcript_text,
-                    'confidence': 0.95 if transcript_text else 0.0,
-                    'segments': segments,
-                    'provider': 'openrouter',
-                    'model': m,
-                    'durationMs': calc_duration,
-                    'pronunciationEvidence': 'AVAILABLE' if speech_diagnostics.get('mispronounced_words') else 'UNAVAILABLE',
-                    'speech_diagnostics': speech_diagnostics,
-                }
+                if isinstance(parsed_json, dict) and 'transcript' in parsed_json:
+                    transcript_text = parsed_json.get('transcript')
+                    if not isinstance(transcript_text, str):
+                        raise ProviderError('STT_RESPONSE_INVALID')
+                    transcript_text = transcript_text.strip()
+                else:
+                    transcript_text = raw_text
+                    if (transcript_text.startswith('"') and transcript_text.endswith('"')) or (transcript_text.startswith("'") and transcript_text.endswith("'")):
+                        transcript_text = transcript_text[1:-1].strip()
+                if transcript_text.lower() == '[silence]':
+                    transcript_text = ''
+                # These providers return text without measured timestamps or calibrated
+                # confidence. Do not infer acoustic faults from the transcript alone.
+                return {
+                    'text': transcript_text,
+                    'confidence': None,
+                    'segments': [],
+                    'provider': 'openrouter',
+                    'model': m,
+                    'durationMs': duration_ms,
+                    'pronunciationEvidence': 'UNAVAILABLE',
+                    'speech_diagnostics': {},
+                }
         except Exception as exc:
             last_error = exc
             logger.warning("OpenRouter STT model %s failed (%s), trying next fallback...", m, exc)
@@ -842,8 +821,6 @@ def _transcribe_openrouter(path, mime, language='en', duration_ms=None):
     try:
         from .assessment_local_stt import transcribe as local_transcribe
         local_res = local_transcribe(path, mime, language, duration_ms)
-        if isinstance(local_res, dict):
-            local_res.setdefault('speech_diagnostics', _generate_heuristic_speech_diagnostics(local_res.get('text', ''), duration_ms or 3000))
         return local_res
     except Exception:
         pass

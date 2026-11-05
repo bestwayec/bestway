@@ -65,7 +65,9 @@ class TeacherOverrideServiceTests(SimpleTestCase):
             section_bands={},
             standard_scores={},
             media_state={},
-            status="in_progress",
+            status="grading",
+            student=SimpleNamespace(group=SimpleNamespace(teacher_id="teacher-1")),
+            exam=SimpleNamespace(type="ielts"),
             finished_at=None,
             save=MagicMock(),
         )
@@ -154,13 +156,14 @@ class TeacherOverrideServiceTests(SimpleTestCase):
 
 class ForAttemptOverviewTests(SimpleTestCase):
     @patch("apps.core.assessment.assert_can_view")
+    @patch("apps.core.assessment.AuditLog.objects.filter")
     @patch("apps.core.assessment.SpeechTranscript.objects.filter")
     @patch("apps.core.assessment.AssessmentEvaluation.objects.filter")
     @patch("apps.core.assessment.MockAnswer.objects.filter")
     @patch("apps.core.assessment.AssessmentJob.objects.filter")
     @patch("apps.core.assessment.MockAttempt.objects.filter")
     def test_for_attempt_includes_ocr_images_and_teacher_review(
-        self, mock_att_filter, mock_job_filter, mock_ans_filter, mock_eval_filter, mock_stt_filter, mock_can_view
+        self, mock_att_filter, mock_job_filter, mock_ans_filter, mock_eval_filter, mock_stt_filter, mock_audit_filter, mock_can_view
     ):
         teacher = SimpleNamespace(id="teacher-1", name="Teacher Komil", role="teacher")
         attempt = SimpleNamespace(

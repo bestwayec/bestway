@@ -261,6 +261,17 @@ try:
                 check(SpeechTranscript.objects.filter(job_id=job.id,status='FAILED',failure_code=code).exists(),
                     label+' records its specific transcript failure')
 
+        unmeasured_id,unmeasured_job=speech_case('unmeasured-stt-confidence','recorded',
+            lambda *args:dict(transcript(*args),confidence=None))
+        check(unmeasured_job.status=='NEEDS_REVIEW' and unmeasured_job.failure_code=='STT_CONFIDENCE_INSUFFICIENT'
+            and unmeasured_job.final_score is None and unmeasured_job.ai_score is not None,
+            'unmeasured STT confidence does not automatically approve a score')
+        check(not MockAnswer.objects.filter(attempt_id=unmeasured_id,is_graded=True).exists(),
+            'unmeasured STT confidence does not project graded answers')
+        unmeasured_view=request('student','/v1/assessment/attempts/'+unmeasured_id)
+        check(unmeasured_view['status']=='needs_review' and unmeasured_view['overall_band'] is None,
+            'student overview displays the review state without an overall score')
+
         def silence(path,*args):
             _decode_audio(path,600)  # Real PCM silence is detected before inference.
             raise AssertionError('Expected silent audio to be detected')

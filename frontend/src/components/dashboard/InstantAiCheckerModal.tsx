@@ -142,7 +142,7 @@ export function InstantAiCheckerModal({
                   </span>
                 </DialogTitle>
                 <p className="text-xs text-slate-400">
-                  4 ta rasmiy mezon, xatolarni qizil/yashil tahlili va C1 darajasidagi namuna javob
+                  Tezkor baholash vaqtincha mavjud emas. Imtihon natijalari sahifasidan foydalaning.
                 </p>
               </div>
             </div>
@@ -194,7 +194,7 @@ export function InstantAiCheckerModal({
             <div className="flex items-center justify-end gap-3 pt-1">
               <Button
                 type="button"
-                disabled={loading || wordCount < 15}
+                disabled
                 onClick={handleEvaluate}
                 className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 flex items-center gap-2 shadow-md shadow-emerald-500/20"
               >

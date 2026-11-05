@@ -52,9 +52,23 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
             self.assertEqual(res["text"], "Hello this is a test spoken answer.")
             self.assertEqual(res["model"], "google/gemini-2.5-flash")
             self.assertEqual(res["provider"], "openrouter")
-            self.assertEqual(res["confidence"], 0.95)
-            self.assertTrue(len(res["segments"]) > 0)
-            self.assertEqual(res["segments"][0]["text"], "Hello")
+            self.assertIsNone(res["confidence"])
+            self.assertEqual(res["segments"], [])
+            self.assertEqual(res["pronunciationEvidence"], "UNAVAILABLE")
+
+    @patch("apps.core.assessment_providers.provider_json")
+    def test_gemini_direct_does_not_invent_audio_measurements(self, mock_provider):
+        mock_provider.return_value = {"candidates": [{"content": {"parts": [{"text": "Hello there"}]}}]}
+        mock_path = MagicMock()
+        mock_path.read_bytes.return_value = b"audio"
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
+            result = providers._transcribe_gemini_direct(mock_path, "audio/wav", duration_ms=None)
+        self.assertEqual(result["text"], "Hello there")
+        self.assertIsNone(result["confidence"])
+        self.assertIsNone(result["durationMs"])
+        self.assertEqual(result["segments"], [])
+        self.assertEqual(result["speech_diagnostics"], {})
+        self.assertEqual(result["pronunciationEvidence"], "UNAVAILABLE")
 
     @patch("apps.core.assessment_providers._transcribe_openrouter")
     def test_transcribe_dispatches_to_openrouter(self, mock_or_transcribe):
@@ -141,12 +155,10 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
             res = providers._transcribe_openrouter(mock_path, "audio/wav", "en", duration_ms=5000)
             self.assertEqual(res["text"], "I feel comfortable in this specific environment, um, absolutely.")
             self.assertEqual(res["model"], "google/gemini-2.5-flash")
-            self.assertIn("speech_diagnostics", res)
-            diag = res["speech_diagnostics"]
-            self.assertEqual(len(diag["mispronounced_words"]), 1)
-            self.assertEqual(diag["mispronounced_words"][0]["word"], "comfortable")
-            self.assertEqual(diag["fluency_score"], 7.0)
-            self.assertEqual(res["pronunciationEvidence"], "AVAILABLE")
+            self.assertEqual(res["speech_diagnostics"], {})
+            self.assertIsNone(res["confidence"])
+            self.assertEqual(res["segments"], [])
+            self.assertEqual(res["pronunciationEvidence"], "UNAVAILABLE")
 
     def test_heuristic_speech_diagnostics_detection(self):
         text = "Well, um, I think this specific situation is comfortable, you know."

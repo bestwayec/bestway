@@ -14,7 +14,7 @@ from apps.core import assessment
 ])
 def test_only_approved_auto_policy_projects_answers(policy, confidence, teacher_touched, expected):
     job = SimpleNamespace(attempt_id='attempt', input_snapshot={'parts': [{'responses': [{'questionId': 'q'}]}]}, policy_mode=policy)
-    current = SimpleNamespace(final_score_source=None)
+    current = SimpleNamespace(id='job', skill='writing', input_snapshot=job.input_snapshot, final_score_source=None)
     result = {'confidence': confidence}
     with patch.object(assessment.MockAttempt.objects, 'select_for_update') as attempts, \
          patch.object(assessment, 'require_lease', return_value=current), \
