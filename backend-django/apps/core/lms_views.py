@@ -46,7 +46,7 @@ def courses_list_view(request):
         completed_count = 0
         if user and user.is_authenticated:
             completed_count = UserLessonProgress.objects.filter(
-                user=user,
+                user_id=user.id,
                 lesson__course=c,
                 is_completed=True,
             ).count()
@@ -81,7 +81,7 @@ def course_detail_view(request, course_id):
     if user and user.is_authenticated:
         completed_lesson_ids = set(
             UserLessonProgress.objects.filter(
-                user=user,
+                user_id=user.id,
                 lesson__course=course,
                 is_completed=True,
             ).values_list("lesson_id", flat=True)
@@ -198,8 +198,8 @@ def lesson_hls_status_view(request, lesson_id):
 @permission_classes([AllowAny])
 def lesson_hls_transcode_trigger_view(request, lesson_id):
     """Trigger background HLS transcoding for a lesson."""
-    user = require_authenticated(request)
-    require_role(user, ["admin", "super_admin", "teacher"])
+    require_authenticated(request)
+    require_role(request, "admin", "super_admin", "teacher")
     result = trigger_hls_transcoding(lesson_id, async_mode=True)
     return success(result)
 
@@ -292,7 +292,7 @@ def quiz_deck_create_view(request):
 
     data = request.data or {}
     deck = create_or_update_quiz_deck(user, data)
-    return success({"id": deck.id, "title": deck.title}, status_code=201)
+    return success({"id": deck.id, "title": deck.title}, status=201)
 
 
 @api_view(["POST"])

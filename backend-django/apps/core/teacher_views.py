@@ -25,9 +25,10 @@ def success(data: object, status: int = 200) -> Response:
     return Response({"success": True, "data": data}, status=status)
 
 
-def require_authenticated(request) -> None:
+def require_authenticated(request):
     if not getattr(request.user, "is_authenticated", False):
         raise ContractAPIException("UNAUTHORIZED", "Avval tizimga kiring", 401)
+    return request.user
 
 
 def require_role(request, *roles) -> None:
@@ -62,7 +63,7 @@ def teacher_cohorts_view(request):
         if user_role in ("admin", "super_admin"):
             qs = Cohort.objects.all().select_related("teacher")
         else:
-            qs = Cohort.objects.filter(teacher=request.user).select_related("teacher")
+            qs = Cohort.objects.filter(teacher_id=request.user.id).select_related("teacher")
 
         cohorts_list = []
         for cohort in qs:
@@ -95,8 +96,10 @@ def teacher_cohorts_view(request):
         if Cohort.objects.filter(invite_code__iexact=invite_code).exists():
             raise ContractAPIException("DUPLICATE_CODE", "Ushbu taklif kodi allaqachon mavjud", 400)
 
+    if not User.objects.filter(id=request.user.id, is_active=True).exists():
+        raise ContractAPIException("UNAUTHORIZED", "Token yaroqsiz yoki muddati tugagan", 401)
     cohort = Cohort.objects.create(
-        teacher=request.user,
+        teacher_id=request.user.id,
         name=name,
         description=description,
         invite_code=invite_code,
@@ -130,7 +133,7 @@ def cohort_analytics_view(request, cohort_id: str):
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
     user_role = getattr(request.user, "role", "teacher")
-    if user_role == "teacher" and str(cohort.teacher_id) != str(request.user.id):
+    if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizni ko'ra olasiz", 403)
 
     assignments_qs = cohort.assignments.select_related("lesson", "exam").order_by("created_at")
@@ -228,7 +231,7 @@ def teacher_assignments_view(request):
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
     user_role = getattr(request.user, "role", "teacher")
-    if user_role == "teacher" and str(cohort.teacher_id) != str(request.user.id):
+    if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizga vazifa biriktira olasiz", 403)
 
     lesson_id = data.get("lesson_id")
@@ -299,7 +302,7 @@ def student_join_cohort_view(request):
 
     membership, created = CohortMembership.objects.update_or_create(
         cohort=cohort,
-        student=request.user,
+        student_id=request.user.id,
         defaults={"status": "active"},
     )
 
@@ -323,7 +326,7 @@ def student_my_assignments_view(request):
     require_authenticated(request)
 
     memberships = CohortMembership.objects.filter(
-        student=request.user,
+        student_id=request.user.id,
         status="active",
     ).values_list("cohort_id", flat=True)
 
@@ -333,7 +336,7 @@ def student_my_assignments_view(request):
 
     submissions = {
         str(s.assignment_id): s
-        for s in HomeworkSubmission.objects.filter(student=request.user)
+        for s in HomeworkSubmission.objects.filter(student_id=request.user.id)
     }
 
     now = timezone.now()
@@ -395,7 +398,7 @@ def student_submit_assignment_view(request, assignment_id: str):
     # Check student is active member of cohort
     is_member = CohortMembership.objects.filter(
         cohort=assignment.cohort,
-        student=request.user,
+        student_id=request.user.id,
         status="active",
     ).exists()
     if not is_member:
@@ -412,7 +415,7 @@ def student_submit_assignment_view(request, assignment_id: str):
 
     sub, created = HomeworkSubmission.objects.update_or_create(
         assignment=assignment,
-        student=request.user,
+        student_id=request.user.id,
         defaults={
             "score_percent": score,
             "is_passed": is_passed,

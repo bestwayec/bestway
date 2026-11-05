@@ -167,7 +167,7 @@ def stream_video_file(file_path: str, request: HttpRequest) -> HttpResponse | St
 def get_or_create_progress(user: User, lesson: Lesson) -> UserLessonProgress:
     """Retrieve or initialize user lesson progress."""
     progress, _ = UserLessonProgress.objects.get_or_create(
-        user=user,
+        user_id=user.id,
         lesson=lesson,
         defaults={
             "watched_seconds": 0,
@@ -318,7 +318,7 @@ def get_quiz_deck_detail(deck_id: str, user: Optional[User] = None) -> Dict[str,
     is_unlocked = True
     if deck.is_lesson_tied and deck.lesson_id:
         if user and user.is_authenticated:
-            progress = UserLessonProgress.objects.filter(user=user, lesson_id=deck.lesson_id).first()
+            progress = UserLessonProgress.objects.filter(user_id=user.id, lesson_id=deck.lesson_id).first()
             is_unlocked = bool(progress and progress.is_completed)
         else:
             is_unlocked = False
@@ -369,7 +369,7 @@ def create_or_update_quiz_deck(
                 category=data.get("category", "General"),
                 is_lesson_tied=data.get("is_lesson_tied", False),
                 lesson_id=data.get("lesson_id"),
-                created_by=user if user and user.is_authenticated else None,
+                created_by_id=user.id if user and user.is_authenticated else None,
             )
 
         # Sync cards if provided

@@ -13,6 +13,7 @@ from apps.core.parent_bot_service import (
 def parent_invite_code_view(request):
     """Retrieve or generate 6-digit parent invite code for current student."""
     user = require_authenticated(request)
+    require_role(request, "student")
     code_data = get_or_create_parent_invite_code(user.id, getattr(user, "name", ""))
     return success(code_data)
 

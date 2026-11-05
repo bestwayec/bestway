@@ -66,8 +66,10 @@ class TeacherWorkspaceTests(SimpleTestCase):
 
     @patch("apps.core.teacher_views.Cohort.objects.create")
     @patch("apps.core.teacher_views.Cohort.objects.filter")
-    def test_teacher_create_cohort_success(self, mock_filter, mock_create):
+    @patch("apps.core.teacher_views.User.objects.filter")
+    def test_teacher_create_cohort_success(self, mock_user_filter, mock_filter, mock_create):
         """Teacher creates a new cohort with generated invite code."""
+        mock_user_filter.return_value.exists.return_value = True
         mock_filter.return_value.exists.return_value = False
 
         fake_cohort = MagicMock(
@@ -90,6 +92,7 @@ class TeacherWorkspaceTests(SimpleTestCase):
 
         resp = teacher_cohorts_view(request)
         self.assertEqual(resp.status_code, 201)
+        self.assertEqual(mock_create.call_args.kwargs["teacher_id"], "teacher-1")
         data = resp.data["data"]
         self.assertEqual(data["id"], "cohort-100")
         self.assertEqual(data["name"], "CEFR B2 Fast Track")
