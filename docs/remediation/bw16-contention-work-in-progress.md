@@ -46,6 +46,6 @@ reach the backend, it clears local cookies but returns LOGOUT_UNCONFIRMED; serve
 revocation is not guaranteed. This does not solve the parallel refresh race.
 The public refresh-bearer logout response is deliberately uniform for unknown
 and expired tokens; HTTP 200 alone cannot prove that an unknown or expired
-bearer revoked anything. The current UI logout caller also does not display
-LOGOUT_UNCONFIRMED when the backend is unreachable, so operators must not treat
-local cookie clearing as proof of server-side revocation.
+bearer revoked anything. If logout returns an error or cannot reach the server,
+the UI now displays a warning rather than reporting confirmed revocation. Local
+cookie clearing is not proof that the server revoked the session.

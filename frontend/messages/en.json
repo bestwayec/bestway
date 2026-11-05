@@ -676,6 +676,7 @@
     "parent": "Parent"
   },
   "auth": {
+    "logoutUnconfirmed": "Server sign-out could not be confirmed. Contact an administrator to revoke your sessions.",
     "loginTitle": "Sign in",
     "loginSubtitle": "Enter your phone number and password",
     "registerTitle": "Create account",

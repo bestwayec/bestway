@@ -30,12 +30,16 @@ export function UserMenu() {
 
   async function handleLogout() {
     setLoggingOut(true);
+    let confirmed = false;
     try {
       await authApi.logout();
+      confirmed = true;
+    } catch {
+      // Local cookies may be gone even if server-side revocation failed.
     } finally {
       qc.clear();
       const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-      window.location.replace(`${prefix}/login`);
+      window.location.replace(`${prefix}/login${confirmed ? "" : "?logout_unconfirmed=1"}`);
     }
   }
 
