@@ -20,7 +20,6 @@ from rest_framework.test import APIRequestFactory
 from apps.core import auth_service, views
 from apps.legacy_schema.models import User
 from common.api.exceptions import ContractAPIException
-from common.auth.jwt import issue_access
 
 uid = 'phase3-race-' + uuid4().hex
 user = (uid, 'Synthetic', 'unused', 'student')
@@ -44,9 +43,8 @@ try:
                         is_active=True, created_at=timezone.now(), updated_at=timezone.now())
     initial = auth_service.issue_tokens(user)['refreshToken']
     def logout():
-        request = APIRequestFactory().post('/logout', {'refreshToken': initial}, format='json',
-            HTTP_AUTHORIZATION='Bearer ' + issue_access(uid, 'student'))
-        return views.logout_view(request).status_code
+        request = APIRequestFactory().post('/logout-refresh', {'refreshToken': initial}, format='json')
+        return views.logout_refresh_view(request).status_code
     rotated, status = parallel(lambda: auth_service.refresh(initial), logout)
     assert status == 200, 'logout request failed'
     if 'refreshToken' in rotated:

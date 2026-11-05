@@ -180,6 +180,22 @@ def _refresh_locked(raw: str):
     return tokens
 
 
+
+def revoke_refresh_family(raw: str):
+    """Revoke the family proved by an unexpired refresh bearer, without disclosure."""
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute('SELECT "id","userId","familyId","expiresAt" FROM "RefreshToken" WHERE "tokenHash"=%s FOR UPDATE', [token_hash(raw)])
+        row = cursor.fetchone()
+        if not row:
+            return
+        now = timezone.now() if getattr(row[3], "tzinfo", None) is not None else db_now()
+        if row[3] < now:
+            return
+        if row[2] is None:
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "id"=%s', [row[0]])
+        else:
+            cursor.execute('UPDATE "RefreshToken" SET "revokedAt"=NOW() WHERE "userId"=%s AND "familyId"=%s', [row[1], row[2]])
+
 def verify_challenge(verifier: str, challenge: str) -> bool:
     digest = hashlib.sha256(verifier.encode("utf-8")).digest()
     try:

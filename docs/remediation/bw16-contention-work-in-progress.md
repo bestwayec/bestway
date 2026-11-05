@@ -37,3 +37,15 @@ an independently spawned process and tests lock release after worker termination
 followed by a successful rotation and replay rejection. This exercises shared
 PostgreSQL locks and crash recovery only: it does not prove browser session
 continuity, late-request coordination, or stale cookie response ordering.
+
+The logout path now accepts proof of possession of an unexpired refresh bearer
+to revoke only its token family, even if the access token has expired. Unknown
+or expired bearers receive a uniform response and expired bearers cannot revoke
+families. Rotation and logout serialize on the token row. If the frontend cannot
+reach the backend, it clears local cookies but returns LOGOUT_UNCONFIRMED; server
+revocation is not guaranteed. This does not solve the parallel refresh race.
+The public refresh-bearer logout response is deliberately uniform for unknown
+and expired tokens; HTTP 200 alone cannot prove that an unknown or expired
+bearer revoked anything. The current UI logout caller also does not display
+LOGOUT_UNCONFIRMED when the backend is unreachable, so operators must not treat
+local cookie clearing as proof of server-side revocation.

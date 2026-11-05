@@ -203,6 +203,18 @@ def refresh_view(request):
     return success(auth_service.refresh(data["refreshToken"]))
 
 
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([SensitiveAuthThrottle])
+def logout_refresh_view(request):
+    data = body(request, {"refreshToken"})
+    token = data.get("refreshToken")
+    if not isinstance(token, str) or not 1 <= len(token) <= 512:
+        raise ContractAPIException("VALIDATION_ERROR", "Validatsiya xatosi", 400)
+    auth_service.revoke_refresh_family(token)
+    return success({"loggedOut": True})
+
+
 @api_view(["POST"])
 @permission_classes([Authenticated])
 def logout_view(request):
