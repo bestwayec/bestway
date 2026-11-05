@@ -9,6 +9,52 @@ from rest_framework.permissions import AllowAny
 
 from .models import Exam, Section, QuestionGroup, Question, AnswerKey
 from apps.legacy_schema.models import MockExam, MockSection, MockQuestionGroup, MockQuestion
+from . import mock_catalog
+
+
+def _without_answer_metadata(value):
+    """Strip grading secrets even inside nested option metadata."""
+    blocked = {'answer', 'answers', 'answerkey', 'correct', 'iscorrect',
+               'correctanswer', 'correctanswers', 'validanswers',
+               'acceptedvariants', 'solution', 'explanation'}
+    if isinstance(value, dict):
+        return {key: _without_answer_metadata(item) for key, item in value.items()
+                if str(key).replace('_', '').lower() not in blocked}
+    if isinstance(value, list):
+        return [_without_answer_metadata(item) for item in value]
+    return value
+
+
+def _actor(request):
+    user = getattr(request, 'user', None)
+    return user if getattr(user, 'is_authenticated', False) else None
+
+
+def _may_view_legacy(user, exam):
+    role = getattr(user, 'role', None)
+    if role in ('admin', 'super_admin'):
+        return True
+    if role == 'teacher':
+        return str(exam.created_by_id) == str(user.id)
+    if not exam.is_published:
+        return False
+    return mock_catalog.access_for(user, exam) == 'granted'
+
+
+def _may_view_cd(user, exam):
+    # CD definitions have no author or price field: unpublished material can
+    # only be previewed by administrators, never by an unverified teacher.
+    # A CD definition shadowing a legacy exam must not bypass its entitlement.
+    legacy = MockExam.objects.filter(Q(id=exam.id) | Q(id__iexact=exam.code)).first()
+    role = getattr(user, 'role', None)
+    if not exam.is_published:
+        return role in ('admin', 'super_admin') or bool(
+            role == 'teacher' and legacy and str(legacy.created_by_id) == str(user.id))
+    return legacy is None or _may_view_legacy(user, legacy)
+
+
+def _not_found():
+    return JsonResponse({"error": {"code": "EXAM_NOT_FOUND", "message": "Exam not found"}}, status=404)
 
 
 @api_view(["GET"])
@@ -21,17 +67,14 @@ def get_cd_exam_session(request, exam_id: str):
     exam = Exam.objects.filter(Q(id=exam_id) | Q(code__iexact=exam_id)).first()
     
     if exam:
-        return _serialize_cd_exam(exam)
+        return _serialize_cd_exam(exam) if _may_view_cd(_actor(request), exam) else _not_found()
     
     # Fallback to MockExam legacy schema if CD Exam table doesn't have it yet
     legacy_exam = MockExam.objects.filter(Q(id=exam_id) | Q(id__iexact=exam_id)).first()
     if legacy_exam:
-        return _serialize_legacy_mock_exam(legacy_exam)
+        return _serialize_legacy_mock_exam(legacy_exam) if _may_view_legacy(_actor(request), legacy_exam) else _not_found()
         
-    return JsonResponse(
-        {"error": {"code": "EXAM_NOT_FOUND", "message": f"Exam '{exam_id}' not found"}},
-        status=404
-    )
+    return _not_found()
 
 
 @api_view(["GET"])
@@ -40,16 +83,13 @@ def get_active_cd_exam(request):
     """
     Returns the default active CD Exam session payload (MOCK-RECORD-01).
     """
-    exam = Exam.objects.filter(is_published=True, code="MOCK-RECORD-01").first()
-    if not exam:
-        exam = Exam.objects.filter(is_published=True).first()
-    if exam:
-        return _serialize_cd_exam(exam)
-    legacy = MockExam.objects.filter(is_published=True, id="MOCK-RECORD-01").first()
-    if not legacy:
-        legacy = MockExam.objects.filter(is_published=True).exclude(id="multilevel-test-01-gym-vegetarian").first()
-    if legacy:
-        return _serialize_legacy_mock_exam(legacy)
+    user = _actor(request)
+    for exam in sorted(Exam.objects.filter(is_published=True).order_by('code'), key=lambda item: item.code != 'MOCK-RECORD-01'):
+        if _may_view_cd(user, exam):
+            return _serialize_cd_exam(exam)
+    for legacy in sorted(MockExam.objects.filter(is_published=True).exclude(id="multilevel-test-01-gym-vegetarian").order_by('-created_at'), key=lambda item: item.id != 'MOCK-RECORD-01'):
+        if _may_view_legacy(user, legacy):
+            return _serialize_legacy_mock_exam(legacy)
     return JsonResponse(
         {"error": {"code": "NO_ACTIVE_EXAM", "message": "No active exam found"}},
         status=404
@@ -117,7 +157,8 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
                     "essay": "essay",
                     "speaking_prompt": "speaking",
                 }
-                payload = q.payload_json or {}
+                raw_payload = q.payload_json if isinstance(q.payload_json, dict) else {}
+                payload = _without_answer_metadata({key: raw_payload[key] for key in ('options', 'answerRule', 'guidance', 'imageMapRef') if key in raw_payload})
                 options = payload.get("options")
                 prompt_text = q.prompt or ""
                 
@@ -215,7 +256,7 @@ def _serialize_cd_exam(exam: Exam) -> JsonResponse:
 
 def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
     from .mock_catalog import shape_exam
-    shaped = shape_exam(legacy, True)
+    shaped = shape_exam(legacy, False)
     
     sections_data = []
     all_parts = []
@@ -225,6 +266,7 @@ def _serialize_legacy_mock_exam(legacy: MockExam) -> JsonResponse:
         for grp in sec.get("groups", []):
             q_list = []
             for q in grp.get("questions", []):
+                q = _without_answer_metadata(q)
                 p_text = q.get("prompt") or q.get("text") or ""
                 q_list.append({
                     "id": q["id"],

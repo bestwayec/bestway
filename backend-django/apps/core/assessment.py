@@ -1,4 +1,5 @@
 """Durable assessment ledger, authorized projections and serialized review."""
+import math
 import os
 from datetime import timedelta
 from urllib.parse import quote
@@ -49,15 +50,18 @@ def for_attempt(actor,identifier):
     assert_can_view(actor,attempt.student_id)
     if actor.role=='student':assert_program(actor,attempt)
     answers_map = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=identifier)}
-    rows=AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at');seen=set();values=[]
+    rows=list(AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at'))
+    reviewed_ids=set(AuditLog.objects.filter(entity='AssessmentJob', entity_id__in=[j.id for j in rows],
+        action__in=('assessment.accept', 'assessment.override')).values_list('entity_id', flat=True)) if rows else set()
+    seen=set();values=[];latest=[]
     for job in rows:
         if job.skill in seen:continue
-        seen.add(job.skill);input=job.input_snapshot
+        seen.add(job.skill);latest.append(job);input=job.input_snapshot
         evaluations=list(AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         transcripts=list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluation=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
         value={key:getattr(job,attr) for key,attr in dict(id='id',skill='skill',program='program',status='status',policyMode='policy_mode',version='version',aiScore='ai_score',teacherScore='teacher_score',finalScore='final_score',finalScoreSource='final_score_source',confidence='confidence',rubricVersion='rubric_version',promptVersion='prompt_version',failureCode='failure_code',finalResult='final_result',approvedFeedback='approved_feedback').items()}
-        value.update(teacherReviewed=job.final_score_source=='TEACHER' or job.approved_feedback is not None,
+        value.update(teacherReviewed=job.status=='SUCCEEDED' and (job.final_score_source=='TEACHER' or job.id in reviewed_ids),
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
         if input.get('gradingPolicy'):
@@ -70,13 +74,11 @@ def for_attempt(actor,identifier):
         active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
         if active_res:
             value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
-        if isinstance(attempt.media_state, dict):
-            value['speechDiagnostics'] = attempt.media_state.get('speech_diagnostics', {})
         for part in input['parts']:
             for r in part['responses']:
-                transcript=next((t for t in transcripts if t.question_id==r['questionId'] and (not r.get('audioHash') or t.audio_hash==r.get('audioHash'))),None)
-                if not transcript:
-                    transcript=next((t for t in transcripts if t.question_id==r['questionId']),None)
+                transcript=next((t for t in transcripts if job.skill=='speaking' and r.get('audioHash')
+                    and t.question_id==r['questionId'] and t.audio_hash==r['audioHash']
+                    and isinstance(t.text,str) and t.text.strip()),None)
                 ans = answers_map.get(r['questionId'])
                 img_keys = []
                 ocr_text = r.get('originalResponse') or ''
@@ -93,27 +95,14 @@ def for_attempt(actor,identifier):
                     audio_link = f"/api/v1/assessment/jobs/{job.id}/audio/{qid_quoted}"
 
                 t_text = transcript.text if transcript else None
-                if not t_text and ans and ans.response:
-                    t_text = ans.response
-                if not t_text and ans and isinstance(ans.rubric_scores, dict) and ans.rubric_scores.get('transcript'):
-                    t_text = ans.rubric_scores['transcript']
-                if not t_text and isinstance(attempt.media_state, dict):
-                    t_text = attempt.media_state.get('transcripts', {}).get(r['questionId'])
 
+                # Older transcript records can contain heuristic diagnostics with
+                # no acoustic provenance. Do not present them as measured speech.
                 speech_diag = None
-                if transcript and transcript.pronunciation_evidence and transcript.pronunciation_evidence != 'UNAVAILABLE':
-                    try:
-                        speech_diag = json.loads(transcript.pronunciation_evidence)
-                    except Exception:
-                        pass
-                if not speech_diag and ans and isinstance(ans.rubric_scores, dict):
-                    speech_diag = ans.rubric_scores.get('speech_diagnostics') or ans.rubric_scores.get('speechDiagnostics')
-                if not speech_diag and isinstance(attempt.media_state, dict):
-                    speech_diag = attempt.media_state.get('speech_diagnostics', {}).get(r['questionId'])
 
                 t_dict = dict(
                     text=t_text,
-                    confidence=transcript.confidence if transcript else 0.95,
+                    confidence=transcript.confidence,
                     segments=transcript.segments if (transcript and transcript.segments) else [],
                     pronunciationEvidence='AVAILABLE' if (speech_diag and speech_diag.get('mispronounced_words')) else 'UNAVAILABLE',
                     speechDiagnostics=speech_diag
@@ -128,6 +117,8 @@ def for_attempt(actor,identifier):
                     teacherFeedback=ans.feedback if ans else None,
                     transcript=t_dict,
                     speechDiagnostics=speech_diag))
+        value['speechDiagnostics'] = {submission['questionId']: submission['speechDiagnostics']
+            for submission in value['submissions'] if submission['speechDiagnostics']}
         values.append(value)
     CRIT_MAP = {
         'ta': 'task_achievement',
@@ -144,34 +135,29 @@ def for_attempt(actor,identifier):
         'pronunciation': 'pronunciation'
     }
     top_status = 'completed' if attempt.status == 'completed' else 'pending'
-    if any(j.status in ('PENDING', 'PROCESSING', 'RETRY') for j in rows):
+    if any(j.status in ('PENDING', 'PROCESSING', 'RETRY') for j in latest):
         top_status = 'grading'
-    elif any(j.status == 'SUCCEEDED' for j in rows) or attempt.status == 'completed':
+    elif any(j.status == 'NEEDS_REVIEW' for j in latest):
+        top_status = 'needs_review'
+    elif any(j.status == 'FAILED' for j in latest):
+        top_status = 'failed'
+    elif latest and all(j.status == 'SUCCEEDED' for j in latest):
         top_status = 'completed'
 
     overall_band = None
-    if attempt.overall_band is not None:
+    if attempt.overall_band is not None and all(j.status == 'SUCCEEDED' for j in latest):
         try: overall_band = float(attempt.overall_band)
         except (ValueError, TypeError): pass
-    if overall_band is None:
-        for j in rows:
-            sc = j.final_score if j.final_score is not None else j.ai_score
-            if sc is not None:
-                try:
-                    overall_band = float(sc)
-                    break
-                except (ValueError, TypeError): pass
 
-    conf = 0.85
-    for j in rows:
+    conf = None
+    for j in latest:
         if j.confidence is not None:
             try:
                 conf = float(j.confidence)
                 break
             except (ValueError, TypeError): pass
 
-    teacher_confirmed = any(j.final_score_source == 'TEACHER' or j.approved_feedback is not None for j in rows)
-    provisional = not teacher_confirmed
+    teacher_confirmed = bool(latest) and all(j.status == 'SUCCEEDED' and (j.final_score_source == 'TEACHER' or j.id in reviewed_ids) for j in latest)
 
     criteria_scores = {}
     strengths = []
@@ -229,14 +215,6 @@ def for_attempt(actor,identifier):
             if rec and rec not in next_actions:
                 next_actions.append(rec)
 
-    if not criteria_scores and overall_band is not None:
-        criteria_scores = {
-            'task_achievement': {'score': overall_band, 'comment': 'Comprehensive task response based on completed exam parts.'},
-            'coherence_cohesion': {'score': overall_band, 'comment': 'Cohesive progression and logical linkage across responses.'},
-            'lexical_resource': {'score': overall_band, 'comment': 'Demonstrated vocabulary and appropriate lexical choices.'},
-            'grammatical_range': {'score': overall_band, 'comment': 'Syntactic structures and grammatical control observed.'}
-        }
-
     band_8_rewrite = "\n\n".join(improved_rewrites) if improved_rewrites else ""
     next_action = next_actions[0] if next_actions else ("Review detailed feedback and focus on weaker areas." if top_status == 'completed' else "Exam assessment is underway.")
 
@@ -249,7 +227,8 @@ def for_attempt(actor,identifier):
     if not teacher_comment and attempt.media_state and isinstance(attempt.media_state, dict):
         teacher_comment = attempt.media_state.get('teacher_comment')
 
-    is_reviewed = teacher_confirmed or bool(attempt.media_state and isinstance(attempt.media_state, dict) and attempt.media_state.get('is_teacher_reviewed'))
+    is_reviewed = teacher_confirmed or bool(not latest and attempt.media_state and isinstance(attempt.media_state, dict) and attempt.media_state.get('is_teacher_reviewed'))
+    provisional = not is_reviewed
     reviewed_by = (attempt.media_state.get('teacher_reviewed_by') if (attempt.media_state and isinstance(attempt.media_state, dict)) else None)
 
     return dict(
@@ -388,16 +367,35 @@ def require_lease(job):
     if not current or current.status!='PROCESSING' or current.lease_token!=job.lease_token or not current.lease_expires_at or aware(current.lease_expires_at)<timezone.now():fail('ASSESSMENT_STALE_LEASE','Worker lease is no longer active',409)
     return current
 
+def speech_confidence_verified(job):
+    """Auto-grading requires confidence measured for each submitted recording."""
+    snapshot = job.input_snapshot
+    from .assessment_quality import enabled
+    if job.skill != 'speaking' or not enabled(snapshot):
+        return True
+    transcripts = list(SpeechTranscript.objects.filter(job_id=job.id, status='SUCCEEDED').order_by('-completed_at'))
+    responses = [r for part in snapshot['parts'] for r in part['responses']]
+    if not responses:
+        return False
+    for response in responses:
+        audio_hash = response.get('audioHash')
+        transcript = next((t for t in transcripts if audio_hash and t.question_id == response['questionId']
+            and t.audio_hash == audio_hash and isinstance(t.text, str) and t.text.strip()), None)
+        if not transcript or type(transcript.confidence) not in (int, float) or not math.isfinite(transcript.confidence) or not threshold() <= transcript.confidence <= 1:
+            return False
+    return True
+
 @transaction.atomic
 def finish(job,result,selected,adjudicated):
     attempt=MockAttempt.objects.select_for_update().get(id=job.attempt_id);current=require_lease(job);input=job.input_snapshot;score=results.score(input,result)['score']
     teacher_touched=MockAnswer.objects.filter(attempt_id=job.attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']],graded_by_id__isnull=False).exists()
-    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode in ('PRACTICE_AUTO_AI', 'FULL_MOCK_AI_WITH_REVIEW') and result['confidence']>=threshold() and score is not None
-    can_project=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and score is not None
+    speech_verified=speech_confidence_verified(current)
+    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode == 'PRACTICE_AUTO_AI' and result['confidence']>=threshold() and score is not None and speech_verified
+    can_project=auto
     if can_project:project(current,result,None)
-    values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
+    values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'STT_CONFIDENCE_INSUFFICIENT' if not speech_verified else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
         lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
-    if current.final_score_source!='TEACHER':values['final_result']=result
+    if can_project:values['final_result']=result
     if can_project:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
     update(current,**values)
     if can_project:
@@ -447,8 +445,10 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     if actor.role == 'teacher':
         student = getattr(attempt, 'student', None)
         student_group = getattr(student, 'group', None) if student else None
-        if student_group and getattr(student_group, 'teacher_id', None) and student_group.teacher_id != actor.id:
+        if not student_group or getattr(student_group, 'teacher_id', None) != actor.id:
             fail('FORBIDDEN', 'Ushbu talaba sizning guruhingizga biriktirilmagan', 403)
+    if attempt.status == 'in_progress':
+        fail('MOCK_ATTEMPT_NOT_SUBMITTED', 'Imtihon hali topshirilmagan', 409)
 
     final_score = data.get('final_score')
     if final_score is None:
@@ -466,20 +466,21 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     teacher_comment = str(data.get('teacher_comment') or data.get('teacherComment') or data.get('comment') or '').strip()
     criteria_scores = data.get('criteria_scores') or data.get('criteriaScores') or {}
 
-    try:
-        final_score_val = float(final_score) if final_score is not None else None
-    except (ValueError, TypeError):
-        final_score_val = None
+    maximum = 75 if attempt.exam.type == 'multilevel' else 9
+    def validated_score(value):
+        if value is None:
+            return None
+        try:
+            score = float(value)
+        except (ValueError, TypeError):
+            fail('SCORE_OUT_OF_RANGE', 'Ball noto‘g‘ri', 400)
+        if isinstance(value, bool) or not math.isfinite(score) or not 0 <= score <= maximum:
+            fail('SCORE_OUT_OF_RANGE', f'Ball 0 dan {maximum} gacha bo‘lishi kerak', 400)
+        return score
 
-    try:
-        w_score_val = float(writing_score) if writing_score is not None else None
-    except (ValueError, TypeError):
-        w_score_val = None
-
-    try:
-        s_score_val = float(speaking_score) if speaking_score is not None else None
-    except (ValueError, TypeError):
-        s_score_val = None
+    final_score_val = validated_score(final_score)
+    w_score_val = validated_score(writing_score)
+    s_score_val = validated_score(speaking_score)
 
     if final_score_val is None and w_score_val is None and s_score_val is None:
         fail('SCORE_REQUIRED', 'Baho kiritilishi shart', 400)

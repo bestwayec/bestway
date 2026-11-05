@@ -400,46 +400,6 @@ def mock_exams_view(request):
     return success(data)
 
 
-def _delete_mock_exam_for_staff(actor, exam_id: str) -> dict:
-    from types import SimpleNamespace
-
-    from apps.legacy_schema.models import MockAttempt, MockExam, MockPurchase
-
-    exam = MockExam.objects.filter(id=exam_id).first()
-    if exam is None:
-        raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
-    has_history = False
-    try:
-        has_history = (
-            MockAttempt.objects.filter(exam_id=exam_id).exists()
-            or MockPurchase.objects.filter(exam_id=exam_id).exists()
-        )
-    except Exception:
-        has_history = False
-    if has_history and getattr(actor, "role", None) != "super_admin":
-        raise ContractAPIException("FORBIDDEN", "Tarixga ega imtihonni faqat super admin o'chira oladi", 403)
-    try:
-        proxy_actor = SimpleNamespace(
-            id=actor.id,
-            role="super_admin" if getattr(actor, "role", None) == "super_admin" or not has_history else getattr(actor, "role", "teacher"),
-            is_authenticated=True,
-        )
-        res = mock_authoring.delete_exam(proxy_actor, exam_id)
-        payload = {**(res if isinstance(res, dict) else {}), "deleted": True}
-        if exam_id == "exam-del-1":
-            payload["id"] = exam_id
-        return payload
-    except ContractAPIException:
-        raise
-    except Exception:
-        if hasattr(exam, "delete"):
-            exam.delete()
-        payload = {"deleted": True}
-        if exam_id == "exam-del-1":
-            payload["id"] = exam_id
-        return payload
-
-
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([AllowAny])
 @authentication_classes([OptionalMockJWTAuthentication])
@@ -447,11 +407,9 @@ def mock_exam_detail_view(request, exam_id):
     if request.method == "GET":
         return success(mock_catalog.get_exam(request.user if getattr(request.user, "is_authenticated", False) else None, exam_id))
     require_authenticated(request)
-    if request.method == "DELETE":
-        if getattr(request.user, "__name__", type(request.user).__name__) == "A" and getattr(request.user, "id", None) == "owner-1" and exam_id == "exam-1":
-            require_role(request, "super_admin")
-        require_role(request, "teacher", "admin", "super_admin")
-        return success(_delete_mock_exam_for_staff(request.user, exam_id))
+    if request.method == "DELETE":
+        require_role(request, "super_admin")
+        return success(mock_authoring.delete_exam(request.user, exam_id))
     require_role(request, "teacher", "admin", "super_admin")
     data = body(request, {"title", "description", "level", "practiceLevel", "assessmentPolicy", "isPublished", "isDemo", "price", "isFreeForApproved", "profile"})
     return success(mock_authoring.exam_payload(mock_authoring.update_exam(request.user, exam_id, data)))

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import io
 import json
+from types import SimpleNamespace
+from rest_framework.test import force_authenticate
 from django.core.management import call_command
 from django.db import connection
 from django.test import RequestFactory, TestCase
@@ -116,6 +118,7 @@ class CdExamAndSeederTestCase(TestCase):
         # 6. API Endpoint test
         factory = RequestFactory()
         req = factory.get(f"/api/v1/exams/{exam.code}/cd-session/")
+        force_authenticate(req, user=SimpleNamespace(id='admin', role='admin', is_authenticated=True))
         resp = get_cd_exam_session(req, exam.code)
         self.assertEqual(resp.status_code, 200)
 

@@ -168,6 +168,38 @@ try:
             with patch.object(assessment_worker.service,'claim',return_value=claimed),patch.dict(os.environ,dict(ASSESSMENT_ADJUDICATION_ENABLED='false')):
                 assessment_worker.run_once(grader=grader,speech=speech_stub)
             job.refresh_from_db()
+        # A low-confidence proposal is stored for teacher review only.
+        low_id=prefix+'-low-confidence'
+        insert('MockAttempt',id=low_id,examId=ids['exam'],studentId=ids['student'],status='grading',submittedAt=stamp,
+            flowMode='partial_practice',specificationVersion=CURRENT_SPEC,mediaState=json.dumps({'__practice_scope':dict(version=1,skills=['writing'],questionIds=writing)}))
+        for qid in writing:
+            insert('MockAnswer',id=str(uuid4()),attemptId=low_id,questionId=qid,response=original,updatedAt=stamp)
+        mock_submission_snapshots.enqueue(MockAttempt.objects.select_related('exam').get(id=low_id))
+        low_job=AssessmentJob.objects.get(attempt_id=low_id)
+        claimed=assessment.update(low_job,status='PROCESSING',lease_token=str(uuid4()),lease_expires_at=timezone.now()+__import__('datetime').timedelta(minutes=10),attempt_count=1)
+        def low_grader(input,role):
+            answer=grader(input,role)
+            answer['result']['confidence']=0.1
+            return answer
+        with patch.object(assessment_worker.service,'claim',return_value=claimed),patch.dict(os.environ,dict(ASSESSMENT_ADJUDICATION_ENABLED='false')):
+            assessment_worker.run_once(grader=low_grader,speech=transcript)
+        low_job.refresh_from_db()
+        check(low_job.status=='NEEDS_REVIEW' and low_job.ai_score is not None and low_job.final_score is None
+              and low_job.final_result is None and low_job.approved_feedback is None,
+              'low-confidence AI remains a proposal without an approved final score')
+        check(not MockAnswer.objects.filter(attempt_id=low_id,is_graded=True).exists(),
+              'low-confidence AI does not project graded answers')
+        view=request('student','/v1/assessment/attempts/'+low_id)
+        check(view['overall_band'] is None, 'unapproved AI score is not exposed as overall band')
+        MockAttempt.objects.filter(id=low_id).update(status='completed')
+        request('student','/v1/mock/attempts/'+low_id+'/certificate',None,409)
+        low_review='/v1/assessment/jobs/'+low_job.id+'/review'
+        request('teacher',low_review,dict(action='ACCEPT',expectedVersion=low_job.version,reason='Reviewed the actual response'),201)
+        low_job.refresh_from_db()
+        check(low_job.status=='SUCCEEDED' and low_job.final_score is not None
+              and MockAnswer.objects.filter(attempt_id=low_id,is_graded=True).exists(),
+              'teacher approval projects the previously unapproved result')
+
         for job in ai_jobs.values():run_fixture(job)
         ai_attempt.refresh_from_db()
         check(ai_attempt.status=='completed' and all(j.final_score_source=='AI' and j.status=='SUCCEEDED' for j in ai_jobs.values()),'mocked providers finish scoped AI jobs through the real worker and answer projection')
@@ -228,6 +260,17 @@ try:
             if audio_kind != 'missing':
                 check(SpeechTranscript.objects.filter(job_id=job.id,status='FAILED',failure_code=code).exists(),
                     label+' records its specific transcript failure')
+
+        unmeasured_id,unmeasured_job=speech_case('unmeasured-stt-confidence','recorded',
+            lambda *args:dict(transcript(*args),confidence=None))
+        check(unmeasured_job.status=='NEEDS_REVIEW' and unmeasured_job.failure_code=='STT_CONFIDENCE_INSUFFICIENT'
+            and unmeasured_job.final_score is None and unmeasured_job.ai_score is not None,
+            'unmeasured STT confidence does not automatically approve a score')
+        check(not MockAnswer.objects.filter(attempt_id=unmeasured_id,is_graded=True).exists(),
+            'unmeasured STT confidence does not project graded answers')
+        unmeasured_view=request('student','/v1/assessment/attempts/'+unmeasured_id)
+        check(unmeasured_view['status']=='needs_review' and unmeasured_view['overall_band'] is None,
+            'student overview displays the review state without an overall score')
 
         def silence(path,*args):
             _decode_audio(path,600)  # Real PCM silence is detected before inference.

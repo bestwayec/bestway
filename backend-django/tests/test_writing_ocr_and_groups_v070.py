@@ -335,18 +335,21 @@ class TeacherGroupsAnalyticsAndExcelExportTests(SimpleTestCase):
             self.assertEqual(ws.cell(row=2, column=9).value, 7.5)
             self.assertEqual(ws.cell(row=3, column=1).value, "GROUP AVERAGE")
 
-    def test_teacher_can_delete_mock_exam(self):
-        teacher = SimpleNamespace(id="teacher-del", role="teacher", is_authenticated=True)
-        self.client.force_authenticate(teacher)
-
-        fake_exam = SimpleNamespace(id="exam-del-1", title="Draft Exam", delete=MagicMock())
-        with patch("apps.legacy_schema.models.MockExam.objects.filter") as mock_filter, \
-             patch("apps.core.mock_authoring.delete_exam", return_value={"deleted": True}):
-            mock_filter.return_value.first.return_value = fake_exam
-            res = self.client.delete("/v1/mock/exams/exam-del-1")
-            self.assertEqual(res.status_code, 200)
-            self.assertTrue(res.data["data"]["deleted"])
-            self.assertEqual(res.data["data"]["id"], "exam-del-1")
+    def test_only_superadmin_can_delete_mock_exam(self):
+        for role in ("teacher", "admin", "student"):
+            actor = SimpleNamespace(id="actor", role=role, is_authenticated=True)
+            self.client.force_authenticate(actor)
+            with patch("apps.core.mock_authoring.delete_exam") as delete:
+                response = self.client.delete("/v1/mock/exams/exam-del-1")
+                self.assertEqual(response.status_code, 403)
+                delete.assert_not_called()
+        actor = SimpleNamespace(id="super", role="super_admin", is_authenticated=True)
+        self.client.force_authenticate(actor)
+        with patch("apps.core.mock_authoring.delete_exam", return_value={"deleted": True}) as delete:
+            response = self.client.delete("/v1/mock/exams/exam-del-1")
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.data["data"]["deleted"])
+            delete.assert_called_once_with(actor, "exam-del-1")
 
     def test_ensure_superadmin_management_command_sets_telegram_id_5582178765(self):
         existing_admin = SimpleNamespace(

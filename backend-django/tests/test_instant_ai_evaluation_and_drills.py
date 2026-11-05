@@ -20,55 +20,21 @@ class InstantAiEvaluationAndDrillsTests(SimpleTestCase):
         )
         self.client.force_authenticate(self.student)
 
-    def test_instant_evaluator_unit_logic(self):
-        """Test the core heuristic rubric evaluation logic directly."""
-        text = (
-            "In modern world peoples thinks that technology is very important because it help everyone. "
-            "Furthermore, there is many big problem if I will not care. Consequently, we must prepare."
-        )
-        res = instant_evaluator.evaluate_text_instant(
-            text=text,
-            prompt="Discuss the advantages and disadvantages of modern technology.",
-            skill="writing",
-            task_type="task2",
-            program="IELTS",
-        )
+    def test_instant_evaluator_does_not_fabricate_scores(self):
+        from common.api.exceptions import ContractAPIException
+        with self.assertRaises(ContractAPIException) as error:
+            instant_evaluator.evaluate_text_instant(text="A student's response")
+        self.assertEqual(error.exception.contract_code, 'INSTANT_ASSESSMENT_UNAVAILABLE')
+        self.assertEqual(error.exception.status_code, 503)
 
-        self.assertIn("band", res)
-        self.assertIn("cefr_level", res)
-        self.assertIn("criteria_scores", res)
-        self.assertIn("task_achievement", res["criteria_scores"])
-        self.assertIn("coherence_cohesion", res["criteria_scores"])
-        self.assertIn("lexical_resource", res["criteria_scores"])
-        self.assertIn("grammatical_range", res["criteria_scores"])
-
-        # Check grammar corrections
-        self.assertTrue(len(res["grammar_corrections"]) >= 2)
-        corr_origs = [c["original"].lower() for c in res["grammar_corrections"]]
-        self.assertTrue(any("people" in o for o in corr_origs))
-
-        # Check vocabulary upgrades
-        self.assertTrue(len(res["vocabulary_upgrades"]) >= 1)
-
-        # Check C1 Model Answer
-        self.assertIn("model_answer", res)
-        self.assertIn("C1 Academic Model Answer", res["model_answer"])
-
-    def test_instant_evaluate_api_endpoint(self):
-        """Test POST /api/v1/assessment/instant-evaluate endpoint."""
-        payload = {
-            "text": "In modern world peoples thinks that technology is very important because it help everyone. But there is many big problem if I will not care.",
-            "prompt": "Discuss technology.",
-            "skill": "writing",
-            "task_type": "task2",
-        }
-        res = self.client.post("/api/v1/assessment/instant-evaluate", payload, format="json")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()["data"]
-        self.assertIn("band", data)
-        self.assertIn("cefr_level", data)
-        self.assertIn("criteria_scores", data)
-        self.assertIn("model_answer", data)
+    def test_instant_evaluate_api_fails_closed(self):
+        for skill in ('writing', 'speaking'):
+            with self.subTest(skill=skill):
+                res = self.client.post('/api/v1/assessment/instant-evaluate',
+                    {'text': 'A student response', 'skill': skill}, format='json')
+                self.assertEqual(res.status_code, 503)
+                self.assertEqual(res.json()['error']['code'], 'INSTANT_ASSESSMENT_UNAVAILABLE')
+                self.assertNotIn('data', res.json())
 
     def test_targeted_practice_get_questions(self):
         """Test GET /api/v1/study-plan/targeted-practice?category=tfng."""

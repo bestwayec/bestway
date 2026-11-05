@@ -229,7 +229,7 @@ export function TeacherEvaluationDialog({
             {/* Quick score summary indicators */}
             <div className="flex items-center gap-3 text-xs">
               <span className="text-slate-400">
-                AI Balli: <strong className="text-emerald-400">{assessmentData?.overall_band ?? attempt?.overallBand ?? "-"}</strong>
+                AI Balli: <strong className="text-emerald-400">{(assessmentData ? assessmentData.overall_band : attempt?.overallBand) ?? "-"}</strong>
               </span>
               <span className="text-slate-400">
                 Ustoz Balli: <strong className="text-amber-400">{finalScore || "-"}</strong>
@@ -390,13 +390,13 @@ export function TeacherEvaluationDialog({
                 <div>
                   <span className="text-xs text-slate-400 block">AI Tavsiya Qilgan Umumiy Natija</span>
                   <span className="text-lg font-bold text-emerald-400">
-                    {assessmentData?.overall_band ?? attempt?.overallBand ?? "Baholanmoqda"}
+                    {(assessmentData ? assessmentData.overall_band : attempt?.overallBand) ?? "Baholanmoqda"}
                   </span>
                 </div>
                 <div className="text-right">
                   <span className="text-xs text-slate-400 block">Ishonchlilik Darajasi</span>
                   <span className="text-xs font-semibold text-slate-200">
-                    {assessmentData?.confidence ? `${Math.round(assessmentData.confidence * 100)}%` : "Yuqori"}
+                    {assessmentData?.confidence != null ? `${Math.round(assessmentData.confidence * 100)}%` : "Mavjud emas"}
                   </span>
                 </div>
               </div>
