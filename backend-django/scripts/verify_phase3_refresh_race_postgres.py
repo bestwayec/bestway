@@ -55,7 +55,15 @@ try:
         else:
             raise AssertionError('logout failed to revoke rotated token')
     else:
-        assert rotated['error'] == 'SESSION_EXPIRED'
+        assert rotated['error'] in ('SESSION_EXPIRED', 'REFRESH_IN_PROGRESS')
+        # A competing logout can hold the row lock, producing a transient 409.
+        # After logout commits the old credential must still be revoked.
+        try:
+            auth_service.refresh(initial)
+        except ContractAPIException as error:
+            assert error.contract_code == 'SESSION_EXPIRED'
+        else:
+            raise AssertionError('logout did not revoke the original token')
     print('PASS concurrent logout prevents refresh family reuse')
 
     initial = auth_service.issue_tokens(user)['refreshToken']
