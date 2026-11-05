@@ -66,7 +66,7 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
       <div className="border-b border-border bg-gradient-to-r from-brand/10 via-surface to-brand/5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="grid size-9 place-items-center rounded-xl bg-brand text-white shadow-sm">
+            <span className="grid size-9 place-items-center rounded-xl bg-brand text-brand-fg shadow-sm">
               <Sparkles className="size-5" />
             </span>
             <div>

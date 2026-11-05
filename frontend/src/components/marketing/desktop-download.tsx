@@ -267,7 +267,7 @@ export function DesktopDownload() {
   return (
     <div className="mx-auto mt-10 w-full min-w-0 max-w-6xl">
       {/* ── Recommended Device Hero Card ── */}
-      <Card className="ring-gradient shine anim-scale-in min-w-0 overflow-hidden p-6 sm:p-10 border border-emerald-500/30 bg-[#0B0F17]/90 shadow-2xl">
+      <Card className="ring-gradient shine anim-scale-in min-w-0 overflow-hidden p-6 sm:p-10 border border-emerald-500/30 bg-bg-subtle/90 shadow-2xl">
         {loading ? (
           <p className="inline-flex items-center gap-2 text-sm text-fg-muted" role="status">
             <Loader2 className="size-4 animate-spin text-emerald-500" aria-hidden />
@@ -313,7 +313,7 @@ export function DesktopDownload() {
 
             {/* Android Safety & Install Instructions */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <ShieldCheck className="size-4" />
                   <span>1. Faylni Yuklab Oling</span>
@@ -323,7 +323,7 @@ export function DesktopDownload() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <CheckCircle2 className="size-4" />
                   <span>2. Ruxsat Bering</span>
@@ -333,7 +333,7 @@ export function DesktopDownload() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <Sparkles className="size-4" />
                   <span>3. Hisobingizga Kiring</span>
@@ -384,7 +384,7 @@ export function DesktopDownload() {
 
             {/* iOS PWA 3-Step Guide */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <Share2 className="size-4" />
                   <span>1. Ulashish Tugmasi</span>
@@ -394,7 +394,7 @@ export function DesktopDownload() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <PlusSquare className="size-4" />
                   <span>2. Bosh Ekranga Qo&apos;shish</span>
@@ -404,7 +404,7 @@ export function DesktopDownload() {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-[#111827]/60 p-4">
+              <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
                 <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
                   <CheckCircle2 className="size-4" />
                   <span>3. Qo&apos;shishni Bosing</span>
@@ -506,7 +506,7 @@ export function DesktopDownload() {
                 <Card
                   key={key}
                   className={cn(
-                    "lift flex min-w-0 max-w-full flex-col overflow-hidden p-5 rounded-2xl border bg-[#0B0F17] transition-all",
+                    "lift flex min-w-0 max-w-full flex-col overflow-hidden p-5 rounded-2xl border bg-bg-subtle transition-all",
                     isRec ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10" : "border-white/10 hover:border-white/20",
                   )}
                 >
@@ -536,7 +536,7 @@ export function DesktopDownload() {
                           variant="outline"
                           size="sm"
                           asChild
-                          className="h-auto w-full justify-start overflow-hidden py-2.5 px-3 rounded-xl border-white/10 bg-[#111827]/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition text-left"
+                          className="h-auto w-full justify-start overflow-hidden py-2.5 px-3 rounded-xl border-white/10 bg-surface/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition text-left"
                         >
                           <a href={a.url} rel="noopener noreferrer" title={a.name} className="w-full">
                             <Download className="size-4 shrink-0 text-emerald-400 mr-2" />

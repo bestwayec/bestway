@@ -79,7 +79,7 @@ export function SectionTransitionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0B0F17]/95 p-6 sm:p-8 shadow-2xl text-center text-white">
+      <div className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-bg-subtle/95 p-6 sm:p-8 shadow-2xl text-center text-white">
         {/* Success badge */}
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 ring-4 ring-emerald-500/10">
           <CheckCircle2 className="size-8" />

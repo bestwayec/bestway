@@ -65,7 +65,7 @@ export function QuestionNav({
                 className={cn(
                   "grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30",
                   isActive
-                    ? "bg-brand text-white shadow-sm"
+                    ? "bg-brand text-brand-fg shadow-sm"
                     : answered
                       ? "bg-success-bg text-success ring-1 ring-success/20 hover:bg-success-bg/80"
                       : "border border-border bg-surface text-fg-muted hover:bg-surface-hover hover:text-fg",

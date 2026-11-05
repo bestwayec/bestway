@@ -145,7 +145,7 @@ export function StudentAssignmentsWidget() {
           <Button
             size="sm"
             onClick={() => setJoinModalOpen(true)}
-            className="mt-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-7 gap-1"
+            className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 gap-1"
           >
             <Plus className="h-3 w-3" />
             Kodni Kiritish
@@ -213,7 +213,7 @@ export function StudentAssignmentsWidget() {
                     className={`text-xs h-7 gap-1 font-medium ${
                       a.is_submitted
                         ? "bg-surface-hover hover:bg-surface text-fg-muted"
-                        : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
                     }`}
                   >
                     {a.is_submitted ? (
@@ -276,7 +276,7 @@ export function StudentAssignmentsWidget() {
                 type="submit"
                 size="sm"
                 disabled={isJoining}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               >
                 {isJoining ? (
                   <>

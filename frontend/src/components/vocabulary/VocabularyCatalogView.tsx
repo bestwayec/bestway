@@ -161,7 +161,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Button
               type="button"
               onClick={() => setIsBuilderOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-600/20"
             >
               <Plus className="mr-2 h-4 w-4" />
               Yangi Lug'at Yaratish
@@ -171,7 +171,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       </div>
 
       {/* Subway Vocab Runner Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-[#0B0F17] to-emerald-900/20 p-6 md:p-7 shadow-xl shadow-emerald-950/20">
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-bg-subtle to-emerald-900/20 p-6 md:p-7 shadow-xl shadow-emerald-950/20">
         <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
@@ -341,7 +341,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
                       <div className="flex items-center gap-2">
                         <Link href={`/vocabulary/${s.id}`} className="flex-1">
-                          <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-sm">
+                          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm">
                             <Play className="mr-1.5 h-4 w-4" />
                             Mashqni Boshlash
                           </Button>

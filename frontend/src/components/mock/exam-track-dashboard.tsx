@@ -130,14 +130,14 @@ export function ExamTrackDashboard() {
 
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
             {fullMock ? (
-              <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-white shadow-md hover:bg-brand-hover">
+              <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-brand-fg shadow-md hover:bg-brand-hover">
                 <Link href={`/mock/${fullMock.id}`}>
                   <Play className="size-4 fill-current mr-2" />
                   Start Full Mock
                 </Link>
               </Button>
             ) : (
-              <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-white shadow-md hover:bg-brand-hover">
+              <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-brand-fg shadow-md hover:bg-brand-hover">
                 <Link href="/mock">
                   <Play className="size-4 fill-current mr-2" />
                   Browse Full Mocks

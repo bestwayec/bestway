@@ -57,7 +57,7 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
 
   if (isLoading && !plan) {
     return (
-      <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/90 text-slate-100 shadow-xl", className)}>
+      <Card className={cn("border-emerald-500/20 bg-bg-subtle/90 text-slate-100 shadow-xl", className)}>
         <CardHeader className="pb-3 border-b border-slate-800/80">
           <Skeleton className="h-6 w-48 bg-slate-800" />
           <Skeleton className="h-4 w-72 bg-slate-800/60" />
@@ -74,7 +74,7 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
   const monthlyPercent = plan?.monthlyProgress?.percent ?? 0;
 
   return (
-    <Card className={cn("border-emerald-500/15 bg-[#111827]/90 text-slate-100 shadow-xl overflow-hidden", className)}>
+    <Card className={cn("border-emerald-500/15 bg-surface/90 text-slate-100 shadow-xl overflow-hidden", className)}>
       <CardHeader className="pb-3 border-b border-slate-800/80">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
@@ -159,7 +159,7 @@ export function AdaptiveStudyPlan({ className }: { className?: string }) {
                     size="sm"
                     disabled={updateTargetMutation.isPending}
                     onClick={handleSaveTarget}
-                    className="h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 shrink-0"
+                    className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 shrink-0"
                   >
                     {updateTargetMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
                   </Button>

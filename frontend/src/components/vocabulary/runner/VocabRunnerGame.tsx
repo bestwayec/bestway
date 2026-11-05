@@ -600,7 +600,7 @@ export function VocabRunnerGame() {
       }
 
       // Deep Obsidian background
-      ctx.fillStyle = "#0B0F17";
+      ctx.fillStyle = "#0B0D08";
       ctx.fillRect(0, 0, width, height);
 
       // Starry sky / Neon grid horizon
@@ -623,8 +623,8 @@ export function VocabRunnerGame() {
 
       // Track Floor
       const floorGrad = ctx.createLinearGradient(0, horizonY, 0, height);
-      floorGrad.addColorStop(0, "#0F172A");
-      floorGrad.addColorStop(1, "#0B0F17");
+      floorGrad.addColorStop(0, "#11140C");
+      floorGrad.addColorStop(1, "#0B0D08");
       ctx.fillStyle = floorGrad;
       ctx.beginPath();
       ctx.moveTo(vanishingX - trackWidthHorizon * 1.5, horizonY);
@@ -758,7 +758,7 @@ export function VocabRunnerGame() {
         ctx.fill();
 
         // Head / Helmet
-        ctx.fillStyle = "#0F172A";
+        ctx.fillStyle = "#11140C";
         ctx.beginPath();
         ctx.arc(0, -68, 14, 0, Math.PI * 2);
         ctx.fill();
@@ -828,7 +828,7 @@ export function VocabRunnerGame() {
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center select-none">
       {/* Top HUD Header (Responsive & Compact) */}
-      <div className="mb-2 sm:mb-3 flex w-full items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-[#0B0F17]/90 px-3 sm:px-5 py-2 sm:py-3 shadow-xl backdrop-blur-md">
+      <div className="mb-2 sm:mb-3 flex w-full items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-bg-subtle/90 px-3 sm:px-5 py-2 sm:py-3 shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/vocabulary"
@@ -885,7 +885,7 @@ export function VocabRunnerGame() {
 
       {/* Target Question Floating HUD Card (Compact & High Contrast) */}
       {isPlaying && !isGameOver && currentQuestion && (
-        <div className="mb-2 sm:mb-3 w-full rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-[#111827]/95 px-3 py-2 sm:p-4 text-center shadow-xl backdrop-blur-md animate-fadeIn">
+        <div className="mb-2 sm:mb-3 w-full rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-surface/95 px-3 py-2 sm:p-4 text-center shadow-xl backdrop-blur-md animate-fadeIn">
           <div className="flex items-center justify-center gap-2 mb-0.5">
             <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-400">
               {currentQuestion.category}
@@ -902,7 +902,7 @@ export function VocabRunnerGame() {
 
       {/* Main Canvas Viewport with Touch Listener (Full Mobile Touch Optimized) */}
       <div
-        className="relative w-full aspect-[16/9] max-h-[65dvh] sm:max-h-[580px] overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-2xl bg-[#0B0F17] touch-none select-none"
+        className="relative w-full aspect-[16/9] max-h-[65dvh] sm:max-h-[580px] overflow-hidden rounded-2xl sm:rounded-3xl border border-white/15 shadow-2xl bg-bg-subtle touch-none select-none"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -916,7 +916,7 @@ export function VocabRunnerGame() {
         {/* Start / Overlay Screen */}
         {!isPlaying && !isGameOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6 text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl shadow-emerald-500/40 text-white animate-bounce-slow">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl shadow-emerald-500/40 text-brand-fg animate-bounce-slow">
               <Zap className="h-10 w-10 fill-current" />
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mb-2">
@@ -941,7 +941,7 @@ export function VocabRunnerGame() {
             <button
               type="button"
               onClick={() => void startGame()}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black px-8 py-4 text-base shadow-2xl shadow-emerald-950/60 transition cursor-pointer hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-brand-fg font-black px-8 py-4 text-base shadow-2xl shadow-emerald-950/60 transition cursor-pointer hover:scale-105 active:scale-95"
             >
               <Play className="h-5 w-5 fill-current" />
               <span>O&apos;yinni Boshlash</span>
@@ -971,7 +971,7 @@ export function VocabRunnerGame() {
             <button
               type="button"
               onClick={() => setIsPaused(false)}
-              className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 text-sm shadow-xl transition"
+              className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 text-sm shadow-xl transition"
             >
               Davom ettirish
             </button>
@@ -981,7 +981,7 @@ export function VocabRunnerGame() {
         {/* Game Over Screen */}
         {isGameOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6 text-center overflow-y-auto">
-            <div className="w-full max-w-lg rounded-3xl border border-red-500/40 bg-[#0B0F17] p-6 shadow-2xl text-center text-white relative">
+            <div className="w-full max-w-lg rounded-3xl border border-red-500/40 bg-bg-subtle p-6 shadow-2xl text-center text-white relative">
               <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 shadow-lg">
                 <Trophy className="h-8 w-8 text-amber-400" />
               </div>
@@ -997,15 +997,15 @@ export function VocabRunnerGame() {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3 my-4">
-                <div className="rounded-2xl bg-[#111827] border border-white/5 p-3 text-center">
+                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
                   <span className="text-[10px] uppercase font-bold text-gray-400">Yakuniy Ball</span>
                   <p className="font-mono text-xl font-black text-emerald-400">{score}</p>
                 </div>
-                <div className="rounded-2xl bg-[#111827] border border-white/5 p-3 text-center">
+                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
                   <span className="text-[10px] uppercase font-bold text-gray-400">Masofa</span>
                   <p className="font-mono text-xl font-black text-teal-400">{distance}m</p>
                 </div>
-                <div className="rounded-2xl bg-[#111827] border border-white/5 p-3 text-center">
+                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
                   <span className="text-[10px] uppercase font-bold text-gray-400">To&apos;g&apos;ri so&apos;zlar</span>
                   <p className="font-mono text-xl font-black text-white">{correctCount}</p>
                 </div>
@@ -1028,7 +1028,7 @@ export function VocabRunnerGame() {
 
               {/* Mistakes Review (if any) */}
               {mistakes.length > 0 && (
-                <div className="mb-5 max-h-36 overflow-y-auto rounded-2xl bg-[#111827] border border-white/5 p-3 text-left">
+                <div className="mb-5 max-h-36 overflow-y-auto rounded-2xl bg-surface border border-white/5 p-3 text-left">
                   <span className="text-[10px] uppercase font-bold text-gray-400 block mb-2">
                     Xatolar tahlili ({mistakes.length} ta xato):
                   </span>
@@ -1054,7 +1054,7 @@ export function VocabRunnerGame() {
                 <button
                   type="button"
                   onClick={() => void startGame()}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-4 shadow-xl text-xs md:text-sm transition cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-brand-fg font-bold py-3 px-4 shadow-xl text-xs md:text-sm transition cursor-pointer"
                 >
                   <RotateCcw className="h-4 w-4" />
                   <span>Qayta o&apos;ynash</span>

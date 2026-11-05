@@ -536,7 +536,7 @@ export function BamboozleArena({
   return (
     <div
       ref={containerRef}
-      className={`w-full min-h-[500px] md:min-h-[600px] bg-[#0B0F17] text-white rounded-2xl border border-emerald-500/20 p-4 sm:p-6 pb-12 sm:pb-6 flex flex-col justify-between select-none relative overflow-hidden ${
+      className={`w-full min-h-[500px] md:min-h-[600px] bg-bg-subtle text-white rounded-2xl border border-emerald-500/20 p-4 sm:p-6 pb-12 sm:pb-6 flex flex-col justify-between select-none relative overflow-hidden ${
         isProjectorMode ? "p-8 max-w-full" : ""
       }`}
     >
@@ -785,7 +785,7 @@ export function BamboozleArena({
               exit={{ scale: 0.8, y: -20 }}
               transition={{ type: "spring", damping: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-b from-slate-900 via-[#0B0F17] to-black border-2 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col items-center text-center relative"
+              className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-b from-slate-900 via-bg-subtle to-black border-2 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col items-center text-center relative"
             >
               <div className="text-6xl mb-3 animate-bounce">{surpriseModal.icon}</div>
               <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
@@ -809,7 +809,7 @@ export function BamboozleArena({
       {/* Active Question Modal */}
       {activeCard && (
         <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in zoom-in-95 duration-200">
-          <div className="w-full max-w-2xl bg-[#0B0F17] border-2 border-emerald-500/50 rounded-2xl p-6 shadow-2xl flex flex-col items-center">
+          <div className="w-full max-w-2xl bg-bg-subtle border-2 border-emerald-500/50 rounded-2xl p-6 shadow-2xl flex flex-col items-center">
             {/* Header: Turn + Points + Timer */}
             <div className="w-full flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
               <Badge

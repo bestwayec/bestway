@@ -256,7 +256,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
               type="button"
               onClick={handleAddSingleWord}
               disabled={!engInput.trim() || !uzbInput.trim()}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white shrink-0"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -344,7 +344,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting || words.length === 0}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 font-semibold shadow-lg shadow-emerald-600/20"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 font-semibold shadow-lg shadow-emerald-600/20"
         >
           {isSubmitting ? "Saqlanmoqda..." : "Lug'at To'plamini E'lon Qilish"}
         </Button>
@@ -429,7 +429,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
                 type="button"
                 disabled={parsedPreview.length === 0}
                 onClick={handleApplySmartPaste}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {parsedPreview.length} ta So'zni To'plamga Qo'shish
               </Button>

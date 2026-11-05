@@ -39,7 +39,7 @@ export function SubmitConfirmModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-6 bg-[#0B0F17] border border-border text-fg">
+      <DialogContent className="max-w-md p-6 bg-bg-subtle border border-border text-fg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-fg">
             <Send className="size-5 text-brand" />
@@ -102,7 +102,7 @@ export function SubmitConfirmModal({
           </Button>
           <Button
             type="button"
-            className="flex-1 bg-brand font-bold text-white hover:bg-brand-hover"
+            className="flex-1 bg-brand font-bold text-brand-fg hover:bg-brand-hover"
             disabled={!hasQuestions}
             loading={isSubmitting}
             onClick={onConfirm}

@@ -32,7 +32,7 @@ export function MobileWelcomeScreen({ locale }: { locale: string }) {
   ];
 
   return (
-    <div className="flex min-h-[100dvh] flex-col justify-between bg-gradient-to-b from-[#0B0F17] via-[#0D1520] to-[#0B0F17] px-5 py-6 text-fg">
+    <div className="flex min-h-[100dvh] flex-col justify-between bg-gradient-to-b from-bg-subtle via-[#0D1520] to-bg-subtle px-5 py-6 text-fg">
       {/* Top Bar with Language Switcher */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

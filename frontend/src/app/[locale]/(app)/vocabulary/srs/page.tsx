@@ -119,7 +119,7 @@ export default function VocabularySrsPage() {
               type="button"
               disabled={!stats || stats.totalWeakWords === 0}
               onClick={() => setIsQuizActive(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-md shadow-emerald-600/20"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md shadow-emerald-600/20"
             >
               <Play className="mr-2 h-4 w-4" />
               Xatolar Mashqini Boshlash

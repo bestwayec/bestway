@@ -14,7 +14,7 @@ export default async function AuthLayout({
   setRequestLocale(locale);
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#0B0F17] text-slate-100">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-bg-subtle text-slate-100">
       {/* dekorativ fon — modern obsidian dark glassmorphism */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.12),rgba(255,255,255,0))]" />

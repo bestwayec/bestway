@@ -131,7 +131,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
             type="button"
             onClick={handleDownloadExcel}
             disabled={isExporting || isLoading}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-600/20"
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             {isExporting ? "Yuklanmoqda..." : "Excel Yuklab Olish (.xlsx)"}

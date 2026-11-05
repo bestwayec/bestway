@@ -343,7 +343,7 @@ export function BamboozleLobby() {
   return (
     <div className="w-full space-y-6 pb-12 sm:pb-6">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#0B0F17] to-slate-900 border border-emerald-500/20 p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/60 via-bg-subtle to-slate-900 border border-emerald-500/20 p-6 sm:p-8">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -435,7 +435,7 @@ export function BamboozleLobby() {
             return (
               <div
                 key={deck.id}
-                className="p-5 rounded-2xl bg-[#0B0F17] border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between group shadow-lg"
+                className="p-5 rounded-2xl bg-bg-subtle border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between group shadow-lg"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -504,7 +504,7 @@ export function BamboozleLobby() {
       {/* 1v1 Viral Challenge Invite Modal */}
       {challengeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl border border-emerald-500/30 bg-[#0B0F17] p-6 text-white shadow-2xl relative space-y-4">
+          <div className="w-full max-w-md rounded-3xl border border-emerald-500/30 bg-bg-subtle p-6 text-white shadow-2xl relative space-y-4">
             <button
               type="button"
               onClick={() => setChallengeModal(null)}

@@ -176,7 +176,7 @@ export function WeakPointsTargetDrillModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl overflow-hidden border border-emerald-500/30 bg-[#0B0F17] p-0 text-slate-100 shadow-2xl backdrop-blur-xl sm:rounded-2xl">
+      <DialogContent className="max-w-2xl overflow-hidden border border-emerald-500/30 bg-bg-subtle p-0 text-slate-100 shadow-2xl backdrop-blur-xl sm:rounded-2xl">
         {/* Header Bar */}
         <div className="relative border-b border-slate-800 bg-slate-900/80 p-5">
           <div className="flex items-center justify-between gap-3">

@@ -250,7 +250,7 @@ export function ExamQuestionsEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : undefined)}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto border border-slate-800 bg-[#0B0F17]/95 p-6 text-slate-100 shadow-2xl backdrop-blur-2xl">
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto border border-slate-800 bg-bg-subtle/95 p-6 text-slate-100 shadow-2xl backdrop-blur-2xl">
         <DialogHeader className="border-b border-slate-800/80 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -751,7 +751,7 @@ export function ExamQuestionsEditorDialog({
 
           <Button
             type="button"
-            className="border border-emerald-500/50 bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500"
+            className="border border-emerald-500/50 bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-700"
             onClick={handleSaveAndPublish}
             loading={saving}
           >

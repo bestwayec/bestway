@@ -277,7 +277,7 @@ export function ExamLocker({
           <div className="mt-6">
             <Button
               size="lg"
-              className="bg-brand hover:bg-brand/90 text-white font-semibold px-6 shadow-lg"
+              className="bg-brand hover:bg-brand/90 text-brand-fg font-semibold px-6 shadow-lg"
               onClick={() => void requestFullscreenSafe()}
             >
               <Maximize2 className="mr-2 size-5" />
@@ -332,7 +332,7 @@ export function ExamLocker({
                 </div>
               ) : (
                 <Button
-                  className="w-full bg-brand text-white"
+                  className="w-full bg-brand text-brand-fg"
                   onClick={() => {
                     setWarningModalOpen(false);
                     lastViolationTimeRef.current = Date.now();

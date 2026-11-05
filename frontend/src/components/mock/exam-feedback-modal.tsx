@@ -173,9 +173,9 @@ export function ExamFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-emerald-500/20 bg-[#0B0F17] p-0 text-white shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-emerald-500/20 bg-bg-subtle p-0 text-white shadow-[0_0_60px_rgba(16,185,129,0.15)]">
         {/* Header */}
-        <div className="sticky top-0 z-20 border-b border-emerald-500/15 bg-[#0B0F17]/95 px-6 py-5 backdrop-blur-md">
+        <div className="sticky top-0 z-20 border-b border-emerald-500/15 bg-bg-subtle/95 px-6 py-5 backdrop-blur-md">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
@@ -236,7 +236,7 @@ export function ExamFeedbackModal({
         {/* Content Body */}
         <div className="p-6 space-y-6">
           {!feedback ? (
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/60 p-8 text-center text-slate-400">
+            <div className="rounded-2xl border border-slate-800 bg-surface/60 p-8 text-center text-slate-400">
               <HelpCircle className="mx-auto size-10 text-slate-500 mb-3" />
               <p className="text-sm font-semibold text-slate-300">
                 Ushbu modul bo&apos;yicha diagnostik tahlil ma&apos;lumotlari shakllantirilmoqda.
@@ -257,7 +257,7 @@ export function ExamFeedbackModal({
 
                   <div className="grid gap-3 sm:grid-cols-4">
                     {/* WPM */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-[#111827] p-4 text-center shadow-sm">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
                       <span className="text-[11px] font-bold text-slate-400 block mb-1">
                         Nutq Tezligi (WPM)
                       </span>
@@ -270,7 +270,7 @@ export function ExamFeedbackModal({
                     </div>
 
                     {/* Fluency Score */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-[#111827] p-4 text-center shadow-sm">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
                       <span className="text-[11px] font-bold text-slate-400 block mb-1">
                         Ravonlik Bahosi
                       </span>
@@ -283,7 +283,7 @@ export function ExamFeedbackModal({
                     </div>
 
                     {/* Lexical Density */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-[#111827] p-4 text-center shadow-sm">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
                       <span className="text-[11px] font-bold text-slate-400 block mb-1">
                         Leksik Xilma-xillik
                       </span>
@@ -296,7 +296,7 @@ export function ExamFeedbackModal({
                     </div>
 
                     {/* Vocabulary Level */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-[#111827] p-4 text-center shadow-sm">
+                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
                       <span className="text-[11px] font-bold text-slate-400 block mb-1">
                         Lug&apos;at Darajasi
                       </span>
@@ -320,7 +320,7 @@ export function ExamFeedbackModal({
                         {speechDiag.mispronounced_words.map((item, idx) => (
                           <div
                             key={idx}
-                            className="rounded-xl border border-amber-500/20 bg-[#0B0F17]/80 p-2.5 text-xs"
+                            className="rounded-xl border border-amber-500/20 bg-bg-subtle/80 p-2.5 text-xs"
                           >
                             <span className="font-bold text-white">&ldquo;{item.word}&rdquo;</span>
                             {item.issue && (
@@ -356,7 +356,7 @@ export function ExamFeedbackModal({
                       return (
                         <div
                           key={idx}
-                          className="rounded-2xl border border-slate-800 bg-[#111827] p-4 transition-all hover:border-emerald-500/30"
+                          className="rounded-2xl border border-slate-800 bg-surface p-4 transition-all hover:border-emerald-500/30"
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className="font-bold text-sm text-slate-200">{c.criterion}</span>
@@ -457,7 +457,7 @@ export function ExamFeedbackModal({
                     Ballni Oshirish Uchun Amaliy Qadamlar (Action Plan)
                   </div>
 
-                  <div className="rounded-2xl border border-emerald-500/20 bg-[#111827] p-4 space-y-2">
+                  <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 space-y-2">
                     {feedback.action_plan.map((step, idx) => (
                       <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-300">
                         <span className="grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500/20 font-mono text-[11px] font-black text-emerald-400">

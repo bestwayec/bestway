@@ -212,7 +212,7 @@ export function ScorePredictionCard({
   const historyPoints = data.history ?? [];
 
   return (
-    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-[#111827]/90 backdrop-blur-md shadow-2xl transition-all", className)}>
+    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-surface/90 backdrop-blur-md shadow-2xl transition-all", className)}>
       <CardHeader className="border-b border-slate-800/80 bg-slate-900/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -674,8 +674,8 @@ function PredictionSvgChart({
       >
         <defs>
           <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#89F336" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#89F336" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -717,7 +717,7 @@ function PredictionSvgChart({
               cy={p.y}
               r="4.5"
               fill="#10B981"
-              stroke="#0B0F17"
+              stroke="#171A10"
               strokeWidth="2"
             />
             <text

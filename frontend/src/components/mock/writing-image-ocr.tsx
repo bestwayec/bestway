@@ -89,7 +89,7 @@ export function ImageZoomModal({
     >
       {/* Top Toolbar */}
       <div
-        className="flex w-full max-w-4xl items-center justify-between gap-3 border-b border-slate-800 bg-[#0B0F17]/90 px-4 py-2.5 text-white rounded-t-xl"
+        className="flex w-full max-w-4xl items-center justify-between gap-3 border-b border-slate-800 bg-bg-subtle/90 px-4 py-2.5 text-white rounded-t-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <span className="text-sm font-semibold truncate text-slate-200">
@@ -372,7 +372,7 @@ export function WritingImageOcr({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-800/80 bg-[#0B0F17]/90 p-4 shadow-xl backdrop-blur-xl transition-all",
+        "rounded-2xl border border-slate-800/80 bg-bg-subtle/90 p-4 shadow-xl backdrop-blur-xl transition-all",
         className,
       )}
       onDragStart={(e) => e.stopPropagation()}
@@ -599,7 +599,7 @@ export function WritingImageOcr({
                 size="sm"
                 disabled={isExtracting}
                 onClick={() => handleExtractOcr("replace")}
-                className="h-9 gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-500"
+                className="h-9 gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-700"
               >
                 {isExtracting ? (
                   <>

@@ -33,7 +33,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("noun test") || (lower.includes("test") && lower.includes("noun"))) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-indigo-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-indigo-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
         <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
@@ -50,7 +50,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
 
         <div className="relative z-10 flex items-center justify-center mb-2">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-emerald-400 p-0.5 shadow-[0_0_25px_rgba(99,102,241,0.35)]">
-            <div className="size-full rounded-2xl bg-[#0B0F17] flex flex-col items-center justify-center">
+            <div className="size-full rounded-2xl bg-bg-subtle flex flex-col items-center justify-center">
               <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-emerald-300">
                 A+
               </span>
@@ -75,10 +75,10 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("noun")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
         <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -115,7 +115,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("adjective") || lower.includes("sifat")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-amber-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-amber-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-amber-500/25 blur-2xl pointer-events-none" />
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-emerald-500/20 blur-2xl pointer-events-none" />
@@ -158,7 +158,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("adverb") || lower.includes("ravish")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-cyan-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-cyan-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-cyan-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -197,7 +197,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("numeral") || lower.includes("sonlar") || lower.includes("fraction")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-purple-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-purple-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-purple-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#a855f7_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -237,7 +237,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("article") || lower.includes("artikl")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-rose-950/60 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-rose-950/60 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-rose-500/25 blur-2xl pointer-events-none" />
         <div className="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-emerald-500/20 blur-2xl pointer-events-none" />
@@ -281,7 +281,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("present simple") || (lower.includes("present") && !lower.includes("perfect") && !lower.includes("continuous"))) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-teal-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-teal-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#14b8a6_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -318,7 +318,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("present continuous")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-cyan-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-cyan-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-cyan-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -355,10 +355,10 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("present perfect continuous")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-emerald-950/90 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-emerald-950/90 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
         <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -392,10 +392,10 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("present perfect")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
         <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -430,7 +430,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("so") && (lower.includes("such") || lower.includes("enough") || lower.includes("too") || lower.includes("confusing"))) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-violet-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-violet-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-violet-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -470,10 +470,10 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("some") && lower.includes("any")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-emerald-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
         <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -508,7 +508,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("tag") || lower.includes("question tags")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-blue-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-blue-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-blue-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -546,7 +546,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("future continuous")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-teal-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-teal-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-teal-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#14b8a6_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -584,7 +584,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("if") || lower.includes("conditional")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-indigo-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-indigo-950/80 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-indigo-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -622,10 +622,10 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("passive")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-slate-900 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-emerald-500/25 blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+        <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
         <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -660,7 +660,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   if (lower.includes("modal")) {
     return (
       <div
-        className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-amber-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+        className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-amber-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
       >
         <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-amber-500/25 blur-2xl pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
@@ -699,11 +699,11 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
   // 15. DEFAULT / TOPIC FALLBACK (Obsidian-Emerald Luxury Style)
   return (
     <div
-      className={`relative size-full overflow-hidden bg-gradient-to-br from-[#0B0F17] via-emerald-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
+      className={`relative size-full overflow-hidden bg-gradient-to-br from-bg-subtle via-emerald-950/70 to-slate-950 flex flex-col items-center justify-center p-4 select-none ${className}`}
     >
       <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/20 blur-2xl pointer-events-none" />
       <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-teal-500/20 blur-2xl pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+      <div className="absolute inset-0 bg-[radial-gradient(#89f336_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
 
       <div className="relative z-10 flex items-center gap-1.5 mb-2.5">
         <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
@@ -715,7 +715,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
       </div>
 
       <div className="relative z-10 w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 mb-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-        <div className="size-full rounded-2xl bg-[#0B0F17] flex items-center justify-center text-emerald-400">
+        <div className="size-full rounded-2xl bg-bg-subtle flex items-center justify-center text-emerald-400">
           <BookMarked className="w-6 h-6" />
         </div>
       </div>

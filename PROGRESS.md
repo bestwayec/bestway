@@ -7,6 +7,13 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 16-BLOK: Ranglar uyg'unligi (design tokens) va kontrast auditi
+1. **Tahlil**: UI ~1 500 ta xom Tailwind `emerald/slate/teal` klassi va 86 ta qattiq yozilgan navy `#0B0F17` (+35 ta `#111827`) ishlatgan; brend tokenlari esa lime/olive. Natijada bir sahifada 3 xil yashil va ko'k-kulrang neytral aralashgan; 145 ta kontrast xatosi (jami 1119 matn namunasidan).
+2. **Tuzatish** (`frontend/src/app/globals.css`): Tailwind `emerald/teal` shkalasi brend lime→o'rmon yashiliga, `slate/gray` iliq olive neytrallarga, `sky-400` ochroq, `--fg-subtle` #92957f (5.7:1) ga yo'naltirildi. 119 ta navy literal → tokenlar; lime fondagi `text-white` → `text-brand-fg` (41 qator); gradient CTA'lar tuzatildi; qo'sh ⚡ ikonka olib tashlandi.
+3. **Natija** (`scripts/e2e-local/ui-audit.mjs`, 17 sahifa): kontrast xatolari 145 → 10 (qolgani: o'chirilgan tugma va dekorativ "·"), navy/ko'k-kulrang 248 → 0, emerald 360 → 11. Smoke-test 15/15, tsc 0 xato, vitest 403/403.
+
+---
+
 ### 15-BLOK: Windows 10 (4 GB RAM) lokal ishlab chiqish muhiti va brauzer smoke-test
 1. **Lokal muhit** (`docs/LOCAL_DEVELOPMENT_WINDOWS.md`): alohida `bestway_local` bazasi (Prisma migratsiyalari → Django migratsiyalari, `check_legacy_schema` PASS), Django `:8100`, Next.js `:3300`. Redis/worker/Telegram/AI o'chirilgan.
 2. **Skriptlar**: `scripts/local-start.ps1`, `local-stop.ps1`, `local-check.ps1` (faqat o'z jarayonlarini to'xtatadi, qayta ishga tushirish xavfsiz).
