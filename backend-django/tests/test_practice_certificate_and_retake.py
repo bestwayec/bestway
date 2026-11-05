@@ -97,7 +97,9 @@ class CertificateDataLogicTests(SimpleTestCase):
         mock_attempt_cls.objects.select_related.return_value.filter.return_value.first.return_value = attempt_obj
 
         actor = SimpleNamespace(id='student-uuid-456', role='student')
-        result = mock_support.certificate_data(actor, 'attempt-uuid-123')
+        with patch.object(mock_support.AssessmentJob.objects, 'filter') as jobs:
+            jobs.return_value.order_by.return_value = []
+            result = mock_support.certificate_data(actor, 'attempt-uuid-123')
 
         self.assertTrue(result['isPartial'])
         self.assertEqual(result['studentName'], 'Komiljon Roziyev')

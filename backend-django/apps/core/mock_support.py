@@ -5,7 +5,7 @@ from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from apps.legacy_schema.models import MockAttempt, MockExam, MockPurchase, Notification
+from apps.legacy_schema.models import AssessmentJob, MockAttempt, MockExam, MockPurchase, Notification
 
 from .mock_attempts import (
     SKILLS,
@@ -155,6 +155,15 @@ def certificate_data(actor,attempt_id):
             fail('MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE','Internal classroom practice grades do not issue an overall exam or CEFR certificate')
     if row.status not in ('completed', 'submitted'):
         fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
+    # A completed attempt may have a later unresolved AI assessment. Only the
+    # latest generation per skill can make a certificate eligible.
+    seen = set()
+    for job in AssessmentJob.objects.filter(attempt_id=row.id).order_by('-generation', '-created_at'):
+        if job.skill in seen:
+            continue
+        seen.add(job.skill)
+        if job.status != 'SUCCEEDED' or job.final_score is None:
+            fail('ASSESSMENT_NEEDS_REVIEW', 'Baholash tasdiqlanmaguncha sertifikat berilmaydi', 409)
 
     raw_map = row.raw_scores or {}
     sec_bands = row.section_bands or {}

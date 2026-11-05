@@ -247,8 +247,9 @@ class InternalGradeDeliveryTests(SimpleTestCase):
 
     def test_historical_full_certificate_retains_saved_native_result(self):
         row=self.attempt(False)
-        with patch.object(mock_support.MockAttempt,'objects') as attempts,patch.object(mock_support,'assert_view'):
+        with patch.object(mock_support.MockAttempt,'objects') as attempts,patch.object(mock_support,'assert_view'), patch.object(mock_support.AssessmentJob.objects,'filter') as jobs:
             attempts.select_related.return_value.filter.return_value.first.return_value=row
+            jobs.return_value.order_by.return_value=[]
             result=mock_support.certificate_data(SimpleNamespace(role='student'),'attempt')
         self.assertEqual((result['overallScore'],result['cefrLevel']),(75,'C1'))
 

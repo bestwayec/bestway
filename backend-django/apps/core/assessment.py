@@ -155,7 +155,7 @@ def for_attempt(actor,identifier):
         except (ValueError, TypeError): pass
     if overall_band is None:
         for j in rows:
-            sc = j.final_score if j.final_score is not None else j.ai_score
+            sc = j.final_score
             if sc is not None:
                 try:
                     overall_band = float(sc)
@@ -392,12 +392,12 @@ def require_lease(job):
 def finish(job,result,selected,adjudicated):
     attempt=MockAttempt.objects.select_for_update().get(id=job.attempt_id);current=require_lease(job);input=job.input_snapshot;score=results.score(input,result)['score']
     teacher_touched=MockAnswer.objects.filter(attempt_id=job.attempt_id,question_id__in=[r['questionId'] for p in input['parts'] for r in p['responses']],graded_by_id__isnull=False).exists()
-    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode in ('PRACTICE_AUTO_AI', 'FULL_MOCK_AI_WITH_REVIEW') and result['confidence']>=threshold() and score is not None
-    can_project=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and score is not None
+    auto=current.final_score_source!='TEACHER' and not teacher_touched and attempt.status!='in_progress' and job.policy_mode == 'PRACTICE_AUTO_AI' and result['confidence']>=threshold() and score is not None
+    can_project=auto
     if can_project:project(current,result,None)
     values=dict(status='SUCCEEDED' if auto or current.final_score_source=='TEACHER' else 'NEEDS_REVIEW',failure_code='PRONUNCIATION_EVIDENCE_UNAVAILABLE' if score is None else None if auto else 'TEACHER_CONFIRMATION_REQUIRED',ai_score=score,confidence=result['confidence'],selected_evaluation_id=selected,
         lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
-    if current.final_score_source!='TEACHER':values['final_result']=result
+    if can_project:values['final_result']=result
     if can_project:values.update(final_score=score,final_score_source='ADJUDICATED' if adjudicated else 'AI',approved_feedback=result)
     update(current,**values)
     if can_project:
