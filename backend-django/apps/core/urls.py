@@ -302,6 +302,16 @@ urlpatterns = [
     path("mock/exams/<str:exam_id>/quick-content/", mock_exam_quick_content_view),
     path("v1/mock/exams/<str:exam_id>/quick-content", mock_exam_quick_content_view),
     path("v1/mock/exams/<str:exam_id>/quick-content/", mock_exam_quick_content_view),
+    # Literal student sub-resources must precede the catch-all "students/<student_id>" delete route,
+    # otherwise GET /students/study-plan and /students/mistake-vault are answered with 405.
+    path('students/study-plan', study_plans.study_plan_view),
+    path('students/study-plan/', study_plans.study_plan_view),
+    path('v1/students/study-plan', study_plans.study_plan_view),
+    path('v1/students/study-plan/', study_plans.study_plan_view),
+    path('students/mistake-vault', study_plans.mistake_vault_view),
+    path('students/mistake-vault/', study_plans.mistake_vault_view),
+    path('v1/students/mistake-vault', study_plans.mistake_vault_view),
+    path('v1/students/mistake-vault/', study_plans.mistake_vault_view),
     path("students/<str:student_id>", user_admin.delete_student_view),
     path("students/<str:student_id>/", user_admin.delete_student_view),
     path("v1/students/<str:student_id>", user_admin.delete_student_view),
@@ -452,20 +462,10 @@ urlpatterns = [
     path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/pdf', group_reports.group_exam_export_pdf_view),
     path('v1/groups/<str:group_id>/exams/<str:exam_id>/export/pdf/', group_reports.group_exam_export_pdf_view),
 
-    path('students/study-plan', study_plans.study_plan_view),
-    path('students/study-plan/', study_plans.study_plan_view),
-    path('v1/students/study-plan', study_plans.study_plan_view),
-    path('v1/students/study-plan/', study_plans.study_plan_view),
-
     path('students/study-plan/target', study_plans.study_plan_target_view),
     path('students/study-plan/target/', study_plans.study_plan_target_view),
     path('v1/students/study-plan/target', study_plans.study_plan_target_view),
     path('v1/students/study-plan/target/', study_plans.study_plan_target_view),
-
-    path('students/mistake-vault', study_plans.mistake_vault_view),
-    path('students/mistake-vault/', study_plans.mistake_vault_view),
-    path('v1/students/mistake-vault', study_plans.mistake_vault_view),
-    path('v1/students/mistake-vault/', study_plans.mistake_vault_view),
 
     path('students/mistake-vault/practice', study_plans.targeted_practice_view),
     path('students/mistake-vault/practice/', study_plans.targeted_practice_view),

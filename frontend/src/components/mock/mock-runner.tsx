@@ -362,6 +362,21 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     }, new Date(serverNow));
   }, [multilevelReview, exam, answers, audioSet, attempt.flowMode, attempt.currentSkill, attempt.sectionDeadlines, attempt.overallDeadlineAt, attempt.deadlineAt, serverNow]);
 
+  // Must be declared before doSubmit and listed in its dependencies: `exam` loads
+  // asynchronously, so a doSubmit memoised on the first render would keep seeing
+  // total === 0 and refuse every hand-in with the "0/0" toast.
+  const total =
+    exam?.questionCount ||
+    (exam?.sections || []).reduce(
+      (sum, s) =>
+        sum +
+        (s?.groups || (s as any)?.parts || []).reduce(
+          (n: number, g: any) => n + (g?.questions || (g as any)?.items || []).length,
+          0
+        ),
+      0
+    );
+
   const doSubmit = React.useCallback(
     async (auto = false, confirmed = false) => {
       if (submittingRef.current) return;
@@ -427,7 +442,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate],
+    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate, total],
   );
 
   // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
@@ -497,17 +512,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     setActiveSection(index);
   }, [exam, flush]);
 
-  const total =
-    exam?.questionCount ||
-    (exam?.sections || []).reduce(
-      (sum, s) =>
-        sum +
-        (s?.groups || (s as any)?.parts || []).reduce(
-          (n: number, g: any) => n + (g?.questions || (g as any)?.items || []).length,
-          0
-        ),
-      0
-    );
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
 

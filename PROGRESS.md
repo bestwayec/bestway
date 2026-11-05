@@ -7,6 +7,18 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 15-BLOK: Windows 10 (4 GB RAM) lokal ishlab chiqish muhiti va brauzer smoke-test
+1. **Lokal muhit** (`docs/LOCAL_DEVELOPMENT_WINDOWS.md`): alohida `bestway_local` bazasi (Prisma migratsiyalari → Django migratsiyalari, `check_legacy_schema` PASS), Django `:8100`, Next.js `:3300`. Redis/worker/Telegram/AI o'chirilgan.
+2. **Skriptlar**: `scripts/local-start.ps1`, `local-stop.ps1`, `local-check.ps1` (faqat o'z jarayonlarini to'xtatadi, qayta ishga tushirish xavfsiz).
+3. **Sintetik ma'lumot**: `manage.py seed_local_dev` (faqat `*_local` bazada, loopback'da ishlaydi) + mavjud `seed_cbt_multilevel_exam`.
+4. **Haqiqiy brauzer testi**: `scripts/e2e-local/smoke.mjs` (Playwright + Chromium) — 15/15 qadam PASS (login, dashboard, katalog, practice start, javob saqlash, bo'lim navigatsiyasi, submit, natija, logout, RBAC).
+5. **Topilgan va tuzatilgan xatolar**:
+   - `frontend/src/components/mock/mock-runner.tsx`: `doSubmit` eskirgan `total` (0) ni ushlab qolardi → har bir topshirish "0/0" xabari bilan rad etilardi. `total` dependency'ga qo'shildi; regressiya testi `mock-runner-late-exam.spec.ts`.
+   - `backend-django/apps/core/urls.py`: `students/<student_id>` (DELETE) marshruti `students/study-plan` va `students/mistake-vault` GET so'rovlarini 405 bilan yutib yuborardi; tartib tuzatildi; test `tests/test_student_route_order.py`.
+6. **Test natijalari**: backend `pytest` 767 passed / 1 failed (`test_actual_silent_pcm...` — ixtiyoriy `faster-whisper` o'rnatilmagan) / 5 skipped; frontend `tsc --noEmit` 0 xato, `vitest` 66 fayl / 403 test PASS.
+
+---
+
 ### 14-BLOK: React Render Crash (White/Black Screen) Bartaraf Etilishi, ErrorBoundary & Multi-Platform Zero-Downtime Deployment
 1. **React Render Crash va Data Mismatch Bartaraf Etildi**:
    - `bestway/backend-django/apps/core/cd_exam_views.py` da API javoblariga `"success": True` bayrog'i qo'shildi, `sections_data` da ham `parts`, ham `groups` strukturasi to'liq shakllantirildi, savollarda `prompt`, `text`, `kind`, `type`, `questionType` maydonlari sinxronlashtirildi.
