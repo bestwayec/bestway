@@ -70,7 +70,7 @@ export function ExamTrackPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-fg">{program}</h3>
                       {isActive && (
-                        <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-xs font-medium text-white">
+                        <span className="inline-flex items-center rounded-full bg-brand px-2 py-0.5 text-xs font-medium text-brand-fg">
                           {t("active")}
                         </span>
                       )}

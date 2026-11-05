@@ -101,7 +101,7 @@ export function TeacherCohortList({
         <Button
           size="sm"
           onClick={() => setCreateModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5 shadow-sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
         >
           <Plus className="h-3.5 w-3.5" />
           Yangi Guruh Ochish
@@ -119,7 +119,7 @@ export function TeacherCohortList({
           <Button
             size="sm"
             onClick={() => setCreateModalOpen(true)}
-            className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5"
+            className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
           >
             <Plus className="h-3.5 w-3.5" />
             Birinchi Guruhni Ochish
@@ -256,7 +256,7 @@ export function TeacherCohortList({
                 type="submit"
                 size="sm"
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               >
                 {isSubmitting ? (
                   <>

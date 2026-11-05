@@ -487,7 +487,7 @@ export function TestManageView({ testId }: { testId: string }) {
                               onClick={() => toggleSelect(q.id)}
                               className={cn(
                                 "mt-1 grid size-5 place-items-center rounded-[6px] border shrink-0 transition-colors",
-                                isSel ? "bg-brand border-brand text-white" : "border-border bg-surface hover:border-border-strong",
+                                isSel ? "bg-brand border-brand text-brand-fg" : "border-border bg-surface hover:border-border-strong",
                               )}
                             >
                               {isSel && <CheckSquare className="size-3.5" />}

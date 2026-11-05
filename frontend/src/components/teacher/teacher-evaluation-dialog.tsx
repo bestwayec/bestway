@@ -171,7 +171,7 @@ export function TeacherEvaluationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0 border border-emerald-500/20 bg-[#0B0F17] text-slate-100 shadow-2xl">
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0 border border-emerald-500/20 bg-bg-subtle text-slate-100 shadow-2xl">
           {/* Header */}
           <DialogHeader className="px-6 py-4 border-b border-slate-800 bg-slate-900/60 flex flex-row items-center justify-between">
             <div>
@@ -238,7 +238,7 @@ export function TeacherEvaluationDialog({
           </div>
 
           {/* Main Dual-Column Workspace */}
-          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#0B0F17]">
+          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-bg-subtle">
             {/* LEFT COLUMN: Candidate Work */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">

@@ -215,7 +215,7 @@ export function TeacherAttemptOverrideCard({
               type="submit"
               size="sm"
               loading={mutation.isPending}
-              className="bg-emerald-600 font-semibold text-white hover:bg-emerald-500"
+              className="bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
             >
               <CheckCircle2 className="size-4" /> Yakuniy Bahoni Tasdiqlash
             </Button>
@@ -391,7 +391,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                   <span className="text-[11px] text-slate-400">Band 8.0+ Namuna</span>
                 </div>
                 <p className="text-xs text-slate-400">{t("exampleNotice")}</p>
-                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-[#0B0F17]/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-slate-200">
+                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-bg-subtle/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-slate-200">
                   {example.text}
                 </div>
               </div>

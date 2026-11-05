@@ -249,7 +249,7 @@ export function CreateAssignmentModal({
               type="submit"
               size="sm"
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             >
               {isSubmitting ? (
                 <>

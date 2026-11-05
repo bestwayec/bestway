@@ -266,7 +266,7 @@ export function ExpressPlacementTest({
       <div
         id="placement-test"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-[#0B0F17] p-6 sm:p-10 shadow-2xl backdrop-blur-xl",
+          "relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl",
           className,
         )}
       >
@@ -289,17 +289,17 @@ export function ExpressPlacementTest({
           </p>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-6 py-2 max-w-lg mx-auto">
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/80 p-3.5 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
               <Clock className="size-5 mx-auto text-emerald-400 mb-1" />
               <div className="text-lg font-bold text-white">10 daqiqa</div>
               <div className="text-xs text-slate-400">Tezkor diagnostika</div>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/80 p-3.5 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
               <Award className="size-5 mx-auto text-teal-400 mb-1" />
               <div className="text-lg font-bold text-white">20 ta savol</div>
               <div className="text-xs text-slate-400">A1 dan C1 gacha</div>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/80 p-3.5 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
               <Zap className="size-5 mx-auto text-yellow-400 mb-1" />
               <div className="text-lg font-bold text-white">0 so'm</div>
               <div className="text-xs text-slate-400">Mutlaqo bepul</div>
@@ -310,7 +310,7 @@ export function ExpressPlacementTest({
             <button
               type="button"
               onClick={startTest}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-8 py-4 text-base sm:text-lg font-bold text-white shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.02] active:scale-95"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.02] active:scale-95"
             >
               <Zap className="size-5 fill-current" />
               <span>⚡️ Bepul Darajangizni Aniqlang (10 daqiqa)</span>
@@ -324,7 +324,7 @@ export function ExpressPlacementTest({
   // 2. LOADING STATE
   if (status === "loading") {
     return (
-      <div className={cn("rounded-3xl border border-slate-800 bg-[#0B0F17] p-12 text-center shadow-2xl", className)}>
+      <div className={cn("rounded-3xl border border-slate-800 bg-bg-subtle p-12 text-center shadow-2xl", className)}>
         <Loader2 className="size-12 animate-spin text-emerald-400 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-white">Diagnostik Savollar Yuklanmoqda...</h3>
         <p className="text-sm text-slate-400 mt-2">Sun’iy intellekt CEFR savollar bazasini kalibratsiya qilmoqda.</p>
@@ -335,14 +335,14 @@ export function ExpressPlacementTest({
   // 3. ERROR STATE
   if (status === "error") {
     return (
-      <div className={cn("rounded-3xl border border-red-900/60 bg-[#0B0F17] p-8 text-center shadow-2xl", className)}>
+      <div className={cn("rounded-3xl border border-red-900/60 bg-bg-subtle p-8 text-center shadow-2xl", className)}>
         <AlertCircle className="size-10 text-red-400 mx-auto mb-3" />
         <h3 className="text-lg font-bold text-white">Xatolik yuz berdi</h3>
         <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">{errorMessage}</p>
         <button
           type="button"
           onClick={startTest}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition"
         >
           <RotateCcw className="size-4" />
           <span>Qaytadan urinish</span>
@@ -354,7 +354,7 @@ export function ExpressPlacementTest({
   // 4. SUBMITTING STATE
   if (status === "submitting") {
     return (
-      <div className={cn("rounded-3xl border border-emerald-500/40 bg-[#0B0F17] p-12 text-center shadow-2xl", className)}>
+      <div className={cn("rounded-3xl border border-emerald-500/40 bg-bg-subtle p-12 text-center shadow-2xl", className)}>
         <div className="relative size-20 mx-auto mb-6">
           <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
           <div className="relative size-20 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-slate-900">
@@ -377,12 +377,12 @@ export function ExpressPlacementTest({
       <div
         id="placement-test-runner"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-slate-800 bg-[#0B0F17] p-4 sm:p-8 shadow-2xl",
+          "relative overflow-hidden rounded-3xl border border-slate-800 bg-bg-subtle p-4 sm:p-8 shadow-2xl",
           className,
         )}
       >
         {/* Sticky Header: Timer & Progress */}
-        <div className="sticky top-2 z-20 mb-6 rounded-2xl border border-slate-800/80 bg-[#111827]/90 px-4 py-3 shadow-lg backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+        <div className="sticky top-2 z-20 mb-6 rounded-2xl border border-slate-800/80 bg-surface/90 px-4 py-3 shadow-lg backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400">
               <Zap className="size-3.5 fill-current" />
@@ -416,7 +416,7 @@ export function ExpressPlacementTest({
         </div>
 
         {/* Question Card */}
-        <div className="rounded-2xl border border-slate-800/90 bg-[#111827] p-5 sm:p-8 shadow-inner">
+        <div className="rounded-2xl border border-slate-800/90 bg-surface p-5 sm:p-8 shadow-inner">
           <div className="flex items-center gap-2 mb-4">
             <span className="rounded-md border border-emerald-500/40 bg-emerald-950/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
               {currentQuestion.level}
@@ -446,7 +446,7 @@ export function ExpressPlacementTest({
                     "group flex items-center gap-3.5 rounded-xl border p-4 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-500",
                     isSelected
                       ? "border-emerald-500 bg-emerald-950/40 text-white shadow-md shadow-emerald-950/40 ring-1 ring-emerald-500"
-                      : "border-slate-800 bg-[#0B0F17]/80 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40",
+                      : "border-slate-800 bg-bg-subtle/80 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40",
                   )}
                 >
                   <span
@@ -521,7 +521,7 @@ export function ExpressPlacementTest({
               <button
                 type="button"
                 onClick={handleSubmitTest}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/60 hover:from-emerald-400 hover:to-emerald-500 active:scale-95 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-6 py-2.5 text-sm font-bold text-brand-fg shadow-lg shadow-emerald-950/60 hover:from-emerald-400 hover:to-emerald-500 active:scale-95 transition"
               >
                 <Zap className="size-4 fill-current" />
                 <span>Testni Yakunlash ({answeredCount}/{questions.length})</span>
@@ -539,7 +539,7 @@ export function ExpressPlacementTest({
       <div
         id="placement-test-results"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-emerald-500/40 bg-[#0B0F17] p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8",
+          "relative overflow-hidden rounded-3xl border border-emerald-500/40 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8",
           className,
         )}
       >
@@ -567,7 +567,7 @@ export function ExpressPlacementTest({
 
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/90 p-4 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
               <div className="text-xs text-slate-400 mb-1">Aniqlik darajasi</div>
               <div className="text-lg sm:text-xl font-extrabold text-emerald-400">
                 {result.score} / {result.total_questions}
@@ -575,7 +575,7 @@ export function ExpressPlacementTest({
               <div className="text-[11px] text-slate-500">({result.score_percent}%)</div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/90 p-4 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
               <div className="text-xs text-slate-400 mb-1">Taxminiy IELTS</div>
               <div className="text-lg sm:text-xl font-extrabold text-teal-300">
                 {result.estimated_ielts_band}
@@ -583,7 +583,7 @@ export function ExpressPlacementTest({
               <div className="text-[11px] text-slate-500">Band (0-9.0)</div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-[#111827]/90 p-4 text-center">
+            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
               <div className="text-xs text-slate-400 mb-1">Milliy Sertifikat</div>
               <div className="text-lg sm:text-xl font-extrabold text-yellow-400">
                 {result.national_score_estimate}
@@ -595,7 +595,7 @@ export function ExpressPlacementTest({
 
         {/* Weak Grammatical Topics */}
         {result.weak_topics && result.weak_topics.length > 0 && (
-          <div className="rounded-2xl border border-slate-800/90 bg-[#111827]/80 p-5 sm:p-7 space-y-4">
+          <div className="rounded-2xl border border-slate-800/90 bg-surface/80 p-5 sm:p-7 space-y-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-amber-400" />
               <h4 className="text-base sm:text-lg font-bold text-white">
@@ -607,7 +607,7 @@ export function ExpressPlacementTest({
               {result.weak_topics.map((wt, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-slate-800 bg-[#0B0F17] p-4 flex flex-col justify-between space-y-3"
+                  className="rounded-xl border border-slate-800 bg-bg-subtle p-4 flex flex-col justify-between space-y-3"
                 >
                   <div>
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
@@ -636,7 +636,7 @@ export function ExpressPlacementTest({
         )}
 
         {/* FRICTIONLESS CONVERSION / STATE MIGRATION CALLOUT */}
-        <div className="rounded-3xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 via-[#111827] to-[#0B0F17] p-6 sm:p-8 text-center space-y-5 shadow-2xl">
+        <div className="rounded-3xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 via-surface to-bg-subtle p-6 sm:p-8 text-center space-y-5 shadow-2xl">
           <div className="max-w-xl mx-auto space-y-2">
             <h4 className="text-lg sm:text-2xl font-bold text-white leading-snug">
               Batafsil xatolar tahlili, o'qituvchilar tavsiyasi va shaxsiy o'quv rejangizni saqlab qolish uchun kiring:
@@ -654,7 +654,7 @@ export function ExpressPlacementTest({
               </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-500 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700 transition"
               >
                 <span>O'quvchi Kabinetiga O'tish</span>
                 <ArrowRight className="size-4" />

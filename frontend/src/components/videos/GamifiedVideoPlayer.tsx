@@ -676,7 +676,7 @@ export function GamifiedVideoPlayer({
   return (
     <div
       ref={containerRef}
-      className="relative w-full rounded-2xl overflow-hidden bg-[#0B0F17] border border-emerald-500/20 shadow-2xl group select-none"
+      className="relative w-full rounded-2xl overflow-hidden bg-bg-subtle border border-emerald-500/20 shadow-2xl group select-none"
     >
       {/* Video Element */}
       <video
@@ -743,7 +743,7 @@ export function GamifiedVideoPlayer({
 
       {/* Obsidian-Emerald Fallback / Stream Recovery Card */}
       {streamError && !completionData && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#0B0F17]/95 p-6 text-center backdrop-blur-md animate-in fade-in duration-300">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-bg-subtle/95 p-6 text-center backdrop-blur-md animate-in fade-in duration-300">
           <div className="size-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
             <AlertTriangle className="size-8" />
           </div>

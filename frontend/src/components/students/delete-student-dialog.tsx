@@ -48,7 +48,7 @@ export function DeleteStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : undefined)}>
-      <DialogContent className="max-w-md border border-slate-800 bg-[#0B0F17]/95 p-6 text-slate-100 shadow-2xl backdrop-blur-2xl">
+      <DialogContent className="max-w-md border border-slate-800 bg-bg-subtle/95 p-6 text-slate-100 shadow-2xl backdrop-blur-2xl">
         <DialogHeader className="space-y-3">
           <div className="flex size-12 items-center justify-center rounded-full border border-rose-800/50 bg-rose-950/40 text-rose-400">
             <AlertTriangle className="size-6 text-rose-400" />

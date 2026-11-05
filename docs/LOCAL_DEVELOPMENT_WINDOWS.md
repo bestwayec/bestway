@@ -52,6 +52,10 @@ node smoke.mjs                              # hisobot: .local\e2e\report.json, s
 ```
 Faqat loopback manzillarga ishlaydi (`BW_WEB` boshqa host bo'lsa rad etadi).
 
+## UI ranglar auditi
+`node ui-audit.mjs <nom>` (`scripts\e2e-local` ichida) 17 sahifani haqiqiy Chromium bilan ochib, har bir matnning WCAG
+kontrastini o'lchaydi va skrinshot saqlaydi (`.local\ui\<nom>\`). Dizayn o'zgarishidan oldin/keyin ishga tushirib solishtiring.
+
 ## Sintetik akkauntlar
 `seed_local_dev` yaratadi: super_admin / admin / teacher / 2 student / parent (`+99890000000x`). Parol:
 `backend-django/apps/core/management/commands/seed_local_dev.py` ichidagi `LOCAL_DEV_PASSWORD`.

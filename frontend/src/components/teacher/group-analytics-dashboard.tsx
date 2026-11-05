@@ -112,7 +112,7 @@ export function GroupAnalyticsDashboard({
 
   if (isLoading && !analytics) {
     return (
-      <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/90 text-slate-100 shadow-xl", className)}>
+      <Card className={cn("border-emerald-500/20 bg-bg-subtle/90 text-slate-100 shadow-xl", className)}>
         <CardHeader className="pb-3 border-b border-slate-800/80">
           <Skeleton className="h-6 w-52 bg-slate-800" />
           <Skeleton className="h-4 w-72 bg-slate-800/60" />
@@ -128,7 +128,7 @@ export function GroupAnalyticsDashboard({
   const weakTopics = analytics?.weakTopicsHeatmap ?? [];
 
   return (
-    <Card className={cn("border-emerald-500/20 bg-[#0B0F17]/95 text-slate-100 shadow-xl overflow-hidden", className)}>
+    <Card className={cn("border-emerald-500/20 bg-bg-subtle/95 text-slate-100 shadow-xl overflow-hidden", className)}>
       <CardHeader className="pb-3 border-b border-slate-800/80">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">

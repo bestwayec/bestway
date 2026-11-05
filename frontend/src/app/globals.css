@@ -17,7 +17,7 @@
 
   --fg: #fffdf0;
   --fg-muted: #b8b9aa;
-  --fg-subtle: #7f8272;
+  --fg-subtle: #92957f;
 
   --border: #303321;
   --border-strong: #4b5030;
@@ -50,7 +50,7 @@
   --warning-bg: #5c2c07;
   --warning-border: #92400e;
 
-  --info: #38bdf8;
+  --info: #5bc8fb;
   --info-bg: #0c4a6e;
   --info-border: #075985;
   color-scheme: dark;
@@ -64,7 +64,7 @@
 
   --fg: #fffdf0;
   --fg-muted: #b8b9aa;
-  --fg-subtle: #7f8272;
+  --fg-subtle: #92957f;
 
   --border: #303321;
   --border-strong: #4b5030;
@@ -97,9 +97,38 @@
   --warning-bg: #5c2c07;
   --warning-border: #92400e;
 
-  --info: #38bdf8;
+  --info: #5bc8fb;
   --info-bg: #0c4a6e;
   --info-border: #075985;
+}
+
+/*
+ * Palette alignment. The UI was written with raw Tailwind `emerald-*` / `slate-*` / `teal-*` classes
+ * (≈1 500 uses) that rendered a second, cooler green and a blue-grey neutral next to the lime/olive
+ * brand tokens. Re-pointing the Tailwind scales makes every legacy class follow the brand system:
+ *   emerald/teal → one lime→forest green family (500 = --brand, 600 = darkest green that still carries
+ *                  white text at ≥ 4.5:1),
+ *   slate/gray   → warm olive neutrals matching --bg/--surface/--border,
+ *   sky-400      → slightly lighter so info badges pass 4.5:1.
+ */
+@theme {
+  --color-emerald-50: #f5ffe8;  --color-emerald-100: #e8ffcc; --color-emerald-200: #d3ffa3;
+  --color-emerald-300: #bdfd84; --color-emerald-400: #a5f65a; --color-emerald-500: #89f336;
+  --color-emerald-600: #3b8210; --color-emerald-700: #2f6a10; --color-emerald-800: #24510f;
+  --color-emerald-900: #1b3d0e; --color-emerald-950: #0f2208;
+  --color-teal-50: #f5ffe8;     --color-teal-100: #e8ffcc;    --color-teal-200: #d3ffa3;
+  --color-teal-300: #bdfd84;    --color-teal-400: #a5f65a;    --color-teal-500: #89f336;
+  --color-teal-600: #3b8210;    --color-teal-700: #2f6a10;    --color-teal-800: #24510f;
+  --color-teal-900: #1b3d0e;    --color-teal-950: #0f2208;
+  --color-slate-50: #f7f8f1;    --color-slate-100: #eceee1;   --color-slate-200: #dcdfcd;
+  --color-slate-300: #d0d3bf;   --color-slate-400: #b8bba7;   --color-slate-500: #8a8e78;
+  --color-slate-600: #6f7359;   --color-slate-700: #454932;   --color-slate-800: #2e3120;
+  --color-slate-900: #1c1f13;   --color-slate-950: #11140c;
+  --color-gray-50: #f7f8f1;     --color-gray-100: #eceee1;    --color-gray-200: #dcdfcd;
+  --color-gray-300: #d0d3bf;    --color-gray-400: #b8bba7;    --color-gray-500: #8a8e78;
+  --color-gray-600: #6f7359;    --color-gray-700: #454932;    --color-gray-800: #2e3120;
+  --color-gray-900: #1c1f13;    --color-gray-950: #11140c;
+  --color-sky-400: #5bc8fb;
 }
 
 @theme inline {

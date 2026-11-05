@@ -163,7 +163,7 @@ export function DesktopAuthorize() {
           <p className="text-sm text-fg-muted">{t("needLogin")}</p>
           <Link
             href={`/login?next=${loginNext}`}
-            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:brightness-110"
+            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
           >
             {t("loginButton")}
           </Link>
@@ -277,7 +277,7 @@ export function DesktopAuthorize() {
           </Field>
           <a
             href={phase.callbackUrl}
-            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:brightness-110"
+            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
           >
             {t("openAppButton")}
           </a>

@@ -75,7 +75,7 @@ function SteppedGradingProgress() {
               <div
                 className={cn(
                   "grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-all",
-                  isDone && "bg-brand text-white",
+                  isDone && "bg-brand text-brand-fg",
                   isCurrent && "bg-brand/20 text-brand ring-2 ring-brand animate-pulse",
                   !isDone && !isCurrent && "bg-surface text-fg-subtle border border-border"
                 )}
@@ -253,7 +253,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               href={media(`/mock/attempts/${attempt.id}/certificate`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
               {partialPractice ? "Amaliyot Hisoboti (PDF)" : `${t("certificate")} (PDF)`}

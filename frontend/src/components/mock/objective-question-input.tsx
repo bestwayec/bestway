@@ -48,7 +48,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                       className={cn(
                         "flex size-10 items-center justify-center rounded-lg border text-sm font-bold transition-all touch-manipulation",
                         checked
-                          ? "border-brand bg-brand text-white shadow-md scale-105"
+                          ? "border-brand bg-brand text-brand-fg shadow-md scale-105"
                           : unavailable
                           ? "border-border/40 bg-bg-subtle/50 text-fg-muted/40 cursor-not-allowed opacity-50"
                           : "border-border bg-surface text-fg hover:border-brand/60 hover:bg-surface-hover"

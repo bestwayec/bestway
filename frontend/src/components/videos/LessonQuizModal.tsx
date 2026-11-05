@@ -289,7 +289,7 @@ export function LessonQuizModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[96vw] max-w-3xl max-h-[92dvh] sm:max-h-[88vh] overflow-hidden flex flex-col bg-[#0B0F17] border-slate-800 text-white p-0 gap-0 shadow-2xl rounded-2xl">
+      <DialogContent className="w-[96vw] max-w-3xl max-h-[92dvh] sm:max-h-[88vh] overflow-hidden flex flex-col bg-bg-subtle border-slate-800 text-white p-0 gap-0 shadow-2xl rounded-2xl">
         <ConfettiCanvas active={confettiActive} />
 
         {/* Header */}

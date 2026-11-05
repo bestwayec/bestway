@@ -34,7 +34,7 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   const manage = !!studentId;
 
   return (
-    <Card className="my-4 border-slate-800 bg-[#0B0F17]/90 backdrop-blur-md p-5 shadow-xl transition-all">
+    <Card className="my-4 border-slate-800 bg-bg-subtle/90 backdrop-blur-md p-5 shadow-xl transition-all">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3 mb-4">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">

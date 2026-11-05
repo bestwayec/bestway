@@ -106,7 +106,7 @@ export default function VocabularyDetailPage() {
                 </div>
                 <div
                   className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${
-                    isSelected ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground"
+                    isSelected ? "border-emerald-500 bg-emerald-500 text-brand-fg" : "border-muted-foreground"
                   }`}
                 >
                   {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
@@ -120,7 +120,7 @@ export default function VocabularyDetailPage() {
         <Button
           type="button"
           onClick={() => setIsQuizStarted(true)}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white h-12 text-base font-semibold shadow-lg shadow-emerald-600/20"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-semibold shadow-lg shadow-emerald-600/20"
         >
           Testni Boshlash
         </Button>

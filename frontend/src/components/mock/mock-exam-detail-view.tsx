@@ -198,7 +198,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="flex items-center gap-2 text-base font-semibold text-fg">
-                  <span className="flex size-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">1</span>
+                  <span className="flex size-5 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-brand-fg">1</span>
                   Alohida bo&apos;lim topshirish (Single Skill)
                 </h3>
                 <p className="mt-1 text-xs text-fg-muted">{t("practiceSelectionHint")}</p>

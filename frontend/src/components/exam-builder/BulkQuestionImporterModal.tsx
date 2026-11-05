@@ -164,7 +164,7 @@ export function BulkQuestionImporterModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[96vw] max-w-3xl max-h-[92dvh] overflow-hidden flex flex-col p-0 bg-[#0B0F17] border border-emerald-500/30 shadow-2xl rounded-2xl text-slate-100">
+      <DialogContent className="w-[96vw] max-w-3xl max-h-[92dvh] overflow-hidden flex flex-col p-0 bg-bg-subtle border border-emerald-500/30 shadow-2xl rounded-2xl text-slate-100">
         <DialogHeader className="p-5 pb-3 border-b border-emerald-500/20 bg-slate-900/40">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">

@@ -172,7 +172,7 @@ export function VideosView() {
       />
 
       {/* Featured Curriculum Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-[#0B0F17] p-6 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-bg-subtle p-6 shadow-xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
@@ -236,7 +236,7 @@ export function VideosView() {
                 className="h-full"
               >
                 <TiltCard maxTilt={4} className="h-full rounded-2xl">
-                  <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800/80 bg-[#0B0F17] p-0 hover:border-emerald-500/50 hover:shadow-[0_12px_35px_rgba(16,185,129,0.18)] transition-all duration-300">
+                  <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800/80 bg-bg-subtle p-0 hover:border-emerald-500/50 hover:shadow-[0_12px_35px_rgba(16,185,129,0.18)] transition-all duration-300">
                     {/* Muqova / Artwork Banner */}
                     <div className="relative aspect-video overflow-hidden bg-slate-900 border-b border-slate-800/80">
                       <VideoCardImage src={v.thumbnailUrl} title={v.title} />
@@ -424,7 +424,7 @@ export function VideosView() {
 
       {/* Gamified Anti-Cheat Video Player Modal */}
       <Dialog open={Boolean(playing)} onOpenChange={(open) => !open && setPlaying(null)}>
-        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] overflow-hidden p-0 bg-[#0B0F17] border border-emerald-500/30 shadow-2xl rounded-2xl">
+        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] overflow-hidden p-0 bg-bg-subtle border border-emerald-500/30 shadow-2xl rounded-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{playing?.title ?? t("watch")}</DialogTitle>
           </DialogHeader>

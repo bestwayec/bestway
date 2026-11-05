@@ -365,7 +365,7 @@ export function ExamBuilderList() {
                 <Button
                   size="sm"
                   variant={e.isPublished ? "outline" : "primary"}
-                  className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
+                  className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-emerald-600 hover:bg-emerald-700 text-white"}
                   loading={updateExam.isPending && updateExam.variables?.id === e.id}
                   onClick={() => handleTogglePublish(e)}
                   title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}
@@ -514,7 +514,7 @@ export function ExamBuilderList() {
                       <Button
                         size="sm"
                         variant={e.isPublished ? "outline" : "primary"}
-                        className={e.isPublished ? "text-xs" : "text-xs bg-emerald-600 hover:bg-emerald-500 text-white"}
+                        className={e.isPublished ? "text-xs" : "text-xs bg-emerald-600 hover:bg-emerald-700 text-white"}
                         loading={updateExam.isPending && updateExam.variables?.id === e.id}
                         onClick={() => handleTogglePublish(e)}
                         title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}

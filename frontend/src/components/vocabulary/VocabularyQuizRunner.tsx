@@ -262,7 +262,7 @@ export function VocabularyQuizRunner({
           Ushbu rejimda yoki xatolar bankida hozircha mashq qilish uchun so'zlar yo'q.
         </p>
         {onExit && (
-          <Button onClick={onExit} className="bg-emerald-600 hover:bg-emerald-500 text-white">
+          <Button onClick={onExit} className="bg-emerald-600 hover:bg-emerald-700 text-white">
             Lug'atga qaytish
           </Button>
         )}
@@ -394,7 +394,7 @@ export function VocabularyQuizRunner({
               <Button
                 type="button"
                 onClick={onExit}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               >
                 Lug'atga Qaytish
               </Button>
@@ -402,7 +402,7 @@ export function VocabularyQuizRunner({
               <Link href="/vocabulary">
                 <Button
                   type="button"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                 >
                   Lug'atga Qaytish
                 </Button>
@@ -506,7 +506,7 @@ export function VocabularyQuizRunner({
               type="button"
               onClick={handleSpellingSubmit}
               disabled={!spellingText.trim() || isAnswered}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white h-12 px-6 rounded-xl font-semibold shrink-0"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-6 rounded-xl font-semibold shrink-0"
             >
               Tekshirish
             </Button>

@@ -52,7 +52,7 @@ const SHAPES = [
   { bg: "bg-red-600 active:scale-95 hover:bg-red-500", text: "text-white", shape: "🔺" },
   { bg: "bg-blue-600 active:scale-95 hover:bg-blue-500", text: "text-white", shape: "🔷" },
   { bg: "bg-amber-600 active:scale-95 hover:bg-amber-500", text: "text-white", shape: "🟡" },
-  { bg: "bg-emerald-600 active:scale-95 hover:bg-emerald-500", text: "text-white", shape: "🟢" },
+  { bg: "bg-emerald-600 active:scale-95 hover:bg-emerald-700", text: "text-white", shape: "🟢" },
 ];
 
 export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlayerProps) {
@@ -151,7 +151,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
 
   if (!hasJoined) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-[#0B0F17] p-8 text-white shadow-2xl max-w-md mx-auto space-y-6">
+      <div className="rounded-3xl border border-white/10 bg-bg-subtle p-8 text-white shadow-2xl max-w-md mx-auto space-y-6">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-2">
             <Gamepad2 className="h-5 w-5 text-emerald-400" />
@@ -189,7 +189,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
             size="lg"
             onClick={() => handleJoin()}
             disabled={isJoining || pin.length < 5}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 rounded-xl text-base shadow-lg shadow-emerald-950/40"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl text-base shadow-lg shadow-emerald-950/40"
           >
             {isJoining ? (
               <>
@@ -206,7 +206,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0B0F17] p-6 text-white shadow-2xl max-w-lg mx-auto min-h-[500px] flex flex-col justify-between">
+    <div className="rounded-3xl border border-white/10 bg-bg-subtle p-6 text-white shadow-2xl max-w-lg mx-auto min-h-[500px] flex flex-col justify-between">
       {/* Top player header */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <div>
@@ -349,7 +349,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           <Button
             type="button"
             onClick={onClose}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3 rounded-xl"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl"
           >
             Chiqish ✅
           </Button>
