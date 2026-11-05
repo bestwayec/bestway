@@ -30,3 +30,10 @@ cookies. If rotation succeeded but retrying the upstream request fails, the
 These changes do not coordinate responses across workers or prevent a late
 response from overwriting a newer cookie. The parallel integration explicitly
 fails if a legitimate request receives 409 rather than recovering its session.
+
+The dashboard resume handler also returns the explicit 409 without clearing
+cookies when the refresh row is locked. The contention verification now uses
+an independently spawned process and tests lock release after worker termination,
+followed by a successful rotation and replay rejection. This exercises shared
+PostgreSQL locks and crash recovery only: it does not prove browser session
+continuity, late-request coordination, or stale cookie response ordering.
