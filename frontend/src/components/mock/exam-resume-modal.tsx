@@ -66,7 +66,7 @@ export function ExamResumeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-6 bg-[#0B0F17] border border-border text-fg">
+      <DialogContent className="max-w-md p-6 bg-bg-subtle border border-border text-fg">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-fg">
             Qaysi bo&apos;limni davom ettirmoqchisiz?

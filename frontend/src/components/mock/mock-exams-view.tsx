@@ -358,7 +358,7 @@ export function MockExamCard({
           <>
             {availableSkills.length > 1 ? (
               <Button
-                className="w-full bg-brand font-semibold text-white transition-colors hover:bg-brand-hover"
+                className="w-full bg-brand font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
                 onClick={() => setResumeOpen(true)}
               >
                 <RefreshCw className="mr-1.5 size-4" />
@@ -367,7 +367,7 @@ export function MockExamCard({
             ) : (
               <Link
                 href={`/mock/attempt/${inProgress.id}`}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
               >
                 <RefreshCw className="size-4" />
                 {t("resume")}
@@ -385,7 +385,7 @@ export function MockExamCard({
           onStart ? (
             <>
               <Button
-                className="w-full bg-brand font-semibold text-white transition-colors hover:bg-brand-hover"
+                className="w-full bg-brand font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
                 onClick={() => setLauncherOpen(true)}
               >
                 <Play className="size-4 fill-current mr-1.5" />
@@ -401,7 +401,7 @@ export function MockExamCard({
           ) : (
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
             >
               <Play className="size-4 fill-current mr-1.5" />
               {t("start")}

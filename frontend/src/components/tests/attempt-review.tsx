@@ -99,7 +99,7 @@ export function AttemptReview({ attempt }: { attempt: AttemptDetail }) {
             {attempt.status === "completed" && isStudent && (
               <a
                 href={`/api/backend/tests/attempts/${attempt.id}/certificate`}
-                className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-3 text-sm font-medium text-white hover:bg-brand-hover"
+                className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand-hover"
               >
                 <Award className="size-4" />
                 {tFallback(t, "certificate", "Certificate")}

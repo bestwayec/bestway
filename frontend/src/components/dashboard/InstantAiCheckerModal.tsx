@@ -126,9 +126,9 @@ export function InstantAiCheckerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto border border-emerald-500/30 bg-[#0B0F17] p-0 text-slate-100 shadow-2xl backdrop-blur-xl sm:rounded-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto border border-emerald-500/30 bg-bg-subtle p-0 text-slate-100 shadow-2xl backdrop-blur-xl sm:rounded-2xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-slate-800 bg-[#0B0F17]/95 p-5 backdrop-blur-md">
+        <div className="sticky top-0 z-10 border-b border-slate-800 bg-bg-subtle/95 p-5 backdrop-blur-md">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="grid size-10 place-items-center rounded-xl border border-emerald-500/40 bg-emerald-500/20 text-emerald-400 shadow-xs">
@@ -349,7 +349,7 @@ export function InstantAiCheckerModal({
                     </Button>
                   </div>
 
-                  <div className="whitespace-pre-wrap rounded-xl border border-slate-800 bg-[#0B0F17]/90 p-4 font-serif text-xs sm:text-sm leading-relaxed text-slate-200">
+                  <div className="whitespace-pre-wrap rounded-xl border border-slate-800 bg-bg-subtle/90 p-4 font-serif text-xs sm:text-sm leading-relaxed text-slate-200">
                     {result.model_answer}
                   </div>
                 </div>

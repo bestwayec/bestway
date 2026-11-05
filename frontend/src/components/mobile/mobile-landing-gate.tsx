@@ -24,7 +24,7 @@ export function MobileLandingGate({
   if (isMobileApp) {
     if (isAuthenticated) {
       return (
-        <div className="flex min-h-[100dvh] items-center justify-center bg-[#0B0F17] text-fg">
+        <div className="flex min-h-[100dvh] items-center justify-center bg-bg-subtle text-fg">
           <div className="flex flex-col items-center gap-3">
             <div className="size-10 animate-spin rounded-full border-2 border-brand border-t-transparent" />
             <p className="text-xs font-medium text-fg-muted">Boshqaruv paneliga o&apos;tilmoqda...</p>

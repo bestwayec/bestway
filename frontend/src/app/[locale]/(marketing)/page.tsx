@@ -66,7 +66,7 @@ const COURSE_PIXEL: Record<
   (typeof COURSES)[number]["key"],
   { variant: "default" | "blue" | "yellow" | "pink"; gap: number; speed: number; colors: string; active: string }
 > = {
-  ielts: { variant: "blue", gap: 12, speed: 32, colors: "#064E3B,#10B981,#34D399", active: "#10B981" },
+  ielts: { variant: "blue", gap: 12, speed: 32, colors: "#0F2208,#89F336,#BDFD84", active: "#10B981" },
   multilevel: { variant: "yellow", gap: 10, speed: 28, colors: "#3A3510,#FFED29,#FFF580", active: "#FFED29" },
   sat: { variant: "pink", gap: 10, speed: 55, colors: "#3C260D,#FF991C,#FFC268", active: "#FF991C" },
 };
@@ -189,7 +189,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <div className="mt-8 flex w-full flex-col flex-wrap items-center justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
                 <a
                   href="#placement-test"
-                  className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-7 py-3.5 text-base font-bold text-white shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.03] active:scale-95"
+                  className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-7 py-3.5 text-base font-bold text-brand-fg shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.03] active:scale-95"
                 >
                   <Zap className="size-5 fill-current" />
                   <span>{t("heroCta")}</span>
@@ -249,7 +249,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Feature 1: 29+ Video Lessons */}
             <Reveal delay={0} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"
@@ -282,7 +282,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 2: CDI & Multi-Level Simulator */}
             <Reveal delay={100} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-teal-500/50 hover:shadow-2xl hover:shadow-teal-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-teal-500/50 hover:shadow-2xl hover:shadow-teal-950/30">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-600 transition-transform duration-300 group-hover:scale-x-100"
@@ -315,7 +315,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 3: Teacher Workspace */}
             <Reveal delay={200} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-[#111827] p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"

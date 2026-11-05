@@ -168,7 +168,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               <Button
                 size="sm"
                 onClick={() => setAttendanceOpen(true)}
-                className="gap-1.5 bg-brand text-white hover:bg-brand/90 font-medium text-xs"
+                className="gap-1.5 bg-brand text-brand-fg hover:bg-brand/90 font-medium text-xs"
               >
                 <CheckSquare className="size-4" />
                 <span>📋 Aqlli Davomat Olish</span>

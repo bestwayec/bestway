@@ -508,7 +508,7 @@ export function CbtAnnotatedText({
               className={cn(
                 "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors touch-manipulation",
                 noteDraftOpen
-                  ? "bg-brand text-white"
+                  ? "bg-brand text-brand-fg"
                   : "text-brand hover:bg-brand/15"
               )}
             >
@@ -548,7 +548,7 @@ export function CbtAnnotatedText({
               <button
                 type="button"
                 onClick={saveStickyNote}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-hover"
+                className="inline-flex h-7 items-center gap-1 rounded-md bg-brand px-2.5 text-xs font-semibold text-brand-fg hover:bg-brand-hover"
               >
                 <Plus className="size-3" />
                 Saqlash

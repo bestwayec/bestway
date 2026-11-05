@@ -33,7 +33,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-emerald-500/30 bg-[#0B0F17] p-6 shadow-2xl text-slate-100 my-8">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-emerald-500/30 bg-bg-subtle p-6 shadow-2xl text-slate-100 my-8">
         {/* Close Button */}
         <button
           type="button"
@@ -63,7 +63,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
             <Button
               asChild
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-lg shadow-emerald-900/30"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-lg shadow-emerald-900/30"
             >
               <a href={`/api/backend/mock/attempts/${attempt.id}/certificate`} target="_blank" rel="noopener noreferrer">
                 <Download className="size-4 mr-1.5" />
@@ -76,7 +76,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
         {/* Certificate Printable Canvas */}
         <div
           id="certificate-print-area"
-          className="relative rounded-xl border-2 border-emerald-500/40 bg-gradient-to-b from-[#0F172A] via-[#0B0F17] to-[#041A13] p-8 shadow-inner"
+          className="relative rounded-xl border-2 border-emerald-500/40 bg-gradient-to-b from-bg-subtle via-bg-subtle to-[#041A13] p-8 shadow-inner"
         >
           {/* Inner Golden/Emerald Accent Frame */}
           <div className="absolute inset-2 pointer-events-none rounded-lg border border-emerald-500/20" />

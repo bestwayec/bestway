@@ -157,7 +157,7 @@ export function ExamLauncherModal({
           <div className="rounded-xl border-2 border-brand/40 bg-gradient-to-br from-brand/10 via-surface to-surface p-4 shadow-sm transition-all hover:border-brand/70">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="grid size-7 place-items-center rounded-full bg-brand text-xs font-bold text-white shadow-xs">
+                <span className="grid size-7 place-items-center rounded-full bg-brand text-xs font-bold text-brand-fg shadow-xs">
                   1
                 </span>
                 <h3 className="font-bold text-base text-fg">
@@ -191,7 +191,7 @@ export function ExamLauncherModal({
 
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
               <Button
-                className="flex-1 bg-brand font-bold text-white shadow-sm hover:bg-brand-hover"
+                className="flex-1 bg-brand font-bold text-brand-fg shadow-sm hover:bg-brand-hover"
                 loading={isStarting}
                 onClick={() =>
                   triggerStart(

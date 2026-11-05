@@ -247,7 +247,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20",
                   isActive
-                    ? "bg-brand text-white shadow-sm"
+                    ? "bg-brand text-brand-fg shadow-sm"
                     : "border border-border bg-surface text-fg-muted hover:bg-surface-hover hover:text-fg",
                 )}
               >
@@ -318,7 +318,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                 <span
                   className={cn(
                     "grid size-7 place-items-center rounded-full text-xs font-bold tabular-nums transition-colors",
-                    isActiveQ ? "bg-brand text-white" : answered ? "bg-success-bg text-success" : "bg-brand-subtle text-brand-subtle-fg",
+                    isActiveQ ? "bg-brand text-brand-fg" : answered ? "bg-success-bg text-success" : "bg-brand-subtle text-brand-subtle-fg",
                   )}
                   aria-hidden
                 >

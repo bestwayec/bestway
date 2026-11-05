@@ -178,7 +178,7 @@ export function SmartAttendanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl border border-slate-800/80 bg-[#0B0F17]/95 text-slate-100 p-0 overflow-hidden backdrop-blur-2xl rounded-2xl shadow-2xl">
+      <DialogContent className="max-w-3xl border border-slate-800/80 bg-bg-subtle/95 text-slate-100 p-0 overflow-hidden backdrop-blur-2xl rounded-2xl shadow-2xl">
         {/* Header */}
         <DialogHeader className="p-5 border-b border-slate-800/80 bg-slate-900/60">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -347,7 +347,7 @@ export function SmartAttendanceDialog({
               size="sm"
               disabled={isSubmitting || students.length === 0}
               onClick={handleSaveAttendance}
-              className="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-semibold rounded-xl px-6 py-2.5 shadow-lg shadow-emerald-950/40 transition-all flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold rounded-xl px-6 py-2.5 shadow-lg shadow-emerald-950/40 transition-all flex items-center gap-1.5"
             >
               {isSubmitting ? "Saqlanmoqda..." : "Saqlash va Tasdiqlash"}
             </Button>

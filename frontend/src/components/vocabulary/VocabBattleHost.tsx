@@ -57,7 +57,7 @@ const OPTION_COLORS = [
   { bg: "bg-red-600 hover:bg-red-500", border: "border-red-500/30", text: "text-white", shape: "🔺" },
   { bg: "bg-blue-600 hover:bg-blue-500", border: "border-blue-500/30", text: "text-white", shape: "🔷" },
   { bg: "bg-amber-600 hover:bg-amber-500", border: "border-amber-500/30", text: "text-white", shape: "🟡" },
-  { bg: "bg-emerald-600 hover:bg-emerald-500", border: "border-emerald-500/30", text: "text-white", shape: "🟢" },
+  { bg: "bg-emerald-600 hover:bg-emerald-700", border: "border-emerald-500/30", text: "text-white", shape: "🟢" },
 ];
 
 export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
@@ -142,7 +142,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
 
   if (isLoading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-[#0B0F17] p-12 text-center text-foreground flex flex-col items-center gap-4">
+      <div className="rounded-3xl border border-white/10 bg-bg-subtle p-12 text-center text-foreground flex flex-col items-center gap-4">
         <RefreshCw className="h-10 w-10 animate-spin text-emerald-500" />
         <h2 className="text-xl font-bold">Jonli Vocab Battle xonasi tayyorlanmoqda...</h2>
         <p className="text-sm text-muted-foreground">Savollar generatsiya qilinib, PIN-kod olinmoqda</p>
@@ -162,7 +162,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
   if (!battleState) return null;
 
   return (
-    <div className="relative rounded-3xl border border-white/10 bg-[#0B0F17] text-white p-6 md:p-8 shadow-2xl overflow-hidden min-h-[550px] flex flex-col justify-between">
+    <div className="relative rounded-3xl border border-white/10 bg-bg-subtle text-white p-6 md:p-8 shadow-2xl overflow-hidden min-h-[550px] flex flex-col justify-between">
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <div className="flex items-center gap-3">
@@ -230,7 +230,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
             size="lg"
             onClick={handleNextStep}
             disabled={isAdvancing || battleState.totalParticipants === 0}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base px-8 py-6 rounded-2xl shadow-xl shadow-emerald-950/50 hover:scale-105 active:scale-95 transition-all"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base px-8 py-6 rounded-2xl shadow-xl shadow-emerald-950/50 hover:scale-105 active:scale-95 transition-all"
           >
             <Play className="mr-2 h-5 w-5 fill-current" />
             {battleState.totalParticipants === 0 ? "O'quvchilarni kuting..." : "Bellashuvni Boshlash 🚀"}
@@ -301,7 +301,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
               type="button"
               onClick={handleNextStep}
               disabled={isAdvancing}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-950/40"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-950/40"
             >
               Natijalarni Ko'rsatish (Leaderboard) 📊
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -359,7 +359,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
               type="button"
               onClick={handleNextStep}
               disabled={isAdvancing}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-950/40"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-950/40"
             >
               {battleState.currentQuestionIndex + 1 >= battleState.totalQuestions
                 ? "G'oliblarni E'lon Qilish (Podium) 🏆"
@@ -432,7 +432,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
             type="button"
             size="lg"
             onClick={onClose}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3 rounded-2xl shadow-xl shadow-emerald-950/40"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-2xl shadow-xl shadow-emerald-950/40"
           >
             Bellashuvni Yakunlash ✅
           </Button>

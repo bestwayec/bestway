@@ -103,7 +103,7 @@ export function TargetedPracticeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl border-emerald-500/30 bg-[#0B0F17] text-slate-100 p-0 overflow-hidden">
+      <DialogContent className="max-w-2xl border-emerald-500/30 bg-bg-subtle text-slate-100 p-0 overflow-hidden">
         <DialogHeader className="p-5 border-b border-slate-800 bg-slate-900/60">
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-1">
@@ -167,7 +167,7 @@ export function TargetedPracticeDialog({
                 </Button>
                 <Button
                   onClick={() => onOpenChange(false)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-5"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-5"
                 >
                   Tushunarli, yopish
                 </Button>
@@ -301,7 +301,7 @@ export function TargetedPracticeDialog({
                   size="sm"
                   disabled={!selectedAnswer}
                   onClick={handleCheckAnswer}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4"
                 >
                   Javobni tekshirish
                 </Button>
@@ -309,7 +309,7 @@ export function TargetedPracticeDialog({
                 <Button
                   size="sm"
                   onClick={handleNext}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 flex items-center gap-1"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 flex items-center gap-1"
                 >
                   {currentIndex + 1 < totalQuestions ? "Keyingi savol" : "Natijani ko'rish"}
                   <ChevronRight className="size-3.5" />
