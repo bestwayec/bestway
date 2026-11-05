@@ -89,3 +89,6 @@ docker-compose.override.yml
 /bestway-test-system-fix-prompt.md
 /bestway-visual-question-builder-prompt.md
 /ielts-and-palftorms-report.md
+
+# Local development state (pids, logs, e2e reports) created by scripts/local-*.ps1
+/.local/
