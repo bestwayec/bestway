@@ -94,3 +94,13 @@ def test_switch_section_blocks_jumping_forward_in_full_test():
         with pytest.raises(ContractAPIException) as exc:
             switch_section(actor, "att_1", "speaking")
         assert exc.value.contract_code == "SECTION_LOCKED"
+
+
+def test_strict_speaking_keeps_the_original_recording():
+    from apps.core import mock_attempts as engine
+    with patch("apps.core.mock_speaking_policy.strict", return_value=True), patch.object(engine.transaction, "on_commit") as on_commit:
+        assert engine.schedule_speaking_compression(SimpleNamespace(), "private/a.webm", "a1", "q1") is False
+    on_commit.assert_not_called()
+    with patch("apps.core.mock_speaking_policy.strict", return_value=False), patch.object(engine.transaction, "on_commit") as on_commit:
+        assert engine.schedule_speaking_compression(SimpleNamespace(), "private/a.webm", "a1", "q1") is True
+    on_commit.assert_called_once()

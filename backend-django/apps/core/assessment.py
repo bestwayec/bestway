@@ -61,6 +61,7 @@ def for_attempt(actor,identifier):
         transcripts=list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluation=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
         value={key:getattr(job,attr) for key,attr in dict(id='id',skill='skill',program='program',status='status',policyMode='policy_mode',version='version',aiScore='ai_score',teacherScore='teacher_score',finalScore='final_score',finalScoreSource='final_score_source',confidence='confidence',rubricVersion='rubric_version',promptVersion='prompt_version',failureCode='failure_code',finalResult='final_result',approvedFeedback='approved_feedback').items()}
+        value['failureCode']=job.failure_code
         value.update(teacherReviewed=job.status=='SUCCEEDED' and (job.final_score_source=='TEACHER' or job.id in reviewed_ids),
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])

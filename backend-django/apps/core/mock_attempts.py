@@ -882,6 +882,25 @@ def validate_audio_container(upload):
         fail('INVALID_AUDIO', 'The file is not a supported audio recording')
 
 
+def schedule_speaking_compression(attempt, key, attempt_id, question_id):
+    """Re-encode a speaking upload to Opus after commit, except under strict timing.
+
+    Strict attempts verify the recording by storage key and content hash
+    (speaking.verify_stored). The background re-encode swaps MockAnswer.audioKey to a
+    new file, which races that verification and the submission evidence, so strict
+    attempts keep the original upload untouched.
+    """
+    from . import mock_speaking_policy as speaking
+    if speaking.strict(attempt):
+        return False
+    try:
+        from apps.exams.audio_service import compress_speaking_audio_async
+        transaction.on_commit(lambda: compress_speaking_audio_async(key, attempt_id, question_id), robust=True)
+        return True
+    except Exception:
+        return False
+
+
 def upload_speaking(actor, attempt_id, question_id, upload):
     from . import mock_speaking_policy as speaking
     from .mock_media import (
@@ -938,12 +957,7 @@ def upload_speaking(actor, attempt_id, question_id, upload):
                 defaults=dict(audio_key=created_key, updated_at=timezone.now()),
                 create_defaults=dict(id=new_id(), audio_key=created_key, response='', is_graded=False, updated_at=timezone.now()))
             if created_key:
-                try:
-                    from apps.exams.audio_service import compress_speaking_audio_async
-                    c_key = created_key
-                    transaction.on_commit(lambda: compress_speaking_audio_async(c_key, attempt_id, question_id), robust=True)
-                except Exception:
-                    pass
+                schedule_speaking_compression(attempt, created_key, attempt_id, question_id)
             if prior and prior.audio_key:
                 transaction.on_commit(lambda: delete_unreferenced(prior.audio_key), robust=True)
         return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id), **({'audioDurationMs': duration} if duration is not None else {}))

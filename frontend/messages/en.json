@@ -61,6 +61,7 @@
     "originalAudio": "Original submitted audio",
     "wordCount": "{count} words",
     "noResponse": "No response was submitted.",
+    "scoringUnavailable": "Automatic scoring is not configured. Your recording was received and a teacher will review it.",
     "transcript": "Transcript",
     "transcriptPending": "No transcript is available yet. Use the original recording for review.",
     "transcriptConfidence": "Transcription confidence",
