@@ -153,6 +153,11 @@ try:
         mock_submission_snapshots.enqueue(ai_attempt)
         ai_jobs={j.skill:j for j in AssessmentJob.objects.filter(attempt_id=ai_id)}
         check(all(j.policy_mode=='PRACTICE_AUTO_AI' and j.status=='PENDING' for j in ai_jobs.values()),'configured scoped practice queues actual AI assessments')
+        with patch.object(assessment_worker, 'run_once') as unauthorized_worker:
+            request('other_teacher', '/v1/assessment/attempts/'+ai_id, expected=403)
+            check(not unauthorized_worker.called, 'foreign teacher cannot trigger assessment work')
+        check(not AssessmentJob.objects.filter(attempt_id=ai_id).exclude(status='PENDING').exists(),
+            'unauthorized assessment read leaves all jobs pending')
         def grader(input,role):
             rated=assessment_results.empty(input);rated['confidence']=.95
             for part in rated['parts']:

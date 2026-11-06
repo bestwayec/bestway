@@ -39,6 +39,11 @@ def validate_review(data):
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def attempt(request,attempt_id):
+    # A read is allowed to nudge queued work only after the assessment's
+    # ownership and program checks have succeeded. Otherwise an authenticated
+    # caller could invoke the global worker using another student's attempt.
+    overview = assessment.for_attempt(request.user, attempt_id)
+    processed = False
     try:
         from apps.legacy_schema.models import AssessmentJob
         pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
@@ -47,9 +52,10 @@ def attempt(request,attempt_id):
             for _ in range(min(5, pending_jobs.count())):
                 if not assessment_worker.run_once():
                     break
+                processed = True
     except Exception:
         pass
-    return success(assessment.for_attempt(request.user,attempt_id))
+    return success(assessment.for_attempt(request.user,attempt_id) if processed else overview)
 
 
 @api_view(['POST'])
