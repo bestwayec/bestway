@@ -20,9 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api-client";
 import { useGroupAttendanceSummary } from "@/hooks/use-mock";
 import { cn } from "@/lib/utils";
+import { saveAttendance } from "./attendance-save";
 
 interface SmartAttendanceDialogProps {
   groupId: string;
@@ -57,20 +57,20 @@ export function SmartAttendanceDialog({
   const { data: summary, refetch } = useGroupAttendanceSummary(groupId, selectedDate, open);
 
   const [records, setRecords] = React.useState<
-    Record<string, { state: "present" | "late" | "absent"; isExcused: boolean }>
+    Record<string, { state: "present" | "late" | "absent"; isExcused: boolean | null }>
   >({});
 
   // Initialize records from existing server summary or default to present
   React.useEffect(() => {
     if (!open) return;
 
-    const initial: Record<string, { state: "present" | "late" | "absent"; isExcused: boolean }> = {};
+    const initial: Record<string, { state: "present" | "late" | "absent"; isExcused: boolean | null }> = {};
 
     if (summary?.students && summary.students.length > 0) {
       summary.students.forEach((s) => {
         initial[s.studentId] = {
           state: s.state,
-          isExcused: Boolean(s.isExcused),
+          isExcused: s.isExcused,
         };
       });
     } else {
@@ -113,7 +113,7 @@ export function SmartAttendanceDialog({
   const presentCount = Object.values(records).filter((r) => r.state === "present").length;
   const lateCount = Object.values(records).filter((r) => r.state === "late").length;
   const absentUnexcusedCount = Object.values(records).filter(
-    (r) => r.state === "absent" && !r.isExcused
+    (r) => r.state === "absent" && r.isExcused === false
   ).length;
   const absentExcusedCount = Object.values(records).filter(
     (r) => r.state === "absent" && r.isExcused
@@ -141,24 +141,10 @@ export function SmartAttendanceDialog({
         };
       });
 
-      // Send PUT request to /attendance/bulk (and fallback to POST if needed)
-      try {
-        await api.put("/attendance/bulk", {
-          groupId,
-          date: normalizedDate,
-          records: payloadRecords,
-        });
-      } catch (putErr: any) {
-        // Fallback to POST in case PUT is blocked
-        await api.post("/attendance/bulk", {
-          groupId,
-          date: normalizedDate,
-          records: payloadRecords,
-        });
-      }
+      await saveAttendance({ groupId, date: normalizedDate, records: payloadRecords });
 
       toast.success("Davomat muvaffaqiyatli saqlandi!", {
-        description: `${totalCount} talaba qayd etildi. Kelmagan o'quvchilar ota-onalariga Telegram ogohlantirish yuborildi.`,
+        description: `${totalCount} talaba qayd etildi. Kelmaganlik sababi hozircha alohida saqlanmaydi.`,
       });
 
       refetch();
@@ -188,7 +174,7 @@ export function SmartAttendanceDialog({
                 Aqlli Davomat (Smart Attendance) — {groupName}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                1-bosishda davomat olish va ota-onalar Telegramiga avtomatlashtirilgan ogohlantirish
+                Davomat saqlanadi. Kelmaganlik sababi hozircha alohida saqlanmaydi.
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -246,8 +232,8 @@ export function SmartAttendanceDialog({
               const rec = records[st.studentId] || { state: "present", isExcused: false };
               const isPresent = rec.state === "present";
               const isLate = rec.state === "late";
-              const isAbsentUnexcused = rec.state === "absent" && !rec.isExcused;
-              const isAbsentExcused = rec.state === "absent" && rec.isExcused;
+              const isAbsentUnexcused = rec.state === "absent" && rec.isExcused === false;
+              const isAbsentExcused = rec.state === "absent" && rec.isExcused === true;
 
               return (
                 <div
@@ -261,6 +247,9 @@ export function SmartAttendanceDialog({
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{st.studentName}</p>
                       {st.phone && <p className="text-[11px] text-slate-400 truncate">{st.phone}</p>}
+                      {rec.state === "absent" && rec.isExcused === null && (
+                        <p className="text-[11px] text-amber-300">Kelmaganlik sababi saqlanmagan</p>
+                      )}
                     </div>
                   </div>
 

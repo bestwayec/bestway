@@ -436,8 +436,12 @@ urlpatterns = [
 
     path('attendance/group-summary', attendance.group_summary_view),
     path('attendance/group-summary/', attendance.group_summary_view),
+    path('attendance/group-summary/<str:group_id>', attendance.group_day_summary_view),
+    path('attendance/group-summary/<str:group_id>/', attendance.group_day_summary_view),
     path('v1/attendance/group-summary', attendance.group_summary_view),
     path('v1/attendance/group-summary/', attendance.group_summary_view),
+    path('v1/attendance/group-summary/<str:group_id>', attendance.group_day_summary_view),
+    path('v1/attendance/group-summary/<str:group_id>/', attendance.group_day_summary_view),
 
     path('v1/groups/<str:group_id>/analytics', group_reports.group_analytics_view),
     path('v1/groups/<str:group_id>/analytics/', group_reports.group_analytics_view),

@@ -18,8 +18,8 @@ from .notifications import notify_parents
 from .system_settings import audit
 
 
-def manage_group(actor, group_id):
-    group = get_group(group_id)
+def manage_group(actor, group_id, lock=False):
+    group = get_group(group_id, True) if lock else get_group(group_id)
     if actor.role not in ('admin', 'super_admin') and not (actor.role == 'teacher' and group.teacher_id == actor.id):
         raise ContractAPIException('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
     return group
@@ -93,32 +93,25 @@ def listing(actor, query):
 
 
 def bulk(actor, data):
-    manage_group(actor, data['groupId'])
     day = reference_date(data['date'])
-    members = {p.user_id: p for p in StudentProfile.objects.filter(group_id=data['groupId']).select_related('user')}
-    
-    # Safe fallback if student profile is not yet provisioned for user in this group
-    missing_ids = [r['studentId'] for r in data['records'] if r['studentId'] not in members]
-    if missing_ids:
-        from apps.legacy_schema.models import User
-        fallback_users = list(User.objects.filter(id__in=missing_ids))
-        for u in fallback_users:
-            profile, _ = StudentProfile.objects.get_or_create(user_id=u.id, defaults={'group_id': data['groupId'], 'link_code': u.id[:8]})
-            if profile.group_id != data['groupId']:
-                profile.group_id = data['groupId']
-                profile.save(update_fields=['group_id'])
-            profile.user = u
-            members[u.id] = profile
-
-    if any(r['studentId'] not in members for r in data['records']):
-        raise ContractAPIException('STUDENT_NOT_IN_GROUP', "Ro'yxatda guruhga tegishli bo'lmagan o'quvchi bor", 400)
-    if any(not getattr(getattr(members[r['studentId']], 'user', None), 'is_active', True) for r in data['records']):
-        raise ContractAPIException('STUDENT_BLOCKED', "Bloklangan o'quvchi uchun davomat belgilab bo'lmaydi", 400)
-    previous = dict(Attendance.objects.filter(group_id=data['groupId'], date=day,
-        student_id__in=[r['studentId'] for r in data['records']]).values_list('student_id', 'state'))
-    marked = [r for r in data['records'] if r['state'] not in ('empty', 'blank')]
-    cleared = [r for r in data['records'] if r['state'] in ('empty', 'blank')]
     with transaction.atomic():
+        # Group and roster changes use the same group-first lock order. Hold
+        # both until the batch commits so membership cannot change mid-write.
+        manage_group(actor, data['groupId'], lock=True)
+        identifiers = [r['studentId'] for r in data['records']]
+        profiles = (StudentProfile.objects.filter(group_id=data['groupId'], user_id__in=identifiers)
+                    .select_related('user').order_by('user_id').select_for_update(of=('self',)))
+        members = {p.user_id: p for p in profiles}
+        # Attendance cannot create profiles or change group membership. Validate
+        # the entire batch before writing any rows or notifying parents.
+        if any(r['studentId'] not in members for r in data['records']):
+            raise ContractAPIException('STUDENT_NOT_IN_GROUP', "Ro'yxatda guruhga tegishli bo'lmagan o'quvchi bor", 400)
+        if any(not getattr(getattr(members[r['studentId']], 'user', None), 'is_active', True) for r in data['records']):
+            raise ContractAPIException('STUDENT_BLOCKED', "Bloklangan o'quvchi uchun davomat belgilab bo'lmaydi", 400)
+        previous = dict(Attendance.objects.filter(group_id=data['groupId'], date=day,
+            student_id__in=identifiers).values_list('student_id', 'state'))
+        marked = [r for r in data['records'] if r['state'] not in ('empty', 'blank')]
+        cleared = [r for r in data['records'] if r['state'] in ('empty', 'blank')]
         for r in marked:
             stamp = timezone.now()
             upsert(r['studentId'], data['groupId'], day, r['state'], actor.id, stamp)
@@ -222,4 +215,27 @@ def group_summary(actor, query):
         "late": late,
         "absent": absent,
         "attendanceRate": rate,
+    }
+
+
+def group_day_summary(actor, group_id, day):
+    """Daily staff dashboard data; absent records remain unmarked, not absent."""
+    group = manage_group(actor, group_id)
+    rows = list(Attendance.objects.filter(group_id=group_id, date=day)
+                .select_related('student__user').order_by('student__user__name', 'student_id'))
+    counts = {state: sum(row.state == state for row in rows) for state in ('present', 'late', 'absent')}
+    marked = sum(counts.values())
+    return {
+        'groupId': group_id,
+        'groupName': group.name,
+        'date': day.isoformat(),
+        'totalStudents': StudentProfile.objects.filter(group_id=group_id).count(),
+        'presentCount': counts['present'],
+        'lateCount': counts['late'],
+        'absentCount': counts['absent'],
+        'attendanceRate': round((counts['present'] + counts['late']) * 100 / marked) if marked else None,
+        # The legacy schema has no excuse/note fields. Null means unavailable,
+        # not a claim that an absence is unexcused or has no note.
+        'students': [dict(id=row.id, studentId=row.student_id, studentName=row.student.user.name,
+                          state=row.state, isExcused=None, note=None) for row in rows],
     }

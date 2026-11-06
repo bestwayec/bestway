@@ -1,7 +1,9 @@
 """Exact Nest attendance DTO boundaries and authenticated routes."""
 import re
+from datetime import date
 
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 
 from common.auth.permissions import Authenticated, roles
@@ -61,6 +63,10 @@ def bulk_view(request):
         string(row, 'studentId', required=True, not_empty=True)
         if row.get('state') not in ('present', 'absent', 'late', 'empty', 'blank'):
             invalid('state must be one of the following values: present, absent, late, empty, blank')
+        if any(row.get(key) is not None for key in ('note', 'isExcused')):
+            from common.api.exceptions import ContractAPIException
+            raise ContractAPIException('ATTENDANCE_DETAILS_UNAVAILABLE',
+                'Kelmaganlik sababi va izohni saqlash hozircha mavjud emas', 409)
     return success(service.bulk(request.user, data))
 
 
@@ -77,3 +83,22 @@ def export_view(request):
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
 def group_summary_view(request):
     return success(service.group_summary(request.user, query(request, 'stats')))
+
+
+@api_view(['GET'])
+@permission_classes([roles('teacher', 'admin', 'super_admin')])
+def group_day_summary_view(request, group_id):
+    params = dict(request.query_params.items())
+    for key in params:
+        if key != 'date': invalid(f'property {key} should not exist')
+    value = params.get('date')
+    if value is None:
+        day = timezone.localdate()
+    else:
+        try:
+            if not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', value):
+                raise ValueError
+            day = date.fromisoformat(value)
+        except ValueError:
+            invalid('date must be a valid YYYY-MM-DD date')
+    return success(service.group_day_summary(request.user, group_id, day))

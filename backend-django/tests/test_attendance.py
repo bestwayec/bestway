@@ -31,12 +31,29 @@ class AttendanceTests(SimpleTestCase):
         self.assertEqual(self.client.get('/v1/stats/export/attendance?groupId=own').status_code,403)
 
     def test_foreign_teacher_cannot_write_before_membership_queries(self):
-        with patch.object(attendance,'get_group',return_value=SimpleNamespace(teacher_id='other')), \
+        with patch.object(attendance.transaction,'atomic'), \
+             patch.object(attendance,'get_group',return_value=SimpleNamespace(teacher_id='other')), \
              patch.object(attendance.StudentProfile.objects,'filter') as query:
             with self.assertRaises(ContractAPIException) as raised:
                 attendance.bulk(SimpleNamespace(id='teacher',role='teacher'),dict(groupId='foreign',date='2026-10-01',records=[]))
             self.assertEqual(raised.exception.status_code,403)
             query.assert_not_called()
+
+    def test_mixed_attendance_batch_cannot_reassign_foreign_students(self):
+        actor = SimpleNamespace(id='teacher', role='teacher')
+        member = SimpleNamespace(user_id='own', user=SimpleNamespace(is_active=True))
+        records = [dict(studentId='own', state='present'), dict(studentId='foreign', state='present')]
+        with patch.object(attendance.transaction, 'atomic'), \
+             patch.object(attendance, 'manage_group'), \
+             patch.object(attendance.StudentProfile.objects, 'filter') as profiles, \
+             patch.object(attendance.StudentProfile.objects, 'get_or_create') as create, \
+             patch.object(attendance, 'upsert') as upsert:
+            profiles.return_value.select_related.return_value.order_by.return_value.select_for_update.return_value = [member]
+            with self.assertRaises(ContractAPIException) as error:
+                attendance.bulk(actor, dict(groupId='own-group', date='2026-11-06', records=records))
+            self.assertEqual(error.exception.contract_code, 'STUDENT_NOT_IN_GROUP')
+            create.assert_not_called()
+            upsert.assert_not_called()
 
     def test_calendar_date_uses_slice_not_timezone_and_preserves_overflow(self):
         self.assertEqual(attendance.reference_date('2026-10-01T00:30:00+05:00'),date(2026,10,1))
@@ -56,6 +73,16 @@ class AttendanceTests(SimpleTestCase):
             for record in [dict(studentId='student',state='present',markedById='foreign'),dict(studentId='student',state='bad')]:
                 response=self.client.put('/v1/attendance/bulk',dict(groupId='group',date='2026-10-01',records=[record]),format='json')
                 self.assertEqual(response.status_code,400)
+            write.assert_not_called()
+
+    def test_excuse_and_note_are_not_silently_discarded(self):
+        self.client.force_authenticate(SimpleNamespace(id='admin', role='admin', is_authenticated=True))
+        with patch.object(attendance, 'bulk') as write:
+            for detail in (dict(isExcused=True), dict(isExcused=False), dict(note='Reason')):
+                record = dict(studentId='student', state='absent', **detail)
+                response = self.client.put('/v1/attendance/bulk', dict(groupId='group', date='2026-10-01', records=[record]), format='json')
+                self.assertEqual(response.status_code, 409)
+                self.assertEqual(response.data['error']['code'], 'ATTENDANCE_DETAILS_UNAVAILABLE')
             write.assert_not_called()
 
     def test_csv_formula_protection_and_escaping_match_reference(self):
