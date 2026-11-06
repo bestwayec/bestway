@@ -45,3 +45,43 @@ Revert the workflow commit on a development branch if necessary. Reinstating
 the previous workflow restores automatic deployment after main CI; do not merge
 that rollback without a separate production deployment safeguard. No schema
 changes are introduced by this milestone.
+
+## Verification checkpoint
+
+All database checks below used freshly named loopback-only synthetic databases.
+
+- Full Django pytest: 788 passed, 4 skipped because the legacy NestJS dist is
+  absent. Django system check, migration dry-run and Prisma source manifest passed.
+- Applying Prisma SQL followed by Django migrations in a disposable non-public
+  schema produced a compatible mapping for 39 unmanaged models (`--skip-ledger`
+  was used only in that disposable schema). Before Django migrations the schema
+  lacked `StudentProfile.initialLevel`, `StudentProfile.diagnosticCefrScore`
+  and `VideoLesson.hlsPlaylistUrl`. This confirms the deployment-order concern.
+  The actual Prisma CLI migration/ledger rehearsal remains blocked: downloading
+  its engine checksum from `binaries.prisma.sh` returned HTTP 403. Do not
+  interpret the SQL-only check as a successful Prisma migration or upgrade.
+- PostgreSQL readiness 65/65, partial practice 74/74, grading 79, AI ranking
+  35/35, mock authoring 171/171, Phase 0 security 17 and Phase 3 auth 22 checks
+  passed. Manual-grade and attendance concurrency scripts passed their real
+  PostgreSQL lock, rollback and authorization cases.
+- `verify_phase3_refresh_race_postgres.py` failed as designed at BW-16: a
+  legitimate overlapping refresh receives `REFRESH_IN_PROGRESS` without
+  recovery. The separate independent-process lock/crash and replay test passed;
+  neither test establishes that BW-16 is fixed.
+- Frontend: 411 unit tests, TypeScript and production build passed; ESLint
+  reported zero errors and 463 warnings.
+- Real Chromium against synthetic loopback services: the existing smoke script
+  reported 15/15 steps on a production build (student login, dashboard, exam
+  catalogue, answer save/reload, navigation, submit, result, logout, teacher
+  dashboard and negative student authorization). Synthetic admin login,
+  dashboard and user-list access also passed. A final targeted browser check
+  passed for the teacher attendance dialog and its unavailable-reason warning.
+  These checks do not establish every student/teacher/admin journey. The smoke
+  run recorded 18 failed OpenStreetMap tile requests due to the network policy,
+  a pre-login `auth/me` 401 and the teacher attendance 404 later fixed and
+  independently rechecked. The first `next dev` run restarted at its memory
+  threshold; its failed screenshots were retained separately in `/tmp`.
+- GitHub Actions and environment configuration could not be queried:
+  `api.github.com` returned `Forbidden`. No pull request, merge, release or
+  production deployment has been performed. No performance benchmark has been
+  established.
