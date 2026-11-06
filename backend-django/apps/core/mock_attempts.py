@@ -338,7 +338,7 @@ def start(actor, exam_id, data):
         if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
-        at = timezone.now()
+        at = attempt_signature.truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
         if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):

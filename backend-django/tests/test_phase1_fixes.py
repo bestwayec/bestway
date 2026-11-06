@@ -11,7 +11,7 @@ from apps.core.mock_attempts import switch_section, upload_speaking
 from common.api.exceptions import ContractAPIException
 
 
-def test_signature_fallback_authenticates_owner():
+def test_mismatched_signature_is_rejected_even_for_the_owner():
     request = SimpleNamespace(
         META={"HTTP_X_ATTEMPT_SIGNATURE": "outdated_or_mismatched_signature"},
         user=SimpleNamespace(is_authenticated=True, id="student_123")
@@ -27,8 +27,10 @@ def test_signature_fallback_authenticates_owner():
 
     with patch("apps.legacy_schema.models.MockAttempt.objects.filter") as mock_filter:
         mock_filter.return_value.first.return_value = mock_attempt
-        # Should not raise exception because authenticated user owns the attempt
-        sig.verify_request(request, "attempt_1")
+        # The owner fallback was removed: a supplied signature must match exactly.
+        with pytest.raises(ContractAPIException) as caught:
+            sig.verify_request(request, "attempt_1")
+        assert caught.value.status_code == 403
 
 
 def test_signature_rejects_foreign_user():

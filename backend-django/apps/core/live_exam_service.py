@@ -26,6 +26,7 @@ from common.api.exceptions import ContractAPIException
 
 from . import mock_attempts, mock_catalog
 from .prediction_service import extract_attempt_dual_metrics
+from .attempt_signature import truncate_to_millis
 
 _live_tables_ensured = False
 
@@ -360,7 +361,7 @@ def _start_or_resume_live_attempt(student_user, exam: MockExam, duration_minutes
             return mock_attempts.start_response(existing, exam, True, duration_minutes)
 
         shaped = mock_catalog.shape_exam(exam, False)
-        at = timezone.now()
+        at = truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadline = at + timedelta(minutes=max(10, duration_minutes))
         first_skill = shaped["sections"][0]["skill"] if shaped.get("sections") else "reading"
         attempt = MockAttempt.objects.create(
