@@ -15,13 +15,14 @@ pytestmark = pytest.mark.skipif(not BASH or not JQ, reason='Bash and jq are requ
 
 
 def run_preflight(tmp_path, *, event='workflow_dispatch', confirmation='DEPLOY TO PRODUCTION',
-                  rules=None, api_exit=0, repository='bestwayec/bestway'):
+                  rules=None, api_exit=0, repository='bestwayec/bestway', ref='refs/heads/main'):
     fake = tmp_path / 'gh'
     fake.write_text('#!/usr/bin/env bash\nprintf "called\\n" >> "$GH_CALLS"\n'
                     'printf "%s" "$GH_RESPONSE"\nexit "$GH_EXIT"\n')
     fake.chmod(0o755)
     env = dict(os.environ, PATH=str(tmp_path) + os.pathsep + os.environ['PATH'],
                GITHUB_EVENT_NAME=event, GITHUB_REPOSITORY=repository,
+               GITHUB_REF=ref,
                DEPLOY_CONFIRMATION=confirmation, GH_CALLS=str(tmp_path / 'calls'),
                GH_RESPONSE=json.dumps({'protection_rules': rules or []}), GH_EXIT=str(api_exit))
     result = subprocess.run([BASH, str(SCRIPT)], env=env, capture_output=True, text=True, timeout=10)
@@ -52,6 +53,12 @@ def test_rejects_nonmanual_unconfirmed_or_invalid_requests_before_api(tmp_path, 
     assert not called
 
 
+def test_workflow_from_feature_branch_is_rejected(tmp_path):
+    result, called = run_preflight(tmp_path, ref='refs/heads/feature')
+    assert result.returncode != 0
+    assert not called
+
+
 @pytest.mark.parametrize('rules,api_exit', [
     ([], 0), ([rule(reviewers=[])], 0), ([rule(prevent=False)], 0),
     ([{'type': 'wait_timer', 'wait_timer': 1}], 0), ([rule()], 1),
@@ -71,6 +78,7 @@ def test_deploy_workflow_is_manual_and_job_requires_protected_environment(filena
     assert '  push:' not in event_block
     assert '      confirmation:' in event_block
     assert 'bash scripts/check-production-approval.sh' in text
+    assert "  approval-preflight:\n    if: github.ref == 'refs/heads/main'\n" in text
     job_block = text.split(f'\n  {job}:\n', 1)[1]
     assert '    needs: approval-preflight\n' in job_block
     assert '    environment: production\n' in job_block

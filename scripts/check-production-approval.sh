@@ -6,6 +6,10 @@ if [[ "${GITHUB_EVENT_NAME:-}" != 'workflow_dispatch' ]]; then
   echo 'Production deployment requires a manual workflow dispatch.' >&2
   exit 1
 fi
+if [[ "${GITHUB_REF:-}" != 'refs/heads/main' ]]; then
+  echo 'Production workflow must be dispatched from main.' >&2
+  exit 1
+fi
 if [[ "${DEPLOY_CONFIRMATION:-}" != 'DEPLOY TO PRODUCTION' ]]; then
   echo 'Production deployment confirmation did not match.' >&2
   exit 1

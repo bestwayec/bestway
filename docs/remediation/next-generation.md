@@ -27,7 +27,10 @@ workflow or otherwise prevent runs, examine/cancel already queued deployment
 runs, configure the GitHub `production` environment with required reviewers and
 `prevent self-review`, and verify those controls and branch protections. The
 preflight fails closed if the environment API or reviewer configuration cannot
-be verified. Approval and exact successful-CI checks must be tested in GitHub;
+be verified. Both workflows must be dispatched from `main`, so an unreviewed
+feature-branch copy of the preflight cannot satisfy the deployment gate. The
+cutover's separately selected target commit still requires its existing CI gate.
+Approval and exact successful-CI checks must be tested in GitHub;
 local simulated tests do not establish actual repository protection. CI API
 access is restricted in this environment. No merge or deploy is authorized while
 these and the remaining security gates are unresolved.
