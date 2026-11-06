@@ -95,3 +95,40 @@ class ImportCdRecordMock1Tests(TestCase):
         items = resp_list.json()["data"]
         self.assertTrue(any(i["code"] == "MOCK-RECORD-01" for i in items))
         self.assertFalse(any(i["code"] == "multilevel-test-01-gym-vegetarian" for i in items))
+
+    def test_canonical_importer_contract(self):
+        from django.core.management import load_command_class
+        from django.core.management.base import CommandError
+        from django.test import override_settings
+        import os
+        import tempfile
+        from unittest import mock
+
+        # All four historic names run the same canonical command.
+        classes = {load_command_class("apps.core", n).__class__ for n in
+                   ("import_cd_record_mock_1", "import_record_mock_1", "seed_record_mock_1", "seed_cd_record_mock_1")}
+        self.assertEqual(len(classes), 1)
+
+        call_command("import_cd_record_mock_1", stdout=io.StringIO())
+        cd_exam = Exam.objects.get(code="MOCK-RECORD-01")
+        legacy_ids = set(MockQuestion.objects.filter(group__section__exam_id="MOCK-RECORD-01").values_list("id", flat=True))
+        cd_ids = set(Question.objects.filter(group__section__exam=cd_exam).values_list("id", flat=True))
+        # Simulator / CD-session question ids are exactly the ids a MockAttempt accepts.
+        self.assertEqual(cd_ids, legacy_ids)
+        self.assertEqual(len(cd_ids), 81)
+
+        # Rows written by an older importer under other ids are pruned on re-run.
+        section = cd_exam.sections.get(section_type="reading")
+        stale_group = QuestionGroup.objects.create(id="stale-group", section=section, title="old", part_number=9, sort_order=99)
+        Question.objects.create(id="stale-question", group=stale_group, order=99, question_type="single_choice", prompt="old")
+        call_command("import_cd_record_mock_1", stdout=io.StringIO())
+        self.assertFalse(Question.objects.filter(id="stale-question").exists())
+        self.assertFalse(QuestionGroup.objects.filter(id="stale-group").exists())
+        self.assertEqual(Question.objects.filter(group__section__exam=cd_exam).count(), 81)
+
+        # A missing source file aborts instead of synthesising media.
+        with tempfile.TemporaryDirectory() as empty, mock.patch.dict(os.environ, {"SEED_MEDIA_DIR": empty}):
+            with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+                with self.assertRaises(CommandError) as ctx:
+                    call_command("import_cd_record_mock_1", stdout=io.StringIO())
+        self.assertIn("record_mock1_audio_part_1.wav", str(ctx.exception))

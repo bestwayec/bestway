@@ -1,5 +1,4 @@
-from __future__ import annotations
+"""Alias of import_cd_record_mock_1, the single canonical Record Mock 1 importer."""
+from .import_cd_record_mock_1 import Command
 
-from apps.exams.management.commands.import_record_mock_1 import Command, seed_record_mock_1
-
-__all__ = ["Command", "seed_record_mock_1"]
+__all__ = ["Command"]

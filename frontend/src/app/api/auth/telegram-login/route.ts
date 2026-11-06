@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_URL } from "@/lib/config";
+import { forwardedForHeaders } from "@/lib/client-ip";
 import { setSessionCookies } from "@/lib/auth";
 import type { ApiResponse, AuthTokens } from "@/lib/types";
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     upstream = await fetch(`${API_URL}/auth/telegram-login`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...forwardedForHeaders(req.headers) },
       body: JSON.stringify(body),
       cache: "no-store",
     });

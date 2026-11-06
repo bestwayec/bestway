@@ -362,11 +362,9 @@ QUESTIONS_DICT = {q["id"]: q for q in PLACEMENT_QUESTIONS}
 
 
 def get_client_ip(request) -> str:
-    """Extract real client IP considering reverse proxy headers."""
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "127.0.0.1")
+    """Client IP honouring TRUSTED_PROXY_COUNT (see common.api.client_ip)."""
+    from common.api.client_ip import client_ip
+    return client_ip(request)
 
 
 def get_authenticated_user_from_request(request) -> Optional[User]:

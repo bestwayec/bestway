@@ -160,7 +160,8 @@ def cheat_view(request,attempt_id):
     student(request)
     # Nest's route throttle is per IP/handler, not per attempt or student.
     import time
-    key='legacy-test-cheat:'+request.META.get('REMOTE_ADDR','')
+    from common.api.client_ip import client_ip
+    key='legacy-test-cheat:'+client_ip(request)
     now=time.time()
     with _THROTTLE_LOCK:
         state=cache.get(key,dict(hits=[],blockedUntil=0))

@@ -70,6 +70,13 @@ jobs:
             # Local gates (fatal): reach services over host loopback ports.
             curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3001/v1/health > /dev/null
             curl -fsS --retry 25 --retry-delay 2 --retry-all-errors http://127.0.0.1:3005/ > /dev/null
+            # Django-owned tables only (core/cd_*, auth, admin, sessions). Prisma-owned tables are
+            # unmanaged models with no Django migrations; tests/test_migration_safety.py enforces it.
+            echo "Applying Django migrations"
+            docker compose exec -T backend python manage.py migrate --noinput
+            # Canonical, idempotent exam content; media come from the read-only ./media/exams mount.
+            echo "Importing canonical Record Mock 1"
+            docker compose exec -T backend python manage.py import_cd_record_mock_1
             docker compose exec -T backend python manage.py seed_all_29_grammar_quizzes || true
             # Public gates (warn-only): fail before DNS cutover / tunnel setup.
             curl -fsS --max-time 30 https://api.bestwayec.uz/v1/health > /dev/null \
