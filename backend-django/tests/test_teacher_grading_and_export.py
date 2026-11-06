@@ -91,7 +91,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
     @patch("apps.core.assessment.AssessmentJob.objects.filter")
     @patch("apps.core.assessment.MockAttempt.objects.filter")
     def test_teacher_grade_attempt_success(self, mock_att_filter, mock_job_filter, mock_ans_filter):
-        mock_att_filter.return_value.select_related.return_value.first.return_value = self.fake_attempt
+        mock_att_filter.return_value.select_related.return_value.select_for_update.return_value.first.return_value = self.fake_attempt
 
         mock_job_qs = MagicMock()
         mock_job_qs.__iter__.return_value = [self.fake_job_w, self.fake_job_s]
@@ -107,7 +107,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
             "teacher_comment": "Excellent coherence and vocabulary range.",
         }
 
-        res = assessment.teacher_grade_attempt(self.teacher, "att-123", payload)
+        res = assessment.teacher_grade_attempt.__wrapped__(self.teacher, "att-123", payload)
 
         self.assertTrue(res["success"])
         self.assertTrue(res["isTeacherReviewed"])
@@ -122,7 +122,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
     @patch("apps.core.assessment.AssessmentJob.objects.filter")
     @patch("apps.core.assessment.MockAttempt.objects.filter")
     def test_teacher_grade_with_total_score_fallback(self, mock_att_filter, mock_job_filter, mock_ans_filter):
-        mock_att_filter.return_value.select_related.return_value.first.return_value = self.fake_attempt
+        mock_att_filter.return_value.select_related.return_value.select_for_update.return_value.first.return_value = self.fake_attempt
 
         mock_job_qs = MagicMock()
         mock_job_qs.__iter__.return_value = []
@@ -134,22 +134,22 @@ class TeacherGradingOverrideTests(SimpleTestCase):
             "teacher_comment": "Great performance overall.",
         }
 
-        res = assessment.teacher_grade_attempt(self.admin, "att-123", payload)
+        res = assessment.teacher_grade_attempt.__wrapped__(self.admin, "att-123", payload)
         self.assertTrue(res["success"])
         self.assertEqual(res["final_score"], 7.5)
         self.assertEqual(res["total_score"], 7.5)
 
     def test_teacher_grade_forbidden_for_student(self):
         with self.assertRaises(ContractAPIException) as ctx:
-            assessment.teacher_grade_attempt(self.student, "att-123", {"final_score": 6.0})
+            assessment.teacher_grade_attempt.__wrapped__(self.student, "att-123", {"final_score": 6.0})
         self.assertEqual(ctx.exception.status_code, 403)
 
     @patch("apps.core.assessment.MockAttempt.objects.filter")
     def test_teacher_grade_forbidden_for_unassigned_teacher(self, mock_att_filter):
-        mock_att_filter.return_value.select_related.return_value.first.return_value = self.fake_attempt
+        mock_att_filter.return_value.select_related.return_value.select_for_update.return_value.first.return_value = self.fake_attempt
 
         with self.assertRaises(ContractAPIException) as ctx:
-            assessment.teacher_grade_attempt(self.other_teacher, "att-123", {"final_score": 6.0})
+            assessment.teacher_grade_attempt.__wrapped__(self.other_teacher, "att-123", {"final_score": 6.0})
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertIn("biriktirilmagan", ctx.exception.contract_message)
 

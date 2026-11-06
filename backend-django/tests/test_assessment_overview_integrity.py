@@ -111,9 +111,9 @@ class ManualGradeBoundaryTests(SimpleTestCase):
     def grade_error(self, payload):
         from common.api.exceptions import ContractAPIException
         with patch.object(assessment.MockAttempt.objects, 'filter') as attempts:
-            attempts.return_value.select_related.return_value.first.return_value = self.attempt
+            attempts.return_value.select_related.return_value.select_for_update.return_value.first.return_value = self.attempt
             with self.assertRaises(ContractAPIException) as error:
-                assessment.teacher_grade_attempt(self.teacher, 'attempt', payload)
+                assessment.teacher_grade_attempt.__wrapped__(self.teacher, 'attempt', payload)
         return error.exception
 
     def test_unassigned_or_unowned_group_cannot_grade(self):

@@ -435,10 +435,13 @@ def record_legacy_grade(attempt_id,question_id):
     update(job,teacher_score=score,final_score=score,final_score_source='TEACHER',final_result=result,approved_feedback=result,status='SUCCEEDED',failure_code=None,lease_token=None,lease_expires_at=None,completed_at=timezone.now(),version=F('version')+1)
 
 
+@transaction.atomic
 def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
     if actor.role not in ('teacher', 'admin', 'super_admin'):
         fail('FORBIDDEN', 'Staff access required', 403)
-    attempt = MockAttempt.objects.filter(id=attempt_id).select_related('exam', 'student__group').first()
+    # Match the attempt-first lock ordering used by grading and worker finish.
+    # Restrict the lock to the attempt: student/group joins can be nullable.
+    attempt = MockAttempt.objects.filter(id=attempt_id).select_related('exam', 'student__group').select_for_update(of=('self',)).first()
     if attempt is None:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
 
@@ -509,6 +512,9 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
                 status='SUCCEEDED',
                 approved_feedback=approved,
                 failure_code=None,
+                lease_token=None,
+                lease_expires_at=None,
+                version=F('version')+1,
                 completed_at=now,
                 updated_at=now,
             )
