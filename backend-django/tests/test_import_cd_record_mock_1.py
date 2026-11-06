@@ -132,3 +132,15 @@ class ImportCdRecordMock1Tests(TestCase):
                 with self.assertRaises(CommandError) as ctx:
                     call_command("import_cd_record_mock_1", stdout=io.StringIO())
         self.assertIn("record_mock1_audio_part_1.wav", str(ctx.exception))
+
+    def test_active_exam_comes_only_from_setting(self):
+        from django.test import override_settings
+        call_command("import_cd_record_mock_1", stdout=io.StringIO())
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(id='admin', role='admin', is_authenticated=True))
+        with override_settings(ACTIVE_CD_EXAM_CODE="NO-SUCH-EXAM"):
+            resp = client.get("/api/v1/exams/active/")
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.json()["error"]["code"], "NO_ACTIVE_EXAM")
+        with override_settings(ACTIVE_CD_EXAM_CODE="MOCK-RECORD-01"):
+            self.assertEqual(client.get("/api/v1/exams/active/").json()["data"]["exam"]["code"], "MOCK-RECORD-01")

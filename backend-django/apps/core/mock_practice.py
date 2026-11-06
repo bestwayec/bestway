@@ -199,17 +199,7 @@ def practice_plan(exam, _auto_seed=True):
         except (OSError, ValueError, ContractAPIException):
             return False
     plan = task_scope(dict(type=exam.type, specificationVersion=exam.specification_version, sections=sections), available)
-    if _auto_seed and getattr(exam, 'id', None) == 'multilevel-test-01-gym-vegetarian' and len(plan.get('skills') or []) < 4:
-        try:
-            import io
-            from apps.core.management.commands.seed_multilevel_test1_gym_diet import (
-                seed_mock_test_1,
-            )
-            seed_mock_test_1(io.StringIO())
-            exam.refresh_from_db()
-            return practice_plan(exam, _auto_seed=False)
-        except Exception:
-            pass
+    # The retired "Gym & Vegetarian" exam is no longer re-seeded on read; MOCK-RECORD-01 replaced it.
     if _auto_seed and getattr(exam, 'id', None) == 'ielts-academic-mock-01' and len(plan.get('skills') or []) < 4:
         try:
             import io

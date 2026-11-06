@@ -81,17 +81,22 @@ def get_cd_exam_session(request, exam_id: str):
 @permission_classes([AllowAny])
 def get_active_cd_exam(request):
     """
-    Returns the default active CD Exam session payload (MOCK-RECORD-01).
+    Returns the configured active exam (settings.ACTIVE_CD_EXAM_CODE, default MOCK-RECORD-01).
+
+    Only that exam is considered; when it is missing or not visible to the caller the
+    response is 404 NO_ACTIVE_EXAM, never a different exam.
     """
+    from django.conf import settings
+    code = getattr(settings, "ACTIVE_CD_EXAM_CODE", "MOCK-RECORD-01")
     user = _actor(request)
-    for exam in sorted(Exam.objects.filter(is_published=True).order_by('code'), key=lambda item: item.code != 'MOCK-RECORD-01'):
-        if _may_view_cd(user, exam):
-            return _serialize_cd_exam(exam)
-    for legacy in sorted(MockExam.objects.filter(is_published=True).exclude(id="multilevel-test-01-gym-vegetarian").order_by('-created_at'), key=lambda item: item.id != 'MOCK-RECORD-01'):
-        if _may_view_legacy(user, legacy):
-            return _serialize_legacy_mock_exam(legacy)
+    exam = Exam.objects.filter(code__iexact=code, is_published=True).first()
+    if exam and _may_view_cd(user, exam):
+        return _serialize_cd_exam(exam)
+    legacy = MockExam.objects.filter(id=code, is_published=True).first()
+    if legacy and _may_view_legacy(user, legacy):
+        return _serialize_legacy_mock_exam(legacy)
     return JsonResponse(
-        {"error": {"code": "NO_ACTIVE_EXAM", "message": "No active exam found"}},
+        {"success": False, "error": {"code": "NO_ACTIVE_EXAM", "message": "No active exam found"}},
         status=404
     )
 
