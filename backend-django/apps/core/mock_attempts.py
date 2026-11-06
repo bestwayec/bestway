@@ -356,6 +356,11 @@ def start(actor, exam_id, data):
         return start_response(attempt, exam, False, duration)
 
 
+def _fail_foreign(question_ids):
+    raise ContractAPIException('QUESTION_NOT_IN_EXAM', "Savol bu imtihonga tegishli emas. Sahifani yangilang.", 400,
+                               {'questionIds': question_ids[:20], 'count': len(question_ids)})
+
+
 def upsert_answer(attempt_id, question_id, response):
     MockAnswer.objects.update_or_create(attempt_id=attempt_id, question_id=question_id,
         defaults=dict(response=response, updated_at=timezone.now()),
@@ -377,9 +382,12 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
                 if skill != attempt.current_skill or skill in (getattr(attempt, 'submitted_sections', None) or []):
                     fail('SECTION_LOCKED', 'Question outside the active section', 403)
         valid_ids = {q.id for q in valid}
-        selected = [a for a in items if a['questionId'] in valid_ids]
-        if not selected:
-            return {'saved': 0 if bulk else False}
+        foreign = sorted({a['questionId'] for a in items} - valid_ids)
+        if foreign:
+            # Reject the whole batch: silently dropping ids made the client show
+            # "Save failed" with no reason while some answers were never stored.
+            _fail_foreign(foreign)
+        selected = items
         for item in selected:
             upsert_answer(attempt.id, item['questionId'], item['response'])
         return {'saved': len(selected) if bulk else True}

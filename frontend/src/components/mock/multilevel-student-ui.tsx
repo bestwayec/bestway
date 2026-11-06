@@ -67,6 +67,20 @@ export function studentSubmitNeedsReview(error: unknown): boolean {
   return errorCode(error) === "MOCK_ATTEMPT_INCOMPLETE";
 }
 
+/** True when the server said why a save failed, so even legacy runners show the reason. */
+export function isExplainedSaveError(error: unknown): boolean {
+  return ["QUESTION_NOT_IN_EXAM", "ATTEMPT_SIGNATURE_INVALID"].includes(errorCode(error));
+}
+
+/** Toast for a failed autosave. QUESTION_NOT_IN_EXAM means the page holds a stale exam definition. */
+export function studentSaveErrorMessage(error: unknown): string {
+  if (errorCode(error) === "QUESTION_NOT_IN_EXAM") {
+    return "Some answers belong to questions that are not part of this exam (the exam was updated). Reload the page — your saved answers are kept.";
+  }
+  if (errorCode(error) === "ATTEMPT_SIGNATURE_INVALID") return "Your exam session expired. Reload the page to continue.";
+  return "Your response could not be saved. Try again.";
+}
+
 export function studentSaveMessage(state: "idle" | "saving" | "saved" | "error"): string {
   return { idle: "Saved", saving: "Saving…", saved: "Saved", error: "Save failed — Retry" }[state];
 }

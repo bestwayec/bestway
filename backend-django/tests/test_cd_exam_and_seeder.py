@@ -132,6 +132,11 @@ class CdExamAndSeederTestCase(TestCase):
         total_part_qs = sum(len(p["questions"]) for p in data["parts"])
         self.assertEqual(total_part_qs, 81)
 
+        # Ids served to the simulator/CD session are exactly the ids a MockAttempt accepts.
+        session_ids = {str(q["id"]) for p in data["parts"] for q in p["questions"]}
+        legacy_ids = set(MockQuestion.objects.filter(group__section__exam_id="MOCK-RECORD-01").values_list("id", flat=True))
+        self.assertEqual(session_ids, legacy_ids)
+
         # 7. Test idempotency (run again without error or duplicates)
         out2 = io.StringIO()
         call_command("seed_cd_record_mock_1", stdout=out2)

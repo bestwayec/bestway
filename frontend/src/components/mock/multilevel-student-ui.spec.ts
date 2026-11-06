@@ -135,3 +135,15 @@ describe("Multilevel student UX", () => {
     expect(html).toContain("55 /75");
   });
 });
+
+describe("autosave error messages", () => {
+  it("explains a foreign question id and an expired session instead of a bare failure", async () => {
+    const { isExplainedSaveError, studentSaveErrorMessage } = await import("./multilevel-student-ui");
+    const foreign = { code: "QUESTION_NOT_IN_EXAM", message: "x" };
+    expect(isExplainedSaveError(foreign)).toBe(true);
+    expect(studentSaveErrorMessage(foreign)).toMatch(/not part of this exam/);
+    expect(studentSaveErrorMessage({ code: "ATTEMPT_SIGNATURE_INVALID" })).toMatch(/Reload the page/);
+    expect(isExplainedSaveError(new Error("offline"))).toBe(false);
+    expect(studentSaveErrorMessage(new Error("offline"))).toBe("Your response could not be saved. Try again.");
+  });
+});

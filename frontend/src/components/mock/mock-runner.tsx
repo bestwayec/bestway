@@ -54,7 +54,7 @@ import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
 import { usedMatchingOptions } from '@/lib/objective-question';
-import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
+import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
@@ -297,9 +297,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       succeeded = true;
       ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
       if (versioned && !dirty.current.size) setSaveState("saved");
-    }).catch(() => {
+    }).catch((error: unknown) => {
       if (versioned) setSaveState("error");
-      toast.error(versioned ? "Your response could not be saved. Try again." : tc("saveFailed"));
+      toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
     }).finally(() => {
       saveInFlight.current = null;
       // Edits made while saving remain dirty; debounce their latest snapshot.

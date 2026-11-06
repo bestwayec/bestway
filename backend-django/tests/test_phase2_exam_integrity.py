@@ -26,8 +26,12 @@ def save(a, items, rows, bulk=True):
 
 def test_bulk_valid_mixed_empty_and_duplicate_requests():
     a=attempt(); items=[dict(questionId='q1',response='one'),dict(questionId='foreign',response='bad')]
-    result,calls=save(a,items,[question('q1')]); assert result == {'saved':1}; assert len(calls)==1 and calls[0].args[1]=='q1'
-    result,calls=save(a,items,[]); assert result == {'saved':0} and type(result['saved']) is int and not calls
+    # A foreign id rejects the whole batch with a clear error; nothing is stored.
+    for known in ([question('q1')], []):
+        with pytest.raises(ContractAPIException) as caught:
+            save(a,items,known)
+        assert caught.value.status_code == 400 and caught.value.contract_code == 'QUESTION_NOT_IN_EXAM'
+        assert 'foreign' in caught.value.contract_details['questionIds']
     for _ in range(2):
         result,calls=save(a,items[:1],[question('q1')]); assert result=={'saved':1} and len(calls)==1
 
