@@ -1,7 +1,7 @@
 name: Deploy to VPS
 
-# Single-VPS Docker + Cloudflare deploy. Runs AFTER CI is green.
-# Trigger: successful main CI (or manual dispatch with a successful CI gate).
+# Single-VPS Docker + Cloudflare deploy. CI never starts a deployment.
+# Manual dispatch, protected environment approval and successful main CI are required.
 #
 # Required GitHub secrets (repo Settings → Secrets → Actions):
 #   VPS_HOST     — VPS IP or hostname (e.g. 203.0.113.10)
@@ -10,11 +10,12 @@ name: Deploy to VPS
 #   VPS_PATH     — repo path on VPS (default /opt/bestway if unset)
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DEPLOY TO PRODUCTION to request a deployment
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -25,8 +26,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  approval-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Require explicit request and configured production reviewers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bash scripts/check-production-approval.sh
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: approval-preflight
+    if: github.ref == 'refs/heads/main'
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -34,7 +49,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           gh api "repos/$REPO/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=100" \
@@ -44,7 +59,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           VPS_PATH: ${{ secrets.VPS_PATH }}
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          DEPLOY_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}

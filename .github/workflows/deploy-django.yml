@@ -7,6 +7,10 @@ on:
         description: Full release commit SHA with successful CI
         required: true
         type: string
+      confirmation:
+        description: Type DEPLOY TO PRODUCTION to request a cutover
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,7 +21,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  approval-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Require explicit request and configured production reviewers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bash scripts/check-production-approval.sh
   cutover:
+    needs: approval-preflight
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
