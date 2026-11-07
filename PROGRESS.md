@@ -7,6 +7,13 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 17-BLOK: CI/CD tiklash — deploy rollback, CI concurrency (PR #98)
+1. **Tiklash**: `fix/ci-deployment-reliability` allaqachon PR #97 sifatida main'ga merge qilingan edi (yo'qolgan ish yo'q). Lokal `fix/exam-pipeline-and-deploy` (5 commit, push qilinmagan) main bilan birlashtirildi → `fix/ci-deployment-reliability-recovery`.
+2. **Topilgan sabablar**: (a) muvaffaqiyatsiz activate'dan keyin qaytish imkoni yo'q edi (`:local` teglar prepare'da qayta yozilardi); (b) run 42030164865 — build va konteyner yangilash bitta SSH buyrug'ida (#97 da bo'lingan); (c) PR CI'da concurrency yo'q; (d) `ubuntu-latest` Ubuntu 26 ga ko'chmoqda; (e) GitHub'da `production` environment mavjud emas → har qanday deploy preflight'da bloklanadi.
+3. **Tuzatildi**: `scripts/deploy-release.sh` rollback (live image ID'lar build'dan oldin saqlanadi, swap/healthcheck xatosida tiklanadi), migratsiya + `import_cd_record_mock_1` swap'dan oldin one-off konteynerda, faza vaqtlari, disk tekshiruvi; frontend nomli image; public 200 tekshiruvi; CI concurrency (faqat PR bekor qilinadi); runner `ubuntu-24.04`; BuildKit kesh; `.gitattributes` (`*.sh` LF).
+4. **Testlar**: pytest 795 passed / 1 failed (lokal STT kutubxonasi yo'q) / 19 skipped; yangi 13 ta deploy regression testi PASS; actionlint 1.7.12 + shellcheck toza.
+5. **Keyingi qadam**: repo Settings → Environments → `production` yaratish (required reviewer + prevent self-review), PR #98 ni ko'rib chiqib merge qilish, keyin `Deploy to VPS` ni qo'lda ishga tushirish.
+
 ### 16-BLOK: Ranglar uyg'unligi (design tokens) va kontrast auditi
 1. **Tahlil**: UI ~1 500 ta xom Tailwind `emerald/slate/teal` klassi va 86 ta qattiq yozilgan navy `#0B0F17` (+35 ta `#111827`) ishlatgan; brend tokenlari esa lime/olive. Natijada bir sahifada 3 xil yashil va ko'k-kulrang neytral aralashgan; 145 ta kontrast xatosi (jami 1119 matn namunasidan).
 2. **Tuzatish** (`frontend/src/app/globals.css`): Tailwind `emerald/teal` shkalasi brend lime→o'rmon yashiliga, `slate/gray` iliq olive neytrallarga, `sky-400` ochroq, `--fg-subtle` #92957f (5.7:1) ga yo'naltirildi. 119 ta navy literal → tokenlar; lime fondagi `text-white` → `text-brand-fg` (41 qator); gradient CTA'lar tuzatildi; qo'sh ⚡ ikonka olib tashlandi.
