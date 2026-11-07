@@ -11,7 +11,7 @@ from apps.core.mock_attempts import switch_section, upload_speaking
 from common.api.exceptions import ContractAPIException
 
 
-def test_signature_fallback_authenticates_owner():
+def test_mismatched_signature_is_rejected_even_for_the_owner():
     request = SimpleNamespace(
         META={"HTTP_X_ATTEMPT_SIGNATURE": "outdated_or_mismatched_signature"},
         user=SimpleNamespace(is_authenticated=True, id="student_123")
@@ -27,8 +27,10 @@ def test_signature_fallback_authenticates_owner():
 
     with patch("apps.legacy_schema.models.MockAttempt.objects.filter") as mock_filter:
         mock_filter.return_value.first.return_value = mock_attempt
-        # Should not raise exception because authenticated user owns the attempt
-        sig.verify_request(request, "attempt_1")
+        # The owner fallback was removed: a supplied signature must match exactly.
+        with pytest.raises(ContractAPIException) as caught:
+            sig.verify_request(request, "attempt_1")
+        assert caught.value.status_code == 403
 
 
 def test_signature_rejects_foreign_user():
@@ -92,3 +94,13 @@ def test_switch_section_blocks_jumping_forward_in_full_test():
         with pytest.raises(ContractAPIException) as exc:
             switch_section(actor, "att_1", "speaking")
         assert exc.value.contract_code == "SECTION_LOCKED"
+
+
+def test_strict_speaking_keeps_the_original_recording():
+    from apps.core import mock_attempts as engine
+    with patch("apps.core.mock_speaking_policy.strict", return_value=True), patch.object(engine.transaction, "on_commit") as on_commit:
+        assert engine.schedule_speaking_compression(SimpleNamespace(), "private/a.webm", "a1", "q1") is False
+    on_commit.assert_not_called()
+    with patch("apps.core.mock_speaking_policy.strict", return_value=False), patch.object(engine.transaction, "on_commit") as on_commit:
+        assert engine.schedule_speaking_compression(SimpleNamespace(), "private/a.webm", "a1", "q1") is True
+    on_commit.assert_called_once()

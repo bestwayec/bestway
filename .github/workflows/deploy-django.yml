@@ -23,7 +23,7 @@ concurrency:
 jobs:
   approval-preflight:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -37,7 +37,7 @@ jobs:
   cutover:
     needs: approval-preflight
     environment: production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Verify the exact release passed CI

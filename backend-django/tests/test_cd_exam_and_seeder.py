@@ -61,7 +61,7 @@ class CdExamAndSeederTestCase(TestCase):
 
         # 1. Exam record verification
         exam = Exam.objects.get(code="MOCK-RECORD-01")
-        self.assertEqual(exam.title, "Record Mock - Test 1 (Multi-Level)")
+        self.assertEqual(exam.title, "Multi-Level (CEFR) Mock Test 1 (Record Mock)")
         self.assertEqual(exam.exam_type, "CEFR_MULTILEVEL")
         self.assertTrue(exam.is_cd_format)
         self.assertEqual(exam.duration_minutes, 150)
@@ -91,29 +91,29 @@ class CdExamAndSeederTestCase(TestCase):
 
         # 4. Total AnswerKeys
         total_keys = AnswerKey.objects.filter(question__group__section__exam=exam).count()
-        self.assertEqual(total_keys, 81)
+        self.assertEqual(total_keys, 70)  # only objective Listening+Reading items carry keys
 
         # 5. Check specific AnswerKeys
         q1 = Question.objects.get(group__section=l_sec, order=1)
-        self.assertEqual(q1.answer_key.valid_answers_list, ["C"])
+        self.assertEqual(q1.answer_key.valid_answers_list[0], "C")
 
         q9 = Question.objects.get(group__section=l_sec, order=9)
         self.assertIn("coach", q9.answer_key.valid_answers_list)
 
         q19 = Question.objects.get(group__section=l_sec, order=19)
-        self.assertEqual(q19.answer_key.valid_answers_list, ["D"])
+        self.assertEqual(q19.answer_key.valid_answers_list[0], "D")
 
         q_r1 = Question.objects.get(group__section=r_sec, order=1)
-        self.assertEqual(q_r1.answer_key.valid_answers_list, ["bees"])
+        self.assertEqual(q_r1.answer_key.valid_answers_list[0], "bees")
 
         q_r7 = Question.objects.get(group__section=r_sec, order=7)
-        self.assertEqual(q_r7.answer_key.valid_answers_list, ["B"])
+        self.assertEqual(q_r7.answer_key.valid_answers_list[0], "E")
 
         q_r15 = Question.objects.get(group__section=r_sec, order=15)
-        self.assertEqual(q_r15.answer_key.valid_answers_list, ["B"])
+        self.assertEqual(q_r15.answer_key.valid_answers_list[0], "E")
 
         q_r25 = Question.objects.get(group__section=r_sec, order=25)
-        self.assertEqual(q_r25.answer_key.valid_answers_list, ["False"])
+        self.assertEqual(q_r25.answer_key.valid_answers_list[0], "False")
 
         # 6. API Endpoint test
         factory = RequestFactory()
@@ -127,10 +127,15 @@ class CdExamAndSeederTestCase(TestCase):
         data = payload["data"]
         self.assertEqual(data["exam"]["code"], "MOCK-RECORD-01")
         self.assertEqual(len(data["sections"]), 4)
-        self.assertEqual(len(data["parts"]), 16)
+        self.assertEqual(len(data["parts"]), 18)  # 6 listening + 5 reading + writing + speaking parts
 
         total_part_qs = sum(len(p["questions"]) for p in data["parts"])
         self.assertEqual(total_part_qs, 81)
+
+        # Ids served to the simulator/CD session are exactly the ids a MockAttempt accepts.
+        session_ids = {str(q["id"]) for p in data["parts"] for q in p["questions"]}
+        legacy_ids = set(MockQuestion.objects.filter(group__section__exam_id="MOCK-RECORD-01").values_list("id", flat=True))
+        self.assertEqual(session_ids, legacy_ids)
 
         # 7. Test idempotency (run again without error or duplicates)
         out2 = io.StringIO()

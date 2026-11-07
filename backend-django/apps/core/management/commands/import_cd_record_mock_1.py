@@ -1,27 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Django Management Command: import_cd_record_mock_1.
+"""Canonical importer for "Multi-Level (CEFR) Mock Test 1 (Record Mock)" (MOCK-RECORD-01).
 
-Ingests and activates the CEFR Multi-Level Mock Exam ("Record Mock - Test 1") from:
-C:/Users/user/Desktop/exam/RECORD MOCK _ TEST 1 - Multi-Level Record .pdf
+One command owns this exam. It writes the legacy MockExam/MockSection/MockQuestionGroup/
+MockQuestion rows and mirrors them into cd_* (Exam/Section/QuestionGroup/Question/AnswerKey)
+with the SAME ids, so simulator/CD-session ids are accepted by mock attempts.
 
-1. Populates Exam, Section, QuestionGroup, Question, AnswerKey in cd_exams (PostgreSQL).
-2. Populates MockExam, MockSection, MockQuestionGroup, MockQuestion in legacy schema.
-3. Unpublishes old "Gym Membership & Vegetarian Diet" exam (multilevel-test-01-gym-vegetarian).
-4. Sets "Multi-Level (CEFR) Mock Test 1 (Record Mock)" (MOCK-RECORD-01) as default active exam.
-5. Saves Community Centre Plan map image to media/exams/record_mock_1/map.png and binds to Part 4.
+Idempotent: re-running updates rows in place and removes cd_* groups/questions of this exam
+that no longer exist in the legacy definition. Media are copied from SEED_MEDIA_DIR
+(read-only mount in Docker); a missing source file aborts the command.
+
+Aliases: import_record_mock_1, seed_record_mock_1, seed_cd_record_mock_1.
 """
 from __future__ import annotations
 
-import io
-import shutil
-from pathlib import Path
-from django.conf import settings
-from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
 from apps.core.models import AnswerKey, Exam, Question, QuestionGroup, Section
+from apps.core.record_mock_1_content import SeedMediaMissing, seed_record_mock_1
 from apps.legacy_schema.models import (
     MockAnswer,
     MockExam,
@@ -70,28 +67,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE(f"=== Ingesting Real CD Exam: {EXAM_TITLE} ({EXAM_CODE}) ==="))
 
-        # 1. Guarantee media assets and map.png
-        media_root = Path(settings.MEDIA_ROOT).resolve()
-        rec_dir = media_root / "exams/record_mock_1"
-        rec_dir.mkdir(parents=True, exist_ok=True)
-        
-        map_target = rec_dir / "map.png"
-        candidates = [
-            rec_dir / "listening_part4_map.png",
-            media_root / "exams/mock1/listening_part4_map.png",
-            Path(settings.BASE_DIR).resolve().parents[0] / "media/exams/record_mock_1/listening_part4_map.png",
-            Path(settings.BASE_DIR).resolve().parents[0] / "media/exams/record_mock_1/map.png",
-        ]
-        for c in candidates:
-            if c.is_file() and not map_target.is_file():
-                shutil.copyfile(str(c), str(map_target))
-                self.stdout.write(self.style.SUCCESS(f"  [OK] Copied {c.name} -> {map_target}"))
-                break
-
-        # 2. Run import_record_mock_1 to ingest the 100% accurate PDF text & questions into MockExam
-        out = io.StringIO()
-        call_command("import_record_mock_1", stdout=out)
-        self.stdout.write(self.style.SUCCESS("  [OK] Seeded MockExam legacy records from RECORD MOCK _ TEST 1 PDF"))
+        # 1+2. Legacy definition (copies media from SEED_MEDIA_DIR; never synthesises files)
+        try:
+            seed_record_mock_1(self.stdout, self.style)
+        except SeedMediaMissing as exc:
+            raise CommandError(str(exc)) from exc
 
         # 3. Explicitly unpublish the old Gym & Vegetarian mock exam
         unpub_count = MockExam.objects.filter(id="multilevel-test-01-gym-vegetarian").update(
@@ -102,8 +82,7 @@ class Command(BaseCommand):
         # 4. Fetch the seeded MockExam record
         mock_exam = MockExam.objects.filter(id=EXAM_CODE).first()
         if not mock_exam:
-            self.stdout.write(self.style.ERROR(f"  [FAIL] MockExam {EXAM_CODE} not found after legacy import!"))
-            return
+            raise CommandError(f"MockExam {EXAM_CODE} not found after legacy import")
 
         mock_exam.title = EXAM_TITLE
         mock_exam.is_published = True
@@ -130,6 +109,8 @@ class Command(BaseCommand):
             )
 
             total_questions_synced = 0
+            synced_group_ids: set[str] = set()
+            synced_question_ids: set[str] = set()
             total_keys_synced = 0
 
             # Iterate sections from legacy MockExam
@@ -168,6 +149,7 @@ class Command(BaseCommand):
                         },
                     )
 
+                    synced_group_ids.add(cd_grp.id)
                     mock_questions = MockQuestion.objects.filter(group=m_grp).order_by("sort_order", "number")
                     for m_q in mock_questions:
                         q_kind = _to_cd_question_type(m_q.type, sec_type, m_grp.part_number)
@@ -200,6 +182,7 @@ class Command(BaseCommand):
                                 "payload_json": payload,
                             },
                         )
+                        synced_question_ids.add(cd_q.id)
                         total_questions_synced += 1
 
                         if m_q.correct_answers:
@@ -221,6 +204,14 @@ class Command(BaseCommand):
                                 },
                             )
                             total_keys_synced += 1
+
+            # Remove cd_* rows of this exam that an older importer created with other ids.
+            stale_q = Question.objects.filter(group__section__exam=cd_exam).exclude(id__in=synced_question_ids)
+            stale_g = QuestionGroup.objects.filter(section__exam=cd_exam).exclude(id__in=synced_group_ids)
+            removed_q, _ = stale_q.delete()
+            removed_g, _ = stale_g.delete()
+            if removed_q or removed_g:
+                self.stdout.write(self.style.WARNING(f"  [OK] Removed stale cd_* rows: {removed_q} question rows, {removed_g} group rows"))
 
             self.stdout.write(
                 self.style.SUCCESS(

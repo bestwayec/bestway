@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { CDLayout } from "@/components/simulator/CDLayout";
-import { CdExamView } from "@/components/demo/cd-exam-view";
-import { getActiveCdExam, getDemoMockExams, getDemoMockExam } from "@/lib/public-api";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +17,7 @@ export default async function SimulatorPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  let exam = await getActiveCdExam();
-  if (!exam || !exam.sections || exam.sections.length === 0) {
-    const demos = await getDemoMockExams();
-    if (demos.length > 0) {
-      exam = await getDemoMockExam(demos[0].id);
-    }
-  }
-
-  return <CDLayout exam={exam} />;
+  // CDLayout loads the server's active exam itself through the authenticated proxy,
+  // so signed-in students get their entitled exam and nobody gets a silent substitute.
+  return <CDLayout />;
 }

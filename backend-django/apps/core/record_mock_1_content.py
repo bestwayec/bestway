@@ -1,14 +1,15 @@
+"""Canonical content for "Multi-Level (CEFR) Mock Test 1 (Record Mock)" (legacy MockExam tables).
+
+Used only by the import_cd_record_mock_1 management command (and its aliases).
+"""
 from __future__ import annotations
 
-import math
+import os
 import shutil
-import struct
-import wave
 from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
@@ -28,67 +29,52 @@ from apps.legacy_schema.models import (
 )
 
 EXAM_ID = "MOCK-RECORD-01"
-EXAM_TITLE = "Record Mock - Test 1 (Multi-Level)"
-MAP_IMAGE_PATH = "exams/mock1/listening_part4_map.png"
+EXAM_TITLE = "Multi-Level (CEFR) Mock Test 1 (Record Mock)"
+MAP_IMAGE_PATH = "exams/record_mock_1/map.png"
 SPEAKING_SPORT_IMAGE_PATH = "exams/mock1/speaking_part12_sport.png"
 SPEAKING_EDU_IMAGE_PATH = "exams/mock1/speaking_part2_education.png"
 
 
-def _write_clean_wav(path: Path, duration_sec: int = 8, freq_hz: float = 440.0) -> None:
-    """Writes a valid 16-bit PCM mono WAV file with intro chime and room tone."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.is_file() and path.stat().st_size > 4096:
-        return
-    sample_rate = 16000
-    total_samples = sample_rate * duration_sec
-    buf = bytearray()
-    for i in range(total_samples):
-        t = i / sample_rate
-        if t < 0.6:
-            envelope = math.sin(math.pi * (t / 0.6))
-            sample = int(4500 * envelope * math.sin(2.0 * math.pi * freq_hz * t))
-        elif 0.7 <= t < 1.3:
-            envelope = math.sin(math.pi * ((t - 0.7) / 0.6))
-            sample = int(4500 * envelope * math.sin(2.0 * math.pi * (freq_hz * 1.25) * t))
-        else:
-            sample = 0
-        buf.extend(struct.pack("<h", sample))
+class SeedMediaMissing(Exception):
+    """Raised when a required source file is absent from SEED_MEDIA_DIR."""
 
-    with wave.open(str(path), "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sample_rate)
-        wf.writeframes(bytes(buf))
+
+def seed_media_dir() -> Path:
+    """Read-only source of exam media. Docker mounts ./media at /app/seed-media."""
+    configured = os.environ.get("SEED_MEDIA_DIR", "").strip()
+    return Path(configured) if configured else Path(settings.BASE_DIR).resolve().parent / "media"
+
+
+# (source path under SEED_MEDIA_DIR, destination key under MEDIA_ROOT)
+REQUIRED_MEDIA: tuple[tuple[str, str], ...] = (
+    *((f"exams/record_mock_1/record_mock1_audio_part_{n}.wav", f"multilevel/assets/record_mock1_audio_part_{n}.wav") for n in range(1, 7)),
+    ("exams/record_mock_1/listening_part4_map.png", MAP_IMAGE_PATH),
+    ("exams/mock1/speaking_part12_sport.png", SPEAKING_SPORT_IMAGE_PATH),
+    ("exams/mock1/speaking_part2_education.png", SPEAKING_EDU_IMAGE_PATH),
+)
 
 
 def ensure_media_assets(stdout) -> dict[int, str]:
-    """Ensures audio files and images exist under MEDIA_ROOT."""
+    """Copy the exam media from SEED_MEDIA_DIR into MEDIA_ROOT. Never synthesises files.
+
+    Raises SeedMediaMissing listing every absent source so a deploy fails loudly
+    instead of publishing an exam whose audio or map cannot load.
+    """
+    source_root = seed_media_dir()
     media_root = Path(settings.MEDIA_ROOT).resolve()
-    audio_keys: dict[int, str] = {}
-    base_freqs = [392.0, 440.0, 493.88, 523.25, 587.33, 659.25]
-
-    for part_num in range(1, 7):
-        rel_key = f"multilevel/assets/record_mock1_audio_part_{part_num}.wav"
-        target_path = media_root / rel_key
-        _write_clean_wav(target_path, duration_sec=8, freq_hz=base_freqs[part_num - 1])
-        cbt_rel = f"mock/cbt/record_mock1_audio_part_{part_num}.mp3"
-        _write_clean_wav(media_root / cbt_rel, duration_sec=6, freq_hz=base_freqs[part_num - 1])
-        audio_keys[part_num] = rel_key
-
-    # Check for images in exams/mock1/
-    mock1_dir = media_root / "exams/mock1"
-    mock1_dir.mkdir(parents=True, exist_ok=True)
-
-    # If assets exist in repo media directory but not MEDIA_ROOT, copy them over
-    repo_media = Path(__file__).resolve().parents[4] / "media/exams/mock1"
-    for img_name in ["listening_part4_map.png", "speaking_part12_sport.png", "speaking_part2_education.png"]:
-        dst = mock1_dir / img_name
-        src = repo_media / img_name
-        if not dst.is_file() and src.is_file():
-            shutil.copyfile(str(src), str(dst))
-
-    stdout.write(f"Verified media assets in {media_root}")
-    return audio_keys
+    missing = [src for src, _ in REQUIRED_MEDIA if not (source_root / src).is_file()]
+    if missing:
+        raise SeedMediaMissing(f"SEED_MEDIA_DIR={source_root} is missing: " + ", ".join(missing))
+    copied = 0
+    for src, dst_key in REQUIRED_MEDIA:
+        src_path, dst_path = source_root / src, media_root / dst_key
+        if dst_path.is_file() and dst_path.stat().st_size == src_path.stat().st_size:
+            continue
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src_path, dst_path)
+        copied += 1
+    stdout.write(f"Media verified from {source_root} into {media_root} ({copied} copied)")
+    return {n: f"multilevel/assets/record_mock1_audio_part_{n}.wav" for n in range(1, 7)}
 
 
 def seed_record_mock_1(stdout, style=None):
@@ -114,6 +100,9 @@ def seed_record_mock_1(stdout, style=None):
 
     with transaction.atomic():
         now = timezone.now()
+        # 0. Unpublish old Gym & Vegetarian mock test so Record Mock is default
+        MockExam.objects.filter(id="multilevel-test-01-gym-vegetarian").update(is_published=False, is_demo=False)
+
 
         # =========================================================================
         # EXAM ROOT RECORD
@@ -136,7 +125,7 @@ def seed_record_mock_1(stdout, style=None):
                 "speaking_profile_version": CURRENT_SPEAKING_PROFILE,
                 "assessment_policy": "FULL_MOCK_AI_WITH_REVIEW",
                 "is_published": True,
-                "is_demo": False,
+                "is_demo": True,
                 "is_free_for_approved": True,
                 "price": 0,
                 "created_by_id": admin_user.id,
@@ -186,14 +175,14 @@ def seed_record_mock_1(stdout, style=None):
         )
 
         l_q_data_1 = [
-            (1, "Choose the correct reply to sentence 1", ["C"], ["c"], ["A  Me too.", "B  Can you?", "C  Sure, you can."]),
-            (2, "Choose the correct reply to sentence 2", ["A"], ["a"], ["A  Take bus 6.", "B  It starts at 9 a.m. tomorrow.", "C  It’s in the center."]),
-            (3, "Choose the correct reply to sentence 3", ["C"], ["c"], ["A  OK, here it is.", "B  No, that doesn’t suit you.", "C  Sure, I’ll wait here."]),
-            (4, "Choose the correct reply to sentence 4", ["B"], ["b"], ["A  In the school library.", "B  Since 1997.", "C  Before I was born."]),
-            (5, "Choose the correct reply to sentence 5", ["A"], ["a"], ["A  You should take a short break.", "B  Let’s get to work right now!", "C  Don’t worry, they haven’t."]),
-            (6, "Choose the correct reply to sentence 6", ["A"], ["a"], ["A  How about an ice-cream?", "B  You need to wear your sweater.", "C  Let’s eat some fresh pizza and chips."]),
-            (7, "Choose the correct reply to sentence 7", ["C"], ["c"], ["A  When does it happen?", "B  Where did you see that?", "C  Who told you that?"]),
-            (8, "Choose the correct reply to sentence 8", ["B"], ["b"], ["A  My hands are also firm.", "B  Sounds like a boring person.", "C  Can you expect anything?"]),
+            (1, "", ["C"], ["c"], ["A  Me too.", "B  Can you?", "C  Sure, you can."]),
+            (2, "", ["A"], ["a"], ["A  Take bus 6.", "B  It starts at 9 a.m. tomorrow.", "C  It’s in the center."]),
+            (3, "", ["C"], ["c"], ["A  OK, here it is.", "B  No, that doesn’t suit you.", "C  Sure, I’ll wait here."]),
+            (4, "", ["B"], ["b"], ["A  In the school library.", "B  Since 1997.", "C  Before I was born."]),
+            (5, "", ["A"], ["a"], ["A  You should take a short break.", "B  Let’s get to work right now!", "C  Don’t worry, they haven’t."]),
+            (6, "", ["A"], ["a"], ["A  How about an ice-cream?", "B  You need to wear your sweater.", "C  Let’s eat some fresh pizza and chips."]),
+            (7, "", ["C"], ["c"], ["A  When does it happen?", "B  Where did you see that?", "C  Who told you that?"]),
+            (8, "", ["B"], ["b"], ["A  My hands are also firm.", "B  Sounds like a boring person.", "C  Can you expect anything?"]),
         ]
         for num, prompt, answers, variants, options in l_q_data_1:
             MockQuestion.objects.update_or_create(
@@ -1323,11 +1312,3 @@ def seed_record_mock_1(stdout, style=None):
         )
 
     stdout.write(style.SUCCESS(f"Successfully seeded exam {EXAM_ID}: {EXAM_TITLE}"))
-
-
-class Command(BaseCommand):
-    help = "Seeds CEFR Multi-Level Mock Exam (Record Mock - Test 1) into the database."
-
-    def handle(self, *args, **options):
-        self.stdout.write(f"Seeding {EXAM_TITLE} ({EXAM_ID})...")
-        seed_record_mock_1(self.stdout, self.style)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_URL, COOKIE } from "@/lib/config";
 import { sessionCookieOptions } from "@/lib/auth";
+import { applyClientIp } from "@/lib/client-ip";
 
 /**
  * Backend uchun proxy.
@@ -45,7 +46,7 @@ function forwardHeaders(req: NextRequest, accessToken?: string): Headers {
     if (!STRIPPED_REQUEST_HEADERS.has(key.toLowerCase())) headers.set(key, value);
   });
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
-  return headers;
+  return applyClientIp(headers, req.headers);
 }
 
 /** Backenddan yangi tokenlar so'rash. Muvaffaqiyatsiz bo'lsa — null. */

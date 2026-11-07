@@ -183,3 +183,14 @@ describe("assessment status resilience", () => {
     hookState.pollingStopped = false; hookState.data = undefined;
   });
 });
+
+describe("speaking scoring unavailable", () => {
+  it("says scoring is not configured instead of 'no response' when STT is missing", () => {
+    const job = { ...speakingJob, status: "NEEDS_REVIEW" as const, failureCode: "STT_NOT_CONFIGURED",
+      submissions: speakingJob.submissions.map((s) => ({ ...s, audioUrl: null, transcript: null })) } as unknown as AssessmentJobView;
+    const html = render(job);
+    expect(html).toContain("Automatic scoring is not configured");
+    expect(html).not.toContain("No response was submitted");
+    expect(html).not.toContain("No transcript is available yet");
+  });
+});

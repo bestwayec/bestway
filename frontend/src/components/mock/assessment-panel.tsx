@@ -256,6 +256,8 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
   const reviewed = job.finalScoreSource === "TEACHER";
   const active = ["PENDING", "PROCESSING", "RETRY"].includes(job.status);
   const variant = job.status === "SUCCEEDED" ? "success" : active ? "info" : "warning";
+  // The worker records why speech could not be transcribed; STT_NOT_CONFIGURED is a server setup gap, not a missing answer.
+  const scoringUnavailable = job.skill === "speaking" && job.failureCode === "STT_NOT_CONFIGURED";
   const pronunciationUnavailable = job.skill === "speaking" && result?.pronunciationEvidence !== "ACOUSTIC";
   const internalPolicy = job.gradingPolicy?.id === "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
   return (
@@ -333,10 +335,10 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               )}
               {submission.audioUrl && <audio controls preload="none" className="w-full max-w-md" aria-label={t("originalAudio")}
                 src={assessmentAudioPath(attemptId, submission.questionId)}><track kind="captions" /></audio>}
-              {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{t("noResponse")}</p>}
+              {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{scoringUnavailable ? t("scoringUnavailable") : t("noResponse")}</p>}
               {job.skill === "speaking" && <div className="rounded-[8px] bg-bg-subtle p-3">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("transcript")}</h5>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{submission.transcript?.text || t("transcriptPending")}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{submission.transcript?.text || (scoringUnavailable ? t("scoringUnavailable") : t("transcriptPending"))}</p>
                 {submission.transcript?.confidence != null && <p className="mt-1 text-xs text-fg-subtle">{t("transcriptConfidence")}: {Math.round(submission.transcript.confidence * 100)}%</p>}
                 {!!submission.transcript?.segments.length && <details className="mt-2 text-xs text-fg-muted"><summary className="cursor-pointer">{t("segments")}</summary>
                   <ol className="mt-2 space-y-1">{submission.transcript.segments.map((segment, index) => <li key={index}>{segment.start.toFixed(1)}–{segment.end.toFixed(1)}s · {segment.text}</li>)}</ol>

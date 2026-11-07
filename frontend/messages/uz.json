@@ -61,6 +61,7 @@
     "originalAudio": "Topshirilgan asl audio",
     "wordCount": "{count} ta so‘z",
     "noResponse": "Javob topshirilmagan.",
+    "scoringUnavailable": "Avtomatik baholash xizmati sozlanmagan. Yozuvingiz qabul qilindi, uni o'qituvchi tekshiradi.",
     "transcript": "Transkript",
     "transcriptPending": "Transkript hozircha mavjud emas. Tekshiruvda asl audiodan foydalaning.",
     "transcriptConfidence": "Transkripsiya ishonchliligi",

@@ -66,6 +66,8 @@ export interface AssessmentJobView {
   skill: "writing" | "speaking";
   program: AssessmentProgram;
   status: AssessmentStatus;
+  /** Why the job stopped (e.g. STT_NOT_CONFIGURED), from AssessmentJob.failureCode. */
+  failureCode?: string | null;
   policyMode: AssessmentPolicy;
   version: number;
   aiScore: number | null;

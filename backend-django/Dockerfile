@@ -4,7 +4,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 curl ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 COPY requirements/ ./requirements/
-RUN pip install --no-cache-dir -r requirements/prod.txt \
+# The pip cache mount survives requirement changes on the build host without bloating the image.
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/prod.txt \
     && groupadd --gid 1001 bestway \
     && useradd --uid 1001 --gid bestway --create-home bestway \
     && mkdir -p /home/bestway/.gunicorn \

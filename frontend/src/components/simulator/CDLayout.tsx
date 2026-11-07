@@ -289,31 +289,20 @@ export function CDLayout({
 
     async function loadActiveExam() {
       try {
-        console.log("[CDLayout] Fetching active exam with multi-tier fallback...");
-        let rawData: any = null;
-        // Tier 1: Next.js backend proxy
-        try {
-          const r1 = await fetch("/api/backend/exams/active");
-          if (r1.ok) rawData = await r1.json();
-        } catch {}
-        // Tier 2: Next.js direct /api/v1/exams/active route
-        if (!rawData) {
-          try {
-            const r2 = await fetch("/api/v1/exams/active");
-            if (r2.ok) rawData = await r2.json();
-          } catch {}
-        }
-        // Tier 3: Direct public backend origin
-        if (!rawData) {
-          try {
-            const r3 = await fetch("https://api.bestwayec.uz/v1/exams/active");
-            if (r3.ok) rawData = await r3.json();
-          } catch {}
-        }
+        // One request through the authenticated proxy. No silent fallback to another
+        // exam: the active exam is chosen by the server (ACTIVE_CD_EXAM_CODE).
+        const res = await fetch("/api/backend/exams/active", { cache: "no-store" });
         if (cancelled) return;
-        if (!rawData) {
-          throw new Error("Failed to load questions from server (endpoints unreachable).");
+        if (!res.ok) {
+          setFetchError(
+            res.status === 404 || res.status === 401 || res.status === 403
+              ? "Aktiv imtihon topilmadi yoki unga kirish huquqingiz yo'q. Tizimga kiring yoki administratorga murojaat qiling."
+              : `Server imtihonni qaytarmadi (HTTP ${res.status}). Birozdan so'ng qayta urining.`,
+          );
+          setIsLoading(false);
+          return;
         }
+        const rawData: unknown = await res.json();
         const parsed = normalizeExamPayload(rawData);
         if (!parsed || (parsed.questionCount ?? 0) === 0) {
           const err = "Failed to load questions from server (0 questions found in payload).";
@@ -509,6 +498,16 @@ export function CDLayout({
             </div>
           </div>
         </header>
+
+        {/* Demo notice: the simulator never persists answers */}
+        <div role="note" className="border-b border-warning-border bg-warning-bg px-3 py-2 text-center text-xs font-medium text-fg sm:px-6">
+          Demo rejim — bu yerdagi javoblar saqlanmaydi va baholanmaydi.{" "}
+          {exam?.id ? (
+            <Link href={`/mock/${encodeURIComponent(exam.id)}`} className="font-semibold text-brand underline underline-offset-2">
+              Haqiqiy imtihonni boshlash
+            </Link>
+          ) : null}
+        </div>
 
         {/* Main Body */}
         <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 pb-28">

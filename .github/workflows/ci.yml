@@ -6,9 +6,14 @@ on:
     branches: [main, migration/django-backend]
 permissions:
   contents: read
+# Superseded pull request runs are cancelled. Pushes to main are never cancelled:
+# production deployment requires a successful main CI run for the exact commit.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   django:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     defaults:
       run:
@@ -151,7 +156,7 @@ jobs:
         if: always()
         run: docker compose -f ../docker-compose.django.yml --profile workers down || true
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:

@@ -2,14 +2,15 @@ FROM node:24.20.0-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+# BuildKit cache mounts keep the npm and Next.js caches on the build host between releases.
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY . .
 # Build-time API_URL can be overridden; default will use runtime env (http://backend:3001/v1)
 ARG API_URL=http://backend:3001/v1
 ENV API_URL=${API_URL}
 ARG NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=xabar_bestway_bot
 ENV NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 FROM node:24.20.0-alpine AS runner
 WORKDIR /app

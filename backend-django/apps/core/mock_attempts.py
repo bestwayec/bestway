@@ -338,7 +338,7 @@ def start(actor, exam_id, data):
         if flow == 'full_test' and exam.profile not in ('full_mock', 'writing_speaking'):
             fail('MOCK_FULL_TEST_UNAVAILABLE', 'Full Mock flow faqat full_mock imtihonlarda mavjud')
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
-        at = timezone.now()
+        at = attempt_signature.truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
         first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
         if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):
@@ -354,6 +354,11 @@ def start(actor, exam_id, data):
             submitted_sections=[] if flow == 'full_test' else None)
         duration = int((last-at).total_seconds()/60 + .5) if last else None
         return start_response(attempt, exam, False, duration)
+
+
+def _fail_foreign(question_ids):
+    raise ContractAPIException('QUESTION_NOT_IN_EXAM', "Savol bu imtihonga tegishli emas. Sahifani yangilang.", 400,
+                               {'questionIds': question_ids[:20], 'count': len(question_ids)})
 
 
 def upsert_answer(attempt_id, question_id, response):
@@ -377,9 +382,12 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
                 if skill != attempt.current_skill or skill in (getattr(attempt, 'submitted_sections', None) or []):
                     fail('SECTION_LOCKED', 'Question outside the active section', 403)
         valid_ids = {q.id for q in valid}
-        selected = [a for a in items if a['questionId'] in valid_ids]
-        if not selected:
-            return {'saved': 0 if bulk else False}
+        foreign = sorted({a['questionId'] for a in items} - valid_ids)
+        if foreign:
+            # Reject the whole batch: silently dropping ids made the client show
+            # "Save failed" with no reason while some answers were never stored.
+            _fail_foreign(foreign)
+        selected = items
         for item in selected:
             upsert_answer(attempt.id, item['questionId'], item['response'])
         return {'saved': len(selected) if bulk else True}
@@ -874,6 +882,25 @@ def validate_audio_container(upload):
         fail('INVALID_AUDIO', 'The file is not a supported audio recording')
 
 
+def schedule_speaking_compression(attempt, key, attempt_id, question_id):
+    """Re-encode a speaking upload to Opus after commit, except under strict timing.
+
+    Strict attempts verify the recording by storage key and content hash
+    (speaking.verify_stored). The background re-encode swaps MockAnswer.audioKey to a
+    new file, which races that verification and the submission evidence, so strict
+    attempts keep the original upload untouched.
+    """
+    from . import mock_speaking_policy as speaking
+    if speaking.strict(attempt):
+        return False
+    try:
+        from apps.exams.audio_service import compress_speaking_audio_async
+        transaction.on_commit(lambda: compress_speaking_audio_async(key, attempt_id, question_id), robust=True)
+        return True
+    except Exception:
+        return False
+
+
 def upload_speaking(actor, attempt_id, question_id, upload):
     from . import mock_speaking_policy as speaking
     from .mock_media import (
@@ -930,12 +957,7 @@ def upload_speaking(actor, attempt_id, question_id, upload):
                 defaults=dict(audio_key=created_key, updated_at=timezone.now()),
                 create_defaults=dict(id=new_id(), audio_key=created_key, response='', is_graded=False, updated_at=timezone.now()))
             if created_key:
-                try:
-                    from apps.exams.audio_service import compress_speaking_audio_async
-                    c_key = created_key
-                    transaction.on_commit(lambda: compress_speaking_audio_async(c_key, attempt_id, question_id), robust=True)
-                except Exception:
-                    pass
+                schedule_speaking_compression(attempt, created_key, attempt_id, question_id)
             if prior and prior.audio_key:
                 transaction.on_commit(lambda: delete_unreferenced(prior.audio_key), robust=True)
         return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id), **({'audioDurationMs': duration} if duration is not None else {}))
