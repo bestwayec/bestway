@@ -25,6 +25,7 @@ export function MobileNavMoreSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("nav");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   const overflow = navForRole(role).filter((item) => !primaryHrefs.includes(item.href));
 
@@ -44,7 +45,7 @@ export function MobileNavMoreSheet({
               </DialogPrimitive.Title>
               <DialogPrimitive.Close
                 className="rounded-[6px] p-1.5 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
-                aria-label="Close"
+                aria-label={tc("close")}
               >
                 <X className="size-5" />
               </DialogPrimitive.Close>
