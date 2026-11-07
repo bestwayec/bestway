@@ -234,6 +234,8 @@ services:
       dockerfile: Dockerfile
       args:
         API_URL: http://backend:3001/v1
+    # Named tag so scripts/deploy-release.sh can restore the previous release image.
+    image: bestway-frontend:local
     container_name: education-frontend
     restart: unless-stopped
     mem_limit: 768m

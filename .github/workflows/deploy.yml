@@ -28,7 +28,7 @@ concurrency:
 jobs:
   approval-preflight:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -43,7 +43,7 @@ jobs:
     needs: approval-preflight
     if: github.ref == 'refs/heads/main'
     environment: production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 65
     steps:
       - name: Require successful main CI for the deployment commit
@@ -75,7 +75,7 @@ jobs:
             flock -n 8 || { echo "Another deployment is running"; exit 1; }
             git diff --quiet && git diff --cached --quiet
             git fetch origin main
-            test "$(git rev-parse FETCH_HEAD)" = "$DEPLOY_SHA"
+            test "$(git rev-parse FETCH_HEAD)" = "$DEPLOY_SHA"               || { echo "main moved after this run was dispatched; dispatch again for the new head"; exit 1; }
             git merge --ff-only FETCH_HEAD
             flock -u 8
             bash scripts/deploy-release.sh prepare "$DEPLOY_SHA"
@@ -94,3 +94,23 @@ jobs:
             set -euo pipefail
             cd "${VPS_PATH:-/opt/bestway}"
             bash scripts/deploy-release.sh activate "$DEPLOY_SHA"
+      - name: Verify public endpoints
+        run: |
+          set -euo pipefail
+          for url in https://bestwayec.uz/ https://api.bestwayec.uz/v1/health; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -L --max-time 20 --retry 10 --retry-delay 6 --retry-all-errors "$url" || true)
+            echo "$url -> HTTP $code"
+            [[ "$code" == 200 ]] || { echo "::error::$url did not return 200 after activation"; exit 1; }
+          done
+      - name: Deployment summary
+        if: always()
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Production deployment"
+            echo "- Commit: \`$DEPLOY_SHA\`"
+            echo "- Result: $JOB_STATUS"
+            echo "- On failure after the container swap, scripts/deploy-release.sh restores the previous application images; migrations are not reversed and the verified backup path is in the step log."
+          } >> "$GITHUB_STEP_SUMMARY"
