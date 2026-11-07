@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/feedback";
+import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useMe } from "@/hooks/use-me";
@@ -25,7 +25,7 @@ export function StudentDashboard() {
   const ts = useTranslations("student");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
-  const { data: me, isLoading } = useMe();
+  const { data: me, isLoading, refetch } = useMe();
   const [copied, setCopied] = React.useState(false);
 
   const firstName = me?.user.name.split(" ")[0] ?? "";
@@ -65,7 +65,7 @@ export function StudentDashboard() {
       .catch(() => {});
   }, [me?.user]);
 
-  if (isLoading || !profile) {
+  if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl">
         <PageHeader title={t("greeting", { name: firstName })} />
@@ -77,9 +77,25 @@ export function StudentDashboard() {
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <PageHeader title={t("greeting", { name: firstName })} />
+        <ErrorState title={tc("unknownError")} action={<Button variant="outline" onClick={() => void refetch()}>{tc("retry")}</Button>} />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("greeting", { name: firstName })} />
+
+      {!profile.isApproved && (
+        <div className="mb-4 flex items-start gap-3 rounded-[12px] border border-warning-border bg-warning-bg/50 px-4 py-3 text-sm">
+          <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" />
+          <p className="font-medium text-fg">{ts("notApproved")}</p>
+        </div>
+      )}
 
       <LiveExamPinCard />
       <div className="mt-4 mb-4"><StudentAssignmentsWidget /></div>
@@ -88,15 +104,6 @@ export function StudentDashboard() {
       <MistakeVault className="mt-4 mb-4" />
       <ExamTrackSelector />
       <ExamTrackDashboard />
-
-      {!profile.isApproved && (
-        <div className="mb-4 flex items-start gap-3 rounded-[12px] border border-warning-border bg-warning-bg/50 px-4 py-3 text-sm">
-          <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" />
-          <div>
-            <p className="font-medium text-fg">{ts("notApproved")}</p>
-          </div>
-        </div>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label={ts("myPoints")} value={profile.currentPoints} icon={Star} tone="brand" />

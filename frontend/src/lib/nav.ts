@@ -3,7 +3,6 @@ import {
   BookA,
   BookOpen,
   CalendarCheck,
-  ClipboardCheck,
   GraduationCap,
   Images,
   LayoutDashboard,
@@ -79,7 +78,12 @@ export function navForRole(role: Role): NavItem[] {
  * Qolgan barcha rolga mos bo'limlar `navForRole()` orqali "More" panelida chiqadi.
  */
 export function mobileNavForRole(role: Role): NavItem[] {
-  return navForRole(role).filter((item) => item.mobile).slice(0, 4);
+  const items = navForRole(role);
+  if (role === "teacher") {
+    const priorities = ["dashboard", "attendance", "groups", "teacherWorkspace"];
+    return priorities.flatMap((key) => items.filter((item) => item.key === key));
+  }
+  return items.filter((item) => item.mobile).slice(0, 4);
 }
 
 /** Faol yo'nalishni aniqlash — /dashboard aniq, qolganlari prefiks bo'yicha */
