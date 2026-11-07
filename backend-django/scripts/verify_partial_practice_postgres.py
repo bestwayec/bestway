@@ -146,13 +146,18 @@ try:
     check(resumed['attemptId'] == attempt_id and resumed['resumed'], 'Matching selection resumes the frozen scope')
     # Scope changes now auto-close old in-progress attempts instead of returning 409
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answer', {'questionId': excluded, 'response': 'Forged'}, format='json'), 400, 'QUESTION_NOT_IN_EXAM')
-    bulk_excluded = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json'), 201)
-    check(bulk_excluded == {'saved': 0} and type(bulk_excluded['saved']) is int, 'Bulk answer ignores out-of-scope question without persisting')
+    # A batch naming any out-of-scope question is rejected as a whole (and names the
+    # foreign ids) so the client can explain the failure instead of silently dropping answers.
+    rejected = client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': excluded, 'response': 'Forged'}]}, format='json')
+    data(rejected, 400, 'QUESTION_NOT_IN_EXAM')
+    check(rejected.data['error']['details']['questionIds'] == [excluded], 'Bulk rejection names the out-of-scope question')
     mixed = [{'questionId': qids['writing'][0], 'response': 'Scoped response'}, {'questionId': excluded, 'response': 'Out of scope'}]
     for _ in range(2):
-        result = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed}, format='json'), 201)
-        check(result == {'saved': 1}, 'Mixed and repeated batches acknowledge only the valid question')
+        data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed}, format='json'), 400, 'QUESTION_NOT_IN_EXAM')
     check(not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=excluded).exists(), 'Mixed batch never persists the out-of-scope question')
+    check(not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=qids['writing'][0]).exists(), 'Rejected mixed batch is atomic: the valid answer is not persisted either')
+    result = data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed[:1]}, format='json'), 201)
+    check(result == {'saved': 1} and type(result['saved']) is int, 'In-scope batch saves after the client drops the stale question')
     client.force_authenticate(SimpleNamespace(id=str(uuid4()), role='student', is_authenticated=True))
     data(client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': mixed[:1]}, format='json'), 404, 'MOCK_ATTEMPT_NOT_FOUND')
     client.force_authenticate(student)
