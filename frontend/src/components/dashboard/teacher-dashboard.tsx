@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
@@ -93,6 +93,7 @@ function KpiCard({
 
 function GroupPerformanceCard({ group }: { group: TeacherGroupSummary }) {
   const t = useTranslations("teacherDash");
+  const tc = useTranslations("common");
   const analyticsQ = useGroupAnalytics(group.id);
   const [busy, setBusy] = React.useState(false);
   const analytics = analyticsQ.data;
@@ -176,7 +177,7 @@ function GroupPerformanceCard({ group }: { group: TeacherGroupSummary }) {
             {analyticsQ.isLoading ? (
               <Skeleton className="mt-1 h-6 w-10" />
             ) : (
-              <p className="text-lg font-bold tabular-nums text-fg">{analytics?.totalCompletedAttempts ?? 0}</p>
+              <p className="text-lg font-bold tabular-nums text-fg">{analytics?.totalCompletedAttempts ?? "—"}</p>
             )}
           </div>
         </div>
@@ -184,6 +185,8 @@ function GroupPerformanceCard({ group }: { group: TeacherGroupSummary }) {
         <div className="min-w-0">
           {analyticsQ.isLoading ? (
             <Skeleton className="h-10 w-full" />
+          ) : analyticsQ.isError ? (
+            <p className="text-xs text-danger">{tc("unknownError")}</p>
           ) : top.length === 0 ? (
             <p className="text-xs text-fg-subtle">{t("noResults")}</p>
           ) : (
@@ -266,7 +269,8 @@ export function TeacherDashboard() {
   const t = useTranslations("dashboard");
   const td = useTranslations("teacherDash");
   const ta = useTranslations("attendance");
-  const { data: me, isLoading } = useMe();
+  const tc = useTranslations("common");
+  const { data: me, isLoading, refetch } = useMe();
   const [pinSignal, setPinSignal] = React.useState(0);
   const [isSendingDigest, setIsSendingDigest] = React.useState(false);
   const pinRef = React.useRef<HTMLDivElement>(null);
@@ -308,11 +312,21 @@ export function TeacherDashboard() {
     const d = q.data;
     return d ? sum + d.presentCount + d.lateCount : sum;
   }, 0);
-  const attendancePct = marked > 0 ? Math.round((attended / marked) * 100) : null;
+  const attendanceFailed = attendanceQs.some((q) => q.isError);
+  const attendancePct = !attendanceFailed && marked > 0 ? Math.round((attended / marked) * 100) : null;
 
   function openPin() {
     setPinSignal((n) => n + 1);
     pinRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (!isLoading && !profile) {
+    return (
+      <div className="mx-auto max-w-6xl">
+        <PageHeader title={t("greeting", { name: firstName })} />
+        <ErrorState title={tc("unknownError")} action={<Button variant="outline" onClick={() => void refetch()}>{tc("retry")}</Button>} />
+      </div>
+    );
   }
 
   return (
@@ -327,15 +341,15 @@ export function TeacherDashboard() {
           icon={CalendarCheck}
           label={td("kpiAttendance")}
           value={attendancePct === null ? "—" : `${attendancePct}%`}
-          hint={attendancePct === null ? td("kpiAttendanceEmpty") : `${attended} / ${marked}`}
+          hint={attendanceFailed ? tc("unknownError") : attendancePct === null ? td("kpiAttendanceEmpty") : `${attended} / ${marked}`}
           loading={isLoading || attendanceLoading}
           tone="success"
         />
         <KpiCard
           icon={ClipboardCheck}
           label={td("kpiReview")}
-          value={pending}
-          hint={td("kpiReviewHint")}
+          value={gradingQ.isError ? "—" : pending}
+          hint={gradingQ.isError ? tc("unknownError") : td("kpiReviewHint")}
           loading={gradingQ.isLoading}
           tone="warning"
         />
@@ -403,7 +417,7 @@ export function TeacherDashboard() {
                 {td("reviewQueue")}
               </h2>
               <p className="mt-3 text-sm text-fg-muted">
-                {pending > 0 ? `${pending} · ${td("kpiReviewHint")}` : td("reviewEmpty")}
+                {gradingQ.isLoading ? tc("loading") : gradingQ.isError ? tc("unknownError") : pending > 0 ? `${pending} · ${td("kpiReviewHint")}` : td("reviewEmpty")}
               </p>
               <Link
                 href="/mock"
