@@ -124,3 +124,28 @@ class GameSchedulerTests(SimpleTestCase):
         with patch.object(game,'startup_recovery') as startup,patch.object(game,'monthly_reset') as monthly:
             game_scheduler.run(Stop(),now=lambda:next(ticks))
             startup.assert_called_once();monthly.assert_called_once()
+
+
+class LeaderboardRankingTests(SimpleTestCase):
+    """O1/O2: ties are broken by who reached the score first; placeholder accounts are hidden."""
+
+    def _row(self, sid, points, minute, name=None):
+        from datetime import datetime, timezone as tz
+        at = datetime(2026, 11, 1, 10, minute, tzinfo=tz.utc)
+        return dict(studentId=sid, name=name or sid, points=points, reached_at=at, tie=at)
+
+    def test_equal_points_are_ordered_by_who_reached_first(self):
+        result = points.rank_rows([self._row('late', 100, 30), self._row('early', 100, 5), self._row('top', 150, 50)])
+        self.assertEqual([(r['studentId'], r['rank']) for r in result], [('top', 1), ('early', 2), ('late', 3)])
+
+    def test_identical_points_and_time_share_rank_competition_style(self):
+        result = points.rank_rows([self._row('a', 100, 5), self._row('b', 100, 5), self._row('c', 90, 1)])
+        self.assertEqual([r['rank'] for r in result], [1, 1, 3])
+
+    def test_placeholder_and_test_names_are_not_listable(self):
+        for name in ('Student', ' student ', 'Student 2', '', None, "O'quvchi", 'Test User', 'test_bot', 'demo-1', 'User'):
+            with self.subTest(name=name):
+                self.assertFalse(points.is_listable_name(name))
+        for name in ('Nasiba', 'Komiljon Roziyev', 'Studentova Dilnoza', 'TheDailyInfoDose', 'Testerov Ali'):
+            with self.subTest(name=name):
+                self.assertTrue(points.is_listable_name(name))
