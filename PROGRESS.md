@@ -7,6 +7,19 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 18-BLOK: Video audit (8-noyabr) — K1/K2, O1–O4, U1–U6 (branch `fix/video-audit-nov8`)
+1. **P0-DB**: prod Postgres 100/100 ulanishda edi (96 tasi `assessment-worker`ning yopilmagan idle ulanishlari). Sabab: har tick yangi ThreadPoolExecutor, oqim ulanishlari `CONN_MAX_AGE` ostida yopilmasdi. `connections.close_all()` qo'shildi.
+2. **K1**: Record Mock Listening "0 bo'lim" — prod attempt `e46a8e71` `single_skill`, scope'siz, `currentSkill=NULL`; frontend `practiceExam()` barcha bo'limlarni filtrlab yuborardi. Kontent to'liq (35 listening savol), CD access sababi emas. Tuzatildi + `seed_local_k1_attempt` fixture + smoke 14-qadam.
+3. **K2**: Mistake Vault har bir talabaga bir xil qattiq yozilgan foizlarni qaytarardi; endi faqat haqiqiy tekshirilgan javoblardan. Demo fallback'lar olib tashlandi, ma'lumot yo'q bo'lsa "—".
+4. **O1/O2**: reyting — ball teng bo'lsa kim oldin yetgan bo'lsa yuqorida; "Student"/test nomlar va staff yashirildi; nomsiz talabaga ism so'rovchi karta.
+5. **O3/O4**: Exam Track skeletonlari (layout shift yo'q); bildirishnomalar sahifasi ochilganda o'qilgan deb belgilanadi.
+6. **U1–U6**: qavsli tugma matni, i18n (uz/en), bir qatordagi teng balandlikdagi track kartalari, umumiy `LoadErrorPanel`, quiz skeletonlari, video kartalar tekislandi.
+
+## Jarayonda
+- OpenRouter kalitini serverda almashtirish: skript tayyor (`~/set-openrouter-key.sh`), foydalanuvchi kalitni yashirin promptga kiritishi kerak.
+- `ru` locale mavjud emas (faqat uz/en) — to'liq tarjima alohida ish.
+
+
 ### 17-BLOK: CI/CD tiklash — deploy rollback, CI concurrency (PR #98)
 1. **Tiklash**: `fix/ci-deployment-reliability` allaqachon PR #97 sifatida main'ga merge qilingan edi (yo'qolgan ish yo'q). Lokal `fix/exam-pipeline-and-deploy` (5 commit, push qilinmagan) main bilan birlashtirildi → `fix/ci-deployment-reliability-recovery`.
 2. **Topilgan sabablar**: (a) muvaffaqiyatsiz activate'dan keyin qaytish imkoni yo'q edi (`:local` teglar prepare'da qayta yozilardi); (b) run 42030164865 — build va konteyner yangilash bitta SSH buyrug'ida (#97 da bo'lingan); (c) PR CI'da concurrency yo'q; (d) `ubuntu-latest` Ubuntu 26 ga ko'chmoqda; (e) GitHub'da `production` environment mavjud emas → har qanday deploy preflight'da bloklanadi.
