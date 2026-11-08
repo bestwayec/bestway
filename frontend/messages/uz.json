@@ -847,7 +847,21 @@
     "codeCopied": "Kod nusxalandi",
     "approved": "Tasdiqlangan o'quvchi",
     "notApproved": "Tasdiqlanmagan",
-    "noGroup": "Guruhga biriktirilmagan"
+    "noGroup": "Guruhga biriktirilmagan",
+    "continueExam": "Davom etish",
+    "unfinishedExam": "Oxirgi imtihon",
+    "recommendedExam": "Tavsiya qilingan test",
+    "startTest": "Testni boshlash",
+    "estimatedLevel": "Taxminiy daraja",
+    "completedTests": "Topshirilgan testlar",
+    "dayStreak": "Ketma-ket kunlar",
+    "daysCount": "{count} kun",
+    "noTestsYet": "Hali test yo'q",
+    "startFirstTest": "Birinchi testni boshlang",
+    "browseExams": "Imtihonlarni ko'rish",
+    "moreTools": "Qo'shimcha bo'limlar",
+    "liveExamTitle": "Jonli imtihon xonasi",
+    "assignmentsTitle": "Topshiriqlar"
   },
   "parent": {
     "children": "Farzandlarim",

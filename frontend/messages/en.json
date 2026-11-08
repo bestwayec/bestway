@@ -848,7 +848,21 @@
     "codeCopied": "Code copied",
     "approved": "Approved student",
     "notApproved": "Not approved",
-    "noGroup": "Not assigned to a group"
+    "noGroup": "Not assigned to a group",
+    "continueExam": "Continue",
+    "unfinishedExam": "Current exam",
+    "recommendedExam": "Recommended test",
+    "startTest": "Start test",
+    "estimatedLevel": "Estimated level",
+    "completedTests": "Completed tests",
+    "dayStreak": "Day streak",
+    "daysCount": "{count} days",
+    "noTestsYet": "No tests yet",
+    "startFirstTest": "Start your first test",
+    "browseExams": "Browse exams",
+    "moreTools": "More sections",
+    "liveExamTitle": "Live exam room",
+    "assignmentsTitle": "Assignments"
   },
   "parent": {
     "children": "My children",

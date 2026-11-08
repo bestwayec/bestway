@@ -8,7 +8,8 @@ const badgeVariants = cva(
     variants: {
       variant: {
         neutral: "bg-bg-subtle text-fg-muted border border-border",
-        brand: "bg-brand-subtle text-brand-subtle-fg border border-brand/20",
+        outline: "bg-transparent text-fg-muted border border-border",
+        brand: "bg-brand-subtle text-brand border border-brand/30",
         success: "bg-success-bg text-success border border-success-border",
         danger: "bg-danger-bg text-danger border border-danger-border",
         warning: "bg-warning-bg text-warning border border-warning-border",
