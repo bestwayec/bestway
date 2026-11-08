@@ -217,7 +217,7 @@ export function ProfileView() {
                 size="sm"
                 loading={linkToken.isPending}
                 onClick={onLink}
-                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-500/20"
+                className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium"
               >
                 {linkToken.isPending ? <Loader2 className="animate-spin" /> : <Link2 />}
                 {t("linkTelegram")}

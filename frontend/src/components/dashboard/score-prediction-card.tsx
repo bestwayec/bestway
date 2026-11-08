@@ -162,8 +162,30 @@ export function ScorePredictionCard({
 
   const historyPoints = data.history ?? [];
 
+  
+  if (!hasEvidence) {
+    return (
+      <Card className="rounded-[12px] border border-border bg-surface p-6 sm:p-8 text-center" data-testid="prediction-no-evidence">
+        <Award className="mx-auto size-12 text-fg-muted mb-3" />
+        <h3 className="text-xl font-bold text-fg">
+          Hali natija yo'q — birinchi testni boshlang
+        </h3>
+        <p className="mt-2 text-sm text-fg-muted max-w-md mx-auto">
+          Bilimingizni sinab ko'rish va taxminiy darajangizni aniqlash uchun mock imtihon topshiring.
+        </p>
+        <div className="mt-6">
+          <Button asChild className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base">
+            <a href="/mock">
+              Birinchi testni boshlash
+            </a>
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-surface/90 backdrop-blur-md shadow-2xl transition-all", className)}>
+    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-surface/90 backdrop-blur-md  transition-all", className)}>
       <CardHeader className="border-b border-slate-800/80 bg-slate-900/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +236,7 @@ export function ScorePredictionCard({
                 className={cn(
                   "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                   scaleTab === t.id
-                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/40 ring-1 ring-emerald-500/50"
+                    ? "bg-emerald-600 text-white  shadow-emerald-950/40 ring-1 ring-emerald-500/50"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
                 )}
               >
@@ -427,7 +449,7 @@ export function ScorePredictionCard({
                         className={cn(
                           "rounded-md border px-1.5 py-1 transition-all",
                           isActiveLevel
-                            ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 font-bold shadow-xs"
+                            ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 font-bold "
                             : "border-border bg-surface text-fg-muted",
                         )}
                       >
@@ -514,7 +536,7 @@ export function ScorePredictionCard({
                     return (
                       <div
                         key={`${wm.module}-${idx}`}
-                        className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3.5 space-y-2 backdrop-blur-sm shadow-sm transition hover:border-slate-700"
+                        className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3.5 space-y-2 backdrop-blur-sm  transition hover:border-slate-700"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -554,7 +576,7 @@ export function ScorePredictionCard({
                           type="button"
                           size="sm"
                           onClick={() => setActiveDrill({ module: wm.module, categoryId: resolveCategory(wm.module) })}
-                          className="w-full mt-2 h-8 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                          className="w-full mt-2 h-8 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all "
                         >
                           <Zap className="size-3.5 fill-emerald-400 text-emerald-400" />
                           <span>{ti("workOnMistakes")}</span>
@@ -627,8 +649,8 @@ function PredictionSvgChart({
       >
         <defs>
           <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#89F336" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#89F336" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#16a34a" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -655,7 +677,7 @@ function PredictionSvgChart({
         {points.length > 1 && (
           <polyline
             fill="none"
-            stroke="#10B981"
+            stroke="#16a34a"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -669,7 +691,7 @@ function PredictionSvgChart({
               cx={p.x}
               cy={p.y}
               r="4.5"
-              fill="#10B981"
+              fill="#16a34a"
               stroke="#171A10"
               strokeWidth="2"
             />
