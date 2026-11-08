@@ -1721,5 +1721,15 @@
     "unranked": "Taqqoslanadigan AI bahosi kutilmoqda",
     "noScores": "Hali AI baholari yo‘q",
     "comparisonNote": "Writing va Speaking natijalari"
+  },
+  "insights": {
+    "retry": "Qayta urinish",
+    "vaultLoadError": "Xatolar banki yuklanmadi.",
+    "vaultEmptyTitle": "Hozircha xato savollar yo'q",
+    "vaultEmptyHint": "Mock testni yakunlang — tekshirilgan javoblaringiz asosida zaif savol turlari shu yerda paydo bo'ladi.",
+    "lastTrained": "Oxirgi mashq",
+    "predictionLoadError": "Ball bashorati yuklanmadi.",
+    "predictionNoEvidence": "Taxminiy ball birinchi tekshirilgan mock testdan keyin hisoblanadi. Hozircha ma'lumot yo'q.",
+    "weakPointsEmpty": "Zaif nuqtalar xaritasi tekshirilgan mock javoblaringiz asosida tuziladi. Hozircha ma'lumot yo'q."
   }
 }

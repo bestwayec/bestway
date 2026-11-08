@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TargetedPracticeDialog } from "@/components/dashboard/targeted-practice-dialog";
+import { useTranslations } from "next-intl";
+import { Skeleton } from "@/components/ui/feedback";
 import { useMistakeVault } from "@/hooks/use-mock";
 import { cn } from "@/lib/utils";
 
@@ -22,72 +24,23 @@ export interface MistakeCategory {
   videoButtonText?: string;
 }
 
-const DEFAULT_MISTAKE_VAULT: MistakeCategory[] = [
-  {
-    id: "tfng",
-    name: "True / False / Not Given",
-    skill: "reading",
-    wrongCount: 8,
-    totalAttempted: 24,
-    accuracy: 66,
-    lastTrained: "2 kun oldin",
-    recommendedFocus: "Matnda to'g'ridan-to'g'ri berilmagan ma'lumotlarni taxmin qilmaslik (Not Given vs False).",
-    videoUrl: "/en/videos?lesson=lesson-29",
-    videoButtonText: "▶️ 29-dars: Linking Words",
-  },
-  {
-    id: "headings",
-    name: "Headings Matching",
-    skill: "reading",
-    wrongCount: 5,
-    totalAttempted: 18,
-    accuracy: 72,
-    lastTrained: "Kecha",
-    recommendedFocus: "Paragrafning birinchi va oxirgi jumlalariga emas, umumiy g'oyasiga e'tibor qaratish.",
-    videoUrl: "/en/videos?lesson=lesson-26",
-    videoButtonText: "▶️ 26-dars: Relative Clauses",
-  },
-  {
-    id: "info-matching",
-    name: "Information Matching & Multiple Choice",
-    skill: "listening",
-    wrongCount: 7,
-    totalAttempted: 20,
-    accuracy: 65,
-    lastTrained: "3 kun oldin",
-    recommendedFocus: "Spikerning fikrini o'zgartiruvchi 'However', 'Actually' kabi signallarni payqash.",
-    videoUrl: "/en/videos?lesson=lesson-13",
-    videoButtonText: "▶️ 13-dars: Reported Speech",
-  },
-  {
-    id: "summary",
-    name: "Summary & Sentence Completion",
-    skill: "reading",
-    wrongCount: 4,
-    totalAttempted: 22,
-    accuracy: 81,
-    lastTrained: "Bugun",
-    recommendedFocus: "Grammatik shakl (ot, fe'l, sifat) va so'z chegarasi (NO MORE THAN TWO WORDS) qoidasi.",
-    videoUrl: "/en/videos?lesson=lesson-1",
-    videoButtonText: "▶️ 1-dars: Nouns (Otlar)",
-  },
-];
-
 export function MistakeVault({ className }: { className?: string }) {
-  const { data: vaultData } = useMistakeVault();
+  const t = useTranslations("insights");
+  const { data: vaultData, isLoading, isError, refetch } = useMistakeVault();
   const [selectedFilter, setSelectedFilter] = React.useState<"all" | "reading" | "listening">("all");
   
   // Targeted Practice Runner Dialog State
   const [practiceOpen, setPracticeOpen] = React.useState<boolean>(false);
   const [activeCategory, setActiveCategory] = React.useState<MistakeCategory | null>(null);
 
-  const categories: MistakeCategory[] = (vaultData?.categories as MistakeCategory[]) || DEFAULT_MISTAKE_VAULT;
+  // Only the student's own graded answers are shown; there is no demo fallback.
+  const categories: MistakeCategory[] = (vaultData?.categories as MistakeCategory[] | undefined) ?? [];
 
   const filtered = categories.filter(
     (item) => selectedFilter === "all" || item.skill === selectedFilter
   );
 
-  const totalMistakes = vaultData?.totalMistakes ?? categories.reduce((acc, curr) => acc + curr.wrongCount, 0);
+  const totalMistakes = categories.reduce((acc, curr) => acc + curr.wrongCount, 0);
 
   const handleStartReTest = (category: MistakeCategory) => {
     setActiveCategory(category);
@@ -137,6 +90,28 @@ export function MistakeVault({ className }: { className?: string }) {
         </CardHeader>
 
         <CardContent className="pt-4 space-y-3">
+          {isLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2" aria-busy="true">
+              <Skeleton className="h-40" />
+              <Skeleton className="h-40" />
+            </div>
+          ) : isError ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-bg-subtle/40 p-4 text-sm text-fg-muted">
+              <span>{t("vaultLoadError")}</span>
+              <Button type="button" size="sm" variant="outline" onClick={() => void refetch()}>
+                <RefreshCw className="size-3.5 mr-1" />
+                {t("retry")}
+              </Button>
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-bg-subtle/40 p-4" data-testid="mistake-vault-empty">
+              <CheckCircle className="mt-0.5 size-5 shrink-0 text-brand" />
+              <div>
+                <p className="text-sm font-semibold text-fg">{t("vaultEmptyTitle")}</p>
+                <p className="mt-1 text-xs text-fg-muted">{t("vaultEmptyHint")}</p>
+              </div>
+            </div>
+          ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {filtered.map((cat) => {
               const isCritical = cat.accuracy < 70;
@@ -153,7 +128,7 @@ export function MistakeVault({ className }: { className?: string }) {
                           {cat.name}
                         </h4>
                         <p className="text-[11px] text-slate-400 capitalize">
-                          Modul: <span className="text-slate-300 font-medium">{cat.skill}</span> · Oxirgi mashq: {cat.lastTrained ?? "Yaqinda"}
+                          Modul: <span className="text-slate-300 font-medium">{cat.skill}</span>{cat.lastTrained ? <> · {t("lastTrained")}: {cat.lastTrained}</> : null}
                         </p>
                       </div>
                       <Badge
@@ -211,6 +186,7 @@ export function MistakeVault({ className }: { className?: string }) {
               );
             })}
           </div>
+          )}
         </CardContent>
       </Card>
 

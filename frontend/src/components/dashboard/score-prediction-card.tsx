@@ -38,6 +38,12 @@ const DEFAULT_MULTILEVEL_BANDS = [
   { level: "C1", min: 65, max: 75 },
 ];
 
+// Neutral shape used only while rendering an empty card; every number is null so nothing
+// demo-like is ever displayed as the student's own result.
+const EMPTY_PREDICTION = {
+  ielts: { currentBand: null, predictedBand: null, targetBand: 7.5, targetProgressPercent: 0, cefrLevel: null, skillBreakdown: {} },
+  multilevel: { currentScore: null, predictedScore: null, targetScore: 65, targetProgressPercent: 0, cefrLevel: null, scaleBands: DEFAULT_MULTILEVEL_BANDS, skillBreakdown: {} },
+} as unknown as Pick<ScorePredictionResponse, "ielts" | "multilevel">;
 
 function resolveCategory(moduleName: string): string {
   const lower = moduleName.toLowerCase();
@@ -48,79 +54,6 @@ function resolveCategory(moduleName: string): string {
   if (lower.includes("grammar") || lower.includes("writing")) return "grammar_cohesion";
   return "tfng";
 }
-
-const BENCHMARK_QUESTION_TYPES = [
-  {
-    module: "Headings Matching (Reading Task 3)",
-    accuracyPercent: 78,
-    errorRatePercent: 22,
-    correctCount: 7,
-    totalQuestions: 9,
-    severity: "low" as const,
-    recommendation: "Paragraf markaziy tezisi va kontekstual sinonimlarni tahlil qilish tavsiya etiladi.",
-  },
-  {
-    module: "True / False / Not Given (Reading Task 4)",
-    accuracyPercent: 70,
-    errorRatePercent: 30,
-    correctCount: 7,
-    totalQuestions: 10,
-    severity: "medium" as const,
-    recommendation: "Not Given va False o'rtasidagi farqni matndagi qat'iy faktlar asosida tekshiring.",
-  },
-  {
-    module: "Information Matching (Listening Part 3 & 4)",
-    accuracyPercent: 68,
-    errorRatePercent: 32,
-    correctCount: 6,
-    totalQuestions: 9,
-    severity: "medium" as const,
-    recommendation: "Chalg'ituvchi (distractor) variantlarga e'tibor qarating, tezkor paraphrase'larni eshiting.",
-  },
-  {
-    module: "Summary & Note Completion (Reading/Listening)",
-    accuracyPercent: 86,
-    errorRatePercent: 14,
-    correctCount: 12,
-    totalQuestions: 14,
-    severity: "low" as const,
-    recommendation: "So'z chegarasi (word limit) va imlo (spelling) qoidalariga qat'iy rioya qiling.",
-  },
-];
-
-const FALLBACK_PREDICTION: ScorePredictionResponse = {
-  ielts: {
-    currentBand: 6.0,
-    predictedBand: 6.5,
-    targetBand: 7.5,
-    targetProgressPercent: 80,
-    cefrLevel: "B2",
-    skillBreakdown: {
-      listening: 6.5,
-      reading: 6.0,
-      writing: 6.0,
-      speaking: 6.5,
-    },
-  },
-  multilevel: {
-    currentScore: 52,
-    predictedScore: 56,
-    targetScore: 65,
-    targetProgressPercent: 80,
-    cefrLevel: "B2",
-    scaleBands: DEFAULT_MULTILEVEL_BANDS,
-    skillBreakdown: {
-      listening: 14,
-      reading: 13,
-      writing: 12,
-      speaking: 13,
-    },
-  },
-  history: [],
-  weakModules: [],
-  trend: "insufficient_data",
-  attemptsAnalyzed: 0,
-};
 
 export function ScorePredictionCard({
   studentId,
@@ -142,9 +75,14 @@ export function ScorePredictionCard({
   const [targetCefrInput, setTargetCefrInput] = React.useState("C1");
   const [activeDrill, setActiveDrill] = React.useState<{ module: string; categoryId: string } | null>(null);
 
-  const data = predQ.data ?? FALLBACK_PREDICTION;
-  const ielts = data.ielts ?? FALLBACK_PREDICTION.ielts;
-  const multilevel = data.multilevel ?? FALLBACK_PREDICTION.multilevel;
+  const ti = useTranslations("insights");
+  // Never substitute demo numbers: without a real response the card shows loading or an error.
+  const data = predQ.data;
+  const ielts = data?.ielts ?? EMPTY_PREDICTION.ielts;
+  const multilevel = data?.multilevel ?? EMPTY_PREDICTION.multilevel;
+  const hasEvidence = (data?.attemptsAnalyzed ?? 0) > 0;
+  const fmtBand = (v: number | null | undefined) => (hasEvidence && v != null ? Number(v).toFixed(1) : "—");
+  const fmtScore = (v: number | null | undefined) => (hasEvidence && v != null ? String(Math.round(v)) : "—");
   const scaleBands =
     multilevel.scaleBands && multilevel.scaleBands.length > 0
       ? multilevel.scaleBands
@@ -174,13 +112,26 @@ export function ScorePredictionCard({
     }
   }
 
-  if (predQ.isLoading) {
+  if (predQ.isLoading || (!data && !predQ.isError)) {
     return (
       <Card className={cn("mb-5 p-5", className)}>
         <Skeleton className="h-7 w-64 mb-4" />
         <div className="grid gap-4 sm:grid-cols-2">
           <Skeleton className="h-36" />
           <Skeleton className="h-36" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Card className={cn("mb-5 p-5", className)}>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-fg-muted">
+          <span>{ti("predictionLoadError")}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => void predQ.refetch()}>
+            {ti("retry")}
+          </Button>
         </div>
       </Card>
     );
@@ -356,6 +307,11 @@ export function ScorePredictionCard({
             scaleTab === "both" ? "lg:grid-cols-2" : "grid-cols-1",
           )}
         >
+          {!hasEvidence && (
+            <p className={cn("rounded-xl border border-dashed border-border bg-bg-subtle/40 p-3 text-xs text-fg-muted", scaleTab === "both" && "lg:col-span-2")} data-testid="prediction-no-evidence">
+              {ti("predictionNoEvidence")}
+            </p>
+          )}
           {/* 1. IELTS Band Predictor Card */}
           {(scaleTab === "both" || scaleTab === "ielts") && (
             <div className="rounded-xl border border-border bg-bg-subtle/40 p-4 space-y-3">
@@ -369,13 +325,13 @@ export function ScorePredictionCard({
                 <div className="text-right">
                   <div className="inline-flex items-baseline gap-1 rounded-xl bg-brand/15 px-3 py-1.5 border border-brand/30">
                     <span className="text-2xl font-black text-brand tabular-nums">
-                      {Number(ielts.predictedBand || 0).toFixed(1)}
+                      {fmtBand(ielts.predictedBand)}
                     </span>
                     <span className="text-xs font-bold text-fg-muted">/ 9.0</span>
                   </div>
                   <p className="mt-1 text-[11px] text-fg-muted">
-                    Joriy o&apos;rtacha: <strong>{Number(ielts.currentBand || 0).toFixed(1)}</strong> · CEFR:{" "}
-                    <strong>{ielts.cefrLevel || "B2"}</strong>
+                    Joriy o&apos;rtacha: <strong>{fmtBand(ielts.currentBand)}</strong> · CEFR:{" "}
+                    <strong>{hasEvidence ? ielts.cefrLevel || "—" : "—"}</strong>
                   </p>
                 </div>
               </div>
@@ -414,7 +370,7 @@ export function ScorePredictionCard({
                         {sk}
                       </p>
                       <p className="mt-0.5 text-sm font-black text-fg tabular-nums">
-                        {val != null ? Number(val).toFixed(1) : "—"}
+                        {fmtBand(val)}
                       </p>
                     </div>
                   );
@@ -436,15 +392,17 @@ export function ScorePredictionCard({
                 <div className="text-right">
                   <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-1.5 border border-emerald-500/25">
                     <span className="text-2xl font-black text-emerald-400 tabular-nums">
-                      {Math.round(multilevel.predictedScore || 0)}
+                      {fmtScore(multilevel.predictedScore)}
                     </span>
                     <span className="text-xs font-bold text-fg-muted">/ 75</span>
-                    <Badge variant="brand" className="ml-1 font-black">
-                      {multilevel.cefrLevel || "B2"}
-                    </Badge>
+                    {hasEvidence && multilevel.cefrLevel ? (
+                      <Badge variant="brand" className="ml-1 font-black">
+                        {multilevel.cefrLevel}
+                      </Badge>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-[11px] text-fg-muted">
-                    Joriy ball: <strong>{Math.round(multilevel.currentScore || 0)} / 75</strong>
+                    Joriy ball: <strong>{fmtScore(multilevel.currentScore)} / 75</strong>
                   </p>
                 </div>
               </div>
@@ -496,7 +454,7 @@ export function ScorePredictionCard({
                         {sk}
                       </p>
                       <p className="mt-0.5 text-sm font-black text-fg tabular-nums">
-                        {val != null ? Math.round(Number(val)) : "—"}
+                        {fmtScore(val)}
                       </p>
                     </div>
                   );
@@ -530,11 +488,7 @@ export function ScorePredictionCard({
               <Flame className="size-3.5 text-emerald-400" />
               {tp("weak_points_map")}
             </h4>
-            {(!data.weakModules || data.weakModules.length === 0) ? (
-              <Badge variant="neutral" className="text-[10px] bg-slate-800/80 border-slate-700 text-slate-300">
-                {tp("weak_points_benchmark")}
-              </Badge>
-            ) : (
+            {data.weakModules && data.weakModules.length > 0 && (
               <span className="text-[11px] text-slate-400">
                 {tp("weak_points_sub")}
               </span>
@@ -542,18 +496,17 @@ export function ScorePredictionCard({
           </div>
 
           {(() => {
-            const displayList = (data.weakModules && data.weakModules.length > 0)
-              ? data.weakModules.slice(0, 6)
-              : BENCHMARK_QUESTION_TYPES;
-            const isBenchmark = !data.weakModules || data.weakModules.length === 0;
+            const displayList = (data.weakModules ?? []).slice(0, 6);
+            if (displayList.length === 0) {
+              return (
+                <p className="rounded-xl border border-dashed border-border bg-bg-subtle/40 p-4 text-xs text-fg-muted" data-testid="weak-points-empty">
+                  {ti("weakPointsEmpty")}
+                </p>
+              );
+            }
 
             return (
               <div className="space-y-2.5">
-                {isBenchmark && (
-                  <p className="text-[11px] text-slate-400 italic">
-                    {tp("weak_points_note")}
-                  </p>
-                )}
                 <div className="grid gap-2.5 sm:grid-cols-2">
                   {displayList.map((wm, idx) => {
                     const isHigh = wm.severity === "high" || wm.errorRatePercent >= 50;

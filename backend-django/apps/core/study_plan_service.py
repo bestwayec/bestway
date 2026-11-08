@@ -158,66 +158,93 @@ def get_student_study_plan(student_user: User, target_months: int = 3, target_ex
     }
 
 
+# Real question types -> targeted-practice bank ids (PRACTICE_QUESTION_BANKS).
+MISTAKE_BANK_BY_TYPE = {
+    "true_false_notgiven": "tfng",
+    "yes_no_notgiven": "tfng",
+    "matching_headings": "headings",
+    "matching": "info_matching",
+    "multiple_choice": "info_matching",
+    "multi_select": "info_matching",
+    "map_labelling": "info_matching",
+    "sentence_completion": "summary_completion",
+    "note_completion": "summary_completion",
+    "summary_completion": "summary_completion",
+    "table_completion": "summary_completion",
+    "short_answer": "summary_completion",
+    "essay_task1": "grammar_cohesion",
+    "essay_task2": "grammar_cohesion",
+}
+MISTAKE_BANK_NAMES = {
+    "tfng": "True / False / Not Given",
+    "headings": "Headings Matching",
+    "info_matching": "Information Matching & Multiple Choice",
+    "summary_completion": "Summary & Sentence Completion",
+    "grammar_cohesion": "Grammar Range & Cohesion (Writing)",
+}
+MISTAKE_BANK_FOCUS = {
+    "tfng": "Not Given va False o'rtasidagi farqni matndagi qat'iy faktlar asosida tekshiring.",
+    "headings": "Paragraf markaziy tezisi va kontekstual sinonimlarni tahlil qiling.",
+    "info_matching": "Spiker fikrini o'zgartiruvchi 'However', 'Actually' kabi signallarga e'tibor qarating.",
+    "summary_completion": "So'z chegarasi (NO MORE THAN TWO WORDS) va imlo qoidalariga rioya qiling.",
+    "grammar_cohesion": "Murakkab gaplarda bog'lovchilar va tinish belgilari uyg'unligini tekshiring.",
+}
+
+
+def _graded_answer_rows(student_id: str) -> List[tuple]:
+    """(skill, question type, points, is_correct, score) for every graded answer of the
+    student's finished mock attempts. In-progress attempts are excluded."""
+    return list(
+        MockAnswer.objects.filter(attempt__student_id=student_id)
+        .exclude(attempt__status="in_progress")
+        .values_list("question__group__section__skill", "question__type", "question__points", "is_correct", "score")
+    )
+
+
+def _answer_is_correct(is_correct, score, points) -> Optional[bool]:
+    if is_correct is not None:
+        return bool(is_correct)
+    if score is not None and points:
+        return float(score) >= float(points) * 0.65
+    return None  # not graded yet: neither a mistake nor a success
+
+
 def get_student_mistake_vault(student_user: User) -> Dict[str, Any]:
-    """Retrieve deep diagnostic analysis of question types student struggles with most."""
-    # Diagnostic topic benchmarks enriched with practice generators
-    categories = [
-        {
-            "id": "tfng",
-            "name": "True / False / Not Given",
-            "skill": "reading",
-            "wrongCount": 14,
-            "totalAttempted": 38,
-            "accuracy": 63,
-            "severity": "high",
-            "recommendedFocus": "Not Given va False o'rtasidagi farqni matndagi qat'iy faktlar asosida tekshiring.",
-            "sampleQuestion": "The author claims that rapid urbanization directly caused the 19th century health crisis.",
-        },
-        {
-            "id": "headings",
-            "name": "Headings Matching",
-            "skill": "reading",
-            "wrongCount": 9,
-            "totalAttempted": 30,
-            "accuracy": 70,
-            "severity": "medium",
-            "recommendedFocus": "Paragraf markaziy tezisi va kontekstual sinonimlarni tahlil qilish tavsiya etiladi.",
-            "sampleQuestion": "Choose the correct heading for Section B from the list of headings below.",
-        },
-        {
-            "id": "info_matching",
-            "name": "Information Matching & Distractors",
-            "skill": "listening",
-            "wrongCount": 11,
-            "totalAttempted": 32,
-            "accuracy": 65,
-            "severity": "medium",
-            "recommendedFocus": "Spiker fikrini o'zgartiruvchi 'However', 'Actually' kabi signallarga e'tibor qarating.",
-            "sampleQuestion": "Which presentation topic was rejected due to lack of academic research?",
-        },
-        {
-            "id": "summary_completion",
-            "name": "Summary & Sentence Completion",
-            "skill": "reading",
-            "wrongCount": 6,
-            "totalAttempted": 34,
-            "accuracy": 82,
-            "severity": "low",
-            "recommendedFocus": "So'z chegarasi (NO MORE THAN TWO WORDS) va imlo (spelling) qoidalariga rioya qiling.",
-            "sampleQuestion": "Complete the summary below using words directly taken from the passage.",
-        },
-        {
-            "id": "grammar_cohesion",
-            "name": "Grammar Range & Cohesion (Insholar)",
-            "skill": "writing",
-            "wrongCount": 8,
-            "totalAttempted": 25,
-            "accuracy": 68,
-            "severity": "medium",
-            "recommendedFocus": "Murakkab qo'shma gaplarda tinish belgilari va bog'lovchilar ('Whereas', 'Consequently') uyg'unligi.",
-            "sampleQuestion": "Task 2: Evaluate the balance of complex clauses and transition connectors in your argument.",
-        },
-    ]
+    """Mistake categories computed only from the student's own graded mock answers.
+
+    No demo/benchmark numbers are ever returned: a student without graded answers
+    gets an empty list and ``hasData=False`` so the UI can show an empty state."""
+    buckets: Dict[str, Dict[str, Any]] = {}
+    try:
+        rows = _graded_answer_rows(student_user.id)
+    except Exception:
+        rows = []
+    for skill, q_type, points, is_correct, score in rows:
+        bank = MISTAKE_BANK_BY_TYPE.get(q_type or "")
+        ok = _answer_is_correct(is_correct, score, points)
+        if bank is None or ok is None:
+            continue
+        entry = buckets.setdefault(bank, {"skills": {}, "total": 0, "wrong": 0})
+        entry["total"] += 1
+        entry["wrong"] += 0 if ok else 1
+        entry["skills"][skill] = entry["skills"].get(skill, 0) + 1
+
+    categories: List[Dict[str, Any]] = []
+    for bank, entry in buckets.items():
+        if entry["wrong"] <= 0:
+            continue
+        accuracy = round((entry["total"] - entry["wrong"]) * 100 / entry["total"])
+        categories.append({
+            "id": bank,
+            "name": MISTAKE_BANK_NAMES[bank],
+            "skill": max(entry["skills"], key=entry["skills"].get) if entry["skills"] else "reading",
+            "wrongCount": entry["wrong"],
+            "totalAttempted": entry["total"],
+            "accuracy": accuracy,
+            "severity": "high" if accuracy < 55 else "medium" if accuracy < 75 else "low",
+            "recommendedFocus": MISTAKE_BANK_FOCUS[bank],
+        })
+    categories.sort(key=lambda c: (c["accuracy"], -c["wrongCount"]))
 
     # Enrich with diagnostic weak topics from Express Placement Test if student took it
     try:
@@ -243,7 +270,7 @@ def get_student_mistake_vault(student_user: User) -> Dict[str, Any]:
         pass
 
     total_mistakes = sum(c["wrongCount"] for c in categories)
-    average_accuracy = int(sum(c["accuracy"] for c in categories) / len(categories))
+    average_accuracy = int(sum(c["accuracy"] for c in categories) / len(categories)) if categories else None
 
     return {
         "studentId": student_user.id,
@@ -251,6 +278,7 @@ def get_student_mistake_vault(student_user: User) -> Dict[str, Any]:
         "totalMistakes": total_mistakes,
         "averageAccuracy": average_accuracy,
         "categories": categories,
+        "hasData": bool(categories),
         "updatedAt": timezone.now().isoformat(),
     }
 

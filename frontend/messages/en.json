@@ -1722,5 +1722,15 @@
     "unranked": "Awaiting a comparable AI assessment",
     "noScores": "No AI assessments yet",
     "comparisonNote": "Writing and Speaking results"
+  },
+  "insights": {
+    "retry": "Try again",
+    "vaultLoadError": "Could not load your mistake vault.",
+    "vaultEmptyTitle": "No mistakes collected yet",
+    "vaultEmptyHint": "Finish a mock test. Your weak question types will appear here based on your graded answers.",
+    "lastTrained": "Last practised",
+    "predictionLoadError": "Could not load your score prediction.",
+    "predictionNoEvidence": "Your estimated score is calculated after your first graded mock test. No data yet.",
+    "weakPointsEmpty": "The weak points map is built from your graded mock answers. No data yet."
   }
 }

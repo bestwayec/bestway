@@ -534,8 +534,9 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     for sk in ("listening", "reading", "writing", "speaking"):
         i_vals = skills_ielts_acc[sk]
         m_vals = skills_ml_acc[sk]
-        skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else curr_band
-        skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else curr_ml
+        # No graded evidence for a skill -> None ("—" in the UI), never a fabricated 0.0.
+        skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else (curr_band if ielts_series else None)
+        skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else (curr_ml if ml_series else None)
 
     weak_modules = _analyze_weak_modules([a.id for a in completed_attempts])
 
