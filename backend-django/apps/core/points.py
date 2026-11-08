@@ -82,7 +82,8 @@ def rank_rows(rows):
 
 
 def leaderboard(query):
-    rows = StudentProfile.objects.filter(user__is_active=True).select_related('user')
+    # Staff accounts that also own a StudentProfile (e.g. a super_admin testing the app) are not ranked.
+    rows = StudentProfile.objects.filter(user__is_active=True, user__role='student').select_related('user')
     if query.get('groupId'): rows = rows.filter(group_id=query['groupId'])
     # Moment the current total was reached = latest points change (or account creation).
     last_change = PointsLog.objects.filter(student_id=OuterRef('pk')).order_by('-created_at').values('created_at')[:1]
