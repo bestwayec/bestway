@@ -25,58 +25,54 @@ import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 const REPO = "bestwayec/bw-tauri";
-const CURRENT_VERSION = "v1.0.9";
+const CURRENT_VERSION = "v1.0.10";
 const RELEASES_URL = `https://github.com/${REPO}/releases/tag/${CURRENT_VERSION}`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const LATEST_RELEASE_BASE = `https://github.com/${REPO}/releases/download/${CURRENT_VERSION}`;
 
-const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_x64-setup.exe`;
-const LATEST_ANDROID_APK_URL = `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_universal.apk`;
+// Must match the asset names the bw-tauri release workflows upload.
+const LATEST_WINDOWS_SETUP_URL = `${LATEST_RELEASE_BASE}/Bestway.App_1.0.10_x64-setup.exe`;
+const LATEST_ANDROID_APK_URL = `${LATEST_RELEASE_BASE}/bestway-app.apk`;
 
 const FALLBACK_RELEASE: ReleaseInfo = {
-  version: "v1.0.9",
-  publishedAt: "2026-10-28T18:00:00Z",
+  version: "v1.0.10",
+  publishedAt: "2026-11-08T18:00:00Z",
   windows: [
     {
-      name: "Bestway.App_1.0.9_x64-setup.exe",
+      name: "Bestway.App_1.0.10_x64-setup.exe",
       url: LATEST_WINDOWS_SETUP_URL,
-      sizeMB: "4.2 MB",
-    },
-    {
-      name: "Bestway.App_1.0.9_x64_en-US.msi",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_x64_en-US.msi`,
-      sizeMB: "3.9 MB",
+      sizeMB: "3.5 MB",
     },
   ],
   macos: [
     {
-      name: "Bestway.App_1.0.9_aarch64.dmg · Apple Silicon",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_aarch64.dmg`,
-      sizeMB: "7.1 MB",
+      name: "Bestway.App_1.0.10_aarch64.dmg · Apple Silicon",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.10_aarch64.dmg`,
+      sizeMB: "6.3 MB",
     },
     {
-      name: "Bestway.App_1.0.9_x64.dmg · Intel",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_x64.dmg`,
-      sizeMB: "7.4 MB",
+      name: "Bestway.App_1.0.10_x64.dmg · Intel",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.10_x64.dmg`,
+      sizeMB: "6.6 MB",
     },
   ],
   linux: [
     {
-      name: "Bestway.App_1.0.9_amd64.deb · Debian / Ubuntu",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_amd64.deb`,
-      sizeMB: "6.2 MB",
+      name: "Bestway.App_1.0.10_amd64.deb · Debian / Ubuntu",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.10_amd64.deb`,
+      sizeMB: "5.5 MB",
     },
     {
-      name: "Bestway.App_1.0.9_amd64.AppImage · Standalone",
-      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.9_amd64.AppImage`,
-      sizeMB: "86.5 MB",
+      name: "Bestway.App_1.0.10_amd64.AppImage · Standalone",
+      url: `${LATEST_RELEASE_BASE}/Bestway.App_1.0.10_amd64.AppImage`,
+      sizeMB: "80.1 MB",
     },
   ],
   android: [
     {
-      name: "Bestway.App_1.0.9_universal.apk · Universal APK",
+      name: "bestway-app.apk · Universal APK",
       url: LATEST_ANDROID_APK_URL,
-      sizeMB: "44.8 MB",
+      sizeMB: "5.1 MB",
     },
   ],
 };
@@ -284,7 +280,7 @@ export function DesktopDownload() {
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant="success" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      Android APK · v1.0.9
+                      Android APK · {release?.version ?? CURRENT_VERSION}
                     </Badge>
                     <span className="text-xs font-semibold text-emerald-300">
                       Universal ABI (64-bit / 32-bit)
@@ -305,7 +301,7 @@ export function DesktopDownload() {
                 >
                   <a href={release?.android[0]?.url || LATEST_ANDROID_APK_URL} download>
                     <Download className="size-5 mr-2" />
-                    <span>BestWay APK Yuklab Olish ({release?.android[0]?.sizeMB || "44.8 MB"})</span>
+                    <span>BestWay APK Yuklab Olish ({release?.android[0]?.sizeMB || FALLBACK_RELEASE.android[0].sizeMB})</span>
                   </a>
                 </Button>
               </div>
@@ -319,7 +315,7 @@ export function DesktopDownload() {
                   <span>1. Faylni Yuklab Oling</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Tugmani bosing va <code className="text-emerald-300">Bestway.App_1.0.9_universal.apk</code> faylini qurilmangizga saqlang.
+                  Tugmani bosing va <code className="text-emerald-300">bestway-app.apk</code> faylini qurilmangizga saqlang.
                 </p>
               </div>
 

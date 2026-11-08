@@ -107,8 +107,8 @@ services:
       ASSESSMENT_FALLBACK_PROVIDER: xkiro
       ASSESSMENT_CONFIDENCE_THRESHOLD: "0.70"
       # Keep in step with bw-tauri (package.json / tauri.conf.json). Override in the root .env once a release is published.
-      DESKTOP_LATEST_VERSION: ${DESKTOP_LATEST_VERSION:-1.0.9}
-      DESKTOP_DOWNLOAD_URL: ${DESKTOP_DOWNLOAD_URL:-https://github.com/bestwayec/bw-tauri/releases/download/v1.0.9/Bestway.App_1.0.9_x64-setup.exe}
+      DESKTOP_LATEST_VERSION: ${DESKTOP_LATEST_VERSION:-1.0.10}
+      DESKTOP_DOWNLOAD_URL: ${DESKTOP_DOWNLOAD_URL:-https://github.com/bestwayec/bw-tauri/releases/download/v1.0.10/Bestway.App_1.0.10_x64-setup.exe}
       DESKTOP_PRERELEASE: "false"
     ports:
       - "127.0.0.1:3001:3001"
