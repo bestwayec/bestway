@@ -76,6 +76,7 @@ import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
 import { ErrorBoundary } from "@/components/common/error-boundary";
+import { LoadErrorPanel } from "@/components/common/load-error-panel";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
@@ -104,6 +105,7 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
 export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
+  const tm = useTranslations("errorPanel");
   const examQ = useMockExam(attempt.examId);
   const audioTimestampsQ = useAudioTimestamps(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
@@ -570,23 +572,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       rawExam: examQ.data,
     });
     return (
-      <div className="mx-auto flex min-h-[400px] max-w-lg items-center justify-center p-6 text-center">
-        <div className="w-full rounded-2xl border-2 border-red-500/50 bg-surface p-6 shadow-2xl">
-          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-red-500/20 text-red-500">
-            <AlertTriangle className="size-6" />
-          </div>
-          <h2 className="text-lg font-bold text-red-600">Failed to load questions from server</h2>
-          <p className="mt-2 text-xs text-fg-muted">
-            Ushbu imtihon topshiriqlari serverdan yuklanmadi yoki bo&apos;sh keldi (0 bo&apos;lim). Iltimos, qayta urinib ko&apos;ring.
-          </p>
-          <div className="mt-4 flex justify-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => examQ.refetch()} className="gap-2">
-              <RefreshCw className="size-3.5" />
-              Qayta yuklash (Retry)
-            </Button>
-          </div>
-        </div>
-      </div>
+      <LoadErrorPanel
+        title={tm("loadErrorTitle")}
+        reason={examQ.isError ? tm("loadErrorNetwork") : tm("loadErrorEmpty")}
+        onRetry={() => void examQ.refetch()}
+      />
     );
   }
 

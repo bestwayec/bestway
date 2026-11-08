@@ -289,7 +289,9 @@ export function VideosView() {
                     </div>
 
                     {/* Matn va Tafsilotlar Qismi */}
-                    <div className="flex flex-1 flex-col p-4 justify-between space-y-3">
+                    {/* U6: fixed text heights + bottom-pinned, non-wrapping action row keep every
+                        card in a row the same height with Watch/Test and the XP badge aligned. */}
+                    <div className="flex flex-1 flex-col gap-3 p-4">
                       <div>
                         {/* Meta qatori: Davomiylik & XP */}
                         <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
@@ -304,20 +306,18 @@ export function VideosView() {
                         </div>
 
                         {/* Dars sarlavhasi */}
-                        <h3 className="line-clamp-2 font-black text-white text-sm sm:text-base leading-snug group-hover:text-emerald-400 transition-colors">
+                        <h3 className="line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] font-black text-white text-sm sm:text-base leading-snug group-hover:text-emerald-400 transition-colors">
                           {v.title}
                         </h3>
 
                         {/* Tavsif */}
-                        {v.description && (
-                          <p className="line-clamp-2 text-xs text-slate-400 mt-1 leading-relaxed">
-                            {v.description}
-                          </p>
-                        )}
+                        <p className="line-clamp-2 min-h-[2.5rem] text-xs text-slate-400 mt-1 leading-relaxed">
+                          {v.description ?? ""}
+                        </p>
                       </div>
 
                       {/* Harakat tugmalari */}
-                      <div className="pt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <div className="mt-auto flex flex-nowrap items-center gap-1.5 sm:gap-2">
                         {v.access === "granted" ? (
                           <>
                             {/* 1. Watch Action */}
@@ -344,7 +344,7 @@ export function VideosView() {
                                   className="h-9 px-2.5 sm:px-3 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 text-xs font-bold shadow-sm flex-shrink-0"
                                 >
                                   <FileText className="w-3.5 h-3.5 mr-1 text-emerald-400 flex-shrink-0" />
-                                  <span>📝 Test</span>
+                                  <span>Test</span>
                                 </Button>
                               ) : (
                                 <Button
@@ -370,7 +370,7 @@ export function VideosView() {
                                   className="h-9 px-2 sm:px-2.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold shadow-sm flex-shrink-0"
                                 >
                                   <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400 flex-shrink-0" />
-                                  <span>🎮 Arena</span>
+                                  <span>Arena</span>
                                 </Button>
                               ) : (
                                 <Button

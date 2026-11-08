@@ -61,11 +61,23 @@ class AdaptiveStudyPlanServiceTests(SimpleTestCase):
         self.assertIsNotNone(plan["rebalanceMessage"])
         self.assertIn("qayta muvozanatlashtirdi", plan["rebalanceMessage"])
 
-    def test_mistake_vault_diagnostics_and_targeted_practice(self):
+    @patch("apps.core.study_plan_service._graded_answer_rows")
+    def test_mistake_vault_diagnostics_and_targeted_practice(self, rows):
+        rows.return_value = [
+            ("reading", "true_false_notgiven", 1, False, None),
+            ("reading", "true_false_notgiven", 1, True, None),
+            ("reading", "yes_no_notgiven", 1, False, None),
+            ("listening", "multiple_choice", 1, True, None),
+            ("listening", "multiple_choice", 1, None, None),  # ungraded: ignored
+            ("writing", "essay_task2", 9, None, 4.0),          # 4 < 0.65*9 -> mistake
+        ]
         user = SimpleNamespace(id="student-4", name="Dilnoza Rahimova", role="student")
         vault = study_plan_service.get_student_mistake_vault(user)
-        self.assertTrue(vault["totalMistakes"] > 0)
-        self.assertTrue(len(vault["categories"]) >= 4)
+        by_id = {c["id"]: c for c in vault["categories"]}
+        self.assertEqual(set(by_id), {"tfng", "grammar_cohesion"})  # info_matching has no mistakes
+        self.assertEqual((by_id["tfng"]["wrongCount"], by_id["tfng"]["totalAttempted"], by_id["tfng"]["accuracy"]), (2, 3, 33))
+        self.assertEqual(vault["totalMistakes"], 3)
+        self.assertTrue(vault["hasData"])
         
         # Test 1-click targeted practice generation
         practice = study_plan_service.generate_targeted_practice(user, category_id="tfng")
@@ -73,6 +85,16 @@ class AdaptiveStudyPlanServiceTests(SimpleTestCase):
         self.assertEqual(len(practice["questions"]), 10)
         self.assertEqual(practice["categoryId"], "tfng")
         self.assertIn("TRUE", practice["questions"][0]["options"])
+
+
+    @patch("apps.core.study_plan_service._graded_answer_rows", return_value=[])
+    def test_mistake_vault_without_answers_returns_no_demo_data(self, _rows):
+        user = SimpleNamespace(id="student-new", name="New Student", role="student")
+        vault = study_plan_service.get_student_mistake_vault(user)
+        self.assertEqual(vault["categories"], [])
+        self.assertEqual(vault["totalMistakes"], 0)
+        self.assertIsNone(vault["averageAccuracy"])
+        self.assertFalse(vault["hasData"])
 
 
 class TeacherAnalyticsAndReportTests(SimpleTestCase):

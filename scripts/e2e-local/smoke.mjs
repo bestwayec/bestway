@@ -1,6 +1,7 @@
 // BESTWAY local browser smoke test (Playwright, real Chromium).
 // Synthetic accounts only (created by `manage.py seed_local_dev`), loopback only.
 //   node smoke.mjs            -> runs all steps, writes report + screenshots to ../../.local/e2e/
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +16,8 @@ const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic local
 const STUDENT = process.env.BW_STUDENT || "+998900000011";
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
 const ADMIN = process.env.BW_ADMIN || "+998900000002";
+const STUDENT_ONE = process.env.BW_STUDENT_ONE || "+998900000010";
+const RECORD_MOCK = process.env.BW_RECORD_MOCK || "MOCK-RECORD-01";
 
 const host = new URL(WEB).hostname;
 if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(host)) {
@@ -172,8 +175,11 @@ await step(s, "06-exam-catalogue", async () => {
 
 await step(s, "07-practice-exam-start", async () => {
   // Re-runs: a single-section attempt may still be open -> card shows a Resume link (1 skill) or button.
-  const resumeLink = s.getByRole("link", { name: /^resume$/i });
-  const resumeBtn = s.getByRole("button", { name: /^resume$/i });
+  // Scope to the CBT mock card: other exams (e.g. the Record Mock) may have their own Resume.
+  const card = s.locator('[data-testid^="mock-card-"]').filter({ hasText: "Multi-Level CEFR CBT Mock 1" }).first();
+  await card.waitFor();
+  const resumeLink = card.getByRole("link", { name: /^resume$/i });
+  const resumeBtn = card.getByRole("button", { name: /^resume$/i });
   if (await resumeLink.count()) {
     await resumeLink.first().click();
   } else if (await resumeBtn.count()) {
@@ -182,7 +188,7 @@ await step(s, "07-practice-exam-start", async () => {
     await d.waitFor();
     await d.getByRole("button").filter({ hasText: /reading/i }).first().click();
   } else {
-    await s.getByRole("button", { name: /^start$/i }).click();
+    await card.getByRole("button", { name: /^start$/i }).click();
     const d = s.getByRole("dialog");
     await d.waitFor();
     await Promise.all([
@@ -307,6 +313,47 @@ await step(t, "13-rbac-student-cannot-use-admin-api", async () => {
   await sc.close();
   if (![401, 403, 404].includes(forbidden.status())) throw new Error(`student got HTTP ${forbidden.status()} on staff endpoint`);
   return `student -> /users = HTTP ${forbidden.status()}`;
+});
+
+// ---------------- K1: Record Mock Listening on a scope-less single_skill attempt ----------------
+// Live PIN rooms and older attempts have flowMode "single_skill" without a frozen practice scope.
+// Before the K1 fix the runner filtered every section away: "Failed to load questions (0 bo'lim)".
+await step(t, "14-record-mock-listening-loads-and-persists", async () => {
+  const py = join(here, "..", "..", "backend-django", ".venv", "Scripts", "python.exe");
+  const attemptId = execFileSync(py, ["manage.py", "seed_local_k1_attempt", "--phone", STUDENT_ONE, "--exam", RECORD_MOCK],
+    { cwd: join(here, "..", "..", "backend-django"), encoding: "utf8" }).trim().split(/\s+/).pop();
+  if (!/^[0-9a-f-]{36}$/.test(attemptId)) throw new Error(`fixture returned ${attemptId}`);
+
+  const kc = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  const k = await kc.newPage();
+  k.setDefaultTimeout(90000);
+  watch(k, "student-k1");
+  await login(k, STUDENT_ONE);
+  await k.goto(`${WEB}/en/mock/attempt/${attemptId}?skill=listening`, { waitUntil: "domcontentloaded" });
+  const answerable = k.locator('input[aria-label^="Answer for question"], input[type="radio"], [role="radio"]');
+  await answerable.first().waitFor({ timeout: 120000 });
+  const body = await k.innerText("body");
+  if (/Failed to load questions|0 bo'lim|\(0\/0\)/.test(body)) throw new Error("runner reports 0 sections");
+  await k.screenshot({ path: join(OUT, "14-record-listening.png") });
+
+  const saveResp = k.waitForResponse((r) => /\/answers?$/.test(new URL(r.url()).pathname) && r.request().method() === "POST", { timeout: 30000 });
+  const first = answerable.first();
+  const tag = `k1-${Date.now().toString(36)}`;
+  if ((await first.getAttribute("type")) === "radio" || (await first.getAttribute("role")) === "radio") await first.click();
+  else await first.fill(tag);
+  const resp = await saveResp;
+  if (resp.status() >= 400) throw new Error(`save HTTP ${resp.status()}`);
+
+  await k.reload({ waitUntil: "domcontentloaded" });
+  await answerable.first().waitFor({ timeout: 120000 });
+  const detail = await (await kc.request.get(`${WEB}/api/backend/mock/attempts/${attemptId}`)).json();
+  const listening = (detail.data.sections || []).find((x) => x.skill === "listening");
+  if (!listening) throw new Error("attempt detail has no listening section");
+  const saved = listening.groups.flatMap((g) => g.questions).filter((q) => q.response != null && String(q.response).trim());
+  if (saved.length < 1) throw new Error("answer not persisted after reload");
+  await k.screenshot({ path: join(OUT, "14-record-listening-after-reload.png") });
+  await kc.close();
+  return `attempt ${attemptId}: ${listening.groups.length} listening parts visible, ${saved.length} answer(s) persisted after reload`;
 });
 
 await browser.close();

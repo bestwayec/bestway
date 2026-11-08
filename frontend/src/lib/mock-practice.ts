@@ -47,6 +47,13 @@ export function practiceExam(
 ): MockExamDetail | undefined {
   if (!exam) return undefined;
   if (!isPartialPractice(attempt)) return exam;
+  // A "single_skill" attempt without a frozen scope (live PIN rooms, attempts started before
+  // scopes were stored) is authorised by the backend for the whole exam. Filtering it here
+  // removed every section and showed "0 bo'lim" / "0/0" (K1); the runner picks the section
+  // from ?skill= or currentSkill instead.
+  const hasExplicitScope =
+    Boolean(attempt.singleSection) || Boolean(attempt.practiceScope?.skills?.length);
+  if (!hasExplicitScope && attempt.flowMode !== "partial_practice") return exam;
 
   // Single section practice takes precedence:
   const targetSkill =

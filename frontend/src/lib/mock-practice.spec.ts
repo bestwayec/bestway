@@ -34,3 +34,16 @@ describe("explicit authored-task practice", () => {
     expect(practiceExam(undefined, { flowMode: "partial_practice" })).toBeUndefined();
   });
 });
+
+describe("single_skill attempts without a frozen scope (K1)", () => {
+  it("keeps every section so the runner can open the requested skill", () => {
+    const legacy = practiceExam(exam, { flowMode: "single_skill" })!;
+    expect(legacy.sections.map((section) => section.skill)).toEqual(["listening", "writing", "speaking"]);
+    expect(legacy.sections.length).toBeGreaterThan(0);
+  });
+
+  it("still narrows scoped single-section practice", () => {
+    const scoped = practiceExam(exam, { flowMode: "single_skill", singleSection: "writing", practiceScope: { skills: ["writing"], questionIds: ["w1"] } } as never)!;
+    expect(scoped.sections.map((section) => section.skill)).toEqual(["writing"]);
+  });
+});

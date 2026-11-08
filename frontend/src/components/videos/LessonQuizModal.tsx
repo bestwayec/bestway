@@ -18,6 +18,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/feedback";
 import { motion, AnimatePresence } from "motion/react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -347,9 +348,12 @@ export function LessonQuizModal({
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {loading ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="size-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-sm text-slate-400 font-medium">Test savollari yuklanmoqda...</p>
+            <div className="space-y-4 py-2" aria-busy="true" data-testid="lesson-quiz-skeleton">
+              <p className="sr-only" role="status">Test savollari yuklanmoqda...</p>
+              <Skeleton className="h-6 w-2/3" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 rounded-xl" />
+              ))}
             </div>
           ) : result ? (
             /* Results Screen */

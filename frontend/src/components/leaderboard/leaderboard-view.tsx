@@ -70,7 +70,7 @@ export function LeaderboardView() {
                 </span>
                 <span className="min-w-0 flex-1 truncate font-medium text-fg">
                   {r.name}
-                  {isSelf && <span className="ml-2 text-xs text-brand">({tc("profile")})</span>}
+                  {isSelf && <span className="ml-2 text-xs text-brand">({t("you")})</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-1 font-semibold text-fg tabular-nums">
                   <Star className="size-4 text-brand" />

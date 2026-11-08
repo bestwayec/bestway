@@ -17,7 +17,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/i18n/navigation";
@@ -64,6 +66,7 @@ export function VocabularyQuizRunner({
   onFinish,
   onExit,
 }: VocabularyQuizRunnerProps) {
+  const t = useTranslations("vocabQuiz");
   const [questions, setQuestions] = React.useState<QuizQuestion[]>([]);
   const [quizTitle, setQuizTitle] = React.useState<string>("");
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -227,9 +230,20 @@ export function VocabularyQuizRunner({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-12 text-center text-slate-300 shadow-2xl flex flex-col items-center justify-center gap-4">
-        <Sparkles className="h-8 w-8 text-emerald-400 animate-spin" />
-        <p className="text-base font-medium">Lug'at savollari tayyorlanmoqda...</p>
+      // Skeleton in the shape of the quiz card (U5): header, progress, prompt, four options.
+      <div className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl" aria-busy="true" data-testid="vocab-quiz-skeleton">
+        <p className="sr-only" role="status">{t("preparing")}</p>
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-6 w-16" />
+        </div>
+        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-8 w-3/4" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }

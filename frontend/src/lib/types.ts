@@ -1171,6 +1171,8 @@ export interface ScorePredictionHistoryItem {
 export interface ScorePredictionResponse {
   ielts: {
     currentBand: number;
+    /** Band change from the first analysed attempt to the projection (backend `trendDelta`). */
+    trendDelta?: number;
     predictedBand: number;
     targetBand: number;
     targetProgressPercent: number;

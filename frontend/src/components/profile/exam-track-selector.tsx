@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
+import { ExamTrackCard } from "@/components/exam-track/exam-track-card";
 import { useExamPrograms, useSetExamPrograms, type ExamProgram } from "@/hooks/use-exam-programs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/feedback";
 
 export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   const t = useTranslations("examTrack");
@@ -15,10 +16,18 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   const save = useSetExamPrograms(studentId);
 
   if (state.isPending) {
+    // Same footprint as the loaded card so nothing below jumps when data arrives (O3).
     return (
-      <div className="my-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400 animate-pulse">
-        {t("loading")}
-      </div>
+      <Card className="my-4 border-slate-800 bg-bg-subtle/90 p-5" aria-busy="true" aria-label={t("loading")} data-testid="exam-track-skeleton">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <Skeleton className="h-9 w-56" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+        </div>
+      </Card>
     );
   }
   if (!state.data) {
@@ -46,77 +55,30 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
           </p>
         </div>
         <Badge variant="neutral" className="border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-xs">
-          Faol Yo&apos;nalish: {current.activeProgram ?? "IELTS"}
+          {t("activeBadge", { program: current.activeProgram ? t(current.activeProgram === "IELTS" ? "ieltsName" : "multilevelName") : "—" })}
         </Badge>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 items-stretch gap-3">
         {(["IELTS", "MULTILEVEL"] as ExamProgram[]).map((program) => {
           const isActive = current.activeProgram === program;
           const available = current.availablePrograms.includes(program);
           const selectable = available || (!manage && accessPolicy === "SELF_SELECT");
-
           return (
-            <div
+            <ExamTrackCard
               key={program}
-              className={cn(
-                "relative flex flex-col justify-between rounded-xl border p-4 transition-all",
-                isActive
-                  ? "border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 via-slate-900/90 to-slate-900 shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-500/30"
-                  : "border-slate-800/80 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900/90"
-              )}
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-extrabold text-white tracking-tight">
-                      {program === "IELTS" ? "IELTS Academic" : "Multi-Level (CEFR)"}
-                    </span>
-                    {isActive && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                        <CheckCircle2 className="size-3" />
-                        Faol
-                      </span>
-                    )}
-                  </div>
-                  <Badge variant={isActive ? "success" : available ? "brand" : "neutral"} className="text-[11px]">
-                    {t(isActive ? "active" : available ? "enrolled" : selectable ? "available" : "locked")}
-                  </Badge>
-                </div>
-
-                <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
-                  {t(program === "IELTS" ? "ieltsDescription" : "multilevelDescription")}
-                </p>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center gap-2">
-                <Button
-                  size="sm"
-                  disabled={!selectable || save.isPending || isActive}
-                  onClick={() => save.mutate({ ...current, activeProgram: program })}
-                  className={cn(
-                    "w-full text-xs font-bold transition-all",
-                    isActive
-                      ? "bg-emerald-600 text-white shadow-lg cursor-default hover:bg-emerald-600"
-                      : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-                  )}
-                >
-                  {isActive ? (
-                    <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className="size-3.5" />
-                      {t("active")}
-                    </span>
-                  ) : (
-                    `${t("select")} ${program}`
-                  )}
-                </Button>
-
-                {manage && (
+              program={program}
+              isActive={isActive}
+              selectable={selectable}
+              pending={save.isPending && save.variables?.activeProgram === program}
+              onSelect={() => save.mutate({ ...current, activeProgram: program })}
+              extraAction={
+                manage ? (
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={save.isPending}
-                    className="shrink-0 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+                    className="text-xs"
                     onClick={() => {
                       const programs = available
                         ? current.availablePrograms.filter((p) => p !== program)
@@ -132,9 +94,9 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
                   >
                     {t(available ? "remove" : "assign")}
                   </Button>
-                )}
-              </div>
-            </div>
+                ) : undefined
+              }
+            />
           );
         })}
       </div>

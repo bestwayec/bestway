@@ -1,8 +1,10 @@
 """Points history, teacher-scoped adjustment and public competition ranking."""
+import re
 from uuid import uuid4
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.legacy_schema.models import ParentStudent, PointsLog, StudentProfile, User
@@ -55,12 +57,44 @@ def adjust(actor, student_id, data):
     return dict(current=updated.current_points)
 
 
-def leaderboard(query):
-    rows = StudentProfile.objects.filter(user__is_active=True).select_related('user')
-    if query.get('groupId'): rows = rows.filter(group_id=query['groupId'])
-    rows = rows.order_by('-current_points', 'created_at')[:query.get('limit', 50)]
+# Placeholder / test identities never appear on the public ranking (O2). Their owners are
+# asked to set a real name on the dashboard instead (see frontend name prompt).
+PLACEHOLDER_NAME_RE = re.compile(r"^\s*(student|o['’`]?quvchi|user|test(\s*user)?|demo|guest|\d*)\s*\d*\s*$", re.I)
+TEST_NAME_RE = re.compile(r"^\s*(test|demo|qa)[\s_-]", re.I)
+
+
+def is_listable_name(name):
+    value = (name or '').strip()
+    return bool(value) and not PLACEHOLDER_NAME_RE.match(value) and not TEST_NAME_RE.match(value)
+
+
+def rank_rows(rows):
+    """Competition ranking ("1224"). Ties on points are broken by who reached the score
+    first (earlier ``reached_at`` ranks higher); only identical points AND time share a rank."""
+    ordered = sorted(rows, key=lambda r: (-r['points'], r['reached_at'], r['tie']))
     result = []; rank = 0; previous = None
-    for index, row in enumerate(rows, 1):
-        if row.current_points != previous: rank = index; previous = row.current_points
-        result.append(dict(studentId=row.user_id, name=row.user.name, points=row.current_points, rank=rank))
+    for index, row in enumerate(ordered, 1):
+        key = (row['points'], row['reached_at'])
+        if key != previous: rank = index; previous = key
+        result.append(dict(studentId=row['studentId'], name=row['name'], points=row['points'], rank=rank,
+                           reachedAt=row['reached_at'].isoformat() if hasattr(row['reached_at'], 'isoformat') else None))
     return result
+
+
+def leaderboard(query):
+    # Staff accounts that also own a StudentProfile (e.g. a super_admin testing the app) are not ranked.
+    rows = StudentProfile.objects.filter(user__is_active=True, user__role='student').select_related('user')
+    if query.get('groupId'): rows = rows.filter(group_id=query['groupId'])
+    # Moment the current total was reached = latest points change (or account creation).
+    last_change = PointsLog.objects.filter(student_id=OuterRef('pk')).order_by('-created_at').values('created_at')[:1]
+    rows = rows.annotate(reached_at=Coalesce(Subquery(last_change), F('created_at')))
+    rows = rows.order_by('-current_points', 'reached_at', 'created_at')
+    limit = query.get('limit', 50)
+    picked = []
+    # Over-fetch so that hidden placeholder accounts do not shorten the list.
+    for row in rows[:limit * 3 + 20]:
+        if not is_listable_name(row.user.name): continue
+        picked.append(dict(studentId=row.user_id, name=row.user.name.strip(), points=row.current_points,
+                           reached_at=row.reached_at, tie=row.created_at))
+        if len(picked) >= limit: break
+    return rank_rows(picked)
