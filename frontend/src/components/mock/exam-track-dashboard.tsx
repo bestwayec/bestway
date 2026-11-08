@@ -32,7 +32,6 @@ const SKILL_CONFIG: Record<
     icon: typeof Headphones;
     color: string;
     bg: string;
-    desc: string;
     duration: string;
   }
 > = {
@@ -40,28 +39,24 @@ const SKILL_CONFIG: Record<
     icon: Headphones,
     color: "text-emerald-500",
     bg: "bg-emerald-500/10 border-emerald-500/20",
-    desc: "6 Parts · 35 Questions · Audio recordings",
     duration: "45 min",
   },
   reading: {
     icon: BookOpenText,
     color: "text-blue-500",
     bg: "bg-blue-500/10 border-blue-500/20",
-    desc: "5 Parts · 35 Questions · Dual-column passages",
     duration: "60 min",
   },
   writing: {
     icon: PenLine,
     color: "text-purple-500",
     bg: "bg-purple-500/10 border-purple-500/20",
-    desc: "Task 1 & Task 2 · Word counter & AI check",
     duration: "60 min",
   },
   speaking: {
     icon: Mic,
     color: "text-amber-500",
     bg: "bg-amber-500/10 border-amber-500/20",
-    desc: "Parts 1-3 · Mic calibration & timed recording",
     duration: "15 min",
   },
 };
@@ -70,6 +65,7 @@ export function ExamTrackDashboard() {
   const t = useTranslations("examTrack");
   const tm = useTranslations("mock");
   const tc = useTranslations("common");
+  const td = useTranslations("trackDashboard");
   const { program, ready, needsProgramSelection } = useStudentProgramScope();
   const exams = useMockExams();
   const history = useMyMockAttempts();
@@ -122,16 +118,14 @@ export function ExamTrackDashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="success" className="gap-1.5 font-semibold">
                 <Sparkles className="size-3.5 fill-current" />
-                Official CBT Standard
+                {td("officialStandard")}
               </Badge>
               <span className="text-xs text-fg-muted font-medium">
-                1. Listening → 2. Reading → 3. Writing → 4. Speaking
+                {td("sectionOrder")}
               </span>
             </div>
             <h2 className="text-xl font-bold tracking-tight text-fg sm:text-2xl">
-              {program === "MULTILEVEL"
-                ? "Multi-Level CEFR Full Mock Exam"
-                : "IELTS Academic Full Mock Exam"}
+              {program === "MULTILEVEL" ? td("fullMockMultilevel") : td("fullMockIelts")}
             </h2>
             <p className="max-w-xl text-sm text-fg-muted leading-relaxed">
               Standard CBT imtihon muhiti: ketma-ket 4 ta bo&apos;lim, vaqt nazorati va
@@ -144,20 +138,20 @@ export function ExamTrackDashboard() {
               <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-brand-fg shadow-md hover:bg-brand-hover">
                 <Link href={`/mock/${fullMock.id}`}>
                   <Play className="size-4 fill-current mr-2" />
-                  Start Full Mock
+                  {td("startFullMock")}
                 </Link>
               </Button>
             ) : (
               <Button asChild size="lg" className="min-h-12 bg-brand px-6 font-bold text-brand-fg shadow-md hover:bg-brand-hover">
                 <Link href="/mock">
                   <Play className="size-4 fill-current mr-2" />
-                  Browse Full Mocks
+                  {td("browseFullMocks")}
                 </Link>
               </Button>
             )}
             <Button asChild variant="outline" size="lg" className="min-h-12">
               <Link href="/mock">
-                View All Exams
+                {td("viewAllExams")}
                 <ArrowRight className="size-4 ml-1.5" />
               </Link>
             </Button>
@@ -170,10 +164,10 @@ export function ExamTrackDashboard() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-fg sm:text-lg">
-              {t("practice")} — Individual Sections
+              {t("practice")} — {td("individualSections")}
             </h3>
             <p className="text-xs text-fg-muted">
-              Har bir ko&apos;nikma bo&apos;yicha alohida mashq qiling va natijangizni oshiring
+              {td("practiceHint")}
             </p>
           </div>
           <Link
@@ -207,7 +201,7 @@ export function ExamTrackDashboard() {
                         <Icon className="size-5" />
                       </div>
                       <Badge variant="neutral" className="tabular-nums text-[11px]">
-                        {count} {count === 1 ? "exam" : "exams"}
+                        {td("examCount", { count })}
                       </Badge>
                     </div>
 
@@ -215,7 +209,7 @@ export function ExamTrackDashboard() {
                       {tm(`skills.${skill}`)}
                     </h4>
                     <p className="mt-1 text-xs text-fg-muted leading-relaxed">
-                      {cfg.desc}
+                      {td(`skillDesc.${skill}`)}
                     </p>
                   </div>
 
@@ -225,7 +219,7 @@ export function ExamTrackDashboard() {
                         <Clock className="size-3" />
                         {cfg.duration}
                       </span>
-                      <span>Target: Multi-Level</span>
+                      <span>{td("target", { program: program === "MULTILEVEL" ? "Multi-Level" : "IELTS" })}</span>
                     </div>
                     {skillExams.length > 0 ? (
                       <Button
@@ -235,12 +229,12 @@ export function ExamTrackDashboard() {
                         className="w-full justify-center font-semibold group-hover:bg-brand group-hover:text-white group-hover:border-brand transition-all"
                       >
                         <Link href={`/mock/${skillExams[0].id}?section=${skill}`}>
-                          Boshlash
+                          {td("start")}
                         </Link>
                       </Button>
                     ) : (
                       <Button size="sm" variant="outline" disabled className="w-full justify-center text-xs">
-                        Boshlash
+                        {td("start")}
                       </Button>
                     )}
                   </div>
@@ -257,13 +251,13 @@ export function ExamTrackDashboard() {
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-fg sm:text-lg flex items-center gap-2">
               <Award className="size-5 text-brand" />
-              Your Latest Exam Result
+              {td("latestResult")}
             </h3>
             <Link
               href={`/mock/attempt/${latestCompleted.id}`}
               className="text-xs font-semibold text-brand hover:underline"
             >
-              Full Breakdown →
+              {td("fullBreakdown")} →
             </Link>
           </div>
 

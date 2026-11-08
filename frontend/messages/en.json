@@ -801,7 +801,8 @@
     "rank": "Rank",
     "teacherLimit": "Teacher limit per action: ±{limit} points",
     "system": "System",
-    "noHistory": "Points history is empty"
+    "noHistory": "Points history is empty",
+    "you": "you"
   },
   "dashboard": {
     "greeting": "Hello, {name}",
@@ -1764,7 +1765,21 @@
     "scoreRange": "{min}–{max} pts",
     "historyTitle": "Progress chart (last {count} exams)",
     "historyHint": "Each point is one mock result",
-    "workOnMistakes": "Work on mistakes"
+    "workOnMistakes": "Work on mistakes",
+    "vaultTitle": "Personal mistake vault",
+    "vaultSubtitle": "Personal practice built from the mistakes in your exams",
+    "vaultCollected": "{count, plural, one {# mistake} other {# mistakes}}",
+    "filterAll": "All question types",
+    "skill": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "module": "Skill",
+    "wrongCount": "{count, plural, one {# mistake} other {# mistakes}}",
+    "accuracy": "Accuracy",
+    "recommendation": "Tip",
+    "watchLesson": "Watch lesson",
+    "closeGaps": "Close the gaps ({count} questions)"
   },
   "namePrompt": {
     "title": "Add your name",
@@ -1785,5 +1800,27 @@
   },
   "vocabQuiz": {
     "preparing": "Preparing vocabulary questions…"
+  },
+  "trackDashboard": {
+    "officialStandard": "Official CBT standard",
+    "sectionOrder": "1. Listening → 2. Reading → 3. Writing → 4. Speaking",
+    "fullMockMultilevel": "Multi-Level CEFR full mock exam",
+    "fullMockIelts": "IELTS Academic full mock exam",
+    "startFullMock": "Start full mock",
+    "browseFullMocks": "Browse full mocks",
+    "viewAllExams": "View all exams",
+    "individualSections": "Individual sections",
+    "practiceHint": "Practise each skill separately and raise your score",
+    "examCount": "{count, plural, one {# exam} other {# exams}}",
+    "skillDesc": {
+      "listening": "6 parts · 35 questions · audio recordings",
+      "reading": "5 parts · 35 questions · dual-column passages",
+      "writing": "Task 1 and Task 2 · word counter and AI check",
+      "speaking": "Parts 1–3 · mic check and timed recording"
+    },
+    "target": "Target: {program}",
+    "start": "Start",
+    "latestResult": "Your latest exam result",
+    "fullBreakdown": "Full breakdown"
   }
 }

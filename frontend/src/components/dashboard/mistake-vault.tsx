@@ -55,16 +55,16 @@ export function MistakeVault({ className }: { className?: string }) {
             <div className="space-y-1">
               <CardTitle className="text-base font-bold flex items-center gap-2 text-white">
                 <Target className="size-4 text-emerald-400" />
-                Zaif Nuqtalar Banki (Personal Mistake Vault)
+                {t("vaultTitle")}
               </CardTitle>
               <CardDescription className="text-xs text-slate-400">
-                Imtihonlarda yo&apos;l qo&apos;yilgan xatolar asosida shakllangan shaxsiy mashqlar ombori
+                {t("vaultSubtitle")}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="danger" className="border-rose-500/30 bg-rose-950/30 text-rose-300 text-xs py-0.5">
                 <Flame className="size-3 mr-1 text-rose-400" />
-                {totalMistakes} ta xato savol to&apos;plandi
+                {t("vaultCollected", { count: totalMistakes })}
               </Badge>
             </div>
           </div>
@@ -83,7 +83,7 @@ export function MistakeVault({ className }: { className?: string }) {
                     : "bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 )}
               >
-                {filter === "all" ? "Barcha savol turlari" : filter}
+                {filter === "all" ? t("filterAll") : t(`skill.${filter}`)}
               </button>
             ))}
           </div>
@@ -128,21 +128,21 @@ export function MistakeVault({ className }: { className?: string }) {
                           {cat.name}
                         </h4>
                         <p className="text-[11px] text-slate-400 capitalize">
-                          Modul: <span className="text-slate-300 font-medium">{cat.skill}</span>{cat.lastTrained ? <> · {t("lastTrained")}: {cat.lastTrained}</> : null}
+                          {t("module")}: <span className="text-slate-300 font-medium">{cat.skill}</span>{cat.lastTrained ? <> · {t("lastTrained")}: {cat.lastTrained}</> : null}
                         </p>
                       </div>
                       <Badge
                         variant={isCritical ? "danger" : "warning"}
                         className="text-[10px] shrink-0"
                       >
-                        {cat.wrongCount} xato
+                        {t("wrongCount", { count: cat.wrongCount })}
                       </Badge>
                     </div>
 
                     {/* Accuracy Bar */}
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Aniqlik ko&apos;rsatkichi:</span>
+                        <span>{t("accuracy")}:</span>
                         <span className={isCritical ? "text-rose-400 font-bold" : "text-amber-400 font-bold"}>
                           {cat.accuracy}% ({cat.totalAttempted - cat.wrongCount}/{cat.totalAttempted})
                         </span>
@@ -157,18 +157,18 @@ export function MistakeVault({ className }: { className?: string }) {
 
                     {/* Pedagogical Recommendation */}
                     <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800/60">
-                      💡 <span className="text-slate-300 font-medium">Tavsiya:</span> {cat.recommendedFocus}
+                      <span className="text-slate-300 font-medium">{t("recommendation")}:</span> {cat.recommendedFocus}
                     </p>
                   </div>
 
                   {/* Re-test & Video Lesson Routing CTA */}
                   <div className="pt-3 mt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2">
                     <a
-                      href={cat.videoUrl || "/en/videos"}
+                      href={cat.videoUrl || "/videos"}
                       className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold transition-all hover:scale-[1.02]"
                     >
                       <Play className="size-3 fill-current" />
-                      <span>{cat.videoButtonText || "▶️ Darsni ko'rish"}</span>
+                      <span>{cat.videoButtonText || t("watchLesson")}</span>
                     </a>
 
                     <Button
@@ -179,7 +179,7 @@ export function MistakeVault({ className }: { className?: string }) {
                       className="h-8 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white text-xs font-semibold shadow-sm transition-all"
                     >
                       <Sparkles className="size-3 mr-1" />
-                      Bo&apos;shliqlarni yopish (10 ta)
+                      {t("closeGaps", { count: 10 })}
                     </Button>
                   </div>
                 </div>

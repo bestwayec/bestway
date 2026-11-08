@@ -800,7 +800,8 @@
     "rank": "O'rin",
     "teacherLimit": "O'qituvchi uchun bir amaldagi chegara: ±{limit} ball",
     "system": "Tizim",
-    "noHistory": "Ball tarixi bo'sh"
+    "noHistory": "Ball tarixi bo'sh",
+    "you": "siz"
   },
   "dashboard": {
     "greeting": "Salom, {name}",
@@ -1763,7 +1764,21 @@
     "scoreRange": "{min}–{max} ball",
     "historyTitle": "O'sish grafigi (oxirgi {count} ta imtihon)",
     "historyHint": "Har bir nuqta bitta mock natijasi",
-    "workOnMistakes": "Xatolar ustida ishlash"
+    "workOnMistakes": "Xatolar ustida ishlash",
+    "vaultTitle": "Zaif nuqtalar banki",
+    "vaultSubtitle": "Imtihonlarda yo'l qo'yilgan xatolaringiz asosidagi shaxsiy mashqlar",
+    "vaultCollected": "{count} ta xato savol",
+    "filterAll": "Barcha savol turlari",
+    "skill": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "module": "Modul",
+    "wrongCount": "{count} xato",
+    "accuracy": "Aniqlik",
+    "recommendation": "Tavsiya",
+    "watchLesson": "Darsni ko'rish",
+    "closeGaps": "Bo'shliqlarni yopish ({count} ta)"
   },
   "namePrompt": {
     "title": "Ismingizni kiriting",
@@ -1784,5 +1799,27 @@
   },
   "vocabQuiz": {
     "preparing": "Lug'at savollari tayyorlanmoqda…"
+  },
+  "trackDashboard": {
+    "officialStandard": "Rasmiy CBT standarti",
+    "sectionOrder": "1. Listening → 2. Reading → 3. Writing → 4. Speaking",
+    "fullMockMultilevel": "Multi-Level CEFR to'liq mock imtihon",
+    "fullMockIelts": "IELTS Academic to'liq mock imtihon",
+    "startFullMock": "To'liq mockni boshlash",
+    "browseFullMocks": "To'liq mocklarni ko'rish",
+    "viewAllExams": "Barcha imtihonlar",
+    "individualSections": "Alohida bo'limlar",
+    "practiceHint": "Har bir ko'nikma bo'yicha alohida mashq qiling va natijangizni oshiring",
+    "examCount": "{count} ta imtihon",
+    "skillDesc": {
+      "listening": "6 qism · 35 savol · audio yozuvlar",
+      "reading": "5 qism · 35 savol · ikki ustunli matnlar",
+      "writing": "Task 1 va Task 2 · so'z hisoblagich va AI tekshiruv",
+      "speaking": "1–3 qismlar · mikrofon sozlash va vaqtli yozuv"
+    },
+    "target": "Yo'nalish: {program}",
+    "start": "Boshlash",
+    "latestResult": "Oxirgi imtihon natijangiz",
+    "fullBreakdown": "To'liq tahlil"
   }
 }
