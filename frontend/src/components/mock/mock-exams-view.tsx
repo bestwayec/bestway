@@ -257,7 +257,7 @@ export function MockExamCard({
   }
 
   return (
-    <Card className="flex h-full flex-col p-5">
+    <Card className="flex h-full flex-col p-5" data-testid={`mock-card-${exam.id}`}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
         {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
