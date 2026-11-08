@@ -7,6 +7,7 @@ import { useExamPrograms, useSetExamPrograms, type ExamProgram } from "@/hooks/u
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/feedback";
 import { cn } from "@/lib/utils";
 
 export function ExamTrackSelector({ studentId }: { studentId?: string }) {
@@ -15,10 +16,18 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   const save = useSetExamPrograms(studentId);
 
   if (state.isPending) {
+    // Same footprint as the loaded card so nothing below jumps when data arrives (O3).
     return (
-      <div className="my-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400 animate-pulse">
-        {t("loading")}
-      </div>
+      <Card className="my-4 border-slate-800 bg-bg-subtle/90 p-5" aria-busy="true" aria-label={t("loading")} data-testid="exam-track-skeleton">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+          <Skeleton className="h-9 w-56" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+        </div>
+      </Card>
     );
   }
   if (!state.data) {

@@ -21,6 +21,7 @@ import type { MockSkill } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/feedback";
 import { Link } from "@/i18n/navigation";
 import { AttemptScoreSummary } from "./attempt-score-summary";
 import { CefrResultInfographic } from "./cefr-result-infographic";
@@ -69,11 +70,21 @@ export function ExamTrackDashboard() {
   const t = useTranslations("examTrack");
   const tm = useTranslations("mock");
   const tc = useTranslations("common");
-  const { program } = useStudentProgramScope();
+  const { program, ready, needsProgramSelection } = useStudentProgramScope();
   const exams = useMockExams();
   const history = useMyMockAttempts();
 
-  if (!program) return null;
+  const programPending = !ready && !needsProgramSelection;
+  if (!program) {
+    // Reserve the hero's height while the active track is resolving, instead of
+    // rendering nothing and pushing the page down when it appears (O3).
+    return programPending ? (
+      <div className="my-6 space-y-6" aria-busy="true" data-testid="exam-track-dashboard-skeleton">
+        <Skeleton className="h-56 rounded-2xl" />
+        <Skeleton className="h-48 rounded-2xl" />
+      </div>
+    ) : null;
+  }
 
   const matches = (type?: string) =>
     program === "MULTILEVEL" ? type === "multilevel" : type !== "multilevel";
