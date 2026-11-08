@@ -1782,5 +1782,8 @@
     "loadErrorTitle": "Exam questions could not be loaded",
     "loadErrorNetwork": "Could not reach the server. Check your connection and try again.",
     "loadErrorEmpty": "No questions were found for this attempt. Try again or contact your teacher."
+  },
+  "vocabQuiz": {
+    "preparing": "Preparing vocabulary questions…"
   }
 }
