@@ -125,7 +125,7 @@ export function ListeningPart1Radio({
             aria-checked={selected}
             onClick={() => onChange(selected ? "" : opt)}
             className={cn(
-              "flex min-h-[44px] items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all touch-manipulation",
+              "flex min-h-[44px] items-center gap-2 rounded-[12px] border px-4 py-2 text-sm font-semibold transition-all touch-manipulation",
               selected
                 ? "border-brand bg-brand text-brand-fg shadow-md scale-[1.02]"
                 : "border-border bg-surface text-fg hover:border-brand/60 hover:bg-surface-hover"
@@ -163,7 +163,7 @@ export function SplitScreenMap({
   return (
     <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6 items-start">
       {/* Map display pane */}
-      <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 shadow-sm lg:sticky lg:top-20">
+      <div className="rounded-[12px] border border-border bg-surface p-3 sm:p-4 shadow-sm lg:sticky lg:top-20">
         <div className="mb-2 flex items-center justify-between border-b border-border/60 pb-2">
           <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-fg">
             <MapPin className="size-3.5 text-brand" />
@@ -178,10 +178,10 @@ export function SplitScreenMap({
             alt={title || "Map diagram"}
             loading="lazy"
             decoding="async"
-            className="max-h-[60vh] w-full rounded-xl border border-border/80 object-contain shadow-xs bg-bg-subtle/50"
+            className="max-h-[60vh] w-full rounded-[12px] border border-border/80 object-contain  bg-bg-subtle/50"
           />
         ) : (
-          <div className="flex h-48 w-full items-center justify-center rounded-xl border border-dashed border-border bg-bg-subtle/30 text-xs text-fg-muted">
+          <div className="flex h-48 w-full items-center justify-center rounded-[12px] border border-dashed border-border bg-bg-subtle/30 text-xs text-fg-muted">
             Xarita rasmi yuklanmoqda...
           </div>
         )}
@@ -403,7 +403,7 @@ export function CDLayout({
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+        <div className="flex size-14 items-center justify-center rounded-[12px] bg-emerald-500/10 text-emerald-400">
           <RefreshCw className="size-7 animate-spin" />
         </div>
         <h2 className="mt-4 text-lg font-bold text-slate-100">Imtihon topshiriqlari yuklanmoqda...</h2>
@@ -502,7 +502,7 @@ export function CDLayout({
                   {(part.group?.questions || []).map((q, qi) => {
                     const promptText = q?.prompt || (q as any)?.text || "";
                     return (
-                      <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-xl border border-border bg-surface p-4 shadow-xs">
+                      <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4 ">
                         <div className="flex items-start justify-between gap-2">
                           <span className="font-semibold text-sm text-fg">
                             {part.startIndex + qi + 1}. {promptText}
@@ -533,7 +533,7 @@ export function CDLayout({
             ) : (
               <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-2 items-start">
                 {/* Left Pane: Passage / Audio / Stimulus */}
-                <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 shadow-xs lg:sticky lg:top-20">
+                <div className="rounded-[12px] border border-border bg-surface p-4 sm:p-5  lg:sticky lg:top-20">
                   <div className="mb-3 flex items-center justify-between border-b border-border/60 pb-2">
                     <h2 className="text-sm font-extrabold tracking-wide uppercase text-fg">
                       Part {partIdx + 1}
@@ -555,7 +555,7 @@ export function CDLayout({
                   )}
 
                   {part.group?.passageText ? (
-                    <div className="whitespace-pre-line text-sm leading-relaxed text-fg max-h-[60vh] overflow-y-auto pr-1">
+                    <div className="whitespace-pre-line text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] max-h-[60vh] overflow-y-auto pr-1">
                       {part.group.passageText}
                     </div>
                   ) : (
@@ -581,7 +581,7 @@ export function CDLayout({
                     {(part.group?.questions || []).map((q, qi) => {
                       const promptText = q?.prompt || (q as any)?.text || "";
                       return (
-                        <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-xl border border-border bg-surface p-4 shadow-xs">
+                        <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4 ">
                           <div className="flex items-start justify-between gap-2">
                             <span className="font-semibold text-sm text-fg leading-snug">
                               {part.startIndex + qi + 1}. {promptText}
@@ -618,9 +618,9 @@ export function CDLayout({
                                     aria-checked={selected}
                                     onClick={() => setAnswers((a) => ({ ...a, [q.id]: selected ? "" : opt }))}
                                     className={cn(
-                                      "flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-all touch-manipulation",
+                                      "flex w-full items-center gap-2.5 rounded-[12px] border px-3.5 py-2.5 text-left text-sm transition-all touch-manipulation",
                                       selected
-                                        ? "border-brand bg-brand-subtle/40 text-brand-subtle-fg font-medium shadow-xs"
+                                        ? "border-brand bg-brand-subtle/40 text-brand-subtle-fg font-medium "
                                         : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg"
                                     )}
                                   >
@@ -643,7 +643,7 @@ export function CDLayout({
                               onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
                               placeholder="Javobingizni yozing..."
                               aria-label={promptText}
-                              className="mt-3 w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
+                              className="mt-3 w-full rounded-[12px] border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
                             />
                           )}
                         </div>
@@ -681,9 +681,9 @@ export function CDLayout({
                       type="button"
                       onClick={() => setPartIdx(i)}
                       className={cn(
-                        "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all touch-manipulation",
+                        "flex shrink-0 items-center gap-1.5 rounded-[12px] border px-3 py-1.5 text-xs font-semibold transition-all touch-manipulation",
                         i === partIdx
-                          ? "border-brand bg-brand text-brand-fg shadow-xs scale-105"
+                          ? "border-brand bg-brand text-brand-fg  scale-105"
                           : "border-border bg-surface text-fg-muted hover:border-brand hover:text-fg"
                       )}
                     >
