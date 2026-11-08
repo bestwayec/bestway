@@ -652,7 +652,7 @@
     "staff": "Xodimlar",
     "points": "Ballar",
     "leaderboard": "Reyting",
-    "videos": "Video darslar",
+    "videos": "Darslar",
     "articles": "Yangiliklar",
     "notifications": "Bildirishnomalar",
     "settings": "Sozlamalar",
@@ -667,7 +667,8 @@
     "collapseSidebar": "Yon panelni yig'ish",
     "expandSidebar": "Yon panelni ochish",
     "profile": "Profil",
-    "more": "Yana"
+    "more": "Yana",
+    "results": "Natijalar"
   },
   "brand": {
     "best": "Best",

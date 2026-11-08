@@ -653,7 +653,7 @@
     "staff": "Staff",
     "points": "Points",
     "leaderboard": "Leaderboard",
-    "videos": "Video lessons",
+    "videos": "Lessons",
     "articles": "News",
     "notifications": "Notifications",
     "settings": "Settings",
@@ -668,7 +668,8 @@
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "profile": "Profile",
-    "more": "More"
+    "more": "More",
+    "results": "Results"
   },
   "brand": {
     "best": "Best",
