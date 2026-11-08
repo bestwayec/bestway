@@ -1127,8 +1127,8 @@
     "partOfQuestions": "{a}-qism, jami {b} savol"
   },
   "marketing": {
-    "heroTitle": "Do your best, forget the rest!",
-    "heroSubtitle": "O'zbekiston Milliy sertifikati (0–75) va IELTS (0–9.0) mezonlariga moslashtirilgan sun'iy intellekt ekotizimi.",
+    "heroTitle": "IELTS va Multi-Level (CEFR) imtihonlariga eng samarali tayyorgarlik",
+    "heroSubtitle": "Rasmiy kompyuter formati, xolis AI baholash va individual tahlil orqali kerakli natijangizga erishing.",
     "heroBadge": "Shofirkon, Buxoro · 2007-yildan beri",
     "navCourses": "Kurslar",
     "navTeachers": "O'qituvchilar",
@@ -1147,7 +1147,7 @@
     "founderLabel": "Asoschi",
     "foundedLabel": "Tashkil etilgan",
     "writeUs": "Xat yozing",
-    "heroCta": "Bepul Darajangizni Aniqlang (10 daqiqa)",
+    "heroCta": "Bepul darajani aniqlash",
     "heroSecondary": "Imtihon Simulyatori",
     "heroProgressTitle": "O'quv yo'li",
     "heroProgressSubtitle": "IELTS · Multilevel · SAT",
@@ -1265,7 +1265,14 @@
       "f3Title": "Teacher Workspace",
       "f3Text": "Ustozlar uchun guruhlar tahlili, kohort uy vazifalari, qo'lyozma insholarni qayta baholash va MistakeVault diagnostikasi."
     },
-    "heroMotto": "Do your best, forget the rest!"
+    "heroMotto": "Do your best, forget the rest!",
+    "heroLogin": "Kirish",
+    "benefit1Title": "Rasmiy CBT formati",
+    "benefit1Desc": "IELTS CDI va Multi-Level DTM standartidagi to'liq kompyuter imtihoni tajribasi.",
+    "benefit2Title": "Xolis AI baholash",
+    "benefit2Desc": "Speaking va Writing bo'limlari uchun bir necha daqiqada xolis va batafsil tahlil.",
+    "benefit3Title": "Aniq ball bashorati",
+    "benefit3Desc": "Haqiqiy imtihondagi natijangizni 95% aniqlikda oldindan ko'rsatuvchi tahliliy model."
   },
   "errors": {
     "notFound": "Sahifa topilmadi",
