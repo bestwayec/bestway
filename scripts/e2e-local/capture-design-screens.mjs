@@ -91,7 +91,7 @@ for (const vp of VIEWPORTS) {
 
     for (const t of targets) {
       try {
-        await page.goto(`${WEB}${t.path}`, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.goto(`${WEB}${t.path}`, { waitUntil: "domcontentloaded", timeout: 45000 });
         await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await applyTheme();
         await page.screenshot({ path: join(OUT, `${t.name}-${vp.name}-${theme}.png`) });
