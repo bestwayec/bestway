@@ -6,7 +6,7 @@ from datetime import timedelta
 from threading import Lock
 from uuid import uuid4
 
-from django.db import close_old_connections, transaction
+from django.db import close_old_connections, connections, transaction
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
@@ -302,7 +302,10 @@ def _process_one(grader, speech):
     try:
         return run_once(grader, speech)
     finally:
-        close_old_connections()
+        # Pool threads are recreated every tick, so their thread-local DB
+        # connections must be closed explicitly: close_old_connections() keeps
+        # them open under CONN_MAX_AGE and the dead thread leaks the socket.
+        connections.close_all()
 
 def tick():
     if os.environ.get('ASSESSMENT_WORKER_ENABLED')=='false' or not _tick_lock.acquire(blocking=False):return
