@@ -41,11 +41,25 @@ export function NotificationsView() {
   const items = data ?? [];
   const unread = items.filter((n) => !n.read).length;
 
+  // Opening the page counts as reading it (O4): mark everything read once so the bell
+  // badge clears, but keep this visit's "new" highlight from the first loaded snapshot.
+  const [freshIds, setFreshIds] = React.useState<Set<string> | null>(null);
+  const autoMarked = React.useRef(false);
+  const markAllMutate = markAll.mutate;
+  React.useEffect(() => {
+    if (!data || autoMarked.current) return;
+    autoMarked.current = true;
+    const fresh = new Set(data.filter((n) => !n.read).map((n) => n.id));
+    setFreshIds(fresh);
+    if (fresh.size > 0) markAllMutate();
+  }, [data, markAllMutate]);
+  const isNew = (n: { id: string; read: boolean }) => !n.read || Boolean(freshIds?.has(n.id));
+
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title={t("title")}
-        description={unread > 0 ? t("unread", { count: unread }) : undefined}
+        description={(freshIds?.size ?? unread) > 0 ? t("unread", { count: freshIds?.size ?? unread }) : undefined}
         actions={
           <div className="flex items-center gap-2">
             {isOffice && (
@@ -97,24 +111,24 @@ export function NotificationsView() {
                 onClick={() => !n.read && markOne.mutate(n.id)}
                 className={cn(
                   "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-hover",
-                  !n.read && "bg-brand-subtle/20",
+                  isNew(n) && "bg-brand-subtle/20",
                 )}
               >
                 <span
                   className={cn(
                     "mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full",
-                    n.read ? "bg-bg-subtle text-fg-muted" : "bg-brand-subtle text-brand-subtle-fg",
+                    isNew(n) ? "bg-brand-subtle text-brand-subtle-fg" : "bg-bg-subtle text-fg-muted",
                   )}
                 >
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className={cn("text-sm text-fg", !n.read && "font-medium")}>{n.text}</p>
+                  <p className={cn("text-sm text-fg", isNew(n) && "font-medium")}>{n.text}</p>
                   <p className="mt-1 text-xs text-fg-subtle">
                     {format.relativeTime(new Date(n.date), now)}
                   </p>
                 </div>
-                {!n.read && <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" />}
+                {isNew(n) && <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" aria-hidden />}
               </button>
             );
           })}
