@@ -7,6 +7,17 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 19-BLOK: Frontend dizaynini soddalashtirish (branch `design/simplify`)
+1. **Dizayn tokenlari va tipografiya**: Yagona zumrad (emerald `#16a34a` / `#22c55e`) brend rangi + neytral kulrang shkala. Barcha neon, glow, gradient va sun'iy soyalar olib tashlandi. Shrift o'lchamlari 4 pog'onaga standartlashtirildi: sarlavha 28px, kichik sarlavha 20px, asosiy matn 16px, izoh 14px (14px dan kichik matn qolmadi). Kartalar 1px chegara va 12px radiusga keltirildi. Bo'shliqlar 8 ning karralilariga (8, 16, 24, 32px) moslashtirildi.
+2. **Chap navigatsiya (Sidebar)**: 9+ banddan iborat tartibsiz menyu talabalar uchun 4 ta asosiy bo'limga ixchamlashtirildi: Bosh sahifa, Imtihonlar, Darslar, Natijalar. Qolgan vositalar (Vocabulary, Bamboozle Arena, Leaderboard, Exam Track) "Yana" va profil menyusiga o'tkazildi. Bildirishnomalar yuqori panelga qo'ng'iroq belgisi sifatida joylashtirildi.
+3. **Talaba Dashboardi**: Yuqorida "Salom, {ism}" va bitta markaziy "Davom etish" (Hero Continue) kartasi. Ostida 3 ta asosiy ko'rsatkich: taxminiy daraja, topshirilgan testlar, ketma-ket kunlar. Ikkilamchi bloklar (Live Exam PIN, uy vazifalari) pastki qismga tushirildi.
+4. **Imtihonlar katalogi va Modal**: A1–C1 darajalar filtri; har bir kartada faqat nomi, davomiyligi, bo'limlar va bitta "Boshlash" harakat tugmasi. Boshlash modalida ikkita aniq tanlov: "To'liq imtihon (Full Mock)" va "Alohida bo'lim (Single Section)" imkoniyati.
+5. **Imtihon runner'i**: Chalg'ituvchi fon effektlari va ortiqcha tugmalar tozalandi; yuqorida taymer, bo'lim nomi va tugatish harakati; pastda qulay savol raqamlari palitrasi; matn 16–17px va qator kengligi 70 belgiga (`max-w-[70ch]`) cheklandi. Autosave, audio yozish va submit xatti-harakati 100% saqlab qolindi.
+6. **Natijalar va profil**: Natijalar bo'lmaganda "0.0" o'rniga "Hali natija yo'q — birinchi testni boshlang" banneri va CTA tugmasi. Grafik va jadvallar zumrad ohangga keltirildi.
+7. **Landing sahifa**: Bitta aniq sarlavha ("IELTS va Multi-Level (CEFR) imtihonlariga eng samarali tayyorgarlik"), bitta jumla tavsif, ikkita tugma ("Bepul darajani aniqlash" va "Kirish"), ostida 3 ta asosiy afzallik kartasi. Ishonchsiz sanagichlar va 3D WebGL kanvasi olib tashlandi.
+8. **Feedback holatlari**: 12px burchakli standart Skeleton yuklanish holati va "Nima bo'ldi + Qayta urinish" xatolik paneli.
+9. **Verifikatsiya va Skrinshotlar**: 24 ta OLDIN va 24 ta KEYIN skrinshotlar `docs/design/before/` hamda `docs/design/after/` papkalariga saqlandi (1366×768 va 390×844, light va dark). `scripts/e2e-local/smoke.mjs` 16/16 PASS, Vitest 70 ta test fayl / 417 ta test 100% PASS, `npx tsc --noEmit` 0 xato.
+
 ### 18-BLOK: Video audit (8-noyabr) — K1/K2, O1–O4, U1–U6 (branch `fix/video-audit-nov8`)
 1. **P0-DB**: prod Postgres 100/100 ulanishda edi (96 tasi `assessment-worker`ning yopilmagan idle ulanishlari). Sabab: har tick yangi ThreadPoolExecutor, oqim ulanishlari `CONN_MAX_AGE` ostida yopilmasdi. `connections.close_all()` qo'shildi.
 2. **K1**: Record Mock Listening "0 bo'lim" — prod attempt `e46a8e71` `single_skill`, scope'siz, `currentSkill=NULL`; frontend `practiceExam()` barcha bo'limlarni filtrlab yuborardi. Kontent to'liq (35 listening savol), CD access sababi emas. Tuzatildi + `seed_local_k1_attempt` fixture + smoke 14-qadam.
