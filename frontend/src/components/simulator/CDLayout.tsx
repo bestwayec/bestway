@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { LoadErrorPanel } from "@/components/common/load-error-panel";
 import {
   ArrowLeft,
   ArrowRight,
@@ -307,7 +308,7 @@ export function CDLayout({
         if (!parsed || (parsed.questionCount ?? 0) === 0) {
           const err = "Failed to load questions from server (0 questions found in payload).";
           console.error("[CDLayout]", err, rawData);
-          setFetchError(err);
+          setFetchError(null); // LoadErrorPanel shows the translated default reason
           setIsLoading(false);
           return;
         }
@@ -317,7 +318,7 @@ export function CDLayout({
       } catch (err: any) {
         if (cancelled) return;
         console.error("[CDLayout] Failed to load questions from server:", err);
-        setFetchError(err?.message || "Failed to load questions from server.");
+        setFetchError(null); // network/parse failure: translated default reason
         setIsLoading(false);
       }
     }
@@ -415,29 +416,7 @@ export function CDLayout({
 
   // Defensive Fallback Error State: Never a black screen
   if (fetchError || !exam || parts.length === 0 || !part) {
-    return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-slate-950 p-4 text-center text-slate-100">
-        <div className="w-full max-w-md rounded-2xl border-2 border-red-500/50 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-red-500/20 text-red-400">
-            <AlertTriangle className="size-6" />
-          </div>
-          <h1 className="text-lg font-bold text-red-400">Failed to load questions from server</h1>
-          <p className="mt-2 text-xs text-slate-300">
-            {fetchError || "Topshiriqlar topilmadi (0/0 savol). Iltimos, server yoki tarmoq holatini tekshirib qayta urining."}
-          </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg hover:bg-red-500 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="size-4" />
-              Qayta yuklash (Retry)
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadErrorPanel fullScreen reason={fetchError} />;
   }
 
   const allQuestions = parts.flatMap((p) => p?.group?.questions || []);

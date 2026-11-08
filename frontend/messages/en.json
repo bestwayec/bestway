@@ -1773,5 +1773,14 @@
     "save": "Save",
     "saved": "Name saved",
     "invalid": "Enter a real name (2–100 characters)."
+  },
+  "errorPanel": {
+    "title": "Questions could not be loaded",
+    "reason": "The exam tasks did not arrive from the server or the connection dropped. Please try again.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "loadErrorTitle": "Exam questions could not be loaded",
+    "loadErrorNetwork": "Could not reach the server. Check your connection and try again.",
+    "loadErrorEmpty": "No questions were found for this attempt. Try again or contact your teacher."
   }
 }

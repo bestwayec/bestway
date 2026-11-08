@@ -1772,5 +1772,14 @@
     "save": "Saqlash",
     "saved": "Ism saqlandi",
     "invalid": "Haqiqiy ism kiriting (2–100 belgi)."
+  },
+  "errorPanel": {
+    "title": "Savollar yuklanmadi",
+    "reason": "Serverdan imtihon topshiriqlari kelmadi yoki tarmoq uzildi. Qayta urinib ko'ring.",
+    "retry": "Qayta urinish",
+    "home": "Bosh sahifaga qaytish",
+    "loadErrorTitle": "Imtihon savollari yuklanmadi",
+    "loadErrorNetwork": "Server bilan bog'lanib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.",
+    "loadErrorEmpty": "Bu urinish uchun savollar topilmadi. Qayta urinib ko'ring yoki o'qituvchingizga murojaat qiling."
   }
 }
