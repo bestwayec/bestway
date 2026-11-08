@@ -1,134 +1,130 @@
 @import "tailwindcss";
 
-/* Dark-only — the vivid brand trio sits on warm, ink-dark neutrals. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * BESTWAY EC — dizayn tokenlari (faqat qorong'i mavzu)
- *
- * Primary: #89F336 (green), highlight: #FFED29 (yellow), warmth: #FF991C (orange).
- * Dark olive surfaces keep the saturated palette cohesive and readable.
+ * BESTWAY LMS — Soddalashtirilgan toza dizayn tizimi (Light & Dark)
+ * 1 asosiy brand yashil rang + neytral kulrang shkala + qizil (xato), yashil (muvaffaqiyat).
+ * Neon, gradient, glow va soya effektlari olib tashlangan.
  */
 :root {
-  --bg: #0b0d08;
-  --bg-subtle: #11140c;
-  --surface: #171a10;
-  --surface-hover: #202418;
+  --bg: #ffffff;
+  --bg-subtle: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
 
-  --fg: #fffdf0;
-  --fg-muted: #b8b9aa;
-  --fg-subtle: #92957f;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #64748b;
 
-  --border: #303321;
-  --border-strong: #4b5030;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
 
-  --brand: #89F336;
-  --brand-hover: #9dff52;
-  --brand-fg: #101704;
-  --brand-subtle: #213416;
-  --brand-subtle-fg: #b9ff83;
+  --brand: #16a34a;
+  --brand-hover: #15803d;
+  --brand-fg: #ffffff;
+  --brand-subtle: #f0fdf4;
+  --brand-subtle-fg: #15803d;
 
-  --accent: #ffed29;
-  --accent-fg: #211d00;
-  --accent-subtle: #3a3510;
+  --accent: #16a34a;
+  --accent-fg: #ffffff;
+  --accent-subtle: #f0fdf4;
 
-  --orange: #ff991c;
-  --orange-fg: #251100;
-  --orange-subtle: #3c260d;
+  --orange: #ea580c;
+  --orange-fg: #ffffff;
+  --orange-subtle: #fff7ed;
 
-  --highlight: #ffed29;
+  --highlight: #16a34a;
 
-  --success: #89F336;
-  --success-bg: #14532d;
-  --success-border: #166534;
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
 
-  --danger: #f87171;
-  --danger-bg: #601b1b;
-  --danger-border: #991b1b;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
 
-  --warning: #ff991c;
-  --warning-bg: #5c2c07;
-  --warning-border: #92400e;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
 
-  --info: #5bc8fb;
-  --info-bg: #0c4a6e;
-  --info-border: #075985;
-  color-scheme: dark;
+  --info: #0284c7;
+  --info-bg: #f0f9ff;
+  --info-border: #bae6fd;
+
+  color-scheme: light;
 }
 
 .dark {
-  --bg: #0b0d08;
-  --bg-subtle: #11140c;
-  --surface: #171a10;
-  --surface-hover: #202418;
+  --bg: #090d16;
+  --bg-subtle: #0f172a;
+  --surface: #131c2e;
+  --surface-hover: #1e293b;
 
-  --fg: #fffdf0;
-  --fg-muted: #b8b9aa;
-  --fg-subtle: #92957f;
+  --fg: #f8fafc;
+  --fg-muted: #94a3b8;
+  --fg-subtle: #64748b;
 
-  --border: #303321;
-  --border-strong: #4b5030;
+  --border: #1e293b;
+  --border-strong: #334155;
 
-  --brand: #89F336;
-  --brand-hover: #9dff52;
-  --brand-fg: #101704;
-  --brand-subtle: #213416;
-  --brand-subtle-fg: #b9ff83;
+  --brand: #22c55e;
+  --brand-hover: #16a34a;
+  --brand-fg: #052e16;
+  --brand-subtle: #14532d40;
+  --brand-subtle-fg: #4ade80;
 
-  --accent: #ffed29;
-  --accent-fg: #211d00;
-  --accent-subtle: #3a3510;
+  --accent: #22c55e;
+  --accent-fg: #052e16;
+  --accent-subtle: #14532d40;
 
-  --orange: #ff991c;
-  --orange-fg: #251100;
-  --orange-subtle: #3c260d;
+  --orange: #f97316;
+  --orange-fg: #431407;
+  --orange-subtle: #7c2d1240;
 
-  --highlight: #ffed29;
+  --highlight: #22c55e;
 
-  --success: #89F336;
-  --success-bg: #14532d;
+  --success: #22c55e;
+  --success-bg: #14532d40;
   --success-border: #166534;
 
-  --danger: #f87171;
-  --danger-bg: #601b1b;
+  --danger: #ef4444;
+  --danger-bg: #450a0a40;
   --danger-border: #991b1b;
 
-  --warning: #ff991c;
-  --warning-bg: #5c2c07;
-  --warning-border: #92400e;
+  --warning: #f59e0b;
+  --warning-bg: #451a0340;
+  --warning-border: #78350f;
 
-  --info: #5bc8fb;
-  --info-bg: #0c4a6e;
+  --info: #38bdf8;
+  --info-bg: #082f4940;
   --info-border: #075985;
+
+  color-scheme: dark;
 }
 
-/*
- * Palette alignment. The UI was written with raw Tailwind `emerald-*` / `slate-*` / `teal-*` classes
- * (≈1 500 uses) that rendered a second, cooler green and a blue-grey neutral next to the lime/olive
- * brand tokens. Re-pointing the Tailwind scales makes every legacy class follow the brand system:
- *   emerald/teal → one lime→forest green family (500 = --brand, 600 = darkest green that still carries
- *                  white text at ≥ 4.5:1),
- *   slate/gray   → warm olive neutrals matching --bg/--surface/--border,
- *   sky-400      → slightly lighter so info badges pass 4.5:1.
- */
 @theme {
-  --color-emerald-50: #f5ffe8;  --color-emerald-100: #e8ffcc; --color-emerald-200: #d3ffa3;
-  --color-emerald-300: #bdfd84; --color-emerald-400: #a5f65a; --color-emerald-500: #89f336;
-  --color-emerald-600: #3b8210; --color-emerald-700: #2f6a10; --color-emerald-800: #24510f;
-  --color-emerald-900: #1b3d0e; --color-emerald-950: #0f2208;
-  --color-teal-50: #f5ffe8;     --color-teal-100: #e8ffcc;    --color-teal-200: #d3ffa3;
-  --color-teal-300: #bdfd84;    --color-teal-400: #a5f65a;    --color-teal-500: #89f336;
-  --color-teal-600: #3b8210;    --color-teal-700: #2f6a10;    --color-teal-800: #24510f;
-  --color-teal-900: #1b3d0e;    --color-teal-950: #0f2208;
-  --color-slate-50: #f7f8f1;    --color-slate-100: #eceee1;   --color-slate-200: #dcdfcd;
-  --color-slate-300: #d0d3bf;   --color-slate-400: #b8bba7;   --color-slate-500: #8a8e78;
-  --color-slate-600: #6f7359;   --color-slate-700: #454932;   --color-slate-800: #2e3120;
-  --color-slate-900: #1c1f13;   --color-slate-950: #11140c;
-  --color-gray-50: #f7f8f1;     --color-gray-100: #eceee1;    --color-gray-200: #dcdfcd;
-  --color-gray-300: #d0d3bf;    --color-gray-400: #b8bba7;    --color-gray-500: #8a8e78;
-  --color-gray-600: #6f7359;    --color-gray-700: #454932;    --color-gray-800: #2e3120;
-  --color-gray-900: #1c1f13;    --color-gray-950: #11140c;
-  --color-sky-400: #5bc8fb;
+  --color-emerald-50: #f0fdf4;  --color-emerald-100: #dcfce7; --color-emerald-200: #bbf7d0;
+  --color-emerald-300: #86efac; --color-emerald-400: #4ade80; --color-emerald-500: #22c55e;
+  --color-emerald-600: #16a34a; --color-emerald-700: #15803d; --color-emerald-800: #166534;
+  --color-emerald-900: #14532d; --color-emerald-950: #052e16;
+
+  --color-teal-50: #f0fdf4;     --color-teal-100: #dcfce7;    --color-teal-200: #bbf7d0;
+  --color-teal-300: #86efac;    --color-teal-400: #4ade80;    --color-teal-500: #22c55e;
+  --color-teal-600: #16a34a;    --color-teal-700: #15803d;    --color-teal-800: #166534;
+  --color-teal-900: #14532d;    --color-teal-950: #052e16;
+
+  --color-slate-50: #f8fafc;    --color-slate-100: #f1f5f9;   --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;   --color-slate-400: #94a3b8;   --color-slate-500: #64748b;
+  --color-slate-600: #475569;   --color-slate-700: #334155;   --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;   --color-slate-950: #020617;
+
+  --color-gray-50: #f9fafb;     --color-gray-100: #f3f4f6;    --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;    --color-gray-400: #9ca3af;    --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;    --color-gray-700: #374151;    --color-gray-800: #1f2937;
+  --color-gray-900: #111827;    --color-gray-950: #030712;
+
+  --color-sky-400: #38bdf8;
 }
 
 @theme inline {
@@ -178,8 +174,19 @@
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
+  /* Soddalashtirilgan o'lchamlar: matn hech qachon 14 dan kichik emas */
+  --text-xs: 14px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 28px;
+  --text-4xl: 28px;
+
+  /* Kartalar va boshqaruv elementlari uchun qat'iy 12px */
   --radius-control: 12px;
-  --radius-card: 18px;
+  --radius-card: 12px;
 }
 
 @layer base {
@@ -190,10 +197,9 @@
   html {
     -webkit-tap-highlight-color: transparent;
     overflow-x: clip;
-    /* Scrollbar yo'qolsa ham layout siljimasin (modal scroll-lock izlari) */
     scrollbar-gutter: stable;
   }
-  /* View Transitions compatible smooth scroll — sets via data attribute to avoid disabling Next.js View Transitions */
+
   html[data-scroll-behavior="smooth"] {
     scroll-behavior: smooth;
   }
@@ -211,36 +217,10 @@
     -webkit-font-smoothing: antialiased;
     overflow-x: clip;
     overflow-wrap: break-word;
+    font-size: 16px;
+    line-height: 1.5;
   }
 
-  /* ── Seamless marketing background: ONE fixed ambient layer ──────────────
-     Single near-black / deep forest base + restrained ambient lighting.
-     Fixed so it never bands or stripes while scrolling on mobile. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(42rem 30rem at 12% -6%, rgba(137, 243, 54, 0.07), transparent 70%),
-      radial-gradient(36rem 26rem at 88% 4%, rgba(255, 237, 41, 0.05), transparent 70%),
-      radial-gradient(60rem 44rem at 50% 55%, rgba(32, 68, 22, 0.28), transparent 72%),
-      radial-gradient(54rem 40rem at 50% 108%, rgba(20, 42, 16, 0.32), transparent 72%),
-      var(--bg);
-  }
-
-  @media (max-width: 640px) {
-    body::before {
-      background:
-        radial-gradient(26rem 20rem at 50% -4%, rgba(137, 243, 54, 0.06), transparent 70%),
-        radial-gradient(30rem 24rem at 50% 55%, rgba(32, 68, 22, 0.24), transparent 72%),
-        radial-gradient(28rem 22rem at 50% 105%, rgba(20, 42, 16, 0.26), transparent 72%),
-        var(--bg);
-    }
-  }
-
-  /* Raqamlar ustunda tik turishi uchun (jadval, summa, ball) */
   table,
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -257,78 +237,68 @@
   }
 }
 
-/* Radix qatlamlari uchun animatsiyalar — tashqi paketsiz.
-   Radix elementga data-state="open|closed" qo'yadi, biz shunga ulanamiz. */
+/* 4 qat'iy shrift darajalari uchun yordamchi klasslar */
+.text-title {
+  font-size: 28px !important;
+  line-height: 34px !important;
+  font-weight: 700 !important;
+}
+
+.text-subtitle {
+  font-size: 20px !important;
+  line-height: 26px !important;
+  font-weight: 600 !important;
+}
+
+.text-body {
+  font-size: 16px !important;
+  line-height: 24px !important;
+}
+
+.text-caption {
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+/* Radix dialog/sheet animatsiyalari */
 @keyframes bw-fade-in {
-  from {
-    opacity: 0;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes bw-fade-out {
-  to {
-    opacity: 0;
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @keyframes bw-pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes bw-pop-out {
-  to {
-    opacity: 0;
-    transform: scale(0.96);
-  }
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
 }
 
-/* Pastki sheet (mobile "More") — pastdan yuqoriga sirg'aladi */
 @keyframes bw-sheet-in {
-  from {
-    opacity: 0.5;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 @keyframes bw-sheet-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(24px);
-  }
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
 }
 
-/* Dialog markazda turadi — translate(-50%,-50%) animatsiya davomida saqlanishi shart */
 @keyframes bw-dialog-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 @keyframes bw-dialog-out {
-  from {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
-  }
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
 }
 
 @layer utilities {
@@ -360,132 +330,12 @@
     animation: bw-sheet-out 140ms ease-in;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .anim-fade,
-    .anim-pop,
-    .anim-dialog,
-    .anim-sheet {
-      animation: none !important;
-    }
-  }
-}
-
-/* ── Marketing sayti animatsiyalari ──────────────────────────────────────── */
-@keyframes bw-reveal-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes bw-float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-14px) rotate(1.5deg);
-  }
-}
-
-@keyframes bw-float-slow {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(18px);
-  }
-}
-
-/* Hero progress badges — barely-there vertical drift (no rotation) */
-@keyframes bw-float-soft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes bw-gradient-pan {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes bw-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@layer utilities {
-  /* Scroll-reveal: JS ko'rinishga kelganda .is-visible qo'shadi */
-  .reveal {
-    opacity: 0;
-    will-change: transform, opacity;
-  }
-  .reveal.is-visible {
-    animation: bw-reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
-  .anim-float {
-    animation: bw-float 7s ease-in-out infinite;
-  }
-  .anim-float-slow {
-    animation: bw-float-slow 9s ease-in-out infinite;
-  }
-  .anim-float-soft {
-    animation: bw-float-soft 5.5s ease-in-out infinite;
-  }
-
-  .anim-gradient {
-    background-size: 200% 200%;
-    animation: bw-gradient-pan 12s ease infinite;
-  }
-
-  .marquee-track {
-    animation: bw-marquee 30s linear infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .reveal,
-    .reveal.is-visible,
-    .anim-float,
-    .anim-float-slow,
-    .anim-float-soft,
-    .anim-gradient,
-    .marquee-track {
-      animation: none !important;
-      opacity: 1 !important;
-    }
-  }
-}
-
-@layer utilities {
-  /* Excel-simon jadvalda birinchi ustun scroll qilganda ham ko'rinib turadi */
   .sticky-col {
     position: sticky;
     left: 0;
     z-index: 2;
   }
 
-  /* Mobil qurilmada pastki menyu tizim "home indicator"iga tegmasin */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -498,339 +348,38 @@
   .overscroll-x-contain {
     overscroll-behavior-x: contain;
   }
-}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   Kengaytirilgan dizayn tizimi — animatsiyalar, 3D, chuqurlik, gradientlar
-   ══════════════════════════════════════════════════════════════════════════ */
-
-/* ── Logotip jonlanishi (hero/kirish sahifalarida) ───────────────────────── */
-@keyframes bw-sun-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.09); opacity: 0.9; }
-}
-@keyframes bw-wing-flap {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.86); }
-}
-
-@layer utilities {
-  .bw-mark-animated .bw-mark-sun,
-  .bw-mark-animated .bw-mark-wing {
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-  .bw-mark-animated .bw-mark-sun {
-    animation: bw-sun-pulse 3.6s ease-in-out infinite;
-  }
-  .bw-mark-animated .bw-mark-wing {
-    animation: bw-wing-flap 4.2s ease-in-out infinite;
-  }
-}
-
-/* ── 3D egilish (tilt) — sichqoncha kuzatib boradigan kartalar ────────────── */
-@layer utilities {
-  .perspective {
-    perspective: 1000px;
-  }
-  /* JS `--tilt-x` / `--tilt-y` (deg) o'rnatadi; xclass transformni qo'llaydi */
-  .tilt-3d {
-    transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
-      translateZ(0);
-    transform-style: preserve-3d;
-    transition:
-      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 0.18s ease;
-    will-change: transform;
-  }
-  /* 3D sirt ustidan "ko'tarilib" turadigan ichki qatlam */
-  .tilt-layer {
-    transform: translateZ(38px);
-    transform-style: preserve-3d;
-  }
-  .tilt-glare {
-    background: radial-gradient(
-      circle at var(--glare-x, 50%) var(--glare-y, 0%),
-      rgba(255, 255, 255, 0.28),
-      transparent 45%
-    );
-    opacity: var(--glare-o, 0);
-    transition: opacity 0.2s ease;
-  }
-}
-
-/* ── Chuqurlik (elevation) — qorong'i mavzuda ham ko'rinadigan soyalar ─────── */
-@layer utilities {
-  .elevated {
-    box-shadow:
-      0 1px 2px rgba(16, 24, 40, 0.06),
-      0 10px 28px -10px rgba(16, 24, 40, 0.16);
-  }
-  .elevated-lg {
-    box-shadow:
-      0 2px 4px rgba(16, 24, 40, 0.06),
-      0 24px 48px -16px rgba(16, 24, 40, 0.24);
-  }
-  .dark .elevated {
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.5),
-      0 12px 32px -12px rgba(0, 0, 0, 0.7);
-  }
-  .dark .elevated-lg {
-    box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.5),
-      0 28px 60px -18px rgba(0, 0, 0, 0.8);
-  }
-  /* Umumiy karta "ko'tarilishi" — hoverda yuqoriga suriladi + soya.
-     Soya to'g'ridan-to'g'ri shu yerda (Tailwind v4'da custom utility'ning
-     `hover:` varianti ishlamaydi, shuning uchun o'zimiz yozamiz). */
-  .lift {
-    transition:
-      transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 0.25s ease,
-      border-color 0.25s ease;
-  }
-  .lift:hover {
-    transform: translateY(-4px);
-    box-shadow:
-      0 1px 2px rgba(16, 24, 40, 0.06),
-      0 12px 30px -10px rgba(16, 24, 40, 0.18);
-  }
-  .dark .lift:hover {
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.5),
-      0 14px 34px -12px rgba(0, 0, 0, 0.7);
-  }
-
-  /* Ko'tarilmasdan (transformsiz) faqat hoverda soya — 3D tilt kartalar uchun */
-  .hover-elevate {
-    transition:
-      box-shadow 0.25s ease,
-      border-color 0.25s ease;
-  }
-  .hover-elevate:hover {
-    box-shadow:
-      0 1px 2px rgba(16, 24, 40, 0.06),
-      0 12px 30px -10px rgba(16, 24, 40, 0.18);
-  }
-  .dark .hover-elevate:hover {
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.5),
-      0 14px 34px -12px rgba(0, 0, 0, 0.7);
-  }
-}
-
-/* ── Nur o'tishi (shine) va yaltirash (shimmer) ──────────────────────────── */
-@keyframes bw-shine {
-  100% {
-    transform: translateX(230%) skewX(-16deg);
-  }
-}
-@keyframes bw-shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-@keyframes bw-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-@keyframes bw-spin-slow {
-  to { transform: rotate(360deg); }
-}
-@keyframes bw-scale-in {
-  from { opacity: 0; transform: scale(0.94); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@layer utilities {
-  /* Hoverda ustidan yorug'lik chizig'i o'tadigan konteyner */
-  .shine {
-    position: relative;
-    overflow: hidden;
-    isolation: isolate;
-  }
-  .shine::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 45%;
-    height: 100%;
-    transform: translateX(-160%) skewX(-16deg);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.35),
-      transparent
-    );
-    pointer-events: none;
-    z-index: 1;
-  }
-  .shine:hover::before {
-    animation: bw-shine 0.85s ease-out;
-  }
-
-  /* Yuklanish skeletlari uchun yaltirash */
-  .shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-  .shimmer::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.12),
-      transparent
-    );
-    animation: bw-shimmer 1.6s infinite;
-  }
-
-  .anim-glow {
-    animation: bw-glow 3s ease-in-out infinite;
-  }
-  .anim-spin-slow {
-    animation: bw-spin-slow 18s linear infinite;
-  }
-  .anim-scale-in {
-    animation: bw-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-}
-
-/* ── Gradientlar, to'r fonlar, gradient chegara ──────────────────────────── */
-@layer utilities {
-  .text-gradient-brand {
-    background-image: linear-gradient(110deg, var(--brand), var(--accent) 52%, var(--orange));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Nozik nuqtali/chiziqli to'r foni (hero, bo'sh holatlar) */
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, var(--border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-    background-size: 44px 44px;
-    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
-  }
-  .bg-dots {
-    background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
-    background-size: 22px 22px;
-  }
-
-  /* CD exam highlighter — brand yellow mark on dark passages */
-  mark.cd-mark {
-    background: rgba(255, 237, 41, 0.35);
+  /* Imtihon markerlari */
+  mark.cd-mark,
+  mark.cbt-highlight {
+    background: rgba(34, 197, 94, 0.25);
     color: inherit;
     border-radius: 2px;
-    padding: 0 1px;
+    padding: 0 2px;
   }
 
-  /* CBT Highlight & Underline Tools */
-  mark.cbt-highlight {
-    background: rgba(250, 204, 21, 0.45);
-    color: inherit;
-    border-radius: 3px;
-    padding: 1px 3px;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-  mark.cbt-highlight:hover {
-    background: rgba(250, 204, 21, 0.7);
-  }
   mark.cbt-highlight-green {
-    background: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.35);
     color: inherit;
-    border-radius: 3px;
-    padding: 1px 3px;
-    cursor: pointer;
-    transition: background 0.15s ease;
+    border-radius: 2px;
+    padding: 0 2px;
   }
-  mark.cbt-highlight-green:hover {
-    background: rgba(34, 197, 94, 0.65);
-  }
+
   span.cbt-underline {
     text-decoration: underline;
-    text-decoration-color: #0284c7;
-    text-decoration-thickness: 2.5px;
-    text-underline-offset: 3.5px;
-    cursor: pointer;
-    transition: text-decoration-color 0.15s ease;
-  }
-  span.cbt-underline:hover {
-    text-decoration-color: #0369a1;
-  }
-
-  /* OGL particle backdrop — fills its fixed wrapper, canvas never blocks */
-  .particles-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-  .particles-container canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  /* Gradient chegarali karta — ichki fon + tashqi gradient halqa */
-  .ring-gradient {
-    background:
-      linear-gradient(var(--surface), var(--surface)) padding-box,
-      linear-gradient(120deg, var(--brand), var(--accent), var(--orange)) border-box;
-    border: 1.5px solid transparent;
-  }
-
-  /* ── Seamless sections: boundaries via spacing, not color blocks ─────────
-     Sections stay transparent so the fixed body::before shows through as ONE
-     continuous canvas. --tint adds an extremely subtle vertical veil only
-     where separation helps readability — no hard edges. */
-  .marketing-section {
-    position: relative;
-    background: transparent;
-  }
-  .marketing-section--tint {
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      rgba(255, 255, 255, 0.014) 22%,
-      rgba(255, 255, 255, 0.014) 78%,
-      transparent
-    );
-  }
-  .marketing-footer {
-    position: relative;
-    background:
-      linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.22)),
-      transparent;
+    text-decoration-color: var(--brand);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
   }
 }
 
-/* Harakatni kamaytirish so'ralganda — hammasi tinch */
+/* Harakatni kamaytirish */
 @media (prefers-reduced-motion: reduce) {
-  .bw-mark-animated .bw-mark-sun,
-  .bw-mark-animated .bw-mark-wing,
-  .anim-glow,
-  .anim-spin-slow,
-  .anim-scale-in,
-  .shimmer::after,
-  .shine:hover::before {
+  .anim-fade,
+  .anim-pop,
+  .anim-dialog,
+  .anim-sheet {
     animation: none !important;
-  }
-  .lift,
-  .tilt-3d {
-    transition: none !important;
-  }
-  .lift:hover {
-    transform: none !important;
   }
 }
 
@@ -841,38 +390,4 @@
 
 .is-mobile-app .mobile-app-only {
   display: block !important;
-}
-
-
-/* Touch ripple: Android-style press wave on coarse pointers (phones / WebView). */
-@media (pointer: coarse) {
-  button:not(:disabled),
-  [role="button"],
-  [role="radio"],
-  [role="tab"] {
-    position: relative;
-    overflow: hidden;
-    touch-action: manipulation;
-  }
-  button:not(:disabled)::after,
-  [role="button"]::after,
-  [role="radio"]::after,
-  [role="tab"]::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(circle at center, rgb(16 185 129 / 0.28) 0%, transparent 70%);
-    opacity: 0;
-    transform: scale(0.4);
-    transition: opacity 0.35s ease, transform 0.45s ease;
-  }
-  button:not(:disabled):active::after,
-  [role="button"]:active::after,
-  [role="radio"]:active::after,
-  [role="tab"]:active::after {
-    opacity: 1;
-    transform: scale(1.6);
-    transition-duration: 0s;
-  }
 }

@@ -18,6 +18,8 @@ import {
   Users,
   Wallet,
   Target,
+  BarChart3,
+  Compass,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "./types";
@@ -57,10 +59,7 @@ const NAV: NavItem[] = [
   { href: "/leaderboard", key: "leaderboard", icon: Trophy, roles: ["student", "teacher"], mobile: true },
   { href: "/profile", key: "profile", icon: User, roles: ["student"], mobile: true },
   { href: "/children", key: "children", icon: GraduationCap, roles: ["parent"], mobile: true },
-  // Student exam track selector — placed before profile/settings conceptually
-  { href: "/exam-track", key: "examTrack", icon: Target, roles: ["student"] },
-  // Eslatma: notifications ataylab primary emas — AppTopbar'dagi qo'ng'iroqcha
-  // (NotificationsBell) barcha viewport'larda mavjud, slotni keraksiz egallamasin.
+  { href: "/exam-track", key: "examTrack", icon: Compass, roles: ["student"] },
   { href: "/notifications", key: "notifications", icon: Bell, roles: ALL },
   { href: "/settings", key: "settings", icon: Settings, roles: SUPER },
   { href: "/audit", key: "audit", icon: ScrollText, roles: SUPER },
@@ -73,11 +72,47 @@ export function navForRole(role: Role): NavItem[] {
 }
 
 /**
+ * Talaba uchun 4 ta asosiy bo'lim:
+ * 1. Bosh sahifa
+ * 2. Imtihonlar
+ * 3. Darslar
+ * 4. Natijalar
+ */
+export function primaryNavForRole(role: Role): NavItem[] {
+  if (role === "student") {
+    return [
+      { href: "/dashboard", key: "dashboard", icon: LayoutDashboard, roles: ["student"], mobile: true },
+      { href: "/mock", key: "mock", icon: Target, roles: ["student"], mobile: true },
+      { href: "/videos", key: "videos", icon: PlaySquare, roles: ["student"], mobile: true },
+      { href: "/profile", key: "results", icon: BarChart3, roles: ["student"], mobile: true },
+    ];
+  }
+  return navForRole(role).filter((item) => item.key !== "notifications");
+}
+
+/**
+ * Talaba uchun "Yana" bo'limiga ko'chirilgan yordamchi bo'limlar:
+ * Lug'at, Bamboozle Arena, Reyting, Yo'nalish
+ */
+export function secondaryNavForRole(role: Role): NavItem[] {
+  if (role === "student") {
+    return [
+      { href: "/vocabulary", key: "vocabulary", icon: BookA, roles: ["student"] },
+      { href: "/bamboozle", key: "bamboozle", icon: Swords, roles: ["student"] },
+      { href: "/leaderboard", key: "leaderboard", icon: Trophy, roles: ["student"] },
+      { href: "/exam-track", key: "examTrack", icon: Compass, roles: ["student"] },
+    ];
+  }
+  return [];
+}
+
+/**
  * Mobil pastki menyu uchun BIRLAMCHI (4 slot) bo'limlar.
- * 5-slot doim "More" tugmasiga ajratilgan (komponentda qo'shiladi, bu ro'yxatda emas).
- * Qolgan barcha rolga mos bo'limlar `navForRole()` orqali "More" panelida chiqadi.
  */
 export function mobileNavForRole(role: Role): NavItem[] {
+  if (role === "student") {
+    return primaryNavForRole("student");
+  }
   const items = navForRole(role);
   if (role === "teacher") {
     const priorities = ["dashboard", "attendance", "groups", "teacherWorkspace"];

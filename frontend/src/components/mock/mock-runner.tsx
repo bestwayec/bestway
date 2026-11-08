@@ -635,154 +635,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               </p>
             </div>
 
-            {/* Simulator Mode & Accessibility Toolbar */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Simulator Mode Toggle (CDI vs DTM) */}
-              <div className="inline-flex items-center rounded-lg border border-border bg-surface p-0.5 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setSimulatorMode("cdi")}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition-colors",
-                    simulatorMode === "cdi"
-                      ? "bg-brand text-brand-fg"
-                      : "text-fg-muted hover:text-fg"
-                  )}
-                  title="IELTS Computer-Delivered (CDI) Interfeysi"
-                >
-                  <Monitor className="size-3.5" />
-                  <span>IELTS CDI</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulatorMode("dtm")}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition-colors",
-                    simulatorMode === "dtm"
-                      ? "bg-brand text-brand-fg"
-                      : "text-fg-muted hover:text-fg"
-                  )}
-                  title="Multi-Level DTM (Bilimni baholash agentligi) Interfeysi"
-                >
-                  <span>DTM</span>
-                </button>
-              </div>
-
-              {/* CDI Mode: Contrast Theme Switcher + Notes Drawer */}
-              {simulatorMode === "cdi" && (
-                <>
-                  <div
-                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs"
-                    title="CDI Kontrast mavzusi"
-                  >
-                    <Contrast className="size-3.5 text-fg-muted" />
-                    <select
-                      aria-label="CDI Contrast Theme"
-                      value={contrastTheme}
-                      onChange={(e) => setContrastTheme(e.target.value as CdiContrastTheme)}
-                      className="bg-transparent text-xs font-medium text-fg focus:outline-none"
-                    >
-                      <option value="standard" className="bg-surface text-fg">
-                        Standart (Oq fon)
-                      </option>
-                      <option value="yellow_on_black" className="bg-zinc-900 text-yellow-300">
-                        Qora (Yellow-on-Black)
-                      </option>
-                      <option value="grey" className="bg-gray-700 text-gray-100">
-                        Kulrang (Grey)
-                      </option>
-                    </select>
-                  </div>
-
-                  {/* Sticky Notes Drawer Trigger */}
-                  <div className="relative">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setNotesDrawerOpen((v) => !v)}
-                      className="h-8 gap-1.5 px-2.5 text-xs"
-                    >
-                      <StickyNote className="size-3.5 text-amber-500" />
-                      <span>Izohlar ({attemptNotes.length})</span>
-                    </Button>
-
-                    {notesDrawerOpen && (
-                      <div className="absolute right-0 top-10 z-50 w-80 rounded-xl border border-border bg-surface p-3 shadow-2xl">
-                        <div className="mb-2 flex items-center justify-between border-b border-border pb-2">
-                          <span className="text-xs font-bold text-fg">
-                            Saqlangan Izohlar (Sticky Notes)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setNotesDrawerOpen(false)}
-                            className="rounded p-0.5 text-fg-muted hover:text-fg"
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        </div>
-                        {attemptNotes.length === 0 ? (
-                          <p className="py-4 text-center text-xs text-fg-muted">
-                            Matnni belgilab &ldquo;Izoh&rdquo; tugmasini bosing.
-                          </p>
-                        ) : (
-                          <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
-                            {attemptNotes.map((n) => (
-                              <div
-                                key={n.id}
-                                className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-2 text-xs"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="line-clamp-1 font-semibold text-amber-600 dark:text-amber-300">
-                                    &ldquo;{n.quote}&rdquo;
-                                  </p>
-                                  {n.storageKey && (
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteAttemptNote(n.storageKey!, n.id)}
-                                      className="text-fg-muted hover:text-danger"
-                                      title="Izohni o'chirish"
-                                    >
-                                      <Trash2 className="size-3" />
-                                    </button>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-fg">{n.text}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* DTM Mode: Fullscreen Toggle */}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void toggleFullscreen()}
-                className="h-8 gap-1.5 px-2.5 text-xs"
-                title="To'liq ekran rejimi"
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="size-3.5" />
-                ) : (
-                  <Maximize2 className="size-3.5" />
-                )}
-                <span className="hidden sm:inline">To&apos;liq ekran</span>
-              </Button>
-
+            {/* Distraction-Free Controls */}
+            <div className="flex items-center gap-3">
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
-                <Button size="sm" variant="outline" className="min-h-[44px] px-3.5 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
+                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
                   Next section
                 </Button>
               ) : null}
-              <Button size="sm" className="min-h-[44px] px-3.5 touch-manipulation" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
-                <Send />
+              <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand/90 text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+                <Send className="mr-1.5 size-4" />
                 {t("submit")}
               </Button>
             </div>
@@ -1221,7 +1083,7 @@ function GroupBlock({
         {hasPassage && !hasGappedContent && (
           <div
             className={cn(
-              "whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-4 text-sm leading-relaxed text-fg shadow-inner",
+              "whitespace-pre-line rounded-[12px] border border-border bg-surface p-5 text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch]",
               "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}

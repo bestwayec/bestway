@@ -2,17 +2,13 @@
 
 import * as React from "react";
 
-// Dark-only theme provider — white/light theme deleted entirely.
-// Keeps the old `useTheme` / `ThemeProvider` API so existing imports keep working,
-// but the app is always dark: `<html>` always has `.dark`, `color-scheme: dark`.
-
 interface UseThemeProps {
   themes: string[];
   forcedTheme?: string | undefined;
-  setTheme: React.Dispatch<React.SetStateAction<string>>;
+  setTheme: (theme: string | ((prev: string) => string)) => void;
   theme?: string | undefined;
   resolvedTheme?: string | undefined;
-  systemTheme?: undefined;
+  systemTheme?: "dark" | "light" | undefined;
 }
 
 const ThemeContext = React.createContext<UseThemeProps | undefined>(undefined);
@@ -21,12 +17,12 @@ export function useTheme(): UseThemeProps {
   const ctx = React.useContext(ThemeContext);
   if (ctx) return ctx;
   return {
-    themes: ["dark"],
+    themes: ["dark", "light"],
     setTheme: () => {},
     theme: "dark",
     resolvedTheme: "dark",
-    systemTheme: undefined,
-    forcedTheme: "dark",
+    systemTheme: "dark",
+    forcedTheme: undefined,
   };
 }
 
@@ -43,36 +39,58 @@ interface ThemeProviderProps extends React.PropsWithChildren {
   nonce?: string;
 }
 
-export function ThemeProvider({ children, storageKey = "theme" }: ThemeProviderProps) {
-  // Enforce dark on mount + clean up any stale light/system preference.
+export function ThemeProvider({
+  children,
+  storageKey = "theme",
+  defaultTheme = "dark",
+}: ThemeProviderProps) {
+  const [theme, setThemeState] = React.useState<string>(defaultTheme);
+
   React.useEffect(() => {
     try {
-      localStorage.removeItem(storageKey);
-      localStorage.setItem(storageKey, "dark");
+      const saved = localStorage.getItem(storageKey);
+      if (saved === "light" || saved === "dark") {
+        setThemeState(saved);
+      }
     } catch {}
-    const el = document.documentElement;
-    el.classList.add("dark");
-    el.style.colorScheme = "dark";
   }, [storageKey]);
 
-  const setTheme = React.useCallback(() => {
-    // No-op — dark only. Keep `.dark` enforced in case something removes it.
-    if (typeof document !== "undefined") {
-      document.documentElement.classList.add("dark");
-      document.documentElement.style.colorScheme = "dark";
+  React.useEffect(() => {
+    const el = document.documentElement;
+    if (theme === "light") {
+      el.classList.remove("dark");
+      el.style.colorScheme = "light";
+      el.setAttribute("data-theme", "light");
+    } else {
+      el.classList.add("dark");
+      el.style.colorScheme = "dark";
+      el.setAttribute("data-theme", "dark");
     }
-  }, []) as React.Dispatch<React.SetStateAction<string>>;
+  }, [theme]);
+
+  const setTheme = React.useCallback(
+    (next: string | ((prev: string) => string)) => {
+      setThemeState((prev) => {
+        const val = typeof next === "function" ? next(prev) : next;
+        try {
+          localStorage.setItem(storageKey, val);
+        } catch {}
+        return val;
+      });
+    },
+    [storageKey],
+  );
 
   const providerValue = React.useMemo<UseThemeProps>(
     () => ({
-      theme: "dark",
+      theme,
       setTheme,
-      forcedTheme: "dark",
-      resolvedTheme: "dark",
-      systemTheme: undefined,
-      themes: ["dark"],
+      forcedTheme: undefined,
+      resolvedTheme: theme,
+      systemTheme: "dark",
+      themes: ["dark", "light"],
     }),
-    [setTheme],
+    [theme, setTheme],
   );
 
   return <ThemeContext.Provider value={providerValue}>{children}</ThemeContext.Provider>;

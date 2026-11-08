@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 /**
  * Shared "could not load" panel (U4): a title, the reason, "Try again" and "Back to home".
- * Used by the mock runner and the CD simulator so both failures look and behave the same.
  */
 export function LoadErrorPanel({
   title,
@@ -33,22 +32,27 @@ export function LoadErrorPanel({
         className,
       )}
     >
-      <div role="alert" className="w-full max-w-md rounded-2xl border border-danger-border bg-surface p-6 shadow-lg sm:p-8">
-        <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-danger-bg text-danger">
+      <div
+        role="alert"
+        className="w-full max-w-md rounded-[12px] border border-danger-border bg-surface p-6 sm:p-8"
+      >
+        <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-danger-bg text-danger border border-danger-border/40">
           <AlertTriangle className="size-6" aria-hidden />
         </div>
-        <h2 className="text-lg font-bold text-fg">{title ?? t("title")}</h2>
+        <h2 className="text-xl font-bold text-fg">{title ?? t("title")}</h2>
         <p className="mt-2 text-sm text-fg-muted">{reason || t("reason")}</p>
-        <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-          <Button type="button" onClick={onRetry ?? (() => window.location.reload())}>
-            <RotateCcw className="size-4" aria-hidden />
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <Button
+            type="button"
+            className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium px-5"
+            onClick={onRetry ?? (() => window.location.reload())}
+          >
+            <RotateCcw className="mr-1.5 size-4" aria-hidden />
             {t("retry")}
           </Button>
-          <Button asChild variant="outline">
-            {/* Plain anchor (full navigation is the right reset after a failed load); the
-                locale proxy keeps the user's language via the NEXT_LOCALE cookie. */}
+          <Button asChild variant="outline" className="min-h-[44px] px-5">
             <a href={homeHref}>
-              <Home className="size-4" aria-hidden />
+              <Home className="mr-1.5 size-4" aria-hidden />
               {t("home")}
             </a>
           </Button>

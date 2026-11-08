@@ -9,9 +9,8 @@ import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
- * Mobil "More" pastki paneli — pastki menyuga sig'magan barcha rolga mos
- * bo'limlar shu yerda (100% nav reachability). Tanlash yoki backdrop tap
- * bilan yopiladi. z-50: topbar (z-20) va pastki nav (z-30) dan yuqorida.
+ * Mobil "More" pastki paneli:
+ * Qo'shimcha bo'limlar shu yerda. Soya yo'q, toza 1px chegara.
  */
 export function MobileNavMoreSheet({
   role,
@@ -27,31 +26,33 @@ export function MobileNavMoreSheet({
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   const pathname = usePathname();
-  const overflow = navForRole(role).filter((item) => !primaryHrefs.includes(item.href));
+  const overflow = navForRole(role).filter(
+    (item) => !primaryHrefs.includes(item.href) && item.key !== "notifications",
+  );
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="anim-fade fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
+        <DialogPrimitive.Overlay className="anim-fade fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content
-          className="anim-sheet pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-[16px] border-t border-border bg-surface shadow-lg"
+          className="anim-sheet pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-[12px] border-t border-border bg-surface"
           aria-label={t("more")}
         >
-          <div className="sticky top-0 bg-surface pt-2 pb-1">
+          <div className="sticky top-0 bg-surface pt-2 pb-1 border-b border-border/40">
             <div aria-hidden className="mx-auto h-1 w-10 rounded-full bg-border" />
             <div className="flex items-center justify-between px-4 pt-2">
-              <DialogPrimitive.Title className="text-base font-semibold text-fg">
+              <DialogPrimitive.Title className="text-subtitle font-semibold text-fg">
                 {t("more")}
               </DialogPrimitive.Title>
               <DialogPrimitive.Close
-                className="rounded-[6px] p-1.5 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+                className="inline-flex size-9 items-center justify-center rounded-[8px] text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
                 aria-label={tc("close")}
               >
                 <X className="size-5" />
               </DialogPrimitive.Close>
             </div>
           </div>
-          <nav className="px-2 pt-1 pb-4">
+          <nav className="space-y-1 p-3">
             {overflow.map((item) => {
               const active = isActive(pathname, item.href);
               const Icon = item.icon;
@@ -62,8 +63,8 @@ export function MobileNavMoreSheet({
                   onClick={() => onOpenChange(false)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium transition-colors",
-                    active ? "bg-brand-subtle text-brand-subtle-fg" : "text-fg hover:bg-surface-hover",
+                    "flex min-h-[44px] items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors",
+                    active ? "bg-brand-subtle text-brand-subtle-fg font-semibold" : "text-fg hover:bg-surface-hover",
                   )}
                 >
                   <Icon className="size-5 shrink-0" />

@@ -47,14 +47,13 @@ import {
 import type { ExamSimulatorMode, MockAttemptMode, MockPracticeSkill } from "@/lib/types";
 import { ExamLauncherModal } from "./exam-launcher-modal";
 import { ExamResumeModal } from "./exam-resume-modal";
-import { LiveExamPinCard } from "./live-exam-pin-card";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
-import { useStudentProgramScope } from '@/hooks/use-exam-programs';
-import { ExamTrackSelector } from '@/components/profile/exam-track-selector';
-import { ExamTrackRequired } from '@/components/exam-track/exam-track-required';
+import { useStudentProgramScope } from "@/hooks/use-exam-programs";
+import { ExamTrackSelector } from "@/components/profile/exam-track-selector";
+import { ExamTrackRequired } from "@/components/exam-track/exam-track-required";
 import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
-import { formatMoney, formatPhone } from "@/lib/utils";
+import { cn, formatMoney, formatPhone } from "@/lib/utils";
 import { MultilevelReadiness } from "./multilevel-student-ui";
 import { availablePracticeSkills } from "@/lib/mock-practice";
 
@@ -64,6 +63,9 @@ const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   writing: PenLine,
   speaking: Mic,
 };
+
+const LEVELS = ["all", "A1", "A2", "B1", "B2", "C1"] as const;
+type LevelFilter = (typeof LEVELS)[number];
 
 type Tab = "exams" | "live" | "grading" | "purchases";
 
@@ -76,11 +78,14 @@ export function MockExamsView() {
   const isOffice = role === "admin" || role === "super_admin";
   const isStudent = role === "student";
   const scope = useStudentProgramScope();
-  const tt = useTranslations('examTrack');
-  const [practiceLevel, setPracticeLevel] = React.useState<'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'all'>('all');
 
+  const [levelFilter, setLevelFilter] = React.useState<LevelFilter>("all");
   const [tab, setTab] = React.useState<Tab>("exams");
-  const examsQ = useMockExams(undefined, scope.program === 'MULTILEVEL' && practiceLevel !== 'all' ? practiceLevel : undefined);
+
+  const examsQ = useMockExams(
+    undefined,
+    scope.program === "MULTILEVEL" && levelFilter !== "all" ? (levelFilter as any) : undefined
+  );
   const attemptsQ = useMyMockAttempts();
   const purchase = usePurchaseMock();
   const deleteExam = useDeleteMockExam();
@@ -88,7 +93,12 @@ export function MockExamsView() {
   const start = useStartMock();
   const router = useRouter();
 
-  function onStart(examId: string, mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) {
+  function onStart(
+    examId: string,
+    mode: MockAttemptMode,
+    skills?: MockPracticeSkill[],
+    simulatorMode?: ExamSimulatorMode
+  ) {
     start.mutate(
       {
         examId,
@@ -112,15 +122,28 @@ export function MockExamsView() {
     });
   }
 
+  // Filter exams by selected level
+  const displayedExams = React.useMemo(() => {
+    const list = examsQ.data ?? [];
+    if (levelFilter === "all") return list;
+    return list.filter((e) => {
+      const targetLvl = levelFilter.toUpperCase();
+      const examLvl = (e.level || e.practiceLevel || "").toUpperCase();
+      if (examLvl.includes(targetLvl)) return true;
+      if (e.title.toUpperCase().includes(targetLvl)) return true;
+      return false;
+    });
+  }, [examsQ.data, levelFilter]);
+
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         title={t("title")}
         description={t("subtitle")}
         actions={
           isStaff ? (
             <Link href="/exam-builder/new">
-              <Button size="sm">
+              <Button size="sm" className="min-h-[44px]">
                 <Plus />
                 {t("create")}
               </Button>
@@ -129,13 +152,28 @@ export function MockExamsView() {
         }
       />
 
-      {isStudent && (
-        <div className="mb-5">
-          <LiveExamPinCard />
-        </div>
-      )}
       {isStudent && <ExamTrackSelector />}
-      {isStudent && scope.program === 'MULTILEVEL' && <label className="mb-4 block text-sm">{tt('practiceLevel')} <select aria-label={tt('practiceLevel')} value={practiceLevel} onChange={(e) => setPracticeLevel(e.target.value as typeof practiceLevel)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">{tt('allLevels')}</option>{(['A1','A2','B1','B2','C1'] as const).map((level) => <option key={level} value={level}>{level}</option>)}</select></label>}
+
+      {/* Daraja filtri (A1–C1) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-fg mr-1">Daraja:</span>
+        {LEVELS.map((lvl) => (
+          <button
+            key={lvl}
+            type="button"
+            onClick={() => setLevelFilter(lvl)}
+            className={cn(
+              "min-h-[44px] px-4 rounded-[8px] border text-sm font-medium transition-colors",
+              levelFilter === lvl
+                ? "border-brand bg-brand text-brand-fg"
+                : "border-border bg-surface text-fg hover:border-brand/40"
+            )}
+          >
+            {lvl === "all" ? "Hammasi" : lvl}
+          </button>
+        ))}
+      </div>
+
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
@@ -167,14 +205,14 @@ export function MockExamsView() {
       ) : examsQ.isPending ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-52" />
+            <Skeleton key={i} className="h-52 rounded-[12px]" />
           ))}
         </div>
-      ) : (examsQ.data?.length ?? 0) === 0 ? (
+      ) : displayedExams.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title={t("noExams")} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {examsQ.data!.map((e) => (
+          {displayedExams.map((e) => (
             <MockExamCard
               key={e.id}
               exam={e}
@@ -191,14 +229,6 @@ export function MockExamsView() {
           ))}
         </div>
       )}
-
-      {/*
-        Authoring lives solely in the unified Exam Builder (/exam-builder/new,
-        /exam-builder/[id]). The legacy Mock*Dialog authoring path was removed;
-        the shared question core in components/mock/exam-builder/
-        (QuestionEditor.tsx, types.ts) is still live — imported by
-        components/exam-builder/* — and is not dead code.
-      */}
     </div>
   );
 }
@@ -256,57 +286,81 @@ export function MockExamCard({
     }
   }
 
+  const levelTag = exam.level || (exam.profile === "practice" ? exam.practiceLevel : null);
+
   return (
-    <Card className="flex h-full flex-col p-5" data-testid={`mock-card-${exam.id}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="info">{t(`types.${exam.type}`)}</Badge>
-        {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
-        {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
-        {isStaff && (
-          <Badge variant={exam.isPublished ? "success" : "warning"}>
-            {exam.isPublished ? t("published") : t("draft")}
+    <Card
+      className="flex h-full flex-col justify-between rounded-[12px] border border-border bg-surface p-5"
+      data-testid={`mock-card-${exam.id}`}
+    >
+      <div className="space-y-3">
+        {/* Yuqori teglari */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            {multilevel ? "Multi-Level" : "IELTS"}
           </Badge>
-        )}
-        {exam.type === 'multilevel' && exam.profile === 'practice' ? exam.practiceLevel && <span className="text-xs text-fg-subtle">{exam.practiceLevel} practice</span> : exam.level && <span className="text-xs text-fg-subtle">{exam.level}</span>}
-      </div>
+          {levelTag && (
+            <Badge variant="brand" className="text-sm">
+              {levelTag}
+            </Badge>
+          )}
+          {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
+          {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
+          {isStaff && (
+            <Badge variant={exam.isPublished ? "success" : "warning"}>
+              {exam.isPublished ? t("published") : t("draft")}
+            </Badge>
+          )}
+        </div>
 
-      <h3 className="mt-3 line-clamp-2 font-semibold text-fg">{exam.title}</h3>
-      {exam.description && (
-        <p className="mt-1 line-clamp-2 text-sm text-fg-muted">{exam.description}</p>
-      )}
+        {/* 1. Nomi */}
+        <h3 className="text-xl font-semibold tracking-tight text-fg line-clamp-2">
+          {exam.title}
+        </h3>
 
-      {multilevel && <p className="mt-3 text-sm font-medium text-fg-muted">Listening · Reading · Writing · Speaking</p>}
-      <div className="mt-3 flex flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-fg-muted">
-        <span className="flex items-center gap-1.5">
+        {/* 2. Davomiyligi va savollar soni */}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-fg-muted">
+          {exam.durationMinutes != null && (
+            <span className="flex items-center gap-1.5">
+              <Clock className="size-4 shrink-0" />
+              {exam.durationMinutes} {t("minutes")}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <FileQuestion className="size-4 shrink-0" />
+            {exam.questionCount} {t("questions")}
+          </span>
+          {!exam.isDemo && exam.price > 0 && (
+            <span className="font-semibold text-fg tabular-nums">
+              {formatMoney(exam.price)} {tc("sum")}
+            </span>
+          )}
+        </div>
+
+        {/* 3. Bo'limlari */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
           {exam.skills.map((s) => {
             const Icon = SKILL_ICON[s];
-            return <Icon key={s} className="size-3.5" aria-label={t(`skills.${s}`)} />;
+            return (
+              <span
+                key={s}
+                className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted capitalize"
+              >
+                <Icon className="size-3.5" />
+                {s}
+              </span>
+            );
           })}
-        </span>
-        <span className="flex items-center gap-1">
-          <FileQuestion className="size-3.5" />
-          {exam.questionCount} {t("questions")}
-        </span>
-        {exam.durationMinutes != null && (
-          <span className="flex items-center gap-1">
-            <Clock className="size-3.5" />
-            {exam.durationMinutes} {t("minutes")}
-          </span>
-        )}
-        {!exam.isDemo && exam.price > 0 && (
-          <span className="font-semibold text-fg tabular-nums">
-            {formatMoney(exam.price)} {tc("sum")}
-          </span>
-        )}
-        {isStudent && <span>{examAttempts.length} {examAttempts.length === 1 ? "attempt" : "attempts"}</span>}
+        </div>
       </div>
 
-      <div className="mt-4">
+      {/* 4. Bitta asosiy tugma */}
+      <div className="mt-5 pt-3">
         {isStaff ? (
           <div className="flex items-center gap-2">
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-hover"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-elevated"
             >
               <ClipboardCheck className="size-4" />
               {t("manage")}
@@ -318,7 +372,7 @@ export function MockExamCard({
               aria-label="Imtihonni o'chirish"
               title="Imtihonni o'chirish"
               onClick={() => setConfirmDeleteOpen(true)}
-              className="h-9 w-9 border-danger/30 text-danger hover:bg-danger/10"
+              className="min-h-[44px] min-w-[44px] border-danger/30 text-danger hover:bg-danger/10"
             >
               <Trash2 className="size-4" />
             </Button>
@@ -350,24 +404,24 @@ export function MockExamCard({
             </Dialog>
           </div>
         ) : multilevel && exam.ready === false && availablePracticeSkills(exam).length === 0 && !inProgress ? (
-          <Button className="w-full" disabled>
-            <Play className="fill-current" />
-            Start Exam
+          <Button className="w-full min-h-[44px]" disabled>
+            <Play className="fill-current mr-1.5 size-4" />
+            Tayyorlanmoqda
           </Button>
         ) : inProgress ? (
           <>
             {availableSkills.length > 1 ? (
               <Button
-                className="w-full bg-brand font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
+                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 font-medium text-brand-fg text-base"
                 onClick={() => setResumeOpen(true)}
               >
-                <RefreshCw className="mr-1.5 size-4" />
+                <RefreshCw className="mr-2 size-4" />
                 {t("resume")}
               </Button>
             ) : (
               <Link
                 href={`/mock/attempt/${inProgress.id}`}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 text-base font-medium text-brand-fg transition-colors"
               >
                 <RefreshCw className="size-4" />
                 {t("resume")}
@@ -385,10 +439,10 @@ export function MockExamCard({
           onStart ? (
             <>
               <Button
-                className="w-full bg-brand font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
+                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 font-medium text-brand-fg text-base"
                 onClick={() => setLauncherOpen(true)}
               >
-                <Play className="size-4 fill-current mr-1.5" />
+                <Play className="size-4 fill-current mr-2" />
                 {t("start")}
               </Button>
               <ExamLauncherModal
@@ -401,24 +455,29 @@ export function MockExamCard({
           ) : (
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover"
+              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 text-base font-medium text-brand-fg transition-colors"
             >
-              <Play className="size-4 fill-current mr-1.5" />
+              <Play className="size-4 fill-current mr-2" />
               {t("start")}
             </Link>
           )
         ) : exam.access === "pending" ? (
-          <Badge variant="warning" className="w-full justify-center py-1.5">
-            <Clock /> {t("pending")}
+          <Badge variant="warning" className="w-full justify-center min-h-[44px] text-sm">
+            <Clock className="mr-1.5 size-4" /> {t("pending")}
           </Badge>
         ) : isStudent ? (
-          <Button variant="outline" size="sm" className="w-full" loading={buying} onClick={onBuy}>
-            <ShoppingCart />
+          <Button
+            variant="outline"
+            className="w-full min-h-[44px] text-base"
+            loading={buying}
+            onClick={onBuy}
+          >
+            <ShoppingCart className="mr-2 size-4" />
             {t("buy")}
           </Button>
         ) : (
-          <Badge variant="neutral" className="w-full justify-center py-1.5">
-            <Lock /> {t("locked")}
+          <Badge variant="neutral" className="w-full justify-center min-h-[44px] text-sm">
+            <Lock className="mr-1.5 size-4" /> {t("locked")}
           </Badge>
         )}
       </div>
@@ -429,23 +488,54 @@ export function MockExamCard({
 function GradingPanel() {
   const t = useTranslations("mock");
   const ta = useTranslations("assessment");
-  const [program, setProgram] = React.useState<'all' | 'IELTS' | 'MULTILEVEL'>('all');
-  const [status, setStatus] = React.useState<'grading' | 'completed'>('grading');
-  const { data, isLoading, isError } = useMockAttempts(status, program === 'all' ? undefined : program);
+  const [program, setProgram] = React.useState<"all" | "IELTS" | "MULTILEVEL">("all");
+  const [status, setStatus] = React.useState<"grading" | "completed">("grading");
+  const { data, isLoading, isError } = useMockAttempts(
+    status,
+    program === "all" ? undefined : program
+  );
   const attempts = data ?? [];
+
   return (
-    <div className="space-y-2">
-      <label className="block text-sm">Exam program <select aria-label="Filter submissions by exam program" value={program} onChange={(event)=>setProgram(event.target.value as typeof program)} className="ml-2 rounded border border-border bg-surface p-2"><option value="all">All programs</option><option value="IELTS">IELTS</option><option value="MULTILEVEL">Multilevel</option></select></label>
-      <label className="block text-sm">{ta("queueFilter")} <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} className="ml-2 rounded border border-border bg-surface p-2"><option value="grading">{ta("pendingReview")}</option><option value="completed">{ta("completedReview")}</option></select></label>
-      {isLoading && <Skeleton className="h-16" />}
-      {isError && <p role="alert">Could not load submissions.</p>}
-      {!isLoading && !isError && attempts.length === 0 && <EmptyState icon={CheckCircle2} title={t("noAttempts")} />}
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium">
+          Dastur:
+          <select
+            aria-label="Filter submissions by exam program"
+            value={program}
+            onChange={(e) => setProgram(e.target.value as typeof program)}
+            className="ml-2 rounded-[8px] border border-border bg-surface p-2 text-sm"
+          >
+            <option value="all">Barcha dasturlar</option>
+            <option value="IELTS">IELTS</option>
+            <option value="MULTILEVEL">Multilevel</option>
+          </select>
+        </label>
+        <label className="text-sm font-medium">
+          {ta("queueFilter")}:
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as typeof status)}
+            className="ml-2 rounded-[8px] border border-border bg-surface p-2 text-sm"
+          >
+            <option value="grading">{ta("pendingReview")}</option>
+            <option value="completed">{ta("completedReview")}</option>
+          </select>
+        </label>
+      </div>
+
+      {isLoading && <Skeleton className="h-16 rounded-[12px]" />}
+      {isError && <p role="alert" className="text-sm text-danger">Tekshiruvlarni yuklab bo&apos;lmadi.</p>}
+      {!isLoading && !isError && attempts.length === 0 && (
+        <EmptyState icon={CheckCircle2} title={t("noAttempts")} />
+      )}
       {attempts.map((a) => (
         <Link key={a.id} href={`/mock/attempt/${a.id}#assessment-feedback`}>
-          <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-surface-hover">
+          <Card className="flex items-center justify-between gap-3 p-4 rounded-[12px] border border-border bg-surface transition-colors hover:bg-surface-elevated">
             <div className="min-w-0">
-              <p className="truncate font-medium text-fg">{a.studentName ?? "—"}</p>
-              <p className="truncate text-xs text-fg-muted">{a.examTitle}</p>
+              <p className="truncate font-semibold text-fg">{a.studentName ?? "—"}</p>
+              <p className="truncate text-sm text-fg-muted">{a.examTitle}</p>
             </div>
             <Badge variant="warning">{t(`status.${a.status}`)}</Badge>
           </Card>
@@ -468,7 +558,7 @@ function PurchasesPanel() {
       {
         onSuccess: () => toast.success(t("confirmed")),
         onError: () => toast.error(tc("unknownError")),
-      },
+      }
     );
   }
 
@@ -476,7 +566,7 @@ function PurchasesPanel() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-16" />
+          <Skeleton key={i} className="h-16 rounded-[12px]" />
         ))}
       </div>
     );
@@ -485,18 +575,23 @@ function PurchasesPanel() {
     return <EmptyState icon={CheckCircle2} title={t("noPurchases")} />;
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {purchases.map((p) => (
-        <Card key={p.id} className="flex items-center justify-between gap-3 p-4">
+        <Card key={p.id} className="flex items-center justify-between gap-3 p-4 rounded-[12px] border border-border bg-surface">
           <div className="min-w-0">
-            <p className="truncate font-medium text-fg">{p.userName}</p>
-            <p className="truncate text-xs text-fg-muted">
+            <p className="truncate font-semibold text-fg">{p.userName}</p>
+            <p className="truncate text-sm text-fg-muted">
               {formatPhone(p.userPhone)} · {p.examTitle}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-sm text-fg-muted tabular-nums">{formatMoney(p.amount)}</span>
-            <Button size="sm" loading={confirm.isPending} onClick={() => onConfirm(p.examId, p.userId)}>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-sm font-semibold text-fg tabular-nums">{formatMoney(p.amount)}</span>
+            <Button
+              size="sm"
+              className="min-h-[44px]"
+              loading={confirm.isPending}
+              onClick={() => onConfirm(p.examId, p.userId)}
+            >
               {t("confirm")}
             </Button>
           </div>

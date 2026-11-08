@@ -74,7 +74,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
   return (
     <Card
       className={cn(
-        "mb-5 overflow-hidden border-2 border-brand/40 bg-gradient-to-r from-brand/10 via-surface to-surface p-4 sm:p-5 shadow-sm",
+        "rounded-[12px] border border-border bg-surface p-5",
         className,
       )}
     >
@@ -82,28 +82,28 @@ export function LiveExamPinCard({ className }: { className?: string }) {
         onSubmit={(e) => void handleJoin(e)}
         className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
       >
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand" className="gap-1">
-              <Radio className="size-3 animate-pulse" />
-              Live Exam Room (PIN Mode)
+            <Badge variant="outline" className="gap-1.5 text-sm">
+              <Radio className="size-3.5 text-brand" />
+              Live PIN Mode
             </Badge>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
-              <ShieldCheck className="size-3.5" />
-              IELTS CDI &amp; Multi-Level DTM Simulyator
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-muted">
+              <ShieldCheck className="size-4 text-brand" />
+              CDI / Multi-Level
             </span>
           </div>
-          <h3 className="text-base font-bold text-fg">
-            O&apos;qituvchi bergan 6 xonali PIN-kod orqali jonli imtihonga kiring
+          <h3 className="text-base font-semibold text-fg">
+            O&apos;qituvchi bergan 6 xonali PIN-kod orqali imtihonga kiring
           </h3>
-          <p className="text-xs text-fg-muted">
-            Guruh bilan bir vaqtda rasmiy kompyuter imtihonini (CDI yoki DTM rejimida) boshlash uchun kodni kiriting.
+          <p className="text-sm text-fg-muted">
+            Guruh bilan bir vaqtda imtihon topshirish uchun PIN-kodni kiriting.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center shrink-0">
           <div className="relative">
-            <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-brand" />
+            <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-muted" />
             <Input
               type="text"
               inputMode="numeric"
@@ -112,17 +112,18 @@ export function LiveExamPinCard({ className }: { className?: string }) {
               onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="PIN: 482915"
               aria-label="6 xonali imtihon PIN kodi"
-              className="h-11 w-full sm:w-44 pl-9 text-center font-mono text-lg font-black tracking-[0.25em] text-fg border-brand/50"
+              className="min-h-[44px] w-full sm:w-44 pl-9 text-center font-mono text-lg font-bold tracking-[0.2em] text-fg border-border"
             />
           </div>
           <Button
             type="submit"
+            variant="outline"
             loading={joinMut.isPending}
             disabled={pin.replace(/\D/g, "").length !== 6}
-            className="h-11 bg-brand px-5 font-bold text-brand-fg hover:bg-brand-hover"
+            className="min-h-[44px] px-5 font-medium"
           >
-            <Play className="size-4 mr-1.5 fill-current" />
-            Imtihonga ulanish
+            <Play className="size-4 mr-1.5" />
+            Ulanish
           </Button>
         </div>
       </form>

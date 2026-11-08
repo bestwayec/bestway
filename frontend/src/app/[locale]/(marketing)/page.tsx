@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ExpressPlacementTest } from "@/components/placement/ExpressPlacementTest";
-import { Play, Zap } from "lucide-react";
+import { Play, Zap, Monitor, Sparkles } from "lucide-react";
 import {
   ArrowRight,
   Award,
@@ -161,75 +161,65 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <MobileLandingGate locale={locale} isAuthenticated={isAuthenticated}>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="marketing-section relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="bg-grid absolute inset-0 opacity-40" />
-          <div className="anim-float absolute -top-24 left-[4%] size-56 rounded-full bg-brand/10 blur-3xl sm:size-72" />
-          <div className="anim-float-slow absolute top-8 right-[2%] hidden size-80 rounded-full bg-accent/10 blur-3xl sm:block" />
-          <div className="anim-float absolute -bottom-16 left-1/3 hidden size-64 rounded-full bg-highlight/10 blur-3xl sm:block" />
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand via-accent to-orange" />
-        </div>
-
-        <div className="mx-auto grid max-w-6xl items-center gap-6 px-4 py-8 sm:gap-10 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_1fr] lg:gap-8 lg:py-24 xl:max-w-7xl">
-          <div className="order-2 text-center lg:order-1 lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold tracking-wide uppercase shadow-[0_0_20px_rgba(16,185,129,0.2)] mb-4">
-              <span>✨ BestWay LMS</span>
-              <span className="text-slate-500">•</span>
-              <span>Do your best, forget the rest!</span>
-            </div>
-            <h1 className="mt-2 min-h-[2.2em] overflow-visible pt-1 text-[2rem] leading-[1.1] font-extrabold tracking-tight text-pretty bg-gradient-to-r from-white via-emerald-100 to-emerald-400 bg-clip-text text-transparent sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
-              <HeroTitle text={t("heroTitle")} />
-            </h1>
-            <Reveal delay={180}>
-              <p className="mx-auto mt-5 max-w-xl text-base text-pretty text-fg-muted sm:text-lg lg:mx-0 lg:max-w-2xl">
-                {t("heroSubtitle")}
-              </p>
-            </Reveal>
-            <Reveal delay={270}>
-              <div className="mt-8 flex w-full flex-col flex-wrap items-center justify-center gap-3 sm:w-auto sm:flex-row lg:justify-start">
-                <a
-                  href="#placement-test"
-                  className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-7 py-3.5 text-base font-bold text-brand-fg shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.03] active:scale-95"
-                >
-                  <Zap className="size-5 fill-current" />
-                  <span>{t("heroCta")}</span>
-                </a>
-                <Link
-                  href="/mock"
-                  className={cn(
-                    buttonVariants({ size: "lg", variant: "outline" }),
-                    "rounded-2xl border-slate-700 bg-slate-900/60 px-6 py-3.5 text-slate-200 hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-200 hover:scale-[1.03] active:scale-95",
-                  )}
-                >
-                  <Award className="size-4 text-emerald-400 mr-2" />
-                  {t("heroSecondary")}
-                </Link>
-              </div>
-            </Reveal>
-
-            <Reveal delay={360}>
-              <dl className="mx-auto mt-12 grid max-w-md grid-cols-3 gap-2 sm:gap-4 lg:mx-0 lg:max-w-lg">
-                {STATS.map((s) => (
-                  <div key={s.key}>
-                    <dt className="bg-gradient-to-br from-brand to-accent bg-clip-text text-2xl font-bold text-transparent sm:text-3xl">
-                      <CountUp end={s.num} suffix={s.suffix} />
-                    </dt>
-                    <dd className="mt-1 text-xs text-fg-muted sm:text-sm">{t(s.key)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Reveal>
+      <section className="marketing-section relative border-b border-border bg-surface">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-20 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface-elevated text-sm font-medium text-fg-muted mb-6">
+            <span className="size-2 rounded-full bg-brand" />
+            <span>BestWay LMS — Rasmiy imtihon simulyatori</span>
           </div>
 
-          {/* Learning progress visual — mobile: first (visible on main screen); desktop: right column.
-              Plain div (no Reveal): hero is above the fold, scroll-reveal keeps
-              opacity:0 until scrolled and hides the 3D logo on phones. */}
-          <div className="relative order-1 lg:order-2">
-            <HeroShowcase />
+          <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-5xl max-w-3xl mx-auto leading-tight">
+            {t("heroTitle")}
+          </h1>
+
+          <p className="mx-auto mt-4 max-w-2xl text-base sm:text-lg text-fg-muted leading-relaxed">
+            {t("heroSubtitle")}
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href="#placement-test"
+              className="w-full sm:w-auto inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 px-6 py-3 text-base font-semibold text-brand-fg transition-colors"
+            >
+              <Zap className="size-5 fill-current" />
+              <span>{t("heroCta")}</span>
+            </a>
+            <Link
+              href={isAuthenticated ? "/dashboard" : "/login"}
+              className="w-full sm:w-auto inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface hover:border-brand/50 px-6 py-3 text-base font-semibold text-fg transition-colors"
+            >
+              {isAuthenticated ? "Dashboard" : t("heroLogin")}
+            </Link>
+          </div>
+
+          {/* 3 ta asosiy afzallik */}
+          <div className="mt-14 grid gap-4 sm:grid-cols-3 text-left">
+            <div className="rounded-[12px] border border-border bg-surface p-5">
+              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+                <Monitor className="size-5" />
+              </div>
+              <h3 className="text-lg font-bold text-fg">{t("benefit1Title")}</h3>
+              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit1Desc")}</p>
+            </div>
+
+            <div className="rounded-[12px] border border-border bg-surface p-5">
+              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+                <Sparkles className="size-5" />
+              </div>
+              <h3 className="text-lg font-bold text-fg">{t("benefit2Title")}</h3>
+              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit2Desc")}</p>
+            </div>
+
+            <div className="rounded-[12px] border border-border bg-surface p-5">
+              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+                <Award className="size-5" />
+              </div>
+              <h3 className="text-lg font-bold text-fg">{t("benefit3Title")}</h3>
+              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit3Desc")}</p>
+            </div>
           </div>
         </div>
       </section>
-      {/* ── 10-Minute Express Placement Test (Phase 4) ──────────────────── */}
       <section id="placement-test" className="marketing-section scroll-mt-20">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-16">
           <ExpressPlacementTest isAuthenticated={isAuthenticated} />

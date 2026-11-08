@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Brand } from "@/components/brand";
-import { navForRole, isActive } from "@/lib/nav";
+import { primaryNavForRole, secondaryNavForRole, isActive } from "@/lib/nav";
 import { CENTER } from "@/lib/config";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /** Yon panel holati — sahifa yangilanganda ham saqlanadi */
 const COLLAPSED_KEY = "bw-sidebar-collapsed";
@@ -19,14 +20,12 @@ function readCollapsedSetting(): boolean {
   try {
     return window.localStorage.getItem(COLLAPSED_KEY) === "1";
   } catch {
-    /* private mode — o'qib bo'lmaydi, panel ochiq qoladi */
     return false;
   }
 }
 
 function subscribeCollapsedSetting(onChange: () => void) {
   collapsedListeners.add(onChange);
-  // Boshqa tablarda o'zgarsa ham sinxronlashadi
   window.addEventListener("storage", onChange);
   return () => {
     collapsedListeners.delete(onChange);
@@ -37,18 +36,17 @@ function subscribeCollapsedSetting(onChange: () => void) {
 function writeCollapsedSetting(next: boolean) {
   try {
     window.localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0");
-  } catch {
-    /* private mode — saqlanmaydi, lekin panel ishlaydi */
-  }
+  } catch {}
   collapsedListeners.forEach((notify) => notify());
 }
 
 export function AppSidebar({ role }: { role: Role }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
-  const items = navForRole(role);
-  // Browser-only state via external store: SSR always renders expanded
-  // (matches server HTML), client restores the saved state after hydration.
+  const primary = primaryNavForRole(role);
+  const secondary = secondaryNavForRole(role);
+  const [moreExpanded, setMoreExpanded] = React.useState(false);
+
   const collapsed = React.useSyncExternalStore(
     subscribeCollapsedSetting,
     readCollapsedSetting,
@@ -59,6 +57,15 @@ export function AppSidebar({ role }: { role: Role }) {
     writeCollapsedSetting(!collapsed);
   }, [collapsed]);
 
+  const hasSecondary = secondary.length > 0;
+  const isSecondaryActive = secondary.some((item) => isActive(pathname, item.href));
+
+  React.useEffect(() => {
+    if (isSecondaryActive) {
+      setMoreExpanded(true);
+    }
+  }, [isSecondaryActive]);
+
   return (
     <aside
       className={cn(
@@ -66,24 +73,21 @@ export function AppSidebar({ role }: { role: Role }) {
         collapsed ? "w-[76px]" : "w-64",
       )}
     >
-      {/* logo + nozik yashil yog'du */}
+      {/* Oddiy, toza logo qismi — glow va soya olib tashlangan */}
       <div
         className={cn(
-          "relative flex h-16 items-center border-b border-border",
+          "flex h-16 items-center border-b border-border",
           collapsed ? "justify-center px-2" : "px-5",
         )}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-10 left-0 h-24 w-40 rounded-full bg-brand/10 blur-2xl"
-        />
-        <Link href="/" aria-label={CENTER.name} className="relative transition-transform hover:scale-[1.02]">
+        <Link href="/" aria-label={CENTER.name} className="transition-transform hover:opacity-90">
           {collapsed ? <Brand variant="mark" showText={false} size="sm" /> : <Brand />}
         </Link>
       </div>
 
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto p-3">
-        {items.map((item) => {
+        {/* Asosiy 4 ta band */}
+        {primary.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           return (
@@ -94,38 +98,115 @@ export function AppSidebar({ role }: { role: Role }) {
               title={collapsed ? t(item.key) : undefined}
               aria-label={collapsed ? t(item.key) : undefined}
               className={cn(
-                "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium transition-all duration-200",
+                "group relative flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",
                 active
-                  ? "bg-brand-subtle text-brand-subtle-fg"
-                  : "text-fg-muted hover:translate-x-0.5 hover:bg-surface-hover hover:text-fg",
+                  ? "bg-brand-subtle text-brand-subtle-fg font-semibold"
+                  : "text-fg-muted hover:bg-surface-hover hover:text-fg",
               )}
             >
-              {/* chapdagi faol ko'rsatkich */}
               <span
                 aria-hidden
                 className={cn(
-                  "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand transition-all duration-200",
-                  active ? "opacity-100" : "opacity-0 group-hover:opacity-40",
+                  "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand transition-opacity",
+                  active ? "opacity-100" : "opacity-0",
                 )}
               />
               <Icon
                 className={cn(
-                  "size-[18px] shrink-0 transition-transform duration-200",
-                  active ? "text-brand" : "group-hover:scale-110",
+                  "size-[18px] shrink-0",
+                  active ? "text-brand" : "text-fg-muted group-hover:text-fg",
                 )}
               />
-              {!collapsed && t(item.key)}
+              {!collapsed && <span>{t(item.key)}</span>}
             </Link>
           );
         })}
+
+        {/* Yana (Secondary) bo'limi */}
+        {hasSecondary && (
+          <div className="pt-2">
+            {!collapsed ? (
+              <div className="rounded-[12px] border border-border/60 bg-bg-subtle/50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setMoreExpanded(!moreExpanded)}
+                  aria-expanded={moreExpanded}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-[8px] px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+                    isSecondaryActive ? "text-brand" : "text-fg-muted hover:text-fg",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <MoreHorizontal className="size-3.5" />
+                    {t("more")}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 transition-transform duration-200",
+                      moreExpanded && "rotate-180",
+                    )}
+                  />
+                </button>
+                {moreExpanded && (
+                  <div className="mt-1 space-y-1 pt-1">
+                    {secondary.map((item) => {
+                      const active = isActive(pathname, item.href);
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-sm transition-colors",
+                            active
+                              ? "bg-brand-subtle text-brand-subtle-fg font-medium"
+                              : "text-fg-muted hover:bg-surface-hover hover:text-fg",
+                          )}
+                        >
+                          <Icon className="size-4 shrink-0" />
+                          <span>{t(item.key)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 border-t border-border/60 pt-2">
+                {secondary.map((item) => {
+                  const active = isActive(pathname, item.href);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      title={t(item.key)}
+                      aria-label={t(item.key)}
+                      className={cn(
+                        "flex items-center justify-center rounded-[12px] p-2 text-sm transition-colors",
+                        active
+                          ? "bg-brand-subtle text-brand-subtle-fg"
+                          : "text-fg-muted hover:bg-surface-hover hover:text-fg",
+                      )}
+                    >
+                      <Icon className="size-[18px] shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
-      {/* pastki: brend + yig'ish/ochish strelkasi */}
+      {/* Pastki panel: brend, tema almashtirish, yig'ish/ochish */}
       <div
         className={cn(
           "flex items-center gap-2 border-t border-border py-3",
-          collapsed ? "justify-center px-2" : "justify-between px-5",
+          collapsed ? "flex-col justify-center px-2" : "justify-between px-5",
         )}
       >
         {!collapsed && (
@@ -133,16 +214,19 @@ export function AppSidebar({ role }: { role: Role }) {
             {CENTER.name} · <span className="text-fg-muted">{CENTER.established}</span>
           </p>
         )}
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!collapsed}
-          aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
-          title={t(collapsed ? "expandSidebar" : "collapseSidebar")}
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
-        >
-          {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!collapsed}
+            aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
+            title={t(collapsed ? "expandSidebar" : "collapseSidebar")}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+          >
+            {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+          </button>
+        </div>
       </div>
     </aside>
   );
