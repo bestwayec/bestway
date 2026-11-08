@@ -1731,5 +1731,13 @@
     "predictionLoadError": "Ball bashorati yuklanmadi.",
     "predictionNoEvidence": "Taxminiy ball birinchi tekshirilgan mock testdan keyin hisoblanadi. Hozircha ma'lumot yo'q.",
     "weakPointsEmpty": "Zaif nuqtalar xaritasi tekshirilgan mock javoblaringiz asosida tuziladi. Hozircha ma'lumot yo'q."
+  },
+  "namePrompt": {
+    "title": "Ismingizni kiriting",
+    "hint": "Reytingda va ustozingizda to'g'ri ko'rinishi uchun haqiqiy ism-familiyangizni yozing.",
+    "label": "Ism va familiya",
+    "save": "Saqlash",
+    "saved": "Ism saqlandi",
+    "invalid": "Haqiqiy ism kiriting (2–100 belgi)."
   }
 }

@@ -1732,5 +1732,13 @@
     "predictionLoadError": "Could not load your score prediction.",
     "predictionNoEvidence": "Your estimated score is calculated after your first graded mock test. No data yet.",
     "weakPointsEmpty": "The weak points map is built from your graded mock answers. No data yet."
+  },
+  "namePrompt": {
+    "title": "Add your name",
+    "hint": "Enter your real name so teachers and the leaderboard show you correctly.",
+    "label": "Full name",
+    "save": "Save",
+    "saved": "Name saved",
+    "invalid": "Enter a real name (2–100 characters)."
   }
 }
