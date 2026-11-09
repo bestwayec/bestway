@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/feedback";
 import {
@@ -171,9 +172,9 @@ export function ScorePredictionCard({
         </p>
         <div className="mt-6">
           <Button asChild className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base">
-            <a href="/mock">
+            <Link href="/mock">
               Birinchi testni boshlash
-            </a>
+            </Link>
           </Button>
         </div>
       </Card>
