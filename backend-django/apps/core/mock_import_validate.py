@@ -396,7 +396,7 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                                         add('WORD_LIMIT', qb + '/correctAnswers', f'answer "{answer}" exceeds wordLimit {limit}')
                         if question.get('answerRule') is not None and question['answerRule'] not in tuple(ANSWER_RULES):
                             add('ANSWER_RULE', qb + '/answerRule', 'answerRule is invalid')
-                        for issue in objective_question_issues(question, skill in ('reading', 'listening')):
+                        for issue in objective_question_issues(question, skill in ('reading', 'listening'), audio_stem=skill == 'listening'):
                             add('QUESTION_ENGINE', qb, issue)
                         if not nonblank(question.get('sourceRef')):
                             add('SOURCE_REF', qb + '/sourceRef', 'question.sourceRef must be non-blank')

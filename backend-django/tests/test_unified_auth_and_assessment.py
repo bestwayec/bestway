@@ -138,95 +138,61 @@ class UnifiedDesktopAuthTests(TestCase):
 
 
 class TelegramOneClickLoginTests(TestCase):
+    """One-click login accepts only single-use tokens issued by the bot."""
+
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.client = APIClient()
+        self.row = ("user-uuid-tg", "Telegram Student", "+998907778899", "student",
+                    datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC), "hash", True, "123456789", "student@bestwayec.uz")
 
-    def test_telegram_login_with_magic_token_succeeds(self):
-        """Verify 1-click login with token, sso_token, or magic_token."""
-        fake_user = SimpleNamespace(
-            id="user-uuid-tg",
-            name="Telegram Student",
-            phone="+998907778899",
-            role="student",
-            email="student@bestwayec.uz",
-            telegram_chat_id="123456789",
-            is_active=True,
-            created_at=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
-            password_hash="hash",
-        )
-        fake_token_record = SimpleNamespace(
-            id="token-id-1",
-            user_id="user-uuid-tg",
-            user=fake_user,
-            token_hash="hashed_magic_token",
-            expires_at=timezone.now() + timedelta(hours=1),
-            used_at=None,
-        )
+    def _patched(self):
+        from contextlib import ExitStack, nullcontext
+        stack = ExitStack()
+        conn = MagicMock()
+        conn.vendor = "postgresql"
+        conn.cursor.return_value.__enter__.return_value.fetchone.return_value = self.row
+        stack.enter_context(patch("apps.core.telegram_views.connection", conn))
+        stack.enter_context(patch("apps.core.telegram_views.transaction.atomic", return_value=nullcontext()))
+        stack.enter_context(patch("apps.core.auth_service.issue_tokens", return_value={"accessToken": "at_tg", "refreshToken": "rt_tg"}))
+        return stack
 
-        for payload_key in ("magic_token", "sso_token", "token"):
-            with self.subTest(key=payload_key):
-                with patch("apps.legacy_schema.models.TelegramLinkToken.objects.filter") as mock_filter, \
-                     patch("apps.core.auth_service.issue_tokens", return_value={"accessToken": "at_tg", "refreshToken": "rt_tg"}):
-                    mock_filter.return_value.select_related.return_value.first.return_value = fake_token_record
-                    mock_filter.return_value.update.return_value = 1
+    def test_telegram_login_with_bot_sso_token_succeeds(self):
+        from apps.core import telegram_sso
+        token = telegram_sso.issue_sso_token("123456789", "Telegram")
+        with self._patched():
+            res = telegram_views.telegram_login({"sso_token": token})
+        self.assertEqual(res["user"]["id"], "user-uuid-tg")
+        self.assertEqual(res["user"]["email"], "student@bestwayec.uz")
+        self.assertEqual(res["user"]["telegramChatId"], "123456789")
+        self.assertEqual(res["accessToken"], "at_tg")
+        self.assertEqual(res["refreshToken"], "rt_tg")
 
-                    res = telegram_views.telegram_login({payload_key: "valid_secret_code_123"})
-                    self.assertEqual(res["user"]["id"], "user-uuid-tg")
-                    self.assertEqual(res["user"]["name"], "Telegram Student")
-                    self.assertEqual(res["user"]["phone"], "+998907778899")
-                    self.assertEqual(res["user"]["role"], "student")
-                    self.assertEqual(res["user"]["email"], "student@bestwayec.uz")
-                    self.assertEqual(res["user"]["telegramChatId"], "123456789")
-                    self.assertEqual(res["accessToken"], "at_tg")
-                    self.assertEqual(res["refreshToken"], "rt_tg")
+    def test_link_tokens_and_legacy_magic_keys_are_not_login_credentials(self):
+        for payload in ({"magic_token": "x"}, {"token": "x"}, {"sso_token": "not-issued"}):
+            with self.subTest(payload=payload), self._patched(), self.assertRaises(ContractAPIException) as ctx:
+                telegram_views.telegram_login(payload)
+            self.assertIn(ctx.exception.contract_code, ("INVALID_TOKEN", "INVALID_CREDENTIALS", "TELEGRAM_DISABLED"))
 
     def test_telegram_login_with_expired_or_used_token_fails(self):
-        fake_user = SimpleNamespace(id="u-1", is_active=True)
-        used_record = SimpleNamespace(
-            id="token-id-2",
-            user=fake_user,
-            expires_at=timezone.now() + timedelta(hours=1),
-            used_at=timezone.now() - timedelta(minutes=5),
-        )
-        with patch("apps.legacy_schema.models.TelegramLinkToken.objects.filter") as mock_filter:
-            mock_filter.return_value.select_related.return_value.first.return_value = used_record
+        from apps.core import telegram_sso
+        token = telegram_sso.issue_sso_token("123456789")
+        with self._patched():
+            telegram_views.telegram_login({"sso_token": token})
             with self.assertRaises(ContractAPIException) as ctx:
-                telegram_views.telegram_login({"magic_token": "already_used_token"})
-            self.assertEqual(ctx.exception.contract_code, "INVALID_TOKEN")
+                telegram_views.telegram_login({"sso_token": token})
+        self.assertEqual(ctx.exception.contract_code, "INVALID_TOKEN")
 
     def test_telegram_login_endpoint_post_200(self):
-        """Verify POST /v1/telegram/login returns 200 OK with full user and tokens."""
-        fake_user = SimpleNamespace(
-            id="u-magic",
-            name="Magic Student",
-            phone="+998909990011",
-            role="student",
-            email="magic@bestwayec.uz",
-            telegram_chat_id="987654321",
-            is_active=True,
-            created_at=datetime(2026, 2, 2, 10, 0, 0, tzinfo=UTC),
-            password_hash="pwd_hash",
-        )
-        fake_token_record = SimpleNamespace(
-            id="tok-999",
-            user=fake_user,
-            expires_at=timezone.now() + timedelta(hours=1),
-            used_at=None,
-        )
-        with patch("apps.legacy_schema.models.TelegramLinkToken.objects.filter") as mock_filter, \
-             patch("apps.core.auth_service.issue_tokens", return_value={"accessToken": "at_endpoint", "refreshToken": "rt_endpoint"}):
-            mock_filter.return_value.select_related.return_value.first.return_value = fake_token_record
-            mock_filter.return_value.update.return_value = 1
-
-            response = self.client.post("/v1/telegram/login", {"magic_token": "sample_token_xyz"}, format="json")
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.data["success"])
-            data = response.data["data"]
-            self.assertEqual(data["user"]["id"], "u-magic")
-            self.assertEqual(data["user"]["email"], "magic@bestwayec.uz")
-            self.assertEqual(data["user"]["telegramChatId"], "987654321")
-            self.assertEqual(data["accessToken"], "at_endpoint")
-            self.assertEqual(data["refreshToken"], "rt_endpoint")
+        from apps.core import telegram_sso
+        token = telegram_sso.issue_sso_token("123456789")
+        with self._patched():
+            response = self.client.post("/v1/telegram/login", {"sso_token": token}, format="json")
+        self.assertEqual(response.status_code, 200)
+        data = response.data["data"]
+        self.assertEqual(data["user"]["id"], "user-uuid-tg")
+        self.assertEqual(data["accessToken"], "at_tg")
 
 
 class UniversalAssessmentOverviewTests(TestCase):

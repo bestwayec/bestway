@@ -30,13 +30,9 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { ScorePredictionResponse } from "@/lib/types";
+import { MULTILEVEL_CEFR_BANDS, multilevelBandFor } from "@/lib/multilevel-scale";
 
-const DEFAULT_MULTILEVEL_BANDS = [
-  { level: "A2", min: 0, max: 37 },
-  { level: "B1", min: 38, max: 50 },
-  { level: "B2", min: 51, max: 64 },
-  { level: "C1", min: 65, max: 75 },
-];
+const DEFAULT_MULTILEVEL_BANDS = MULTILEVEL_CEFR_BANDS.map(({ level, min, max }) => ({ level, min, max }));
 
 // Neutral shape used only while rendering an empty card; every number is null so nothing
 // demo-like is ever displayed as the student's own result.
@@ -292,9 +288,11 @@ export function ScorePredictionCard({
                   onChange={(e) => setTargetCefrInput(e.target.value)}
                   className="h-9 w-full rounded-lg border border-border bg-bg px-2.5 text-xs font-bold text-fg"
                 >
-                  <option value="B1">B1 (38–50 ball)</option>
-                  <option value="B2">B2 (51–64 ball)</option>
-                  <option value="C1">C1 (65–75 ball)</option>
+                  {(["B1", "B2", "C1"] as const).map((level) => (
+                    <option key={level} value={level}>
+                      {level} ({multilevelBandFor(level).min}–{multilevelBandFor(level).max} ball)
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

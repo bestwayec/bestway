@@ -165,20 +165,25 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
     return result
 
 
-def total_duration(exam, sections):
+def section_minutes(exam, section):
+    """Single source of truth for a section's time limit shown to students."""
     if exam.type == 'multilevel':
         from .multilevel import CURRENT_SPEC, SPECS
-        return sum(SPECS[CURRENT_SPEC][s['skill']]['duration'] for s in sections) or None
-    total = 0
-    for section in sections:
-        if section['skill'] == 'listening':
-            duration = sum(g['audioDurationSec'] or 0 for g in section['groups'])
-            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else (math.ceil((duration + 120) / 60) if duration > 0 else 40)
-        elif section['skill'] == 'speaking':
-            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else 15
-        else:
-            total += section.get('durationMinutes') if section.get('durationMinutes') is not None else 60
-    return total or None
+        return SPECS[CURRENT_SPEC][section['skill']]['duration']
+    if section.get('durationMinutes') is not None:
+        return section['durationMinutes']
+    if section['skill'] == 'listening':
+        duration = sum(g['audioDurationSec'] or 0 for g in section['groups'])
+        return math.ceil((duration + 120) / 60) if duration > 0 else 40
+    return 15 if section['skill'] == 'speaking' else 60
+
+
+def section_durations(exam, sections):
+    return {section['skill']: section_minutes(exam, section) for section in sections}
+
+
+def total_duration(exam, sections):
+    return sum(section_minutes(exam, section) for section in sections) or None
 
 
 def start_ready(exam):
@@ -194,8 +199,8 @@ def list_exams(user, *, program=None, exam_type=None, practice_level=None):
         data = shape_exam(exam, staff)
         from apps.legacy_schema.models import MockExamImport
         latest = MockExamImport.objects.filter(exam_id=exam.id).order_by('-revision').first()
-        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": total_duration(exam, data['sections']), "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": start_ready(exam), "imported": dict(packageId=latest.package_id, revision=latest.revision, importedAt=latest.created_at) if latest else None})
-        data = {k: data[k] for k in ('id', 'type', 'profile', 'rawProfile', 'title', 'description', 'level', 'practiceLevel', 'isDemo', 'isPublished', 'ready', 'canEdit', 'skills', 'questionCount', 'durationMinutes', 'price', 'access', 'imported')}
+        data.update({"skills": [section["skill"] for section in data["sections"]], "durationMinutes": total_duration(exam, data['sections']), "sectionDurations": section_durations(exam, data['sections']), "price": exam.price, "access": access_for(user, exam), "canEdit": bool(user and (user.role in {"admin", "super_admin"} or (user.role == "teacher" and exam.created_by_id == user.id))), "ready": start_ready(exam), "imported": dict(packageId=latest.package_id, revision=latest.revision, importedAt=latest.created_at) if latest else None})
+        data = {k: data[k] for k in ('id', 'type', 'profile', 'rawProfile', 'title', 'description', 'level', 'practiceLevel', 'isDemo', 'isPublished', 'ready', 'canEdit', 'skills', 'questionCount', 'durationMinutes', 'sectionDurations', 'price', 'access', 'imported')}
         if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
             data.update(metadata(exam))
         items.append(data)
@@ -211,10 +216,12 @@ def get_exam(user, exam_id: str):
     if not staff and not exam.is_published and not exam.is_demo: raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
     access = access_for(user, exam)
     output = shape_exam(exam, staff)
+    durations = section_durations(exam, output['sections'])
     if not staff and access != 'granted':
         duration = total_duration(exam, output['sections'])
         output = {k: output[k] for k in ('id', 'type', 'title', 'description', 'level', 'practiceLevel', 'isPublished', 'isDemo', 'createdAt', 'updatedAt', 'contentVersion', 'questionCount')}
         output.update(sections=[], durationMinutes=duration)
+    output["sectionDurations"] = durations
     output.update({"ready": start_ready(exam), "price": exam.price, "isFreeForApproved": exam.is_free_for_approved, "access": access})
     if exam.type in ('multilevel', 'ielts_academic', 'ielts_general'):
         output.update(metadata(exam))

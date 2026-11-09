@@ -245,41 +245,29 @@ class DesktopVersionAndAuthParityTests(TestCase):
 
 
 class TelegramSSOAndMagicTokenTests(TestCase):
-    def test_telegram_login_with_magic_token_returns_full_user(self):
-        """Verify telegram_login handles magic/sso tokens and returns complete user object with role and email."""
-        mock_user = SimpleNamespace(
-            id="u-magic-1",
-            name="SSO User",
-            phone="+998909876543",
-            role="teacher",
-            email="sso_teacher@bestwayec.uz",
-            is_active=True,
-            telegram_chat_id="12345678",
-            created_at=datetime(2026, 10, 10, 8, 0, 0, tzinfo=UTC),
-            password_hash="pwdhash",
-        )
-        mock_link_token = SimpleNamespace(
-            id="tok-1",
-            user=mock_user,
-            used_at=None,
-            expires_at=datetime.now(UTC) + timedelta(minutes=10),
-        )
+    def test_bot_sso_token_returns_full_user(self):
+        """A bot-issued one-time token signs in and returns role, e-mail and Telegram id."""
+        from contextlib import nullcontext
 
-        with patch("apps.legacy_schema.models.TelegramLinkToken.objects.filter") as filter_mock, \
+        from django.core.cache import cache
+
+        from apps.core import telegram_sso
+        cache.clear()
+        row = ("u-magic-1", "SSO User", "+998909876543", "teacher", datetime(2026, 10, 10, 8, 0, 0, tzinfo=UTC),
+               "pwdhash", True, "12345678", "sso_teacher@bestwayec.uz")
+        conn = MagicMock()
+        conn.cursor.return_value.__enter__.return_value.fetchone.return_value = row
+        token = telegram_sso.issue_sso_token("12345678")
+        with patch("apps.core.telegram_views.connection", conn), \
+             patch("apps.core.telegram_views.transaction.atomic", return_value=nullcontext()), \
              patch("apps.core.auth_service.issue_tokens", return_value={"accessToken": "at1", "refreshToken": "rt1"}):
-
-            filter_mock.return_value.select_related.return_value.first.return_value = mock_link_token
-            filter_mock.return_value.update.return_value = 1
-
-            res = telegram_views.telegram_login({"magic_token": "valid_magic_token_string"})
-
-            self.assertIn("user", res)
-            u = res["user"]
-            self.assertEqual(u["id"], "u-magic-1")
-            self.assertEqual(u["role"], "teacher")
-            self.assertEqual(u["email"], "sso_teacher@bestwayec.uz")
-            self.assertTrue(u["isActive"])
-            self.assertIn("accessToken", res)
+            res = telegram_views.telegram_login({"sso_token": token})
+        u = res["user"]
+        self.assertEqual(u["id"], "u-magic-1")
+        self.assertEqual(u["role"], "teacher")
+        self.assertEqual(u["email"], "sso_teacher@bestwayec.uz")
+        self.assertTrue(u["isActive"])
+        self.assertIn("accessToken", res)
 
 
 class AssessmentOverviewParityTests(TestCase):

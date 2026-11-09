@@ -53,12 +53,15 @@ export function CbtSectionStepper({
 
   const flaggedQuestions = externalFlags ?? internalFlags;
 
-  // Flatten questions with global 1-based sequential index
+  // Flatten questions. `label` is the authored question number the student
+  // sees next to the question (e.g. 9 when a part is absent); the sequential
+  // position is only a fallback for items without a number.
   const flattenedQuestions = React.useMemo(() => {
     let globalNum = 1;
     return safeGroups.flatMap((group, groupIdx) =>
       (group?.questions || []).map((q) => ({
         ...q,
+        label: typeof q.number === "number" && q.number > 0 ? q.number : globalNum,
         globalIndex: globalNum++,
         groupIndex: groupIdx,
         groupTitle:
@@ -94,7 +97,7 @@ export function CbtSectionStepper({
     if (!onActiveQuestionChange || !activeQuestionId) return;
     const found = flattenedQuestions.find((q) => q.id === activeQuestionId);
     if (found) {
-      onActiveQuestionChange(found.globalIndex);
+      onActiveQuestionChange(found.label);
     }
   }, [activeQuestionId, flattenedQuestions, onActiveQuestionChange]);
 
@@ -138,8 +141,10 @@ export function CbtSectionStepper({
       const label =
         group?.title ||
         (skill === "reading" ? `Passage ${idx + 1}` : `Part ${idx + 1}`);
+      const partNo = typeof group?.partNumber === "number" ? group.partNumber : idx + 1;
       return {
         label,
+        shortLabel: `${skill === "reading" ? "Passage" : "Part"} ${partNo}`,
         answeredCount,
         totalCount: qs.length,
         isComplete,
@@ -156,24 +161,28 @@ export function CbtSectionStepper({
     <div className="space-y-4">
       {/* 1. Part-by-Part Tabs Stepper */}
       {safeGroups.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md">
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md sm:flex-wrap" role="tablist" aria-label="Parts">
           {partStats.map((part, idx) => {
             const isActive = idx === activePartIndex;
             return (
               <button
                 key={idx}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-label={`${part.label}: ${part.answeredCount}/${part.totalCount}`}
                 onClick={() => {
                   setActivePartIndex(idx);
                 }}
                 className={cn(
-                  "relative flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition-all touch-manipulation",
+                  "relative flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all touch-manipulation",
                   isActive
                     ? "bg-brand text-brand-fg shadow-md scale-[1.02]"
                     : "text-fg-muted hover:bg-surface-hover hover:text-fg"
                 )}
               >
-                <span>{part.label}</span>
+                <span className="sm:hidden">{part.shortLabel}</span>
+                <span className="hidden sm:inline">{part.label}</span>
                 <span
                   className={cn(
                     "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
@@ -203,13 +212,13 @@ export function CbtSectionStepper({
       {/* 3. CBT / DTM Question Palette & Stepper Controls */}
       <Card
         className={cn(
-          "sticky bottom-3 z-30 border p-3 sm:p-4 backdrop-blur-xl ",
+          "sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border p-2 sm:p-4 backdrop-blur-xl",
           isDtm
             ? "border-slate-300 bg-white/95 dark:border-slate-700 dark:bg-slate-900/95"
             : "border-border/80 bg-surface/95"
         )}
       >
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {/* Question Palette Row */}
           {flattenedQuestions.length > 0 && (
             <div>
@@ -223,7 +232,7 @@ export function CbtSectionStepper({
                   }
                   /{flattenedQuestions.length})
                 </span>
-                <div className="flex flex-wrap items-center gap-3 text-[11px]">
+                <div className="hidden sm:flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-emerald-600 " />
                     {isDtm ? "Javob berilgan (Yashil)" : "Ishlangan"}
@@ -239,9 +248,9 @@ export function CbtSectionStepper({
                 </div>
               </div>
 
-              {/* Scrollable Palette grid */}
+              {/* Palette: one swipeable row on phones, wrapping grid on larger screens */}
               <div
-                className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1 py-1"
+                className="flex flex-nowrap gap-1.5 overflow-x-auto py-1 px-0.5 sm:flex-wrap sm:max-h-24 sm:overflow-x-visible sm:overflow-y-auto sm:pr-1"
                 role="group"
                 aria-label="Question palette"
               >
@@ -256,11 +265,15 @@ export function CbtSectionStepper({
                       key={q.id}
                       type="button"
                       onClick={() => jumpToQuestion(q)}
-                      title={`Question ${q.globalIndex} (${q.groupTitle})${
+                      aria-current={isCurrent ? "true" : undefined}
+                      aria-label={`Question ${q.label}, ${q.groupTitle}${
+                        isAns ? ", answered" : ", not answered"
+                      }${isFlag ? ", flagged" : ""}`}
+                      title={`Question ${q.label} (${q.groupTitle})${
                         isAns ? " - Answered" : ""
                       }${isFlag ? " - Flagged" : ""}`}
                       className={cn(
-                        "relative flex size-8 items-center justify-center rounded-lg text-xs font-bold transition-all tabular-nums touch-manipulation",
+                        "relative flex size-9 sm:size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all tabular-nums touch-manipulation",
                         isCurrent &&
                           "ring-2 ring-brand ring-offset-2 ring-offset-bg font-black scale-105",
                         isDtm
@@ -278,7 +291,7 @@ export function CbtSectionStepper({
                           : "bg-surface text-fg-muted/70 border border-border/40 hover:text-fg"
                       )}
                     >
-                      {q.globalIndex}
+                      {q.label}
                       {isFlag && (
                         <span
                           className={cn(

@@ -103,8 +103,9 @@ class CertificateDataLogicTests(SimpleTestCase):
 
         self.assertTrue(result['isPartial'])
         self.assertEqual(result['studentName'], 'Komiljon Roziyev')
-        self.assertEqual(result['overallScore'], 37.9)
-        self.assertEqual(result['cefrLevel'], 'B1')
+        # A section practice report never states an overall score or CEFR level.
+        self.assertIsNone(result['overallScore'])
+        self.assertIsNone(result['cefrLevel'])
         self.assertEqual(len(result['sections']), 1)
         self.assertEqual(result['sections'][0]['skill'], 'speaking')
         self.assertEqual(result['sections'][0]['score'], 37.9)
