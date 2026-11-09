@@ -7,6 +7,26 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 20-BLOK: Mobil video (1000003608.mp4) bo'yicha tuzatishlar — branch `fix/mobile-login-exam-integrity` (base `origin/main` 1f97bc8)
+Video fayli sessiyada yo'q edi; ish berilgan dalillar va kod/lokal bazani tekshirish asosida bajarildi.
+
+| # | Muammo | Ildiz sababi | Tuzatish | Tekshiruv | Holat |
+|---|---|---|---|---|---|
+| 1 | Telegram SSO sahifasida `FATAL: too many clients` va ichki IP | `telegram_login_view` istisno matnini (`{e!s}`) foydalanuvchiga qaytarardi; fon threadlari (HLS, audio, assessment tick, Telegram delivery pool) PG ulanishini yopmasdi | Xavfsiz 503 (lokal matn, `Retry-After`), `common/background.start_thread` ulanishni yopadi, prod'da `idle_session_timeout`/`idle_in_transaction_session_timeout`/`connect_timeout` | unit testlar; real PG: 12 parallel login → backendlar soni o'zgarmadi | FIXED (lokal). Prod ulanish soni o'lchanmagan |
+| 1b | Bot `/login` havolasi | O'zi imzolagan widget payload 24 soat qayta ishlatilardi; link token login token sifatida ishlatilardi; har qanday cache kaliti tekshirilardi | Tasodifiy, hash'langan, 10 daqiqalik, bir martalik `sso_token` (atomik delete); eski yo'llar olib tashlandi; throttle; per-identity advisory lock (ikki marta bosish = bitta akkaunt) | forged/expired/replay/parallel testlar; real PG 6 parallel → 1 qabul | FIXED |
+| 2 | OTP | Kod to'qnashuvi mumkin edi, get+delete atomik emas, throttle yo'q | `cache.add` bilan unikal kod, atomik iste'mol, `SensitiveAuthThrottle` | testlar | FIXED |
+| 3 | 0 urinishda 0/75 va A2 | Predictor ma'lumotsiz 0.0 va "A2" qaytarardi | Ma'lumot yo'q → `null` | unit | FIXED |
+| 4 | CEFR oraliqlari ziddiyati | Backend 34/46/60, frontend 36/51/65 va 38/51/65 | Hamma ekran bitta `lib/multilevel-scale.ts` (backend bilan bir xil) | vitest | PARTIAL — rasmiy UZBMB chegaralari NEEDS PRODUCT DECISION |
+| 5 | Listening 27 savol, Part 1 yo'q; ~35 vs 45 daq | Record Mock kalitlari validatorga mos emas (MC'da variantlar, `ONE_WORD_ONLY`), practice reja listeningni rad etib, Part 1 (bo'sh prompt) ni tashlaydigan zaxira ro'yxatga tushardi; launcher qattiq yozilgan vaqt | Ballga ta'sirsiz normalizatsiya (deployda import qayta ishlaydi), listening uchun "audio stem", `sectionDurations` spec'dan | lokal: 35/35, Part 1 bor; mobil e2e | FIXED (lokal) |
+| 6 | Palitra 1–27 vs savol 9+ | Palitra ketma-ket indeks ishlatardi | Muallif raqami, aria-label/aria-current, mobil ixcham | vitest + e2e (Q20 ↔ palitra 20) | FIXED |
+| 7 | Part 4 xarita buzilgan | Xarita bo'limi boshqa domendagi `PUBLIC_URL/v1/...` ni cookie'siz yuklardi | Doim `/api/backend` proksi, xato/qayta yuklash holati, mobil'da sticky emas | e2e: naturalWidth 800×500 | FIXED (lokal) |
+| 8 | Qisman natija: A2/Below B1, AI xabari, sertifikat | single_skill/PRACTICE_PARTIAL to'liq natija deb ko'rsatilardi; PDF bitta bo'limdan CEFR chiqarardi | "Bo'lim mashqi", daraja/umumiy ball yo'q, AI belgisi faqat Writing/Speaking'da, "Mashq hisoboti (PDF)", PDF'da CEFR yo'q | vitest + e2e + pytest | FIXED |
+| 10 | Dashboard: 1 bo'limdan "barqaror" prognoz | Qisman urinishlar umumiy prognozga kirardi; ko'nikmasiz bo'limlarga umumiy ball yozilardi | Umumiy prognoz faqat to'liq imtihonlardan; 1 natija = `insufficient_data` | unit | FIXED |
+| D | bw-tauri prognoz vidjeti | Ma'lumotsiz 6.5/51, soxta grafik va zaif modullar | `hasEvidence`, soxta qiymatlar olib tashlandi | vitest 418/418 | FIXED (branch `fix/prediction-no-fabricated-data`) |
+| 9, 11 | Vocabulary/Bamboozle/Video/Profile; bot /status, /leaderboard | — | o'zgartirilmadi | smoke-test sahifalari ochiladi | NOT REPRODUCED |
+
+Muhim: `mock-result-view.tsx` main'da `\r\r\n` qator oxirlari bilan buzilgan edi — LF ga keltirildi (mazmun o'zgarishi ~20 qator).
+
 ### 19-BLOK: Frontend dizaynini soddalashtirish (branch `design/simplify`)
 1. **Dizayn tokenlari va tipografiya**: Yagona zumrad (emerald `#16a34a` / `#22c55e`) brend rangi + neytral kulrang shkala. Barcha neon, glow, gradient va sun'iy soyalar olib tashlandi. Shrift o'lchamlari 4 pog'onaga standartlashtirildi: sarlavha 28px, kichik sarlavha 20px, asosiy matn 16px, izoh 14px (14px dan kichik matn qolmadi). Kartalar 1px chegara va 12px radiusga keltirildi. Bo'shliqlar 8 ning karralilariga (8, 16, 24, 32px) moslashtirildi.
 2. **Chap navigatsiya (Sidebar)**: 9+ banddan iborat tartibsiz menyu talabalar uchun 4 ta asosiy bo'limga ixchamlashtirildi: Bosh sahifa, Imtihonlar, Darslar, Natijalar. Qolgan vositalar (Vocabulary, Bamboozle Arena, Leaderboard, Exam Track) "Yana" va profil menyusiga o'tkazildi. Bildirishnomalar yuqori panelga qo'ng'iroq belgisi sifatida joylashtirildi.
