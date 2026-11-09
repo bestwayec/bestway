@@ -5,6 +5,7 @@ import { Award, BookOpenText, CheckCircle2, ChevronRight, Headphones, Mic, PenLi
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { MockSkill } from "@/lib/types";
+import { MULTILEVEL_CEFR_BANDS, multilevelBandFor } from "@/lib/multilevel-scale";
 
 export interface SkillScoreData {
   skill: MockSkill;
@@ -47,8 +48,8 @@ export function getCefrMeta(level?: string | null) {
       label: "C1 — Effective Operational Proficiency",
       color: "from-emerald-600 to-teal-500",
       badge: "border-emerald-500/40 bg-emerald-500/15 text-emerald-400",
-      bandMin: 65,
-      bandMax: 75,
+      bandMin: multilevelBandFor("C1").min,
+      bandMax: multilevelBandFor("C1").max,
       desc: "Can express ideas fluently and spontaneously without much obvious searching for expressions.",
     };
   }
@@ -57,8 +58,8 @@ export function getCefrMeta(level?: string | null) {
       label: "B2 — Vantage / Independent User",
       color: "from-sky-600 to-blue-500",
       badge: "border-sky-500/40 bg-sky-500/15 text-sky-400",
-      bandMin: 51,
-      bandMax: 64,
+      bandMin: multilevelBandFor("B2").min,
+      bandMax: multilevelBandFor("B2").max,
       desc: "Can interact with a degree of fluency and spontaneity with native speakers.",
     };
   }
@@ -67,8 +68,8 @@ export function getCefrMeta(level?: string | null) {
       label: "B1 — Threshold / Independent User",
       color: "from-amber-600 to-yellow-500",
       badge: "border-amber-500/40 bg-amber-500/15 text-amber-400",
-      bandMin: 36,
-      bandMax: 50,
+      bandMin: multilevelBandFor("B1").min,
+      bandMax: multilevelBandFor("B1").max,
       desc: "Can understand the main points of clear standard input on familiar matters.",
     };
   }
@@ -76,8 +77,8 @@ export function getCefrMeta(level?: string | null) {
     label: norm ? `${norm} — Basic User` : "A2 / Below B1",
     color: "from-slate-600 to-zinc-500",
     badge: "border-zinc-500/40 bg-zinc-500/15 text-zinc-400",
-    bandMin: 0,
-    bandMax: 35,
+    bandMin: MULTILEVEL_CEFR_BANDS[0].min,
+    bandMax: MULTILEVEL_CEFR_BANDS[0].max,
     desc: "Can understand basic sentences and frequently used expressions related to immediate areas.",
   };
 }
@@ -92,6 +93,9 @@ export function CefrResultInfographic({
   completedAt,
   className = "",
 }: CefrResultInfographicProps) {
+  // A single-section practice has no overall score or level: never dress it
+  // up as "A2 / Below B1" or draw a level bar for a score that does not exist.
+  const hasOverall = isIelts ? overallBand != null : overallScore != null && Boolean(cefrLevel);
   const meta = getCefrMeta(cefrLevel);
   const totalScore = overallScore ?? 0;
   const scorePercent = Math.min(Math.round((totalScore / 75) * 100), 100);
@@ -113,17 +117,23 @@ export function CefrResultInfographic({
           )}
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-black tracking-tight text-fg sm:text-3xl">
-              {isIelts
+              {!hasOverall
+                ? "Bo'lim natijasi"
+                : isIelts
                 ? `Overall Band: ${overallBand?.toFixed(1) ?? "—"}`
-                : `CEFR Level: ${cefrLevel || "Completed"}`}
+                : `CEFR Level: ${cefrLevel}`}
             </h2>
-            <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.badge}`}>
-              <Award className="size-3.5" aria-hidden />
-              {cefrLevel || "CEFR Assessment"}
-            </span>
+            {hasOverall && (
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.badge}`}>
+                <Award className="size-3.5" aria-hidden />
+                {cefrLevel || "CEFR"}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-fg-muted">
-            {meta.label} · {meta.desc}
+            {hasOverall
+              ? `${meta.label} · ${meta.desc}`
+              : "Umumiy ball va CEFR darajasi faqat to'liq imtihon (4 bo'lim) topshirilganda chiqariladi."}
           </p>
         </div>
 
@@ -145,20 +155,25 @@ export function CefrResultInfographic({
       </div>
 
       {/* Visual Level Track Bar */}
-      {!isIelts && (
+      {!isIelts && hasOverall && (
         <div className="relative z-10 mt-6 space-y-2">
           <div className="flex justify-between text-[11px] font-medium text-fg-muted">
-            <span>A1 / A2 (0–35)</span>
-            <span className="font-semibold text-amber-500">B1 (36–50)</span>
-            <span className="font-semibold text-sky-500">B2 (51–64)</span>
-            <span className="font-semibold text-emerald-500">C1 (65–75)</span>
+            {MULTILEVEL_CEFR_BANDS.map((band, index) => (
+              <span key={band.level} className={["", "font-semibold text-amber-500", "font-semibold text-sky-500", "font-semibold text-emerald-500"][index]}>
+                {band.label} ({band.min}–{band.max})
+              </span>
+            ))}
           </div>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-border/80">
-            {/* Zones */}
-            <div className="absolute inset-y-0 left-0 w-[47%] bg-zinc-500/20" title="A2" />
-            <div className="absolute inset-y-0 left-[47%] w-[20%] bg-amber-500/20" title="B1" />
-            <div className="absolute inset-y-0 left-[67%] w-[19%] bg-sky-500/20" title="B2" />
-            <div className="absolute inset-y-0 left-[86%] right-0 bg-emerald-500/20" title="C1" />
+            {/* Zones, positioned from the same scale as the labels */}
+            {MULTILEVEL_CEFR_BANDS.map((band, index) => (
+              <div
+                key={band.level}
+                className={["absolute inset-y-0 bg-zinc-500/20", "absolute inset-y-0 bg-amber-500/20", "absolute inset-y-0 bg-sky-500/20", "absolute inset-y-0 bg-emerald-500/20"][index]}
+                style={{ left: `${(band.min / 75) * 100}%`, width: `${((band.max - band.min + (index === 3 ? 0 : 1)) / 75) * 100}%` }}
+                title={band.level}
+              />
+            ))}
 
             {/* User progress bar */}
             <div

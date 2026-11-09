@@ -223,11 +223,11 @@ await step(s, "08-answer-saving", async () => {
 });
 
 await step(s, "09-section-navigation", async () => {
-  await s.getByRole("button", { name: /^Part 2/ }).click();
+  await s.getByRole("tab", { name: /^Part 2/ }).click();
   await s.getByText("Part 2 — Short Texts Matching").first().waitFor();
-  await s.getByRole("button", { name: /^Part 3/ }).click();
+  await s.getByRole("tab", { name: /^Part 3/ }).click();
   await s.waitForTimeout(500);
-  await s.getByRole("button", { name: /^Part 1/ }).click();
+  await s.getByRole("tab", { name: /^Part 1/ }).click();
   await s.screenshot({ path: join(OUT, "09-navigation.png") });
   return "Part 1 -> 2 -> 3 -> 1";
 });

@@ -228,15 +228,15 @@ export const authApi = {
     return json.data.user;
   },
 
-  async telegramLogin(data: Record<string, unknown>) {
+  async telegramLogin(data: Record<string, unknown>): Promise<import("./types").PublicUser & { deepLink?: string }> {
     const res = await fetch("/api/auth/telegram-login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(data),
     });
-    let json: ApiResponse<{ user: import("./types").PublicUser }> | undefined;
+    let json: ApiResponse<{ user: import("./types").PublicUser; deepLink?: string }> | undefined;
     try {
-      json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser }>;
+      json = (await res.json()) as ApiResponse<{ user: import("./types").PublicUser; deepLink?: string }>;
     } catch {
       throw new ApiError("SERVER_ERROR", "Serverdan noto'g'ri javob keldi", res.status);
     }
@@ -244,7 +244,7 @@ export const authApi = {
       const error = json && "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram orqali kirishda xatolik", res.status);
     }
-    return json.data.user;
+    return json.data.deepLink ? { ...json.data.user, deepLink: json.data.deepLink } : json.data.user;
   },
 
   async telegramOtpLogin(code: string) {

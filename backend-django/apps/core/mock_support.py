@@ -198,18 +198,13 @@ def certificate_data(actor,attempt_id):
             standardScore=standard_score if standard_score is not None else score,
         ))
 
-    overall_score = row.overall_score
-    overall_band = row.overall_band
-    cefr_level = row.cefr_level
-
-    if is_part or overall_score is None or overall_band is None or not cefr_level:
-        if overall_score is None and sections:
-            overall_score = sections[0].get('standardScore') or sections[0].get('score')
-        if overall_band is None and sections:
-            overall_band = sections[0].get('band')
-        if not cefr_level and overall_score is not None and row.exam.type == 'multilevel':
-            from .prediction_service import multilevel_cefr_from_score
-            cefr_level = multilevel_cefr_from_score(overall_score)
+    # A section practice (scoped partial practice or a legacy single-skill
+    # attempt) is a practice report: it never states an overall score or a CEFR
+    # level, and a missing overall result is never derived from one section.
+    section_only = is_part or row.flow_mode == 'single_skill'
+    overall_score = None if section_only else row.overall_score
+    overall_band = None if section_only else row.overall_band
+    cefr_level = None if section_only else row.cefr_level
 
     return dict(
         studentName=row.student.user.name if row.student and row.student.user else "Student",
@@ -224,5 +219,5 @@ def certificate_data(actor,attempt_id):
         overallScore=overall_score,
         specificationVersion=row.specification_version,
         cefrLevel=cefr_level,
-        isPartial=is_part,
+        isPartial=section_only,
     )

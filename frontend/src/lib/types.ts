@@ -705,6 +705,8 @@ export interface MockExamListItem {
   skills: MockSkill[];
   questionCount: number;
   durationMinutes: number | null;
+  /** Server time limit per section in minutes (single source of truth). */
+  sectionDurations?: Partial<Record<MockSkill, number>>;
   price: number;
   access: MockAccess;
   imported: MockExamImportRef | null;
@@ -816,6 +818,7 @@ export interface MockExamDetail extends MockExamStructure {
   practiceReady?: boolean;
   practiceSkills?: MockPracticeSkill[];
   practiceQuestionCount?: number;
+  sectionDurations?: Partial<Record<MockSkill, number>>;
   price: number;
   isFreeForApproved: boolean;
   access: MockAccess;

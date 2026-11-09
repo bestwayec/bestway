@@ -45,7 +45,10 @@ def respects_answer_rule(value: str, rule: str) -> bool:
     return (len(tokens) == 1 and words == 1) if rule == "ONE_WORD" else bool(tokens) and words <= 1 and numeric <= 1
 
 
-def objective_question_issues(question: dict, is_auto: bool, complete: bool = True) -> list[str]:
+def objective_question_issues(question: dict, is_auto: bool, complete: bool = True, *, audio_stem: bool = False) -> list[str]:
+    """``audio_stem``: the item belongs to a Listening part, where a choice
+    question's stem may be spoken only (e.g. Multilevel Listening Part 1,
+    "choose the correct reply"), so an empty written prompt is legitimate."""
     issues: list[str] = []
     question_type = question.get("type")
     options = string_array(question.get("options"))
@@ -57,7 +60,8 @@ def objective_question_issues(question: dict, is_auto: bool, complete: bool = Tr
     if is_auto == manual:
         issues.append("question type is incompatible with its section")
     prompt = question.get("prompt")
-    if complete and prompt is not None and (not isinstance(prompt, str) or not prompt.strip()):
+    spoken_stem = audio_stem and question_type == "multiple_choice" and (prompt is None or (isinstance(prompt, str) and not prompt.strip()))
+    if complete and prompt is not None and not spoken_stem and (not isinstance(prompt, str) or not prompt.strip()):
         issues.append("question prompt is missing")
     if any(not option.strip() for option in options) or len({strict_answer_text(option) for option in options}) != len(options):
         issues.append("options contain blanks or duplicate values")
@@ -103,9 +107,9 @@ def objective_question_issues(question: dict, is_auto: bool, complete: bool = Tr
     return issues
 
 
-def objective_group_issues(group: dict, is_auto: bool) -> list[str]:
+def objective_group_issues(group: dict, is_auto: bool, *, audio_stem: bool = False) -> list[str]:
     questions = group.get("questions") or []
-    issues = [f"Question {index + 1}: {issue}" for index, question in enumerate(questions) for issue in objective_question_issues(question, is_auto)]
+    issues = [f"Question {index + 1}: {issue}" for index, question in enumerate(questions) for issue in objective_question_issues(question, is_auto, audio_stem=audio_stem)]
     matching = [q for q in questions if q.get("type") in {"matching", "matching_headings"} or (q.get("type") == "map_labelling" and string_array(q.get("options")))]
     layout = group.get("contentLayout")
     if layout in MATCHING_LAYOUTS:

@@ -11,7 +11,6 @@ import logging
 import os
 import shutil
 import subprocess
-import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -201,10 +200,6 @@ def compress_speaking_audio_async(
     except Exception:
         pass
 
-    thread = threading.Thread(
-        target=compress_speaking_audio_for_answer,
-        args=(audio_key_or_path, attempt_id, question_id),
-        daemon=True,
-    )
-    thread.start()
+    from common.background import start_thread
+    start_thread(compress_speaking_audio_for_answer, audio_key_or_path, attempt_id, question_id, name='bestway-audio')
     return {"queued": True, "mode": "thread", "audio": audio_key_or_path}

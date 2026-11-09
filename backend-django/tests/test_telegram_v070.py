@@ -165,7 +165,9 @@ class TelegramV070Tests(SimpleTestCase):
             sso_text = sent_messages[-1][1]
             sso_markup = sent_messages[-1][2]
             self.assertIn("Superadmin SSO", sso_text)
-            self.assertIn("https://bestwayec.uz/login?id=5582178765", sso_markup["inline_keyboard"][0][0]["url"])
+            sso_url = sso_markup["inline_keyboard"][0][0]["url"]
+            self.assertTrue(sso_url.startswith("https://bestwayec.uz/login?sso_token="))
+            self.assertNotIn("5582178765", sso_url)
 
     def test_writing_photo_upload_ocr_and_ai_evaluation_reply(self):
         sent_messages = []

@@ -20,8 +20,8 @@ import { MockResultView, MultilevelResultBreakdown } from "./mock-result-view";
 
 const attempt = (partial = true) => ({
   id: "attempt-1", examTitle: "Selected work", examType: "multilevel", status: "completed",
-  flowMode: partial ? "partial_practice" : "single_skill", specificationVersion: "UZBMB_MULTILEVEL_EN_2026_V2",
-  overallScore: null, cefrLevel: null, scoreMethod: "PRACTICE_PARTIAL",
+  flowMode: partial ? "partial_practice" : "full_test", specificationVersion: "UZBMB_MULTILEVEL_EN_2026_V2",
+  overallScore: partial ? null : 50, cefrLevel: partial ? null : "B2", scoreMethod: partial ? "PRACTICE_PARTIAL" : "ESTIMATED",
   sections: [{ id: "speaking", skill: "speaking", score: 4, max: 5, standardScore: null, band: null, groups: [{ id: "part-1", title: "Personal questions", questions: [3, 4, 5].map((score, index) => ({
     id: `q-${index}`, number: index + 1, type: "speaking_task", prompt: "Describe your day", points: 9,
     guidance: { taskKey: "1.1", displayLabel: "Part 1.1", rawMax: 5 }, isGraded: true, score,
@@ -103,6 +103,20 @@ describe("partial teacher result presentation", () => {
     expect(html).not.toContain("3 / 5");
     expect(html).not.toContain("12 / 5");
     expect(html).not.toContain("Standardized");
+  });
+  it("presents a single-section objective practice as a section result, not a level", () => {
+    const value = attempt(false);
+    value.flowMode = "single_skill";
+    value.scoreMethod = "PRACTICE_PARTIAL";
+    value.overallScore = null;
+    value.cefrLevel = null;
+    value.sections = [{ ...value.sections[0], id: "listening", skill: "listening", score: 0, max: 27, groups: [] }];
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).not.toContain("Below B1");
+    expect(html).not.toContain("Estimated Multilevel Result");
+    expect(html).not.toContain("AI bahosi");
+    expect(html).not.toContain("Sertifikatni");
+    expect(html).toContain("Mashq hisoboti (PDF)");
   });
   it("preserves the full-result certificate flow", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: attempt(false) }));

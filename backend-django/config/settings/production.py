@@ -33,6 +33,18 @@ REST_FRAMEWORK = {**REST_FRAMEWORK,
 }
 DATABASES["default"]["CONN_MAX_AGE"] = 60
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+# Server-side safety net against leaked sessions: PostgreSQL ends a session
+# that sits idle (or idle inside a transaction) longer than these limits, so a
+# forgotten connection can no longer pin one of the limited slots forever.
+# Both are well above CONN_MAX_AGE; loops call close_old_connections() and
+# health checks reconnect transparently. Set to 0 to disable.
+_db_options = DATABASES["default"].setdefault("OPTIONS", {})
+_db_options["options"] = " ".join(filter(None, [
+    _db_options.get("options", ""),
+    f"-c idle_session_timeout={int(env('DB_IDLE_SESSION_TIMEOUT_MS', '600000'))}",
+    f"-c idle_in_transaction_session_timeout={int(env('DB_IDLE_IN_TRANSACTION_TIMEOUT_MS', '120000'))}",
+]))
+DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", int(env("DB_CONNECT_TIMEOUT_SECONDS", "5")))
 # CsrfViewMiddleware already ships with the base stack (Django Admin);
 # production only adds the clickjacking guard.
 MIDDLEWARE = [*MIDDLEWARE, "django.middleware.clickjacking.XFrameOptionsMiddleware"]

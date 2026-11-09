@@ -117,7 +117,7 @@ def task_scope(tree, media_exists):
                 if is_auto:
                     if isinstance(prompt, str) and prompt and PLACEHOLDER.search(prompt):
                         continue
-                    if objective_question_issues(question, True):
+                    if objective_question_issues(question, True, audio_stem=skill == 'listening'):
                         continue
                     if type(points) is not int or points < 1:
                         continue
@@ -162,7 +162,11 @@ def _authored_skill_question_ids(exam, skill):
             if any(isinstance(v, str) and PLACEHOLDER.search(v) for v in text):
                 continue
             for q in MockQuestion.objects.filter(group_id=group.id).order_by('sort_order', 'number', 'id'):
-                if isinstance(q.prompt, str) and q.prompt.strip() and not PLACEHOLDER.search(q.prompt):
+                prompt = q.prompt if isinstance(q.prompt, str) else ''
+                # A Listening choice item may have a spoken-only stem (Part 1);
+                # dropping it silently removed a whole part from practice.
+                spoken_stem = skill == 'listening' and q.type == 'multiple_choice' and not prompt.strip()
+                if (prompt.strip() or spoken_stem) and not PLACEHOLDER.search(prompt):
                     ids.append(q.id)
     return ids
 

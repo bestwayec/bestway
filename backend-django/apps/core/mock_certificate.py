@@ -62,7 +62,7 @@ def generate(data):
         cert_heading = 'MULTILEVEL CEFR ESTIMATED RESULT'
     center(cert_heading, 145, 13, True, accent)
 
-    center('This certifies that', 182, 11, False, '#64748b')
+    center('Practice report for' if data.get('isPartial') else 'This certifies that', 182, 11, False, '#64748b')
     extra = center(data['studentName'], 210, 22, True, '#0f172a')
     title = data['examTitle'] + (f" ({data['level']})" if data.get('level') else '') + ' — ' + data['examType'].replace('_', ' ', 1).upper()
     extra += center(title, 238 + extra, 12, True, accent)
@@ -96,27 +96,20 @@ def generate(data):
     line(y + 4)
     y += 44
 
-    if data['isIelts']:
+    if data.get('isPartial'):
+        # Section practice: no overall score and no CEFR level exist.
+        center('Section practice only — no overall score or CEFR level is issued.', y, 10, True, '#64748b')
+    elif data['isIelts']:
         band_val = data.get('overallBand')
-        if band_val is None and data.get('isPartial') and data.get('sections'):
-            band_val = data['sections'][0].get('band')
         if band_val is not None:
-            center('OVERALL BAND SCORE' if not data.get('isPartial') else 'PRACTICE BAND SCORE', y, 11, True, '#64748b')
+            center('OVERALL BAND SCORE', y, 11, True, '#64748b')
             center(fixed(band_val), y + 44, 42, True, accent)
     else:
         sc_val = data.get('overallScore')
-        if sc_val is None and data.get('isPartial') and data.get('sections'):
-            sc_val = data['sections'][0].get('standardScore') or data['sections'][0].get('score')
         cefr = data.get('cefrLevel')
-        if not cefr and sc_val is not None:
-            from .prediction_service import multilevel_cefr_from_score
-            cefr = multilevel_cefr_from_score(sc_val)
-
-        if cefr or sc_val is not None:
-            score_str = js_string(sc_val) if sc_val is not None else 'Pending'
-            val = ('PRACTICE SCORE: ' if data.get('isPartial') else 'ESTIMATED SCORE: ') + score_str + ' / 75'
-            center(val, y, 11, True, '#64748b')
-            center(cefr or 'A2', y + 44, 42, True, accent)
+        if sc_val is not None and cefr:
+            center('ESTIMATED SCORE: ' + js_string(sc_val) + ' / 75', y, 11, True, '#64748b')
+            center(cefr, y + 44, 42, True, accent)
 
     # Footer verification metadata
     base_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
@@ -124,7 +117,7 @@ def generate(data):
     finished_str = aware(data['finishedAt']).strftime('%Y-%m-%d') if data.get('finishedAt') else 'N/A'
 
     text('Issue Date: ' + finished_str, 50, height - 90, 9, color='#475569')
-    text('Certificate ID: ' + data['attemptId'], 50, height - 76, 8, color='#64748b')
+    text(('Report ID: ' if data.get('isPartial') else 'Certificate ID: ') + data['attemptId'], 50, height - 76, 8, color='#64748b')
     text('Verify online: ' + verify_url, 50, height - 62, 8, color=accent)
     text('BestWay Mock Examination Engine · Unofficial Diagnostic Practice Report', 50, height - 48, 7, color='#94a3b8')
 

@@ -49,7 +49,9 @@ export function LoginForm() {
   const otpInputsRef = React.useRef<(HTMLInputElement | null)[]>([]);
 
   const schema = React.useMemo(() => makeSchema((k) => t(`errors.${k}`)), [t]);
-  const defaultPhone = params?.get("id") || params?.get("phone") || params?.get("identifier") || "";
+  // `id` is a Telegram user id when the page is opened from a Telegram sign-in link, never a phone.
+  const isTelegramCallback = Boolean(params?.get("hash") || params?.get("sso_token") || params?.get("tgAuthResult"));
+  const defaultPhone = (isTelegramCallback ? null : params?.get("id")) || params?.get("phone") || params?.get("identifier") || "";
   const {
     register,
     handleSubmit,
@@ -64,11 +66,11 @@ export function LoginForm() {
   });
 
   React.useEffect(() => {
-    const idParam = params?.get("id") || params?.get("phone") || params?.get("identifier");
+    const idParam = (isTelegramCallback ? null : params?.get("id")) || params?.get("phone") || params?.get("identifier");
     if (idParam) {
       setValue("phone", idParam);
     }
-  }, [params, setValue]);
+  }, [params, setValue, isTelegramCallback]);
 
   const redirectAfterLogin = React.useCallback(
     (role: string) => {
@@ -94,28 +96,33 @@ export function LoginForm() {
     [locale, params],
   );
 
-  // Handle Telegram SSO automatic login if params present (e.g. from bot link or widget redirect)
+  // Handle Telegram SSO automatic login if params present (e.g. from bot link or widget redirect).
+  // A one-time link must be submitted exactly once, even under React strict-mode double effects.
+  const ssoAttempted = React.useRef(false);
   React.useEffect(() => {
     const hash = params?.get("hash");
     const sso_token = params?.get("sso_token");
     const tgAuthResult = params?.get("tgAuthResult");
     const client = params?.get("client");
 
-    if (hash || sso_token || tgAuthResult) {
+    if ((hash || sso_token || tgAuthResult) && !ssoAttempted.current) {
+      ssoAttempted.current = true;
       const payload: Record<string, unknown> = {};
       params.forEach((value, key) => {
         payload[key] = value;
       });
+      // Drop the credential from the address bar and history straight away.
+      try {
+        window.history.replaceState(null, "", window.location.pathname);
+      } catch {}
 
       setIsTelegramLoggingIn(true);
       authApi
         .telegramLogin(payload)
-        .then((res: any) => {
-          const user = res?.user || res;
+        .then((user) => {
           const isMobileClient = client === "mobile" || params?.get("redirect_to_app") === "true";
-          const deepLink = res?.deepLink || (res?.accessToken ? `bestwayapp://auth?token=${encodeURIComponent(res.accessToken)}&refresh=${encodeURIComponent(res.refreshToken || "")}` : null);
-          if (isMobileClient && deepLink) {
-            window.location.href = deepLink;
+          if (isMobileClient && user.deepLink) {
+            window.location.href = user.deepLink;
             return;
           }
           toast.success(t("welcomeBack"));
@@ -123,7 +130,7 @@ export function LoginForm() {
         })
         .catch((err) => {
           setIsTelegramLoggingIn(false);
-          const message = (err as any)?.message || (err instanceof Error ? err.message : null) || tc("unknownError");
+          const message = err instanceof ApiError ? err.message : tc("unknownError");
           setServerError(message);
         });
     }

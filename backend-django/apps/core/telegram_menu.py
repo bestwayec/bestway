@@ -298,22 +298,23 @@ def send_apk(chat_id):
     api.send(chat_id,APK_ERROR_TEXT)
     return False
 
-def generate_sso_url(chat_id, user=None):
-    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-    auth_date = int(time.time())
-    name = user.name if user else 'Student'
-    data = [
-        f"auth_date={auth_date}",
-        f"first_name={name}",
-        f"id={chat_id}",
-    ]
-    data.sort()
-    data_string = "\n".join(data)
-    secret_key = hashlib.sha256(token.encode('utf-8')).digest()
-    auth_hash = hmac.new(secret_key, data_string.encode('utf-8'), hashlib.sha256).hexdigest()
+def generate_sso_url(chat_id, user=None, from_user=None):
+    """One-click web login link: a random, single-use token valid for minutes.
+
+    The link carries no identity data and no reusable signature, so a
+    forwarded message or browser history entry cannot sign anyone in later.
+    """
+    from . import telegram_sso
+    first_name = last_name = username = ''
+    if isinstance(from_user, dict):
+        first_name = from_user.get('first_name') or ''
+        last_name = from_user.get('last_name') or ''
+        username = from_user.get('username') or ''
+    elif user is not None:
+        first_name = getattr(user, 'name', '') or ''
+    token = telegram_sso.issue_sso_token(chat_id, first_name, last_name, username)
     base_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
-    enc_name = urllib.parse.quote(name)
-    return f"{base_url}/login?id={chat_id}&first_name={enc_name}&auth_date={auth_date}&hash={auth_hash}"
+    return f"{base_url}/login?sso_token={urllib.parse.quote(token)}"
 
 def send_web_login(chat_id, user=None):
     if is_superadmin(chat_id=chat_id, user=user):
@@ -325,7 +326,7 @@ def send_web_login(chat_id, user=None):
         "➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
         "Platformaga parol kiritmasdan, bir marta bosish orqali to'g'ridan-to'g'ri kirish uchun "
         "pastdagi tugmani bosing 👇\n\n"
-        "⏱ <i>Havola xavfsizlik sababli cheklangan muddat amal qiladi.</i>"
+        "⏱ <i>Havola 10 daqiqa amal qiladi va faqat bir marta ishlaydi.</i>"
     )
     api.send(chat_id, text, reply_markup=reply_markup)
 
@@ -782,36 +783,23 @@ def text_for(user,key):
 
 
 def send_otp_code(chat_id, from_user=None):
-    import secrets
-
-    from django.core.cache import cache
-    code = f"{secrets.randbelow(900000) + 100000}"
-    cache_key = f"telegram_otp:{code}"
+    from . import telegram_sso
 
     telegram_id = chat_id
-    first_name = ""
-    last_name = ""
-    username = ""
-    if from_user:
-        if hasattr(from_user, "name"):
-            first_name = from_user.name
-        elif isinstance(from_user, dict):
-            telegram_id = from_user.get("id") or chat_id
-            first_name = from_user.get("first_name", "")
-            last_name = from_user.get("last_name", "")
-            username = from_user.get("username", "")
-
-    cache_data = {
-        "telegram_id": telegram_id,
-        "first_name": first_name,
-        "last_name": last_name,
-        "username": username,
-    }
-    cache.set(cache_key, cache_data, timeout=300)
-
+    first_name = last_name = username = ""
+    if isinstance(from_user, dict):
+        telegram_id = from_user.get("id") or chat_id
+        first_name = from_user.get("first_name", "")
+        last_name = from_user.get("last_name", "")
+        username = from_user.get("username", "")
+    elif from_user is not None and hasattr(from_user, "name"):
+        first_name = from_user.name
+    code = telegram_sso.issue_otp(telegram_id, first_name, last_name, username)
     text = (
         f"🔑 <b>Sizning kirish kodingiz:</b> <code>{code}</code>\n\n"
-        f"⏳ Ushbu kod 5 daqiqa davomida amal qiladi. BestWay mobil ilovasida ushbu kodni kiriting."
+        "⏳ Kod 5 daqiqa amal qiladi va faqat bir marta ishlaydi. "
+        "Uni bestwayec.uz saytidagi «Telegram kod» bo'limiga yoki BestWay ilovasiga kiriting.\n"
+        "🔒 Kodni hech kimga bermang."
     )
     api.send(chat_id, text)
 

@@ -692,7 +692,7 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
                         unavailable.append(group.id)
             value = group_payload(group)
             value['questions'] = [question_payload(q) for q in qs]
-            issues = objective_group_issues(value, auto)
+            issues = objective_group_issues(value, auto, audio_stem=section['skill'] == 'listening')
             try:
                 if gap_numbers(group.content_html):
                     assert_gapped_questions(group.content_html, [q.number for q in qs])

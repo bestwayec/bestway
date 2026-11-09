@@ -424,6 +424,16 @@ def _analyze_weak_modules(attempt_ids: list[str]) -> list[dict]:
     return modules_out[:8]
 
 
+def is_full_exam_attempt(attempt) -> bool:
+    """Only a complete multi-section exam may feed an overall score, CEFR level
+    or trend. A single-section practice has real section evidence, but no
+    overall result."""
+    from .mock_practice import is_partial
+    if is_partial(attempt) or getattr(attempt, 'flow_mode', None) in ('single_skill', 'partial_practice'):
+        return False
+    return True
+
+
 def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     """Compute Dual-Scale (IELTS 0-9.0 & Multi-Level 0-75 CEFR) score predictions, trend history, and weak modules."""
     user = User.objects.filter(id=student_id).first()
@@ -454,6 +464,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     skills_ielts_acc: dict[str, list[float]] = {"listening": [], "reading": [], "writing": [], "speaking": []}
     skills_ml_acc: dict[str, list[float]] = {"listening": [], "reading": [], "writing": [], "speaking": []}
 
+    section_attempts = 0
     for att in chronological:
         metrics = extract_attempt_dual_metrics(att)
         dt = att.finished_at or att.submitted_at or att.started_at
@@ -461,14 +472,18 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         exam_title = att.exam.title if getattr(att, "exam", None) else "Mock Exam"
         exam_type = att.exam.type if getattr(att, "exam", None) else "ielts_academic"
 
-        ielts_series.append(metrics["ieltsBand"])
-        ml_series.append(metrics["multilevelScore"])
-
+        # Section practice contributes per-skill evidence only.
         for sk in ("listening", "reading", "writing", "speaking"):
             if sk in metrics["skillsIelts"]:
                 skills_ielts_acc[sk].append(metrics["skillsIelts"][sk])
             if sk in metrics["skillsMultilevel"]:
                 skills_ml_acc[sk].append(metrics["skillsMultilevel"][sk])
+        if not is_full_exam_attempt(att):
+            section_attempts += 1
+            continue
+
+        ielts_series.append(metrics["ieltsBand"])
+        ml_series.append(metrics["multilevelScore"])
 
         history.append(
             {
@@ -519,6 +534,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
                 }
             )
 
+    has_overall = bool(ml_series)
     curr_band, pred_band, delta_band = _compute_weighted_prediction(ielts_series, step_half=True, max_cap=9.0)
     curr_ml, pred_ml, delta_ml = _compute_weighted_prediction(ml_series, step_half=False, max_cap=75.0)
 
@@ -534,17 +550,19 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     for sk in ("listening", "reading", "writing", "speaking"):
         i_vals = skills_ielts_acc[sk]
         m_vals = skills_ml_acc[sk]
-        # No graded evidence for a skill -> None ("—" in the UI), never a fabricated 0.0.
-        skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else (curr_band if ielts_series else None)
-        skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else (curr_ml if ml_series else None)
+        # No graded evidence for a skill -> None ("—" in the UI); never copy the
+        # overall score into a skill that was not attempted.
+        skill_breakdown_ielts[sk] = float(round_half(sum(i_vals) / len(i_vals))) if i_vals else None
+        skill_breakdown_ml[sk] = round(sum(m_vals) / len(m_vals), 1) if m_vals else None
 
     weak_modules = _analyze_weak_modules([a.id for a in completed_attempts])
 
     profile = StudentProfile.objects.filter(user_id=student_id).first()
     active_program = getattr(profile, "active_program", None) or "IELTS"
 
-    if len(history) < 2:
-        trend = "insufficient_data" if len(history) == 0 else "stable"
+    if len(ml_series) < 2:
+        # One result is not a trend: never call it "stable".
+        trend = "insufficient_data"
     elif delta_ml > 1.0 or delta_band >= 0.5:
         trend = "improving"
     elif delta_ml < -1.0 or delta_band <= -0.5:
@@ -556,28 +574,29 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         "studentId": student_id,
         "studentName": user.name,
         "activeProgram": active_program,
-        "attemptsAnalyzed": len(history),
+        "attemptsAnalyzed": len(ml_series),
+        "sectionAttemptsAnalyzed": section_attempts,
         "trend": trend,
-        "targetProgressPercent": ml_progress if active_program == "MULTILEVEL" else band_progress,
+        "targetProgressPercent": (ml_progress if active_program == "MULTILEVEL" else band_progress) if has_overall else 0,
         "ielts": {
-            "currentBand": curr_band,
-            "predictedBand": pred_band,
+            "currentBand": curr_band if has_overall else None,
+            "predictedBand": pred_band if has_overall else None,
             "trendDelta": delta_band,
             "targetBand": target_band,
-            "targetProgressPercent": band_progress,
-            "gapToTarget": round(max(0.0, target_band - pred_band), 1),
-            "cefrLevel": cefr_band(pred_band) if pred_band > 0 else "A2",
+            "targetProgressPercent": band_progress if has_overall else 0,
+            "gapToTarget": round(max(0.0, target_band - pred_band), 1) if has_overall else None,
+            "cefrLevel": cefr_band(pred_band) if has_overall and pred_band > 0 else None,
             "skillBreakdown": skill_breakdown_ielts,
         },
         "multilevel": {
-            "currentScore": curr_ml,
-            "predictedScore": pred_ml,
+            "currentScore": curr_ml if has_overall else None,
+            "predictedScore": pred_ml if has_overall else None,
             "trendDelta": delta_ml,
             "targetScore": target_score,
             "targetCefr": target_cefr,
-            "targetProgressPercent": ml_progress,
-            "gapToTarget": round(max(0.0, target_score - pred_ml), 1),
-            "cefrLevel": multilevel_cefr_from_score(pred_ml),
+            "targetProgressPercent": ml_progress if has_overall else 0,
+            "gapToTarget": round(max(0.0, target_score - pred_ml), 1) if has_overall else None,
+            "cefrLevel": multilevel_cefr_from_score(pred_ml) if has_overall else None,
             "scaleBands": MULTILEVEL_SCALE_BANDS,
             "skillBreakdown": skill_breakdown_ml,
         },

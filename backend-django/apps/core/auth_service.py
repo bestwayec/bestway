@@ -57,6 +57,7 @@ def public(row):
         "role": str(row[3]),
         "isActive": bool(is_active),
         "is_active": bool(is_active),
+        "telegramChatId": row[7] if len(row) > 7 else None,
         "createdAt": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at) if created_at else None,
     }
 

@@ -87,6 +87,42 @@ export type CdiContrastTheme = "standard" | "yellow_on_black" | "grey";
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
 
+/**
+ * Exam pictures and maps are protected: always load them through the same-origin
+ * /api/backend proxy, which carries the httpOnly session. The absolute API URL
+ * from the payload is cross-origin and is refused without credentials.
+ */
+export function GroupImage({ groupId, alt }: { groupId: string; alt: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const [attempt, setAttempt] = React.useState(0);
+  const src = `${media(`/mock/groups/${groupId}/image`)}${attempt ? `?retry=${attempt}` : ""}`;
+  if (failed) {
+    return (
+      <div role="alert" className="flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border p-4 text-center text-sm text-fg-muted">
+        <span>Rasm yuklanmadi. Internetni tekshirib, qayta urinib ko&apos;ring.</span>
+        <button
+          type="button"
+          onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}
+          className="min-h-[40px] rounded-lg border border-border px-3 font-semibold text-fg hover:bg-surface-hover"
+        >
+          Qayta yuklash
+        </button>
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- authenticated proxy media; next/image cannot forward the session
+    <img
+      src={src}
+      alt={alt}
+      decoding="async"
+      data-testid="exam-group-image"
+      onError={() => setFailed(true)}
+      className="max-h-[65vh] w-full rounded-lg border border-border/80 object-contain shadow-sm"
+    />
+  );
+}
+
 function countAnswered(exam: MockExamDetail, answers: Record<string, string>, audio: Set<string>): number {
   let n = 0;
   for (const s of (exam?.sections || [])) {
@@ -989,14 +1025,9 @@ function GroupBlock({
         )
       )}
       {group.imageUrl && !isMapSplit && (
-        // eslint-disable-next-line @next/next/no-img-element -- authenticated /api/backend media URL; next/image optimizer bypass is intentional (auth headers)
-        <img
-          src={media(`/mock/groups/${group.id}/image`)}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="mt-3 max-h-96 w-full rounded-[8px] border border-border object-contain"
-        />
+        <div className="mt-3">
+          <GroupImage groupId={group.id} alt={group.title ? `${group.title} — picture` : "Picture for this part"} />
+        </div>
       )}
       {group.instructions && (
         <div className="mt-3 text-sm font-medium text-fg-muted">
@@ -1066,18 +1097,13 @@ function GroupBlock({
         )}
       >
         {isMapSplit && (
-          <div className="sticky top-20 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center max-h-[calc(100vh-8rem)] overflow-y-auto">
+          // Sticky only beside the questions on wide screens; on phones a sticky
+          // map would cover the questions it belongs to.
+          <div className="mb-3 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center lg:mb-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
             <p className="text-xs font-semibold text-fg-muted mb-2 uppercase tracking-wider">
-              {group.title || "Community Centre Plan (Map)"}
+              {group.title || "Map"}
             </p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={group.imageUrl && (group.imageUrl.startsWith("http") || group.imageUrl.startsWith("/media")) ? group.imageUrl : media(`/mock/groups/${group.id}/image`)}
-              alt="Floor plan map"
-              loading="lazy"
-              decoding="async"
-              className="max-h-[65vh] w-full rounded-lg border border-border/80 object-contain shadow-sm"
-            />
+            <GroupImage groupId={group.id} alt={group.title ? `${group.title} — map` : "Map for this part"} />
           </div>
         )}
         {hasPassage && !hasGappedContent && (

@@ -1311,4 +1311,45 @@ def seed_record_mock_1(stdout, style=None):
             },
         )
 
-    stdout.write(style.SUCCESS(f"Successfully seeded exam {EXAM_ID}: {EXAM_TITLE}"))
+        normalized = normalize_objective_keys(EXAM_ID)
+
+    stdout.write(style.SUCCESS(f"Successfully seeded exam {EXAM_ID}: {EXAM_TITLE} ({normalized} answer keys normalized)"))
+
+
+def normalize_objective_keys(exam_id: str) -> int:
+    """Bring stored answer keys in line with the shared authoring rules.
+
+    The historical content attached letter/text "variants" to choice and
+    True/False items and an unsupported ``ONE_WORD_ONLY`` rule to completion
+    items. The validator therefore rejected every Listening part, practice
+    fell back to an unvalidated question list and silently dropped Part 1.
+    Every change here is scoring-neutral:
+      * choice/decision items are scored by option index / canonical decision,
+        never by variants, so their variants are removed;
+      * ``ONE_WORD_ONLY`` was never recognised by the scorer (generic matching
+        with ``word_limit=1`` applied), so the rule becomes ``None`` and the
+        one-word limit stays;
+      * under a valid answer rule, a variant that breaks the rule could never
+        match a rule-abiding response, so it is removed.
+    """
+    from apps.core.mock_rules import (
+        ANSWER_RULES,
+        CHOICE_TYPES,
+        TEXT_TYPES,
+        respects_answer_rule,
+    )
+    changed = 0
+    for question in MockQuestion.objects.filter(group__section__exam_id=exam_id):
+        variants = list(question.accepted_variants or [])
+        rule = question.answer_rule
+        if question.type in CHOICE_TYPES | {"true_false_notgiven", "yes_no_notgiven"}:
+            variants = []
+        elif question.type in TEXT_TYPES:
+            if rule is not None and rule not in ANSWER_RULES:
+                rule = None
+            if rule in ANSWER_RULES:
+                variants = [v for v in variants if isinstance(v, str) and respects_answer_rule(v, rule)]
+        if variants != list(question.accepted_variants or []) or rule != question.answer_rule:
+            MockQuestion.objects.filter(id=question.id).update(accepted_variants=variants, answer_rule=rule)
+            changed += 1
+    return changed

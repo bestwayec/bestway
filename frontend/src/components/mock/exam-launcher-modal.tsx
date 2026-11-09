@@ -38,11 +38,11 @@ const SKILL_ICONS: Record<MockSkill, typeof Headphones> = {
   speaking: Mic,
 };
 
-const SKILL_META: Record<MockSkill, { title: string; time: string }> = {
-  listening: { title: "Listening", time: "~35 daq" },
-  reading: { title: "Reading", time: "~60 daq" },
-  writing: { title: "Writing", time: "~50 daq" },
-  speaking: { title: "Speaking", time: "~15 daq" },
+const SKILL_TITLES: Record<MockSkill, string> = {
+  listening: "Listening",
+  reading: "Reading",
+  writing: "Writing",
+  speaking: "Speaking",
 };
 
 interface ExamLauncherModalProps {
@@ -63,12 +63,16 @@ export function ExamLauncherModal({
   const isMultilevel = exam.type === "multilevel";
   const simulatorMode: ExamSimulatorMode = isMultilevel ? "dtm" : "cdi";
 
+  // Offer only sections the server confirmed as practice-ready, with the
+  // server's own time limit; never a hard-coded estimate.
   const availableSkills: MockSkill[] = React.useMemo(() => {
+    if (Array.isArray(exam.practiceSkills)) return exam.practiceSkills as MockSkill[];
     if ("skills" in exam && Array.isArray((exam as { skills?: unknown }).skills) && (exam as { skills: MockSkill[] }).skills.length > 0) {
       return (exam as { skills: MockSkill[] }).skills;
     }
     return ["listening", "reading", "writing", "speaking"];
   }, [exam]);
+  const durations = exam.sectionDurations ?? {};
 
   function triggerStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
     if (typeof window !== "undefined") {
@@ -147,7 +151,8 @@ export function ExamLauncherModal({
             <div className="grid grid-cols-2 gap-2.5 pt-1">
               {availableSkills.map((skill) => {
                 const Icon = SKILL_ICONS[skill] || Headphones;
-                const meta = SKILL_META[skill] || { title: skill, time: "" };
+                const minutes = durations[skill];
+                const meta = { title: SKILL_TITLES[skill] || skill, time: minutes ? `${minutes} daq` : "" };
 
                 return (
                   <Button

@@ -4,7 +4,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
-from django.db import close_old_connections, transaction
+from django.db import close_old_connections, connections, transaction
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
@@ -34,7 +34,10 @@ def deliver(user_ids,kind,text):
         for chat_id in User.objects.filter(id__in=user_ids,telegram_chat_id__isnull=False).values_list('telegram_chat_id',flat=True):
             telegram_delivery.send(chat_id,decorate(kind,text))
     except Exception:logging.getLogger(__name__).warning('Notification Telegram delivery failed')
-    finally:close_old_connections()
+    finally:
+        # Runs on the shared delivery pool: release the thread's connection
+        # instead of parking an idle PostgreSQL session per pool thread.
+        connections.close_all()
 
 
 @transaction.atomic
