@@ -310,7 +310,7 @@ export function CbtSectionStepper({
           )}
 
           {/* Previous / Flag / Next Stepper Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2 sm:pt-2.5">
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -323,8 +323,8 @@ export function CbtSectionStepper({
                 }}
                 className="min-h-[40px] px-3.5 text-xs font-medium touch-manipulation"
               >
-                <ArrowLeft className="mr-1.5 size-4" />
-                {isDtm ? "Oldingi qism" : "Previous Part"}
+                <ArrowLeft className="size-4 sm:mr-1.5" />
+                <span className="sr-only sm:not-sr-only">{isDtm ? "Oldingi qism" : "Previous Part"}</span>
               </Button>
 
               {activeQuestionId && (
@@ -342,17 +342,17 @@ export function CbtSectionStepper({
                 >
                   <Flag
                     className={cn(
-                      "mr-1.5 size-3.5",
+                      "size-3.5 sm:mr-1.5",
                       currentFlagged && "fill-amber-400 text-amber-500"
                     )}
                   />
-                  {isDtm
+                  <span className="sr-only sm:not-sr-only">{isDtm
                     ? currentFlagged
                       ? "Belgilangan (Flagged)"
                       : "Belgilash (Flag)"
                     : currentFlagged
                     ? "Flagged for Review"
-                    : "Flag Question"}
+                    : "Flag Question"}</span>
                 </Button>
               )}
             </div>
