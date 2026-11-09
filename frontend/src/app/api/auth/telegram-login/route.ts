@@ -26,7 +26,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const json = (await upstream.json()) as ApiResponse<AuthTokens>;
+  let json: ApiResponse<AuthTokens>;
+  try {
+    json = (await upstream.json()) as ApiResponse<AuthTokens>;
+  } catch {
+    // A proxy/gateway error page is not JSON: never surface its body.
+    return NextResponse.json(
+      { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "Server hozir band. Birozdan so'ng qayta urinib ko'ring" } },
+      { status: upstream.status >= 500 ? upstream.status : 502 },
+    );
+  }
   if (!upstream.ok || !json.success) {
     return NextResponse.json(json, { status: upstream.status });
   }

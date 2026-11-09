@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -26,7 +27,9 @@ class TelegramOtpAndGroupRenameTests(SimpleTestCase):
             chat_id, text = args
             self.assertEqual(chat_id, 12345678)
             self.assertIn("Sizning kirish kodingiz:", text)
-            self.assertIn("5 daqiqa davomida amal qiladi", text)
+            self.assertIn("5 daqiqa amal qiladi", text)
+            code = text.split('<code>')[1].split('</code>')[0]
+            self.assertEqual(cache.get(f'telegram_otp:{code}')['telegram_id'], '12345678')
 
     def test_telegram_otp_verify_invalid_code_formats(self):
         response = self.client.post('/v1/auth/telegram-otp/verify', {'code': '123'}, format='json')
@@ -58,6 +61,7 @@ class TelegramOtpAndGroupRenameTests(SimpleTestCase):
         mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
 
         with patch('apps.core.telegram_views.connection', mock_conn), \
+             patch('apps.core.telegram_views.transaction.atomic', return_value=nullcontext()), \
              patch('apps.core.auth_service.issue_tokens', return_value={'accessToken': 'at_test', 'refreshToken': 'rt_test'}):
             response = self.client.post('/v1/auth/telegram-otp/verify/', {'code': '654321'}, format='json')
             self.assertEqual(response.status_code, 200)

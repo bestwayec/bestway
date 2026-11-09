@@ -30,5 +30,13 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
         msg = response.data.get("detail", "Request failed") if isinstance(response.data, dict) else "Request failed"
         return Response({"success":False,"error":{"code":STATUS_CODES.get(response.status_code,"ERROR"),"message":str(msg)}}, status=response.status_code, headers=response.headers)
     import logging
+
+    from django.db import OperationalError
+    if isinstance(exc, OperationalError):
+        # Transient database unavailability (e.g. connection slots exhausted):
+        # log for operators, tell the user to retry, never echo driver text,
+        # which contains internal hosts and ports.
+        logging.getLogger("django.request").error("Database unavailable in %s", context.get("view", "unknown_view"), exc_info=exc)
+        return Response({"success":False,"error":{"code":"SERVICE_UNAVAILABLE","message":"Server hozir band. Bir necha soniyadan so'ng qayta urinib ko'ring"}}, status=503, headers={"Retry-After":"5"})
     logging.getLogger("django.request").exception("Unhandled API exception in %s: %s", context.get("view", "unknown_view"), exc)
     return Response({"success":False,"error":{"code":"INTERNAL_ERROR","message":"Serverda kutilmagan xatolik yuz berdi"}}, status=500)

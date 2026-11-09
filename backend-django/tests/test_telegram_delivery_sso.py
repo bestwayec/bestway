@@ -149,10 +149,11 @@ class TelegramBotParityTests(TestCase):
     def test_sso_url_generation(self):
         with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": self.bot_token, "FRONTEND_URL": "https://bestwayec.uz"}):
             url = telegram_menu.generate_sso_url(777888, SimpleNamespace(name="Ali"))
-            self.assertIn("https://bestwayec.uz/login?", url)
-            self.assertIn("id=777888", url)
-            self.assertIn("first_name=Ali", url)
-            self.assertIn("hash=", url)
+            self.assertTrue(url.startswith("https://bestwayec.uz/login?sso_token="))
+            # The link carries only an opaque one-time token, never identity
+            # data or a reusable signature.
+            self.assertNotIn("777888", url)
+            self.assertNotIn("hash=", url)
 
     def test_bot_login_command_sends_sso_inline_button(self):
         sent = []

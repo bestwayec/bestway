@@ -1155,7 +1155,6 @@ except Exception:
 
 def trigger_hls_transcoding(lesson_id: str, video_path: Optional[str] = None, async_mode: bool = True) -> Dict[str, Any]:
     """Trigger HLS transcoding either via Celery, background thread or synchronously."""
-    import threading
     if async_mode:
         try:
             if hasattr(transcode_video_to_hls_task, "delay"):
@@ -1163,12 +1162,8 @@ def trigger_hls_transcoding(lesson_id: str, video_path: Optional[str] = None, as
                 return {"queued": True, "mode": "celery", "lesson_id": lesson_id}
         except Exception:
             pass
-        thread = threading.Thread(
-            target=execute_hls_transcode_for_lesson,
-            args=(lesson_id, video_path),
-            daemon=True,
-        )
-        thread.start()
+        from common.background import start_thread
+        start_thread(execute_hls_transcode_for_lesson, lesson_id, video_path, name='bestway-hls')
         return {"queued": True, "mode": "thread", "lesson_id": lesson_id}
 
     return execute_hls_transcode_for_lesson(lesson_id, video_path)

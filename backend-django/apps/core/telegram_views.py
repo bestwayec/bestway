@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 import time
@@ -8,22 +9,22 @@ import urllib.parse
 import uuid
 
 from django.conf import settings
-from django.core.cache import cache
-from django.db import connection, transaction
-from django.utils import timezone
+from django.db import OperationalError, connection, transaction
+from django.http import HttpResponseRedirect
 from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    throttle_classes,
 )
 from rest_framework.permissions import AllowAny
 
-from apps.legacy_schema.models import TelegramLinkToken
 from common.api.exceptions import ContractAPIException
 from common.auth.passwords import hash_password
 from common.auth.permissions import Authenticated
+from common.auth.throttling import SensitiveAuthThrottle
 
-from . import auth_service
+from . import auth_service, telegram_sso
 from . import telegram_bot as bot
 from . import telegram_links as links
 from .mock_attempt_views import success
@@ -115,142 +116,12 @@ def verify_telegram_auth(data: dict) -> dict:
     }
 
 
-def telegram_login(data: dict):
-    # Support one-time SSO or magic token if provided
-    sso_token = data.get('sso_token') or data.get('token') or data.get('magic_token')
-    if sso_token and not data.get('hash'):
-        token_str = str(sso_token).strip()
-        row = TelegramLinkToken.objects.filter(token_hash=links.token_hash(token_str)).select_related('user').first()
-        if not row:
-            row = TelegramLinkToken.objects.filter(token_hash=token_str).select_related('user').first()
-        db_user = None
-        if row and not row.used_at and (not row.expires_at or row.expires_at > timezone.now()):
-            TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
-            db_user = row.user
-        elif not row:
-            cache_user_id = cache.get(f"sso_token:{token_str}") or cache.get(f"magic_token:{token_str}") or cache.get(f"telegram_sso:{token_str}") or cache.get(token_str)
-            if cache_user_id:
-                cache.delete(f"sso_token:{token_str}")
-                cache.delete(f"magic_token:{token_str}")
-                cache.delete(f"telegram_sso:{token_str}")
-                cache.delete(token_str)
-                from apps.legacy_schema.models import User
-                db_user = User.objects.filter(id=cache_user_id).first()
+logger = logging.getLogger(__name__)
 
-        if not db_user:
-            raise ContractAPIException('INVALID_TOKEN', "Kirish kodi noto'g'ri yoki muddati tugagan", 401)
-        if not db_user.is_active:
-            raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
+USER_COLUMNS = '"id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId","email"'
 
-        user_tuple = (
-            db_user.id,
-            db_user.name,
-            db_user.phone,
-            db_user.role,
-            db_user.created_at,
-            db_user.password_hash,
-            db_user.is_active,
-            db_user.telegram_chat_id,
-            getattr(db_user, 'email', None),
-        )
-        tokens = auth_service.issue_tokens(user_tuple)
-        user_profile = {
-            'id': db_user.id,
-            'name': db_user.name,
-            'phone': db_user.phone,
-            'role': db_user.role,
-            'email': getattr(db_user, 'email', None) or '',
-            'isActive': bool(db_user.is_active),
-            'is_active': bool(db_user.is_active),
-            'telegramChatId': db_user.telegram_chat_id,
-            'createdAt': db_user.created_at.isoformat() if hasattr(db_user.created_at, 'isoformat') else str(db_user.created_at),
-        }
-        return {
-            'user': user_profile,
-            'tokens': tokens,
-            'accessToken': tokens['accessToken'],
-            'refreshToken': tokens['refreshToken'],
-        }
 
-    verified = verify_telegram_auth(data)
-    telegram_id = verified.get('id')
-    if not telegram_id:
-        raise ContractAPIException('VALIDATION_ERROR', 'Telegram ID aniqlanmadi', 400)
-    telegram_chat_id = str(telegram_id)
-
-    with connection.cursor() as cursor:
-        cursor.execute(
-            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId","email" '
-            'FROM "User" WHERE "telegramChatId"=%s LIMIT 1',
-            [telegram_chat_id],
-        )
-        user = cursor.fetchone()
-
-    if user:
-        if not user[6]:
-            raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
-        tokens = auth_service.issue_tokens(user)
-        return {
-            'user': auth_service.public(user),
-            'tokens': tokens,
-            'accessToken': tokens['accessToken'],
-            'refreshToken': tokens['refreshToken'],
-        }
-
-    # Auto-create student User and StudentProfile
-    first_name = (verified.get('first_name') or '').strip()
-    last_name = (verified.get('last_name') or '').strip()
-    username = (verified.get('username') or '').strip()
-
-    candidate_name = f"{first_name} {last_name}".strip()
-    if not candidate_name:
-        candidate_name = username or f"Student {telegram_id}"
-    if len(candidate_name) < 2:
-        candidate_name = f"Student {telegram_id}"
-    candidate_name = candidate_name[:100]
-
-    phone_candidate = data.get('phone') or f"tg_{telegram_id}"
-
-    with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute('SELECT 1 FROM "User" WHERE "phone"=%s', [phone_candidate])
-        if cursor.fetchone():
-            phone_candidate = f"tg_{telegram_id}_{secrets.token_hex(3)}"
-
-        user_id = str(uuid.uuid4())
-        pwd_hash = hash_password(secrets.token_urlsafe(16))
-
-        cursor.execute(
-            'INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","telegramChatId","createdAt","updatedAt") '
-            'VALUES (%s,%s,%s,%s,\'student\',true,%s,NOW(),NOW())',
-            [user_id, candidate_name, phone_candidate, pwd_hash, telegram_chat_id],
-        )
-
-        points = auth_service.initial_points(cursor)
-        link_code = auth_service.unique_link_code(cursor)
-
-        cursor.execute(
-            'INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") '
-            'VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",true,%s,%s,NOW(),false)',
-            [user_id, points, link_code],
-        )
-        cursor.execute(
-            'INSERT INTO "PointsLog" ("id","studentId","change","reason","createdAt") VALUES (%s,%s,%s,%s,NOW())',
-            [str(uuid.uuid4()), user_id, points, "Boshlang'ich ball"],
-        )
-        cursor.execute(
-            'INSERT INTO "Notification" ("id","userId","type","text","read","createdAt") VALUES (%s,%s,\'points\'::"NotificationType",%s,false,NOW())',
-            [str(uuid.uuid4()), user_id, f"Xush kelibsiz! Sizga boshlang'ich {points} ball berildi."],
-        )
-
-        auth_service.audit(cursor, user_id, 'user.telegram_auto_register', 'user', user_id, new={'telegramId': telegram_chat_id})
-
-        cursor.execute(
-            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
-            'FROM "User" WHERE "id"=%s',
-            [user_id],
-        )
-        user = cursor.fetchone()
-
+def _session(user):
     tokens = auth_service.issue_tokens(user)
     return {
         'user': auth_service.public(user),
@@ -260,9 +131,89 @@ def telegram_login(data: dict):
     }
 
 
+def _register_student(cursor, telegram_chat_id, first_name, last_name, username, method):
+    candidate_name = f"{(first_name or '').strip()} {(last_name or '').strip()}".strip()
+    if not candidate_name:
+        candidate_name = (username or '').strip() or f"Student {telegram_chat_id}"
+    if len(candidate_name) < 2:
+        candidate_name = f"Student {telegram_chat_id}"
+    candidate_name = candidate_name[:100]
+
+    phone_candidate = f"tg_{telegram_chat_id}"
+    cursor.execute('SELECT 1 FROM "User" WHERE "phone"=%s', [phone_candidate])
+    if cursor.fetchone():
+        phone_candidate = f"tg_{telegram_chat_id}_{secrets.token_hex(3)}"
+
+    user_id = str(uuid.uuid4())
+    cursor.execute(
+        'INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","telegramChatId","createdAt","updatedAt") '
+        'VALUES (%s,%s,%s,%s,\'student\',true,%s,NOW(),NOW())',
+        [user_id, candidate_name, phone_candidate, hash_password(secrets.token_urlsafe(16)), telegram_chat_id],
+    )
+    points = auth_service.initial_points(cursor)
+    link_code = auth_service.unique_link_code(cursor)
+    cursor.execute(
+        'INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") '
+        'VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",true,%s,%s,NOW(),false)',
+        [user_id, points, link_code],
+    )
+    cursor.execute(
+        'INSERT INTO "PointsLog" ("id","studentId","change","reason","createdAt") VALUES (%s,%s,%s,%s,NOW())',
+        [str(uuid.uuid4()), user_id, points, "Boshlang'ich ball"],
+    )
+    cursor.execute(
+        'INSERT INTO "Notification" ("id","userId","type","text","read","createdAt") VALUES (%s,%s,\'points\'::"NotificationType",%s,false,NOW())',
+        [str(uuid.uuid4()), user_id, f"Xush kelibsiz! Sizga boshlang'ich {points} ball berildi."],
+    )
+    auth_service.audit(cursor, user_id, 'user.telegram_auto_register', 'user', user_id, new={'telegramId': telegram_chat_id, 'method': method})
+    cursor.execute(f'SELECT {USER_COLUMNS} FROM "User" WHERE "id"=%s', [user_id])
+    return cursor.fetchone()
+
+
+def login_or_register(telegram_id, first_name='', last_name='', username='', method='telegram'):
+    """Sign in the account linked to a verified Telegram identity.
+
+    The Telegram user id is the only identity key: accounts are never matched
+    or merged by display name, phone or e-mail. An unknown, verified Telegram
+    identity gets a new student account (existing auto-registration policy).
+    """
+    if not telegram_id:
+        raise ContractAPIException('VALIDATION_ERROR', 'Telegram ID aniqlanmadi', 400)
+    telegram_chat_id = str(telegram_id)
+    with transaction.atomic(), connection.cursor() as cursor:
+        # Serialise concurrent first logins of the same Telegram identity so a
+        # double tap cannot create two student accounts.
+        if connection.vendor == 'postgresql':
+            cursor.execute('SELECT pg_advisory_xact_lock(hashtext(%s))', [f'telegram-login:{telegram_chat_id}'])
+        cursor.execute(f'SELECT {USER_COLUMNS} FROM "User" WHERE "telegramChatId"=%s LIMIT 1', [telegram_chat_id])
+        user = cursor.fetchone()
+        if user and not user[6]:
+            raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
+        if not user:
+            user = _register_student(cursor, telegram_chat_id, first_name, last_name, username, method)
+    return _session(user)
+
+
+def telegram_login(data: dict):
+    sso_token = data.get('sso_token')
+    if sso_token and not data.get('hash'):
+        payload = telegram_sso.consume_sso_token(sso_token)
+        if not payload:
+            raise ContractAPIException('INVALID_TOKEN', "Kirish havolasi eskirgan yoki allaqachon ishlatilgan. Botda /login ni qayta bosing", 401)
+        return login_or_register(payload['telegram_id'], payload.get('first_name'), payload.get('last_name'), payload.get('username'), 'sso_link')
+
+    verified = verify_telegram_auth(data)
+    return login_or_register(verified.get('id'), verified.get('first_name'), verified.get('last_name'), verified.get('username'), 'widget')
+
+
+def database_unavailable():
+    return ContractAPIException('SERVICE_UNAVAILABLE', "Server hozir band. Bir necha soniyadan so'ng qayta urinib ko'ring", 503)
+
+
 @api_view(['GET', 'POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([SensitiveAuthThrottle])
 def telegram_login_view(request):
     if request.method == 'GET':
         data = request.GET.dict()
@@ -271,138 +222,63 @@ def telegram_login_view(request):
         if not data and request.GET:
             data = request.GET.dict()
 
-    client = (data.get('client') or request.GET.get('client') or '').lower()
+    client = str(data.get('client') or request.GET.get('client') or '').lower()
     ua = request.META.get('HTTP_USER_AGENT', '').lower()
     is_mobile = client == 'mobile' or 'bestwayapp' in ua or 'bestway' in client
+    wants_redirect = request.method == 'GET' or data.get('redirect') == '1' or request.GET.get('redirect') == '1'
+
+    if wants_redirect and not is_mobile:
+        # Browsers finish sign-in on the web login page, which keeps the session
+        # in httpOnly cookies. Access tokens never travel in a URL.
+        frontend_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
+        allowed = ('sso_token', 'id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date', 'hash')
+        query = urllib.parse.urlencode({k: v for k, v in data.items() if k in allowed and isinstance(v, str)})
+        return HttpResponseRedirect(f"{frontend_url}/login?{query}")
 
     try:
         res = telegram_login(data)
-        access_tok = res.get('accessToken') or res.get('tokens', {}).get('accessToken', '')
-        refresh_tok = res.get('refreshToken') or res.get('tokens', {}).get('refreshToken', '')
-        deep_link = f"bestwayapp://auth?token={urllib.parse.quote(str(access_tok))}&refresh={urllib.parse.quote(str(refresh_tok))}"
-        res['deepLink'] = deep_link
-
-        if request.method == 'GET' or data.get('redirect') == '1' or request.GET.get('redirect') == '1':
-            from django.http import HttpResponseRedirect
-            if is_mobile:
-                return HttpResponseRedirect(deep_link)
-            frontend_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
-            return HttpResponseRedirect(f"{frontend_url}/en/dashboard?token={access_tok}")
-
-        return success(res)
     except ContractAPIException:
         raise
-    except Exception as e:
-        raise ContractAPIException('TELEGRAM_AUTH_FAILED', f"Telegram orqali kirishda xatolik: {e!s}", 400)
+    except OperationalError:
+        logger.exception('Telegram login failed: database unavailable')
+        raise database_unavailable() from None
+    except Exception:
+        logger.exception('Telegram login failed unexpectedly')
+        raise ContractAPIException('TELEGRAM_AUTH_FAILED', "Telegram orqali kirib bo'lmadi. Qayta urinib ko'ring", 500) from None
+
+    res['deepLink'] = (
+        f"bestwayapp://auth?token={urllib.parse.quote(str(res['accessToken']))}"
+        f"&refresh={urllib.parse.quote(str(res['refreshToken']))}"
+    )
+    if wants_redirect:
+        return HttpResponseRedirect(res['deepLink'])
+    return success(res)
 
 
 def telegram_otp_verify(code: str):
     code = str(code or "").strip()
     if not code or len(code) != 6 or not code.isdigit():
         raise ContractAPIException('VALIDATION_ERROR', "6 xonali raqamli kod kiriting", 400)
-
-    cache_key = f"telegram_otp:{code}"
-    otp_data = cache.get(cache_key)
+    otp_data = telegram_sso.consume_otp(code)
     if not otp_data:
         raise ContractAPIException('INVALID_CREDENTIALS', "Kod eskirgan yoki noto'g'ri", 401)
-
-    # Delete immediately to ensure single-use
-    cache.delete(cache_key)
-
-    telegram_id = otp_data.get('telegram_id')
-    if not telegram_id:
-        raise ContractAPIException('VALIDATION_ERROR', "Telegram ma'lumotlari topilmadi", 400)
-    telegram_chat_id = str(telegram_id)
-
-    with connection.cursor() as cursor:
-        cursor.execute(
-            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
-            'FROM "User" WHERE "telegramChatId"=%s LIMIT 1',
-            [telegram_chat_id],
-        )
-        user = cursor.fetchone()
-
-    if user:
-        if not user[6]:
-            raise ContractAPIException('USER_DEACTIVATED', 'Akkaunt bloklangan. Administratsiyaga murojaat qiling', 403)
-        tokens = auth_service.issue_tokens(user)
-        return {
-            'user': auth_service.public(user),
-            'tokens': tokens,
-            'accessToken': tokens['accessToken'],
-            'refreshToken': tokens['refreshToken'],
-        }
-
-    # Auto-create student User and StudentProfile if not existing
-    first_name = (otp_data.get('first_name') or '').strip()
-    last_name = (otp_data.get('last_name') or '').strip()
-    username = (otp_data.get('username') or '').strip()
-
-    candidate_name = f"{first_name} {last_name}".strip()
-    if not candidate_name:
-        candidate_name = username or f"Student {telegram_id}"
-    if len(candidate_name) < 2:
-        candidate_name = f"Student {telegram_id}"
-    candidate_name = candidate_name[:100]
-
-    phone_candidate = f"tg_{telegram_id}"
-
-    with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute('SELECT 1 FROM "User" WHERE "phone"=%s', [phone_candidate])
-        if cursor.fetchone():
-            phone_candidate = f"tg_{telegram_id}_{secrets.token_hex(3)}"
-
-        user_id = str(uuid.uuid4())
-        pwd_hash = hash_password(secrets.token_urlsafe(16))
-
-        cursor.execute(
-            'INSERT INTO "User" ("id","name","phone","passwordHash","role","isActive","telegramChatId","createdAt","updatedAt") '
-            'VALUES (%s,%s,%s,%s,\'student\',true,%s,NOW(),NOW())',
-            [user_id, candidate_name, phone_candidate, pwd_hash, telegram_chat_id],
-        )
-
-        points = auth_service.initial_points(cursor)
-        link_code = auth_service.unique_link_code(cursor)
-
-        cursor.execute(
-            'INSERT INTO "StudentProfile" ("userId","availablePrograms","activeProgram","isApproved","currentPoints","linkCode","createdAt","gameQualified") '
-            'VALUES (%s,ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[],\'IELTS\'::"ExamProgram",true,%s,%s,NOW(),false)',
-            [user_id, points, link_code],
-        )
-        cursor.execute(
-            'INSERT INTO "PointsLog" ("id","studentId","change","reason","createdAt") VALUES (%s,%s,%s,%s,NOW())',
-            [str(uuid.uuid4()), user_id, points, "Boshlang'ich ball"],
-        )
-        cursor.execute(
-            'INSERT INTO "Notification" ("id","userId","type","text","read","createdAt") VALUES (%s,%s,\'points\'::"NotificationType",%s,false,NOW())',
-            [str(uuid.uuid4()), user_id, f"Xush kelibsiz! Sizga boshlang'ich {points} ball berildi."],
-        )
-
-        auth_service.audit(cursor, user_id, 'user.telegram_auto_register', 'user', user_id, new={'telegramId': telegram_chat_id, 'method': 'otp'})
-
-        cursor.execute(
-            'SELECT "id","name","phone","role","createdAt","passwordHash","isActive","telegramChatId" '
-            'FROM "User" WHERE "id"=%s',
-            [user_id],
-        )
-        user = cursor.fetchone()
-
-    tokens = auth_service.issue_tokens(user)
-    return {
-        'user': auth_service.public(user),
-        'tokens': tokens,
-        'accessToken': tokens['accessToken'],
-        'refreshToken': tokens['refreshToken'],
-    }
+    return login_or_register(otp_data.get('telegram_id'), otp_data.get('first_name'), otp_data.get('last_name'), otp_data.get('username'), 'otp')
 
 
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([SensitiveAuthThrottle])
 def telegram_otp_verify_view(request):
     data = request.data if isinstance(request.data, dict) else {}
     code = data.get('code') or data.get('otp')
-    return success(telegram_otp_verify(code))
+    try:
+        return success(telegram_otp_verify(code))
+    except ContractAPIException:
+        raise
+    except OperationalError:
+        logger.exception('Telegram OTP login failed: database unavailable')
+        raise database_unavailable() from None
 
 
 @api_view(['GET'])
