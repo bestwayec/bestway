@@ -108,7 +108,7 @@ def blueprint_failure(value):
 def enqueue(attempt, wanted=None):
     exam = attempt.exam
     answers = {a.question_id:dict(response=a.response,audioKey=a.audio_key,
-        hasImages=bool(isinstance(a.rubric_scores, dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls'))))
+        hasImages=bool(isinstance(getattr(a, 'rubric_scores', None), dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls'))))
         for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
     image_keys = dict(MockQuestionGroup.objects.filter(section__exam_id=exam.id).values_list('id','image_key'))
     for section in scope_sections(attempt,shape_exam(exam, True)['sections']):
