@@ -20,6 +20,8 @@ import {
   DialogBody,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { primeMicrophonePermission } from "@/lib/microphone";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
@@ -74,7 +76,13 @@ export function ExamLauncherModal({
   }, [exam]);
   const durations = exam.sectionDurations ?? {};
 
-  function triggerStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+  async function triggerStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
+    // Ask for the microphone now, before the exam goes full screen: Android will not show the
+    // permission dialog over a full-screen page. A refusal never blocks the exam.
+    if (!skills || skills.includes("speaking")) {
+      const permission = await primeMicrophonePermission();
+      if (permission === "denied") toast.warning("Mikrofonga ruxsat berilmadi. Speaking qismidan oldin brauzer sozlamalarida mikrofonga ruxsat bering.");
+    }
     if (typeof window !== "undefined") {
       try {
         sessionStorage.setItem("bw_simulator_mode", simulatorMode);

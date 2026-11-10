@@ -53,7 +53,7 @@ async function step(name, fn) {
   }
 }
 
-const browser = await chromium.launch({ executablePath: findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage"] });
+const browser = await chromium.launch({ executablePath: findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
 const sizes = [
   { name: "360x640", viewport: { width: 360, height: 640 } },
   { name: "390x844", viewport: { width: 390, height: 844 } },
@@ -264,6 +264,58 @@ await step("09-audio-parts-1-4-decode", async () => {
     if (info.seconds < 60) console.log(`WARN Part ${i + 1} audio is only ${info.seconds.toFixed(1)}s long: placeholder-length media, not a real recording`);
   }
   return `decoded ${rows.join("; ")}`;
+});
+
+// Microphone check before Speaking, on a phone-sized Chromium with a FAKE microphone device (no real hardware).
+// (a) permission refused -> Uzbek instructions, Retry, and a way on without the microphone;
+// (b) permission granted -> the 5 second test completes. A real phone (Android overlay detection,
+// Samsung/Chrome prompt) is NOT covered by this.
+await step("10-microphone-check-refused-then-allowed", async () => {
+  const start = await ctx.request.post(`${WEB}/api/backend/mock/exams/${EXAM}/start`, { data: { mode: "timed", skills: ["speaking"], retake: true, force: true } });
+  const sj = await start.json();
+  if (!start.ok()) throw new Error(`start HTTP ${start.status()} ${JSON.stringify(sj).slice(0, 200)}`);
+  const id = sj.data?.attemptId || sj.data?.id || sj.data?.attempt?.id;
+  const url = `${WEB}/en/mock/attempt/${id}?skill=speaking`;
+
+  // (a) refused: this context was never granted the microphone
+  await page.setViewportSize(sizes[1].viewport);
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: /Sinovni boshlash/ }).click({ timeout: 90000 });
+  const help = page.getByRole("alert").filter({ hasText: /Mikrofon/ });
+  await help.waitFor({ timeout: 30000 });
+  const helpText = await help.innerText();
+  if (!/Ruxsat berish/.test(helpText)) throw new Error(`no Uzbek instructions: ${helpText}`);
+  if (/permission denied/i.test(await page.innerText("body"))) throw new Error("English permission error shown");
+  await page.getByRole("button", { name: /Qayta urinish/ }).waitFor();
+  await page.screenshot({ path: join(OUT, "10a-mic-refused-390.png") });
+  await page.getByTestId("mic-continue-without").click();
+  await page.getByRole("button", { name: /Sinovni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
+  // the exam is usable again: the header Finish button is reachable (not covered by the modal)
+  const finish = page.getByRole("button", { name: /Finish|Yakunlash|Topshirish/ }).first();
+  await finish.waitFor();
+  const covered = await finish.evaluate((el) => { const r = el.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(top === el || el.contains(top)); });
+  if (covered) throw new Error("exam buttons are still covered after continuing without the microphone");
+
+  // (b) allowed (fake device)
+  const ctx2 = await browser.newContext({ ...devices["Pixel 5"], viewport: sizes[1].viewport, permissions: ["microphone"] });
+  try {
+    const p2 = await ctx2.newPage();
+    p2.setDefaultTimeout(90000);
+    await acceptFullscreenNotice(p2);
+    await p2.goto(`${WEB}/en/login`, { waitUntil: "domcontentloaded" });
+    await p2.waitForSelector("#phone");
+    await p2.waitForTimeout(1500);
+    await p2.fill("#phone", STUDENT); await p2.fill("#password", PASSWORD);
+    await Promise.all([p2.waitForResponse((r) => r.url().includes("/api/auth/login")), p2.click('button[type="submit"]')]);
+    await p2.waitForURL(/dashboard/);
+    await p2.goto(url, { waitUntil: "domcontentloaded" });
+    await p2.getByRole("button", { name: /Sinovni boshlash/ }).click();
+    await p2.getByText(/Yozuv tayyor/).waitFor({ timeout: 20000 });
+    await p2.screenshot({ path: join(OUT, "10b-mic-allowed-390.png") });
+    await p2.getByRole("button", { name: /Speakingni boshlash/ }).click();
+    await p2.getByRole("button", { name: /Speakingni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
+  } finally { await ctx2.close(); }
+  return "refused: Uzbek help + Retry + continue without (buttons free); allowed (fake mic): 5 s test passes";
 });
 
 await browser.close();

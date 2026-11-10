@@ -78,3 +78,74 @@ export function recordedAudioBlob(recorder: Pick<MediaRecorder, 'mimeType'>, chu
   recordingFileName(blob);
   return blob;
 }
+
+export type MicrophoneProblem = 'denied' | 'notFound' | 'busy' | 'unsupported' | 'insecure' | 'other';
+
+/** Classify a getUserMedia/recorder failure so screens can give the right instructions. */
+export function microphoneProblem(error: unknown): MicrophoneProblem {
+  const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : '';
+  const message = (error instanceof Error ? error.message : typeof error === 'string' ? error : '').toLowerCase();
+  if (message.includes('secure https')) return 'insecure';
+  if (message.includes('unavailable in this browser')) return 'unsupported';
+  if (['NotAllowedError', 'SecurityError', 'PermissionDeniedError', 'PermissionDismissedError'].includes(name) || message.includes('permission denied') || message.includes('permission dismissed')) return 'denied';
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'notFound';
+  if (['NotReadableError', 'AbortError', 'TrackStartError'].includes(name)) return 'busy';
+  if (name === 'NotSupportedError') return 'unsupported';
+  return 'other';
+}
+
+export type MicrophonePermission = 'granted' | 'denied' | 'prompt' | 'unknown';
+
+/** Current microphone permission, or 'unknown' where the Permissions API cannot tell. */
+export async function microphonePermission(): Promise<MicrophonePermission> {
+  try {
+    if (typeof navigator === 'undefined' || !navigator.permissions?.query) return 'unknown';
+    const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    return status.state === 'granted' || status.state === 'denied' || status.state === 'prompt' ? status.state : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/** The exam's full-screen guard listens for this so a deliberate, short full-screen exit is not a violation. */
+export const FULLSCREEN_GUARD_EVENT = 'bw:fullscreen-guard';
+
+function setFullscreenGuardPaused(paused: boolean) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(FULLSCREEN_GUARD_EVENT, { detail: { paused } }));
+}
+
+/**
+ * Open the microphone. Android withholds the permission dialog while a full-screen page (and its
+ * system toast) is covering the screen ("close pop-ups or windows from other apps"), so when the exam
+ * is full screen we leave it for the duration of the request, without counting that as a violation,
+ * and go back afterwards. Callers must run this from a user gesture.
+ */
+export async function requestMicrophoneStream(constraints: MediaStreamConstraints = { audio: true }): Promise<MediaStream> {
+  const wasFullscreen = typeof document !== 'undefined' && !!document.fullscreenElement;
+  if (wasFullscreen) {
+    setFullscreenGuardPaused(true);
+    try { await document.exitFullscreen(); } catch { /* the request below still runs */ }
+  }
+  try {
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  } finally {
+    if (wasFullscreen) {
+      try { await document.documentElement.requestFullscreen(); } catch { /* the exam shows its "return to full screen" button */ }
+      setFullscreenGuardPaused(false);
+    }
+  }
+}
+
+/** Ask once, before the exam goes full screen, and release the microphone again. */
+export async function primeMicrophonePermission(): Promise<MicrophonePermission> {
+  const state = await microphonePermission();
+  if (state !== 'prompt') return state;
+  try {
+    assertMicrophoneAvailable();
+    const stream = await requestMicrophoneStream({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    return 'granted';
+  } catch (error) {
+    return microphoneProblem(error) === 'denied' ? 'denied' : 'unknown';
+  }
+}
