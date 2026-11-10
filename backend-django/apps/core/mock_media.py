@@ -104,13 +104,34 @@ def validate_multipart(request, *, staged=False):
 
 def validate_upload(upload, field='file', *, staged=False):
     extension = Path(upload.name).suffix.lower()
-    mime = upload.content_type or ''
-    audio = mime.startswith('audio/') and extension in AUDIO_EXTENSIONS
+    raw_mime = upload.content_type or ''
+    mime = raw_mime.split(';')[0].strip().lower()
+    if not extension or extension == '.blob':
+        if mime in ('audio/webm', 'video/webm'):
+            extension = '.webm'
+        elif mime in ('audio/wav', 'audio/x-wav'):
+            extension = '.wav'
+        elif mime in ('audio/mpeg', 'audio/mp3'):
+            extension = '.mp3'
+        elif mime in ('audio/ogg', 'audio/opus'):
+            extension = '.ogg'
+        elif mime in ('audio/m4a', 'audio/mp4'):
+            extension = '.m4a'
+        elif mime in ('image/jpeg', 'image/jpg'):
+            extension = '.jpg'
+        elif mime == 'image/png':
+            extension = '.png'
+        elif mime == 'image/webp':
+            extension = '.webp'
+        if extension:
+            stem = Path(upload.name).stem or 'upload'
+            upload.name = f"{stem}{extension}"
+    audio = (mime.startswith('audio/') or mime == 'video/webm') and (extension in AUDIO_EXTENSIONS or extension == '.webm')
     image = mime.startswith('image/') and extension in IMAGE_EXTENSIONS
     if staged and not (audio or image):
         raise ContractAPIException('INVALID_FILE_TYPE', 'Audio yoki rasm yuklang', 400)
     if not staged and field == 'audio' and not audio:
-        raise ContractAPIException('INVALID_FILE_TYPE', 'Audio fayl yuklang (mp3, m4a...)', 400)
+        raise ContractAPIException('INVALID_FILE_TYPE', 'Audio fayl yuklang (webm, wav, mp3, m4a...)', 400)
     if not staged and field == 'image' and not image:
         raise ContractAPIException('INVALID_FILE_TYPE', 'Rasm fayli yuklang', 400)
     limit = (100 if staged else int(os.environ.get('MAX_UPLOAD_MB', '500'))) * 1024 * 1024
@@ -120,7 +141,8 @@ def validate_upload(upload, field='file', *, staged=False):
 
 def store_upload(upload, field='file', *, staged=False, folder='mock'):
     validate_upload(upload, field, staged=staged)
-    key = f'{folder}/{uuid4()}{Path(upload.name).suffix.lower()}'
+    ext = Path(upload.name).suffix.lower() or ('.webm' if field == 'audio' else '.jpg')
+    key = f'{folder}/{uuid4()}{ext}'
     path = resolve_key(key)
     path.parent.mkdir(parents=True, exist_ok=True)
     try:

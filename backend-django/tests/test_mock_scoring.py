@@ -119,3 +119,33 @@ def test_timeout_completeness_and_unreachable_sections():
     assert_complete(attempt,sections,{},now)
     attempt.flow_mode='full_test'; attempt.current_skill='listening'
     assert_complete(attempt,sections,{},now)
+
+
+def test_skipped_sections_do_not_auto_zero_overall_score():
+    sections = [
+        section('listening', [question('l1', points=1)]),
+        section('reading', [question('r1', points=1)]),
+        section('writing', [question('w1', 'essay_task1', points=5)], maxScore=5),
+        section('speaking', [question('s1', 'speaking_task', points=5)], maxScore=5),
+    ]
+    # Candidate answered only Listening correctly; Reading, Writing, Speaking were skipped/unanswered
+    answers = {
+        'l1': dict(response='yes'),
+        'r1': dict(response='', isGraded=True, score=0.0),
+        'w1': dict(response='', isGraded=True, score=0.0),
+        's1': dict(response='', isGraded=True, score=0.0),
+    }
+    result, _ = score.calculate('multilevel', sections, answers, versioned=True)
+    assert result['status'] == 'completed'
+    standards = result['standardScores']
+    assert standards['listening']['estimatedStandardScore'] == 75
+    assert standards['listening']['status'] == 'COMPLETED'
+    assert standards['reading']['status'] == 'SKIPPED'
+    assert standards['reading']['estimatedStandardScore'] is None
+    assert standards['writing']['status'] == 'SKIPPED'
+    assert standards['writing']['estimatedStandardScore'] is None
+    assert standards['speaking']['status'] == 'SKIPPED'
+    assert standards['speaking']['estimatedStandardScore'] is None
+    # Overall score should be strictly based on the completed section (75), not dragged down to 18.75 or 0!
+    assert result['overallScore'] == 75.0
+
