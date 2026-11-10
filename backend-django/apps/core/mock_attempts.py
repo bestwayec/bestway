@@ -289,8 +289,12 @@ def start(actor, exam_id, data):
             if not inferred:
                 fail('MOCK_NOT_READY', 'No validated practice skills are available')
             data = dict(data, skills=inferred)
-            partial = True
-        existing = MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').first()
+        existing_list = list(MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').order_by('-started_at'))
+        existing = existing_list[0] if existing_list else None
+        if len(existing_list) > 1:
+            for extra in existing_list[1:]:
+                extra.status = 'completed'
+                extra.save(update_fields=['status'])
         # An omitted scope on a legacy resume request means the existing
         # practice scope, regardless of the requested mode. Do not auto-submit
         # an owned scoped attempt merely because its client sent another mode.
@@ -763,9 +767,17 @@ def my_attempts(actor, query):
         track = exam_programs.state(cursor, actor.id)
     if query.get('program') and query['program'] != track['activeProgram']:
         fail('PROGRAM_CHANGED', 'Your exam track changed. Refresh and try again.', 409)
-    active = track['activeProgram'] if track['activeProgram'] in track['availablePrograms'] else None
-    types = ['multilevel'] if active == 'MULTILEVEL' else ['ielts_academic', 'ielts_general'] if active == 'IELTS' else []
-    rows = MockAttempt.objects.filter(student_id=actor.id, exam__type__in=types).select_related('exam').order_by('-started_at')
+    req_program = query.get('program')
+    if req_program == 'MULTILEVEL':
+        types = ['multilevel']
+    elif req_program == 'IELTS':
+        types = ['ielts_academic', 'ielts_general']
+    else:
+        types = None
+    if types is not None:
+        rows = MockAttempt.objects.filter(student_id=actor.id, exam__type__in=types).select_related('exam').order_by('-started_at')
+    else:
+        rows = MockAttempt.objects.filter(student_id=actor.id).select_related('exam').order_by('-started_at')
     if query.get('status'):
         rows = rows.filter(status=query['status'])
     if query.get('examId'):
@@ -912,8 +924,8 @@ def upload_speaking(actor, attempt_id, question_id, upload):
     if upload is None:
         fail('NO_FILE', 'Audio fayl yuklanmadi')
     validate_upload(upload, 'audio')
-    if upload.size < 10240:
-        fail('FILE_TOO_SMALL', 'Ovozli javob hajmi juda kichik (kamida 10 KB bo‘lishi kerak)')
+    if upload.size < 1024:
+        fail('FILE_TOO_SMALL', 'Ovozli javob hajmi juda kichik (kamida 1 KB bo‘lishi kerak)')
     if upload.size > 25*1024*1024:
         fail('FILE_TOO_LARGE', 'Fayl hajmi ruxsat etilganidan katta')
     created_key = None

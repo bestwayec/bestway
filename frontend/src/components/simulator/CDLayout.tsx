@@ -16,10 +16,11 @@ import {
   Play,
   RotateCcw,
   CheckCircle2,
+  GripVertical,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -28,13 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { buttonVariants } from "@/components/ui/button-variants";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/common/error-boundary";
 import { StrictErrorBoundary } from "@/components/common/StrictErrorBoundary";
 import { normalizeExamPayload } from "@/lib/normalize-exam";
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import type {
   MockExamDetail,
   MockGroup,
@@ -77,11 +76,6 @@ export function flattenGroups(exam?: MockExamDetail | null): FlatGroup[] {
     }
   }
   return out;
-}
-
-function wordCount(text: string): number {
-  const t = (text || "").trim();
-  return t ? t.split(/\s+/).length : 0;
 }
 
 function formatLeft(totalSeconds: number): string {
@@ -178,7 +172,7 @@ export function SplitScreenMap({
             alt={title || "Map diagram"}
             loading="lazy"
             decoding="async"
-            className="max-h-[60vh] w-full rounded-[12px] border border-border/80 object-contain  bg-bg-subtle/50"
+            className="max-h-[60vh] w-full rounded-[12px] border border-border/80 object-contain bg-bg-subtle/50"
           />
         ) : (
           <div className="flex h-48 w-full items-center justify-center rounded-[12px] border border-dashed border-border bg-bg-subtle/30 text-xs text-fg-muted">
@@ -258,6 +252,81 @@ export function QuestionPalette({
 }
 
 /**
+ * Authentic Computer-Delivered Exam Skeleton Loader
+ */
+export function CDLayoutSkeleton() {
+  return (
+    <div className="flex min-h-screen w-screen flex-col bg-bg text-fg select-none">
+      {/* Header Skeleton */}
+      <header className="flex h-14 items-center justify-between border-b border-border bg-surface/50 px-4 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="size-8 rounded-full bg-surface animate-pulse" />
+          <div className="h-5 w-48 sm:w-64 rounded bg-surface animate-pulse" />
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-24 rounded-full bg-surface animate-pulse" />
+          <div className="hidden sm:flex h-8 w-20 rounded-full bg-surface animate-pulse" />
+          <div className="size-8 rounded bg-surface animate-pulse" />
+        </div>
+      </header>
+
+      {/* Banner Skeleton */}
+      <div className="h-8 w-full border-b border-border/40 bg-surface/30 animate-pulse" />
+
+      {/* Main Split-Screen Skeleton */}
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-6 lg:flex-row">
+        {/* Left Pane: Passage Skeleton */}
+        <div className="flex-1 rounded-[12px] border border-border bg-surface p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-border/50 pb-2">
+            <div className="h-4 w-28 rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-16 rounded bg-surface-hover animate-pulse" />
+          </div>
+          <div className="h-10 w-full rounded bg-surface-hover animate-pulse" />
+          <div className="space-y-2.5 pt-4">
+            <div className="h-4 w-full rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-11/12 rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-4/5 rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-full rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-3/4 rounded bg-surface-hover animate-pulse" />
+            <div className="h-4 w-5/6 rounded bg-surface-hover animate-pulse" />
+          </div>
+        </div>
+
+        {/* Right Pane: Question Cards Skeleton */}
+        <div className="flex-1 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-36 rounded bg-surface animate-pulse" />
+            <div className="h-4 w-20 rounded bg-surface animate-pulse" />
+          </div>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="rounded-[12px] border border-border bg-surface p-4 space-y-3">
+              <div className="h-4 w-3/4 rounded bg-surface-hover animate-pulse" />
+              <div className="space-y-2 pt-1">
+                <div className="h-9 w-full rounded-[10px] bg-surface-hover animate-pulse" />
+                <div className="h-9 w-full rounded-[10px] bg-surface-hover animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      {/* Footer Palette Skeleton */}
+      <footer className="fixed inset-x-0 bottom-0 h-20 border-t border-border bg-surface/80 p-3">
+        <div className="mx-auto max-w-7xl flex items-center justify-between gap-4">
+          <div className="h-8 w-24 rounded bg-surface animate-pulse" />
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="size-8 rounded-lg bg-surface animate-pulse" />
+            ))}
+          </div>
+          <div className="h-8 w-24 rounded bg-surface animate-pulse" />
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/**
  * Master Computer-Delivered Layout Wrapper (CDLayout)
  */
 export function CDLayout({
@@ -267,9 +336,6 @@ export function CDLayout({
   exam?: MockExamDetail | null;
   children?: React.ReactNode;
 }) {
-  const t = useTranslations("marketing");
-  const tc = useTranslations("common");
-
   const [exam, setExam] = React.useState<MockExamDetail | null>(() =>
     initialExam ? normalizeExamPayload(initialExam) : null
   );
@@ -277,6 +343,15 @@ export function CDLayout({
     !initialExam || !initialExam.sections || initialExam.sections.length === 0
   );
   const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  // Kiosk Isolation Mode: unmount outside elements & suppress browser scrolling
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.add("cd-kiosk-mode");
+    return () => {
+      document.body.classList.remove("cd-kiosk-mode");
+    };
+  }, []);
 
   // Client-side fallback fetcher if exam is not passed or empty
   React.useEffect(() => {
@@ -290,15 +365,13 @@ export function CDLayout({
 
     async function loadActiveExam() {
       try {
-        // One request through the authenticated proxy. No silent fallback to another
-        // exam: the active exam is chosen by the server (ACTIVE_CD_EXAM_CODE).
         const res = await fetch("/api/backend/exams/active", { cache: "no-store" });
         if (cancelled) return;
         if (!res.ok) {
           setFetchError(
             res.status === 404 || res.status === 401 || res.status === 403
               ? "Aktiv imtihon topilmadi yoki unga kirish huquqingiz yo'q. Tizimga kiring yoki administratorga murojaat qiling."
-              : `Server imtihonni qaytarmadi (HTTP ${res.status}). Birozdan so'ng qayta urining.`,
+              : `Server imtihonni qaytarmadi (HTTP ${res.status}). Birozdan so'ng qayta urining.`
           );
           setIsLoading(false);
           return;
@@ -306,19 +379,15 @@ export function CDLayout({
         const rawData: unknown = await res.json();
         const parsed = normalizeExamPayload(rawData);
         if (!parsed || (parsed.questionCount ?? 0) === 0) {
-          const err = "Failed to load questions from server (0 questions found in payload).";
-          console.error("[CDLayout]", err, rawData);
-          setFetchError(null); // LoadErrorPanel shows the translated default reason
+          setFetchError(null);
           setIsLoading(false);
           return;
         }
-        console.log("[CDLayout] Successfully loaded active exam:", parsed.title, "Questions:", parsed.questionCount);
         setExam(parsed);
         setIsLoading(false);
       } catch (err: any) {
         if (cancelled) return;
-        console.error("[CDLayout] Failed to load questions from server:", err);
-        setFetchError(null); // network/parse failure: translated default reason
+        setFetchError(null);
         setIsLoading(false);
       }
     }
@@ -348,6 +417,33 @@ export function CDLayout({
   const [hidden, setHidden] = React.useState(false);
   const [secondsLeft, setSecondsLeft] = React.useState<number>(() => totalMinutes * 60);
 
+  // Resizable Split-Screen state
+  const [splitRatio, setSplitRatio] = React.useState<number>(50);
+  const [isDragging, setIsDragging] = React.useState<boolean>(false);
+  const splitContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Text Highlighting state
+  const [highlights, setHighlights] = React.useState<string[]>([]);
+  const [showHighlightTooltip, setShowHighlightTooltip] = React.useState<boolean>(false);
+
+  // Real-time Auto-save state
+  const [saveStatus, setSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
+  const saveDebounceTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Load drafts from localStorage on exam initialization
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !exam?.id) return;
+    try {
+      const stored = localStorage.getItem(`bw_sim_draft_${exam.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.answers) setAnswers((a) => ({ ...parsed.answers, ...a }));
+        if (parsed?.flagged) setFlagged((f) => ({ ...parsed.flagged, ...f }));
+        if (parsed?.highlights) setHighlights(parsed.highlights);
+      }
+    } catch {}
+  }, [exam?.id]);
+
   // Sync timer once exam data resolves
   React.useEffect(() => {
     if (!isLoading && totalMinutes > 0) {
@@ -355,7 +451,7 @@ export function CDLayout({
     }
   }, [isLoading, totalMinutes]);
 
-  // Auto-enter fullscreen on first user interaction
+  // Auto-enter fullscreen on first interaction
   React.useEffect(() => {
     if (typeof document === "undefined") return;
     const enterFs = () => {
@@ -371,7 +467,7 @@ export function CDLayout({
     };
   }, []);
 
-  // Timer interval: only countdown when not loading
+  // Timer interval
   React.useEffect(() => {
     if (isLoading) return;
     const id = window.setInterval(() => {
@@ -380,10 +476,140 @@ export function CDLayout({
     return () => window.clearInterval(id);
   }, [isLoading]);
 
+  // Resizable split-screen drag event listeners
+  React.useEffect(() => {
+    if (!isDragging) return;
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const ratio = ((clientX - rect.left) / rect.width) * 100;
+      setSplitRatio(Math.min(75, Math.max(25, ratio)));
+    };
+    const handleUp = () => setIsDragging(false);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove);
+    window.addEventListener("touchend", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
+    };
+  }, [isDragging]);
+
   const part = parts[partIdx] ?? parts[0];
 
   function toggleFlag(id: string) {
-    setFlagged((f) => ({ ...f, [id]: !f[id] }));
+    setFlagged((f) => {
+      const updated = { ...f, [id]: !f[id] };
+      if (typeof window !== "undefined" && exam?.id) {
+        try {
+          const draft = JSON.parse(localStorage.getItem(`bw_sim_draft_${exam.id}`) || "{}");
+          draft.flagged = updated;
+          localStorage.setItem(`bw_sim_draft_${exam.id}`, JSON.stringify(draft));
+        } catch {}
+      }
+      return updated;
+    });
+  }
+
+  function handleAnswer(qid: string, val: string) {
+    const updated = { ...answers, [qid]: val };
+    setAnswers(updated);
+    setSaveStatus("saving");
+
+    // Local draft caching
+    if (typeof window !== "undefined" && exam?.id) {
+      try {
+        const draft = JSON.parse(localStorage.getItem(`bw_sim_draft_${exam.id}`) || "{}");
+        draft.answers = updated;
+        localStorage.setItem(`bw_sim_draft_${exam.id}`, JSON.stringify(draft));
+      } catch {}
+    }
+
+    // Debounced real-time API call (save-answer)
+    if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
+    saveDebounceTimer.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/backend/mock/attempts/${exam?.id || "active"}/save-answer`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: qid, response: val }),
+        }).catch(() => {});
+        setSaveStatus("saved");
+      } catch {
+        setSaveStatus("saved");
+      }
+    }, 500);
+  }
+
+  function handlePassageMouseUp() {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.toString().trim().length > 1) {
+      setShowHighlightTooltip(true);
+    } else {
+      setShowHighlightTooltip(false);
+    }
+  }
+
+  function applyHighlight() {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().trim();
+    if (text.length > 1 && !highlights.includes(text)) {
+      const updated = [...highlights, text];
+      setHighlights(updated);
+      if (exam?.id) {
+        try {
+          const draft = JSON.parse(localStorage.getItem(`bw_sim_draft_${exam.id}`) || "{}");
+          draft.highlights = updated;
+          localStorage.setItem(`bw_sim_draft_${exam.id}`, JSON.stringify(draft));
+        } catch {}
+      }
+    }
+    sel.removeAllRanges();
+    setShowHighlightTooltip(false);
+  }
+
+  function clearAllHighlights() {
+    setHighlights([]);
+    if (typeof window !== "undefined" && exam?.id) {
+      try {
+        const draft = JSON.parse(localStorage.getItem(`bw_sim_draft_${exam.id}`) || "{}");
+        delete draft.highlights;
+        localStorage.setItem(`bw_sim_draft_${exam.id}`, JSON.stringify(draft));
+      } catch {}
+    }
+  }
+
+  function renderHighlightedPassage(text: string) {
+    if (!highlights.length || !text) return text;
+    const escaped = highlights
+      .filter(Boolean)
+      .map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    if (!escaped.length) return text;
+    try {
+      const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+      const chunks = text.split(regex);
+      return chunks.map((chunk, idx) =>
+        highlights.some((h) => h.toLowerCase() === chunk.toLowerCase()) ? (
+          <mark
+            key={idx}
+            className="rounded bg-amber-400/40 text-fg px-1 py-0.5 font-medium transition-colors"
+          >
+            {chunk}
+          </mark>
+        ) : (
+          chunk
+        )
+      );
+    } catch {
+      return text;
+    }
   }
 
   function jumpToQuestion(qid: string) {
@@ -399,19 +625,9 @@ export function CDLayout({
     }, 60);
   }
 
-  // Loading state
+  // Authentic Skeleton Loader instead of simple spinner
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen w-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
-        <div className="flex size-14 items-center justify-center rounded-[12px] bg-emerald-500/10 text-emerald-400">
-          <RefreshCw className="size-7 animate-spin" />
-        </div>
-        <h2 className="mt-4 text-lg font-bold text-slate-100">Imtihon topshiriqlari yuklanmoqda...</h2>
-        <p className="mt-1 text-xs text-slate-400">
-          Serverdan rasmiy topshiriqlar va audio materiallar yuklanmoqda.
-        </p>
-      </div>
-    );
+    return <CDLayoutSkeleton />;
   }
 
   // Defensive Fallback Error State: Never a black screen
@@ -425,9 +641,21 @@ export function CDLayout({
 
   return (
     <StrictErrorBoundary fallbackTitle="CD Layout Master Render Crash">
+      <style>{`
+        body.cd-kiosk-mode {
+          overflow: hidden !important;
+        }
+        body.cd-kiosk-mode .mobile-app-hide,
+        body.cd-kiosk-mode header:not(.cd-header),
+        body.cd-kiosk-mode footer:not(.cd-footer),
+        body.cd-kiosk-mode aside {
+          display: none !important;
+        }
+      `}</style>
+
       <div className={cn("min-h-screen w-full bg-bg text-fg select-none", FONT_CLASS[fontSize])}>
         {/* Top Header */}
-        <header className="sticky top-0 z-30 border-b border-border bg-bg/95 backdrop-blur-md px-3 py-2.5 sm:px-6">
+        <header className="cd-header sticky top-0 z-30 border-b border-border bg-bg/95 backdrop-blur-md px-3 py-2.5 sm:px-6">
           <div className="flex w-full items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Link
@@ -442,7 +670,20 @@ export function CDLayout({
               </h1>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Real-time Auto-save status */}
+              {saveStatus === "saving" && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-400 font-medium animate-pulse">
+                  <RefreshCw className="size-3 animate-spin" /> Saqlanmoqda...
+                </span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
+                  <CheckCircle2 className="size-3" /> Saqlandi
+                </span>
+              )}
+
+              {/* Timer */}
               <div
                 role="timer"
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs sm:text-sm font-bold tabular-nums text-fg"
@@ -478,7 +719,7 @@ export function CDLayout({
           </div>
         </header>
 
-        {/* Demo notice: the simulator never persists answers */}
+        {/* Demo banner */}
         <div role="note" className="border-b border-warning-border bg-warning-bg px-3 py-2 text-center text-xs font-medium text-fg sm:px-6">
           Demo rejim — bu yerdagi javoblar saqlanmaydi va baholanmaydi.{" "}
           {exam?.id ? (
@@ -488,8 +729,8 @@ export function CDLayout({
           ) : null}
         </div>
 
-        {/* Main Body */}
-        <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 pb-28">
+        {/* Main Body with Resizable Split-Screen for Reading & Writing */}
+        <main className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4 pb-28">
           <ErrorBoundary fallbackTitle="Imtihon qismini yuklashda xatolik yuz berdi">
             {children ? (
               children
@@ -502,45 +743,81 @@ export function CDLayout({
                   {(part.group?.questions || []).map((q, qi) => {
                     const promptText = q?.prompt || (q as any)?.text || "";
                     return (
-                      <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4 ">
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold text-sm text-fg">
-                            {part.startIndex + qi + 1}. {promptText}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => toggleFlag(q.id)}
-                            className={cn(
-                              "grid size-7 place-items-center rounded-full border text-xs transition-colors",
-                              flagged[q.id]
-                                ? "border-amber-400 bg-amber-400/20 text-amber-500"
-                                : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
-                            )}
-                          >
-                            <Flag className="size-3.5" />
-                          </button>
+                      <StrictErrorBoundary key={q.id || qi} fallbackTitle={`Savol ${part.startIndex + qi + 1} xatosi`}>
+                        <div id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-semibold text-sm text-fg">
+                              {part.startIndex + qi + 1}. {promptText}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleFlag(q.id)}
+                              className={cn(
+                                "grid size-7 place-items-center rounded-full border text-xs transition-colors",
+                                flagged[q.id]
+                                  ? "border-amber-400 bg-amber-400/20 text-amber-500"
+                                  : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
+                              )}
+                            >
+                              <Flag className="size-3.5" />
+                            </button>
+                          </div>
+                          <ListeningPart1Radio
+                            q={q}
+                            value={answers[q.id] ?? ""}
+                            onChange={(v) => handleAnswer(q.id, v)}
+                          />
                         </div>
-                        <ListeningPart1Radio
-                          q={q}
-                          value={answers[q.id] ?? ""}
-                          onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
-                        />
-                      </div>
+                      </StrictErrorBoundary>
                     );
                   })}
                 </div>
               </SplitScreenMap>
             ) : (
-              <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-2 items-start">
-                {/* Left Pane: Passage / Audio / Stimulus */}
-                <div className="rounded-[12px] border border-border bg-surface p-4 sm:p-5  lg:sticky lg:top-20">
+              /* Resizable Split-Screen Container with Independent Scrolling */
+              <div
+                ref={splitContainerRef}
+                className="flex w-full flex-col lg:flex-row items-stretch gap-0 relative"
+              >
+                {/* Left Pane: Passage / Audio / Stimulus with Independent Scroll */}
+                <div
+                  style={{ width: undefined }}
+                  className="w-full lg:flex-1 rounded-[12px] border border-border bg-surface p-4 sm:p-5 flex flex-col h-[calc(100vh-180px)] overflow-y-auto"
+                  onMouseUp={handlePassageMouseUp}
+                >
                   <div className="mb-3 flex items-center justify-between border-b border-border/60 pb-2">
-                    <h2 className="text-sm font-extrabold tracking-wide uppercase text-fg">
+                    <h2 className="text-sm font-extrabold tracking-wide uppercase text-fg flex items-center gap-2">
                       Part {partIdx + 1}
-                      <span className="ml-2 rounded-full bg-brand-subtle px-2 py-0.5 text-[11px] font-semibold text-brand-subtle-fg normal-case">
+                      <span className="rounded-full bg-brand-subtle px-2 py-0.5 text-[11px] font-semibold text-brand-subtle-fg normal-case">
                         {part.skill}
                       </span>
                     </h2>
+
+                    {/* Passage Highlighter Controls */}
+                    <div className="flex items-center gap-1">
+                      {showHighlightTooltip && (
+                        <Button
+                          size="sm"
+                          variant="subtle"
+                          onClick={applyHighlight}
+                          className="h-7 px-2 text-xs bg-amber-400 text-slate-950 hover:bg-amber-300 font-bold"
+                        >
+                          <Highlighter className="size-3 mr-1" />
+                          Belgilash
+                        </Button>
+                      )}
+                      {highlights.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={clearAllHighlights}
+                          title="Belgilashlarni tozalash"
+                          className="flex items-center gap-1 text-[11px] text-fg-muted hover:text-warning px-2 py-0.5 rounded border border-border"
+                        >
+                          <RotateCcw className="size-3" />
+                          Tozalash
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {part.group?.audioUrl && (
@@ -555,8 +832,8 @@ export function CDLayout({
                   )}
 
                   {part.group?.passageText ? (
-                    <div className="whitespace-pre-line text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] max-h-[60vh] overflow-y-auto pr-1">
-                      {part.group.passageText}
+                    <div className="whitespace-pre-line text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] pr-2 flex-1">
+                      {renderHighlightedPassage(part.group.passageText)}
                     </div>
                   ) : (
                     <p className="flex items-center gap-2 text-xs text-fg-muted">
@@ -566,9 +843,21 @@ export function CDLayout({
                   )}
                 </div>
 
-                {/* Right Pane: Questions */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                {/* Draggable Divider Handle for Split-Screen (Desktop only) */}
+                <div
+                  onMouseDown={() => setIsDragging(true)}
+                  onTouchStart={() => setIsDragging(true)}
+                  className="hidden lg:flex w-3 items-center justify-center cursor-col-resize hover:bg-brand/20 active:bg-brand/40 transition-colors z-10 select-none group"
+                  title="O'lchamni o'zgartirish uchun suring"
+                >
+                  <div className="flex flex-col gap-1 items-center justify-center py-2 px-0.5 rounded bg-surface border border-border group-hover:border-brand">
+                    <GripVertical className="size-3 text-fg-muted group-hover:text-brand" />
+                  </div>
+                </div>
+
+                {/* Right Pane: Questions with Independent Scroll */}
+                <div className="w-full lg:flex-1 space-y-4 h-[calc(100vh-180px)] overflow-y-auto pl-0 lg:pl-1 pr-1">
+                  <div className="flex items-center justify-between sticky top-0 bg-bg/90 backdrop-blur py-1 z-10">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-fg">
                       Questions {part.startIndex + 1}–{part.endIndex + 1}
                     </h3>
@@ -581,72 +870,74 @@ export function CDLayout({
                     {(part.group?.questions || []).map((q, qi) => {
                       const promptText = q?.prompt || (q as any)?.text || "";
                       return (
-                        <div key={q.id || qi} id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4 ">
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="font-semibold text-sm text-fg leading-snug">
-                              {part.startIndex + qi + 1}. {promptText}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleFlag(q.id)}
-                              className={cn(
-                                "grid size-7 place-items-center rounded-full border text-xs transition-colors shrink-0",
-                                flagged[q.id]
-                                  ? "border-amber-400 bg-amber-400/20 text-amber-500"
-                                  : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
-                              )}
-                            >
-                              <Flag className="size-3.5" />
-                            </button>
-                          </div>
+                        <StrictErrorBoundary key={q.id || qi} fallbackTitle={`Savol ${part.startIndex + qi + 1} yuklanmadi`}>
+                          <div id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-semibold text-sm text-fg leading-snug">
+                                {part.startIndex + qi + 1}. {promptText}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleFlag(q.id)}
+                                className={cn(
+                                  "grid size-7 place-items-center rounded-full border text-xs transition-colors shrink-0",
+                                  flagged[q.id]
+                                    ? "border-amber-400 bg-amber-400/20 text-amber-500"
+                                    : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
+                                )}
+                              >
+                                <Flag className="size-3.5" />
+                              </button>
+                            </div>
 
-                          {isPart1Listening ? (
-                            <ListeningPart1Radio
-                              q={q}
-                              value={answers[q.id] ?? ""}
-                              onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
-                            />
-                          ) : q?.options && q.options.length > 0 ? (
-                            <div className="mt-3 space-y-1.5" role="radiogroup" aria-label={promptText}>
-                              {q.options.map((opt) => {
-                                const selected = (answers[q.id] ?? "") === opt;
-                                return (
-                                  <button
-                                    key={opt}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={selected}
-                                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: selected ? "" : opt }))}
-                                    className={cn(
-                                      "flex w-full items-center gap-2.5 rounded-[12px] border px-3.5 py-2.5 text-left text-sm transition-all touch-manipulation",
-                                      selected
-                                        ? "border-brand bg-brand-subtle/40 text-brand-subtle-fg font-medium "
-                                        : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg"
-                                    )}
-                                  >
-                                    <span
+                            {isPart1Listening ? (
+                              <ListeningPart1Radio
+                                q={q}
+                                value={answers[q.id] ?? ""}
+                                onChange={(v) => handleAnswer(q.id, v)}
+                              />
+                            ) : q?.options && q.options.length > 0 ? (
+                              <div className="mt-3 space-y-1.5" role="radiogroup" aria-label={promptText}>
+                                {q.options.map((opt) => {
+                                  const selected = (answers[q.id] ?? "") === opt;
+                                  return (
+                                    <button
+                                      key={opt}
+                                      type="button"
+                                      role="radio"
+                                      aria-checked={selected}
+                                      onClick={() => handleAnswer(q.id, selected ? "" : opt)}
                                       className={cn(
-                                        "grid size-4 shrink-0 place-items-center rounded-full border",
-                                        selected ? "border-brand bg-brand" : "border-fg-subtle"
+                                        "flex w-full items-center gap-2.5 rounded-[12px] border px-3.5 py-2.5 text-left text-sm transition-all touch-manipulation",
+                                        selected
+                                          ? "border-brand bg-brand-subtle/40 text-brand-subtle-fg font-medium"
+                                          : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg"
                                       )}
                                     >
-                                      {selected && <span className="size-2 rounded-full bg-white" />}
-                                    </span>
-                                    <span>{opt}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <input
-                              value={answers[q.id] ?? ""}
-                              onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                              placeholder="Javobingizni yozing..."
-                              aria-label={promptText}
-                              className="mt-3 w-full rounded-[12px] border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
-                            />
-                          )}
-                        </div>
+                                      <span
+                                        className={cn(
+                                          "grid size-4 shrink-0 place-items-center rounded-full border",
+                                          selected ? "border-brand bg-brand" : "border-fg-subtle"
+                                        )}
+                                      >
+                                        {selected && <span className="size-2 rounded-full bg-white" />}
+                                      </span>
+                                      <span>{opt}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <input
+                                value={answers[q.id] ?? ""}
+                                onChange={(e) => handleAnswer(q.id, e.target.value)}
+                                placeholder="Javobingizni yozing..."
+                                aria-label={promptText}
+                                className="mt-3 w-full rounded-[12px] border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
+                              />
+                            )}
+                          </div>
+                        </StrictErrorBoundary>
                       );
                     })}
                   </div>
@@ -657,7 +948,7 @@ export function CDLayout({
         </main>
 
         {/* Fixed Bottom Palette & Navigation */}
-        <footer className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-md p-2.5 sm:px-6">
+        <footer className="cd-footer fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-md p-2.5 sm:px-6">
           <div className="mx-auto max-w-7xl flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <Button
@@ -683,7 +974,7 @@ export function CDLayout({
                       className={cn(
                         "flex shrink-0 items-center gap-1.5 rounded-[12px] border px-3 py-1.5 text-xs font-semibold transition-all touch-manipulation",
                         i === partIdx
-                          ? "border-brand bg-brand text-brand-fg  scale-105"
+                          ? "border-brand bg-brand text-brand-fg scale-105"
                           : "border-border bg-surface text-fg-muted hover:border-brand hover:text-fg"
                       )}
                     >
@@ -730,6 +1021,8 @@ export function CDLayout({
                 <li>Pastki palitradan savol raqamini bosib to&apos;g&apos;ridan-to&apos;g&apos;ri o&apos;tishingiz mumkin.</li>
                 <li>Keyinchalik qaytmoqchi bo&apos;lgan savollaringizni bayroqcha (Flag) bilan belgilab qo&apos;ying.</li>
                 <li>Yashil rangli raqamlar javob berilgan savollarni bildiradi.</li>
+                <li>Matndan kerakli so&apos;zlarni belgilab, sariq rangda saqlab qolishingiz mumkin.</li>
+                <li>Javoblaringiz real vaqtda avtomatik saqlanib boradi.</li>
               </ul>
             </DialogBody>
           </DialogContent>

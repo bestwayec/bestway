@@ -847,6 +847,9 @@ export interface MockSectionScore {
   score: number;
   max: number;
   practiceGrade?: PracticeGrade | null;
+  skipped?: boolean;
+  status?: string;
+  answered?: number;
 }
 
 export type MockPracticeSkill = "listening" | "reading" | "writing" | "speaking";

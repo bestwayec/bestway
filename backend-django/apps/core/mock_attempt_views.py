@@ -95,14 +95,25 @@ def start_view(request, exam_id=None):
     return success(engine.start(request.user, target_exam_id, data), 201)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'PUT'])
 @permission_classes([AllowAny])
 def answer_view(request, attempt_id):
     student(request)
     attempt_signature.verify_request(request, attempt_id)
-    data = body(request, {'questionId', 'response'})
+    if isinstance(request.data, dict) and ('answers' in request.data or isinstance(request.data.get('data'), list)):
+        items = request.data.get('answers') or request.data.get('data') or []
+        for item in items:
+            validate_answer(item)
+        return success(engine.save_answers(request.user, attempt_id, items, bulk=True), 200 if request.method == 'PUT' else 201)
+    data = body(request, {'questionId', 'question_id', 'response', 'answer', 'value'})
+    if 'question_id' in data and 'questionId' not in data:
+        data['questionId'] = data['question_id']
+    if 'answer' in data and 'response' not in data:
+        data['response'] = data['answer']
+    elif 'value' in data and 'response' not in data:
+        data['response'] = data['value']
     validate_answer(data)
-    return success(engine.save_answers(request.user, attempt_id, [data]), 201)
+    return success(engine.save_answers(request.user, attempt_id, [data]), 200 if request.method == 'PUT' else 201)
 
 
 @api_view(['POST'])
@@ -285,10 +296,15 @@ def detail_view(request, attempt_id):
 @permission_classes([AllowAny])
 def speaking_upload_view(request, attempt_id, question_id):
     student(request)
-    # Same one-file field contract as FileInterceptor('audio').
-    if any(key != 'audio' or len(request.FILES.getlist(key)) != 1 for key in request.FILES):
-        engine.fail('UPLOAD_ERROR', 'Unexpected field')
-    return success(engine.upload_speaking(request.user, attempt_id, question_id, request.FILES.get('audio')), 201)
+    audio_file = (
+        request.FILES.get('audio')
+        or request.FILES.get('file')
+        or request.FILES.get('recording')
+        or (list(request.FILES.values())[0] if request.FILES else None)
+    )
+    if not audio_file:
+        engine.fail('NO_FILE', 'Audio fayl yuklanmadi')
+    return success(engine.upload_speaking(request.user, attempt_id, question_id, audio_file), 201)
 
 
 @api_view(['GET'])

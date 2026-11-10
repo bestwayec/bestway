@@ -185,30 +185,78 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
         )}
 
-        {/* Bo'lim ballari — IELTS da har doim BAND (xom ball emas); baholanmagan bo'lim Pending */}
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {/* Bo'lim ballari va aniqlik tahlili */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {attempt.sections.map((s) => {
-            const practiceGrade = s.practiceGrade ?? attempt.rawScores?.[s.skill]?.practiceGrade;
+            const rawSkill = attempt.rawScores?.[s.skill];
+            const isSkipped = rawSkill?.skipped || (rawSkill?.status === "SKIPPED") || (!s.score && !s.standardScore && !s.band && attempt.status === "completed" && !MANUAL_SKILLS.has(s.skill));
+            const practiceGrade = s.practiceGrade ?? rawSkill?.practiceGrade;
             const pendingManual = MANUAL_SKILLS.has(s.skill) && !practiceGrade && !hasCompleteManualGrade(s);
+            const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
             return (
-            <div
-              key={s.id}
-              className="flex items-center justify-between rounded-[8px] border border-border bg-bg-subtle px-3 py-2"
-            >
-              <span className="text-sm font-medium text-fg">{t(`skills.${s.skill}`)}{practiceGrade && <span className="mt-1 block text-xs font-normal text-fg-subtle">{t("internalPracticeScore")}</span>}</span>
-              <span className="text-sm text-fg-muted tabular-nums">
-                {pendingManual ? t("awaitingGrade") : practiceGrade ? <span className="font-bold text-brand">{practiceGrade.score} /{practiceGrade.scaleMax}</span> : !isIelts && s.standardScore != null ? <span className="font-bold text-brand">{s.standardScore} /75 · {s.score}/{s.max} raw</span> : s.band != null ? (
-                  <span className="font-bold text-brand">{isIelts ? s.band.toFixed(1) : s.band}</span>
-                ) : isIelts ? (
-                  t("awaitingGrade")
-                ) : s.score != null && s.max != null ? (
-                  `${s.score}/${s.max}`
-                ) : (
-                  t("awaitingGrade")
+              <div
+                key={s.id}
+                className="flex flex-col justify-between rounded-[12px] border border-border bg-surface p-3.5 shadow-sm text-left"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-fg capitalize flex items-center gap-1.5">
+                    {t(`skills.${s.skill}`)}
+                    {practiceGrade && (
+                      <span className="text-[10px] font-normal text-fg-subtle">({t("internalPracticeScore")})</span>
+                    )}
+                  </span>
+                  {isSkipped ? (
+                    <Badge variant="neutral" className="text-[11px] font-medium">
+                      O&apos;tkazib yuborilgan
+                    </Badge>
+                  ) : pendingManual ? (
+                    <Badge variant="warning" className="text-[11px]">
+                      {t("awaitingGrade")}
+                    </Badge>
+                  ) : practiceGrade ? (
+                    <span className="font-bold text-sm text-brand tabular-nums">
+                      {practiceGrade.score} /{practiceGrade.scaleMax}
+                    </span>
+                  ) : !isIelts && s.standardScore != null ? (
+                    <span className="font-bold text-sm text-brand tabular-nums">
+                      {s.standardScore} /75 <span className="text-xs font-normal text-fg-muted">({s.score}/{s.max})</span>
+                    </span>
+                  ) : s.band != null ? (
+                    <span className="font-bold text-sm text-brand tabular-nums">
+                      Band {isIelts ? s.band.toFixed(1) : s.band}
+                    </span>
+                  ) : s.score != null && s.max != null ? (
+                    <span className="font-bold text-sm text-brand tabular-nums">
+                      {s.score}/{s.max}
+                    </span>
+                  ) : (
+                    <Badge variant="neutral" className="text-[11px]">
+                      {t("awaitingGrade")}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Accuracy percentage & visual progress bar */}
+                {!isSkipped && !pendingManual && accuracy !== null && (
+                  <div className="mt-2.5 space-y-1">
+                    <div className="flex items-center justify-between text-xs text-fg-muted">
+                      <span>Aniqlik (Accuracy):</span>
+                      <span className="font-semibold text-fg tabular-nums">{accuracy}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          accuracy >= 80 ? "bg-emerald-500" : accuracy >= 60 ? "bg-brand" : "bg-amber-400"
+                        )}
+                        style={{ width: `${Math.min(100, Math.max(0, accuracy))}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
-              </span>
-            </div>
-          );})}
+              </div>
+            );
+          })}
         </div>
 
         {completed && !internalPractice && (

@@ -43,10 +43,9 @@ def attempt(request,attempt_id):
         from apps.legacy_schema.models import AssessmentJob
         pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
         if pending_jobs.exists():
+            from common.background import start_thread
             from . import assessment_worker
-            for _ in range(min(5, pending_jobs.count())):
-                if not assessment_worker.run_once():
-                    break
+            start_thread(assessment_worker.tick, name='bestway-assessment-tick')
     except Exception:
         pass
     return success(assessment.for_attempt(request.user,attempt_id))
