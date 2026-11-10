@@ -7,6 +7,23 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 21-BLOK: Android video audit (10-noyabr) — P1–P6, branch'lar `fix/p1…p5`, `fix/extras…`
+Video qo'lda ko'rilmadi; kuzatuvlar gipoteza sifatida kod va lokal muhitda qayta tekshirildi. Deploy qilinmagan.
+
+| # | Muammo | Ildiz sababi | Tuzatish | Holat |
+|---|---|---|---|---|
+| P1 | Part 4 xaritasi javobga mos emas | `map.png` qo'lda chizilgan nusxa edi: harflar nomli xonalarga qo'yilgan ([C] Medical Centre), prosa "plan" ham shuni takrorlardi, variantlar "Room A..H". Rasmiy PDF'da A–H nomsiz xonalarda | Rasmiy reja (watermark'siz), variantlar A–H, prosa olib tashlandi, eski "D  Room D" javoblar baholanadi. Kalit (D,C,A,E,H) o'zgarmadi — rasmiy javoblar sahifasiga mos | lokal tekshirildi (360/390 px), qurilmada emas |
+| P3 | "Preview this part / Volume" | Bu imtihon pleyeri: server 20 s ko'rib chiqish beradi, audio 2 marta (`playLimit=2`) — cheklovlar serverda. Yashirilmadi. Topilgan haqiqiy xatolar: (a) `record_audio_access` har qanday qisman urinish uchun 403 berardi — Listening-only mashqda audio umuman ijro bo'lmasdi; (b) `src` ikki marta o'rnatilib birinchi `play()` AbortError bilan uzilardi va har urinish 2 ta ijrodan birini yeb qo'yardi | Gate faqat Listening kirmagan scope'da rad etadi; src bir marta, berilgan ijro qayta so'ralmaydi; uz/en matn; ixcham | lokal tekshirildi. **Repodagi 6 ta WAV — 8 soniyalik tovush (e'lon qilingani 360 s): haqiqiy yozuvlar emas** |
+| P4 | Tillar aralash, "DTM" | CEFR layout rejimi ichki nomi `dtm`; palitra/stepper/header matnlari qattiq yozilgan | next-intl uz/en, "DTM" yo'q | lokal tekshirildi (uz — vitest; local `next dev` da prefikssiz uz marshrut sikllanadi) |
+| P6 | Palitra qirqilgan, Next section, kiosk toast | Palitra yonga aylanuvchi bitta qator edi; Next section tasdiqsiz; toast — brauzer matni | Qatorlarga o'raladi + hint; Next section tasdiq dialogi; uz/en to'liq ekran ogohlantirishi (bir marta) | lokal tekshirildi |
+| P2 | Mikrofon dialogi telefonda | Ruxsat to'liq ekranda so'ralardi; rad etilsa chiqish yo'q | Ruxsat imtihon boshida (to'liq ekrandan oldin); to'liq ekranda bo'lsa vaqtincha chiqib so'raladi (guard to'xtatiladi); uz yo'riqnoma, Qayta urinish, "mikrofonsiz davom etish" | Chromium + soxta mikrofon; **haqiqiy Android'da tekshirilmagan** |
+| P5 | Bo'sh attempt | Writing/Speaking uchun bo'sh javobga job yaratilar, attempt `grading`da qolardi; UI sahnalashtirilgan soxta "Deepgram" bosqichlari | Bo'sh vazifa — yakuniy 0, job yo'q, daraja/band yo'q; "Javob topshirilmagan" ekrani; soxta animatsiya olib tashlandi | lokal: ~1 s da `completed`; 360/390 px da ustma-ust yo'q (video siqilishi) |
+| — | Listening 9 ("coach"/"bus") | Rasmiy kalit faqat "coach"; "bus" variant sifatida qo'shilgan, transkript repoda yo'q | **O'zgartirilmadi** — mahsulot qarori | ochiq |
+| — | faster-whisper testi | Ixtiyoriy paket | `importorskip` | tuzatildi |
+| — | README | NestJS tasvirlangan | Django/Next.js | tuzatildi |
+
+Egasi qilishi kerak: haqiqiy Android qurilmada mikrofon/audio/to'liq ekran tekshiruvi; haqiqiy Listening audio fayllarini `media/exams/record_mock_1/` ga qo'yish (importer endi ogohlantiradi; deploy mavjud prod audio'ni qisqa fayl bilan almashtirib yubormasligi uchun avval prod audio'ni tekshiring); deploydan keyin `https://api.bestwayec.uz/v1/health` da `buildCommit`.
+
 ### 20-BLOK: Mobil video (1000003608.mp4) bo'yicha tuzatishlar — branch `fix/mobile-login-exam-integrity` (base `origin/main` 1f97bc8)
 Video fayli sessiyada yo'q edi; ish berilgan dalillar va kod/lokal bazani tekshirish asosida bajarildi.
 
