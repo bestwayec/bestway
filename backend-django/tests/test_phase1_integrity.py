@@ -106,6 +106,8 @@ def test_failed_stt_cannot_call_grader():
 
 
 def test_actual_silent_pcm_is_detected_without_inventing_a_transcript():
+    # The decoder comes from the optional local STT package (requirements/prod.txt only).
+    pytest.importorskip('faster_whisper')
     import wave
     from apps.core.assessment_local_stt import _decode_audio
     with TemporaryDirectory() as directory:
