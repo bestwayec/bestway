@@ -33,6 +33,13 @@ function findChromium() {
   return undefined;
 }
 
+// The exam shows a one-time Uzbek/English full-screen notice; accept it whenever it appears.
+async function acceptFullscreenNotice(page) {
+  await page.addLocatorHandler(page.getByTestId("fullscreen-notice"), async (notice) => {
+    await notice.getByRole("button").click();
+  });
+}
+
 const results = [];
 async function step(name, fn) {
   const t0 = Date.now();
@@ -53,6 +60,7 @@ const sizes = [
 ];
 const ctx = await browser.newContext({ ...devices["Pixel 5"], viewport: sizes[1].viewport });
 const page = await ctx.newPage();
+await acceptFullscreenNotice(page);
 page.setDefaultTimeout(120000);
 
 await step("01-login-mobile", async () => {
@@ -101,8 +109,10 @@ await step("04-runner-palette-matches-question-numbers", async () => {
   const labels = await palette.allInnerTexts();
   const nums = labels.map((x) => Number(x.replace(/[^\d]/g, "")));
   if (nums.length !== 35 || nums[0] !== 1 || nums.at(-1) !== 35) throw new Error(`palette ${nums.slice(0, 5)}…${nums.at(-1)} (${nums.length})`);
+  const noticeSeen = await page.evaluate((id) => sessionStorage.getItem(`bw_fullscreen_notice_${id}`), attemptId);
+  if (noticeSeen !== "1") throw new Error("the one-time full-screen notice was not shown and accepted");
   await page.screenshot({ path: join(OUT, "04-part1-390.png") });
-  return "palette shows 1…35, Part 1 visible";
+  return "palette shows 1…35, Part 1 visible; full-screen notice shown once";
 });
 
 await step("05-part4-map-loads-and-palette-maps-to-q20", async () => {
@@ -189,11 +199,15 @@ for (const size of sizes) {
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return !(top === el || el.contains(top));
     });
+    // The palette wraps into rows (no sideways scrolling) and says when more rows are hidden.
+    const pal = await page.getByTestId("question-palette").evaluate((el) => ({ sideways: el.scrollWidth - el.clientWidth, more: el.scrollHeight > el.clientHeight + 4, hint: !!document.querySelector('[data-testid="palette-more"]') }));
+    if (pal.sideways > 1) throw new Error(`palette scrolls sideways by ${pal.sideways}px`);
+    if (pal.more && !pal.hint) throw new Error("palette hides rows without a scroll hint");
     const paletteHeight = await page.locator('[aria-label="Question palette"]').evaluate((el) => el.closest(".sticky")?.getBoundingClientRect().height ?? 0);
     await page.screenshot({ path: join(OUT, `07-part2-${size.name}.png`) });
     if (covered) throw new Error("last answer field is covered by fixed controls");
     if (paletteHeight > size.viewport.height * 0.4) throw new Error(`palette takes ${Math.round(paletteHeight)}px of ${size.viewport.height}`);
-    return `no overflow, last field reachable, palette ${Math.round(paletteHeight)}px`;
+    return `no overflow, last field reachable, palette ${Math.round(paletteHeight)}px, wraps${pal.more ? " + scroll hint" : ""}`;
   });
 }
 

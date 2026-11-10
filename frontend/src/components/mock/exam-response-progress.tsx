@@ -15,7 +15,7 @@ export function ResponseProgress({ answered, total }: { answered: number; total:
       <span className="tabular-nums">{completed} / {total}</span>
     </div>
     <progress aria-label={t("responseProgress")} value={completed} max={total} className="block h-1.5 w-full overflow-hidden rounded-full accent-brand [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-border [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-brand [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-brand" />
-    <p className="text-xs text-fg-subtle">{t("responseProgressHint")}</p>
+    <p className="hidden text-xs text-fg-subtle sm:block">{t("responseProgressHint")}</p>
   </div>;
 }
 
