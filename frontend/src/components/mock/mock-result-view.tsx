@@ -25,77 +25,20 @@ import { CefrResultInfographic } from "./cefr-result-infographic";
 import { CertificateModal } from "./certificate-modal";
 import { ExamFeedbackModal } from "./exam-feedback-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
+import { isEmptyAttempt } from "@/lib/empty-attempt";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
 
-function SteppedGradingProgress() {
-  const [activeStep, setActiveStep] = React.useState(1);
-
-  React.useEffect(() => {
-    const t1 = setTimeout(() => setActiveStep(2), 2500);
-    const t2 = setTimeout(() => setActiveStep(3), 6000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-
-  const steps = [
-    { num: 1, label: "Ovoz matnga aylantirilmoqda", desc: "Deepgram STT nutq transkripsiyasi" },
-    { num: 2, label: "Grammatika va lug'at tahlili", desc: "Lexical resource & grammar range" },
-    { num: 3, label: "CEFR ballari va tavsiyalar", desc: "Band scoring & diagnostic feedback" },
-  ];
-
+/** Shown only while a real assessment is outstanding; no scripted steps, the panel below shows the true job state. */
+function GradingNotice() {
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-brand/20 bg-brand/[0.03] p-5 text-left">
-      <div className="flex items-center gap-2.5 font-semibold text-sm text-fg">
-        <Sparkles className="size-4 text-brand animate-pulse" />
-        Natijalar sun&apos;iy intellekt tomonidan tekshirilmoqda
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-brand font-medium">
-          <Loader2 className="size-3.5 animate-spin" />
-          Ultra-tezkor tahlil
-        </span>
+    <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl border border-brand/20 bg-brand/[0.03] p-4 text-left">
+      <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-brand" />
+      <div className="text-sm">
+        <p className="font-semibold text-fg">Natijalar tekshirilmoqda</p>
+        <p className="mt-0.5 text-xs text-fg-subtle">Writing va Speaking javoblari baholanmoqda. Sahifa har 3 soniyada avtomatik yangilanadi.</p>
       </div>
-
-      <div className="mt-4 space-y-3">
-        {steps.map((s) => {
-          const isDone = activeStep > s.num;
-          const isCurrent = activeStep === s.num;
-          return (
-            <div
-              key={s.num}
-              className={cn(
-                "flex items-center gap-3 rounded-xl p-2.5 transition-all duration-300",
-                isCurrent && "bg-brand/10 border border-brand/30 shadow-sm",
-                isDone && "opacity-85",
-                !isDone && !isCurrent && "opacity-40"
-              )}
-            >
-              <div
-                className={cn(
-                  "grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition-all",
-                  isDone && "bg-brand text-brand-fg",
-                  isCurrent && "bg-brand/20 text-brand ring-2 ring-brand animate-pulse",
-                  !isDone && !isCurrent && "bg-surface text-fg-subtle border border-border"
-                )}
-              >
-                {isDone ? <Check className="size-3.5" /> : isCurrent ? <Loader2 className="size-3.5 animate-spin" /> : s.num}
-              </div>
-              <div className="min-w-0 flex-1 leading-tight">
-                <p className="text-sm font-medium text-fg">{s.label}</p>
-                <p className="text-[11px] text-fg-subtle truncate">{s.desc}</p>
-              </div>
-              {isDone && <span className="text-[11px] font-semibold text-brand">Tayyor</span>}
-              {isCurrent && <span className="text-[11px] font-semibold text-brand animate-pulse">Tekshirilmoqda...</span>}
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="mt-3 text-center text-[11px] text-fg-subtle">
-        Sahifa har 3 soniyada avtomatik yangilanadi. Oynani yopmasdan kuting.
-      </p>
     </div>
   );
 }
@@ -118,6 +61,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 
   const isIelts = attempt.examType !== "multilevel";
   const completed = attempt.status === "completed";
+  const empty = isEmptyAttempt(attempt);
   // Section practice (scoped practice or a legacy single-skill attempt) has
   // section scores only: no overall score, CEFR level or certificate.
   const partialPractice =
@@ -140,6 +84,21 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       </Link>
 
       {isStaff && !completed && <div className="print:hidden"><AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} /></div>}
+
+      {empty && (
+        <Card className="p-6 text-center" data-testid="empty-attempt">
+          <p className="text-sm text-fg-muted">
+            {attempt.examTitle}
+            {isStaff && attempt.studentName ? ` · ${attempt.studentName}` : ""}
+          </p>
+          <h1 className="mt-3 text-xl font-bold text-fg">{t("emptyAttempt.title")}</h1>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fg-muted">{t("emptyAttempt.body")}</p>
+          <Link href="/mock" className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg">
+            {t("emptyAttempt.retry")}
+          </Link>
+        </Card>
+      )}
+      {empty ? null : <>
 
       {completed && !partialPractice && !internalPractice && (
         <CefrResultInfographic
@@ -186,7 +145,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
         )}
 
-        {attempt.status === "grading" && <SteppedGradingProgress />}
+        {attempt.status === "grading" && <GradingNotice />}
 
         {partialPractice && (
           <div className="mt-4 space-y-1">
@@ -331,6 +290,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           );
         })}
       </div>
+      </>}
     </div>
   );
 }

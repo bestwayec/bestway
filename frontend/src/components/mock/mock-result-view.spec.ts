@@ -25,7 +25,7 @@ const attempt = (partial = true) => ({
   sections: [{ id: "speaking", skill: "speaking", score: 4, max: 5, standardScore: null, band: null, groups: [{ id: "part-1", title: "Personal questions", questions: [3, 4, 5].map((score, index) => ({
     id: `q-${index}`, number: index + 1, type: "speaking_task", prompt: "Describe your day", points: 9,
     guidance: { taskKey: "1.1", displayLabel: "Part 1.1", rawMax: 5 }, isGraded: true, score,
-    response: "", feedback: null, rubricScores: null, audioUrl: null, hasAudio: false,
+    response: "Sample answer", feedback: null, rubricScores: null, audioUrl: null, hasAudio: false,
   })) }] }],
 } as MockAttemptDetail);
 
@@ -144,5 +144,53 @@ describe("partial teacher result presentation", () => {
     expect(html).not.toContain("75 /75");
     expect(html).not.toContain("C1");
     expect(html).not.toContain("/certificate");
+  });
+});
+
+describe("attempt with no answers", () => {
+  const emptied = (status: MockAttemptDetail["status"] = "completed") => {
+    const value = attempt(false);
+    value.status = status;
+    value.sections[0].groups[0].questions.forEach((question) => { question.response = ""; question.hasAudio = false; question.isGraded = true; question.score = 0; });
+    return value;
+  };
+  const html = (value: MockAttemptDetail) => renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+
+  it("says nothing was submitted and shows no score, level, AI badge or certificate", () => {
+    viewer.role = "student";
+    const out = html(emptied());
+    expect(out).toContain('data-testid="empty-attempt"');
+    expect(out).toContain(en.mock.emptyAttempt.title);
+    for (const banned of ["AI bahosi", "Natijalar tekshirilmoqda", "/certificate", "Estimated Multilevel Result", ">B2<", "/75", "raw", en.mock.awaitingGrade]) {
+      expect(out).not.toContain(banned);
+    }
+  });
+
+  it("never hangs on a checking state, even if the stored status still says grading", () => {
+    viewer.role = "student";
+    const out = html(emptied("grading"));
+    expect(out).toContain(en.mock.emptyAttempt.title);
+    expect(out).not.toContain("Natijalar tekshirilmoqda");
+  });
+
+  it("any recording or answer makes it a normal result again", () => {
+    viewer.role = "student";
+    const value = emptied();
+    value.sections[0].groups[0].questions[1].hasAudio = true;
+    expect(html(value)).not.toContain('data-testid="empty-attempt"');
+  });
+
+  it("does not claim emptiness for a running attempt", () => {
+    expect(html(emptied("in_progress"))).not.toContain('data-testid="empty-attempt"');
+  });
+
+  it("a real grading attempt shows one honest notice, not scripted steps", () => {
+    viewer.role = "student";
+    const value = attempt(false);
+    value.status = "grading";
+    const out = html(value);
+    expect(out).toContain("Natijalar tekshirilmoqda");
+    expect(out).not.toContain("Deepgram");
+    expect(out).not.toContain("Ultra-tezkor");
   });
 });

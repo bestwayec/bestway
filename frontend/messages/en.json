@@ -1077,7 +1077,12 @@
       "completed": "Completed"
     },
     "internalPracticeScore": "Score",
-    "internalPracticeNotice": "Results"
+    "internalPracticeNotice": "Results",
+    "emptyAttempt": {
+      "title": "No answers were submitted",
+      "body": "This attempt has no saved answers or recordings, so no score, level or certificate was calculated and nothing was sent for AI or teacher review.",
+      "retry": "Back to mock exams"
+    }
   },
   "wizard": {
     "title": "Create exam",

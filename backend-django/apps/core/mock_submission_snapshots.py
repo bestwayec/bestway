@@ -107,7 +107,9 @@ def blueprint_failure(value):
 
 def enqueue(attempt, wanted=None):
     exam = attempt.exam
-    answers = {a.question_id:dict(response=a.response,audioKey=a.audio_key) for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
+    answers = {a.question_id:dict(response=a.response,audioKey=a.audio_key,
+        hasImages=bool(isinstance(a.rubric_scores, dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls'))))
+        for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
     image_keys = dict(MockQuestionGroup.objects.filter(section__exam_id=exam.id).values_list('id','image_key'))
     for section in scope_sections(attempt,shape_exam(exam, True)['sections']):
         skill = section['skill']
@@ -115,6 +117,11 @@ def enqueue(attempt, wanted=None):
             continue
         for group in section['groups']:
             group['imageKey'] = image_keys[group['id']]
+        if not any(((answers.get(q['id']) or {}).get('response') or '').strip() or (answers.get(q['id']) or {}).get('audioKey')
+                   or (answers.get(q['id']) or {}).get('hasImages')
+                   for group in section['groups'] for q in group['questions']):
+            # Nothing was submitted for this skill: no AI/teacher job (it would only wait forever).
+            continue
         missing = []
         def hash_audio(key):
             if not key:
