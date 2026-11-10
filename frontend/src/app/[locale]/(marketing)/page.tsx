@@ -162,56 +162,59 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <MobileLandingGate locale={locale} isAuthenticated={isAuthenticated}>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="marketing-section relative border-b border-border bg-surface">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-20 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface-elevated text-sm font-medium text-fg-muted mb-6">
-            <span className="size-2 rounded-full bg-brand" />
+        <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-xs sm:text-sm font-semibold text-emerald-500 dark:text-emerald-400 mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
+            <span className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
             <span>BestWay LMS — Rasmiy imtihon simulyatori</span>
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-5xl max-w-3xl mx-auto leading-tight">
-            {t("heroTitle")}
+          <h1 className="text-3xl font-black tracking-tight text-fg sm:text-5xl lg:text-6xl max-w-4xl mx-auto leading-[1.12] uppercase">
+            DO YOUR BEST{" "}
+            <span className="relative inline-block bg-gradient-to-r from-emerald-400 via-green-400 to-teal-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(16,185,129,0.45)]">
+              FORGET THE REST !
+            </span>
           </h1>
 
-          <p className="mx-auto mt-4 max-w-2xl text-base sm:text-lg text-fg-muted leading-relaxed">
+          <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-fg-muted leading-relaxed font-normal">
             {t("heroSubtitle")}
           </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
             <a
               href="#placement-test"
-              className="w-full sm:w-auto inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 px-6 py-3 text-base font-semibold text-brand-fg transition-colors"
+              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-brand hover:bg-brand-hover px-7 text-base font-bold text-brand-fg transition-all duration-150 shadow-md shadow-brand/20 active:scale-[0.98]"
             >
               <Zap className="size-5 fill-current" />
               <span>{t("heroCta")}</span>
             </a>
             <Link
               href={isAuthenticated ? "/dashboard" : "/login"}
-              className="w-full sm:w-auto inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface hover:border-brand/50 px-6 py-3 text-base font-semibold text-fg transition-colors"
+              className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface hover:border-brand/50 hover:bg-surface-hover px-7 text-base font-semibold text-fg transition-all duration-150 active:scale-[0.98]"
             >
               {isAuthenticated ? "Dashboard" : t("heroLogin")}
             </Link>
           </div>
 
           {/* 3 ta asosiy afzallik */}
-          <div className="mt-14 grid gap-4 sm:grid-cols-3 text-left">
-            <div className="rounded-[12px] border border-border bg-surface p-5">
-              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+          <div className="mt-14 grid gap-5 sm:grid-cols-3 text-left">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Monitor className="size-5" />
               </div>
               <h3 className="text-lg font-bold text-fg">{t("benefit1Title")}</h3>
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit1Desc")}</p>
             </div>
 
-            <div className="rounded-[12px] border border-border bg-surface p-5">
-              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Sparkles className="size-5" />
               </div>
               <h3 className="text-lg font-bold text-fg">{t("benefit2Title")}</h3>
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit2Desc")}</p>
             </div>
 
-            <div className="rounded-[12px] border border-border bg-surface p-5">
-              <div className="size-10 rounded-[8px] border border-border bg-surface-elevated flex items-center justify-center text-brand mb-3">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Award className="size-5" />
               </div>
               <h3 className="text-lg font-bold text-fg">{t("benefit3Title")}</h3>
@@ -220,8 +223,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </div>
         </div>
       </section>
-      <section id="placement-test" className="marketing-section scroll-mt-20">
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-16">
+      <section id="placement-test" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-20">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-20">
           <ExpressPlacementTest isAuthenticated={isAuthenticated} />
         </div>
       </section>
@@ -341,12 +344,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
 
       {/* ── Kurslar ──────────────────────────────────────────────────────── */}
-      <section id="courses" className="marketing-section marketing-section--tint scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+      <section id="courses" className="marketing-section border-b border-border bg-surface scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <Reveal>
             <SectionHeading title={t("coursesTitle")} subtitle={t("coursesSubtitle")} />
           </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {COURSES.map(({ key, Icon, tone }, i) => {
               const cfg = COURSE_PIXEL[key];
               return (
@@ -388,7 +391,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       {/* ── O'qituvchilar (TeacherProfileCard carousel) ─────────────────────── */}
       <section id="teachers" className="marketing-section scroll-mt-16 overflow-x-clip">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <Reveal>
             <SectionHeading title={t("teachersTitle")} subtitle={t("teachersSubtitle")} />
           </Reveal>
@@ -401,15 +404,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       </section>
 
       {/* ── Nega biz ─────────────────────────────────────────────────────── */}
-      <section id="why" className="marketing-section marketing-section--tint scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+      <section id="why" className="marketing-section border-t border-border bg-bg-subtle scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <Reveal>
             <SectionHeading title={t("whyTitle")} subtitle={t("whySubtitle")} />
           </Reveal>
-          <div className="mt-12 grid gap-x-8 gap-y-8 sm:grid-cols-2">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2">
             {FEATURES.map(({ key, Icon, tone }, i) => (
               <Reveal key={key} delay={i * 70}>
-                <div className="group flex gap-4 rounded-2xl p-4 transition-colors hover:bg-surface">
+                <div className="group flex gap-4 rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-border-strong hover:bg-surface-hover hover:shadow-md">
                   <span
                     className={cn(
                       "inline-flex size-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110",

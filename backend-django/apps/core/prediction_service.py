@@ -444,7 +444,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
     limit = max(3, min(10, int(limit or 5)))
 
     completed_attempts = list(
-        MockAttempt.objects.filter(student_id=student_id, status="completed")
+        MockAttempt.objects.filter(student_id=student_id, status__in=["completed", "grading"])
         .select_related("exam")
         .order_by("-finished_at", "-submitted_at", "-started_at")[:limit]
     )
@@ -574,7 +574,7 @@ def get_student_prediction(student_id: str, limit: int = 5) -> dict:
         "studentId": student_id,
         "studentName": user.name,
         "activeProgram": active_program,
-        "attemptsAnalyzed": len(ml_series),
+        "attemptsAnalyzed": len(ml_series) if len(ml_series) > 0 else (section_attempts or len(completed_attempts)),
         "sectionAttemptsAnalyzed": section_attempts,
         "trend": trend,
         "targetProgressPercent": (ml_progress if active_program == "MULTILEVEL" else band_progress) if has_overall else 0,

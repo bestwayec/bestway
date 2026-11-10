@@ -301,6 +301,12 @@
     "linkTelegram": "Telegramni ulash",
     "unlinkTelegram": "Uzish",
     "telegramHint": "Bildirishnomalar Telegramga ham keladi",
+    "completedTests": "Tugatilgan testlar",
+    "recentResults": "So'nggi mock natijalari",
+    "noResultsYet": "Hali topshirilgan testlar yo'q",
+    "browseExams": "Testlarni ko'rish",
+    "details": "Batafsil",
+    "continueExam": "Davom ettirish",
     "weak_points_map": "Zaif Nuqtalar Xaritasi (Savol turlari bo'yicha)",
     "weak_points_benchmark": "Diagnostik Benchmark (4 ta asosiy savol turi)",
     "weak_points_sub": "Eng ko'p xato qilingan modul va savol toifalari",
@@ -1132,8 +1138,8 @@
     "partOfQuestions": "{a}-qism, jami {b} savol"
   },
   "marketing": {
-    "heroTitle": "IELTS va Multi-Level (CEFR) imtihonlariga eng samarali tayyorgarlik",
-    "heroSubtitle": "Rasmiy kompyuter formati, xolis AI baholash va individual tahlil orqali kerakli natijangizga erishing.",
+    "heroTitle": "DO YOUR BEST FORGET THE REST !",
+    "heroSubtitle": "IELTS va Multi-Level (CEFR) imtihonlariga rasmiy kompyuter formati, aniq AI diagnostikasi va individual tahlillar bilan tayyorlaning.",
     "heroBadge": "Shofirkon, Buxoro · 2007-yildan beri",
     "navCourses": "Kurslar",
     "navTeachers": "O'qituvchilar",

@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Check, Link2, Loader2, Pencil, Send, Unlink } from "lucide-react";
+import { ArrowRight, Award, Check, CheckCircle2, Link2, Loader2, Pencil, Play, Send, Unlink } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { Link } from "@/i18n/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Skeleton } from "@/components/ui/feedback";
 import { Field, Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/app/page-header";
 import { useMe, useUpdateMe } from "@/hooks/use-me";
+import { useMyMockAttempts } from "@/hooks/use-mock";
 import {
   useTelegramLinkToken,
   useTelegramStatus,
@@ -21,6 +23,7 @@ import { ApiError } from "@/lib/api-client";
 import { formatPhone, isSafeHref } from "@/lib/utils";
 import { ExamTrackSelector } from './exam-track-selector';
 import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
+import { AttemptScoreSummary } from "@/components/mock/attempt-score-summary";
 
 export function ProfileView() {
   const t = useTranslations("profile");
@@ -28,6 +31,11 @@ export function ProfileView() {
   const tr = useTranslations("roles");
   const format = useFormatter();
   const { data: me, isLoading } = useMe();
+  const attemptsQ = useMyMockAttempts();
+  const attempts = React.useMemo(() => attemptsQ.data ?? [], [attemptsQ.data]);
+  const completedCount = React.useMemo(() => {
+    return attempts.filter((a) => a.status === "completed" || a.status === "grading").length;
+  }, [attempts]);
   const statusQ = useTelegramStatus();
   const linkToken = useTelegramLinkToken();
   const unlink = useUnlinkTelegram();
@@ -113,7 +121,126 @@ export function ProfileView() {
       {me.user.role === 'student' && (
         <>
           <ExamTrackSelector />
-          <ScorePredictionCard />
+          <ScorePredictionCard attempts={attempts} />
+
+          {/* Student Stats & Recent Mock Results */}
+          <Card className="rounded-[12px] border border-border bg-surface p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+              <div>
+                <h3 className="text-lg font-bold text-fg flex items-center gap-2">
+                  <Award className="size-5 text-brand" />
+                  {t("recentResults")}
+                </h3>
+                <p className="text-xs text-fg-muted mt-0.5">
+                  {t("completedTests")}: <strong className="font-semibold text-fg tabular-nums">{completedCount}</strong>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-brand/40 text-brand bg-brand-subtle font-semibold px-2.5 py-1">
+                  <CheckCircle2 className="size-3.5 mr-1" />
+                  {completedCount} {t("completedTests").toLowerCase()}
+                </Badge>
+                <Button asChild size="sm" variant="outline" className="text-xs h-8">
+                  <Link href="/mock">
+                    {t("browseExams")}
+                    <ArrowRight className="size-3.5 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {attemptsQ.isLoading ? (
+                <div className="space-y-2.5 py-2">
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </div>
+              ) : attempts.length === 0 ? (
+                <div className="text-center py-8">
+                  <Award className="mx-auto size-10 text-fg-muted/60 mb-2" />
+                  <p className="text-sm font-medium text-fg">{t("noResultsYet")}</p>
+                  <p className="text-xs text-fg-muted mt-1 max-w-sm mx-auto">
+                    Mock imtihonlarni topshiring va natijalaringiz hamda diagnostik tahlilingizni shu yerda kuzatib boring.
+                  </p>
+                  <Button asChild size="sm" className="mt-4 bg-brand hover:bg-brand/90 text-brand-fg">
+                    <Link href="/mock">
+                      <Play className="size-3.5 mr-1.5 fill-current" />
+                      {t("browseExams")}
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs text-fg-muted font-medium">
+                        <th className="pb-2.5 font-medium">Imtihon</th>
+                        <th className="pb-2.5 font-medium">Holat</th>
+                        <th className="pb-2.5 font-medium text-center">Natija</th>
+                        <th className="pb-2.5 font-medium text-right">Amal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {attempts.slice(0, 5).map((a) => (
+                        <tr key={a.id} className="group hover:bg-surface-hover/60 transition-colors">
+                          <td className="py-3 pr-3">
+                            <p className="font-semibold text-fg text-sm">{a.examTitle ?? "Mock Exam"}</p>
+                            <p className="text-xs text-fg-muted">
+                              {a.finishedAt || a.startedAt
+                                ? format.dateTime(new Date(a.finishedAt || a.startedAt), {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "—"}{" "}
+                              ·{" "}
+                              <span className="font-medium">
+                                {a.flowMode === "partial_practice" ? "Section Practice" : "Full Mock"}
+                              </span>
+                            </p>
+                          </td>
+                          <td className="py-3 pr-3 whitespace-nowrap">
+                            <Badge
+                              variant={
+                                a.status === "completed"
+                                  ? "success"
+                                  : a.status === "grading"
+                                  ? "warning"
+                                  : "neutral"
+                              }
+                              className="text-xs"
+                            >
+                              {a.status === "grading"
+                                ? "AI Tekshiruvda"
+                                : a.status === "completed"
+                                ? "Yakunlangan"
+                                : "Jarayonda"}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-3 text-center whitespace-nowrap">
+                            <AttemptScoreSummary attempt={a} />
+                          </td>
+                          <td className="py-3 pl-3 text-right whitespace-nowrap">
+                            <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
+                              <Link
+                                href={`/mock/attempt/${a.id}${
+                                  a.status !== "in_progress" ? "#assessment-feedback" : ""
+                                }`}
+                              >
+                                {a.status === "in_progress" ? t("continueExam") : t("details")}
+                              </Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </Card>
         </>
       )}
 
