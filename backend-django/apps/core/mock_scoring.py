@@ -26,11 +26,18 @@ def canonical_decision(value):
     return 'NOT_GIVEN' if token in ('NOT_GIVEN','NO_INFORMATION') else token
 
 
+# Record Mock 1 Part 4 used to offer "D  Room D"; keep attempts saved that way gradable.
+LEGACY_MAP_ANSWER = re.compile(r'([a-h]) room \1')
+
+
 def choice_index(value, options):
     normalized = strict_answer_text(value)
     for index, option in enumerate(options):
         if strict_answer_text(option)==normalized:
             return index
+    legacy=LEGACY_MAP_ANSWER.fullmatch(normalized)
+    if legacy:
+        normalized=legacy.group(1)
     if len(normalized)==1 and 'a'<=normalized<='z':
         index=ord(normalized)-ord('a')
         return index if index<len(options) else None
