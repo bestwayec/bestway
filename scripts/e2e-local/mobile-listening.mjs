@@ -168,6 +168,15 @@ await step("08-section-result-has-no-level", async () => {
   await page.setViewportSize(sizes[1].viewport);
   await page.goto(`${WEB}/en/mock/attempt/${attemptId}`, { waitUntil: "domcontentloaded" });
   await page.getByText(/Bo'lim mashqi/).first().waitFor({ timeout: 120000 });
+  // Result cards stack without overlapping on phones (a video suggested they did; it was compression).
+  for (const size of sizes) {
+    await page.setViewportSize(size.viewport);
+    await page.waitForTimeout(300);
+    const layout = await stackedWithoutOverlap(page);
+    if (layout.clashes.length) throw new Error(`overlapping result blocks at ${size.name}: ${layout.clashes.join("; ")}`);
+    if (layout.overflow > 1) throw new Error(`horizontal overflow ${layout.overflow}px at ${size.name}`);
+  }
+  await page.setViewportSize(sizes[1].viewport);
   const body = await page.innerText("body");
   for (const banned of ["Below B1", "Estimated Multilevel Result", "AI bahosi", "Sertifikatni"]) {
     if (body.includes(banned)) throw new Error(`result shows "${banned}"`);
@@ -176,6 +185,48 @@ await step("08-section-result-has-no-level", async () => {
   const head = (await pdf.body()).subarray(0, 5).toString();
   await page.screenshot({ path: join(OUT, "08-result-390.png"), fullPage: true });
   return `section result without level; report HTTP ${pdf.status()} ${head}`;
+});
+
+// A full mock handed in with no answers: final state at once (nothing queued for AI), a plain
+// "no answers" screen, no scores/level/certificate, and no overlapping cards on phones.
+async function stackedWithoutOverlap(page) {
+  return page.evaluate(() => {
+    const root = document.querySelector('[data-testid="empty-attempt"]')?.parentElement ?? document.querySelector(".mx-auto.max-w-3xl");
+    const kids = [...(root?.children ?? [])].filter((el) => el.getBoundingClientRect().height > 0);
+    const clashes = [];
+    for (let i = 1; i < kids.length; i++) {
+      const a = kids[i - 1].getBoundingClientRect(), b = kids[i].getBoundingClientRect();
+      if (b.top < a.bottom - 1) clashes.push(`${kids[i - 1].tagName}#${i - 1} overlaps #${i} by ${Math.round(a.bottom - b.top)}px`);
+    }
+    return { clashes, overflow: document.documentElement.scrollWidth - window.innerWidth, blocks: kids.length };
+  });
+}
+await step("09-empty-attempt-final-state-and-layout", async () => {
+  const start = await ctx.request.post(`${WEB}/api/backend/mock/exams/${EXAM}/start`, { data: { mode: "timed", retake: true, force: true } });
+  const sj = await start.json();
+  if (!start.ok()) throw new Error(`start HTTP ${start.status()} ${JSON.stringify(sj).slice(0, 200)}`);
+  const id = sj.data?.attemptId || sj.data?.id || sj.data?.attempt?.id;
+  const t0 = Date.now();
+  const sub = await ctx.request.post(`${WEB}/api/backend/mock/attempts/${id}/submit`, { data: { confirm: true } });
+  if (sub.status() >= 400) throw new Error(`submit HTTP ${sub.status()} ${(await sub.text()).slice(0, 200)}`);
+  const detail = (await (await ctx.request.get(`${WEB}/api/backend/mock/attempts/${id}`)).json()).data;
+  const seconds = (Date.now() - t0) / 1000;
+  if (detail.status !== "completed") throw new Error(`status is ${detail.status} after ${seconds.toFixed(1)}s`);
+  if (detail.cefrLevel != null || detail.overallScore != null) throw new Error(`empty attempt carries a level: ${detail.cefrLevel} / ${detail.overallScore}`);
+  const rows = [];
+  for (const size of sizes) {
+    await page.setViewportSize(size.viewport);
+    await page.goto(`${WEB}/en/mock/attempt/${id}`, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("empty-attempt").waitFor({ timeout: 120000 });
+    const body = await page.innerText("body");
+    for (const banned of ["AI bahosi", "tekshirilmoqda", "/75", "raw", "Sertifikat", "Certificate"]) if (body.includes(banned)) throw new Error(`empty result shows "${banned}" at ${size.name}`);
+    const layout = await stackedWithoutOverlap(page);
+    if (layout.clashes.length) throw new Error(`overlapping blocks at ${size.name}: ${layout.clashes.join("; ")}`);
+    if (layout.overflow > 1) throw new Error(`horizontal overflow ${layout.overflow}px at ${size.name}`);
+    await page.screenshot({ path: join(OUT, `09-empty-result-${size.name}.png`), fullPage: true });
+    rows.push(`${size.name}: ${layout.blocks} blocks, no overlap`);
+  }
+  return `completed ${seconds.toFixed(1)}s after submit, no level; ${rows.join("; ")}`;
 });
 
 await browser.close();

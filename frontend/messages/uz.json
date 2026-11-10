@@ -1076,7 +1076,12 @@
       "completed": "Yakunlangan"
     },
     "internalPracticeScore": "Baho",
-    "internalPracticeNotice": "Natijalar"
+    "internalPracticeNotice": "Natijalar",
+    "emptyAttempt": {
+      "title": "Javob topshirilmagan",
+      "body": "Bu urinishda birorta ham saqlangan javob yoki yozuv yo‘q, shuning uchun ball, daraja va sertifikat hisoblanmadi, AI yoki ustoz tekshiruviga hech narsa yuborilmadi.",
+      "retry": "Mock imtihonlarga qaytish"
+    }
   },
   "wizard": {
     "title": "Imtihon yaratish",

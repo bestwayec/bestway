@@ -22,6 +22,19 @@ def saved_result(attempt):
         scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
 
 
+def has_evidence(response, audio_key=None, rubric_scores=None) -> bool:
+    """Any student work at all: text, a recording, or uploaded handwriting pages."""
+    if audio_key or (response or '').strip():
+        return True
+    return bool(isinstance(rubric_scores, dict) and (rubric_scores.get('imageKeys') or rubric_scores.get('imageUrls')))
+
+
+def without_level(result):
+    """An attempt nobody answered carries raw zeros but no level, band or standard score."""
+    return dict(result, sectionBands=None, overallBand=None, cefrLevel=None,
+        **({'standardScores': None, 'overallScore': None} if 'standardScores' in result else {}))
+
+
 def assert_complete(attempt, sections, answers, now):
     """Graceful completion check: students can submit at any time, even with partial
     or 0 answers. Unanswered questions gracefully receive 0 score.
@@ -83,6 +96,9 @@ def submit(actor, attempt_id, skills=None, *, force=False):
             for q in group.get('questions', []):
                 qid = q['id']
                 if qid not in existing_q_ids:
+                    # A Writing/Speaking task nobody answered is a final 0, like an unanswered
+                    # question: nothing to send to the AI or a teacher, so it must not leave the
+                    # attempt waiting for a grade that can never come.
                     ans_obj = MockAnswer.objects.create(
                         id=str(uuid4()),
                         attempt_id=attempt.id,
@@ -90,11 +106,16 @@ def submit(actor, attempt_id, skills=None, *, force=False):
                         response='',
                         is_correct=False if auto else None,
                         score=0.0,
-                        is_graded=auto,
+                        is_graded=True,
                         updated_at=now,
                     )
                     rows.append(ans_obj)
-                    answers[qid] = dict(response='', audioKey=None, isGraded=auto, score=0.0, hasImages=False)
+                    answers[qid] = dict(response='', audioKey=None, isGraded=True, score=0.0, hasImages=False)
+                elif not auto and not answers[qid].get('isGraded') and not answers[qid].get('hasImages')                         and not has_evidence(answers[qid].get('response'), answers[qid].get('audioKey')):
+                    # An answer row exists but is blank (typed then deleted, autosaved empty).
+                    MockAnswer.objects.filter(attempt_id=attempt.id, question_id=qid).update(
+                        score=0.0, is_graded=True, updated_at=now)
+                    answers[qid] = dict(answers[qid], isGraded=True, score=0.0)
     if versioned and not force:
         assert_complete(attempt, sections, answers, now)
     if skills:
@@ -105,6 +126,9 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         versioned=versioned, full_test=attempt.flow_mode == 'full_test', tables=band_tables())
     if is_partial(attempt):
         result = scoring.partial_result(result)
+    scoped_ids = {q['id'] for section in sections for group in section.get('groups', []) for q in group.get('questions', [])}
+    if not any(has_evidence(a.response, a.audio_key, a.rubric_scores) for a in rows if a.question_id in scoped_ids):
+        result = without_level(result)
     for answer in rows:
         if answer.question_id in projections:
             projection = projections[answer.question_id]
