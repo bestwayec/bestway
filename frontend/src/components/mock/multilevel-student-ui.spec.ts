@@ -19,7 +19,6 @@ import {
   MultilevelTaskProgress,
   multilevelTaskName,
   studentStartMessage,
-  studentSaveMessage,
   studentSubmitMessage,
   studentSubmitNeedsReview,
   taskDuration,
@@ -117,9 +116,6 @@ describe("Multilevel student UX", () => {
   });
 
   it("makes autosave states and Multilevel raw/standardized results understandable", () => {
-    expect(studentSaveMessage("saving")).toBe("Saving…");
-    expect(studentSaveMessage("saved")).toBe("Saved");
-    expect(studentSaveMessage("error")).toBe("Save failed — Retry");
     const attempt = {
       specificationVersion: "UZBMB_MULTILEVEL_EN_2026_V1",
       sections: [{ id: "writing", skill: "writing", score: 13, max: 16, standardScore: 55, groups: [

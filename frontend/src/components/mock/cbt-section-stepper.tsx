@@ -5,6 +5,7 @@ import { Flag, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import type { ExamSimulatorMode, MockSection, MockSkill } from "@/lib/types";
 import { multilevelQuestionAnswered } from "@/lib/multilevel-completeness";
 
@@ -46,6 +47,7 @@ export function CbtSectionStepper({
   isLastSection = false,
   isFullTest = false,
 }: CbtSectionStepperProps) {
+  const t = useTranslations("mock.stepper");
   const safeGroups = groups || [];
   const [activePartIndex, setActivePartIndex] = React.useState(0);
   const [internalFlags, setInternalFlags] = React.useState<Set<string>>(new Set());
@@ -161,7 +163,7 @@ export function CbtSectionStepper({
     <div className="space-y-4">
       {/* 1. Part-by-Part Tabs Stepper */}
       {safeGroups.length > 1 && (
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md sm:flex-wrap" role="tablist" aria-label="Parts">
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md sm:flex-wrap" role="tablist" aria-label={t("partsLabel")}>
           {partStats.map((part, idx) => {
             const isActive = idx === activePartIndex;
             return (
@@ -224,7 +226,7 @@ export function CbtSectionStepper({
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-fg-muted">
                 <span className="font-semibold uppercase tracking-wider text-[11px] text-fg">
-                  {isDtm ? "DTM Savollar Palitrasi" : "Question Palette"} (
+                  {t("palette")} (
                   {
                     flattenedQuestions.filter((q) =>
                       multilevelQuestionAnswered(q, answers, audioSet)
@@ -235,15 +237,15 @@ export function CbtSectionStepper({
                 <div className="hidden sm:flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-emerald-600 " />
-                    {isDtm ? "Javob berilgan (Yashil)" : "Ishlangan"}
+                    {t("legendAnswered")}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-amber-400 " />
-                    {isDtm ? "Belgilangan (Sariq)" : "Review"}
+                    {t("legendFlagged")}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-slate-300 dark:bg-slate-700 border border-border" />
-                    {isDtm ? "Javobsiz (Kulrang)" : "Ishlanmagan"}
+                    {t("legendUnanswered")}
                   </span>
                 </div>
               </div>
@@ -252,7 +254,7 @@ export function CbtSectionStepper({
               <div
                 className="flex flex-nowrap gap-1.5 overflow-x-auto py-1 px-0.5 sm:flex-wrap sm:max-h-24 sm:overflow-x-visible sm:overflow-y-auto sm:pr-1"
                 role="group"
-                aria-label="Question palette"
+                aria-label={t("palette")}
               >
                 {flattenedQuestions.map((q) => {
                   const isAns = multilevelQuestionAnswered(q, answers, audioSet);
@@ -266,12 +268,12 @@ export function CbtSectionStepper({
                       type="button"
                       onClick={() => jumpToQuestion(q)}
                       aria-current={isCurrent ? "true" : undefined}
-                      aria-label={`Question ${q.label}, ${q.groupTitle}${
-                        isAns ? ", answered" : ", not answered"
-                      }${isFlag ? ", flagged" : ""}`}
-                      title={`Question ${q.label} (${q.groupTitle})${
-                        isAns ? " - Answered" : ""
-                      }${isFlag ? " - Flagged" : ""}`}
+                      aria-label={`${t("questionLabel", { label: q.label, part: q.groupTitle })}, ${
+                        isAns ? t("stateAnswered") : t("stateNotAnswered")
+                      }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
+                      title={`${t("questionLabel", { label: q.label, part: q.groupTitle })}${
+                        isAns ? ` - ${t("stateAnswered")}` : ""
+                      }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
                       className={cn(
                         "relative flex size-9 sm:size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all tabular-nums touch-manipulation",
                         isCurrent &&
@@ -324,7 +326,7 @@ export function CbtSectionStepper({
                 className="min-h-[40px] px-3.5 text-xs font-medium touch-manipulation"
               >
                 <ArrowLeft className="size-4 sm:mr-1.5" />
-                <span className="sr-only sm:not-sr-only">{isDtm ? "Oldingi qism" : "Previous Part"}</span>
+                <span className="sr-only sm:not-sr-only">{t("previousPart")}</span>
               </Button>
 
               {activeQuestionId && (
@@ -346,13 +348,7 @@ export function CbtSectionStepper({
                       currentFlagged && "fill-amber-400 text-amber-500"
                     )}
                   />
-                  <span className="sr-only sm:not-sr-only">{isDtm
-                    ? currentFlagged
-                      ? "Belgilangan (Flagged)"
-                      : "Belgilash (Flag)"
-                    : currentFlagged
-                    ? "Flagged for Review"
-                    : "Flag Question"}</span>
+                  <span className="sr-only sm:not-sr-only">{currentFlagged ? t("flagged") : t("flag")}</span>
                 </Button>
               )}
             </div>
@@ -365,7 +361,7 @@ export function CbtSectionStepper({
                   onClick={() => setActivePartIndex(activePartIndex + 1)}
                   className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand/90 touch-manipulation"
                 >
-                  {isDtm ? "Keyingi qism" : "Next Part"}
+                  {t("nextPart")}
                   <ArrowRight className="ml-1.5 size-4" />
                 </Button>
               ) : (
@@ -377,7 +373,7 @@ export function CbtSectionStepper({
                       onClick={onNextSection}
                       className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand/90 touch-manipulation"
                     >
-                      Next Section →
+                      {t("nextSection")} →
                     </Button>
                   ) : onSubmitSection ? (
                     <Button
@@ -386,7 +382,7 @@ export function CbtSectionStepper({
                       onClick={onSubmitSection}
                       className="min-h-[40px] bg-emerald-600 text-white px-4 text-xs font-semibold shadow hover:bg-emerald-700 touch-manipulation"
                     >
-                      Submit Section
+                      {t("submitSection")}
                     </Button>
                   ) : null}
                 </>

@@ -149,6 +149,18 @@ await step("05c-listening-player-plays-part-1", async () => {
   return `player: no native controls, volume only, Play locked during preview, element playing (${el.seconds.toFixed(1)}s, volume ${el.volume})`;
 });
 
+// A CEFR mock must not be labelled "DTM", and the exam chrome comes from the message catalogue.
+// (Uzbek strings are covered by the vitest specs: the unprefixed default-locale route loops under
+// `next dev` on this machine, so the browser check runs on /en.)
+await step("05d-exam-chrome-has-no-dtm-label", async () => {
+  await page.getByRole("tab", { name: /Part 1/ }).click();
+  await page.getByText(/Question palette/).first().waitFor({ timeout: 30000 });
+  const text = await page.innerText("body");
+  if (/DTM/i.test(text)) throw new Error("the page still says DTM");
+  for (const raw of ["mock.stepper.", "mock.runnerUx."]) if (text.includes(raw)) throw new Error(`missing translation key ${raw}`);
+  return "palette titled 'Question palette'; no DTM label, no raw translation keys";
+});
+
 await step("06-answer-persists-and-palette-marks-it", async () => {
   await page.getByRole("tab", { name: /Part 1/ }).click();
   const radio = page.locator('[role="radio"], input[type="radio"]').first();

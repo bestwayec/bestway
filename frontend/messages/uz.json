@@ -996,7 +996,14 @@
       "listeningLoading": "Audio yuklanmoqda…",
       "listeningPrepareError": "Ko‘zdan kechirishni boshlab bo‘lmadi. Qayta urinib ko‘ring.",
       "listeningPlayError": "Audioni yuklab yoki ijro etib bo‘lmadi. Qayta urinib ko‘ring.",
-      "listeningMediaError": "Audio ijro etilmadi. Nazoratchiga murojaat qiling."
+      "listeningMediaError": "Audio ijro etilmadi. Nazoratchiga murojaat qiling.",
+      "nextSection": "Keyingi bo‘lim",
+      "nextSectionDone": "Keyingi bo‘limga o‘tildi",
+      "saveSaved": "Saqlandi",
+      "saveSaving": "Saqlanmoqda…",
+      "saveError": "Saqlanmadi",
+      "saveRetry": "Qayta urinish",
+      "practiceBadge": "{skill} mashqi"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1090,7 +1097,25 @@
       "completed": "Yakunlangan"
     },
     "internalPracticeScore": "Baho",
-    "internalPracticeNotice": "Natijalar"
+    "internalPracticeNotice": "Natijalar",
+    "stepper": {
+      "partsLabel": "Qismlar",
+      "palette": "Savollar palitrasi",
+      "legendAnswered": "Javob berilgan",
+      "legendFlagged": "Belgilangan",
+      "legendUnanswered": "Javobsiz",
+      "questionLabel": "{label}-savol, {part}",
+      "stateAnswered": "javob berilgan",
+      "stateNotAnswered": "javobsiz",
+      "stateFlagged": "belgilangan",
+      "previousPart": "Oldingi qism",
+      "nextPart": "Keyingi qism",
+      "flag": "Savolni belgilash",
+      "flagged": "Belgilandi",
+      "nextSection": "Keyingi bo‘lim",
+      "submitSection": "Bo‘limni topshirish",
+      "scrollHint": "Yana savollarni ko‘rish uchun suring"
+    }
   },
   "wizard": {
     "title": "Imtihon yaratish",

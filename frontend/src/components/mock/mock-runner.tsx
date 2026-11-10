@@ -54,7 +54,7 @@ import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
 import { usedMatchingOptions } from '@/lib/objective-question';
-import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
+import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
@@ -142,6 +142,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const tm = useTranslations("errorPanel");
+  const tr = useTranslations("mock.runnerUx");
   const examQ = useMockExam(attempt.examId);
   const audioTimestampsQ = useAudioTimestamps(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
@@ -508,11 +509,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       if (currentSkill && nextSkill) {
         setTransitionModal({ completedSkill: currentSkill, nextSkill });
       }
-      toast.success("Next section");
+      toast.success(tr("nextSectionDone"));
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { submittingRef.current = false; }
-  }, [advanceMutateAsync, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
+  }, [advanceMutateAsync, tc, tr, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
 
   React.useEffect(() => {
     if (!deadline) return;
@@ -658,7 +659,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               {isSingleSection && targetSkill ? (
                 <div className="flex items-center gap-2">
                   <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
-                    {targetSkill} Practice
+                    {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
                   </span>
                   <p className="truncate font-semibold text-fg">{exam.title}</p>
                 </div>
@@ -676,7 +677,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
                 <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
-                  Next section
+                  {tr("nextSection")}
                 </Button>
               ) : null}
               <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand/90 text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
@@ -686,8 +687,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             </div>
           </div>
           {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
-            <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
-            {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
+            <span className={cn(saveState === "error" && "text-danger")}>{tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError" }[saveState])}</span>
+            {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>{tr("saveRetry")}</button>}
           </div>}
           <ResponseProgress answered={answered} total={total} />
         </div>
