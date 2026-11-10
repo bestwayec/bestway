@@ -121,6 +121,34 @@ await step("05-part4-map-loads-and-palette-maps-to-q20", async () => {
   return `map ${natural} via ${src}; palette 20 is current`;
 });
 
+// Audio on a phone-sized Chromium. Part 1 goes through the real exam player (server-granted preview,
+// then one granted play). Parts 1-4 files are decoded in step 09.
+// Headless Chromium has no speaker: this proves the file is served, decodes and is not silent,
+// and that the element really starts playing. It does NOT prove audible output on a device.
+await step("05c-listening-player-plays-part-1", async () => {
+  await page.getByRole("tab", { name: /Part 1/ }).click();
+  const player = page.locator('section[aria-label]').filter({ has: page.locator('audio') }).first();
+  await player.waitFor();
+  if ((await player.locator("audio[controls]").count()) !== 0) throw new Error("exam audio exposes native controls");
+  if ((await player.locator('input[type="range"]').count()) !== 1) throw new Error("exam audio must expose volume only");
+  await player.getByRole("button", { name: /Preview this part|Qismni ko/ }).click();
+  const playBtn = player.getByRole("button", { name: /Play audio|Audioni boshlash/ });
+  await playBtn.waitFor();
+  if (!(await playBtn.isDisabled())) throw new Error("Play is enabled during the preview window");
+  await page.waitForFunction((el) => !el.disabled, await playBtn.elementHandle(), { timeout: 40000, polling: 500 });
+  const audioLog = [];
+  page.on("response", (r) => { if (r.url().includes("/audio")) audioLog.push(`${r.status()} ${r.url().slice(-60)}`); });
+  page.on("console", (m) => { if (m.type() === "error") audioLog.push(`console: ${m.text().slice(0, 120)}`); });
+  await playBtn.click();
+  await page.waitForFunction(() => { const a = document.querySelector("audio"); return !!a && !a.paused && a.currentTime > 0.2; }, null, { timeout: 30000 }).catch(async (e) => {
+    const state = await page.evaluate(() => { const a = document.querySelector("audio"); return { paused: a?.paused, t: a?.currentTime, ended: a?.ended, err: a?.error?.message, log: undefined, src: a?.currentSrc?.slice(0, 40), ready: a?.readyState, ui: document.querySelector("section[aria-label]")?.innerText }; });
+    throw new Error(`audio element never started: ${JSON.stringify(state)} log=${JSON.stringify(audioLog)} (${e.message.split(String.fromCharCode(10))[0]})`);
+  });
+  const el = await page.evaluate(() => { const a = document.querySelector("audio"); return { seconds: a.duration, volume: a.volume, controls: a.controls }; });
+  await page.screenshot({ path: join(OUT, "05c-player-playing-390.png") });
+  return `player: no native controls, volume only, Play locked during preview, element playing (${el.seconds.toFixed(1)}s, volume ${el.volume})`;
+});
+
 await step("06-answer-persists-and-palette-marks-it", async () => {
   await page.getByRole("tab", { name: /Part 1/ }).click();
   const radio = page.locator('[role="radio"], input[type="radio"]').first();
@@ -176,6 +204,40 @@ await step("08-section-result-has-no-level", async () => {
   const head = (await pdf.body()).subarray(0, 5).toString();
   await page.screenshot({ path: join(OUT, "08-result-390.png"), fullPage: true });
   return `section result without level; report HTTP ${pdf.status()} ${head}`;
+});
+
+// Parts 1-4 media decode check (practice attempt: timed attempts only release a part after the previous
+// one expired). Not silent, decodable, served as audio.
+await step("09-audio-parts-1-4-decode", async () => {
+  const start = await ctx.request.post(`${WEB}/api/backend/mock/exams/${EXAM}/start`, { data: { mode: "practice", skills: ["listening"], retake: true, force: true } });
+  const sj = await start.json();
+  if (!start.ok()) throw new Error(`start HTTP ${start.status()} ${JSON.stringify(sj).slice(0, 200)}`);
+  const id = sj.data?.attemptId || sj.data?.id || sj.data?.attempt?.id;
+  const detail = await (await ctx.request.get(`${WEB}/api/backend/mock/attempts/${id}`)).json();
+  const listening = detail.data.sections.find((s) => s.skill === "listening");
+  const rows = [];
+  for (const [i, g] of listening.groups.slice(0, 4).entries()) {
+    const info = await page.evaluate(async (url) => {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) return { error: `HTTP ${res.status}` };
+      const buf = await res.arrayBuffer();
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ac = new Ctx();
+      try {
+        const audio = await ac.decodeAudioData(buf.slice(0));
+        const data = audio.getChannelData(0);
+        let sum = 0; for (let k = 0; k < data.length; k++) sum += data[k] * data[k];
+        return { type: res.headers.get("content-type"), bytes: buf.byteLength, seconds: audio.duration, rms: Math.sqrt(sum / data.length) };
+      } catch (e) { return { error: `decode failed: ${e.message}` }; }
+      finally { void ac.close(); }
+    }, `/api/backend/mock/groups/${g.id}/audio?attemptId=${id}`);
+    if (info.error) throw new Error(`Part ${i + 1}: ${info.error}`);
+    if (!/^audio\//.test(info.type || "")) throw new Error(`Part ${i + 1}: content-type ${info.type}`);
+    if (info.rms < 0.001) throw new Error(`Part ${i + 1}: audio is silent (rms ${info.rms})`);
+    rows.push(`P${i + 1} ${info.seconds.toFixed(1)}s ${(info.bytes / 1024).toFixed(0)}KB rms ${info.rms.toFixed(3)}`);
+    if (info.seconds < 60) console.log(`WARN Part ${i + 1} audio is only ${info.seconds.toFixed(1)}s long: placeholder-length media, not a real recording`);
+  }
+  return `decoded ${rows.join("; ")}`;
 });
 
 await browser.close();
