@@ -12,7 +12,10 @@ vi.mock('next-intl', () => ({
     return node[key] ?? key;
   },
 }));
-import { ExamLocker } from './exam-locker';
+import { ExamLocker, type ExamLockerProps } from './exam-locker';
+
+// createElement takes the children as arguments; the props type requires them, so view it without.
+const Locker = ExamLocker as React.FC<React.PropsWithChildren<Omit<ExamLockerProps, 'children'>>>;
 
 let host: HTMLDivElement;
 let root: Root;
@@ -20,7 +23,7 @@ let fullscreenElement: Element | null;
 const onAnomaly = vi.fn();
 const onForceSubmit = vi.fn();
 
-const mount = () => act(async () => root.render(React.createElement(ExamLocker, { active: true, attemptId: 'a1', onAnomaly, onForceSubmit, children: React.createElement('p', null, 'exam') })));
+const mount = () => act(async () => root.render(React.createElement(Locker, { active: true, attemptId: 'a1', onAnomaly, onForceSubmit }, React.createElement('p', null, 'exam'))));
 const guard = (paused: boolean) => act(async () => { window.dispatchEvent(new CustomEvent(FULLSCREEN_GUARD_EVENT, { detail: { paused } })); });
 const leaveFullscreen = () => act(async () => { fullscreenElement = null; document.dispatchEvent(new Event('fullscreenchange')); });
 const returnButtonShown = () => document.body.textContent?.includes('Imtihon faqat to') ?? false;
