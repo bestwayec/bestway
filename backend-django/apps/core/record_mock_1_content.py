@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import wave
 from pathlib import Path
 from uuid import uuid4
 
@@ -54,6 +55,32 @@ REQUIRED_MEDIA: tuple[tuple[str, str], ...] = (
 )
 
 
+MIN_REAL_LISTENING_SECONDS = 60
+DECLARED_LISTENING_PART_SECONDS = 360
+
+
+def wav_seconds(path: Path) -> float | None:
+    try:
+        with wave.open(str(path), "rb") as handle:
+            return handle.getnframes() / float(handle.getframerate())
+    except (wave.Error, EOFError, OSError, ZeroDivisionError):
+        return None
+
+
+def placeholder_audio(source_root: Path) -> list[tuple[str, float]]:
+    """Listening files far shorter than a real exam part (the declared length is 360 s).
+
+    Reported, never repaired: this command must not invent audio.
+    """
+    found = []
+    for src, _ in REQUIRED_MEDIA:
+        if src.endswith(".wav"):
+            seconds = wav_seconds(source_root / src)
+            if seconds is not None and seconds < MIN_REAL_LISTENING_SECONDS:
+                found.append((src, seconds))
+    return found
+
+
 def ensure_media_assets(stdout) -> dict[int, str]:
     """Copy the exam media from SEED_MEDIA_DIR into MEDIA_ROOT. Never synthesises files.
 
@@ -74,6 +101,13 @@ def ensure_media_assets(stdout) -> dict[int, str]:
         shutil.copyfile(src_path, dst_path)
         copied += 1
     stdout.write(f"Media verified from {source_root} into {media_root} ({copied} copied)")
+    short = placeholder_audio(source_root)
+    if short:
+        stdout.write(
+            "WARNING: listening audio looks like placeholder media, not the real recordings "
+            f"(declared {DECLARED_LISTENING_PART_SECONDS}s per part): "
+            + ", ".join(f"{name.rsplit('/', 1)[-1]}={seconds:.0f}s" for name, seconds in short)
+        )
     return {n: f"multilevel/assets/record_mock1_audio_part_{n}.wav" for n in range(1, 7)}
 
 
