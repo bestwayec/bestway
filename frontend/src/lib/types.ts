@@ -1205,6 +1205,7 @@ export interface ScorePredictionResponse {
   weakModules: ScorePredictionWeakModule[];
   trend: "improving" | "stable" | "declining" | "insufficient_data";
   attemptsAnalyzed: number;
+  sectionAttemptsAnalyzed?: number;
 }
 
 export interface LiveExamRoom {

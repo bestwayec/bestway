@@ -302,6 +302,12 @@
     "linkTelegram": "Link Telegram",
     "unlinkTelegram": "Unlink",
     "telegramHint": "Notifications will also arrive in Telegram",
+    "completedTests": "Completed tests",
+    "recentResults": "Recent mock results",
+    "noResultsYet": "No mock attempts yet",
+    "browseExams": "Browse exams",
+    "details": "Details",
+    "continueExam": "Continue",
     "weak_points_map": "Weak Points Map (By Question Types)",
     "weak_points_benchmark": "Diagnostic Benchmark (4 core question types)",
     "weak_points_sub": "Most frequent error modules and question categories",
@@ -1133,8 +1139,8 @@
     "partOfQuestions": "Part {a} of {b} questions"
   },
   "marketing": {
-    "heroTitle": "The Most Effective Preparation for IELTS and Multi-Level Exams",
-    "heroSubtitle": "Achieve your target score through official computer format, unbiased AI evaluation, and detailed analytics.",
+    "heroTitle": "DO YOUR BEST FORGET THE REST !",
+    "heroSubtitle": "IELTS va Multi-Level (CEFR) imtihonlariga rasmiy kompyuter formati, aniq AI diagnostikasi va individual tahlillar bilan tayyorlaning.",
     "heroBadge": "Shofirkon, Bukhara · since 2007",
     "navCourses": "Courses",
     "navTeachers": "Teachers",

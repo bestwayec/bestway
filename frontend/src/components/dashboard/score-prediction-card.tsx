@@ -25,12 +25,13 @@ import { Link } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/feedback";
 import {
+  useMyMockAttempts,
   useStudentScorePrediction,
   useUpdatePredictionTarget,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import type { ScorePredictionResponse } from "@/lib/types";
+import type { MockAttemptSummary, ScorePredictionResponse } from "@/lib/types";
 import { MULTILEVEL_CEFR_BANDS, multilevelBandFor } from "@/lib/multilevel-scale";
 
 const DEFAULT_MULTILEVEL_BANDS = MULTILEVEL_CEFR_BANDS.map(({ level, min, max }) => ({ level, min, max }));
@@ -56,13 +57,16 @@ export function ScorePredictionCard({
   studentId,
   readOnlyTarget = false,
   className,
+  attempts: propAttempts,
 }: {
   studentId?: string;
   readOnlyTarget?: boolean;
   className?: string;
+  attempts?: MockAttemptSummary[];
 }) {
   const tp = useTranslations("profile");
   const predQ = useStudentScorePrediction(studentId, true);
+  const myAttemptsQ = useMyMockAttempts();
   const updateTarget = useUpdatePredictionTarget();
 
   const [scaleTab, setScaleTab] = React.useState<"both" | "ielts" | "multilevel">("both");
@@ -73,11 +77,53 @@ export function ScorePredictionCard({
   const [activeDrill, setActiveDrill] = React.useState<{ module: string; categoryId: string } | null>(null);
 
   const ti = useTranslations("insights");
-  // Never substitute demo numbers: without a real response the card shows loading or an error.
   const data = predQ.data;
-  const ielts = data?.ielts ?? EMPTY_PREDICTION.ielts;
-  const multilevel = data?.multilevel ?? EMPTY_PREDICTION.multilevel;
-  const hasEvidence = (data?.attemptsAnalyzed ?? 0) > 0;
+
+  const effectiveAttempts = propAttempts ?? (!studentId ? myAttemptsQ.data : undefined);
+  const completedAttemptsCount = React.useMemo(() => {
+    if (!effectiveAttempts) return 0;
+    return effectiveAttempts.filter((a) => a.status === "completed" || a.status === "grading").length;
+  }, [effectiveAttempts]);
+
+  const latestScored = React.useMemo(() => {
+    return effectiveAttempts?.find(
+      (a) => a.overallBand != null || a.overallScore != null || a.cefrLevel != null
+    );
+  }, [effectiveAttempts]);
+
+  const evidenceCount =
+    (data?.attemptsAnalyzed ?? 0) ||
+    (data?.sectionAttemptsAnalyzed ?? 0) ||
+    completedAttemptsCount;
+  const hasEvidence =
+    evidenceCount > 0 || (data?.history && data.history.length > 0);
+
+  const ielts = React.useMemo(() => {
+    const base = data?.ielts ?? EMPTY_PREDICTION.ielts;
+    if (base.currentBand == null && latestScored?.overallBand != null) {
+      return {
+        ...base,
+        currentBand: latestScored.overallBand,
+        predictedBand: base.predictedBand ?? latestScored.overallBand,
+        cefrLevel: base.cefrLevel ?? latestScored.cefrLevel ?? null,
+      };
+    }
+    return base;
+  }, [data?.ielts, latestScored]);
+
+  const multilevel = React.useMemo(() => {
+    const base = data?.multilevel ?? EMPTY_PREDICTION.multilevel;
+    if (base.currentScore == null && latestScored?.overallScore != null) {
+      return {
+        ...base,
+        currentScore: latestScored.overallScore,
+        predictedScore: base.predictedScore ?? latestScored.overallScore,
+        cefrLevel: base.cefrLevel ?? latestScored.cefrLevel ?? null,
+      };
+    }
+    return base;
+  }, [data?.multilevel, latestScored]);
+
   const fmtBand = (v: number | null | undefined) => (hasEvidence && v != null ? Number(v).toFixed(1) : "—");
   const fmtScore = (v: number | null | undefined) => (hasEvidence && v != null ? String(Math.round(v)) : "—");
   const scaleBands =
@@ -153,7 +199,7 @@ export function ScorePredictionCard({
     ) : (
       <Badge variant="neutral" className="gap-1">
         <Sparkles className="size-3.5" />
-        {ti("attemptsAnalyzed", { count: data.attemptsAnalyzed })}
+        {ti("attemptsAnalyzed", { count: evidenceCount })}
       </Badge>
     );
 
@@ -194,7 +240,7 @@ export function ScorePredictionCard({
                 {ti("cardTitle")}
               </CardTitle>
               <p className="text-xs text-slate-400">
-                {ti("cardSubtitle", { count: data.attemptsAnalyzed || 0 })}
+                {ti("cardSubtitle", { count: evidenceCount })}
               </p>
             </div>
           </div>
