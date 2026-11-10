@@ -121,6 +121,36 @@ await step("05-part4-map-loads-and-palette-maps-to-q20", async () => {
   return `map ${natural} via ${src}; palette 20 is current`;
 });
 
+// Q19-23: the printed plan carries A-H, the answer buttons are the same bare letters,
+// and nothing else (no prose plan) competes with the picture.
+for (const size of sizes) {
+  await step(`05b-part4-map-letters-${size.name}`, async () => {
+    await page.setViewportSize(size.viewport);
+    await page.getByRole("tab", { name: /Part 4/ }).click();
+    const img = page.locator('[data-testid="exam-group-image"]').first();
+    await img.waitFor();
+    await page.waitForFunction((el) => el.complete && el.naturalWidth > 0, await img.elementHandle(), { timeout: 60000 });
+    await img.scrollIntoViewIfNeeded();
+    const m = await img.evaluate((el) => ({ nw: el.naturalWidth, cw: el.getBoundingClientRect().width }));
+    if (m.nw < 1000) throw new Error(`map image is only ${m.nw}px wide; letters would blur on phones`);
+    // The big room letters are ~8% of the image height; they must stay >= 12 CSS px tall.
+    const letterPx = (m.cw / m.nw) * 55;
+    if (letterPx < 12) throw new Error(`map letters render ${letterPx.toFixed(1)}px tall at ${size.name}`);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    if (overflow > 1) throw new Error(`horizontal page overflow ${overflow}px`);
+    for (const n of [19, 20, 21, 22, 23]) {
+      const q = page.locator(`#q-mock-record-01-ql${n}`);
+      const letters = await q.locator("button[aria-pressed]").allInnerTexts();
+      if (letters.join("") !== "ABCDEFGH") throw new Error(`Q${n} options are "${letters.join("|")}"`);
+    }
+    const body = await page.innerText("body");
+    if (/Room [A-H]\b/.test(body)) throw new Error('answer options still read "Room X"');
+    await page.screenshot({ path: join(OUT, `05b-part4-map-${size.name}.png`) });
+    return `map ${m.nw}px wide shown at ${Math.round(m.cw)}px (letters ~${letterPx.toFixed(0)}px), Q19–23 offer A–H`;
+  });
+}
+await page.setViewportSize(sizes[1].viewport);
+
 await step("06-answer-persists-and-palette-marks-it", async () => {
   await page.getByRole("tab", { name: /Part 1/ }).click();
   const radio = page.locator('[role="radio"], input[type="radio"]').first();

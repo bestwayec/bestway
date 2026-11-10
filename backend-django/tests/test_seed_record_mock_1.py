@@ -102,7 +102,12 @@ class SeedRecordMock1TestCase(TestCase):
         # Verify Listening Part 4 keys (map labeling)
         q19 = MockQuestion.objects.get(id="mock-record-01-ql19")
         self.assertEqual(q19.correct_answers, ["D"])
-        self.assertEqual(len(q19.options), 8)
+        self.assertEqual(q19.options, list("ABCDEFGH"))
+        self.assertFalse((l_groups[3].passage_text or "").strip(), "map group must not carry a prose plan that contradicts the image")
+        self.assertEqual(
+            {n: MockQuestion.objects.get(id=f"mock-record-01-ql{n}").correct_answers for n in range(19, 24)},
+            {19: ["D"], 20: ["C"], 21: ["A"], 22: ["E"], 23: ["H"]},
+        )
         self.assertIn(l_groups[3].image_key, ["exams/mock1/listening_part4_map.png", "exams/record_mock_1/map.png"])
 
         # Verify Listening Part 5 keys (MCQ)
