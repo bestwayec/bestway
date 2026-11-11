@@ -17,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,8 +48,10 @@ export interface StudentProgressRow {
     string,
     {
       submitted: boolean;
-      score_percent: number;
+      /** null while waiting for an exam result or the teacher's grade */
+      score_percent: number | null;
       is_passed: boolean;
+      status?: "graded" | "awaiting_result" | "awaiting_review";
       completed_at?: string;
     }
   >;
@@ -70,12 +73,56 @@ interface CohortProgressTableProps {
   data: CohortDetailData;
   isLoading?: boolean;
   onOpenCreateAssignment: () => void;
+  /** Called after the teacher saves a grade, to reload the matrix. */
+  onGraded?: () => void;
+}
+
+/** The only place a non-exam homework gets its score: the teacher enters it. */
+function GradeCell({ assignmentId, studentId, onGraded }: { assignmentId: string; studentId: string; onGraded?: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+        className="min-h-8 rounded-md border border-brand/40 px-2 text-[11px] font-semibold text-brand hover:bg-brand-subtle">
+        Baholang
+      </button>
+    );
+  }
+  const score = Number(value);
+  const valid = value.trim() !== "" && Number.isInteger(score) && score >= 0 && score <= 100;
+  const save = async () => {
+    setSaving(true);
+    try {
+      await apiClient.post(`/teacher/assignments/${assignmentId}/grade`, { student_id: studentId, score_percent: score });
+      toast.success("Baho saqlandi");
+      setOpen(false);
+      onGraded?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bahoni saqlab bo'lmadi");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <input type="number" min={0} max={100} inputMode="numeric" aria-label="Baho, foizda (0–100)" value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="h-8 w-14 rounded-md border border-border bg-surface px-1 text-center text-xs text-fg" />
+      <button type="button" disabled={!valid || saving} onClick={() => void save()}
+        className="min-h-8 rounded-md bg-brand px-2 text-[11px] font-semibold text-brand-fg disabled:opacity-50">
+        {saving ? "…" : "Saqlash"}
+      </button>
+    </div>
+  );
 }
 
 export function CohortProgressTable({
   data,
   isLoading,
   onOpenCreateAssignment,
+  onGraded,
 }: CohortProgressTableProps) {
   const [copied, setCopied] = React.useState(false);
 
@@ -276,6 +323,24 @@ export function CohortProgressTable({
                             <td key={a.id} className="py-3 px-2 text-center">
                               <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-mono font-semibold px-2 py-0.5">
                                 {sub.score_percent}% ✓
+                              </Badge>
+                            </td>
+                          );
+                        }
+
+                        if (sub && sub.status === "awaiting_review") {
+                          return (
+                            <td key={a.id} className="py-3 px-2 text-center">
+                              <GradeCell assignmentId={a.id} studentId={student.student_id} onGraded={onGraded} />
+                            </td>
+                          );
+                        }
+
+                        if (sub && sub.status === "awaiting_result") {
+                          return (
+                            <td key={a.id} className="py-3 px-2 text-center">
+                              <Badge className="border border-border bg-surface text-fg-muted text-[11px] font-semibold px-2 py-0.5">
+                                Kutilmoqda
                               </Badge>
                             </td>
                           );

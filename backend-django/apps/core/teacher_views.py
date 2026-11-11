@@ -166,18 +166,24 @@ def cohort_analytics_view(request, cohort_id: str):
         total_score = 0
         passed_count = 0
 
+        graded_count = 0
         for s in subs:
+            graded = s.status == "graded"
             subs_map[str(s.assignment_id)] = {
                 "submitted": True,
-                "score_percent": s.score_percent,
+                "score_percent": s.score_percent if graded else None,
                 "is_passed": s.is_passed,
+                "status": s.status,
+                "source": s.source,
                 "completed_at": s.completed_at.isoformat() if s.completed_at else "",
             }
-            total_score += s.score_percent
+            if graded:
+                total_score += s.score_percent
+                graded_count += 1
             if s.is_passed:
                 passed_count += 1
 
-        total_subs = len(subs_map)
+        total_subs = graded_count
         avg_score = round(total_score / total_subs) if total_subs > 0 else 0
 
         # Also get completed video lessons count for student
@@ -338,6 +344,13 @@ def student_my_assignments_view(request):
         str(s.assignment_id): s
         for s in HomeworkSubmission.objects.filter(student_id=request.user.id)
     }
+    from . import homework_scoring as scoring
+    for a in assignments_qs:
+        sub = submissions.get(str(a.id))
+        if a.exam_id and (sub is None or sub.status != scoring.GRADED or sub.source == "exam_attempt"):
+            synced = scoring.sync_from_exam(a, request.user.id)
+            if synced is not None:
+                submissions[str(a.id)] = synced
 
     now = timezone.now()
     results = []
@@ -345,12 +358,15 @@ def student_my_assignments_view(request):
     for a in assignments_qs:
         sub = submissions.get(str(a.id))
         is_submitted = sub is not None
-        score_percent = sub.score_percent if sub else 0
-        is_passed = sub.is_passed if sub else False
+        graded = bool(sub and sub.status == scoring.GRADED)
+        score_percent = sub.score_percent if graded else None
+        is_passed = sub.is_passed if graded else False
         is_overdue = not is_submitted and a.deadline < now
 
         if is_passed:
             status_str = "passed"
+        elif is_submitted and not graded:
+            status_str = sub.status
         elif is_submitted:
             status_str = "failed"
         elif is_overdue:
@@ -404,30 +420,39 @@ def student_submit_assignment_view(request, assignment_id: str):
     if not is_member:
         raise ContractAPIException("FORBIDDEN", "Siz ushbu guruhga a'zo emassiz", 403)
 
-    data = request.data or {}
-    score = data.get("score_percent", 100)
+    # The client never supplies a score (an empty POST used to record 100% passed).
+    from . import homework_scoring as scoring
+    if assignment.exam_id:
+        sub = scoring.sync_from_exam(assignment, request.user.id)
+        if sub is None:
+            raise ContractAPIException(
+                "HOMEWORK_ATTEMPT_REQUIRED",
+                "Avval biriktirilgan imtihonni topshiring — natija avtomatik olinadi", 400)
+    else:
+        sub = scoring.submit_for_review(assignment, request.user.id)
+    return success(scoring.payload(sub))
+
+
+@api_view(["POST"])
+def teacher_grade_assignment_view(request, assignment_id: str):
+    """
+    POST /api/v1/teacher/assignments/<id>/grade  {student_id, score_percent}
+    The only way a non-exam homework (or an attempt without an objective result) gets a score.
+    """
+    require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
     try:
-        score = int(score)
-    except (ValueError, TypeError):
-        score = 0
-
-    is_passed = score >= assignment.min_pass_percent
-
-    sub, created = HomeworkSubmission.objects.update_or_create(
-        assignment=assignment,
-        student_id=request.user.id,
-        defaults={
-            "score_percent": score,
-            "is_passed": is_passed,
-            "completed_at": timezone.now(),
-        },
-    )
-
-    return success({
-        "id": sub.id,
-        "assignment_id": assignment.id,
-        "student_id": str(request.user.id),
-        "score_percent": sub.score_percent,
-        "is_passed": sub.is_passed,
-        "completed_at": sub.completed_at.isoformat(),
-    })
+        assignment = HomeworkAssignment.objects.select_related("cohort").get(id=assignment_id)
+    except HomeworkAssignment.DoesNotExist:
+        raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
+    if getattr(request.user, "role", "") in ("teacher", "instructor") and str(assignment.cohort.teacher_id) != str(request.user.id):
+        raise ContractAPIException("FORBIDDEN", "Bu guruh sizga tegishli emas", 403)
+    data = request.data or {}
+    student_id = str(data.get("student_id") or "").strip()
+    score = data.get("score_percent")
+    if not student_id or isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
+        raise ContractAPIException("VALIDATION_ERROR", "student_id va 0–100 oralig'idagi butun score_percent kerak", 400)
+    if not CohortMembership.objects.filter(cohort=assignment.cohort, student_id=student_id, status="active").exists():
+        raise ContractAPIException("STUDENT_NOT_IN_COHORT", "O'quvchi bu guruhda emas", 400)
+    from . import homework_scoring as scoring
+    return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))
