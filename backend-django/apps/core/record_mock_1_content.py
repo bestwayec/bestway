@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import filecmp
 from pathlib import Path
 from uuid import uuid4
 
@@ -65,10 +66,17 @@ def ensure_media_assets(stdout) -> dict[int, str]:
     missing = [src for src, _ in REQUIRED_MEDIA if not (source_root / src).is_file()]
     if missing:
         raise SeedMediaMissing(f"SEED_MEDIA_DIR={source_root} is missing: " + ", ".join(missing))
+    # Compare contents, not sizes, before copying anything. Existing assets may be
+    # authored recordings that must never be replaced by the repository fixtures.
+    conflicts = [dst for src, dst in REQUIRED_MEDIA
+                 if (media_root / dst).exists() and
+                 (not (media_root / dst).is_file() or not filecmp.cmp(source_root / src, media_root / dst, shallow=False))]
+    if conflicts:
+        raise SeedMediaMissing("Existing media differs; refusing to overwrite: " + ", ".join(conflicts))
     copied = 0
     for src, dst_key in REQUIRED_MEDIA:
         src_path, dst_path = source_root / src, media_root / dst_key
-        if dst_path.is_file() and dst_path.stat().st_size == src_path.stat().st_size:
+        if dst_path.is_file():
             continue
         dst_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src_path, dst_path)
