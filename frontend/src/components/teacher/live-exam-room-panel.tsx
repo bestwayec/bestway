@@ -409,7 +409,7 @@ export function LiveExamRoomPanel({
                     onClick={() => void handleCopyPin(currentRoom.pin)}
                     className="h-8 text-xs justify-start"
                   >
-                    {copiedPin ? <Check className="size-3.5 mr-1.5 text-emerald-400" /> : <Copy className="size-3.5 mr-1.5" />}
+                    {copiedPin ? <Check className="size-3.5 mr-1.5 text-brand" /> : <Copy className="size-3.5 mr-1.5" />}
                     PIN nusxalash
                   </Button>
                   <Button
@@ -419,7 +419,7 @@ export function LiveExamRoomPanel({
                     onClick={() => void handleCopyInviteLink(currentRoom.pin)}
                     className="h-8 text-xs justify-start"
                   >
-                    {copiedLink ? <Check className="size-3.5 mr-1.5 text-emerald-400" /> : <Monitor className="size-3.5 mr-1.5" />}
+                    {copiedLink ? <Check className="size-3.5 mr-1.5 text-brand" /> : <Monitor className="size-3.5 mr-1.5" />}
                     Havolani nusxalash
                   </Button>
                 </div>
@@ -452,7 +452,7 @@ export function LiveExamRoomPanel({
                   size="sm"
                   loading={downloadingExcel}
                   onClick={() => void handleDownloadExcel(currentRoom.id, currentRoom.pin)}
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="bg-brand text-brand-fg hover:bg-brand-hover"
                 >
                   <Download className="size-4 mr-1.5" />
                   Excel (.xlsx) Natijalarni Yuklab olish
@@ -531,19 +531,19 @@ export function LiveExamRoomPanel({
 
                           <td className="px-3.5 py-3 min-w-[180px]">
                             <div className="flex items-center justify-between text-[11px] mb-1">
-                              <span className="font-semibold text-emerald-400">
+                              <span className="font-semibold text-brand">
                                 {p.answeredCount || 0} / {totalQ} ishlangan ({pct}%)
                               </span>
                               {(p.flaggedCount ?? 0) > 0 && (
-                                <span className="inline-flex items-center gap-0.5 font-semibold text-amber-400">
-                                  <Flag className="size-3 fill-amber-400" />
+                                <span className="inline-flex items-center gap-0.5 font-semibold text-warning">
+                                  <Flag className="size-3 fill-warning" />
                                   {p.flaggedCount}
                                 </span>
                               )}
                             </div>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-bg-subtle">
                               <div
-                                className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                                className="h-full rounded-full bg-brand transition-all duration-300"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -551,12 +551,12 @@ export function LiveExamRoomPanel({
 
                           <td className="px-3.5 py-3">
                             {(p.antiCheatCount ?? 0) > 0 ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2.5 py-1 text-[11px] font-bold text-rose-400">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-bold text-danger">
                                 <ShieldAlert className="size-3.5" />
                                 {p.antiCheatCount} ogohlantirish
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand">
                                 <ShieldCheck className="size-3.5" />
                                 Toza
                               </span>

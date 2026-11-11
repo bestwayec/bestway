@@ -36,7 +36,7 @@ export function MobileWelcomeScreen({ locale }: { locale: string }) {
       {/* Top Bar with Language Switcher */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-emerald-400 font-bold text-bg shadow-[0_0_20px_rgba(16,185,129,0.35)]">
+          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand font-bold text-bg shadow-[0_0_20px_rgba(16,185,129,0.35)]">
             BW
           </div>
           <span className="text-base font-bold tracking-tight text-fg">BestWay CBT</span>

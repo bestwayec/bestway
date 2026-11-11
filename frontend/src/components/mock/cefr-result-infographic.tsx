@@ -75,8 +75,8 @@ export function getCefrMeta(level?: string | null) {
   }
   return {
     label: norm ? `${norm} — Basic User` : "A2 / Below B1",
-    color: "from-slate-600 to-zinc-500",
-    badge: "border-zinc-500/40 bg-zinc-500/15 text-zinc-400",
+    color: "from-fg-subtle to-fg-subtle",
+    badge: "border-border-strong/40 bg-fg-subtle/15 text-fg-muted",
     bandMin: MULTILEVEL_CEFR_BANDS[0].min,
     bandMax: MULTILEVEL_CEFR_BANDS[0].max,
     desc: "Can understand basic sentences and frequently used expressions related to immediate areas.",
@@ -169,7 +169,7 @@ export function CefrResultInfographic({
             {MULTILEVEL_CEFR_BANDS.map((band, index) => (
               <div
                 key={band.level}
-                className={["absolute inset-y-0 bg-zinc-500/20", "absolute inset-y-0 bg-amber-500/20", "absolute inset-y-0 bg-sky-500/20", "absolute inset-y-0 bg-emerald-500/20"][index]}
+                className={["absolute inset-y-0 bg-fg-subtle/20", "absolute inset-y-0 bg-amber-500/20", "absolute inset-y-0 bg-sky-500/20", "absolute inset-y-0 bg-emerald-500/20"][index]}
                 style={{ left: `${(band.min / 75) * 100}%`, width: `${((band.max - band.min + (index === 3 ? 0 : 1)) / 75) * 100}%` }}
                 title={band.level}
               />

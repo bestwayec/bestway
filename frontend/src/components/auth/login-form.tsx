@@ -241,8 +241,8 @@ export function LoginForm() {
   if (isTelegramLoggingIn) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <Loader2 className="size-8 animate-spin text-emerald-400" />
-        <p className="text-sm font-medium text-slate-200">{t("telegramLoggingIn")}</p>
+        <Loader2 className="size-8 animate-spin text-brand" />
+        <p className="text-sm font-medium text-fg">{t("telegramLoggingIn")}</p>
       </div>
     );
   }
@@ -250,7 +250,7 @@ export function LoginForm() {
   return (
     <div className="space-y-5">
       {/* Switcher: Password vs Telegram OTP */}
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-950/60 p-1 border border-slate-800/80">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-bg/60 p-1 border border-border/80">
         <button
           type="button"
           onClick={() => {
@@ -260,8 +260,8 @@ export function LoginForm() {
           className={cn(
             "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
             loginMethod === "password"
-              ? "bg-emerald-600 text-white shadow-md"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
+              ? "bg-brand text-brand-fg shadow-md"
+              : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
           )}
         >
           <Smartphone className="size-3.5" />
@@ -276,8 +276,8 @@ export function LoginForm() {
           className={cn(
             "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
             loginMethod === "otp"
-              ? "bg-emerald-600 text-white shadow-md"
-              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
+              ? "bg-brand text-brand-fg shadow-md"
+              : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
           )}
         >
           <KeyRound className="size-3.5" />
@@ -286,7 +286,7 @@ export function LoginForm() {
       </div>
 
       {params?.get("logout_unconfirmed") === "1" && (
-        <div role="alert" className="rounded-xl border border-amber-700/60 bg-amber-950/40 px-3.5 py-3 text-sm text-amber-200">
+        <div role="alert" className="rounded-xl border border-warning/60 bg-warning-bg/40 px-3.5 py-3 text-sm text-warning">
           {t("logoutUnconfirmed")}
         </div>
       )}
@@ -294,7 +294,7 @@ export function LoginForm() {
       {serverError && (
         <div
           role="alert"
-          className="rounded-xl border border-red-800/60 bg-red-950/40 px-3.5 py-3 text-sm text-red-300"
+          className="rounded-xl border border-danger-border/60 bg-danger-bg/40 px-3.5 py-3 text-sm text-danger"
         >
           {serverError}
         </div>
@@ -309,7 +309,7 @@ export function LoginForm() {
               autoComplete="username"
               placeholder={t("phonePlaceholder")}
               aria-invalid={!!errors.phone}
-              className="bg-slate-950/60 border-slate-700/60 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white placeholder-slate-500 rounded-xl transition-all"
+              className="bg-bg/60 border-border-strong/60 focus:border-brand focus:ring-1 focus:ring-brand text-fg placeholder-fg-subtle rounded-xl transition-all"
               {...register("phone")}
             />
           </Field>
@@ -322,13 +322,13 @@ export function LoginForm() {
                 autoComplete="current-password"
                 placeholder={t("passwordPlaceholder")}
                 aria-invalid={!!errors.password}
-                className="pr-10 bg-slate-950/60 border-slate-700/60 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-white placeholder-slate-500 rounded-xl transition-all"
+                className="pr-10 bg-bg/60 border-border-strong/60 focus:border-brand focus:ring-1 focus:ring-brand text-fg placeholder-fg-subtle rounded-xl transition-all"
                 {...register("password")}
               />
               <button
                 type="button"
                 onClick={() => setShowPass((v) => !v)}
-                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-200"
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-fg-muted hover:text-fg"
                 aria-label={showPass ? "Hide password" : "Show password"}
                 title={showPass ? "Hide password" : "Show password"}
                 tabIndex={-1}
@@ -341,7 +341,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/30 transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
@@ -357,8 +357,8 @@ export function LoginForm() {
         /* Telegram 6-Digit OTP Form */
         <form onSubmit={handleOtpSubmit} className="space-y-4" noValidate>
           <div className="text-center space-y-1">
-            <h3 className="text-sm font-semibold text-slate-200">{t("telegramOtpTitle")}</h3>
-            <p className="text-xs text-slate-400">{t("telegramOtpHint")}</p>
+            <h3 className="text-sm font-semibold text-fg">{t("telegramOtpTitle")}</h3>
+            <p className="text-xs text-fg-muted">{t("telegramOtpHint")}</p>
           </div>
 
           {/* 6-Digit SMS-style inputs */}
@@ -386,7 +386,7 @@ export function LoginForm() {
                     otpInputsRef.current[Math.min(pasted.length, 5)]?.focus();
                   }
                 }}
-                className="size-11 sm:size-12 rounded-xl border border-slate-700/60 bg-slate-950/60 text-center text-xl sm:text-2xl font-bold text-white shadow-inner focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none transition-all"
+                className="size-11 sm:size-12 rounded-xl border border-border-strong/60 bg-bg/60 text-center text-xl sm:text-2xl font-bold text-fg shadow-inner focus:border-brand focus:ring-2 focus:ring-brand/30 focus:outline-none transition-all"
                 autoFocus={idx === 0}
               />
             ))}
@@ -395,7 +395,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isVerifyingOtp || otpDigits.join("").length !== 6}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/30 transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
           >
             {isVerifyingOtp ? (
               <>
@@ -424,9 +424,9 @@ export function LoginForm() {
 
       <div className="relative my-4 flex items-center justify-center">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-800" />
+          <div className="w-full border-t border-border" />
         </div>
-        <div className="relative bg-slate-900 px-3 text-xs uppercase text-slate-400">
+        <div className="relative bg-surface px-3 text-xs uppercase text-fg-muted">
           {t("or")}
         </div>
       </div>
@@ -441,7 +441,7 @@ export function LoginForm() {
         <button
           type="button"
           onClick={handleTelegramLogin}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-700/80 bg-slate-950/50 px-4 py-2.5 text-sm font-semibold text-slate-200 shadow-sm transition hover:bg-slate-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border-strong/80 bg-bg/50 px-4 py-2.5 text-sm font-semibold text-fg shadow-sm transition hover:bg-surface-hover/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <svg className="size-5 fill-[#229ED9]" viewBox="0 0 24 24">
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
@@ -450,9 +450,9 @@ export function LoginForm() {
         </button>
       </div>
 
-      <p className="text-center text-sm text-slate-400 pt-2">
+      <p className="text-center text-sm text-fg-muted pt-2">
         {t("noAccount")}{" "}
-        <Link href="/register" className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
+        <Link href="/register" className="font-semibold text-brand hover:text-brand transition-colors">
           {t("registerButton")}
         </Link>
       </p>

@@ -173,28 +173,28 @@ export function ExamFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-emerald-500/20 bg-bg-subtle p-0 text-white shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-brand/20 bg-bg-subtle p-0 text-fg shadow-[0_0_60px_rgba(16,185,129,0.15)]">
         {/* Header */}
-        <div className="sticky top-0 z-20 border-b border-emerald-500/15 bg-bg-subtle/95 px-6 py-5 backdrop-blur-md">
+        <div className="sticky top-0 z-20 border-b border-brand/15 bg-bg-subtle/95 px-6 py-5 backdrop-blur-md">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+              <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-tr from-brand to-brand text-fg shadow-[0_0_20px_rgba(16,185,129,0.4)]">
                 <Sparkles className="size-6 fill-current" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-black tracking-tight text-white sm:text-xl">
+                <DialogTitle className="text-lg font-black tracking-tight text-fg sm:text-xl">
                   AI Imtihon Diagnostikasi &amp; Tahlil Markazi
                 </DialogTitle>
-                <DialogDescription className="text-xs text-slate-400">
+                <DialogDescription className="text-xs text-fg-muted">
                   Xalqaro IELTS 9.0 va CEFR C1 mezonlari bo&apos;yicha zaif nuqtalar va xatoliklar tahlili
                 </DialogDescription>
               </div>
             </div>
 
             {overallScore !== null && overallScore !== undefined && (
-              <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
-                <span className="text-xs font-semibold text-slate-300">Umumiy Natija:</span>
-                <span className="font-mono text-base font-black text-emerald-400">
+              <div className="flex items-center gap-2 rounded-2xl border border-brand/30 bg-brand/10 px-4 py-2">
+                <span className="text-xs font-semibold text-fg-muted">Umumiy Natija:</span>
+                <span className="font-mono text-base font-black text-brand">
                   {overallScore}
                 </span>
               </div>
@@ -214,8 +214,8 @@ export function ExamFeedbackModal({
                     className={cn(
                       "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all",
                       isActive
-                        ? "bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                        : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-white"
+                        ? "bg-brand text-brand-fg shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                        : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
                     )}
                   >
                     {s === "writing" ? (
@@ -236,12 +236,12 @@ export function ExamFeedbackModal({
         {/* Content Body */}
         <div className="p-6 space-y-6">
           {!feedback ? (
-            <div className="rounded-2xl border border-slate-800 bg-surface/60 p-8 text-center text-slate-400">
-              <HelpCircle className="mx-auto size-10 text-slate-500 mb-3" />
-              <p className="text-sm font-semibold text-slate-300">
+            <div className="rounded-2xl border border-border bg-surface/60 p-8 text-center text-fg-muted">
+              <HelpCircle className="mx-auto size-10 text-fg-subtle mb-3" />
+              <p className="text-sm font-semibold text-fg-muted">
                 Ushbu modul bo&apos;yicha diagnostik tahlil ma&apos;lumotlari shakllantirilmoqda.
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-fg-subtle mt-1">
                 Baholash ishi yakunlangach, barcha mezonlar shu yerda aks etadi.
               </p>
             </div>
@@ -250,60 +250,60 @@ export function ExamFeedbackModal({
               {/* 1. Speech Diagnostics Meter (for Speaking) */}
               {(activeSkill === "speaking" || speechDiag) && speechDiag && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
                     <Gauge className="size-4" />
                     Nutq Tezligi va Talaffuz Dinamikasi (Speech Analytics)
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-4">
                     {/* WPM */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
-                      <span className="text-[11px] font-bold text-slate-400 block mb-1">
+                    <div className="rounded-2xl border border-brand/20 bg-surface p-4 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-fg-muted block mb-1">
                         Nutq Tezligi (WPM)
                       </span>
-                      <span className="font-mono text-2xl font-black text-emerald-300">
+                      <span className="font-mono text-2xl font-black text-brand">
                         {speechDiag.words_per_minute ?? speechDiag.wpm ?? 110}
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                      <span className="text-[10px] text-fg-subtle block mt-0.5">
                         so&apos;z / daqiqada
                       </span>
                     </div>
 
                     {/* Fluency Score */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
-                      <span className="text-[11px] font-bold text-slate-400 block mb-1">
+                    <div className="rounded-2xl border border-brand/20 bg-surface p-4 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-fg-muted block mb-1">
                         Ravonlik Bahosi
                       </span>
-                      <span className="font-mono text-2xl font-black text-teal-300">
+                      <span className="font-mono text-2xl font-black text-brand">
                         {speechDiag.fluency_score ?? "6.5"}
                       </span>
-                      <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">
+                      <span className="text-[10px] text-brand font-semibold block mt-0.5">
                         {speechDiag.clarity_rating ?? "Yaxshi"}
                       </span>
                     </div>
 
                     {/* Lexical Density */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
-                      <span className="text-[11px] font-bold text-slate-400 block mb-1">
+                    <div className="rounded-2xl border border-brand/20 bg-surface p-4 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-fg-muted block mb-1">
                         Leksik Xilma-xillik
                       </span>
-                      <span className="font-mono text-2xl font-black text-white">
+                      <span className="font-mono text-2xl font-black text-fg">
                         {speechDiag.lexical_density ? `${speechDiag.lexical_density}%` : "68%"}
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                      <span className="text-[10px] text-fg-subtle block mt-0.5">
                         Unikal so&apos;zlar nisbati
                       </span>
                     </div>
 
                     {/* Vocabulary Level */}
-                    <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 text-center shadow-sm">
-                      <span className="text-[11px] font-bold text-slate-400 block mb-1">
+                    <div className="rounded-2xl border border-brand/20 bg-surface p-4 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-fg-muted block mb-1">
                         Lug&apos;at Darajasi
                       </span>
-                      <span className="font-mono text-2xl font-black text-emerald-400">
+                      <span className="font-mono text-2xl font-black text-brand">
                         {speechDiag.vocabulary_level ?? "B2"}
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                      <span className="text-[10px] text-fg-subtle block mt-0.5">
                         CEFR Standart
                       </span>
                     </div>
@@ -311,8 +311,8 @@ export function ExamFeedbackModal({
 
                   {/* Phonetic & Hesitation highlights */}
                   {speechDiag.mispronounced_words && speechDiag.mispronounced_words.length > 0 && (
-                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+                    <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-warning">
                         <Volume2 className="size-4" />
                         Talaffuzni Yaxshilash Uchun So&apos;zlar:
                       </div>
@@ -320,14 +320,14 @@ export function ExamFeedbackModal({
                         {speechDiag.mispronounced_words.map((item, idx) => (
                           <div
                             key={idx}
-                            className="rounded-xl border border-amber-500/20 bg-bg-subtle/80 p-2.5 text-xs"
+                            className="rounded-xl border border-warning/20 bg-bg-subtle/80 p-2.5 text-xs"
                           >
-                            <span className="font-bold text-white">&ldquo;{item.word}&rdquo;</span>
+                            <span className="font-bold text-fg">&ldquo;{item.word}&rdquo;</span>
                             {item.issue && (
-                              <p className="text-[11px] text-amber-300/80 mt-0.5">{item.issue}</p>
+                              <p className="text-[11px] text-warning/80 mt-0.5">{item.issue}</p>
                             )}
                             {item.suggestion && (
-                              <p className="text-[11px] text-emerald-400 font-medium mt-0.5">
+                              <p className="text-[11px] text-brand font-medium mt-0.5">
                                 Maslahat: {item.suggestion}
                               </p>
                             )}
@@ -342,7 +342,7 @@ export function ExamFeedbackModal({
               {/* 2. Official Criteria Breakdown */}
               {feedback.criteria_scores && feedback.criteria_scores.length > 0 && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
                     <Target className="size-4" />
                     Rasmiy Mezonlar Bo&apos;yicha Baholash (Criteria Scoring)
                   </div>
@@ -356,24 +356,24 @@ export function ExamFeedbackModal({
                       return (
                         <div
                           key={idx}
-                          className="rounded-2xl border border-slate-800 bg-surface p-4 transition-all hover:border-emerald-500/30"
+                          className="rounded-2xl border border-border bg-surface p-4 transition-all hover:border-brand/30"
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="font-bold text-sm text-slate-200">{c.criterion}</span>
-                            <span className="font-mono text-sm font-black text-emerald-400">
-                              {scoreNum} <span className="text-xs text-slate-500">/ {maxNum}</span>
+                            <span className="font-bold text-sm text-fg">{c.criterion}</span>
+                            <span className="font-mono text-sm font-black text-brand">
+                              {scoreNum} <span className="text-xs text-fg-subtle">/ {maxNum}</span>
                             </span>
                           </div>
 
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-900 border border-slate-800 mb-2">
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-surface border border-border mb-2">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+                              className="h-full rounded-full bg-gradient-to-r from-brand to-brand transition-all duration-500"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
 
                           {c.comment && (
-                            <p className="text-xs text-slate-400 leading-relaxed">{c.comment}</p>
+                            <p className="text-xs text-fg-muted leading-relaxed">{c.comment}</p>
                           )}
                         </div>
                       );
@@ -385,7 +385,7 @@ export function ExamFeedbackModal({
               {/* 3. In-text Mistakes & Fixes */}
               {feedback.mistakes_and_fixes && feedback.mistakes_and_fixes.length > 0 && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-400">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-danger">
                     <AlertCircle className="size-4" />
                     Matn Ichidagi Aniq Xatolar va To&apos;g&apos;ri Variantlar
                   </div>
@@ -394,19 +394,19 @@ export function ExamFeedbackModal({
                     {feedback.mistakes_and_fixes.map((m, idx) => (
                       <div
                         key={idx}
-                        className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-1.5"
+                        className="rounded-2xl border border-danger/20 bg-danger/5 p-4 space-y-1.5"
                       >
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/20 px-2 py-0.5 font-mono text-rose-300 font-bold">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-danger/20 px-2 py-0.5 font-mono text-danger font-bold">
                             <XCircle className="size-3" /> {m.original}
                           </span>
-                          <span className="text-slate-500 font-bold">➔</span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-0.5 font-mono text-emerald-300 font-bold">
+                          <span className="text-fg-subtle font-bold">➔</span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-brand/20 px-2 py-0.5 font-mono text-brand font-bold">
                             <CheckCircle2 className="size-3" /> {m.corrected}
                           </span>
                         </div>
                         {m.explanation && (
-                          <p className="text-xs text-slate-300 leading-relaxed pt-1">
+                          <p className="text-xs text-fg-muted leading-relaxed pt-1">
                             {m.explanation}
                           </p>
                         )}
@@ -419,7 +419,7 @@ export function ExamFeedbackModal({
               {/* 4. Vocabulary Upgrades */}
               {feedback.vocabulary_upgrades && feedback.vocabulary_upgrades.length > 0 && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-teal-400">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
                     <Wand2 className="size-4" />
                     Leksik Boyitish (C1 / C2 Advanced Vocabulary Upgrades)
                   </div>
@@ -428,18 +428,18 @@ export function ExamFeedbackModal({
                     {feedback.vocabulary_upgrades.map((v, idx) => (
                       <div
                         key={idx}
-                        className="rounded-2xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-1"
+                        className="rounded-2xl border border-brand/20 bg-brand/5 p-4 space-y-1"
                       >
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-medium line-through">
+                          <span className="text-fg-muted font-medium line-through">
                             {v.original}
                           </span>
-                          <span className="font-bold text-teal-300 bg-teal-500/20 border border-teal-500/40 rounded-lg px-2 py-0.5">
+                          <span className="font-bold text-brand bg-brand/20 border border-brand/40 rounded-lg px-2 py-0.5">
                             ★ {v.alternative}
                           </span>
                         </div>
                         {v.explanation && (
-                          <p className="text-[11px] text-slate-400 italic pt-1">
+                          <p className="text-[11px] text-fg-muted italic pt-1">
                             {v.explanation}
                           </p>
                         )}
@@ -452,15 +452,15 @@ export function ExamFeedbackModal({
               {/* 5. Actionable Next Steps */}
               {feedback.action_plan && feedback.action_plan.length > 0 && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
                     <Lightbulb className="size-4" />
                     Ballni Oshirish Uchun Amaliy Qadamlar (Action Plan)
                   </div>
 
-                  <div className="rounded-2xl border border-emerald-500/20 bg-surface p-4 space-y-2">
+                  <div className="rounded-2xl border border-brand/20 bg-surface p-4 space-y-2">
                     {feedback.action_plan.map((step, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-300">
-                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500/20 font-mono text-[11px] font-black text-emerald-400">
+                      <div key={idx} className="flex items-start gap-2.5 text-xs text-fg-muted">
+                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand/20 font-mono text-[11px] font-black text-brand">
                           {idx + 1}
                         </span>
                         <span className="leading-relaxed">{step}</span>
@@ -473,8 +473,8 @@ export function ExamFeedbackModal({
               {/* 5. Smart Video Lesson Recommendations for Weak Points */}
               {activeRecommendations && activeRecommendations.length > 0 && (
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
-                    <Sparkles className="size-4 text-emerald-400" />
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
+                    <Sparkles className="size-4 text-brand" />
                     Zaif Nuqtalarni Yopish Uchun Tavsiya Etilgan Video Darslar
                   </div>
 
@@ -482,23 +482,23 @@ export function ExamFeedbackModal({
                     {activeRecommendations.map((rec, idx) => (
                       <div
                         key={idx}
-                        className="rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4 flex flex-col justify-between space-y-3"
+                        className="rounded-2xl border border-brand/25 bg-brand-subtle/20 p-4 flex flex-col justify-between space-y-3"
                       >
                         <div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-white">{rec.topic}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                            <span className="font-bold text-fg">{rec.topic}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/20 text-brand font-mono font-bold">
                               {rec.order_index}-Dars
                             </span>
                           </div>
-                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                          <p className="text-xs text-fg-muted mt-1.5 leading-relaxed">
                             {rec.description}
                           </p>
                         </div>
 
                         <a
                           href={rec.url}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-2 text-xs shadow-md transition-all hover:scale-[1.02]"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-brand-fg font-bold px-3 py-2 text-xs shadow-md transition-all hover:scale-[1.02]"
                         >
                           <Play className="size-3.5 fill-current" />
                           <span>{rec.button_text}</span>
@@ -513,7 +513,7 @@ export function ExamFeedbackModal({
               {feedback.band_8_rewrite && (
                 <section className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-400">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand">
                       <Award className="size-4" />
                       Band 8.0+ Namuna Insho (Exemplar Model Answer)
                     </div>
@@ -522,14 +522,14 @@ export function ExamFeedbackModal({
                       variant="outline"
                       size="sm"
                       onClick={() => copyModelAnswer(feedback.band_8_rewrite || "")}
-                      className="h-7 text-xs border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                      className="h-7 text-xs border-brand/30 text-brand hover:bg-brand-hover/20"
                     >
                       <Copy className="size-3 mr-1" />
                       {copied ? "Nusxalandi!" : "Nusxa Olish"}
                     </Button>
                   </div>
 
-                  <div className="rounded-2xl border border-emerald-500/25 bg-slate-950/80 p-5 font-serif text-sm leading-relaxed text-slate-200 whitespace-pre-line shadow-inner">
+                  <div className="rounded-2xl border border-brand/25 bg-bg/80 p-5 font-serif text-sm leading-relaxed text-fg whitespace-pre-line shadow-inner">
                     {feedback.band_8_rewrite}
                   </div>
                 </section>

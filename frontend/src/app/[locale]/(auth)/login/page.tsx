@@ -21,12 +21,12 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
   const t = await getTranslations("auth");
 
   return (
-    <div className="w-full rounded-2xl border border-slate-800/80 bg-slate-900/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+    <div className="w-full rounded-2xl border border-border/80 bg-surface/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-white">{t("loginTitle")}</h1>
-        <p className="mt-1.5 text-sm text-slate-400">{t("loginSubtitle")}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-fg">{t("loginTitle")}</h1>
+        <p className="mt-1.5 text-sm text-fg-muted">{t("loginSubtitle")}</p>
       </div>
-      <Suspense fallback={<Skeleton className="h-64 rounded-xl bg-slate-800/50" />}>
+      <Suspense fallback={<Skeleton className="h-64 rounded-xl bg-surface-hover/50" />}>
         <LoginForm />
       </Suspense>
     </div>

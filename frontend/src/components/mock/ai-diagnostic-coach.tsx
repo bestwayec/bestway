@@ -143,8 +143,8 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
                   </div>
 
                   {/* Corrected Green */}
-                  <div className="flex items-start gap-2.5 bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                  <div className="flex items-start gap-2.5 bg-brand/10 p-3 text-brand">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
                     <div className="min-w-0 flex-1">
                       <span className="block text-[11px] font-bold uppercase tracking-wide opacity-80">
                         C1 / Band 8.0 Namuna (To&apos;g&apos;ri variant):
@@ -213,13 +213,13 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
         {action_plan.length > 0 && (
           <section className="space-y-3">
             <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-fg-subtle">
-              <Lightbulb className="size-4 text-amber-500" />
+              <Lightbulb className="size-4 text-warning" />
               Amaliy Reja (Action Plan)
             </h4>
-            <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm">
+            <div className="space-y-2 rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm">
               {action_plan.map((step, sIdx) => (
                 <div key={sIdx} className="flex items-start gap-2.5 text-fg">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-amber-500/20 text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-warning/20 text-xs font-bold text-warning">
                     {sIdx + 1}
                   </span>
                   <p className="leading-relaxed text-sm text-fg">{step}</p>
@@ -243,7 +243,7 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
                 onClick={copyRewrite}
                 className="h-8 gap-1.5 text-xs font-medium"
               >
-                {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+                {copied ? <Check className="size-3.5 text-brand" /> : <Copy className="size-3.5" />}
                 {copied ? "Nusxa olindi" : "Nusxa olish"}
               </Button>
             </div>

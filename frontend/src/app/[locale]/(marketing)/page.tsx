@@ -163,14 +163,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="marketing-section relative border-b border-border bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-xs sm:text-sm font-semibold text-emerald-500 dark:text-emerald-400 mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
-            <span className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
+            <span className="size-2 rounded-full bg-brand animate-pulse" />
             <span>BestWay LMS — Rasmiy imtihon simulyatori</span>
           </div>
 
           <h1 className="text-3xl font-black tracking-tight text-fg sm:text-5xl lg:text-6xl max-w-4xl mx-auto leading-[1.12] uppercase">
             DO YOUR BEST{" "}
-            <span className="relative inline-block bg-gradient-to-r from-emerald-400 via-green-400 to-teal-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(16,185,129,0.45)]">
+            <span className="relative inline-block bg-gradient-to-r from-brand via-brand to-brand bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(16,185,129,0.45)]">
               FORGET THE REST !
             </span>
           </h1>
@@ -197,7 +197,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
           {/* 3 ta asosiy afzallik */}
           <div className="mt-14 grid gap-5 sm:grid-cols-3 text-left">
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Monitor className="size-5" />
               </div>
@@ -205,7 +205,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit1Desc")}</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Sparkles className="size-5" />
               </div>
@@ -213,7 +213,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit2Desc")}</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/10">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Award className="size-5" />
               </div>
@@ -242,29 +242,29 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Feature 1: 29+ Video Lessons */}
             <Reveal delay={0} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
                 <span
                   aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
                 />
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 transition-transform duration-300 group-hover:scale-110">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
                       <Play className="size-6 fill-current" />
                     </span>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-950/50 px-3 py-1 text-xs font-semibold text-emerald-400">
+                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
                       v1.0.6
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f1Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f1Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
                     {t("ecosystem.f1Text")}
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                <div className="mt-6 pt-4 border-t border-border/80">
                   <Link
                     href="/videos"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
                     <span>Darslar katalogiga o'tish</span>
                     <ArrowRight className="size-4" />
@@ -275,29 +275,29 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 2: CDI & Multi-Level Simulator */}
             <Reveal delay={100} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-teal-500/50 hover:shadow-2xl hover:shadow-teal-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
                 <span
                   aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-600 transition-transform duration-300 group-hover:scale-x-100"
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
                 />
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-teal-950/60 border border-teal-500/30 text-teal-400 transition-transform duration-300 group-hover:scale-110">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
                       <Award className="size-6" />
                     </span>
-                    <span className="rounded-full border border-teal-500/30 bg-teal-950/50 px-3 py-1 text-xs font-semibold text-teal-300">
+                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
                       Vision OCR
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f2Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f2Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
                     {t("ecosystem.f2Text")}
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                <div className="mt-6 pt-4 border-t border-border/80">
                   <Link
                     href="/mock"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-teal-400 hover:text-teal-300 transition"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
                     <span>Imtihon topshirish</span>
                     <ArrowRight className="size-4" />
@@ -308,29 +308,29 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 3: Teacher Workspace */}
             <Reveal delay={200} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-slate-800/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-950/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
                 <span
                   aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 transition-transform duration-300 group-hover:scale-x-100"
+                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
                 />
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 transition-transform duration-300 group-hover:scale-110">
+                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
                       <GraduationCap className="size-6" />
                     </span>
-                    <span className="rounded-full border border-emerald-500/30 bg-emerald-950/50 px-3 py-1 text-xs font-semibold text-emerald-400">
+                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
                       Smart Analytics
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white">{t("ecosystem.f3Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-slate-300">
+                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f3Title")}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
                     {t("ecosystem.f3Text")}
                   </p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-800/80">
+                <div className="mt-6 pt-4 border-t border-border/80">
                   <Link
                     href="/login"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
                     <span>Kabinetga kirish</span>
                     <ArrowRight className="size-4" />
