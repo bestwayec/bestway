@@ -42,7 +42,12 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W6 UI/UX | PARTIAL | PR #118: responsive audit (15 pages × 4 sizes, docs/design/w6 before/after + report.json). Fixed: exam runner/result overshoot on phones, staff bottom nav hiding "More", exam-track cards at 360, 2 unlabeled search inputs. Exam smoke re-run 16/16. NOT DONE: design-system consolidation (needs its own plan); small touch targets on vocabulary chips/icons |
 | W7 Perf/security | DONE (BW-16 server side open) | PR #119: /mock/exams 118→33 (student) / 141→44 (staff) queries, byte-identical output, regression test. Client retries 409 REFRESH_IN_PROGRESS. Security scripts on disposable bestway_security_w7: phase0 17 PASS, phase3 auth 22 PASS, refresh contention PASS, refresh race FAIL BW-16 (server-side, mitigated in client). Login: 31st bad attempt/min → 429 |
 | W8 Final verification | DONE (local) | Local integration of #113 + #114–#119 (unpushed, no conflicts): pytest 889 pass/4 skip; all CI PostgreSQL scripts pass (authoring 171/171, HTTP 67/67, workers); schema/manifest/deploy checks pass; lint 0 errors, vitest 81 files/466, tsc, next build pass; browser smoke 16/16; crawl 4 roles × 24 routes clean |
-| GATE | PASSED with listed blockers | CI green on all 7 PR heads; no known open P0; open P1 items are BLOCKED on owner decisions (homework score source) or mitigated (BW-16 server side); Finish 502 needs production logs |
+| Owner decision: homework score | FIXED | PR #120: exam-linked → server-side from the student's own attempt (sum raw score / sum raw max); otherwise awaiting teacher review; teacher grade endpoint + 'Baholang' UI; client score ignored; migration core.0008. Live + browser verified |
+| Owner decision: teacher /users | FIXED | PR #121: outside own groups phone '+998 ** *** 12 34' and email masked; teacher search by name/ID only; admins unchanged; browser enrolment verified (390×844) |
+| BW-16 server side | DECISION NEEDED | No server fix without weakening reuse detection: a grace window must keep the new raw tokens in Redis and lets a stolen old token get valid tokens for its duration. Client recovery is in #119. Owner: grace window yes/no |
+| W8b full browser E2E | DONE | PR #122: scripts/e2e-local/full-journey.mjs 13/13 twice (Builder → publish → student all 4 sections → reload → finish → honest pending → teacher view; vocabulary list → quiz 3/3 server-scored). Found and fixed: catalogue cache hid new exams 60 s; launcher offered Full Mock on practice exams (HTTP 400); quiz double load re-scored answers; unnamed add-word button |
+| W6b unified design system | TODO | not started (context budget); next session |
+| GATE | NOT CLOSED | waiting for W6b and green CI on #120, #121, #122 |
 | D1–D3 desktop | TODO | not started (order rule) |
 
 ## Findings to review (from PR #111, external fork, merged 2026-11-10)
@@ -120,14 +125,17 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 | #117 | Dashboard hydration + /teacher guard | 65c2686 | green (run 43029326557; earlier red run 43027637040 = spec typing, fixed) |
 | #118 | Phone layout fixes | 6522b3b | green (run 43029117470) |
 | #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | green (run 43030243067) |
+| #120 | Homework score server-side + teacher grading | 7880e84 | pending |
+| #121 | Teacher contact masking | 9ead3d1 | pending |
+| #122 | Full browser E2E + catalogue cache / launcher / quiz fixes | c947184 | pending |
 
 ## Open questions (owner)
 
-- Homework: where does a homework score come from (e.g. the student's completed attempt on the linked exam, and how to turn it into a percentage)? Until then, the submit endpoint accepts a self-reported score; no UI uses it.
-- Teacher student list (`GET users` as teacher) returns every student with phone/email, because the group enrolment picker searches all students. Mask phones outside the teacher's groups?
-- BW-16 server side: should simultaneous refreshes both succeed (grace window for the just-rotated token)? The client now recovers by retrying.
+- BW-16 server side: accept a short grace window (weaker reuse detection) or keep client-side recovery only?
+- Score display for tiny practice sets: 1/1 correct shows "Band 9.0" (IELTS table). Show accuracy only for practice scopes?
+- P2 noted, not changed: start dialog and vocabulary pages hard-coded in Uzbek on /en; mic-check dialog reopens on every Speaking tab visit; vocabulary mode page lacks the set title; /media public policy.
 - Finish 502: production logs needed (see list in the session report).
 
 ## NEXT STEP
 
-D1: in bestwayec/bw-tauri, verify the desktop leads (main 900c563, v1.0.12 release run 42982782068, PR #30), then check the web↔desktop API contract against the updated website.
+W6b: build one design system from the existing tokens (frontend/src/app/globals.css + components/ui) and move landing, login, student dashboard, exam list, exam runner (4 sections), result, Exam Builder, vocabulary and teacher dashboard onto it, with before/after at 4 sizes via scripts/e2e-local/responsive-audit.mjs; re-run smoke.mjs and full-journey.mjs; then close the WEBSITE GATE and start D1.
