@@ -255,6 +255,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
             <Button
               type="button"
               onClick={handleAddSingleWord}
+              aria-label="So'zni ro'yxatga qo'shish"
               disabled={!engInput.trim() || !uzbInput.trim()}
               className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
             >
