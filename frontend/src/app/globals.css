@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Inter (OFL) beyond the preloaded Latin file: Latin Extended and Cyrillic faces, fetched only when a page
+   contains those characters (unicode-range). The Latin face itself comes from next/font in layout.tsx. */
+@import "@fontsource-variable/inter/wght.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -172,7 +175,7 @@
   --color-info-bg: var(--info-bg);
   --color-info-border: var(--info-border);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
   /* Soddalashtirilgan o'lchamlar: matn hech qachon 14 dan kichik emas */
   --text-xs: 14px;

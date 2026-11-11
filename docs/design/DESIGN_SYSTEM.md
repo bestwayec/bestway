@@ -6,8 +6,9 @@ already defined, and states the rules screens must follow.
 
 ## 1. Colour: semantic tokens only
 
-The app has a light and a dark theme; **dark is the default** (`components/providers.tsx`,
-`ThemeProvider defaultTheme="dark"`). Only the semantic tokens below follow the theme. Raw Tailwind
+The app has a light and a dark theme; **light is the default** and a dark choice is remembered in
+`localStorage("theme")`. `lib/theme-init.ts` applies the stored theme in `<head>` before the first paint (no
+flash); `components/theme-provider.tsx` only touches `<html>` after reading the stored value. Only the semantic tokens below follow the theme. Raw Tailwind
 palette classes (`bg-slate-900`, `text-emerald-400`, `bg-white`, …) are fixed colours and render
 wrongly in one of the two themes (white cards in dark mode, white text on white in light mode).
 
@@ -61,6 +62,10 @@ Files that have been migrated are listed in `frontend/src/design-system.spec.ts`
 a raw palette class comes back.
 
 ## 2. Typography
+
+Font: Inter (SIL OFL), self-hosted. The Latin face (covers Uzbek ʻ U+02BB and ‘ ’) is preloaded through
+`next/font/local`; Latin Extended and Cyrillic faces come from `@fontsource-variable/inter` with
+`unicode-range`, so they download only when a page contains those characters.
 
 Four levels, never smaller than 14px (`--text-xs` and `--text-sm` are both 14px):
 
