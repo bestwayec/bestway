@@ -159,7 +159,7 @@ export function CohortProgressTable({
   return (
     <div className="space-y-5">
       {/* Cohort Header Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-emerald-500/20 bg-surface-elevated/70 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-brand/20 bg-surface-elevated/70 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-fg">
@@ -167,7 +167,7 @@ export function CohortProgressTable({
             </h2>
             <Badge
               
-              className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-mono text-xs px-2.5 py-0.5"
+              className="border-brand/30 bg-brand/10 text-brand font-mono text-xs px-2.5 py-0.5"
             >
               Kod: {cohort.invite_code}
             </Badge>
@@ -177,11 +177,11 @@ export function CohortProgressTable({
           )}
           <div className="flex items-center gap-4 text-xs text-fg-subtle pt-1">
             <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5 text-emerald-400" />
+              <Users className="h-3.5 w-3.5 text-brand" />
               {students.length} ta o'quvchi
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-sky-400" />
+              <Clock className="h-3.5 w-3.5 text-info" />
               {assignments.length} ta vazifa
             </span>
           </div>
@@ -193,11 +193,11 @@ export function CohortProgressTable({
             size="sm"
             
             onClick={copyCode}
-            className="border-border/70 hover:border-emerald-500/40 text-xs gap-1.5"
+            className="border-border/70 hover:border-brand/40 text-xs gap-1.5"
           >
             {copied ? (
               <>
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                <Check className="h-3.5 w-3.5 text-brand" />
                 Nusxalandi
               </>
             ) : (
@@ -211,7 +211,7 @@ export function CohortProgressTable({
             href={telegramShareUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-400 hover:bg-sky-500/20 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info/10 px-3 py-1.5 text-xs font-medium text-info hover:bg-info/20 transition-colors"
           >
             <Send className="h-3.5 w-3.5" />
             Telegramda Ulashish
@@ -219,7 +219,7 @@ export function CohortProgressTable({
           <Button
             size="sm"
             onClick={onOpenCreateAssignment}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5 shadow-sm shadow-emerald-900/30"
+            className="bg-brand hover:bg-brand-hover text-brand-fg font-medium text-xs gap-1.5 shadow-sm shadow-brand/30"
           >
             <Plus className="h-3.5 w-3.5" />
             Yangi Vazifa Biriktirish
@@ -230,20 +230,20 @@ export function CohortProgressTable({
       {/* Analytics Matrix Table */}
       {students.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-border/80 bg-surface/50">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 mb-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand mb-3">
             <Users className="h-6 w-6" />
           </div>
           <h3 className="text-sm font-semibold text-fg">
             Hozircha guruhda o'quvchilar yo'q
           </h3>
           <p className="mt-1 max-w-sm text-xs text-fg-muted">
-            O'quvchilaringizga <span className="font-mono text-emerald-400 font-bold">{cohort.invite_code}</span> taklif kodini bering. Ular platformaga kirib guruhga a'zo bo'lishlari mumkin.
+            O'quvchilaringizga <span className="font-mono text-brand font-bold">{cohort.invite_code}</span> taklif kodini bering. Ular platformaga kirib guruhga a'zo bo'lishlari mumkin.
           </p>
           <Button
             size="sm"
             
             onClick={copyCode}
-            className="mt-4 text-xs gap-1.5 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+            className="mt-4 text-xs gap-1.5 border-brand/30 text-brand hover:bg-brand-hover/10"
           >
             <Copy className="h-3.5 w-3.5" />
             Taklif kodini nusxalash
@@ -287,7 +287,7 @@ export function CohortProgressTable({
 
                       {/* Completed Video Lessons */}
                       <td className="py-3 px-3 text-center">
-                        <span className="font-semibold text-emerald-400">
+                        <span className="font-semibold text-brand">
                           {student.lessons_completed}
                         </span>
                         <span className="text-[10px] text-fg-muted"> / 29</span>
@@ -299,10 +299,10 @@ export function CohortProgressTable({
                           <span
                             className={`font-bold ${
                               student.average_score >= 80
-                                ? "text-emerald-400"
+                                ? "text-brand"
                                 : student.average_score >= 60
-                                ? "text-amber-400"
-                                : "text-rose-400"
+                                ? "text-warning"
+                                : "text-danger"
                             }`}
                           >
                             {student.average_score}%
@@ -321,7 +321,7 @@ export function CohortProgressTable({
                         if (sub && sub.is_passed) {
                           return (
                             <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-mono font-semibold px-2 py-0.5">
+                              <Badge className="bg-brand/20 text-brand border border-brand/30 text-[11px] font-mono font-semibold px-2 py-0.5">
                                 {sub.score_percent}% ✓
                               </Badge>
                             </td>
@@ -349,7 +349,7 @@ export function CohortProgressTable({
                         if (sub && !sub.is_passed) {
                           return (
                             <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-mono font-semibold px-2 py-0.5">
+                              <Badge className="bg-warning/20 text-warning border border-warning/30 text-[11px] font-mono font-semibold px-2 py-0.5">
                                 {sub.score_percent}% ✕
                               </Badge>
                             </td>
@@ -359,7 +359,7 @@ export function CohortProgressTable({
                         if (isOverdue) {
                           return (
                             <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-medium px-2 py-0.5">
+                              <Badge className="bg-danger/20 text-danger border border-danger/30 text-[10px] font-medium px-2 py-0.5">
                                 Topshirmadi ✕
                               </Badge>
                             </td>
@@ -368,7 +368,7 @@ export function CohortProgressTable({
 
                         return (
                           <td key={a.id} className="py-3 px-2 text-center">
-                            <Badge className="bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px] font-medium px-2 py-0.5">
+                            <Badge className="bg-info/10 text-info border border-info/20 text-[10px] font-medium px-2 py-0.5">
                               Kutilmoqda ⏳
                             </Badge>
                           </td>

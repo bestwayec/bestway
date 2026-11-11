@@ -122,7 +122,7 @@ export function CreateAssignmentModal({
             Yangi Uyga Vazifa Biriktirish
           </DialogTitle>
           <DialogDescription className="text-sm text-fg-muted">
-            Guruh: <span className="font-semibold text-emerald-400">{cohortName}</span>
+            Guruh: <span className="font-semibold text-brand">{cohortName}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +134,7 @@ export function CreateAssignmentModal({
               onClick={() => setType("lesson")}
               className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
                 type === "lesson"
-                  ? "bg-emerald-600 text-white shadow-sm"
+                  ? "bg-brand text-brand-fg shadow-sm"
                   : "text-fg-muted hover:text-fg hover:bg-surface-elevated"
               }`}
             >
@@ -146,7 +146,7 @@ export function CreateAssignmentModal({
               onClick={() => setType("exam")}
               className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
                 type === "exam"
-                  ? "bg-emerald-600 text-white shadow-sm"
+                  ? "bg-brand text-brand-fg shadow-sm"
                   : "text-fg-muted hover:text-fg hover:bg-surface-elevated"
               }`}
             >
@@ -162,7 +162,7 @@ export function CreateAssignmentModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               placeholder="Masalan: 5-dars testini topshirish"
               required
             />
@@ -175,7 +175,7 @@ export function CreateAssignmentModal({
               <select
                 value={selectedLessonOrder}
                 onChange={(e) => setSelectedLessonOrder(Number(e.target.value))}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 {GRAMMAR_29_LESSONS.map((l) => (
                   <option key={l.order} value={l.order}>
@@ -190,7 +190,7 @@ export function CreateAssignmentModal({
               <select
                 value={selectedExamId}
                 onChange={(e) => setSelectedExamId(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 <option value="multilevel-test-01-gym-vegetarian">
                   Multi-Level CEFR Mock Test 1 (Gym & Diet)
@@ -206,20 +206,20 @@ export function CreateAssignmentModal({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-fg-muted flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-emerald-400" />
+                <Clock className="h-3.5 w-3.5 text-brand" />
                 Muddati (Deadline)
               </label>
               <input
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-xs text-fg focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-xs text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 required
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-fg-muted flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-brand" />
                 O'tish Balli ({minPassPercent}%)
               </label>
               <input
@@ -229,7 +229,7 @@ export function CreateAssignmentModal({
                 step="5"
                 value={minPassPercent}
                 onChange={(e) => setMinPassPercent(Number(e.target.value))}
-                className="w-full accent-emerald-500"
+                className="w-full accent-brand"
               />
             </div>
           </div>
@@ -249,7 +249,7 @@ export function CreateAssignmentModal({
               type="submit"
               size="sm"
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
             >
               {isSubmitting ? (
                 <>

@@ -105,7 +105,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
               {report?.title || "Guruh Lug'at Tahlili"}
             </h2>
             {report && (
-              <Badge className="bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Badge className="bg-brand/10 text-brand border border-brand/20">
                 {report.level}
               </Badge>
             )}
@@ -131,7 +131,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
             type="button"
             onClick={handleDownloadExcel}
             disabled={isExporting || isLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-600/20"
+            className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md shadow-brand/20"
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             {isExporting ? "Yuklanmoqda..." : "Excel Yuklab Olish (.xlsx)"}
@@ -147,7 +147,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
 
       {isLoading && (
         <div className="py-16 text-center text-muted-foreground flex flex-col items-center gap-3">
-          <RefreshCw className="h-8 w-8 animate-spin text-emerald-500" />
+          <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           <span>Guruh natijalari tahlil qilinmoqda...</span>
         </div>
       )}
@@ -184,7 +184,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 O'rtacha Natija
               </span>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              <p className="text-2xl font-bold text-brand mt-1">
                 {Number(report.averagePercentage ?? (report as any).average_percentage ?? 0)}%
               </p>
             </div>
@@ -194,7 +194,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                 Format
               </span>
               <p className="text-2xl font-bold text-foreground mt-1 flex items-center gap-1.5">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-500" />
+                <FileSpreadsheet className="h-5 w-5 text-brand" />
                 Emerald .XLSX
               </p>
             </div>
@@ -209,8 +209,8 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
             });
             if (hardestItems.length === 0) return null;
             return (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold text-sm">
+              <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-warning font-semibold text-sm">
                   <AlertTriangle className="h-4 w-4" />
                   <span>Guruhda Eng Ko'p Xato Qilingan So'zlar (Hardest Words)</span>
                 </div>
@@ -240,7 +240,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
           {/* Student Roster Table */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Users className="h-4 w-4 text-emerald-500" />
+              <Users className="h-4 w-4 text-brand" />
               <span>O'quvchilar Ro'yxati va Baholari</span>
               <Badge variant="neutral" className="text-xs">
                 {report.roster.length} ta natija
@@ -285,9 +285,9 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                             <span
                               className={`font-semibold ${
                                 isPerfect
-                                  ? "text-emerald-500 font-bold"
+                                  ? "text-brand font-bold"
                                   : isGood
-                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  ? "text-brand"
                                   : "text-muted-foreground"
                               }`}
                             >
@@ -299,8 +299,8 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                               <Badge
                                 className={
                                   row.pointsAwarded === 5
-                                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/30 font-bold"
-                                    : "bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                    ? "bg-warning/10 text-warning border border-warning/30 font-bold"
+                                    : "bg-brand/10 text-brand border border-brand/30"
                                 }
                               >
                                 +{row.pointsAwarded} ball

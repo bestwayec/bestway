@@ -95,13 +95,13 @@ export function TeacherCohortList({
       {/* Header with New Cohort Button */}
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-fg flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-emerald-400" />
+          <GraduationCap className="h-4 w-4 text-brand" />
           Sizning Guruhlaringiz ({cohorts.length})
         </h3>
         <Button
           size="sm"
           onClick={() => setCreateModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm"
+          className="bg-brand hover:bg-brand-hover text-brand-fg text-xs gap-1.5 shadow-sm"
         >
           <Plus className="h-3.5 w-3.5" />
           Yangi Guruh Ochish
@@ -111,7 +111,7 @@ export function TeacherCohortList({
       {/* Cohorts Grid */}
       {cohorts.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed border-border/80 bg-surface/50">
-          <GraduationCap className="h-10 w-10 text-emerald-400 mb-2 opacity-80" />
+          <GraduationCap className="h-10 w-10 text-brand mb-2 opacity-80" />
           <p className="text-sm font-medium text-fg">Sizda hali guruhlar yo'q</p>
           <p className="text-xs text-fg-muted mt-1 max-w-xs">
             Yangi guruh oching va o'quvchilaringizga taklif kodini ulashib, topshiriqlar bering.
@@ -119,7 +119,7 @@ export function TeacherCohortList({
           <Button
             size="sm"
             onClick={() => setCreateModalOpen(true)}
-            className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+            className="mt-4 bg-brand hover:bg-brand-hover text-brand-fg text-xs gap-1.5"
           >
             <Plus className="h-3.5 w-3.5" />
             Birinchi Guruhni Ochish
@@ -141,13 +141,13 @@ export function TeacherCohortList({
                 onClick={() => onSelectCohort(cohort.id)}
                 className={`group relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${
                   isSelected
-                    ? "border-emerald-500 bg-surface-elevated shadow-md shadow-emerald-950/20 ring-1 ring-emerald-500/30"
-                    : "border-border/70 bg-surface/80 hover:border-emerald-500/40 hover:bg-surface-elevated/70"
+                    ? "border-brand bg-surface-elevated shadow-md shadow-brand/30 ring-1 ring-brand/30"
+                    : "border-border/70 bg-surface/80 hover:border-brand/40 hover:bg-surface-elevated/70"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-sm text-fg group-hover:text-emerald-400 transition-colors">
+                    <h4 className="font-semibold text-sm text-fg group-hover:text-brand transition-colors">
                       {cohort.name}
                     </h4>
                     {cohort.description && (
@@ -158,7 +158,7 @@ export function TeacherCohortList({
                   </div>
                   <Badge
                     
-                    className="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-mono text-[11px] px-2 py-0.5 shrink-0"
+                    className="border-brand/30 bg-brand/10 text-brand font-mono text-[11px] px-2 py-0.5 shrink-0"
                   >
                     {cohort.invite_code}
                   </Badge>
@@ -167,11 +167,11 @@ export function TeacherCohortList({
                 <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-3 text-xs text-fg-muted">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5 text-emerald-400" />
+                      <Users className="h-3.5 w-3.5 text-brand" />
                       {cohort.student_count}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-sky-400" />
+                      <Clock className="h-3.5 w-3.5 text-info" />
                       {cohort.assignment_count} vazifa
                     </span>
                   </div>
@@ -181,10 +181,10 @@ export function TeacherCohortList({
                       type="button"
                       onClick={(e) => handleCopyCode(cohort.invite_code, cohort.id, e)}
                       title="Kodni nusxalash"
-                      className="p-1.5 rounded-lg border border-border/70 hover:border-emerald-500/40 text-fg-muted hover:text-emerald-400 transition-colors"
+                      className="p-1.5 rounded-lg border border-border/70 hover:border-brand/40 text-fg-muted hover:text-brand transition-colors"
                     >
                       {copiedId === cohort.id ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        <Check className="h-3.5 w-3.5 text-brand" />
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
@@ -194,7 +194,7 @@ export function TeacherCohortList({
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Telegramda ulashish"
-                      className="p-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors"
+                      className="p-1.5 rounded-lg border border-info/30 bg-info/10 text-info hover:bg-info/20 transition-colors"
                     >
                       <Send className="h-3.5 w-3.5" />
                     </a>
@@ -226,7 +226,7 @@ export function TeacherCohortList({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Masalan: IELTS Morning 9:00 yoki CEFR B2"
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 required
               />
             </div>
@@ -238,7 +238,7 @@ export function TeacherCohortList({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Dars kunlari va maqsadlar haqida qisqacha..."
                 rows={3}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand resize-none"
               />
             </div>
 
@@ -256,7 +256,7 @@ export function TeacherCohortList({
                 type="submit"
                 size="sm"
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
               >
                 {isSubmitting ? (
                   <>

@@ -69,15 +69,15 @@ export function TeacherWorkspaceView() {
   return (
     <div className="space-y-6">
       {/* Top Banner & Stats */}
-      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-surface-elevated/90 via-surface/90 to-surface-muted/80 p-6 backdrop-blur-2xl shadow-xl shadow-black/20">
+      <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-br from-surface-elevated/90 via-surface/90 to-surface-muted/80 p-6 backdrop-blur-2xl shadow-xl shadow-border">
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"
+          className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/10 blur-3xl"
         />
 
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
               <GraduationCap className="h-3.5 w-3.5" />
               Teacher Workspace v1.0
             </div>
@@ -91,15 +91,15 @@ export function TeacherWorkspaceView() {
 
           <div className="grid grid-cols-3 gap-2 sm:gap-4 shrink-0">
             <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-emerald-400">{cohorts.length}</div>
+              <div className="text-xl font-bold text-brand">{cohorts.length}</div>
               <div className="text-[11px] text-fg-muted">Guruhlar</div>
             </div>
             <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-sky-400">{totalStudents}</div>
+              <div className="text-xl font-bold text-info">{totalStudents}</div>
               <div className="text-[11px] text-fg-muted">O'quvchilar</div>
             </div>
             <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-amber-400">{totalAssignments}</div>
+              <div className="text-xl font-bold text-warning">{totalAssignments}</div>
               <div className="text-[11px] text-fg-muted">Vazifalar</div>
             </div>
           </div>

@@ -200,9 +200,9 @@ export function ExamBuilderList() {
                   toast.info(tx(t, "emptyHint", "Iltimos, avval imtihon yarating"));
                 }
               }}
-              className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-medium"
+              className="border-brand/40 text-brand hover:bg-brand-hover/10 font-medium"
             >
-              <Zap className="size-3.5 mr-1 text-emerald-400" aria-hidden />
+              <Zap className="size-3.5 mr-1 text-brand" aria-hidden />
               {tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
@@ -212,7 +212,7 @@ export function ExamBuilderList() {
             <Link href="/exam-builder/new">
               <Button
                 size="sm"
-                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-sm shadow-emerald-500/20"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-sm shadow-brand/20"
               >
                 <Plus aria-hidden />
                 {tx(t, "createExam", "Create Exam")}
@@ -365,7 +365,7 @@ export function ExamBuilderList() {
                 <Button
                   size="sm"
                   variant={e.isPublished ? "outline" : "primary"}
-                  className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-emerald-600 hover:bg-emerald-700 text-white"}
+                  className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-brand hover:bg-brand-hover text-brand-fg"}
                   loading={updateExam.isPending && updateExam.variables?.id === e.id}
                   onClick={() => handleTogglePublish(e)}
                   title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}
@@ -376,28 +376,28 @@ export function ExamBuilderList() {
                 <Button
                   size="sm"
                   variant="subtle"
-                  className="min-h-9 w-full justify-center text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                  className="min-h-9 w-full justify-center text-xs border border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50"
                   onClick={() => setQuickEditTarget(e)}
                   title={tx(t, "questionsTitle", "Questions")}
                 >
-                  <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden />
                   <span className="truncate">{tx(t, "questionsTitle", "Questions")}</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="subtle"
-                  className="min-h-9 w-full justify-center text-xs border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/40"
+                  className="min-h-9 w-full justify-center text-xs border border-brand/30 bg-brand-subtle/20 text-brand hover:bg-brand-subtle/40"
                   onClick={() => setBulkImportTarget(e)}
                   title={tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
                 >
-                  <Zap className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                  <Zap className="size-3.5 shrink-0 text-brand" aria-hidden />
                   <span className="truncate">Bulk Paste</span>
                 </Button>
                 <Link href={`/exam-builder/${e.id}`} className="min-w-0">
                   <Button
                     size="sm"
                     aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
-                    className="min-h-9 w-full justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                    className="min-h-9 w-full justify-center bg-brand/10 text-brand border border-brand/30 hover:bg-brand-hover/20"
                   >
                     <Pencil className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">{tx(t, "edit", "Edit")}</span>
@@ -514,7 +514,7 @@ export function ExamBuilderList() {
                       <Button
                         size="sm"
                         variant={e.isPublished ? "outline" : "primary"}
-                        className={e.isPublished ? "text-xs" : "text-xs bg-emerald-600 hover:bg-emerald-700 text-white"}
+                        className={e.isPublished ? "text-xs" : "text-xs bg-brand hover:bg-brand-hover text-brand-fg"}
                         loading={updateExam.isPending && updateExam.variables?.id === e.id}
                         onClick={() => handleTogglePublish(e)}
                         title={e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}
@@ -525,28 +525,28 @@ export function ExamBuilderList() {
                       <Button
                         size="sm"
                         variant="subtle"
-                        className="text-xs border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                        className="text-xs border border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50"
                         onClick={() => setQuickEditTarget(e)}
                         title={tx(t, "questionsTitle", "Questions")}
                       >
-                        <Sparkles className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden />
                         <span>{tx(t, "questionsTitle", "Questions")}</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="subtle"
-                        className="text-xs border border-emerald-500/30 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-900/40"
+                        className="text-xs border border-brand/30 bg-brand-subtle/20 text-brand hover:bg-brand-subtle/40"
                         onClick={() => setBulkImportTarget(e)}
                         title={tx(t, "bulkImportTitle", "⚡️ Tezkor Kiritish (Bulk Paste)")}
                       >
-                        <Zap className="size-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <Zap className="size-3.5 shrink-0 text-brand" aria-hidden />
                         <span>Bulk</span>
                       </Button>
                       <Link href={`/exam-builder/${e.id}`}>
                         <Button
                           size="sm"
                           aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
-                          className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                          className="bg-brand/10 text-brand border border-brand/30 hover:bg-brand-hover/20"
                         >
                           <Pencil className="size-3.5" aria-hidden />
                           {tx(t, "edit", "Edit")}

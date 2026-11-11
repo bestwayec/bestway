@@ -91,7 +91,7 @@ export default function VocabularySrsPage() {
       <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-warning bg-warning/10 px-2.5 py-1 rounded-md border border-warning/20">
               <Sparkles className="h-3.5 w-3.5" />
               <span>Spaced Repetition System (SRS)</span>
             </div>
@@ -119,7 +119,7 @@ export default function VocabularySrsPage() {
               type="button"
               disabled={!stats || stats.totalWeakWords === 0}
               onClick={() => setIsQuizActive(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md shadow-emerald-600/20"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md shadow-brand/20"
             >
               <Play className="mr-2 h-4 w-4" />
               Xatolar Mashqini Boshlash
@@ -130,8 +130,8 @@ export default function VocabularySrsPage() {
         {/* SRS Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-6">
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-              <div className="text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-between">
+            <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
+              <div className="text-xs uppercase tracking-wider text-warning font-semibold flex items-center justify-between">
                 <span>O'rganilayotgan Xatolar</span>
                 <Flame className="h-4 w-4" />
               </div>
@@ -140,12 +140,12 @@ export default function VocabularySrsPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-              <div className="text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-between">
+            <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
+              <div className="text-xs uppercase tracking-wider text-brand font-semibold flex items-center justify-between">
                 <span>O'zlashtirilgan (Mastered)</span>
                 <CheckCircle2 className="h-4 w-4" />
               </div>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
+              <p className="text-2xl font-bold text-brand mt-2">
                 {stats.totalMasteredWords} ta so'z
               </p>
             </div>
@@ -165,7 +165,7 @@ export default function VocabularySrsPage() {
 
       {isLoading && (
         <div className="py-16 text-center text-muted-foreground flex flex-col items-center gap-3">
-          <RefreshCw className="h-8 w-8 animate-spin text-emerald-500" />
+          <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           <span>Xatolar banki yuklanmoqda...</span>
         </div>
       )}
@@ -187,7 +187,7 @@ export default function VocabularySrsPage() {
 
           {stats.weakWords.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-12 text-center text-muted-foreground space-y-3">
-              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+              <CheckCircle2 className="h-12 w-12 text-brand mx-auto" />
               <h3 className="text-base font-bold text-foreground">Hozircha xatolaringiz yo'q! 🎉</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 Barcha topshirilgan testlardagi so'zlar to'liq o'zlashtirilgan. Yangi lug'at to'plamlarini yechib ko'ring!
@@ -216,7 +216,7 @@ export default function VocabularySrsPage() {
                     <tr key={w.id} className="hover:bg-muted/50 transition-colors">
                       <td className="py-2.5 px-4 text-muted-foreground font-mono text-xs">{idx + 1}</td>
                       <td className="py-2.5 px-4 font-bold text-foreground">{w.english}</td>
-                      <td className="py-2.5 px-4 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <td className="py-2.5 px-4 text-brand font-medium">
                         {w.uzbek}
                       </td>
                       <td className="py-2.5 px-4 text-center">

@@ -232,10 +232,10 @@ export function OverviewPanel({
               <Button
                 size="sm"
                 variant="subtle"
-                className="w-full justify-center border border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50"
+                className="w-full justify-center border border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50"
                 onClick={() => setQuickEditorOpen(true)}
               >
-                <Sparkles className="size-3.5 text-emerald-400" />
+                <Sparkles className="size-3.5 text-brand" />
                 <span>{tx(t, "questionEditorQuick", "Question editor (quick import)")}</span>
               </Button>
             </div>

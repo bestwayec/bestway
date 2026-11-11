@@ -110,7 +110,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+            <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/20 text-brand">
               <BookA className="h-7 w-7" />
             </div>
             <div>
@@ -129,7 +129,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             type="button"
             variant="outline"
             onClick={() => setIsPlayerBattleOpen(true)}
-            className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+            className="border-warning/30 text-warning hover:bg-warning/10"
           >
             <Gamepad2 className="mr-2 h-4 w-4" />
             PIN Bilan Kirish
@@ -139,7 +139,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Button
               type="button"
               onClick={() => setBattleSetId(sets[0].id)}
-              className="bg-amber-600 hover:bg-amber-500 text-white font-medium shadow-md shadow-amber-600/20"
+              className="bg-warning hover:bg-warning text-white font-medium shadow-md shadow-warning/20"
             >
               <Zap className="mr-2 h-4 w-4" />
               Live Vocab Battle
@@ -161,7 +161,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Button
               type="button"
               onClick={() => setIsBuilderOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md shadow-emerald-600/20"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md shadow-brand/20"
             >
               <Plus className="mr-2 h-4 w-4" />
               Yangi Lug'at Yaratish
@@ -171,18 +171,18 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       </div>
 
       {/* Subway Vocab Runner Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-r from-emerald-950/40 via-bg-subtle to-emerald-900/20 p-6 md:p-7 shadow-xl shadow-emerald-950/20">
-        <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-r from-brand-subtle/40 via-bg-subtle to-brand-subtle/20 p-6 md:p-7 shadow-xl shadow-brand/30">
+        <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-              <Zap className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+              <Zap className="h-3.5 w-3.5 text-brand animate-pulse" />
               <span>Yangi 3D Gamifikatsiya • Subway Vocab Runner</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black text-fg tracking-tight flex items-center gap-2">
               ⚡️ Subway Vocab Runner — So'zlarni yugurib o'rganing!
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">
               3 yo'lakli dinamik yugurish trassasi, 60 FPS silliq harakat, CEFR (A1–C1) so'z boyligi, Irregular Verbs va kollokatsiyalar! To'g'ri darvozani tanlang, xavfli to'siqlardan sakrab o'ting va o'z rekordingizni o'rnating.
             </p>
           </div>
@@ -191,7 +191,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Link href="/vocabulary/runner">
               <Button
                 size="lg"
-                className="bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-emerald-500/25 transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-brand/25 transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
               >
                 <Gamepad2 className="h-5 w-5" />
                 <span>Hoziroq O'ynash</span>
@@ -204,9 +204,9 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
       {/* SRS Quick Alert Banner (if user has weak words) */}
       {srsStats && srsStats.totalWeakWords > 0 && (
-        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-card to-emerald-500/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-warning/30 bg-gradient-to-r from-warning/10 via-card to-brand/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-amber-500/20 text-amber-500 shrink-0">
+            <div className="p-3 rounded-xl bg-warning/20 text-warning shrink-0">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
@@ -223,7 +223,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
           </div>
 
           <Link href="/vocabulary/srs">
-            <Button className="bg-amber-600 hover:bg-amber-500 text-white font-semibold shrink-0 shadow-md shadow-amber-600/20">
+            <Button className="bg-warning hover:bg-warning text-white font-semibold shrink-0 shadow-md shadow-warning/20">
               <Sparkles className="mr-2 h-4 w-4" />
               Xatolar Ustida Ishlash
             </Button>
@@ -241,7 +241,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               onClick={() => setSelectedLevel(lvl)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedLevel === lvl
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25"
+                  ? "bg-brand text-brand-fg shadow-md shadow-brand/25"
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               }`}
             >
@@ -267,7 +267,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {/* Loading & Error States */}
       {isLoading && (
         <div className="py-20 text-center text-muted-foreground flex flex-col items-center gap-3">
-          <RefreshCw className="h-8 w-8 animate-spin text-emerald-500" />
+          <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           <span>Lug'at to'plamlari yuklanmoqda...</span>
         </div>
       )}
@@ -296,11 +296,11 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                 return (
                   <div
                     key={s.id}
-                    className="group rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between space-y-5"
+                    className="group rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-xl hover:border-brand/40 transition-all duration-300 flex flex-col justify-between space-y-5"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <Badge className="bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono text-xs">
+                        <Badge className="bg-brand/10 text-brand border border-brand/20 font-mono text-xs">
                           {s.level}
                         </Badge>
                         <span className="text-xs text-muted-foreground font-mono">
@@ -309,7 +309,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
+                        <h3 className="text-lg font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
                           {s.title}
                         </h3>
                         {s.description && (
@@ -331,7 +331,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                       {hasScore ? (
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Eng yaxshi natijangiz:</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          <span className="font-bold text-brand">
                             {s.userBestPercentage}%
                           </span>
                         </div>
@@ -343,7 +343,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
                       <div className="flex items-center gap-2">
                         <Link href={`/vocabulary/${s.id}`} className="flex-1">
-                          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm">
+                          <Button className="w-full bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-sm">
                             <Play className="mr-1.5 h-4 w-4" />
                             Mashqni Boshlash
                           </Button>
@@ -355,7 +355,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               type="button"
                               variant="outline"
                               onClick={() => setBattleSetId(s.id)}
-                              className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                              className="border-warning/30 text-warning hover:bg-warning/10"
                               title="Ushbu to'plam bo'yicha Live Battle (PIN) ochish"
                             >
                               <Zap className="h-4 w-4" />
@@ -367,7 +367,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               className="border-border text-foreground hover:bg-muted"
                               title="Guruh hisoboti va Excel"
                             >
-                              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                              <FileSpreadsheet className="h-4 w-4 text-brand" />
                             </Button>
                           </>
                         )}
