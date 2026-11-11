@@ -257,6 +257,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Lug'at nomidan qidirish..."
+            aria-label="Lug'at nomidan qidirish"
+            type="search"
             className="pl-9 h-9 text-xs bg-card"
           />
         </div>

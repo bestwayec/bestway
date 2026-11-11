@@ -18,7 +18,7 @@ export function ExamTrackPage() {
       <div className="mx-auto max-w-xl space-y-4" aria-busy="true">
         <PageHeader title={t("title")} />
         <p className="sr-only" role="status">{t("loading")}</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
           <Skeleton className="h-36" />
           <Skeleton className="h-36" />
         </div>
@@ -50,7 +50,7 @@ export function ExamTrackPage() {
         description={isSelfSelect ? t("subtitleSelfSelect") : t("subtitleStaffAssigned")}
       />
 
-      <div className="grid grid-cols-2 items-stretch gap-3">
+      <div className="grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-2">
         {(["IELTS", "MULTILEVEL"] as ExamProgram[]).map((program) => {
           const available = current.availablePrograms.includes(program);
           return (
