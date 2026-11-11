@@ -347,6 +347,8 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
   const t = useTranslations("mock");
   const manualSections = attempt.sections.filter((section) => section.skill === "writing" || section.skill === "speaking");
   const partialPractice = attempt.flowMode === "partial_practice";
+  // Objective-only results (e.g. a Reading practice) have nothing to break down: no empty heading.
+  if (manualSections.length === 0) return null;
   return <section aria-labelledby="multilevel-score-breakdown" className="mt-6 space-y-4">
     <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
     {manualSections.map((section) => {

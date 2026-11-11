@@ -129,6 +129,8 @@ describe("Multilevel student UX", () => {
     expect(html).toContain("Raw");
     expect(html).toContain("13 / 16");
     expect(html).toContain("55 /75");
+    const readingOnly = { ...attempt, sections: [{ id: "reading", skill: "reading", score: 13, max: 35, groups: [] }] } as unknown as MockAttemptDetail;
+    expect(renderToStaticMarkup(h(MultilevelResultBreakdown, { attempt: readingOnly }))).toBe("");
   });
 });
 
