@@ -9,13 +9,26 @@ from .views import success
 from . import runner_game_service as service
 
 
+def _bounded_int(value, default, upper=100):
+    try:
+        return max(1, min(int(value or default), upper))
+    except (TypeError, ValueError):
+        return default
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def runner_questions_view(request: Request) -> Response:
     """Return a randomized batch of 40 vocabulary runner questions."""
-    limit = int(request.query_params.get("limit") or 40)
+    limit = _bounded_int(request.query_params.get("limit"), 40)
     category = request.query_params.get("category")
     questions = service.get_runner_questions(limit=limit, category=category)
+    user = getattr(request, "user", None)
+    if request.query_params.get("session") == "1":
+        # A scored game: the server keeps the issued answers and the start time.
+        session_id = (service.start_runner_session(user, questions)
+                      if user is not None and getattr(user, "is_authenticated", False) else None)
+        return success({"sessionId": session_id, "questions": questions})
     return success(questions)
 
 
@@ -33,6 +46,6 @@ def runner_submit_score_view(request: Request) -> Response:
 @permission_classes([AllowAny])
 def runner_leaderboard_view(request: Request) -> Response:
     """Return top runner scores and leaderboard entries."""
-    limit = int(request.query_params.get("limit") or 10)
+    limit = _bounded_int(request.query_params.get("limit"), 10)
     leaderboard = service.get_runner_leaderboard(limit=limit)
     return success(leaderboard)

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import random
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
+
+from django.core.cache import cache
 from django.db import connection, transaction
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from apps.legacy_schema.models import PointsLog, StudentProfile, User
@@ -451,24 +455,183 @@ def get_runner_questions(limit: int = 40, category: Optional[str] = None) -> Lis
     return result
 
 
+# ── Server-authoritative scoring ───────────────────────────────────────────────
+# The client renders the game, so it knows each question's answer. Points are
+# therefore computed only from what the server can check: the questions it issued
+# for this game, the order of the submitted choices, and its own clock.
+RUNNER_DAILY_POINTS_CAP = 300          # owner decision, per student per local day
+RUNNER_GAME_POINTS_CAP = 150           # per game (unchanged)
+RUNNER_LIVES = 3                       # the game ends at the third mistake
+RUNNER_MIN_SECONDS_PER_GATE = 1.0      # fastest gate rate the game can produce
+RUNNER_MAX_SPEED_MPS = 45.0            # existing physical speed bound
+RUNNER_SESSION_TTL = 2 * 60 * 60
+RUNNER_LOG_PREFIX = "Subway Vocab Runner:"
+
+
+def _session_key(session_id: str) -> str:
+    return f"runner:session:{session_id}"
+
+
+def _result_key(session_id: str) -> str:
+    return f"runner:result:{session_id}"
+
+
+def start_runner_session(user: User, questions: List[Dict[str, Any]]) -> str:
+    """Remember the issued questions and start time for one authenticated game."""
+    session_id = str(uuid4())
+    cache.set(_session_key(session_id), {
+        "userId": user.id,
+        "startedAt": timezone.now().timestamp(),
+        "answers": {q["id"]: q["correct"] for q in questions},
+    }, RUNNER_SESSION_TTL)
+    return session_id
+
+
+def replay_score(issued: Dict[str, str], answers: Any) -> tuple[int, int, list]:
+    """Recompute (score, correct, mistakes) from the ordered choices with the game's
+    own rule: +100 x combo per correct gate, a mistake resets the combo, the game
+    ends at the third mistake. Unknown or repeated questions are ignored."""
+    score, combo, correct, mistakes, seen = 0, 1, 0, [], set()
+    for item in answers if isinstance(answers, list) else []:
+        if not isinstance(item, dict):
+            continue
+        qid = str(item.get("questionId") or "")
+        if qid not in issued or qid in seen:
+            continue
+        seen.add(qid)
+        chosen = str(item.get("chosen") or "").strip().lower()
+        if chosen and chosen == str(issued[qid]).strip().lower():
+            score += 100 * combo
+            combo += 1
+            correct += 1
+        else:
+            combo = 1
+            mistakes.append(qid)
+            if len(mistakes) >= RUNNER_LIVES:
+                break
+    return score, correct, mistakes
+
+
+def runner_xp(score: int, correct: int) -> int:
+    if score <= 0 and correct <= 0:
+        return 0
+    return max(5, min(RUNNER_GAME_POINTS_CAP, int(score // 15) + int(correct * 5)))
+
+
+def points_today(student_id: str) -> int:
+    start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+    return PointsLog.objects.filter(student_id=student_id, reason__startswith=RUNNER_LOG_PREFIX,
+                                    created_at__gte=start).aggregate(total=Sum("change"))["total"] or 0
+
+
+def _submit_session(user: User, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    # Idempotent: a retried POST for a finished game returns the stored result.
+    done = cache.get(_result_key(session_id))
+    if done is not None:
+        return dict(done, replayed=True)
+    session = cache.get(_session_key(session_id))
+    if not session or session.get("userId") != user.id:
+        raise ContractAPIException("RUNNER_SESSION_INVALID",
+            "O'yin sessiyasi topilmadi yoki muddati tugagan. Yangi o'yin boshlang.", 400)
+    # Claim the session once; a concurrent duplicate request loses here.
+    if not cache.add(f"runner:claim:{session_id}", 1, RUNNER_SESSION_TTL):
+        done = cache.get(_result_key(session_id))
+        if done is not None:
+            return dict(done, replayed=True)
+        raise ContractAPIException("RUNNER_SUBMIT_IN_PROGRESS", "Natija allaqachon saqlanmoqda", 409)
+
+    elapsed = max(1.0, timezone.now().timestamp() - float(session["startedAt"]))
+    answers = data.get("answers") or []
+    score, correct, mistake_ids = replay_score(session["answers"], answers)
+    gates = correct + len(mistake_ids)
+    if gates and elapsed < gates * RUNNER_MIN_SECONDS_PER_GATE:
+        cache.delete(f"runner:claim:{session_id}")
+        raise ContractAPIException("CHEATING_DETECTED",
+            "Javoblar o'yin imkon beradiganidan tezroq yuborildi. Natija bekor qilindi.", 400)
+    # Distance is display-only; never more than the server clock allows.
+    distance = min(max(0.0, float(data.get("distance_meters") or 0.0)), elapsed * RUNNER_MAX_SPEED_MPS)
+    earned = runner_xp(score, correct)
+
+    awarded, total_xp, saved = 0, None, False
+    is_student = getattr(user, "role", None) == "student"
+    with transaction.atomic():
+        profile = StudentProfile.objects.select_for_update().filter(user_id=user.id).first() if is_student else None
+        if profile is not None:
+            awarded = max(0, min(earned, RUNNER_DAILY_POINTS_CAP - points_today(profile.pk)))
+            if awarded:
+                StudentProfile.objects.filter(pk=profile.pk).update(current_points=F("current_points") + awarded)
+                PointsLog.objects.create(
+                    id=str(uuid4()), student_id=profile.pk, change=awarded, by_user_id=user.id,
+                    created_at=timezone.now(),
+                    reason=f"{RUNNER_LOG_PREFIX} +{score} pts ({int(distance)}m, {correct} words)",
+                )
+            total_xp = StudentProfile.objects.filter(pk=profile.pk).values_list("current_points", flat=True).first()
+            saved = True
+    _record_weak_words(user, data.get("mistakes"))
+
+    capped = saved and awarded < earned
+    result = {
+        "score": score,
+        "distance_meters": round(distance, 1),
+        "correct_count": correct,
+        "duration_seconds": round(elapsed, 1),
+        "xp_earned": awarded,
+        "xp_calculated": earned,
+        "daily_cap": RUNNER_DAILY_POINTS_CAP,
+        "daily_cap_reached": capped,
+        "total_xp": total_xp,
+        "saved": saved,
+        "userName": getattr(user, "name", None) or "Student",
+        "message": (f"+{awarded} XP hisobingizga qo'shildi." + (" Bugungi limitga yetdingiz." if capped else ""))
+                   if saved else "Natija qayd etildi. Ball faqat o'quvchi akkauntiga yoziladi.",
+    }
+    cache.set(_result_key(session_id), result, RUNNER_SESSION_TTL)
+    cache.delete(_session_key(session_id))
+    return result
+
+
+def _record_weak_words(user: User, mistakes: Any) -> None:
+    if not mistakes or not isinstance(mistakes, list):
+        return
+    from apps.core.models import UserWeakWord, VocabularyWord
+    for m in mistakes[:10]:
+        if not isinstance(m, dict):
+            continue
+        target_prompt = str(m.get("prompt") or m.get("correct") or "").strip()
+        word_obj = VocabularyWord.objects.filter(english__iexact=target_prompt).first() if target_prompt else None
+        if word_obj:
+            weak, created = UserWeakWord.objects.get_or_create(
+                student_id=user.id, word_id=word_obj.id,
+                defaults={"mistake_count": 1, "correct_streak": 0, "is_mastered": False},
+            )
+            if not created:
+                weak.mistake_count += 1
+                weak.correct_streak = 0
+                weak.save(update_fields=["mistake_count", "correct_streak", "updated_at"])
+
+
 def submit_runner_score(user: Optional[User], data: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate game telemetry, sync XP, and record mistake words."""
+    """Authenticated games are scored only from a server session (see above).
+    Guests get a preview of their client-side result; nothing is saved."""
+    if user and getattr(user, "is_authenticated", False):
+        session_id = str(data.get("sessionId") or "").strip()
+        if not session_id:
+            raise ContractAPIException("RUNNER_SESSION_REQUIRED",
+                "O'yin sessiyasi yo'q. Sahifani yangilab, yangi o'yin boshlang.", 400)
+        return _submit_session(user, session_id, data)
+
     score = max(0, int(data.get("score") or 0))
     distance_meters = max(0.0, float(data.get("distance_meters") or 0.0))
     duration_seconds = max(1.0, float(data.get("duration_seconds") or 1.0))
     correct_count = max(0, int(data.get("correct_count") or 0))
-    mistakes = data.get("mistakes") or []
 
-    # Anti-cheat speed sanity check:
     speed = distance_meters / duration_seconds
-    if speed > 45.0 and distance_meters > 100:
+    if speed > RUNNER_MAX_SPEED_MPS and distance_meters > 100:
         raise ContractAPIException(
             "CHEATING_DETECTED",
             "O'yin tezligi jismoniy chegaralardan oshib ketgan. Natija bekor qilindi.",
             400,
         )
-
-    # Plausibility sanity check on score vs correct answers & distance
     max_plausible_score = (correct_count * 300) + int(distance_meters * 4) + 500
     if score > max_plausible_score and score > 200:
         raise ContractAPIException(
@@ -476,60 +639,17 @@ def submit_runner_score(user: Optional[User], data: Dict[str, Any]) -> Dict[str,
             "To'plangan ball va javoblar soni o'rtasida nomuvofiqlik aniqlandi.",
             400,
         )
-
-    # XP Calculation: capped at 150 per game to avoid farming exploits
-    xp_earned = max(5, min(150, int(score // 15) + int(correct_count * 5)))
-
-    saved = False
-    total_xp = xp_earned
-    user_name = "Runner"
-
-    if user and getattr(user, "is_authenticated", False):
-        user_name = getattr(user, "name", None) or getattr(user, "email", "Student")
-        try:
-            profile = StudentProfile.objects.filter(user_id=user.id).first()
-            if profile:
-                profile.current_points = (profile.current_points or 0) + xp_earned
-                profile.save(update_fields=["current_points"])
-                total_xp = profile.current_points
-
-                PointsLog.objects.create(
-                    student=profile,
-                    change=xp_earned,
-                    reason=f"Subway Vocab Runner: +{score} pts ({int(distance_meters)}m, {correct_count} words)",
-                )
-
-                # Record mistakes in user weak words bank if available
-                if mistakes and isinstance(mistakes, list):
-                    from apps.core.models import UserWeakWord, VocabularyWord
-                    for m in mistakes[:10]:
-                        target_prompt = str(m.get("prompt") or m.get("correct") or "").strip()
-                        if target_prompt:
-                            word_obj = VocabularyWord.objects.filter(english__iexact=target_prompt).first()
-                            if word_obj:
-                                weak, created = UserWeakWord.objects.get_or_create(
-                                    student_id=user.id,
-                                    word_id=word_obj.id,
-                                    defaults={"mistake_count": 1, "correct_streak": 0, "is_mastered": False},
-                                )
-                                if not created:
-                                    weak.mistake_count += 1
-                                    weak.correct_streak = 0
-                                    weak.save(update_fields=["mistake_count", "correct_streak", "updated_at"])
-            saved = True
-        except Exception:
-            saved = False
-
+    xp_earned = max(5, min(RUNNER_GAME_POINTS_CAP, int(score // 15) + int(correct_count * 5)))
     return {
         "score": score,
         "distance_meters": round(distance_meters, 1),
         "correct_count": correct_count,
         "duration_seconds": round(duration_seconds, 1),
         "xp_earned": xp_earned,
-        "total_xp": total_xp,
-        "saved": saved,
-        "userName": user_name,
-        "message": f"+{xp_earned} XP muvaffaqiyatli hisobingizga qo'shildi!" if saved else "Natija qayd etildi (XP saqlash uchun tizimga kiring)",
+        "total_xp": xp_earned,
+        "saved": False,
+        "userName": "Runner",
+        "message": "Natija qayd etildi (XP saqlash uchun tizimga kiring)",
     }
 
 
