@@ -34,7 +34,8 @@ Use them with any colour utility: `bg-surface`, `text-fg-muted`, `border-danger-
 - Colours that carry meaning as categories: per-skill colours, annotation highlighter colours,
   question-type chips, game answer colours. They must stay distinct, so they keep their hues; their
   neutrals still use tokens.
-- Third-party brand marks (Google sign-in) and print-only artwork (certificates).
+- Third-party brand marks (Google sign-in), print-only artwork (certificates) and the crash report
+  of `StrictErrorBoundary` (a white diagnostic box in both themes).
 
 ### Migrating a component
 

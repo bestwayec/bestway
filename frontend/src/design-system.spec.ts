@@ -29,7 +29,6 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/exam-feedback-modal.tsx": {},
   "src/components/mock/ai-diagnostic-coach.tsx": {},
   "src/components/mock/cefr-result-infographic.tsx": { neutralOnly: true },
-  "src/components/common/StrictErrorBoundary.tsx": {},
 };
 
 const root = path.resolve(__dirname, "..");

@@ -6,6 +6,9 @@
 // and only the semantic tokens follow the theme. Components written for one theme render wrongly in the
 // other (white cards in dark mode, white text on white in light mode).
 //
+// Not migrated on purpose: components/common/StrictErrorBoundary.tsx (crash report is a white box in both
+// themes, see CDLayout.spec.ts), certificate-modal.tsx (print artwork), google-auth-button.tsx (brand mark).
+//
 // Usage: node scripts/tokenize-colors.mjs [--check] [--neutral-only] <file...>
 //   --check         report what would change and exit 1 if anything would; do not write.
 //   --neutral-only  only rewrite neutrals (slate/gray/white/black ...); keep every hue. For files whose hues
@@ -40,7 +43,10 @@ const CLASS_RE = new RegExp(
   "g",
 );
 
-const SATURATED_BG = new RegExp(String.raw`(?<![\w-])bg-(${[...DANGER, ...WARNING, ...ORANGE, ...INFO].join("|")})-(?:[4-7]00)(?![\w-])`);
+// Solid fills, raw or already tokenized (so the codemod is idempotent).
+const SATURATED_BG = new RegExp(
+  String.raw`(?<![\w-])bg-(?:(?:${[...DANGER, ...WARNING, ...ORANGE, ...INFO].join("|")})-[4-7]00|danger|warning|info|orange)(?![\w-])`,
+);
 
 function neutral(role, shade, isWhite, isBlack, alpha) {
   if (role === "text") {
@@ -74,7 +80,7 @@ function neutral(role, shade, isWhite, isBlack, alpha) {
   return "bg";
 }
 
-function tinted(family, role, shade) {
+function tinted(family, role, shade, util) {
   const t = {
     brand: { subtleBg: "brand-subtle", solid: "brand", strong: "brand-hover", text: "brand", textStrong: "brand-subtle-fg", border: "brand/30" },
     danger: { subtleBg: "danger-bg", solid: "danger", strong: "danger", text: "danger", textStrong: "danger", border: "danger-border" },
@@ -84,6 +90,8 @@ function tinted(family, role, shade) {
   }[family];
   if (role === "text") return shade >= 700 && shade <= 900 ? t.textStrong : t.text;
   if (role === "border") return shade >= 400 && shade <= 700 ? t.solid : t.border;
+  // gradient stops stay solid except the lightest / darkest washes
+  if (util === "from" || util === "via" || util === "to") return shade <= 100 || shade >= 900 ? t.subtleBg : shade >= 700 ? t.strong : t.solid;
   if (shade <= 300 || shade >= 900) return t.subtleBg;
   if (shade >= 700) return t.strong;
   return t.solid;
@@ -98,12 +106,14 @@ function familyOf(hue) {
   return "neutral";
 }
 
-const SOLID_HUE_BG = new RegExp(String.raw`(?<![\w-])bg-(${HUES.filter((h) => !NEUTRAL.has(h)).join("|")})-(?:[3-7]00)(?![\w-])`);
+const SOLID_HUE_BG = new RegExp(
+  String.raw`(?<![\w-])bg-(?:(?:${HUES.filter((h) => !NEUTRAL.has(h)).join("|")})-[3-7]00|brand|danger|warning|info|orange)(?![\w-])`,
+);
 
 export function tokenizeLine(line, { neutralOnly = false, keepInfo = false } = {}) {
   const keepWhiteText = SATURATED_BG.test(line);
   const solidHueBg = SOLID_HUE_BG.test(line);
-  const brandSolidBg = /(?<![\w-])bg-(?:emerald|green|teal|lime)-[4-7]00(?![\w-])/.test(line);
+  const brandSolidBg = /(?<![\w-])bg-(?:(?:emerald|green|teal|lime)-[4-7]00|brand)(?![\w-])/.test(line);
   return line.replace(CLASS_RE, (whole, variants, util, hue, shadeStr, alphaStr) => {
     const role = ROLE[util.replace(/-[trblxy]$/, "")];
     const shade = shadeStr ? Number(shadeStr) : 500;
@@ -121,7 +131,7 @@ export function tokenizeLine(line, { neutralOnly = false, keepInfo = false } = {
     if (family === "neutral" && role === "text" && solidHueBg && !isWhite) {
       return brandSolidBg && (isBlack || shade >= 800) ? `${variants}${util}-brand-fg` : whole;
     }
-    let token = family === "neutral" ? neutral(role, shade, isWhite, isBlack, alpha) : tinted(family, role, shade);
+    let token = family === "neutral" ? neutral(role, shade, isWhite, isBlack, alpha) : tinted(family, role, shade, util);
     if (family === "brand" && token === "brand" && role === "bg" && /(?:^|:)(?:hover|active):$/.test(variants)) token = "brand-hover";
     // keep explicit opacity on tinted solids (bg-emerald-500/10 -> bg-brand/10)
     if (alpha !== undefined && !token.includes("/") && !(family === "neutral" && (isWhite || isBlack))) {

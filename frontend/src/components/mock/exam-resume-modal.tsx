@@ -26,13 +26,13 @@ const SKILL_CONFIG: Record<
 > = {
   writing: {
     label: "Writing",
-    icon: <PenLine className="size-5 text-amber-500" />,
+    icon: <PenLine className="size-5 text-warning" />,
     desc: "Insholar va xat yozish topshiriqlari",
     emoji: "✍️",
   },
   speaking: {
     label: "Speaking",
-    icon: <Mic className="size-5 text-emerald-500" />,
+    icon: <Mic className="size-5 text-brand" />,
     desc: "Og'zaki javoblar va audio yozish topshiriqlari",
     emoji: "🗣️",
   },
@@ -89,20 +89,20 @@ export function ExamResumeModal({
                 key={skill}
                 type="button"
                 onClick={() => handleSelectSkill(skill)}
-                className="group flex w-full items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition-all hover:border-emerald-500/50 hover:bg-emerald-500/5 active:scale-[0.99]"
+                className="group flex w-full items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition-all hover:border-brand/50 hover:bg-brand-hover/5 active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-subtle group-hover:border-emerald-500/30">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-subtle group-hover:border-brand/30">
                     <span className="text-lg">{config.emoji}</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-fg group-hover:text-emerald-400">
+                    <h3 className="text-sm font-semibold text-fg group-hover:text-brand">
                       {config.label}
                     </h3>
                     <p className="text-xs text-fg-muted">{config.desc}</p>
                   </div>
                 </div>
-                <ArrowRight className="size-4 text-fg-muted transition-transform group-hover:translate-x-1 group-hover:text-emerald-400" />
+                <ArrowRight className="size-4 text-fg-muted transition-transform group-hover:translate-x-1 group-hover:text-brand" />
               </button>
             );
           })}

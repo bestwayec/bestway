@@ -79,21 +79,21 @@ export function TeacherAttemptOverrideCard({
   };
 
   return (
-    <Card className="overflow-hidden border border-emerald-500/40 bg-surface shadow-xl">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-emerald-950/20 p-4">
+    <Card className="overflow-hidden border border-brand/40 bg-surface shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-brand-subtle/20 p-4">
         <div className="flex items-center gap-2.5">
-          <div className="grid size-9 place-items-center rounded-xl bg-emerald-500/20 text-emerald-400">
+          <div className="grid size-9 place-items-center rounded-xl bg-brand/20 text-brand">
             <Award className="size-5" />
           </div>
           <div>
             <h3 className="flex items-center gap-2 font-bold text-fg text-sm sm:text-base">
               Ustoz Nazorati & Yakuniy Bahoni Tasdiqlash
               {isReviewed ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+                <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand">
                   <CheckCircle2 className="size-3" /> Tasdiqlangan
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400">
+                <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/20 px-2.5 py-0.5 text-[11px] font-semibold text-warning">
                   <Sparkles className="size-3" /> AI Tavsiyasi
                 </span>
               )}
@@ -108,15 +108,15 @@ export function TeacherAttemptOverrideCard({
           variant="outline"
           size="sm"
           onClick={() => setIsOpen(!isOpen)}
-          className="border-emerald-500/30 text-xs text-emerald-400 hover:bg-emerald-500/10"
+          className="border-brand/30 text-xs text-brand hover:bg-brand-hover/10"
         >
           {isOpen ? "Yopish" : "Tahrirlash / Baholash"}
         </Button>
       </div>
 
       {data?.teacherComment && !isOpen && (
-        <div className="border-b border-border/30 bg-emerald-950/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Ustozning rasmiy izohi:</p>
+        <div className="border-b border-border/30 bg-brand-subtle/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand">Ustozning rasmiy izohi:</p>
           <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{data.teacherComment}&rdquo;</p>
           {(data.teacherReviewedBy || data.teacher_reviewed_by) && (
             <p className="mt-1 text-[11px] text-fg-subtle">— {(data.teacherReviewedBy || data.teacher_reviewed_by)}</p>
@@ -215,7 +215,7 @@ export function TeacherAttemptOverrideCard({
               type="submit"
               size="sm"
               loading={mutation.isPending}
-              className="bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+              className="bg-brand font-semibold text-brand-fg hover:bg-brand-hover"
             >
               <CheckCircle2 className="size-4" /> Yakuniy Bahoni Tasdiqlash
             </Button>
@@ -304,9 +304,9 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               {job.skill === "writing" && <p className="text-xs text-fg-muted">{t("wordCount", { count: submission.wordCount })}</p>}
               {submission.originalResponse && <p className="whitespace-pre-wrap break-words text-sm text-fg">{submission.originalResponse}</p>}
               {submission.imageUrls && submission.imageUrls.length > 0 && (
-                <div className="space-y-2 rounded-xl border border-emerald-500/30 bg-emerald-950/15 p-3">
+                <div className="space-y-2 rounded-xl border border-brand/30 bg-brand-subtle/15 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand">
                       <ImageIcon className="size-3.5" /> Qo&apos;lyozma rasmlar ({submission.imageUrls.length} ta sahifa)
                     </span>
                     <span className="text-[11px] text-fg-subtle">Kattalashtirish uchun ustiga bosing</span>
@@ -317,11 +317,11 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                         key={idx}
                         type="button"
                         onClick={() => setSelectedZoomImage({ url, title: `Qo'lyozma ${part.task} · Sahifa #${idx + 1}` })}
-                        className="group relative size-20 overflow-hidden rounded-lg border border-slate-700 bg-black/40 transition hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/40"
+                        className="group relative size-20 overflow-hidden rounded-lg border border-border-strong bg-black/40 transition hover:border-brand hover:ring-2 hover:ring-brand/40"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={url} alt={`Qo'lyozma sahifa ${idx + 1}`} className="size-full object-cover transition-transform duration-200 group-hover:scale-110" />
-                        <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[9px] font-bold text-white">#{idx + 1}</span>
+                        <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[9px] font-bold text-fg">#{idx + 1}</span>
                       </button>
                     ))}
                   </div>
@@ -348,18 +348,18 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-fg">Fonetik va Ravonlik Tahlili:</span>
                       {submission.transcript.speechDiagnostics.fluency_score ? (
-                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
+                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand">
                           Ravonlik: {submission.transcript.speechDiagnostics.fluency_score}/9.0
                         </span>
                       ) : null}
                     </div>
                     {!!submission.transcript.speechDiagnostics.mispronounced_words?.length && (
                       <div className="space-y-1">
-                        <p className="text-[11px] font-medium text-amber-400">Noaniq talaffuz qilingan so&apos;zlar:</p>
+                        <p className="text-[11px] font-medium text-warning">Noaniq talaffuz qilingan so&apos;zlar:</p>
                         <ul className="space-y-1 pl-2 text-[11px] text-fg-muted">
                           {submission.transcript.speechDiagnostics.mispronounced_words.map((m, mIdx) => (
                             <li key={mIdx}>
-                              <strong className="text-fg">{m.word}</strong>: {m.issue} {m.suggestion && <span className="text-emerald-400">({m.suggestion})</span>}
+                              <strong className="text-fg">{m.word}</strong>: {m.issue} {m.suggestion && <span className="text-brand">({m.suggestion})</span>}
                             </li>
                           ))}
                         </ul>
@@ -385,15 +385,15 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               <PartFeedbackView feedback={partResult.feedback} t={t} />
             </div>}
             {result?.improvedExamples.filter((example) => example.partId === part.id).map((example, index) => (
-              <div key={index} className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-emerald-500/5">
+              <div key={index} className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-brand/5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold text-brand">
                     <Sparkles className="size-3" /> C1 Namuna Javob (Model Answer)
                   </span>
-                  <span className="text-[11px] text-slate-400">Band 8.0+ Namuna</span>
+                  <span className="text-[11px] text-fg-muted">Band 8.0+ Namuna</span>
                 </div>
-                <p className="text-xs text-slate-400">{t("exampleNotice")}</p>
-                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-bg-subtle/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-slate-200">
+                <p className="text-xs text-fg-muted">{t("exampleNotice")}</p>
+                <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-border bg-bg-subtle/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-fg">
                   {example.text}
                 </div>
               </div>
@@ -447,26 +447,26 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
       {!!result.grammarCorrections.length && (
         <div className="space-y-2.5">
           <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
-            <span className="inline-block size-2 rounded-full bg-rose-500" />
+            <span className="inline-block size-2 rounded-full bg-danger" />
             {t("corrections")} ({result.grammarCorrections.length} ta)
           </h5>
           <ul className="space-y-2.5">
             {result.grammarCorrections.map((item, index) => (
               <li
                 key={index}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
+                className="rounded-xl border border-border bg-surface/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 text-xs font-mono font-medium text-rose-300 line-through">
+                  <span className="rounded-md border border-danger/30 bg-danger/15 px-2 py-0.5 text-xs font-mono font-medium text-danger line-through">
                     {item.original}
                   </span>
-                  <span className="text-slate-500 text-xs">→</span>
-                  <span className="rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-mono font-bold text-emerald-300">
+                  <span className="text-fg-subtle text-xs">→</span>
+                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand">
                     {item.corrected}
                   </span>
                 </div>
                 {item.explanation && (
-                  <p className="text-xs text-slate-400 leading-relaxed pt-0.5">
+                  <p className="text-xs text-fg-muted leading-relaxed pt-0.5">
                     {item.explanation}
                   </p>
                 )}
@@ -479,24 +479,24 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
       {!!result.vocabularyUpgrades.length && (
         <div className="space-y-2.5">
           <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
-            <span className="inline-block size-2 rounded-full bg-teal-400" />
+            <span className="inline-block size-2 rounded-full bg-brand" />
             {t("vocabularyUpgrades")} ({result.vocabularyUpgrades.length} ta)
           </h5>
           <ul className="space-y-2.5">
             {result.vocabularyUpgrades.map((item, index) => (
               <li
                 key={index}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
+                className="rounded-xl border border-border bg-surface/60 p-3.5 text-xs sm:text-sm space-y-2 backdrop-blur-sm shadow-xs"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-slate-400 font-mono text-xs">{item.original}</span>
-                  <span className="text-teal-400 text-xs">→</span>
-                  <span className="rounded-md border border-teal-500/30 bg-teal-500/15 px-2 py-0.5 text-xs font-mono font-bold text-teal-300">
+                  <span className="text-fg-muted font-mono text-xs">{item.original}</span>
+                  <span className="text-brand text-xs">→</span>
+                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand">
                     {item.alternative}
                   </span>
                 </div>
                 {item.explanation && (
-                  <p className="text-xs text-slate-400 leading-relaxed pt-0.5">
+                  <p className="text-xs text-fg-muted leading-relaxed pt-0.5">
                     {item.explanation}
                   </p>
                 )}

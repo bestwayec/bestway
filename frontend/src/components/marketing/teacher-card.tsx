@@ -88,15 +88,15 @@ export function TeacherProfileCard({
       {/* text block — lower third */}
       <div className="absolute inset-x-0 bottom-0 p-5">
         {teacher.badge && (
-          <span className="mb-2.5 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur-sm">
+          <span className="mb-2.5 inline-flex items-center rounded-full border border-border bg-surface-hover px-2.5 py-1 text-[11px] font-semibold tracking-wide text-fg backdrop-blur-sm">
             {teacher.badge}
           </span>
         )}
         <span aria-hidden className="mb-2 block h-0.5 w-6 rounded-full bg-brand" />
-        <h3 className="text-lg leading-snug font-bold text-white">{teacher.name}</h3>
-        {teacher.title && <p className="mt-0.5 text-sm text-white/75">{teacher.title}</p>}
+        <h3 className="text-lg leading-snug font-bold text-fg">{teacher.name}</h3>
+        {teacher.title && <p className="mt-0.5 text-sm text-fg-muted">{teacher.title}</p>}
         {teacher.achievement && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-white/85">
+          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-fg">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-accent" />
             {teacher.achievement}
           </p>
@@ -106,7 +106,7 @@ export function TeacherProfileCard({
             href={safeHref(teacher.profileUrl)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1 rounded-md text-xs font-semibold text-white/70 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:text-white"
+            className="mt-3 inline-flex items-center gap-1 rounded-md text-xs font-semibold text-fg-muted underline-offset-4 transition-colors hover:text-fg hover:underline focus-visible:text-fg"
           >
             {t("teachersViewProfile")}
             <ArrowUpRight className="size-3.5" aria-hidden />

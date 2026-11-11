@@ -266,43 +266,43 @@ export function ExpressPlacementTest({
       <div
         id="placement-test"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl",
+          "relative overflow-hidden rounded-3xl border border-brand/30 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl",
           className,
         )}
       >
-        <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 size-96 rounded-full bg-teal-500/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-brand/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 size-96 rounded-full bg-brand/10 blur-3xl" />
 
         <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/60 px-4 py-1.5 text-xs font-semibold text-emerald-300 shadow-inner">
-            <Sparkles className="size-3.5 animate-pulse text-emerald-400" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-subtle/60 px-4 py-1.5 text-xs font-semibold text-brand shadow-inner">
+            <Sparkles className="size-3.5 animate-pulse text-brand" />
             <span>AI Diagnostika & Express Placement</span>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            10 Daqiqalik Bepul <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">CEFR & IELTS</span> Placement Test
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-fg leading-tight">
+            10 Daqiqalik Bepul <span className="bg-gradient-to-r from-brand to-brand bg-clip-text text-transparent">CEFR & IELTS</span> Placement Test
           </h2>
 
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-fg-muted max-w-2xl mx-auto leading-relaxed">
             20 ta kalibratsiyalangan savol orqali grammatika, lug'at va reading darajangizni aniqlang.
             Test yakunida aniq CEFR darajangiz (A2-C1), taxminiy IELTS bali (4.0-8.0) hamda 3 ta zaif grammatik mavzuyingiz aniqlab beriladi.
           </p>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-6 py-2 max-w-lg mx-auto">
-            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
-              <Clock className="size-5 mx-auto text-emerald-400 mb-1" />
-              <div className="text-lg font-bold text-white">10 daqiqa</div>
-              <div className="text-xs text-slate-400">Tezkor diagnostika</div>
+            <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
+              <Clock className="size-5 mx-auto text-brand mb-1" />
+              <div className="text-lg font-bold text-fg">10 daqiqa</div>
+              <div className="text-xs text-fg-muted">Tezkor diagnostika</div>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
-              <Award className="size-5 mx-auto text-teal-400 mb-1" />
-              <div className="text-lg font-bold text-white">20 ta savol</div>
-              <div className="text-xs text-slate-400">A1 dan C1 gacha</div>
+            <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
+              <Award className="size-5 mx-auto text-brand mb-1" />
+              <div className="text-lg font-bold text-fg">20 ta savol</div>
+              <div className="text-xs text-fg-muted">A1 dan C1 gacha</div>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-surface/80 p-3.5 text-center">
-              <Zap className="size-5 mx-auto text-yellow-400 mb-1" />
-              <div className="text-lg font-bold text-white">0 so'm</div>
-              <div className="text-xs text-slate-400">Mutlaqo bepul</div>
+            <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
+              <Zap className="size-5 mx-auto text-warning mb-1" />
+              <div className="text-lg font-bold text-fg">0 so'm</div>
+              <div className="text-xs text-fg-muted">Mutlaqo bepul</div>
             </div>
           </div>
 
@@ -310,7 +310,7 @@ export function ExpressPlacementTest({
             <button
               type="button"
               onClick={startTest}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl shadow-emerald-950/60 transition-all duration-200 hover:from-emerald-400 hover:to-emerald-500 hover:scale-[1.02] active:scale-95"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl shadow-brand/30 transition-all duration-200 hover:from-brand-hover hover:to-brand-hover hover:scale-[1.02] active:scale-95"
             >
               <Zap className="size-5 fill-current" />
               <span>⚡️ Bepul Darajangizni Aniqlang (10 daqiqa)</span>
@@ -324,10 +324,10 @@ export function ExpressPlacementTest({
   // 2. LOADING STATE
   if (status === "loading") {
     return (
-      <div className={cn("rounded-3xl border border-slate-800 bg-bg-subtle p-12 text-center shadow-2xl", className)}>
-        <Loader2 className="size-12 animate-spin text-emerald-400 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-white">Diagnostik Savollar Yuklanmoqda...</h3>
-        <p className="text-sm text-slate-400 mt-2">Sun’iy intellekt CEFR savollar bazasini kalibratsiya qilmoqda.</p>
+      <div className={cn("rounded-3xl border border-border bg-bg-subtle p-12 text-center shadow-2xl", className)}>
+        <Loader2 className="size-12 animate-spin text-brand mx-auto mb-4" />
+        <h3 className="text-xl font-bold text-fg">Diagnostik Savollar Yuklanmoqda...</h3>
+        <p className="text-sm text-fg-muted mt-2">Sun’iy intellekt CEFR savollar bazasini kalibratsiya qilmoqda.</p>
       </div>
     );
   }
@@ -335,14 +335,14 @@ export function ExpressPlacementTest({
   // 3. ERROR STATE
   if (status === "error") {
     return (
-      <div className={cn("rounded-3xl border border-red-900/60 bg-bg-subtle p-8 text-center shadow-2xl", className)}>
-        <AlertCircle className="size-10 text-red-400 mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-white">Xatolik yuz berdi</h3>
-        <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">{errorMessage}</p>
+      <div className={cn("rounded-3xl border border-danger-border/60 bg-bg-subtle p-8 text-center shadow-2xl", className)}>
+        <AlertCircle className="size-10 text-danger mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-fg">Xatolik yuz berdi</h3>
+        <p className="text-sm text-fg-muted mt-1 max-w-md mx-auto">{errorMessage}</p>
         <button
           type="button"
           onClick={startTest}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition"
         >
           <RotateCcw className="size-4" />
           <span>Qaytadan urinish</span>
@@ -354,15 +354,15 @@ export function ExpressPlacementTest({
   // 4. SUBMITTING STATE
   if (status === "submitting") {
     return (
-      <div className={cn("rounded-3xl border border-emerald-500/40 bg-bg-subtle p-12 text-center shadow-2xl", className)}>
+      <div className={cn("rounded-3xl border border-brand/40 bg-bg-subtle p-12 text-center shadow-2xl", className)}>
         <div className="relative size-20 mx-auto mb-6">
-          <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-          <div className="relative size-20 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-slate-900">
-            <Sparkles className="size-10 text-emerald-400 animate-spin" />
+          <div className="absolute inset-0 rounded-full bg-brand/20 animate-ping" />
+          <div className="relative size-20 rounded-full border-2 border-brand flex items-center justify-center bg-surface">
+            <Sparkles className="size-10 text-brand animate-spin" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-white">Natijalar Tahlil Qilinmoqda...</h3>
-        <p className="text-sm text-slate-300 mt-2 max-w-md mx-auto">
+        <h3 className="text-2xl font-bold text-fg">Natijalar Tahlil Qilinmoqda...</h3>
+        <p className="text-sm text-fg-muted mt-2 max-w-md mx-auto">
           Sun’iy intellekt sizning javoblaringizni tekshirmoqda, CEFR darajasi va zaif grammatik nuqtalaringizni shakllantirmoqda.
         </p>
       </div>
@@ -377,18 +377,18 @@ export function ExpressPlacementTest({
       <div
         id="placement-test-runner"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-slate-800 bg-bg-subtle p-4 sm:p-8 shadow-2xl",
+          "relative overflow-hidden rounded-3xl border border-border bg-bg-subtle p-4 sm:p-8 shadow-2xl",
           className,
         )}
       >
         {/* Sticky Header: Timer & Progress */}
-        <div className="sticky top-2 z-20 mb-6 rounded-2xl border border-slate-800/80 bg-surface/90 px-4 py-3 shadow-lg backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
+        <div className="sticky top-2 z-20 mb-6 rounded-2xl border border-border/80 bg-surface/90 px-4 py-3 shadow-lg backdrop-blur-md flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 text-xs font-bold text-emerald-400">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand-subtle/80 border border-brand/30 px-3 py-1 text-xs font-bold text-brand">
               <Zap className="size-3.5 fill-current" />
               Savol {currentIndex + 1} / {questions.length}
             </span>
-            <span className="text-xs text-slate-400 hidden sm:inline">
+            <span className="text-xs text-fg-muted hidden sm:inline">
               ({answeredCount} ta belgilandi)
             </span>
           </div>
@@ -398,38 +398,38 @@ export function ExpressPlacementTest({
             className={cn(
               "flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-sm font-bold tracking-wider tabular-nums transition-colors",
               isTimeCritical
-                ? "bg-red-950/80 text-red-300 border border-red-500/50 animate-pulse"
-                : "bg-slate-900 text-emerald-300 border border-slate-700",
+                ? "bg-danger-bg/80 text-danger border border-danger/50 animate-pulse"
+                : "bg-surface text-brand border border-border-strong",
             )}
           >
-            <Clock className={cn("size-4", isTimeCritical ? "text-red-400" : "text-emerald-400")} />
+            <Clock className={cn("size-4", isTimeCritical ? "text-danger" : "text-brand")} />
             <span>{formatTime(timeLeft)}</span>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="mb-6 h-2 w-full rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+        <div className="mb-6 h-2 w-full rounded-full bg-surface overflow-hidden border border-border">
           <div
-            className="h-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-brand via-brand to-brand transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
         {/* Question Card */}
-        <div className="rounded-2xl border border-slate-800/90 bg-surface p-5 sm:p-8 shadow-inner">
+        <div className="rounded-2xl border border-border/90 bg-surface p-5 sm:p-8 shadow-inner">
           <div className="flex items-center gap-2 mb-4">
-            <span className="rounded-md border border-emerald-500/40 bg-emerald-950/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+            <span className="rounded-md border border-brand/40 bg-brand-subtle/40 px-2.5 py-0.5 text-xs font-semibold text-brand">
               {currentQuestion.level}
             </span>
-            <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2.5 py-0.5 text-xs font-medium text-slate-300 uppercase tracking-wider">
+            <span className="rounded-md border border-border-strong bg-surface-hover/60 px-2.5 py-0.5 text-xs font-medium text-fg-muted uppercase tracking-wider">
               {currentQuestion.skill}
             </span>
-            <span className="text-xs text-slate-400 hidden md:inline ml-auto">
+            <span className="text-xs text-fg-muted hidden md:inline ml-auto">
               Mavzu: {currentQuestion.topic}
             </span>
           </div>
 
-          <h3 className="text-lg sm:text-xl font-medium text-slate-100 leading-relaxed min-h-[3.5rem]">
+          <h3 className="text-lg sm:text-xl font-medium text-fg leading-relaxed min-h-[3.5rem]">
             {currentQuestion.prompt}
           </h3>
 
@@ -443,18 +443,18 @@ export function ExpressPlacementTest({
                   type="button"
                   onClick={() => handleSelectOption(currentQuestion.id, opt.key)}
                   className={cn(
-                    "group flex items-center gap-3.5 rounded-xl border p-4 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-500",
+                    "group flex items-center gap-3.5 rounded-xl border p-4 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand",
                     isSelected
-                      ? "border-emerald-500 bg-emerald-950/40 text-white shadow-md shadow-emerald-950/40 ring-1 ring-emerald-500"
-                      : "border-slate-800 bg-bg-subtle/80 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40",
+                      ? "border-brand bg-brand-subtle/40 text-fg shadow-md shadow-brand/30 ring-1 ring-brand"
+                      : "border-border bg-bg-subtle/80 text-fg-muted hover:border-border-strong hover:bg-surface-hover/40",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors",
                       isSelected
-                        ? "bg-emerald-500 text-slate-950"
-                        : "bg-slate-800 text-slate-300 group-hover:bg-slate-700",
+                        ? "bg-brand text-brand-fg"
+                        : "bg-surface-hover text-fg-muted group-hover:bg-border-strong",
                     )}
                   >
                     {opt.key}
@@ -480,10 +480,10 @@ export function ExpressPlacementTest({
                 className={cn(
                   "size-7 rounded-lg text-xs font-semibold transition-all flex items-center justify-center",
                   isCurrent
-                    ? "border-2 border-emerald-400 bg-emerald-500/20 text-white shadow"
+                    ? "border-2 border-brand bg-brand/20 text-brand-fg shadow"
                     : isAnswered
-                      ? "bg-emerald-600/30 text-emerald-300 border border-emerald-600/40"
-                      : "bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300",
+                      ? "bg-brand/30 text-brand border border-brand/40"
+                      : "bg-surface text-fg-subtle border border-border hover:text-fg-muted",
                 )}
               >
                 {idx + 1}
@@ -493,12 +493,12 @@ export function ExpressPlacementTest({
         </div>
 
         {/* Navigation & Submit Footer */}
-        <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-slate-800/80">
+        <div className="mt-8 flex items-center justify-between gap-3 pt-4 border-t border-border/80">
           <button
             type="button"
             onClick={handlePrev}
             disabled={currentIndex === 0}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted hover:bg-surface-hover hover:text-fg disabled:opacity-30 disabled:pointer-events-none transition"
           >
             <ArrowLeft className="size-4" />
             <span>Oldingisi</span>
@@ -509,7 +509,7 @@ export function ExpressPlacementTest({
               <button
                 type="button"
                 onClick={handleNext}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 px-5 py-2.5 text-sm font-semibold text-white transition shadow"
+                className="inline-flex items-center gap-2 rounded-xl bg-surface-hover hover:bg-border-strong px-5 py-2.5 text-sm font-semibold text-fg transition shadow"
               >
                 <span>Keyingisi</span>
                 <ArrowRight className="size-4" />
@@ -521,7 +521,7 @@ export function ExpressPlacementTest({
               <button
                 type="button"
                 onClick={handleSubmitTest}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-6 py-2.5 text-sm font-bold text-brand-fg shadow-lg shadow-emerald-950/60 hover:from-emerald-400 hover:to-emerald-500 active:scale-95 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand to-brand px-6 py-2.5 text-sm font-bold text-brand-fg shadow-lg shadow-brand/30 hover:from-brand-hover hover:to-brand-hover active:scale-95 transition"
               >
                 <Zap className="size-4 fill-current" />
                 <span>Testni Yakunlash ({answeredCount}/{questions.length})</span>
@@ -539,66 +539,66 @@ export function ExpressPlacementTest({
       <div
         id="placement-test-results"
         className={cn(
-          "relative overflow-hidden rounded-3xl border border-emerald-500/40 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8",
+          "relative overflow-hidden rounded-3xl border border-brand/40 bg-bg-subtle p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-8",
           className,
         )}
       >
-        <div aria-hidden className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 size-96 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 size-96 rounded-full bg-brand/15 blur-3xl" />
 
         {/* Hero Result Banner */}
         <div className="relative text-center space-y-4 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-950/60 px-4 py-1 text-xs font-bold text-emerald-300">
-            <Award className="size-4 text-emerald-400" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-subtle/60 px-4 py-1 text-xs font-bold text-brand">
+            <Award className="size-4 text-brand" />
             <span>Rasmiy CEFR & IELTS Express Diagnostika</span>
           </div>
 
           <div className="flex flex-col items-center justify-center">
-            <span className="text-6xl sm:text-7xl font-black bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(16,185,129,0.35)]">
+            <span className="text-6xl sm:text-7xl font-black bg-gradient-to-r from-brand via-brand to-brand bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(16,185,129,0.35)]">
               {result.cefr_level}
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-white mt-1">
+            <span className="text-xl sm:text-2xl font-bold text-fg mt-1">
               {result.cefr_label}
             </span>
           </div>
 
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+          <p className="text-sm sm:text-base text-fg-muted leading-relaxed">
             {result.analysis}
           </p>
 
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
-              <div className="text-xs text-slate-400 mb-1">Aniqlik darajasi</div>
-              <div className="text-lg sm:text-xl font-extrabold text-emerald-400">
+            <div className="rounded-2xl border border-border bg-surface/90 p-4 text-center">
+              <div className="text-xs text-fg-muted mb-1">Aniqlik darajasi</div>
+              <div className="text-lg sm:text-xl font-extrabold text-brand">
                 {result.score} / {result.total_questions}
               </div>
-              <div className="text-[11px] text-slate-500">({result.score_percent}%)</div>
+              <div className="text-[11px] text-fg-subtle">({result.score_percent}%)</div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
-              <div className="text-xs text-slate-400 mb-1">Taxminiy IELTS</div>
-              <div className="text-lg sm:text-xl font-extrabold text-teal-300">
+            <div className="rounded-2xl border border-border bg-surface/90 p-4 text-center">
+              <div className="text-xs text-fg-muted mb-1">Taxminiy IELTS</div>
+              <div className="text-lg sm:text-xl font-extrabold text-brand">
                 {result.estimated_ielts_band}
               </div>
-              <div className="text-[11px] text-slate-500">Band (0-9.0)</div>
+              <div className="text-[11px] text-fg-subtle">Band (0-9.0)</div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-surface/90 p-4 text-center">
-              <div className="text-xs text-slate-400 mb-1">Milliy Sertifikat</div>
-              <div className="text-lg sm:text-xl font-extrabold text-yellow-400">
+            <div className="rounded-2xl border border-border bg-surface/90 p-4 text-center">
+              <div className="text-xs text-fg-muted mb-1">Milliy Sertifikat</div>
+              <div className="text-lg sm:text-xl font-extrabold text-warning">
                 {result.national_score_estimate}
               </div>
-              <div className="text-[11px] text-slate-500">DTM (0-75 ball)</div>
+              <div className="text-[11px] text-fg-subtle">DTM (0-75 ball)</div>
             </div>
           </div>
         </div>
 
         {/* Weak Grammatical Topics */}
         {result.weak_topics && result.weak_topics.length > 0 && (
-          <div className="rounded-2xl border border-slate-800/90 bg-surface/80 p-5 sm:p-7 space-y-4">
+          <div className="rounded-2xl border border-border/90 bg-surface/80 p-5 sm:p-7 space-y-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-amber-400" />
-              <h4 className="text-base sm:text-lg font-bold text-white">
+              <AlertTriangle className="size-5 text-warning" />
+              <h4 className="text-base sm:text-lg font-bold text-fg">
                 Sizning zaif grammatik nuqtalaringiz (Top 3):
               </h4>
             </div>
@@ -607,23 +607,23 @@ export function ExpressPlacementTest({
               {result.weak_topics.map((wt, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-slate-800 bg-bg-subtle p-4 flex flex-col justify-between space-y-3"
+                  className="rounded-xl border border-border bg-bg-subtle p-4 flex flex-col justify-between space-y-3"
                 >
                   <div>
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                      <span className="font-semibold text-emerald-400">#{i + 1}-mavzu</span>
+                    <div className="flex items-center justify-between text-xs text-fg-muted mb-1">
+                      <span className="font-semibold text-brand">#{i + 1}-mavzu</span>
                       {wt.mistakes_count > 0 && (
-                        <span className="text-red-400 font-medium">{wt.mistakes_count} ta xato</span>
+                        <span className="text-danger font-medium">{wt.mistakes_count} ta xato</span>
                       )}
                     </div>
-                    <h5 className="font-semibold text-slate-100 text-sm leading-snug">{wt.topic}</h5>
-                    <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{wt.recommendation}</p>
+                    <h5 className="font-semibold text-fg text-sm leading-snug">{wt.topic}</h5>
+                    <p className="text-xs text-fg-muted mt-1.5 leading-relaxed">{wt.recommendation}</p>
                   </div>
 
                   {wt.lesson_id && (
                     <Link
                       href={`/videos?lesson=${encodeURIComponent(wt.lesson_id)}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 pt-1 transition"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand pt-1 transition"
                     >
                       <Play className="size-3 fill-current" />
                       <span>{wt.lesson_order ? `${wt.lesson_order}-darsni ko'rish` : "Darsni ko'rish"}</span>
@@ -636,25 +636,25 @@ export function ExpressPlacementTest({
         )}
 
         {/* FRICTIONLESS CONVERSION / STATE MIGRATION CALLOUT */}
-        <div className="rounded-3xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 via-surface to-bg-subtle p-6 sm:p-8 text-center space-y-5 shadow-2xl">
+        <div className="rounded-3xl border-2 border-brand/50 bg-gradient-to-br from-brand-subtle/40 via-surface to-bg-subtle p-6 sm:p-8 text-center space-y-5 shadow-2xl">
           <div className="max-w-xl mx-auto space-y-2">
-            <h4 className="text-lg sm:text-2xl font-bold text-white leading-snug">
+            <h4 className="text-lg sm:text-2xl font-bold text-fg leading-snug">
               Batafsil xatolar tahlili, o'qituvchilar tavsiyasi va shaxsiy o'quv rejangizni saqlab qolish uchun kiring:
             </h4>
-            <p className="text-xs sm:text-sm text-slate-300">
+            <p className="text-xs sm:text-sm text-fg-muted">
               Ushbu test natijasi avtomatik ravishda shaxsiy o'quvchi profilingiz (MistakeVault) bazasiga biriktiriladi.
             </p>
           </div>
 
           {hasClaimed ? (
             <div className="flex flex-col items-center justify-center space-y-3 pt-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/50 bg-emerald-950/70 px-4 py-1.5 text-sm font-semibold text-emerald-300">
-                <CheckCircle2 className="size-4 text-emerald-400" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand/50 bg-brand-subtle/70 px-4 py-1.5 text-sm font-semibold text-brand">
+                <CheckCircle2 className="size-4 text-brand" />
                 <span>Natijangiz profilingizga muvaffaqiyatli bog'landi!</span>
               </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-emerald-700 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-bold text-brand-fg shadow-lg hover:bg-brand-hover transition"
               >
                 <span>O'quvchi Kabinetiga O'tish</span>
                 <ArrowRight className="size-4" />
@@ -687,17 +687,17 @@ export function ExpressPlacementTest({
           )}
 
           {!hasClaimed && (
-            <div className="flex items-center justify-center gap-4 text-xs text-slate-400 pt-2">
+            <div className="flex items-center justify-center gap-4 text-xs text-fg-muted pt-2">
               <Link
                 href={`/login?redirect=/${locale}/dashboard`}
-                className="underline hover:text-white transition"
+                className="underline hover:text-fg transition"
               >
                 Telefon va parol bilan kirish
               </Link>
               <span>•</span>
               <Link
                 href={`/register?redirect=/${locale}/dashboard`}
-                className="underline hover:text-emerald-400 transition"
+                className="underline hover:text-brand transition"
               >
                 Ro'yxatdan o'tish
               </Link>
@@ -710,7 +710,7 @@ export function ExpressPlacementTest({
           <button
             type="button"
             onClick={startTest}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-fg-muted hover:text-brand transition"
           >
             <RotateCcw className="size-3.5" />
             <span>Testni qayta topshirish</span>

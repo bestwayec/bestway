@@ -129,18 +129,18 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
           {partialPractice && <Badge variant="outline">Bo&apos;lim mashqi</Badge>}
           {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
               <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
               <Sparkles className="size-3.5" /> AI bahosi (Ustoz ko&apos;rib chiqishi kutilmoqda)
             </span>
           )}
         </div>
         {Boolean(attempt.mediaState?.teacher_comment) && (
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Ustozning rasmiy xulosasi:</p>
+          <div className="mt-4 rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Ustozning rasmiy xulosasi:</p>
             <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{String(attempt.mediaState?.teacher_comment)}&rdquo;</p>
           </div>
         )}
@@ -247,7 +247,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                       <div
                         className={cn(
                           "h-full rounded-full transition-all duration-500",
-                          accuracy >= 80 ? "bg-emerald-500" : accuracy >= 60 ? "bg-brand" : "bg-amber-400"
+                          accuracy >= 80 ? "bg-brand" : accuracy >= 60 ? "bg-brand" : "bg-warning"
                         )}
                         style={{ width: `${Math.min(100, Math.max(0, accuracy))}%` }}
                       />
@@ -265,7 +265,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             <button
               type="button"
               onClick={() => setFeedbackModalOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 text-sm font-semibold text-emerald-400 shadow-sm transition-all hover:bg-emerald-500/20 hover:scale-[1.02]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-5 text-sm font-semibold text-brand shadow-sm transition-all hover:bg-brand-hover/20 hover:scale-[1.02]"
             >
               <Sparkles className="size-4" />
               Batafsil AI Tahlil &amp; Zaif Nuqtalar
