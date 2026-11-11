@@ -1015,7 +1015,9 @@
       "saveError": "Save failed",
       "saveOffline": "Offline — changes not yet saved to server",
       "saveRetry": "Retry",
-      "practiceBadge": "{skill} practice"
+      "practiceBadge": "{skill} practice",
+      "questionPosition": "Question {number}",
+      "flaggedCount": "{count} flagged"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",

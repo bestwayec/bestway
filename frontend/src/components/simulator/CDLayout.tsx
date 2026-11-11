@@ -127,10 +127,10 @@ export function ListeningPart1Radio({
             <span
               className={cn(
                 "grid size-4 shrink-0 place-items-center rounded-full border",
-                selected ? "border-white bg-white/20" : "border-fg-subtle"
+                selected ? "border-border bg-surface-hover" : "border-fg-subtle"
               )}
             >
-              {selected && <span className="size-2 rounded-full bg-white" />}
+              {selected && <span className="size-2 rounded-full bg-surface" />}
             </span>
             <span>{opt}</span>
           </button>
@@ -208,10 +208,10 @@ export function QuestionPalette({
         </span>
         <div className="flex items-center gap-3 text-[11px]">
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-emerald-500" /> Ishlangan
+            <span className="size-2 rounded-full bg-brand" /> Ishlangan
           </span>
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-amber-400" /> Belgilangan
+            <span className="size-2 rounded-full bg-warning" /> Belgilangan
           </span>
           <span className="flex items-center gap-1">
             <span className="size-2 rounded-full bg-border" /> Javobsiz
@@ -231,9 +231,9 @@ export function QuestionPalette({
               className={cn(
                 "size-8 rounded-lg text-xs font-bold transition-all touch-manipulation",
                 isFlag
-                  ? "bg-amber-400 text-slate-950 ring-2 ring-amber-400/50"
+                  ? "bg-warning text-slate-950 ring-2 ring-warning/50"
                   : isAns
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-brand text-brand-fg"
                   : "bg-surface border border-border text-fg-muted hover:border-brand hover:text-fg"
               )}
             >
@@ -577,7 +577,7 @@ export function CDLayout({
         highlights.some((h) => h.toLowerCase() === chunk.toLowerCase()) ? (
           <mark
             key={idx}
-            className="rounded bg-amber-400/40 text-fg px-1 py-0.5 font-medium transition-colors"
+            className="rounded bg-warning/40 text-fg px-1 py-0.5 font-medium transition-colors"
           >
             {chunk}
           </mark>
@@ -649,8 +649,8 @@ export function CDLayout({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {saveStatus === "saved" && <span role="status" className="text-xs text-emerald-400">Faqat shu brauzerda saqlandi</span>}
-              {saveStatus === "error" && <span role="alert" className="text-xs text-red-500">Brauzerga saqlanmadi. Javobni o‘zgartirib qayta urinib ko‘ring.</span>}
+              {saveStatus === "saved" && <span role="status" className="text-xs text-brand">Faqat shu brauzerda saqlandi</span>}
+              {saveStatus === "error" && <span role="alert" className="text-xs text-danger">Brauzerga saqlanmadi. Javobni o‘zgartirib qayta urinib ko‘ring.</span>}
 
               {/* Timer */}
               <div
@@ -725,8 +725,8 @@ export function CDLayout({
                               className={cn(
                                 "grid size-7 place-items-center rounded-full border text-xs transition-colors",
                                 flagged[q.id]
-                                  ? "border-amber-400 bg-amber-400/20 text-amber-500"
-                                  : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
+                                  ? "border-warning bg-warning/20 text-warning"
+                                  : "border-border text-fg-muted hover:border-warning hover:text-warning"
                               )}
                             >
                               <Flag className="size-3.5" />
@@ -770,7 +770,7 @@ export function CDLayout({
                           size="sm"
                           variant="subtle"
                           onClick={applyHighlight}
-                          className="h-7 px-2 text-xs bg-amber-400 text-slate-950 hover:bg-amber-300 font-bold"
+                          className="h-7 px-2 text-xs bg-warning text-slate-950 hover:bg-warning font-bold"
                         >
                           <Highlighter className="size-3 mr-1" />
                           Belgilash
@@ -852,8 +852,8 @@ export function CDLayout({
                                 className={cn(
                                   "grid size-7 place-items-center rounded-full border text-xs transition-colors shrink-0",
                                   flagged[q.id]
-                                    ? "border-amber-400 bg-amber-400/20 text-amber-500"
-                                    : "border-border text-fg-muted hover:border-amber-400 hover:text-amber-500"
+                                    ? "border-warning bg-warning/20 text-warning"
+                                    : "border-border text-fg-muted hover:border-warning hover:text-warning"
                                 )}
                               >
                                 <Flag className="size-3.5" />
@@ -890,7 +890,7 @@ export function CDLayout({
                                           selected ? "border-brand bg-brand" : "border-fg-subtle"
                                         )}
                                       >
-                                        {selected && <span className="size-2 rounded-full bg-white" />}
+                                        {selected && <span className="size-2 rounded-full bg-surface" />}
                                       </span>
                                       <span>{opt}</span>
                                     </button>

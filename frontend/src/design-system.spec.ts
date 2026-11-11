@@ -29,6 +29,18 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/exam-feedback-modal.tsx": {},
   "src/components/mock/ai-diagnostic-coach.tsx": {},
   "src/components/mock/cefr-result-infographic.tsx": { neutralOnly: true },
+  // Exam runner (all 4 sections) and the CD simulator
+  "src/components/mock/mock-runner.tsx": {},
+  "src/components/mock/cbt-section-stepper.tsx": {},
+  "src/components/mock/writing-image-ocr.tsx": {},
+  "src/components/mock/submit-confirm-modal.tsx": {},
+  "src/components/mock/section-transition-modal.tsx": {},
+  "src/components/mock/exam-locker.tsx": {},
+  "src/components/mock/multilevel-submit-review.tsx": {},
+  "src/components/mock/mic-check-modal.tsx": {},
+  "src/components/mock/ClickToVocabWrapper.tsx": {},
+  "src/components/simulator/CDLayout.tsx": {},
+  "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },
 };
 
 const root = path.resolve(__dirname, "..");

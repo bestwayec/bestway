@@ -113,7 +113,7 @@ export function ClickToVocabWrapper({
           <span
             key={i}
             onClick={(e) => handleWordClick(e, token)}
-            className="cursor-pointer hover:bg-emerald-500/20 hover:text-emerald-400 rounded px-0.5 transition-colors underline-offset-4 decoration-emerald-500/30 hover:underline"
+            className="cursor-pointer hover:bg-brand-hover/20 hover:text-brand rounded px-0.5 transition-colors underline-offset-4 decoration-brand/30 hover:underline"
             title="Bosib tarjimasini ko'rish va shaxsiy lug'atga qo'shish"
           >
             {token}
@@ -132,13 +132,13 @@ export function ClickToVocabWrapper({
           {sentencesWithTimestamps.map((s, idx) => (
             <div
               key={idx}
-              className="flex items-start gap-3 p-2.5 rounded-xl border border-transparent hover:border-emerald-500/20 hover:bg-emerald-500/5 transition-colors group"
+              className="flex items-start gap-3 p-2.5 rounded-xl border border-transparent hover:border-brand/20 hover:bg-brand-hover/5 transition-colors group"
             >
               {onSeekAudio && (
                 <button
                   type="button"
                   onClick={() => onSeekAudio(s.timestamp)}
-                  className="mt-0.5 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface text-xs font-medium text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                  className="mt-0.5 shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface text-xs font-medium text-brand border border-brand/30 hover:bg-brand-hover hover:text-brand-fg transition-all shadow-sm"
                   title="Ushbu gapdan eshitish"
                 >
                   <Play className="h-3 w-3 fill-current" />
@@ -164,15 +164,15 @@ export function ClickToVocabWrapper({
             left: Math.max(10, Math.min(popoverPosition.x, (containerRef.current?.offsetWidth || 300) - 280)),
             top: popoverPosition.y,
           }}
-          className="absolute z-50 w-72 rounded-2xl border border-emerald-500/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl shadow-emerald-950/40 text-foreground animate-in fade-in zoom-in-95 duration-150"
+          className="absolute z-50 w-72 rounded-2xl border border-brand/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl shadow-brand/30 text-foreground animate-in fade-in zoom-in-95 duration-150"
         >
-          <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-2.5 mb-2.5">
+          <div className="flex items-start justify-between gap-2 border-b border-border pb-2.5 mb-2.5">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-white capitalize">{selectedWord}</span>
+              <span className="text-lg font-bold text-fg capitalize">{selectedWord}</span>
               <button
                 type="button"
                 onClick={handlePlayPronunciation}
-                className="p-1 rounded-lg bg-white/5 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-colors"
+                className="p-1 rounded-lg bg-surface-hover hover:bg-brand-hover/20 text-brand hover:text-brand transition-colors"
                 title="Talaffuzni tinglash"
               >
                 <Volume2 className="h-4 w-4" />
@@ -181,7 +181,7 @@ export function ClickToVocabWrapper({
             <button
               type="button"
               onClick={closePopover}
-              className="p-1 rounded-lg text-muted-foreground hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-muted-foreground hover:text-fg hover:bg-surface-hover transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -189,22 +189,22 @@ export function ClickToVocabWrapper({
 
           {isLoading ? (
             <div className="py-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-brand" />
               <span>Tarjima qidirilmoqda...</span>
             </div>
           ) : lookupData ? (
             <div className="space-y-3">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold text-emerald-400">{lookupData.uzbek}</span>
+                <span className="text-sm font-semibold text-brand">{lookupData.uzbek}</span>
                 {lookupData.partOfSpeech && (
-                  <Badge variant="neutral" className="text-[10px] text-muted-foreground border-white/10">
+                  <Badge variant="neutral" className="text-[10px] text-muted-foreground border-border">
                     {lookupData.partOfSpeech}
                   </Badge>
                 )}
               </div>
 
               {lookupData.contextSentence && (
-                <p className="text-xs text-muted-foreground italic border-l-2 border-emerald-500/30 pl-2">
+                <p className="text-xs text-muted-foreground italic border-l-2 border-brand/30 pl-2">
                   "{lookupData.contextSentence}"
                 </p>
               )}
@@ -216,8 +216,8 @@ export function ClickToVocabWrapper({
                 disabled={isAddingSrs || isAddedSrs}
                 className={`w-full text-xs font-medium transition-all ${
                   isAddedSrs
-                    ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/30"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-900/30"
+                    ? "bg-brand/30 text-brand border border-brand/30"
+                    : "bg-brand hover:bg-brand-hover text-brand-fg shadow-md shadow-brand/30"
                 }`}
               >
                 {isAddingSrs ? (

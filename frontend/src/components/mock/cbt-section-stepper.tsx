@@ -212,7 +212,7 @@ export function CbtSectionStepper({
                   )}
                 >
                   {part.isComplete ? (
-                    <CheckCircle2 className="size-3 text-emerald-400" />
+                    <CheckCircle2 className="size-3 text-brand" />
                   ) : null}
                   {part.answeredCount}/{part.totalCount}
                 </span>
@@ -234,7 +234,7 @@ export function CbtSectionStepper({
         className={cn(
           "sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border p-2 sm:p-4 backdrop-blur-xl",
           isDtm
-            ? "border-slate-300 bg-white/95 dark:border-slate-700 dark:bg-slate-900/95"
+            ? "border-border-strong bg-surface"
             : "border-border/80 bg-surface/95"
         )}
       >
@@ -254,15 +254,15 @@ export function CbtSectionStepper({
                 </span>
                 <div className="hidden sm:flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-emerald-600 " />
+                    <span className="size-2.5 rounded-full bg-brand " />
                     {t("legendAnswered")}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-amber-400 " />
+                    <span className="size-2.5 rounded-full bg-warning " />
                     {t("legendFlagged")}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-slate-300 dark:bg-slate-700 border border-border" />
+                    <span className="size-2.5 rounded-full bg-border-strong border border-border" />
                     {t("legendUnanswered")}
                   </span>
                 </div>
@@ -301,14 +301,14 @@ export function CbtSectionStepper({
                           "ring-2 ring-brand ring-offset-2 ring-offset-bg font-black scale-105",
                         isDtm
                           ? isFlag
-                            ? "bg-amber-400 text-slate-950 border border-amber-500 shadow-xs"
+                            ? "bg-warning text-slate-950 border border-warning shadow-xs"
                             : isAns
-                            ? "bg-emerald-600 text-white border border-emerald-700 shadow-xs"
-                            : "bg-slate-200 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                            ? "bg-brand text-brand-fg border border-brand shadow-xs"
+                            : "bg-surface-hover text-fg-muted border border-border-strong"
                           : isFlag
-                          ? "bg-amber-500/25 text-amber-300 ring-1 ring-amber-400"
+                          ? "bg-warning/25 text-warning ring-1 ring-warning"
                           : isAns
-                          ? "bg-emerald-600 text-white shadow-sm"
+                          ? "bg-brand text-brand-fg shadow-sm"
                           : isCurrentPart
                           ? "bg-bg-subtle text-fg border border-border/80 hover:bg-surface-hover"
                           : "bg-surface text-fg-muted/70 border border-border/40 hover:text-fg"
@@ -319,7 +319,7 @@ export function CbtSectionStepper({
                         <span
                           className={cn(
                             "absolute -top-1 -right-1 text-[9px] leading-none",
-                            isDtm ? "text-amber-700 dark:text-amber-300" : "text-amber-400"
+                            isDtm ? "text-warning" : "text-warning"
                           )}
                         >
                           ⚑
@@ -362,14 +362,14 @@ export function CbtSectionStepper({
                   className={cn(
                     "min-h-[40px] px-3 text-xs font-medium transition-colors touch-manipulation",
                     currentFlagged
-                      ? "bg-amber-400/25 text-amber-600 dark:text-amber-300 border border-amber-500/50"
+                      ? "bg-warning/25 text-warning border border-warning/50"
                       : "text-fg-muted"
                   )}
                 >
                   <Flag
                     className={cn(
                       "size-3.5 sm:mr-1.5",
-                      currentFlagged && "fill-amber-400 text-amber-500"
+                      currentFlagged && "fill-warning text-warning"
                     )}
                   />
                   <span className="sr-only sm:not-sr-only">{currentFlagged ? t("flagged") : t("flag")}</span>
@@ -404,7 +404,7 @@ export function CbtSectionStepper({
                       type="button"
                       size="sm"
                       onClick={onSubmitSection}
-                      className="min-h-[40px] bg-emerald-600 text-white px-4 text-xs font-semibold shadow hover:bg-emerald-700 touch-manipulation"
+                      className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
                     >
                       {t("submitSection")}
                     </Button>

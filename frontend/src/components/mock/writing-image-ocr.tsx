@@ -89,10 +89,10 @@ export function ImageZoomModal({
     >
       {/* Top Toolbar */}
       <div
-        className="flex w-full max-w-4xl items-center justify-between gap-3 border-b border-slate-800 bg-bg-subtle/90 px-4 py-2.5 text-white rounded-t-xl"
+        className="flex w-full max-w-4xl items-center justify-between gap-3 border-b border-border bg-bg-subtle/90 px-4 py-2.5 text-fg rounded-t-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-sm font-semibold truncate text-slate-200">
+        <span className="text-sm font-semibold truncate text-fg">
           {title || "Qo'lyozma rasm (Kattalashtirilgan ko'rinish)"}
         </span>
         <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export function ImageZoomModal({
             type="button"
             size="sm"
             variant="outline"
-            className="size-8 p-0 border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+            className="size-8 p-0 border-border-strong bg-surface-hover text-fg hover:bg-border-strong"
             onClick={() => setZoomLevel((z) => Math.min(z + 0.3, 3))}
             title="Kattalashtirish"
           >
@@ -110,7 +110,7 @@ export function ImageZoomModal({
             type="button"
             size="sm"
             variant="outline"
-            className="size-8 p-0 border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+            className="size-8 p-0 border-border-strong bg-surface-hover text-fg hover:bg-border-strong"
             onClick={() => setZoomLevel((z) => Math.max(z - 0.3, 0.6))}
             title="Kichiklashtirish"
           >
@@ -120,7 +120,7 @@ export function ImageZoomModal({
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 px-2.5 border-slate-700 bg-slate-800 text-xs font-medium text-slate-200 hover:bg-slate-700"
+            className="h-8 px-2.5 border-border-strong bg-surface-hover text-xs font-medium text-fg hover:bg-border-strong"
             onClick={() => setZoomLevel(1)}
           >
             {Math.round(zoomLevel * 100)}%
@@ -129,7 +129,7 @@ export function ImageZoomModal({
             type="button"
             size="sm"
             variant="outline"
-            className="size-8 p-0 border-rose-800/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60"
+            className="size-8 p-0 border-danger-border/60 bg-danger-bg/40 text-danger hover:bg-danger-bg/60"
             onClick={onClose}
             title="Yopish (Esc)"
           >
@@ -140,7 +140,7 @@ export function ImageZoomModal({
 
       {/* Image Preview Canvas */}
       <div
-        className="relative flex size-full max-w-4xl flex-1 items-center justify-center overflow-auto rounded-b-xl border border-slate-800 bg-[#05080F] p-4 select-none"
+        className="relative flex size-full max-w-4xl flex-1 items-center justify-center overflow-auto rounded-b-xl border border-border bg-[#05080F] p-4 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -372,7 +372,7 @@ export function WritingImageOcr({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-800/80 bg-bg-subtle/90 p-4 shadow-xl backdrop-blur-xl transition-all",
+        "rounded-2xl border border-border/80 bg-bg-subtle/90 p-4 shadow-xl backdrop-blur-xl transition-all",
         className,
       )}
       onDragStart={(e) => e.stopPropagation()}
@@ -419,17 +419,17 @@ export function WritingImageOcr({
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-950/40 text-emerald-400 shadow-sm">
+          <span className="inline-flex size-8 items-center justify-center rounded-xl border border-brand/30 bg-brand-subtle/40 text-brand shadow-sm">
             <ScanText className="size-4" />
           </span>
           <div>
-            <p className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+            <p className="text-xs font-bold text-fg flex items-center gap-1.5">
               <span>Qo&apos;lyozma Inshoni Yuklash & AI Vision OCR</span>
-              <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300 border border-emerald-500/30">
+              <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand border border-brand/30">
                 DeepSeek Vision
               </span>
             </p>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-fg-muted">
               Daftarga yozilgan varaqni telefon kamerasi yoki fayl orqali yuklang (JPG, PNG, max 10MB)
             </p>
           </div>
@@ -441,9 +441,9 @@ export function WritingImageOcr({
             size="sm"
             disabled={isExtracting || pages.length >= maxPages}
             onClick={() => cameraInputRef.current?.click()}
-            className="h-8 gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-xs font-semibold text-emerald-300 hover:bg-emerald-900/50"
+            className="h-8 gap-1.5 rounded-xl border border-brand/40 bg-brand-subtle/30 text-xs font-semibold text-brand hover:bg-brand-subtle/50"
           >
-            <Camera className="size-3.5 text-emerald-400" />
+            <Camera className="size-3.5 text-brand" />
             <span>📷 Kamera / Rasm olish</span>
           </Button>
 
@@ -453,9 +453,9 @@ export function WritingImageOcr({
             variant="outline"
             disabled={isExtracting || pages.length >= maxPages}
             onClick={() => fileInputRef.current?.click()}
-            className="h-8 gap-1.5 rounded-xl border-slate-700 bg-slate-900/80 text-xs font-medium text-slate-200 hover:bg-slate-800"
+            className="h-8 gap-1.5 rounded-xl border-border-strong bg-surface/80 text-xs font-medium text-fg hover:bg-surface-hover"
           >
-            <UploadCloud className="size-3.5 text-slate-400" />
+            <UploadCloud className="size-3.5 text-fg-muted" />
             <span>Fayldan tanlash</span>
           </Button>
         </div>
@@ -482,18 +482,18 @@ export function WritingImageOcr({
         className={cn(
           "cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition-all",
           isDragging
-            ? "border-emerald-500 bg-emerald-950/20 shadow-inner"
-            : "border-slate-800 bg-slate-950/60 hover:border-emerald-500/50 hover:bg-slate-900/60",
+            ? "border-brand bg-brand-subtle/20 shadow-inner"
+            : "border-border bg-bg/60 hover:border-brand/50 hover:bg-surface/60",
           pages.length >= maxPages && "cursor-not-allowed opacity-60",
         )}
       >
         <div className="flex flex-col items-center justify-center gap-1.5">
-          <FileImage className="size-6 text-emerald-400/70" />
-          <p className="text-xs font-medium text-slate-300">
+          <FileImage className="size-6 text-brand/70" />
+          <p className="text-xs font-medium text-fg-muted">
             Daftar varag&apos;i rasmlarini bu yerga tashlang yoki bosib yuklang
           </p>
-          <p className="text-[11px] text-slate-500">
-            Sahifalar: <strong className="text-emerald-400">{pages.length}</strong> / {maxPages} ta
+          <p className="text-[11px] text-fg-subtle">
+            Sahifalar: <strong className="text-brand">{pages.length}</strong> / {maxPages} ta
           </p>
         </div>
       </div>
@@ -505,7 +505,7 @@ export function WritingImageOcr({
             {pages.map((page, idx) => (
               <div
                 key={page.id}
-                className="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-md transition-all hover:border-emerald-500/50"
+                className="group relative overflow-hidden rounded-xl border border-border bg-surface/80 shadow-md transition-all hover:border-brand/50"
               >
                 <div
                   className="relative aspect-4/3 w-full cursor-pointer bg-black/60"
@@ -517,12 +517,12 @@ export function WritingImageOcr({
                     alt={`${idx + 1}-bet`}
                     className="size-full object-cover transition-transform group-hover:scale-105"
                   />
-                  <span className="absolute top-1.5 left-1.5 rounded-md bg-slate-950/90 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400 border border-slate-800">
+                  <span className="absolute top-1.5 left-1.5 rounded-md bg-bg/90 px-1.5 py-0.5 text-[10px] font-bold text-brand border border-border">
                     {idx + 1}-bet
                   </span>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-900/90 px-2 py-1 text-[10px] font-semibold text-white">
-                      <Maximize2 className="size-3 text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 rounded-md bg-surface/90 px-2 py-1 text-[10px] font-semibold text-fg">
+                      <Maximize2 className="size-3 text-brand" />
                       Kattalashtirish
                     </span>
                   </div>
@@ -534,14 +534,14 @@ export function WritingImageOcr({
                       e.stopPropagation();
                       handleRemovePage(idx);
                     }}
-                    className="absolute top-1.5 right-1.5 inline-flex size-6 items-center justify-center rounded-full bg-rose-600/90 text-white shadow hover:bg-rose-700 disabled:opacity-50"
+                    className="absolute top-1.5 right-1.5 inline-flex size-6 items-center justify-center rounded-full bg-danger/90 text-white shadow hover:bg-danger disabled:opacity-50"
                   >
                     <X className="size-3.5" />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between gap-1 p-2 bg-slate-950/80 border-t border-slate-800/80">
-                  <span className="truncate text-[10px] font-medium text-slate-400" title={page.name}>
+                <div className="flex items-center justify-between gap-1 p-2 bg-bg/80 border-t border-border/80">
+                  <span className="truncate text-[10px] font-medium text-fg-muted" title={page.name}>
                     {idx + 1}-bet
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -553,10 +553,10 @@ export function WritingImageOcr({
                         setReplacingIndex(idx);
                         replaceInputRef.current?.click();
                       }}
-                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-800 hover:text-emerald-300 disabled:opacity-50"
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-surface-hover hover:text-brand disabled:opacity-50"
                       title="Almashtirish"
                     >
-                      <RefreshCw className="size-2.5 text-emerald-400" />
+                      <RefreshCw className="size-2.5 text-brand" />
                       <span>Almashtirish</span>
                     </button>
                     <button
@@ -566,7 +566,7 @@ export function WritingImageOcr({
                         e.stopPropagation();
                         handleRemovePage(idx);
                       }}
-                      className="inline-flex items-center rounded p-1 text-slate-500 hover:bg-rose-950/40 hover:text-rose-400 disabled:opacity-50"
+                      className="inline-flex items-center rounded p-1 text-fg-subtle hover:bg-danger-bg/40 hover:text-danger disabled:opacity-50"
                       title="O'chirish"
                     >
                       <Trash2 className="size-3" />
@@ -579,27 +579,27 @@ export function WritingImageOcr({
 
           {/* Extracting Progress Banner */}
           {isExtracting && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3.5 backdrop-blur-md">
-              <div className="flex items-center gap-2.5 text-xs font-semibold text-emerald-300">
-                <Loader2 className="size-4 animate-spin text-emerald-400" />
+            <div className="rounded-xl border border-brand/30 bg-brand-subtle/30 p-3.5 backdrop-blur-md">
+              <div className="flex items-center gap-2.5 text-xs font-semibold text-brand">
+                <Loader2 className="size-4 animate-spin text-brand" />
                 <span>AI Vision qo&apos;lyozmani matnga aylantirmoqda...</span>
               </div>
               <div className="mt-2.5 space-y-1.5">
-                <div className="h-2 w-5/6 animate-pulse rounded bg-emerald-500/20" />
-                <div className="h-2 w-3/4 animate-pulse rounded bg-emerald-500/20" />
+                <div className="h-2 w-5/6 animate-pulse rounded bg-brand/20" />
+                <div className="h-2 w-3/4 animate-pulse rounded bg-brand/20" />
               </div>
             </div>
           )}
 
           {/* Action Row */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-slate-800/80">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-border/80">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 size="sm"
                 disabled={isExtracting}
                 onClick={() => handleExtractOcr("replace")}
-                className="h-9 gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-700"
+                className="h-9 gap-2 rounded-xl bg-brand px-4 text-xs font-semibold text-brand-fg shadow-lg shadow-brand/30 hover:bg-brand-hover"
               >
                 {isExtracting ? (
                   <>
@@ -620,7 +620,7 @@ export function WritingImageOcr({
                   size="sm"
                   variant="outline"
                   onClick={() => handleExtractOcr("append")}
-                  className="h-9 rounded-xl border-slate-700 bg-slate-900/80 text-xs font-medium text-slate-300 hover:bg-slate-800"
+                  className="h-9 rounded-xl border-border-strong bg-surface/80 text-xs font-medium text-fg-muted hover:bg-surface-hover"
                 >
                   Davomiga qo&apos;shish
                 </Button>
@@ -628,7 +628,7 @@ export function WritingImageOcr({
             </div>
 
             {lastExtractedCount !== null && !isExtracting && (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-2.5 py-1 text-[11px] font-semibold text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-brand-subtle/40 px-2.5 py-1 text-[11px] font-semibold text-brand">
                 <CheckCircle2 className="size-3.5" />
                 OCR: {lastExtractedCount} ta so&apos;z ajratib olindi
               </span>
