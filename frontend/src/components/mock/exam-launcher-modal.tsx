@@ -88,7 +88,7 @@ export function ExamLauncherModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl rounded-[12px] border border-border bg-surface p-6">
+      <DialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto rounded-[12px] border border-border bg-surface p-4 sm:p-6">
         <DialogHeader className="text-left space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-sm">
@@ -114,6 +114,14 @@ export function ExamLauncherModal({
         </DialogHeader>
 
         <DialogBody className="space-y-6 pt-2">
+          <div className="rounded-[12px] border border-border bg-bg p-4 text-sm leading-relaxed text-fg-muted">
+            <h3 className="mb-2 font-semibold text-fg">Boshlashdan oldin</h3>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Barqaror internet ulanishini tekshiring.</li>
+              <li>Listening uchun ovozni, Speaking uchun mikrofon va ruxsatlarni tekshiring.</li>
+              <li>Javob saqlanganini ko‘rsatuvchi holatni kuzating; xato bo‘lsa qayta urinib ko‘ring.</li>
+            </ul>
+          </div>
           {/* Tanlov 1: To'liq Mock Imtihon (Full Mock) */}
           <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -148,7 +156,7 @@ export function ExamLauncherModal({
               Ixtiyoriy bitta bo&apos;limni tanlab, mashq qiling:
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 gap-2.5 pt-1 sm:grid-cols-2">
               {availableSkills.map((skill) => {
                 const Icon = SKILL_ICONS[skill] || Headphones;
                 const minutes = durations[skill];

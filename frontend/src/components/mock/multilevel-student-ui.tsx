@@ -81,8 +81,8 @@ export function studentSaveErrorMessage(error: unknown): string {
   return "Your response could not be saved. Try again.";
 }
 
-export function studentSaveMessage(state: "idle" | "saving" | "saved" | "error"): string {
-  return { idle: "Saved", saving: "Saving…", saved: "Saved", error: "Save failed — Retry" }[state];
+export function studentSaveMessage(state: "idle" | "saving" | "saved" | "error" | "offline"): string {
+  return { idle: "Saved", saving: "Saving…", saved: "Saved", error: "Save failed — Retry", offline: "Offline — changes not yet saved to server" }[state];
 }
 
 export function taskDuration(guidance: TaskGuidance | undefined): string | null {

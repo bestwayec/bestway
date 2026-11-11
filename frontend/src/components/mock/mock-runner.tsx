@@ -305,7 +305,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
-  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
+  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -328,15 +328,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
     if (!ids.length) return;
     const snapshot = { ...answersRef.current };
-    if (versioned) setSaveState("saving");
+    setSaveState("saving");
     let succeeded = false;
     saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then((result) => {
       if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
       succeeded = true;
       ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-      if (versioned && !dirty.current.size) setSaveState("saved");
+      if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
-      if (versioned) setSaveState("error");
+      setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
       toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
     }).finally(() => {
       saveInFlight.current = null;
@@ -356,15 +356,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     dirty.current.add(qid);
     const next = { ...answersRef.current, [qid]: val };
     answersRef.current = next;
-    if (versioned) setSaveState("saving");
+    setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saving");
     setAnswers(next);
   }
   React.useEffect(() => {
-    if (!versioned) return;
     window.addEventListener('online', flush);
+    const onOffline = () => { if (dirty.current.size) setSaveState("offline"); };
+    window.addEventListener('offline', onOffline);
     const id = window.setInterval(flush, 10000);
-    return () => { window.removeEventListener('online', flush); window.clearInterval(id); };
-  }, [flush, versioned]);
+    return () => { window.removeEventListener('online', flush); window.removeEventListener('offline', onOffline); window.clearInterval(id); };
+  }, [flush]);
 
   // Native-feeling tap feedback on answer options and buttons (touch devices only).
   React.useEffect(() => installHaptics(), []);
@@ -685,10 +686,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               </Button>
             </div>
           </div>
-          {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
-            <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
-            {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
-          </div>}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted" role="status" aria-live="polite">
+            <span className={cn((saveState === "error" || saveState === "offline") && "text-danger")}>{studentSaveMessage(saveState)}</span>
+            {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[44px] font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
+          </div>
           <ResponseProgress answered={answered} total={total} />
         </div>
 
