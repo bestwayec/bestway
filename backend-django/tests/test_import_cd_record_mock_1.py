@@ -204,7 +204,11 @@ class RecordMockPlaceholderAudioTests(TestCase):
 
     def test_placeholder_override_is_refused_outside_a_local_database(self):
         from django.core.management.base import CommandError
-        with isolated_record_mock_media(listening_seconds=8):
+        from django.db import connection
+        from unittest import mock
+        # Pin a non-local name: the test database is named after DATABASE_URL, so on a developer stack
+        # (education_center_local -> test_education_center_local) the guard would rightly allow it.
+        with isolated_record_mock_media(listening_seconds=8), mock.patch.dict(connection.settings_dict, {"NAME": "education_center"}):
             with self.assertRaises(CommandError) as ctx:
                 call_command("import_cd_record_mock_1", "--allow-placeholder-audio", stdout=io.StringIO())
         self.assertIn("_local", str(ctx.exception))
