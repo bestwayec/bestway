@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { AlertOctagon, Maximize2, ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { FULLSCREEN_GUARD_EVENT } from "@/lib/microphone";
 
 export interface ExamLockerProps {
   active: boolean;
@@ -43,11 +45,27 @@ export function ExamLocker({
   onForceSubmit,
   children,
 }: ExamLockerProps) {
+  const t = useTranslations("mock.locker");
+  // Shown once per attempt: the browser's own "exit full screen" toast is system text we cannot
+  // translate, so say in Uzbek what it is before the exam starts.
+  const noticeKey = `bw_fullscreen_notice_${attemptId}`;
+  const [noticeOpen, setNoticeOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (!active) return;
+    try {
+      if (window.sessionStorage.getItem(noticeKey)) return;
+    } catch {
+      // storage unavailable: show the notice every time
+    }
+    setNoticeOpen(true);
+  }, [active, noticeKey]);
   const [isFullscreen, setIsFullscreen] = React.useState(true);
   const [warningsCount, setWarningsCount] = React.useState(0);
   const [warningModalOpen, setWarningModalOpen] = React.useState(false);
   const [, setLastWarningEvent] = React.useState<string>("");
   const forceSubmittedRef = React.useRef(false);
+  // Paused while the app itself leaves full screen for a moment (microphone permission prompt).
+  const guardPausedRef = React.useRef(false);
   const lastViolationTimeRef = React.useRef(0);
 
   // Keep callback refs stable
@@ -83,7 +101,7 @@ export function ExamLocker({
 
   const triggerViolation = React.useCallback(
     (eventType: string) => {
-      if (!active || forceSubmittedRef.current) return;
+      if (!active || forceSubmittedRef.current || guardPausedRef.current) return;
 
       onAnomalyRef.current(eventType);
 
@@ -142,6 +160,7 @@ export function ExamLocker({
     if (!active) return;
 
     const handleFullscreenChange = () => {
+      if (guardPausedRef.current) return;
       const full = Boolean(getFullscreenElement());
       setIsFullscreen(full);
       if (!full && !forceSubmittedRef.current) {
@@ -156,6 +175,30 @@ export function ExamLocker({
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
     };
   }, [active, triggerViolation]);
+
+  // 2b. Short, app-initiated full-screen exit (see requestMicrophoneStream)
+  React.useEffect(() => {
+    if (!active) return;
+    let expire: ReturnType<typeof setTimeout> | undefined;
+    const onGuard = (event: Event) => {
+      const paused = Boolean((event as CustomEvent<{ paused?: boolean }>).detail?.paused);
+      if (expire) clearTimeout(expire);
+      guardPausedRef.current = paused;
+      if (paused) {
+        // Never stay unguarded: a permission prompt that is never answered must not disable the guard.
+        expire = setTimeout(() => { guardPausedRef.current = false; setIsFullscreen(Boolean(getFullscreenElement())); }, 60_000);
+      } else {
+        lastViolationTimeRef.current = Date.now();
+        setIsFullscreen(Boolean(getFullscreenElement()));
+      }
+    };
+    window.addEventListener(FULLSCREEN_GUARD_EVENT, onGuard);
+    return () => {
+      if (expire) clearTimeout(expire);
+      guardPausedRef.current = false;
+      window.removeEventListener(FULLSCREEN_GUARD_EVENT, onGuard);
+    };
+  }, [active]);
 
   // 3. Tab switch & blur detection
   React.useEffect(() => {
@@ -257,6 +300,26 @@ export function ExamLocker({
   return (
     <>
       {children}
+
+      {active && noticeOpen && (
+        <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="exam-fullscreen-notice-title" data-testid="fullscreen-notice">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand-subtle text-brand-subtle-fg"><Maximize2 className="size-7" /></div>
+            <h3 id="exam-fullscreen-notice-title" className="text-xl font-bold text-fg">{t("startTitle")}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-fg-muted">{t("startBody")}</p>
+            <Button
+              className="mt-6 min-h-[48px] w-full bg-brand font-semibold text-brand-fg touch-manipulation"
+              onClick={() => {
+                try { window.sessionStorage.setItem(noticeKey, "1"); } catch { /* ignore */ }
+                setNoticeOpen(false);
+                void requestFullscreenSafe();
+              }}
+            >
+              {t("startButton")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* FULLSCREEN BLOCKING OVERLAY */}
       {active && !isFullscreen && (

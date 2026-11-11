@@ -997,7 +997,14 @@
       "listeningLoading": "Loading audio…",
       "listeningPrepareError": "The preview could not be started. Please try again.",
       "listeningPlayError": "The audio could not be loaded or played. Please try again.",
-      "listeningMediaError": "The audio failed to play. Tell your supervisor."
+      "listeningMediaError": "The audio failed to play. Tell your supervisor.",
+      "nextSection": "Next section",
+      "nextSectionDone": "Moved to the next section",
+      "saveSaved": "Saved",
+      "saveSaving": "Saving…",
+      "saveError": "Save failed",
+      "saveRetry": "Retry",
+      "practiceBadge": "{skill} practice"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1091,7 +1098,36 @@
       "completed": "Completed"
     },
     "internalPracticeScore": "Score",
-    "internalPracticeNotice": "Results"
+    "internalPracticeNotice": "Results",
+    "stepper": {
+      "partsLabel": "Parts",
+      "palette": "Question palette",
+      "legendAnswered": "Answered",
+      "legendFlagged": "Flagged",
+      "legendUnanswered": "Not answered",
+      "questionLabel": "Question {label}, {part}",
+      "stateAnswered": "answered",
+      "stateNotAnswered": "not answered",
+      "stateFlagged": "flagged",
+      "previousPart": "Previous part",
+      "nextPart": "Next part",
+      "flag": "Flag question",
+      "flagged": "Flagged for review",
+      "nextSection": "Next section",
+      "submitSection": "Submit section",
+      "scrollHint": "Swipe to see more questions"
+    },
+    "advanceConfirm": {
+      "title": "Move to the next section?",
+      "body": "You cannot come back to this section afterwards. Your answers here are saved and will be marked.",
+      "stay": "Stay here",
+      "confirm": "Yes, next section"
+    },
+    "locker": {
+      "startTitle": "This exam runs in full screen",
+      "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Do not leave full screen and do not switch apps or tabs: every exit is recorded and three warnings submit the exam.",
+      "startButton": "I understand, start"
+    }
   },
   "wizard": {
     "title": "Create exam",
