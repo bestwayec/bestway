@@ -41,6 +41,7 @@ const PROTECTED_PREFIXES = [
   "/mock",
   "/exam-builder",
   "/videos",
+  "/teacher",
 ];
 
 /** Login qilgan foydalanuvchi bu sahifalarga qaytmasligi kerak */
@@ -57,6 +58,7 @@ const ROUTE_ROLES: [string, Role[]][] = [
   ["/gallery", ["admin", "super_admin"]],
   ["/mock", ["student", "teacher", "admin", "super_admin"]],
   ["/exam-builder", ["teacher", "admin", "super_admin"]],
+  ["/teacher", ["teacher", "admin", "super_admin"]],
   ["/settings", ["super_admin"]],
   ["/audit", ["super_admin"]],
   ["/my", ["student", "parent"]],
