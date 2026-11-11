@@ -128,7 +128,9 @@ def users(request):
     if q.get('role'): rows=rows.filter(role=q['role'])
     if q.get('groupId'): rows=rows.filter(id__in=StudentProfile.objects.filter(group_id=q['groupId']).values('user_id'))
     search_term = (q.get('search') or '').strip()
-    if search_term:
+    if search_term and request.user.role == 'teacher' and User.objects.filter(id=search_term).exists():
+        rows = rows.filter(id=search_term)
+    elif search_term:
         words = [w for w in re.split(r'\s+', search_term) if w]
         for word in words:
             escaped_chars = []
@@ -145,15 +147,37 @@ def users(request):
                 | Q(name__icontains=word)
                 | Q(name__icontains=word_clean)
                 | Q(name__icontains=word_std)
-                | Q(phone__icontains=word_clean)
-                | Q(email__icontains=word)
             )
+            # Teachers search by name or exact user ID only: matching phone or
+            # email digits would reveal the contact details masked below.
+            if request.user.role != 'teacher':
+                word_q |= Q(phone__icontains=word_clean) | Q(email__icontains=word)
             rows = rows.filter(word_q)
     total=rows.count();start=(q['page']-1)*q['limit']
     # List shapes omit parent children/teacher groups, unlike detail.
     from .views import _lookup_user, _user_shape
     with connection.cursor() as cursor: items=[_user_shape(_lookup_user(cursor,user.id),True) for user in rows.order_by('-created_at')[start:start+q['limit']]]
+    if request.user.role == 'teacher':
+        own = set(StudentProfile.objects.filter(group__teacher_id=request.user.id).values_list('user_id', flat=True))
+        for item in items:
+            if item['id'] not in own:
+                item['phone'] = mask_phone(item.get('phone'))
+                if item.get('email'): item['email'] = mask_email(item['email'])
     return paginated(items,q['page'],q['limit'],total)
+
+
+def mask_phone(phone):
+    """+998901234567 -> '+998 ** *** 45 67'. Keeps only the country code and last 4 digits."""
+    if not phone: return phone
+    digits = re.sub(r'\D', '', str(phone))
+    if len(digits) < 4: return '***'
+    prefix = '+998 ' if digits.startswith('998') else ''
+    return f"{prefix}** *** {digits[-4:-2]} {digits[-2:]}"
+
+
+def mask_email(email):
+    local, _, domain = str(email).partition('@')
+    return f"{local[:1]}***@{domain}" if domain else '***'
 
 
 def delete_student_cascade(actor, identifier):
