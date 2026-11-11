@@ -121,6 +121,7 @@ export function TeacherWorkspaceView() {
             data={cohortDetail}
             isLoading={isLoadingDetail}
             onOpenCreateAssignment={() => setIsAssignmentModalOpen(true)}
+            onGraded={() => void fetchCohortAnalytics(selectedCohortId)}
           />
         </div>
       )}
