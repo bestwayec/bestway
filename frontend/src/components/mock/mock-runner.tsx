@@ -1215,7 +1215,7 @@ function GroupBlock({
   );
 }
 
-function EssayQuestionEditor({
+export function EssayQuestionEditor({
   q,
   attemptId,
   value,
@@ -1236,24 +1236,25 @@ function EssayQuestionEditor({
   // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
   const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
 
-  // Restore draft from localStorage on mount if current value is empty
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && !value) {
-      try {
-        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
-        const cached = localStorage.getItem(draftKey);
-        if (cached && cached.trim()) {
-          onChange(cached);
-        }
-      } catch {}
-    }
-  }, [attemptId, q.id, value, onChange]);
+  // A browser draft may be older than the server (for example after another tab
+  // saved or cleared an answer). Offer it explicitly rather than overwriting.
+  const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+  const [dismissedDraftKey, setDismissedDraftKey] = React.useState<string | null>(null);
+  const subscribeDraft = React.useCallback((notify: () => void) => {
+    window.addEventListener("storage", notify);
+    return () => window.removeEventListener("storage", notify);
+  }, []);
+  const browserDraft = React.useSyncExternalStore(subscribeDraft, () => {
+    try {
+      return localStorage.getItem(draftKey);
+    } catch { return null; }
+  }, () => null);
 
   const handleWritingChange = (text: string) => {
+    setDismissedDraftKey(draftKey);
     onChange(text);
     if (typeof window !== "undefined") {
       try {
-        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
         localStorage.setItem(draftKey, text);
       } catch {}
     }
@@ -1263,6 +1264,14 @@ function EssayQuestionEditor({
 
   return (
     <div className="space-y-3">
+      {browserDraft !== null && browserDraft !== value && dismissedDraftKey !== draftKey && (
+        <details className="rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-fg">
+          <summary className="cursor-pointer font-semibold">{tx("writingDraftFound")}</summary>
+          <p className="mt-2 text-fg-muted">{tx("writingDraftExplanation")}</p>
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-surface p-2 font-sans">{browserDraft.trim() ? browserDraft : tx("writingDraftEmpty")}</pre>
+          <Button type="button" variant="outline" className="mt-2 min-h-[44px]" onClick={() => handleWritingChange(browserDraft)}>{tx("writingDraftRestore")}</Button>
+        </details>
+      )}
       {q.guidance && multilevelSkill === "writing" ? (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
