@@ -480,7 +480,7 @@ export function ExpressPlacementTest({
                 className={cn(
                   "size-7 rounded-lg text-xs font-semibold transition-all flex items-center justify-center",
                   isCurrent
-                    ? "border-2 border-brand bg-brand/20 text-brand-fg shadow"
+                    ? "border-2 border-brand bg-brand/20 text-fg shadow"
                     : isAnswered
                       ? "bg-brand/30 text-brand border border-brand/40"
                       : "bg-surface text-fg-subtle border border-border hover:text-fg-muted",
