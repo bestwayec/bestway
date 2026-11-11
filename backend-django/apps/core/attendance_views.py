@@ -77,3 +77,14 @@ def export_view(request):
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
 def group_summary_view(request):
     return success(service.group_summary(request.user, query(request, 'stats')))
+
+
+@api_view(['GET'])
+@permission_classes([roles('teacher', 'admin', 'super_admin')])
+def group_day_summary_view(request, group_id):
+    data = dict(request.query_params.items())
+    for key in data:
+        if key != 'date': invalid(f'property {key} should not exist')
+    if 'date' in data and not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', data['date']):
+        invalid("date formati YYYY-MM-DD bo'lsin")
+    return success(service.group_day_summary(request.user, group_id, data.get('date')))

@@ -1392,7 +1392,7 @@ export interface GroupAttendanceSummaryResponse {
   presentCount: number;
   lateCount: number;
   absentCount: number;
-  attendanceRate: number;
+  attendanceRate: number | null;
   students: Array<{
     id: string;
     studentId: string;
