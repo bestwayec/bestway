@@ -114,19 +114,19 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI (#113 and #122 merged; #114–#121 merge cleanly into main 32977fb, in any order)
+## PRs / CI (#113–#116, #120–#122 merged; #117–#119 merge cleanly into main a5759d5, in any order)
 
 | PR | Topic | Head | CI |
 |---|---|---|---|
 | #113 | Platform repair (practice start, drafts, Record Mock audio, attendance, vocabulary points, builder/simulator) | e328f58 | MERGED 2026-11-11 |
-| #114 | Runner points integrity | c9d9a06 | green (run 43025769620) |
-| #115 | Vocabulary visibility | 67c6014 | green (run 43025787683) |
-| #116 | Proxy 502 diagnostics | 6455043 | green (run 43025986777) |
+| #114 | Runner points integrity | c9d9a06 | MERGED 2026-11-11 |
+| #115 | Vocabulary visibility | 67c6014 | MERGED 2026-11-11 |
+| #116 | Proxy 502 diagnostics | 6455043 | MERGED 2026-11-11 |
 | #117 | Dashboard hydration + /teacher guard | 65c2686 | green (run 43029326557; earlier red run 43027637040 = spec typing, fixed) |
 | #118 | Phone layout fixes | 6522b3b | green (run 43029117470) |
 | #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | green (run 43030243067) |
-| #120 | Homework score server-side + teacher grading | 7880e84 | green (run 43060261487) |
-| #121 | Teacher contact masking | 9ead3d1 | green (run 43061427570) |
+| #120 | Homework score server-side + teacher grading | 7880e84 | MERGED 2026-11-11 |
+| #121 | Teacher contact masking | 9ead3d1 | MERGED 2026-11-11 |
 | #122 | Full browser E2E + catalogue cache / launcher / quiz fixes | c947184 | MERGED 2026-11-11 (main 32977fb) |
 
 ## Open questions (owner)
