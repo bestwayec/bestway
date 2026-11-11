@@ -55,7 +55,7 @@ export function ExamTrackCard({
         {isActive ? (
           <p className="text-sm font-medium text-brand-subtle-fg">{t("currentTrack")}</p>
         ) : selectable ? (
-          <Button size="sm" className="w-full sm:w-auto" disabled={pending} loading={pending} onClick={onSelect}>
+          <Button size="sm" className="h-auto min-h-9 w-full whitespace-normal py-1.5 text-center sm:w-auto" disabled={pending} loading={pending} onClick={onSelect}>
             {t("switchTo", { program: name })}
           </Button>
         ) : (

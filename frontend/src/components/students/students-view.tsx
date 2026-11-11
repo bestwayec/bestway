@@ -74,6 +74,8 @@ export function StudentsView() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("search")}
+          aria-label={t("search")}
+          type="search"
           className="pl-9"
         />
       </div>

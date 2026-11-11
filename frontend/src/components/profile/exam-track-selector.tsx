@@ -59,7 +59,7 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 items-stretch gap-3">
+      <div className="grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-2">
         {(["IELTS", "MULTILEVEL"] as ExamProgram[]).map((program) => {
           const isActive = current.activeProgram === program;
           const available = current.availablePrograms.includes(program);
