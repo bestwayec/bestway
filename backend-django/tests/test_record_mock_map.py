@@ -44,6 +44,7 @@ class MapOptionScoringTests(SimpleTestCase):
         for module in (mock_rules, mock_scoring):
             self.assertEqual(module.choice_index("D  Room D", OPTIONS), 3)
             self.assertIsNone(module.choice_index("D  Room E", OPTIONS))
+            self.assertIsNone(module.choice_index("D  Room D", ["Red", "Blue", "Green", "Yellow"]))
         self.assertTrue(
             mock_scoring.correct("map_labelling", "D  Room D", ["D"], options=OPTIONS)
         )

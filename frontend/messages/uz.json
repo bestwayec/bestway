@@ -988,7 +988,29 @@
       "finalizingStatus": "Yuklashga tayyorlanmoqda",
       "uploadingStatus": "Yuklanmoqda",
       "uploadedStatus": "Yuklandi",
-      "retryStatus": "Qayta urinish kerak"
+      "retryStatus": "Qayta urinish kerak",
+      "listeningRegion": "Listening audiosi",
+      "listeningStart": "Qismni ko‘zdan kechirish",
+      "listeningPlay": "Audioni boshlash",
+      "listeningRules": "Audio cheklangan marta eshittiriladi, uni to‘xtatib yoki orqaga qaytarib bo‘lmaydi. Avval ko‘zdan kechirishni boshlang; u tugagach audio ochiladi.",
+      "listeningPreview": "Ko‘zdan kechirish: audio {seconds} soniyadan keyin ochiladi",
+      "listeningPlaying": "Audio ijro etilmoqda",
+      "listeningReady": "Tayyor: «Audioni boshlash» tugmasini bosing",
+      "listeningFinished": "Bu qism uchun barcha ijrolar ishlatildi",
+      "listeningPlays": "Ijro {plays}/{limit}",
+      "listeningVolume": "Ovoz balandligi",
+      "listeningLoading": "Audio yuklanmoqda…",
+      "listeningPrepareError": "Ko‘zdan kechirishni boshlab bo‘lmadi. Qayta urinib ko‘ring.",
+      "listeningPlayError": "Audioni yuklab yoki ijro etib bo‘lmadi. Qayta urinib ko‘ring.",
+      "listeningMediaError": "Audio ijro etilmadi. Nazoratchiga murojaat qiling.",
+      "nextSection": "Keyingi bo‘lim",
+      "nextSectionDone": "Keyingi bo‘limga o‘tildi",
+      "saveSaved": "Saqlandi",
+      "saveSaving": "Saqlanmoqda…",
+      "saveError": "Saqlanmadi",
+      "saveOffline": "Internet yo‘q — javoblar serverga hali saqlanmadi",
+      "saveRetry": "Qayta urinish",
+      "practiceBadge": "{skill} mashqi"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1087,6 +1109,35 @@
       "title": "Javob topshirilmagan",
       "body": "Bu urinishda birorta ham saqlangan javob yoki yozuv yo‘q, shuning uchun ball, daraja va sertifikat hisoblanmadi, AI yoki ustoz tekshiruviga hech narsa yuborilmadi.",
       "retry": "Mock imtihonlarga qaytish"
+    },
+    "stepper": {
+      "partsLabel": "Qismlar",
+      "palette": "Savollar palitrasi",
+      "legendAnswered": "Javob berilgan",
+      "legendFlagged": "Belgilangan",
+      "legendUnanswered": "Javobsiz",
+      "questionLabel": "{label}-savol, {part}",
+      "stateAnswered": "javob berilgan",
+      "stateNotAnswered": "javobsiz",
+      "stateFlagged": "belgilangan",
+      "previousPart": "Oldingi qism",
+      "nextPart": "Keyingi qism",
+      "flag": "Savolni belgilash",
+      "flagged": "Belgilandi",
+      "nextSection": "Keyingi bo‘lim",
+      "submitSection": "Bo‘limni topshirish",
+      "scrollHint": "Yana savollarni ko‘rish uchun suring"
+    },
+    "advanceConfirm": {
+      "title": "Keyingi bo‘limga o‘tasizmi?",
+      "body": "Keyin bu bo‘limga qaytib bo‘lmaydi. O‘tishdan oldin javoblaringiz saqlanadi; saqlash xatosida qayta urinib ko‘ring.",
+      "stay": "Shu yerda qolish",
+      "confirm": "Ha, keyingi bo‘lim"
+    },
+    "locker": {
+      "startTitle": "Imtihon to‘liq ekranda o‘tadi",
+      "startBody": "Brauzer «to‘liq ekrandan chiqish…» kabi tizim xabarini ko‘rsatishi mumkin. U brauzerdan keladi, BestWay’dan emas. To‘liq ekrandan chiqmang va boshqa ilova yoki tabga o‘tmang: har bir chiqish qayd etiladi, uchta ogohlantirishdan keyin imtihon topshiriladi.",
+      "startButton": "Tushundim, boshlayman"
     }
   },
   "wizard": {

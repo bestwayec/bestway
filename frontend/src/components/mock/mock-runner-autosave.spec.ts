@@ -126,12 +126,12 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
   it('shows a failed legacy save until a retry is acknowledged', async () => {
     hooks.save.mockRejectedValueOnce(new Error('server error'));
     await mount(false); await answer('unsaved'); await tick(1500);
-    expect(host.textContent).toContain('Save failed');
-    const retry = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Retry')!;
+    expect(host.textContent).toContain('saveError');
+    const retry = [...host.querySelectorAll('button')].find((button) => button.textContent === 'saveRetry')!;
     expect(retry).toBeDefined();
     await act(async () => retry.click());
     expect(hooks.save).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain('Saved');
+    expect(host.textContent).toContain('saveSaved');
   });
 
   it.each([false, true])('submission waits for an older autosave before sending latest answers (versioned=%s)', async (versioned) => {

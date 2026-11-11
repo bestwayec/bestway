@@ -198,9 +198,11 @@ def record_audio_access(actor, attempt_id, group_id):
         attempt = MockAttempt.objects.select_for_update().filter(id=attempt_id).first()
         if attempt is None or attempt.student_id != actor.id:
             raise ContractAPIException('MOCK_ATTEMPT_NOT_FOUND', 'Attempt not found', 404)
-        from .mock_practice import is_partial
-        if is_partial(attempt):
-            raise ContractAPIException('QUESTION_NOT_IN_EXAM', 'Listening audio is outside the selected Writing/Speaking practice scope', 403)
+        from .mock_practice import is_partial, scope
+        # A section practice that includes Listening must be able to hear it; only
+        # practices scoped to other skills are refused.
+        if is_partial(attempt) and 'listening' not in scope(attempt)['skills']:
+            raise ContractAPIException('QUESTION_NOT_IN_EXAM', 'Listening audio is outside the selected practice scope', 403)
         if attempt.mode != 'timed':
             return
         group = MockQuestionGroup.objects.select_related('section').filter(id=group_id).first()

@@ -1,6 +1,17 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import en from "../../../messages/en.json";
+import uz from "../../../messages/uz.json";
+
+const locale = vi.hoisted(() => ({ current: "en" as "en" | "uz" }));
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string, values?: Record<string, unknown>) => {
+    const messages = (locale.current === "en" ? en : uz) as unknown as Record<string, any>;
+    const template: string = namespace.split(".").reduce((node, part) => node?.[part], messages)?.[key] ?? key;
+    return template.replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? ""));
+  },
+}));
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import type { MockSection } from "@/lib/types";
 
@@ -45,5 +56,30 @@ describe("CbtSectionStepper palette", () => {
     const html = render();
     expect(html).toContain('role="tablist"');
     expect(html).toContain(">Part 4<");
+  });
+});
+
+describe("CbtSectionStepper copy", () => {
+  it("never calls a Multi-Level (CEFR) palette 'DTM', in either locale or layout mode", () => {
+    for (const language of ["uz", "en"] as const) {
+      locale.current = language;
+      const html = renderToStaticMarkup(
+        React.createElement(CbtSectionStepper, { skill: "listening", groups, answers: {}, audioSet: new Set<string>(), simulatorMode: "dtm", renderGroupBlock: () => null }),
+      );
+      expect(html).not.toMatch(/DTM/i);
+      expect(html).toContain(language === "uz" ? "Savollar palitrasi" : "Question palette");
+    }
+    locale.current = "en";
+  });
+
+  it("has no English leftovers on the Uzbek exam screen", () => {
+    locale.current = "uz";
+    const html = renderToStaticMarkup(
+      React.createElement(CbtSectionStepper, { skill: "listening", groups, answers: { "q-9": "x" }, audioSet: new Set<string>(), simulatorMode: "dtm", renderGroupBlock: () => null }),
+    );
+    for (const english of ["Next Part", "Previous Part", "Flag Question", "Question palette", "Review", "Answered"]) expect(html).not.toContain(english);
+    expect(html).toContain("Keyingi qism");
+    expect(html).toContain("9-savol");
+    locale.current = "en";
   });
 });

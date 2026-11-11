@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob } from '@/lib/microphone';
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, requestMicrophoneStream } from '@/lib/microphone';
 import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,51 +20,74 @@ function recorderStatus(status: string, recorded: boolean, translate: (key: stri
   return translate(({ idle: 'micRequiredStatus', checking: 'preparingStatus', starting: 'preparingStatus', ready: 'readyStatus', preparing: 'preparingStatus', recording: 'recordingStatus', finalizing: 'finalizingStatus', uploading: 'uploadingStatus', saved: 'uploadedStatus', retry: 'retryStatus' } as Record<string, string>)[status] ?? 'preparingStatus');
 }
 
-/** Server grants each play; only volume is adjustable during timed playback. */
+/**
+ * Exam listening player. The server grants the preview window and every play
+ * (and caps the number of plays), so the student can only start a granted play
+ * and change the volume: there is no pause, seek or rewind control.
+ */
 export function MultilevelListening({ prepare, play, load }: {
   prepare: () => Promise<MediaPhase>; play: () => Promise<MediaPhase>; load: () => Promise<Blob>;
 }) {
+  const t = useTranslations('mock.runnerUx');
   const [phase, setPhase] = useState<MediaPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState(0);
-  const [src, setSrc] = useState<string | null>(null);
   const audio = useRef<HTMLAudioElement>(null);
+  // A play the server granted whose audio has not started yet (load or start failed): retrying
+  // must not spend another of the limited plays while the grant is still valid.
+  const grant = useRef<MediaPhase | null>(null);
+  const [grantValid, setGrantValid] = useState(false);
   const offset = useRef(0);
   const blobUrl = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
   useEffect(() => () => { if (blobUrl.current) URL.revokeObjectURL(blobUrl.current); }, []);
   useEffect(() => {
     if (!phase) return;
-    const tick = () => { const remaining = seconds(playing ? phase.expiresAt : phase.prepEndsAt, offset.current); setLeft(remaining); if (playing && remaining === 0) setPlaying(false); };
+    const tick = () => { const remaining = seconds(playing ? phase.expiresAt : phase.prepEndsAt, offset.current); setLeft(remaining); if (playing && remaining === 0) setPlaying(false); if (grant.current && seconds(grant.current.expiresAt, offset.current) <= 0) { grant.current = null; setGrantValid(false); } };
     tick(); const id = window.setInterval(tick, 250); return () => clearInterval(id);
   }, [phase, playing]);
   async function start() {
     setBusy(true); setError(null);
     try { const next = await prepare(); offset.current = Date.parse(next.serverTime)-Date.now(); setPhase(next); setPlaying(next.plays > 0 && seconds(next.expiresAt, offset.current) > 0); }
-    catch { setError('Audio could not be prepared. Please try again.'); }
+    catch { setError(t('listeningPrepareError')); }
     finally { setBusy(false); }
   }
   async function playAudio() {
     setBusy(true); setError(null);
     try {
-      const next = await play(); setPhase(next); offset.current = Date.parse(next.serverTime)-Date.now();
-      if (!blobUrl.current) { blobUrl.current = URL.createObjectURL(await load()); setSrc(blobUrl.current); }
+      if (grant.current && seconds(grant.current.expiresAt, offset.current) <= 0) { grant.current = null; setGrantValid(false); }
+      if (!grant.current) { const next = await play(); setPhase(next); offset.current = Date.parse(next.serverTime)-Date.now(); grant.current = next; setGrantValid(true); }
+      if (!blobUrl.current) blobUrl.current = URL.createObjectURL(await load());
       const el = audio.current;
       if (!el) throw new Error('Audio element unavailable');
-      el.src = blobUrl.current; el.currentTime = 0; await el.play(); setPlaying(true);
-    } catch { setError('Audio could not be loaded or played. Please try again.'); }
+      // The source is set only here: also binding it through a React attribute would reload the
+      // element while play() is pending and abort the first play.
+      el.src = blobUrl.current; el.currentTime = 0; await el.play(); grant.current = null; setGrantValid(false); setPlaying(true);
+    } catch (failure) { console.error('Listening audio play failed', failure); setError(t('listeningPlayError')); }
     finally { setBusy(false); }
   }
-  return <div className="my-3 space-y-2 rounded-lg border border-current/20 p-3">
-    <audio ref={audio} src={src ?? undefined} onEnded={() => setPlaying(false)} onError={() => setError('Audio failed to play. Contact your supervisor.')}><track kind="captions" /></audio>
-    {!phase ? <button type="button" disabled={busy} onClick={() => void start()}>Preview this part</button> : <>
-      <p role="status">{playing ? 'Playing' : left > 0 ? 'Preview' : 'Ready'} · {left}s · {phase.plays}/{phase.playLimit} plays</p>
-      <button type="button" disabled={busy || playing || left > 0 || phase.plays >= phase.playLimit} onClick={() => void playAudio()}>Play audio</button>
-    </>}
-    <label className="block text-sm">Volume <input aria-label="Audio volume" type="range" min="0" max="1" step="0.05" defaultValue="1" onChange={(e) => { if (audio.current) audio.current.volume = Number(e.target.value); }} /></label>
-    {busy && <p role="status">Loading audio…</p>}{error && <p role="alert">{error}</p>}
-  </div>;
+  const previewing = !!phase && !playing && left > 0;
+  const exhausted = !!phase && !playing && !previewing && phase.plays >= phase.playLimit && !grantValid;
+  const status = !phase ? null
+    : playing ? t('listeningPlaying')
+    : previewing ? t('listeningPreview', { seconds: left })
+    : exhausted ? t('listeningFinished')
+    : t('listeningReady');
+  return <section aria-label={t('listeningRegion')} className="space-y-2 text-sm text-fg">
+    <audio ref={audio} onEnded={() => setPlaying(false)} onError={() => setError(t('listeningMediaError'))}><track kind="captions" /></audio>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {!phase
+        ? <Button type="button" size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation" disabled={busy} onClick={() => void start()}>{t('listeningStart')}</Button>
+        : <Button type="button" size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation" disabled={busy || playing || left > 0 || (phase.plays >= phase.playLimit && !grantValid)} onClick={() => void playAudio()}>{t('listeningPlay')}</Button>}
+      {phase && <p role="status" className="min-w-0 flex-1 basis-40 font-medium">{status}<span className="block text-xs font-normal text-fg-muted">{t('listeningPlays', { plays: phase.plays, limit: phase.playLimit })}</span></p>}
+      <label className="flex items-center gap-2 text-xs text-fg-muted">{t('listeningVolume')}
+        <input aria-label={t('listeningVolume')} className="h-6 w-28 accent-brand" type="range" min="0" max="1" step="0.05" defaultValue="1" onChange={(e) => { if (audio.current) audio.current.volume = Number(e.target.value); }} />
+      </label>
+    </div>
+    {!phase && <p className="text-xs text-fg-muted">{t('listeningRules')}</p>}
+    {busy && <p role="status" className="text-xs text-fg-muted">{t('listeningLoading')}</p>}{error && <p role="alert" className="text-xs text-danger">{error}</p>}
+  </section>;
 }
 
 /** Microphone preflight, server timing, durable takes and upload acknowledgement. */
@@ -171,7 +194,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try {
       closeMicrophone();
       assertMicrophoneAvailable();
-      input = await navigator.mediaDevices.getUserMedia({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
+      input = await requestMicrophoneStream({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
       if (!aliveRef.current || captureGeneration.current !== current) { input.getTracks().forEach((track) => track.stop()); return; }
       stream.current = input;
       // Verify capture support before the server starts a timed response.
