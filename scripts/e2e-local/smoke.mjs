@@ -328,7 +328,8 @@ await step(t, "13-rbac-student-cannot-use-admin-api", async () => {
 // Live PIN rooms and older attempts have flowMode "single_skill" without a frozen practice scope.
 // Before the K1 fix the runner filtered every section away: "Failed to load questions (0 bo'lim)".
 await step(t, "14-record-mock-listening-loads-and-persists", async () => {
-  const py = join(here, "..", "..", "backend-django", ".venv", "Scripts", "python.exe");
+  const py = process.env.BW_PYTHON || join(here, "..", "..", "backend-django", ".venv",
+    process.platform === "win32" ? "Scripts" : "bin", process.platform === "win32" ? "python.exe" : "python");
   const attemptId = execFileSync(py, ["manage.py", "seed_local_k1_attempt", "--phone", STUDENT_ONE, "--exam", RECORD_MOCK],
     { cwd: join(here, "..", "..", "backend-django"), encoding: "utf8" }).trim().split(/\s+/).pop();
   if (!/^[0-9a-f-]{36}$/.test(attemptId)) throw new Error(`fixture returned ${attemptId}`);
