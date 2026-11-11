@@ -331,8 +331,9 @@ class VocabularyAPITests(SimpleTestCase):
         self.assertEqual(res.data["data"]["title"], "B2 Daily Routines")
         self.assertEqual(res.data["data"]["wordCount"], 3)
 
+    @patch("apps.core.vocabulary_views.visible_set")
     @patch("apps.core.vocabulary_views.service.generate_quiz_for_set")
-    def test_student_fetches_quiz(self, mock_gen):
+    def test_student_fetches_quiz(self, mock_gen, _visible):
         mock_gen.return_value = {
             "setId": "vset-1",
             "setTitle": "Animals",
@@ -349,8 +350,9 @@ class VocabularyAPITests(SimpleTestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["data"]["totalQuestions"], 2)
 
+    @patch("apps.core.vocabulary_views.visible_set")
     @patch("apps.core.vocabulary_views.service.submit_quiz_attempt")
-    def test_student_submits_quiz(self, mock_submit):
+    def test_student_submits_quiz(self, mock_submit, _visible):
         mock_submit.return_value = {
             "attemptId": "att-1",
             "score": 5,
@@ -473,3 +475,43 @@ class VocabularyReportViewTests(SimpleTestCase):
             response = client.get("/v1/vocabulary/sets/vset-1/report")
         self.assertEqual(response.status_code, 200)
         report.assert_called_once_with("vset-1")
+
+
+class VocabularySetVisibilityTests(SimpleTestCase):
+    """Students see sets of their own group's teacher, sets assigned to their group,
+    and their own sets; staff see everything."""
+
+    def visibility(self, user, group_id="g1", teacher_id="t1"):
+        from apps.core import vocabulary_views as views
+        with patch("apps.legacy_schema.models.StudentProfile.objects") as profiles, \
+             patch("apps.legacy_schema.models.Group.objects") as groups:
+            profiles.filter.return_value.values_list.return_value.first.return_value = group_id
+            groups.filter.return_value.values_list.return_value.first.return_value = teacher_id
+            return views.student_visibility(user)
+
+    def test_staff_are_not_filtered(self):
+        for role in ("teacher", "admin", "super_admin"):
+            self.assertIsNone(self.visibility(SimpleNamespace(id="x", role=role)))
+
+    def test_student_filter_covers_own_group_teacher_and_own_sets(self):
+        q = str(self.visibility(SimpleNamespace(id="s1", role="student")))
+        for clause in ("('created_by_id', 's1')", "('group_id', 'g1')", "('created_by_id', 't1')"):
+            self.assertIn(clause, q)
+
+    def test_student_without_group_sees_only_own_sets(self):
+        q = self.visibility(SimpleNamespace(id="s1", role="student"), group_id=None)
+        self.assertEqual(str(q), "(AND: ('created_by_id', 's1'))")
+
+    def test_hidden_set_is_not_found_for_quiz_and_submit(self):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(id="s1", role="student", is_authenticated=True))
+        with patch("apps.core.vocabulary_views.student_visibility", return_value=__import__("django.db.models", fromlist=["Q"]).Q(pk__in=[])), \
+             patch("apps.core.vocabulary_views.VocabularySet.objects") as sets, \
+             patch("apps.core.vocabulary_views.service.submit_quiz_attempt") as submit:
+            sets.select_related.return_value.filter.return_value.filter.return_value.first.return_value = None
+            for response in (client.get("/v1/vocabulary/sets/other/quiz"),
+                             client.post("/v1/vocabulary/sets/other/submit", {"answers": []}, format="json"),
+                             client.get("/v1/vocabulary/sets/other")):
+                self.assertEqual(response.status_code, 404)
+        submit.assert_not_called()
