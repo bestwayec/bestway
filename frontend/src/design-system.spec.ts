@@ -15,6 +15,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/app/[locale]/(marketing)/page.tsx": {},
   "src/app/[locale]/(auth)/login/page.tsx": {},
   "src/components/auth/login-form.tsx": {},
+  "src/components/auth/google-auth-button.tsx": {},
   "src/components/placement/ExpressPlacementTest.tsx": {},
   "src/components/marketing/teacher-card.tsx": {},
   "src/components/mobile/mobile-welcome-screen.tsx": {},

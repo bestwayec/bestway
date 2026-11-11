@@ -7,7 +7,7 @@
 // other (white cards in dark mode, white text on white in light mode).
 //
 // Not migrated on purpose: components/common/StrictErrorBoundary.tsx (crash report is a white box in both
-// themes, see CDLayout.spec.ts), certificate-modal.tsx (print artwork), google-auth-button.tsx (brand mark).
+// themes, see CDLayout.spec.ts), certificate-modal.tsx (print artwork).
 //
 // Usage: node scripts/tokenize-colors.mjs [--check] [--neutral-only] <file...>
 //   --check         report what would change and exit 1 if anything would; do not write.
