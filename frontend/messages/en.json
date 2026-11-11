@@ -1764,7 +1764,9 @@
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
     "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
     "bulkImportTitle": "⚡️ Bulk Import",
-    "bulkImportHint": "Paste questions from Word or Telegram"
+    "bulkImportHint": "Paste questions from Word or Telegram",
+    "quickImport": "Quick import (Smart / Excel / Audio)",
+    "questionEditorQuick": "Question editor (quick import)"
   },
   "teacherAiRanking": {
     "title": "Writing and Speaking AI ranking",

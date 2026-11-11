@@ -219,7 +219,7 @@ export function Sidebar({
               section.groups.length === 0
                 ? tx(t, "notConfigured", "Not configured")
                 : qCount === 0
-                  ? `${unitCount} ${meta.units.toLowerCase()} · ${tx(t, "empty", "Empty")}`
+                  ? `${unitCount} ${meta.units.toLowerCase()} · ${tx(t, "noQuestionsYet", "No questions yet")}`
                   : skill === "reading"
                     ? `${unitCount} ${tx(t, "passages", "passages")} · ${qCount} ${tx(t, "questions", "questions")}`
                     : `${qCount} ${tx(t, "questions", "questions")}`;
@@ -281,7 +281,7 @@ export function Sidebar({
                               onClick={() =>
                                 onSelect({ kind: "group", groupId: passage.groups[0].id })
                               }
-                              label={`${passageTitle} — ${passage.groups.length} question sets — ${passage.rangeLabel ? `Questions ${passage.rangeLabel}` : tx(t, "empty", "Empty")}`}
+                              label={`${passageTitle} — ${passage.groups.length} question sets — ${passage.rangeLabel ? `Questions ${passage.rangeLabel}` : tx(t, "noQuestionsYet", "No questions yet")}`}
                             >
                               {passageIssues > 0 ? (
                                 <XCircle className="mt-0.5 size-3.5 shrink-0 text-danger" aria-hidden />
@@ -293,7 +293,7 @@ export function Sidebar({
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate">{passageTitle}</span>
                                 <span className="block truncate text-[11px] font-normal text-fg-subtle">
-                                  {passage.rangeLabel ? `Q${passage.rangeLabel}` : tx(t, "empty", "Empty")} · {passage.groups.length}{" "}
+                                  {passage.rangeLabel ? `Q${passage.rangeLabel}` : tx(t, "noQuestionsYet", "No questions yet")} · {passage.groups.length}{" "}
                                   {tx(t, "questionSets", "question sets")}
                                 </span>
                               </span>
@@ -341,7 +341,7 @@ export function Sidebar({
                           ? tx(t, "needsAttention", "Needs attention")
                           : g.questions.length > 0
                             ? tx(t, "ready", "Ready")
-                            : tx(t, "empty", "Empty");
+                            : tx(t, "noQuestionsYet", "No questions yet");
                       return (
                         <OutlineButton
                           key={g.id}

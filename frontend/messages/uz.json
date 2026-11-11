@@ -1763,7 +1763,9 @@
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
     "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
     "bulkImportTitle": "⚡️ Tezkor Kiritish (Bulk Paste)",
-    "bulkImportHint": "Word yoki Telegram'dan test matnini joylashtiring"
+    "bulkImportHint": "Word yoki Telegram'dan test matnini joylashtiring",
+    "quickImport": "Tezkor kiritish (Smart / Excel / Audio)",
+    "questionEditorQuick": "Savollar redaktori (tezkor kiritish)"
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",
