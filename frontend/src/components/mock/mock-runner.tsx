@@ -72,6 +72,7 @@ import {
   loadAttemptNotes,
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
+import { AdvanceConfirmModal } from "./advance-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
@@ -296,6 +297,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
   const [showSubmitConfirm, setShowSubmitConfirm] = React.useState(false);
+  const [showAdvanceConfirm, setShowAdvanceConfirm] = React.useState(false);
   const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
@@ -676,7 +678,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             <div className="flex items-center gap-3">
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
-                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
+                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
                   {tr("nextSection")}
                 </Button>
               ) : null}
@@ -785,7 +787,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
               onNextSection={() => {
                 if (multilevelReview && missingWork) setReview("advance");
-                else void goNextSection();
+                else setShowAdvanceConfirm(true);
               }}
               onSubmitSection={() => {
                 void doSubmit(false);
@@ -825,6 +827,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           completedSkill={transitionModal?.completedSkill ?? "listening"}
           nextSkill={transitionModal?.nextSkill ?? "reading"}
           onStartNext={() => setTransitionModal(null)}
+        />
+
+        <AdvanceConfirmModal
+          open={showAdvanceConfirm}
+          onOpenChange={setShowAdvanceConfirm}
+          busy={advance.isPending}
+          onConfirm={() => { setShowAdvanceConfirm(false); void goNextSection(); }}
         />
 
         <SubmitConfirmModal

@@ -159,6 +159,24 @@ export function CbtSectionStepper({
     : false;
   const isDtm = simulatorMode === "dtm";
 
+  // The palette wraps into rows (a sideways-scrolling row hid everything after question 9 on phones).
+  // When it holds more rows than fit, say so and keep the current question in view.
+  const paletteRef = React.useRef<HTMLDivElement>(null);
+  const [paletteHasMore, setPaletteHasMore] = React.useState(false);
+  const refreshPaletteHint = React.useCallback(() => {
+    const el = paletteRef.current;
+    if (el) setPaletteHasMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
+  }, []);
+  React.useEffect(() => {
+    const el = paletteRef.current;
+    const current = el?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (el && current) {
+      if (current.offsetTop < el.scrollTop) el.scrollTop = Math.max(0, current.offsetTop - 4);
+      else if (current.offsetTop + current.offsetHeight > el.scrollTop + el.clientHeight) el.scrollTop = current.offsetTop + current.offsetHeight - el.clientHeight + 4;
+    }
+    refreshPaletteHint();
+  }, [activeQuestionId, flattenedQuestions.length, refreshPaletteHint]);
+
   return (
     <div className="space-y-4">
       {/* 1. Part-by-Part Tabs Stepper */}
@@ -252,7 +270,10 @@ export function CbtSectionStepper({
 
               {/* Palette: one swipeable row on phones, wrapping grid on larger screens */}
               <div
-                className="flex flex-nowrap gap-1.5 overflow-x-auto py-1 px-0.5 sm:flex-wrap sm:max-h-24 sm:overflow-x-visible sm:overflow-y-auto sm:pr-1"
+                ref={paletteRef}
+                onScroll={refreshPaletteHint}
+                data-testid="question-palette"
+                className="relative flex max-h-[7.25rem] flex-wrap gap-1.5 overflow-y-auto overscroll-contain px-0.5 py-1 pr-1 sm:max-h-24"
                 role="group"
                 aria-label={t("palette")}
               >
@@ -308,6 +329,9 @@ export function CbtSectionStepper({
                   );
                 })}
               </div>
+              {paletteHasMore && (
+                <p aria-hidden data-testid="palette-more" className="pt-0.5 text-center text-[11px] text-fg-muted">⌄ {t("scrollHint")}</p>
+              )}
             </div>
           )}
 

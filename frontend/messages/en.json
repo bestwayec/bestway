@@ -1116,6 +1116,17 @@
       "nextSection": "Next section",
       "submitSection": "Submit section",
       "scrollHint": "Swipe to see more questions"
+    },
+    "advanceConfirm": {
+      "title": "Move to the next section?",
+      "body": "You cannot come back to this section afterwards. Your answers here are saved and will be marked.",
+      "stay": "Stay here",
+      "confirm": "Yes, next section"
+    },
+    "locker": {
+      "startTitle": "This exam runs in full screen",
+      "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Do not leave full screen and do not switch apps or tabs: every exit is recorded and three warnings submit the exam.",
+      "startButton": "I understand, start"
     }
   },
   "wizard": {

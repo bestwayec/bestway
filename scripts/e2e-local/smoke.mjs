@@ -39,6 +39,13 @@ function findChromium() {
   return undefined;
 }
 
+// The exam shows a one-time full-screen notice; accept it whenever it appears.
+async function acceptFullscreenNotice(page) {
+  await page.addLocatorHandler(page.getByTestId("fullscreen-notice"), async (notice) => {
+    await notice.getByRole("button").click();
+  });
+}
+
 const results = [];
 const consoleErrors = [];
 const failedRequests = [];
@@ -133,6 +140,7 @@ console.log(`Chromium: ${exe || "(playwright default)"}  target: ${WEB}`);
 // ---------------- Student session ----------------
 const sCtx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
 const s = await sCtx.newPage();
+await acceptFullscreenNotice(s);
 s.setDefaultTimeout(90000);
 watch(s, "student");
 
@@ -282,6 +290,7 @@ await step(s, "12-logout", async () => {
 // ---------------- Teacher session ----------------
 const tCtx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
 const t = await tCtx.newPage();
+await acceptFullscreenNotice(t);
 t.setDefaultTimeout(90000);
 watch(t, "teacher");
 await step(t, "05-teacher-login-dashboard", async () => {
@@ -326,6 +335,7 @@ await step(t, "14-record-mock-listening-loads-and-persists", async () => {
 
   const kc = await browser.newContext({ viewport: { width: 1366, height: 900 } });
   const k = await kc.newPage();
+  await acceptFullscreenNotice(k);
   k.setDefaultTimeout(90000);
   watch(k, "student-k1");
   await login(k, STUDENT_ONE);

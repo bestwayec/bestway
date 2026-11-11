@@ -3,7 +3,25 @@
 import * as React from "react";
 import { Mic, Square, Play, Pause, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, recordedAudioBlob } from "@/lib/microphone";
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, recordedAudioBlob, requestMicrophoneStream, type MicrophoneProblem } from "@/lib/microphone";
+
+/** What to tell the student, in Uzbek, for each way the microphone can fail. */
+export function microphoneHelpUz(problem: MicrophoneProblem): string {
+  switch (problem) {
+    case "denied":
+      return "Mikrofonga ruxsat berilmadi. «Qayta urinish» tugmasini bosing va ruxsat oynasida «Ruxsat berish»ni tanlang. Oyna chiqmasa: brauzer manzil qatoridagi sozlamalar belgisi → Mikrofon → Ruxsat berish. Telefonda boshqa ilovalarning oynalari (suzuvchi tugmalar, ekran filtri, yon panel) yopiq bo‘lsin.";
+    case "notFound":
+      return "Mikrofon topilmadi. Mikrofonni ulang (yoki telefonning mikrofoni yopilmaganini tekshiring) va qayta urinib ko‘ring.";
+    case "busy":
+      return "Mikrofonni ochib bo‘lmadi. Uni ishlatayotgan boshqa ilovalarni (qo‘ng‘iroq, yozuv, boshqa tab) yoping va qayta urinib ko‘ring.";
+    case "insecure":
+      return "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.";
+    case "unsupported":
+      return "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.";
+    default:
+      return "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.";
+  }
+}
 
 interface MicCheckModalProps {
   open: boolean;
@@ -66,7 +84,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
 
     try {
       assertMicrophoneAvailable();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await requestMicrophoneStream({ audio: true });
       streamRef.current = stream;
 
       const mr = createAudioRecorder(stream);
@@ -93,7 +111,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
           setAudioUrl(url);
           setStep("review");
         } catch (err) {
-          setErrorMsg(microphoneErrorMessage(err));
+          setErrorMsg(microphoneHelpUz(microphoneProblem(err)));
           setStep("error");
         }
       };
@@ -119,7 +137,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
     } catch (err) {
       if (timerRef.current) clearInterval(timerRef.current);
       stopStream();
-      setErrorMsg(microphoneErrorMessage(err));
+      setErrorMsg(microphoneHelpUz(microphoneProblem(err)));
       setStep("error");
     }
   };
@@ -246,11 +264,15 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
             <div className="space-y-3 py-2 text-left">
               <div className="flex items-start gap-2 text-danger">
                 <AlertTriangle className="size-5 shrink-0 mt-0.5" />
-                <p className="text-sm">{errorMsg || "Mikrofon bilan bog'lanishda xatolik yuz berdi."}</p>
+                <p className="text-sm" role="alert">{errorMsg || "Mikrofon bilan bog'lanishda xatolik yuz berdi."}</p>
               </div>
               <Button onClick={startTest} variant="outline" className="w-full min-h-[44px] mt-2 touch-manipulation">
                 <RefreshCw className="mr-2 size-4" />
                 Qayta urinish
+              </Button>
+              {/* Never trap the student: without a microphone the other sections and Finish stay usable. */}
+              <Button onClick={handleConfirm} variant="ghost" className="h-auto min-h-[44px] w-full whitespace-normal px-3 py-2 text-center text-xs text-fg-muted touch-manipulation" data-testid="mic-continue-without">
+                Mikrofonsiz davom etish (Speaking yozib bo&apos;lmaydi)
               </Button>
             </div>
           )}

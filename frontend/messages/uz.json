@@ -1115,6 +1115,17 @@
       "nextSection": "Keyingi bo‘lim",
       "submitSection": "Bo‘limni topshirish",
       "scrollHint": "Yana savollarni ko‘rish uchun suring"
+    },
+    "advanceConfirm": {
+      "title": "Keyingi bo‘limga o‘tasizmi?",
+      "body": "Keyin bu bo‘limga qaytib bo‘lmaydi. Bu yerdagi javoblaringiz saqlanadi va baholanadi.",
+      "stay": "Shu yerda qolish",
+      "confirm": "Ha, keyingi bo‘lim"
+    },
+    "locker": {
+      "startTitle": "Imtihon to‘liq ekranda o‘tadi",
+      "startBody": "Brauzer «to‘liq ekrandan chiqish…» kabi tizim xabarini ko‘rsatishi mumkin. U brauzerdan keladi, BestWay’dan emas. To‘liq ekrandan chiqmang va boshqa ilova yoki tabga o‘tmang: har bir chiqish qayd etiladi, uchta ogohlantirishdan keyin imtihon topshiriladi.",
+      "startButton": "Tushundim, boshlayman"
     }
   },
   "wizard": {
