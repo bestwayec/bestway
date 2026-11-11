@@ -144,6 +144,7 @@ class VocabularyServiceLogicTests(SimpleTestCase):
         for q in quiz["questions"]:
             self.assertIn(q["type"], ["eng_uzb", "uzb_eng", "spelling"])
 
+    @patch("apps.core.vocabulary_service.points_already_awarded", return_value=0)
     @patch("apps.core.vocabulary_service.UserWeakWord.objects.filter")
     @patch("apps.core.vocabulary_service.transaction.atomic")
     @patch("apps.core.vocabulary_service.PointsLog.objects.create")
@@ -153,7 +154,7 @@ class VocabularyServiceLogicTests(SimpleTestCase):
     @patch("apps.core.vocabulary_service.VocabularySet.objects.filter")
     def test_submit_quiz_100_percent_awards_5_points(
         self, mock_set_filter, mock_word_filter, mock_attempt_create, mock_profile_objects, mock_points_log_create, mock_atomic, mock_weak_filter
-    ):
+    , mock_already):
         student = SimpleNamespace(id="student-1", name="Ali Valiyev", role="student")
         vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
         mock_set_filter.return_value.first.return_value = vocab_set
@@ -186,6 +187,7 @@ class VocabularyServiceLogicTests(SimpleTestCase):
         mock_points_log_create.assert_called_once()
         mock_attempt_create.assert_called_once()
 
+    @patch("apps.core.vocabulary_service.points_already_awarded", return_value=0)
     @patch("apps.core.vocabulary_service.PointsLog.objects.create")
     @patch("apps.core.vocabulary_service.UserWeakWord.objects.filter")
     @patch("apps.core.vocabulary_service.transaction.atomic")
@@ -196,7 +198,7 @@ class VocabularyServiceLogicTests(SimpleTestCase):
     @patch("apps.core.vocabulary_service.VocabularySet.objects.filter")
     def test_submit_quiz_partial_awards_3_points_and_creates_weak_word(
         self, mock_set_filter, mock_word_filter, mock_attempt_create, mock_profile_objects, mock_weak_word_get_or_create, mock_atomic, mock_weak_filter, mock_points_log_create
-    ):
+    , mock_already):
         student = SimpleNamespace(id="student-1", name="Ali Valiyev", role="student")
         vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
         mock_set_filter.return_value.first.return_value = vocab_set
@@ -396,3 +398,78 @@ class VocabularyAPITests(SimpleTestCase):
         self.assertEqual(res.data["data"]["totalWeakWords"], 1)
         self.assertEqual(res.data["data"]["totalMasteredWords"], 1)
         self.assertEqual(len(res.data["data"]["weakWords"]), 2)
+
+
+class VocabularyQuizIntegrityTests(SimpleTestCase):
+    """Score only this set's words once each; points once per set; no staff points."""
+
+    def submit(self, answers, *, role="student", already=0):
+        vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
+        words = [VocabularyWord(id=f"w{i}", set=vocab_set, english=f"eng{i}", uzbek=f"uzb{i}") for i in range(1, 6)]
+        with patch("apps.core.vocabulary_service.VocabularySet.objects.filter") as sets, \
+             patch("apps.core.vocabulary_service.VocabularyWord.objects.filter", return_value=words) as word_query, \
+             patch("apps.core.vocabulary_service.UserWeakWord.objects.filter") as weak, \
+             patch("apps.core.vocabulary_service.UserWeakWord.objects.get_or_create", return_value=(MagicMock(), True)), \
+             patch("apps.core.vocabulary_service.transaction.atomic"), \
+             patch("apps.core.vocabulary_service.VocabularyAttempt.objects.create") as attempt, \
+             patch("apps.core.vocabulary_service.StudentProfile.objects") as profiles, \
+             patch("apps.core.vocabulary_service.PointsLog.objects.create") as log, \
+             patch("apps.core.vocabulary_service.points_already_awarded", return_value=already) as prior:
+            sets.return_value.first.return_value = vocab_set
+            weak.return_value.first.return_value = None
+            result = service.submit_quiz_attempt(SimpleNamespace(id="u1", name="A", role=role), "vset-1", "eng_uzb", answers)
+        word_query.assert_called_once_with(set_id="vset-1")
+        return result, attempt, profiles, log, prior
+
+    def test_repeating_one_correct_answer_does_not_score_the_set(self):
+        result, *_ , log, _prior = self.submit([{"wordId": "w1", "answer": "uzb1"}] * 10)
+        self.assertEqual((result["score"], result["totalWords"], result["percentage"]), (1, 5, 20.0))
+        self.assertEqual(result["pointsAwarded"], 0)
+        log.assert_not_called()
+
+    def test_words_from_another_set_are_ignored(self):
+        result, *_ = self.submit([{"wordId": "foreign", "answer": "x"}, {"wordId": "w1", "answer": "uzb1"}])
+        self.assertEqual((result["score"], result["totalWords"]), (1, 5))
+
+    def test_retry_awards_only_the_improvement_once(self):
+        perfect = [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
+        result, *_ = self.submit(perfect, already=5)
+        self.assertEqual(result["pointsAwarded"], 0)
+        result, _a, _p, log, _prior = self.submit(perfect, already=3)
+        self.assertEqual(result["pointsAwarded"], 2)
+        self.assertEqual(log.call_args.kwargs["change"], 2)
+
+    def test_staff_never_receive_student_points_or_profiles(self):
+        perfect = [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
+        result, _a, profiles, log, prior = self.submit(perfect, role="teacher")
+        self.assertEqual((result["percentage"], result["pointsAwarded"]), (100.0, 0))
+        profiles.create.assert_not_called()
+        log.assert_not_called()
+        prior.assert_not_called()
+
+
+class VocabularySetOwnershipTests(SimpleTestCase):
+    def test_foreign_teacher_cannot_delete_or_read_results(self):
+        from apps.core.vocabulary_views import assert_manages_set
+        own_group = SimpleNamespace(teacher_id="t-group")
+        vocab_set = SimpleNamespace(created_by_id="t-author", group_id="g1", group=own_group)
+        for user in (SimpleNamespace(id="t-author", role="teacher"), SimpleNamespace(id="t-group", role="teacher"),
+                     SimpleNamespace(id="adm", role="admin")):
+            assert_manages_set(user, vocab_set)
+        with self.assertRaises(ContractAPIException) as denied:
+            assert_manages_set(SimpleNamespace(id="t-other", role="teacher"), vocab_set)
+        self.assertEqual(denied.exception.status_code, 403)
+
+
+class VocabularyReportViewTests(SimpleTestCase):
+    def test_owner_report_reaches_the_service(self):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(id="t1", role="teacher", is_authenticated=True))
+        owned = SimpleNamespace(id="vset-1", created_by_id="t1", group_id=None, group=None)
+        with patch("apps.core.vocabulary_views.VocabularySet.objects") as sets, \
+             patch("apps.core.vocabulary_service.get_vocabulary_set_report", return_value={"setId": "vset-1"}) as report:
+            sets.select_related.return_value.filter.return_value.first.return_value = owned
+            response = client.get("/v1/vocabulary/sets/vset-1/report")
+        self.assertEqual(response.status_code, 200)
+        report.assert_called_once_with("vset-1")

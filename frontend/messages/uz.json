@@ -955,6 +955,10 @@
       "writingReviewHint": "Fikrlar, tuzilish va tilni tekshiring. So‘z sonining o‘zi baho emas.",
       "writingPlaceholder": "Javobingizni shu yerga yozing…",
       "writingResponseLabel": "{number}-savolga yozma javob",
+      "writingDraftFound": "Brauzerda qoralama mavjud",
+      "writingDraftExplanation": "Qoralama serverdagi javobdan eski bo‘lishi mumkin. Joriy javobni almashtirishdan oldin uni tekshiring.",
+      "writingDraftRestore": "Javobni shu qoralama bilan almashtirish",
+      "writingDraftEmpty": "Bu qoralama bo‘sh.",
       "responseEntered": "Javob kiritildi",
       "recordingUploaded": "Yozuv yuklandi",
       "notAnswered": "Hali javob berilmadi",
@@ -1759,7 +1763,9 @@
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
     "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
     "bulkImportTitle": "⚡️ Tezkor Kiritish (Bulk Paste)",
-    "bulkImportHint": "Word yoki Telegram'dan test matnini joylashtiring"
+    "bulkImportHint": "Word yoki Telegram'dan test matnini joylashtiring",
+    "quickImport": "Tezkor kiritish (Smart / Excel / Audio)",
+    "questionEditorQuick": "Savollar redaktori (tezkor kiritish)"
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",

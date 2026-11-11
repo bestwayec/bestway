@@ -236,7 +236,7 @@ export function OverviewPanel({
                 onClick={() => setQuickEditorOpen(true)}
               >
                 <Sparkles className="size-3.5 text-emerald-400" />
-                <span>Savollar Redaktori (Tezkor kiritish)</span>
+                <span>{tx(t, "questionEditorQuick", "Question editor (quick import)")}</span>
               </Button>
             </div>
           </CardContent>

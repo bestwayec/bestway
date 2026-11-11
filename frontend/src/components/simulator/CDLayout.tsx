@@ -18,6 +18,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { GroupImage } from "@/components/mock/group-image";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -144,11 +145,14 @@ export function ListeningPart1Radio({
  * Dual-pane or stacked layout specifically designed for Listening Part 4 map labeling.
  */
 export function SplitScreenMap({
-  imageUrl,
+  groupId,
+  hasImage,
   title,
   children,
 }: {
-  imageUrl?: string | null;
+  /** Loaded through the authenticated /api/backend proxy; raw /media URLs 404 on the web origin. */
+  groupId?: string | null;
+  hasImage: boolean;
   title?: string;
   children: React.ReactNode;
 }) {
@@ -163,18 +167,11 @@ export function SplitScreenMap({
           </span>
           <span className="text-[11px] text-fg-muted">Q19–Q23</span>
         </div>
-        {imageUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={imageUrl}
-            alt={title || "Map diagram"}
-            loading="lazy"
-            decoding="async"
-            className="max-h-[60vh] w-full rounded-[12px] border border-border/80 object-contain bg-bg-subtle/50"
-          />
+        {groupId && hasImage ? (
+          <GroupImage groupId={groupId} alt={title || "Map diagram"} />
         ) : (
-          <div className="flex h-48 w-full items-center justify-center rounded-[12px] border border-dashed border-border bg-bg-subtle/30 text-xs text-fg-muted">
-            Xarita rasmi yuklanmoqda...
+          <div role="status" className="flex h-48 w-full items-center justify-center rounded-[12px] border border-dashed border-border bg-bg-subtle/30 text-xs text-fg-muted">
+            Bu qism uchun xarita rasmi yo&apos;q.
           </div>
         )}
       </div>
@@ -708,7 +705,8 @@ export function CDLayout({
               children
             ) : isPart4Map ? (
               <SplitScreenMap
-                imageUrl={part.group?.imageUrl || "/media/exams/record_mock_1/map.png"}
+                groupId={part.group?.id}
+                hasImage={Boolean(part.group?.imageUrl)}
                 title={part.group?.title || "Community Centre Plan (Map)"}
               >
                 <div className="space-y-4">

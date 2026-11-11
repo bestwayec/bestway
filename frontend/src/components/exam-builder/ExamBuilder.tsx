@@ -481,7 +481,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
               className="min-h-9 justify-center border-brand/50 bg-brand/10 text-brand hover:bg-brand/20 max-sm:w-full sm:min-h-0"
             >
               <Sparkles className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">Tezkor Kiritish (Smart / Excel / Audio)</span>
+              <span className="truncate">{tx(t, "quickImport", "Quick import (Smart / Excel / Audio)")}</span>
             </Button>
             <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)} className="min-h-9 justify-center max-sm:w-full sm:min-h-0">
               <Eye className="size-4 shrink-0" aria-hidden />

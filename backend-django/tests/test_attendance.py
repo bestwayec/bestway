@@ -107,3 +107,45 @@ class AttendanceCollationTests(SimpleTestCase):
 
     def test_explicit_collation_overrides_host_locale(self):
         self.assertEqual(self.linux_collation('C', 'uz-x-icu'), 'uz-x-icu')
+
+
+class GroupDaySummaryRouteTests(SimpleTestCase):
+    """The marking dialog and teacher dashboard call /attendance/group-summary/<groupId>."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_path_route_exists_and_requires_staff(self):
+        self.assertEqual(self.client.get('/v1/attendance/group-summary/g1').status_code, 401)
+        for role in ('student', 'parent'):
+            self.client.force_authenticate(SimpleNamespace(id='u', role=role, is_authenticated=True))
+            self.assertEqual(self.client.get('/v1/attendance/group-summary/g1').status_code, 403)
+
+    def test_foreign_teacher_is_refused_before_reading_marks(self):
+        self.client.force_authenticate(SimpleNamespace(id='teacher', role='teacher', is_authenticated=True))
+        with patch.object(attendance, 'get_group', return_value=SimpleNamespace(teacher_id='other', name='G')), \
+             patch.object(attendance.Attendance.objects, 'filter') as rows:
+            response = self.client.get('/v1/attendance/group-summary/foreign?date=2026-11-11')
+        self.assertEqual(response.status_code, 403)
+        rows.assert_not_called()
+
+    def test_unknown_query_and_bad_date_are_rejected(self):
+        self.client.force_authenticate(SimpleNamespace(id='teacher', role='teacher', is_authenticated=True))
+        self.assertEqual(self.client.get('/v1/attendance/group-summary/g1?month=2026-11').status_code, 400)
+        self.assertEqual(self.client.get('/v1/attendance/group-summary/g1?date=11.11.2026').status_code, 400)
+
+    def test_summary_shape_matches_the_frontend_contract(self):
+        mark = SimpleNamespace(id='a1', student_id='s1', state='absent',
+                               student=SimpleNamespace(user=SimpleNamespace(name='Ali')))
+        query = SimpleNamespace(select_related=lambda *_: SimpleNamespace(order_by=lambda *_: [mark]))
+        with patch.object(attendance, 'get_group', return_value=SimpleNamespace(teacher_id='t', name='G1')), \
+             patch.object(attendance.Attendance.objects, 'filter', return_value=query) as rows, \
+             patch.object(attendance.StudentProfile.objects, 'filter') as members:
+            members.return_value.count.return_value = 3
+            data = attendance.group_day_summary(SimpleNamespace(id='t', role='teacher'), 'g1', '2026-11-11')
+        rows.assert_called_once_with(group_id='g1', date=date(2026, 11, 11))
+        self.assertEqual(data['date'], '2026-11-11')
+        self.assertEqual((data['totalStudents'], data['presentCount'], data['absentCount']), (3, 0, 1))
+        self.assertEqual(data['students'], [dict(id='a1', studentId='s1', studentName='Ali', state='absent',
+                                                 isExcused=False, note='')])
+        self.assertEqual(data['attendanceRate'], 0)

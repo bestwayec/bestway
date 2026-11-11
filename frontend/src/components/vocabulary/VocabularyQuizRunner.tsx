@@ -107,8 +107,13 @@ export function VocabularyQuizRunner({
     [],
   );
 
-  // Fetch Quiz Questions
+  // Fetch Quiz Questions. Only the latest load may set the questions: an
+  // earlier response arriving later (remount, React StrictMode) used to replace
+  // the questions under a student who had already answered, so the answer was
+  // scored against another word.
+  const loadSeq = React.useRef(0);
   const loadQuiz = React.useCallback(async () => {
+    const seq = ++loadSeq.current;
     setIsLoading(true);
     setErrorMsg(null);
     try {
@@ -118,6 +123,7 @@ export function VocabularyQuizRunner({
           totalQuestions: number;
           questions: QuizQuestion[];
         }>("/v1/vocabulary/srs/quiz");
+        if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
         setQuizTitle(res.title || "Xatolar Banki (SRS)");
       } else if (setId) {
@@ -126,6 +132,7 @@ export function VocabularyQuizRunner({
           totalQuestions: number;
           questions: QuizQuestion[];
         }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}`);
+        if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
         setQuizTitle(res.setTitle || "Lug'at Testi");
       }
@@ -137,14 +144,17 @@ export function VocabularyQuizRunner({
       setIsCorrectCurrent(null);
       setQuizResult(null);
     } catch (err: any) {
+      if (seq !== loadSeq.current) return;
       setErrorMsg(err.message || "Test savollarini yuklab bo'lmadi");
     } finally {
-      setIsLoading(false);
+      if (seq === loadSeq.current) setIsLoading(false);
     }
   }, [setId, isSrs, mode]);
 
   React.useEffect(() => {
     loadQuiz();
+    // A newer load (or unmount) makes this one stale.
+    return () => { loadSeq.current += 1; };
   }, [loadQuiz]);
 
   const currentQ = questions[currentIndex];

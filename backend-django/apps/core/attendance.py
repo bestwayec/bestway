@@ -223,3 +223,31 @@ def group_summary(actor, query):
         "absent": absent,
         "attendanceRate": rate,
     }
+
+
+def group_day_summary(actor, group_id, day_value=None):
+    """One group's marks for a single day (default: today), for the marking dialog
+    and the teacher dashboard. Unmarked students are listed by the client from
+    the group roster; only stored marks are returned here."""
+    group = manage_group(actor, group_id)
+    day = reference_date(day_value) if day_value else timezone.localdate()
+    total = StudentProfile.objects.filter(group_id=group_id).count()
+    rows = list(Attendance.objects.filter(group_id=group_id, date=day)
+                .select_related('student__user').order_by('student__user__name'))
+    counts = {state: sum(1 for r in rows if r.state == state) for state in ('present', 'late', 'absent')}
+    marked = sum(counts.values())
+    return {
+        "groupId": group_id,
+        "groupName": group.name,
+        "date": day.isoformat(),
+        "totalStudents": total,
+        "presentCount": counts['present'],
+        "lateCount": counts['late'],
+        "absentCount": counts['absent'],
+        "attendanceRate": round((counts['present'] + counts['late'] * 0.5) / marked * 100) if marked else None,
+        "students": [
+            {"id": r.id, "studentId": r.student_id, "studentName": r.student.user.name,
+             "state": r.state, "isExcused": False, "note": ""}
+            for r in rows
+        ],
+    }

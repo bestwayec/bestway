@@ -614,7 +614,7 @@ export function GroupEditor({
             className="min-h-9 justify-center border-brand/50 bg-brand/10 text-brand hover:bg-brand/20"
           >
             <Sparkles className="size-4 shrink-0" aria-hidden />
-            <span className="truncate">Tezkor Kiritish (Smart / Excel / Audio)</span>
+            <span className="truncate">{tx(t, "quickImport", "Quick import (Smart / Excel / Audio)")}</span>
           </Button>
           <Button size="sm" variant="outline" onClick={() => setShowImport((v) => !v)} className="min-h-9 justify-center">
             <Upload className="size-4 shrink-0" aria-hidden />

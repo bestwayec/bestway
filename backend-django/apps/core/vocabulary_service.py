@@ -7,7 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum
 from django.utils import timezone
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -232,6 +232,14 @@ def calculate_points_for_percentage(percentage: float) -> int:
     return 0
 
 
+def points_already_awarded(student_id: str, set_id: str) -> int:
+    """Points this set already gave the student. Locks the student's profile row so
+    concurrent submissions of the same quiz cannot both award points."""
+    list(StudentProfile.objects.select_for_update().filter(user_id=student_id).values_list("user_id", flat=True))
+    return VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).aggregate(
+        total=Sum("points_awarded"))["total"] or 0
+
+
 def submit_quiz_attempt(
     student: User,
     set_id: str,
@@ -245,19 +253,24 @@ def submit_quiz_attempt(
     if not answers:
         raise ContractAPIException("EMPTY_ANSWERS", "Javoblar kiritilmadi", 400)
 
-    word_ids = [a.get("wordId") or a.get("id") for a in answers if a.get("wordId") or a.get("id")]
-    word_map = {w.id: w for w in VocabularyWord.objects.filter(id__in=word_ids)}
+    # Only this set's words count, each at most once: repeating one correct answer
+    # or sending words from another set must not raise the score.
+    word_map = {w.id: w for w in VocabularyWord.objects.filter(set_id=vocab_set.id)}
+    answered: set[str] = set()
 
     score = 0
     wrong_answers = []
 
     for ans in answers:
+        if not isinstance(ans, dict):
+            continue
         wid = ans.get("wordId") or ans.get("id")
         user_val = str(ans.get("answer") or "").strip()
         q_type = ans.get("type", "eng_uzb")
         word = word_map.get(wid)
-        if not word:
+        if not word or wid in answered:
             continue
+        answered.add(wid)
 
         is_correct = False
         if q_type == "eng_uzb":
@@ -302,11 +315,17 @@ def submit_quiz_attempt(
                 weak.is_mastered = False
                 weak.save(update_fields=["mistake_count", "correct_streak", "is_mastered", "last_reviewed"])
 
-    total_words = len(answers)
+    # The quiz covers every word of the set; unanswered words count as not known.
+    total_words = len(word_map)
     percentage = round((score / total_words) * 100, 1) if total_words > 0 else 0.0
-    points_awarded = calculate_points_for_percentage(percentage)
+    earned = calculate_points_for_percentage(percentage)
+    is_student = getattr(student, "role", None) == "student"
 
     with transaction.atomic():
+        # Points are awarded once per set: a retry only adds the improvement over
+        # what this set already gave. Staff accounts never receive student points.
+        already = points_already_awarded(student.id, vocab_set.id) if is_student and earned else 0
+        points_awarded = max(0, earned - already) if is_student else 0
         attempt = VocabularyAttempt.objects.create(
             student_id=student.id,
             set=vocab_set,

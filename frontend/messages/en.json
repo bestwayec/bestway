@@ -956,6 +956,10 @@
       "writingReviewHint": "Check your ideas, structure and language. Word count alone is not a grade.",
       "writingPlaceholder": "Write your response here…",
       "writingResponseLabel": "Written response to question {number}",
+      "writingDraftFound": "A browser draft is available",
+      "writingDraftExplanation": "This draft may be older than the server response. Review it before replacing your current answer.",
+      "writingDraftRestore": "Replace answer with this draft",
+      "writingDraftEmpty": "This draft is empty.",
       "responseEntered": "Response entered",
       "recordingUploaded": "Recording uploaded",
       "notAnswered": "Not answered yet",
@@ -1760,7 +1764,9 @@
     "deletePartConfirm": "Delete this part and everything in it? This will remove its audio and questions.",
     "deletePassageConfirm": "Delete this passage and everything in it? This will remove the passage text and questions.",
     "bulkImportTitle": "⚡️ Bulk Import",
-    "bulkImportHint": "Paste questions from Word or Telegram"
+    "bulkImportHint": "Paste questions from Word or Telegram",
+    "quickImport": "Quick import (Smart / Excel / Audio)",
+    "questionEditorQuick": "Question editor (quick import)"
   },
   "teacherAiRanking": {
     "title": "Writing and Speaking AI ranking",

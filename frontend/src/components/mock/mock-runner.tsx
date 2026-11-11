@@ -88,41 +88,8 @@ export type CdiContrastTheme = "standard" | "yellow_on_black" | "grey";
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
 
-/**
- * Exam pictures and maps are protected: always load them through the same-origin
- * /api/backend proxy, which carries the httpOnly session. The absolute API URL
- * from the payload is cross-origin and is refused without credentials.
- */
-export function GroupImage({ groupId, alt }: { groupId: string; alt: string }) {
-  const [failed, setFailed] = React.useState(false);
-  const [attempt, setAttempt] = React.useState(0);
-  const src = `${media(`/mock/groups/${groupId}/image`)}${attempt ? `?retry=${attempt}` : ""}`;
-  if (failed) {
-    return (
-      <div role="alert" className="flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border p-4 text-center text-sm text-fg-muted">
-        <span>Rasm yuklanmadi. Internetni tekshirib, qayta urinib ko&apos;ring.</span>
-        <button
-          type="button"
-          onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}
-          className="min-h-[40px] rounded-lg border border-border px-3 font-semibold text-fg hover:bg-surface-hover"
-        >
-          Qayta yuklash
-        </button>
-      </div>
-    );
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- authenticated proxy media; next/image cannot forward the session
-    <img
-      src={src}
-      alt={alt}
-      decoding="async"
-      data-testid="exam-group-image"
-      onError={() => setFailed(true)}
-      className="max-h-[65vh] w-full rounded-lg border border-border/80 object-contain shadow-sm"
-    />
-  );
-}
+import { GroupImage } from "./group-image";
+export { GroupImage };
 
 function countAnswered(exam: MockExamDetail, answers: Record<string, string>, audio: Set<string>): number {
   let n = 0;
@@ -1215,7 +1182,7 @@ function GroupBlock({
   );
 }
 
-function EssayQuestionEditor({
+export function EssayQuestionEditor({
   q,
   attemptId,
   value,
@@ -1236,24 +1203,25 @@ function EssayQuestionEditor({
   // Spec §2.3: Task1 min 150, Task2 min 250 (soft — warning, no hard block).
   const minWords = q.guidance?.wordMin ?? (q.type === "essay_task1" ? 150 : q.type === "essay_task2" ? 250 : (q.wordLimit ?? 0));
 
-  // Restore draft from localStorage on mount if current value is empty
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && !value) {
-      try {
-        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
-        const cached = localStorage.getItem(draftKey);
-        if (cached && cached.trim()) {
-          onChange(cached);
-        }
-      } catch {}
-    }
-  }, [attemptId, q.id, value, onChange]);
+  // A browser draft may be older than the server (for example after another tab
+  // saved or cleared an answer). Offer it explicitly rather than overwriting.
+  const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
+  const [dismissedDraftKey, setDismissedDraftKey] = React.useState<string | null>(null);
+  const subscribeDraft = React.useCallback((notify: () => void) => {
+    window.addEventListener("storage", notify);
+    return () => window.removeEventListener("storage", notify);
+  }, []);
+  const browserDraft = React.useSyncExternalStore(subscribeDraft, () => {
+    try {
+      return localStorage.getItem(draftKey);
+    } catch { return null; }
+  }, () => null);
 
   const handleWritingChange = (text: string) => {
+    setDismissedDraftKey(draftKey);
     onChange(text);
     if (typeof window !== "undefined") {
       try {
-        const draftKey = `bw_writing_draft_${attemptId}_${q.id}`;
         localStorage.setItem(draftKey, text);
       } catch {}
     }
@@ -1263,6 +1231,14 @@ function EssayQuestionEditor({
 
   return (
     <div className="space-y-3">
+      {browserDraft !== null && browserDraft !== value && dismissedDraftKey !== draftKey && (
+        <details className="rounded-xl border border-warning-border bg-warning-bg p-3 text-sm text-fg">
+          <summary className="cursor-pointer font-semibold">{tx("writingDraftFound")}</summary>
+          <p className="mt-2 text-fg-muted">{tx("writingDraftExplanation")}</p>
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-surface p-2 font-sans">{browserDraft.trim() ? browserDraft : tx("writingDraftEmpty")}</pre>
+          <Button type="button" variant="outline" className="mt-2 min-h-[44px]" onClick={() => handleWritingChange(browserDraft)}>{tx("writingDraftRestore")}</Button>
+        </details>
+      )}
       {q.guidance && multilevelSkill === "writing" ? (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
