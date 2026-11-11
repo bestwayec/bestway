@@ -5,6 +5,8 @@ from django.core.management import call_command
 from django.db import connection
 from django.test import TestCase
 
+from tests.record_mock_media import isolated_record_mock_media
+
 from apps.core.multilevel import blueprint_issues, readiness, CURRENT_SPEC
 from apps.legacy_schema import models as legacy_models
 from apps.legacy_schema.models import (
@@ -40,6 +42,14 @@ class SeedRecordMock1TestCase(TestCase):
                 with connection.schema_editor() as editor:
                     editor.create_model(model)
                 cls._created_models.append(model)
+
+    def setUp(self):
+        super().setUp()
+        # Real-length synthetic recordings in temp dirs: the publish path is tested
+        # without touching backend/storage or treating repository fixtures as real.
+        media = isolated_record_mock_media(listening_seconds=61)
+        self.seed_root, self.media_root = media.__enter__()
+        self.addCleanup(media.__exit__, None, None, None)
 
     @classmethod
     def tearDownClass(cls):

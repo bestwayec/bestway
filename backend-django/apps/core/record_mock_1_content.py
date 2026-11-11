@@ -83,11 +83,41 @@ def placeholder_audio(source_root: Path) -> list[tuple[str, float]]:
     return found
 
 
-def ensure_media_assets(stdout) -> dict[int, str]:
+LISTENING_AUDIO_KEYS = {n: f"multilevel/assets/record_mock1_audio_part_{n}.wav" for n in range(1, 7)}
+
+
+def is_placeholder_wav(path: Path) -> bool:
+    """True for a WAV far shorter than a real Listening part (or an unreadable WAV)."""
+    seconds = wav_seconds(path)
+    return seconds is None or seconds < MIN_REAL_LISTENING_SECONDS
+
+
+def listening_audio_blockers(media_root: Path | None = None) -> list[str]:
+    """Listening parts whose served file is missing or not a real-length recording."""
+    media_root = media_root or Path(settings.MEDIA_ROOT).resolve()
+    blockers = []
+    for n, key in LISTENING_AUDIO_KEYS.items():
+        path = media_root / key
+        if not path.is_file():
+            blockers.append(f"part {n}: {key} missing")
+        elif is_placeholder_wav(path):
+            seconds = wav_seconds(path)
+            length = "unreadable" if seconds is None else f"{seconds:.0f}s"
+            blockers.append(f"part {n}: {key} is {length}, expected about {DECLARED_LISTENING_PART_SECONDS}s")
+    return blockers
+
+
+def ensure_media_assets(stdout, *, allow_placeholder_audio: bool = False) -> tuple[dict[int, str], list[str]]:
     """Copy the exam media from SEED_MEDIA_DIR into MEDIA_ROOT. Never synthesises files.
 
-    Raises SeedMediaMissing listing every absent source so a deploy fails loudly
-    instead of publishing an exam whose audio or map cannot load.
+    Raises SeedMediaMissing listing every absent source, or any existing MEDIA_ROOT
+    file that differs from its source, before copying anything, so a deploy fails
+    loudly and authored recordings are never overwritten. Short placeholder WAVs are
+    never copied (unless ``allow_placeholder_audio`` for an isolated local database),
+    so they cannot be served as exam audio.
+
+    Returns the Listening audio keys and the list of Listening blockers. The exam
+    must not be published while that list is non-empty.
     """
     source_root = seed_media_dir()
     media_root = Path(settings.MEDIA_ROOT).resolve()
@@ -101,27 +131,38 @@ def ensure_media_assets(stdout) -> dict[int, str]:
                  (not (media_root / dst).is_file() or not filecmp.cmp(source_root / src, media_root / dst, shallow=False))]
     if conflicts:
         raise SeedMediaMissing("Existing media differs; refusing to overwrite: " + ", ".join(conflicts))
-    copied = 0
+    copied, skipped = 0, []
     for src, dst_key in REQUIRED_MEDIA:
         src_path, dst_path = source_root / src, media_root / dst_key
         if dst_path.is_file():
+            continue
+        seconds = wav_seconds(src_path) if src.endswith(".wav") else None
+        if seconds is not None and seconds < MIN_REAL_LISTENING_SECONDS and not allow_placeholder_audio:
+            skipped.append(f"{src.rsplit('/', 1)[-1]}={seconds:.0f}s")
             continue
         dst_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src_path, dst_path)
         copied += 1
     stdout.write(f"Media verified from {source_root} into {media_root} ({copied} copied)")
-    short = placeholder_audio(source_root)
-    if short:
+    if skipped:
         stdout.write(
             "WARNING: listening audio looks like placeholder media, not the real recordings "
-            f"(declared {DECLARED_LISTENING_PART_SECONDS}s per part): "
-            + ", ".join(f"{name.rsplit('/', 1)[-1]}={seconds:.0f}s" for name, seconds in short)
+            f"(declared {DECLARED_LISTENING_PART_SECONDS}s per part); not copied: " + ", ".join(skipped))
+    blockers = [] if allow_placeholder_audio else listening_audio_blockers(media_root)
+    if allow_placeholder_audio:
+        stdout.write("LOCAL FIXTURE: placeholder Listening audio allowed; this is not the real exam audio.")
+    if blockers:
+        stdout.write(
+            "BLOCKED: Record Mock stays unpublished until the real Listening recordings are in "
+            f"MEDIA_ROOT: " + "; ".join(blockers)
         )
-    return {n: f"multilevel/assets/record_mock1_audio_part_{n}.wav" for n in range(1, 7)}
+    return dict(LISTENING_AUDIO_KEYS), blockers
 
 
-def seed_record_mock_1(stdout, style=None):
-    audio_keys = ensure_media_assets(stdout)
+def seed_record_mock_1(stdout, style=None, *, allow_placeholder_audio: bool = False) -> list[str]:
+    """Write the legacy exam rows. Returns the Listening blockers (empty = publishable)."""
+    audio_keys, blockers = ensure_media_assets(stdout, allow_placeholder_audio=allow_placeholder_audio)
+    publishable = not blockers
 
     admin_user = (
         User.objects.filter(role__in=["super_admin", "admin"]).order_by("created_at").first()
@@ -167,8 +208,8 @@ def seed_record_mock_1(stdout, style=None):
                 "specification_version": CURRENT_SPEC,
                 "speaking_profile_version": CURRENT_SPEAKING_PROFILE,
                 "assessment_policy": "FULL_MOCK_AI_WITH_REVIEW",
-                "is_published": True,
-                "is_demo": True,
+                "is_published": publishable,
+                "is_demo": publishable,
                 "is_free_for_approved": True,
                 "price": 0,
                 "created_by_id": admin_user.id,
@@ -1348,6 +1389,7 @@ def seed_record_mock_1(stdout, style=None):
         normalized = normalize_objective_keys(EXAM_ID)
 
     stdout.write(style.SUCCESS(f"Successfully seeded exam {EXAM_ID}: {EXAM_TITLE} ({normalized} answer keys normalized)"))
+    return blockers
 
 
 def normalize_objective_keys(exam_id: str) -> int:

@@ -14,7 +14,7 @@ Aliases: import_record_mock_1, seed_record_mock_1, seed_cd_record_mock_1.
 from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 
 from apps.core.models import AnswerKey, Exam, Question, QuestionGroup, Section
@@ -64,14 +64,28 @@ def _to_cd_question_type(m_type: str, section_type: str, part_num: int) -> str:
 class Command(BaseCommand):
     help = "Ingests and activates Multi-Level Record Mock 1 into CD models and legacy schema."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--allow-placeholder-audio",
+            action="store_true",
+            help="Local E2E only: copy and publish with the short repository WAV fixtures. "
+                 "Refused unless the database is loopback and named *_local.",
+        )
+
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE(f"=== Ingesting Real CD Exam: {EXAM_TITLE} ({EXAM_CODE}) ==="))
+        allow_placeholder = bool(options.get("allow_placeholder_audio"))
+        if allow_placeholder:
+            db = connection.settings_dict
+            if db["HOST"] not in ("127.0.0.1", "localhost", "::1") or not str(db["NAME"]).endswith("_local"):
+                raise CommandError("Refusing --allow-placeholder-audio: database must be loopback and named *_local.")
 
         # 1+2. Legacy definition (copies media from SEED_MEDIA_DIR; never synthesises files)
         try:
-            seed_record_mock_1(self.stdout, self.style)
+            blockers = seed_record_mock_1(self.stdout, self.style, allow_placeholder_audio=allow_placeholder)
         except SeedMediaMissing as exc:
             raise CommandError(str(exc)) from exc
+        publishable = not blockers
 
         # 3. Explicitly unpublish the old Gym & Vegetarian mock exam
         unpub_count = MockExam.objects.filter(id="multilevel-test-01-gym-vegetarian").update(
@@ -85,8 +99,9 @@ class Command(BaseCommand):
             raise CommandError(f"MockExam {EXAM_CODE} not found after legacy import")
 
         mock_exam.title = EXAM_TITLE
-        mock_exam.is_published = True
-        mock_exam.is_demo = True
+        # Never publish the exam while its Listening audio is missing or a placeholder.
+        mock_exam.is_published = publishable
+        mock_exam.is_demo = publishable
         mock_exam.is_free_for_approved = True
         mock_exam.created_at = timezone.now()
         mock_exam.save()
@@ -100,7 +115,7 @@ class Command(BaseCommand):
                     "exam_type": "CEFR_MULTILEVEL",
                     "duration_minutes": 150,
                     "is_cd_format": True,
-                    "is_published": True,
+                    "is_published": publishable,
                     "description": mock_exam.description,
                 },
             )
@@ -219,4 +234,9 @@ class Command(BaseCommand):
                 )
             )
 
-        self.stdout.write(self.style.SUCCESS(f"=== Successfully Activated CD Exam: {EXAM_TITLE} ==="))
+        if publishable:
+            self.stdout.write(self.style.SUCCESS(f"=== Successfully Activated CD Exam: {EXAM_TITLE} ==="))
+        else:
+            self.stdout.write(self.style.WARNING(
+                f"=== Imported but NOT published: {EXAM_TITLE}. Missing real Listening audio: "
+                + "; ".join(blockers) + " ==="))
