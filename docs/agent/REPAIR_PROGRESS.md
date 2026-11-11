@@ -114,20 +114,10 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI (#113–#116, #120–#122 merged; #117–#119 merge cleanly into main a5759d5, in any order)
+## PRs / CI (state 2026-11-11, main 445f2b4)
 
-| PR | Topic | Head | CI |
-|---|---|---|---|
-| #113 | Platform repair (practice start, drafts, Record Mock audio, attendance, vocabulary points, builder/simulator) | e328f58 | MERGED 2026-11-11 |
-| #114 | Runner points integrity | c9d9a06 | MERGED 2026-11-11 |
-| #115 | Vocabulary visibility | 67c6014 | MERGED 2026-11-11 |
-| #116 | Proxy 502 diagnostics | 6455043 | MERGED 2026-11-11 |
-| #117 | Dashboard hydration + /teacher guard | 65c2686 | green (run 43029326557; earlier red run 43027637040 = spec typing, fixed) |
-| #118 | Phone layout fixes | 6522b3b | green (run 43029117470) |
-| #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | green (run 43030243067) |
-| #120 | Homework score server-side + teacher grading | 7880e84 | MERGED 2026-11-11 |
-| #121 | Teacher contact masking | 9ead3d1 | MERGED 2026-11-11 |
-| #122 | Full browser E2E + catalogue cache / launcher / quiz fixes | c947184 | MERGED 2026-11-11 (main 32977fb) |
+#113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
+OPEN: #123 (this file), #125 W6b 2/3 runner, #126 W6b 3/3 builder/vocabulary/teacher (stacked on #125), #127 U0 test/smoke hardening.
 
 ## Open questions (owner)
 
@@ -136,6 +126,25 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - P2 noted, not changed: start dialog and vocabulary pages hard-coded in Uzbek on /en; mic-check dialog reopens on every Speaking tab visit; vocabulary mode page lacks the set title; /media public policy.
 - Finish 502: production logs needed (see list in the session report).
 
+## NEXT LEVEL PROGRAM (owner brief 2026-11-11: premium UI/UX, website first, then desktop)
+
+| Phase | Status | Evidence / PR |
+|---|---|---|
+| U0 post-merge health | IN PROGRESS | PR states verified above. Backend: 900 pass / 4 skip (CI-like env); makemigrations --check clean, single leaf core.0008. Two env-only test issues fixed in #127. smoke.mjs 16/16 on main + #125/#126. Open items A homework / B masking / W8b E2E: merged (#120/#121/#122). C BW-16: client recovery merged (#119), server grace window = owner decision. W6b 3/3 = #126. Record Mock hidden on production until authentic audio (expected) |
+| U1 audit + design direction | TODO | docs/design/NEXT_LEVEL_AUDIT.md; DESIGN_SYSTEM.md v2 |
+| U2 foundation v2 | IN PROGRESS | branch claude/u2-foundation (on #126): light default theme with pre-paint script (no flash), dark remembered |
+| U3 shell | TODO | |
+| U4 student | TODO | |
+| U5 vocabulary | TODO | |
+| U6 teacher/admin/builder | TODO | |
+| U7 public/auth/onboarding | TODO | |
+| U8 motion/i18n/a11y | TODO | |
+| U9 performance | TODO | |
+| U10 verification | TODO | |
+| D1–D3 desktop | TODO | after WEBSITE GATE |
+
+Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` (see Local stack recipe); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
+
 ## NEXT STEP
 
-W6b: build one design system from the existing tokens (frontend/src/app/globals.css + components/ui) and move landing, login, student dashboard, exam list, exam runner (4 sections), result, Exam Builder, vocabulary and teacher dashboard onto it, with before/after at 4 sizes via scripts/e2e-local/responsive-audit.mjs; re-run smoke.mjs and full-journey.mjs; then close the WEBSITE GATE and start D1.
+U0: finish full-journey.mjs on main + stack, all-roles crawl; then U1 audit (NEXT_LEVEL_AUDIT.md) and U2 foundation (branch claude/u2-foundation).
