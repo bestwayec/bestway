@@ -47,7 +47,7 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | BW-16 server side | DECISION NEEDED | No server fix without weakening reuse detection: a grace window must keep the new raw tokens in Redis and lets a stolen old token get valid tokens for its duration. Client recovery is in #119. Owner: grace window yes/no |
 | W8b full browser E2E | DONE | PR #122: scripts/e2e-local/full-journey.mjs 13/13 twice (Builder → publish → student all 4 sections → reload → finish → honest pending → teacher view; vocabulary list → quiz 3/3 server-scored). Found and fixed: catalogue cache hid new exams 60 s; launcher offered Full Mock on practice exams (HTTP 400); quiz double load re-scored answers; unnamed add-word button |
 | W6b unified design system | TODO | not started (context budget); next session |
-| GATE | NOT CLOSED | waiting for W6b and green CI on #120, #121, #122 |
+| GATE | NOT CLOSED | waiting for W6b (CI green on all 10 PR heads #113–#122) |
 | D1–D3 desktop | TODO | not started (order rule) |
 
 ## Findings to review (from PR #111, external fork, merged 2026-11-10)
@@ -125,9 +125,9 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 | #117 | Dashboard hydration + /teacher guard | 65c2686 | green (run 43029326557; earlier red run 43027637040 = spec typing, fixed) |
 | #118 | Phone layout fixes | 6522b3b | green (run 43029117470) |
 | #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | green (run 43030243067) |
-| #120 | Homework score server-side + teacher grading | 7880e84 | pending |
-| #121 | Teacher contact masking | 9ead3d1 | pending |
-| #122 | Full browser E2E + catalogue cache / launcher / quiz fixes | c947184 | pending |
+| #120 | Homework score server-side + teacher grading | 7880e84 | green (run 43060261487) |
+| #121 | Teacher contact masking | 9ead3d1 | green (run 43061427570) |
+| #122 | Full browser E2E + catalogue cache / launcher / quiz fixes | c947184 | green (run 43069894701) |
 
 ## Open questions (owner)
 
