@@ -75,7 +75,7 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
 
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-      <span className="rounded-md bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
+      <span className="rounded-md bg-info/10 px-2 py-0.5 text-xs font-semibold text-info">
         Full Mock
       </span>
       {attempt.examType === "multilevel" ? (

@@ -376,7 +376,7 @@ export function TeacherDashboard() {
           variant="outline"
           onClick={handleSendParentDigest}
           disabled={isSendingDigest}
-          className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+          className="border-brand/30 text-brand hover:bg-brand-hover/10"
         >
           <Send className="mr-1.5 size-3.5" />
           {isSendingDigest ? "Jo'natilmoqda..." : "📲 Ota-onalarga Digest"}

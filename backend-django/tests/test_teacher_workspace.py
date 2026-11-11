@@ -319,6 +319,7 @@ class TeacherWorkspaceTests(SimpleTestCase):
             assignment_id="a-1",
             score_percent=95,
             is_passed=True,
+            status="graded",
             completed_at=datetime(2026, 10, 27, 14, 0, tzinfo=timezone.utc),
         )
         mock_subs.return_value = [sub1]
@@ -336,63 +337,40 @@ class TeacherWorkspaceTests(SimpleTestCase):
         self.assertEqual(items[0]["score_percent"], 95)
         self.assertEqual(items[0]["status"], "passed")
 
-    @patch("apps.core.teacher_views.HomeworkSubmission.objects.update_or_create")
+    @patch("apps.core.homework_scoring.HomeworkSubmission.objects")
     @patch("apps.core.teacher_views.CohortMembership.objects.filter")
     @patch("apps.core.teacher_views.HomeworkAssignment.objects.select_related")
-    def test_student_submit_assignment_passed(self, mock_assign_sr, mock_membership, mock_sub_create):
-        """Student submits assignment with score >= min_pass_percent (is_passed=True)."""
-        fake_assign = MagicMock(
-            id="a-1",
-            cohort=MagicMock(id="c-1"),
-            min_pass_percent=80,
-        )
+    def test_student_cannot_set_a_homework_score(self, mock_assign_sr, mock_membership, mock_subs):
+        """A non-exam homework waits for the teacher, whatever score the client sends (also empty POST)."""
+        fake_assign = MagicMock(id="a-1", cohort=MagicMock(id="c-1"), min_pass_percent=80, exam_id=None)
         mock_assign_sr.return_value.get.return_value = fake_assign
         mock_membership.return_value.exists.return_value = True
+        mock_subs.filter.return_value.first.return_value = None
+        mock_subs.update_or_create.side_effect = lambda **kw: (MagicMock(
+            id="sub-1", assignment_id="a-1", student_id="s", completed_at=None, **kw["defaults"]), True)
+        for body in ({"score_percent": 100}, {}):
+            request = self.factory.post("/v1/student/assignments/a-1/submit", body, format="json")
+            force_authenticate(request, user=self.student_user)
+            resp = student_submit_assignment_view(request, "a-1")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.data["data"]
+            self.assertEqual((data["status"], data["is_passed"], data["score_percent"]), ("awaiting_review", False, None))
+            self.assertEqual(mock_subs.update_or_create.call_args.kwargs["defaults"]["score_percent"], 0)
 
-        fake_sub = MagicMock(
-            id="sub-1",
-            score_percent=85,
-            is_passed=True,
-            completed_at=datetime(2026, 10, 27, 15, 0, tzinfo=timezone.utc),
-        )
-        mock_sub_create.return_value = (fake_sub, True)
-
-        request = self.factory.post("/v1/student/assignments/a-1/submit", {"score_percent": 85}, format="json")
-        force_authenticate(request, user=self.student_user)
-
-        resp = student_submit_assignment_view(request, "a-1")
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.data["data"]["is_passed"])
-        self.assertEqual(resp.data["data"]["score_percent"], 85)
-
-    @patch("apps.core.teacher_views.HomeworkSubmission.objects.update_or_create")
+    @patch("apps.core.homework_scoring.latest_attempt", return_value=None)
+    @patch("apps.core.homework_scoring.HomeworkSubmission.objects")
     @patch("apps.core.teacher_views.CohortMembership.objects.filter")
     @patch("apps.core.teacher_views.HomeworkAssignment.objects.select_related")
-    def test_student_submit_assignment_failed(self, mock_assign_sr, mock_membership, mock_sub_create):
-        """Student submits assignment with score < min_pass_percent (is_passed=False)."""
-        fake_assign = MagicMock(
-            id="a-1",
-            cohort=MagicMock(id="c-1"),
-            min_pass_percent=80,
-        )
-        mock_assign_sr.return_value.get.return_value = fake_assign
+    def test_exam_homework_without_an_attempt_is_refused(self, mock_assign_sr, mock_membership, mock_subs, _attempt):
+        mock_assign_sr.return_value.get.return_value = MagicMock(id="a-1", cohort=MagicMock(id="c-1"), min_pass_percent=80, exam_id="exam-1")
         mock_membership.return_value.exists.return_value = True
-
-        fake_sub = MagicMock(
-            id="sub-2",
-            score_percent=65,
-            is_passed=False,
-            completed_at=datetime(2026, 10, 27, 15, 0, tzinfo=timezone.utc),
-        )
-        mock_sub_create.return_value = (fake_sub, True)
-
-        request = self.factory.post("/v1/student/assignments/a-1/submit", {"score_percent": 65}, format="json")
+        mock_subs.filter.return_value.first.return_value = None
+        request = self.factory.post("/v1/student/assignments/a-1/submit", {"score_percent": 100}, format="json")
         force_authenticate(request, user=self.student_user)
-
         resp = student_submit_assignment_view(request, "a-1")
-        self.assertEqual(resp.status_code, 200)
-        self.assertFalse(resp.data["data"]["is_passed"])
-        self.assertEqual(resp.data["data"]["score_percent"], 65)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data["error"]["code"], "HOMEWORK_ATTEMPT_REQUIRED")
+        mock_subs.update_or_create.assert_not_called()
 
     @patch("apps.core.teacher_views.UserLessonProgress.objects.filter")
     @patch("apps.core.teacher_views.HomeworkSubmission.objects.filter")
@@ -432,6 +410,7 @@ class TeacherWorkspaceTests(SimpleTestCase):
             assignment_id="a-1",
             score_percent=90,
             is_passed=True,
+            status="graded",
             completed_at=datetime(2026, 10, 26, 12, 0, tzinfo=timezone.utc),
         )
         mock_subs.return_value = [sub]

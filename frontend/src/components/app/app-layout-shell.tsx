@@ -37,7 +37,9 @@ export function AppLayoutShell({
   if (isExamAttempt) {
     return (
       <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-bg">
-        <main className="h-full w-full overflow-y-auto">{children}</main>
+        {/* Same side padding as normal pages: the runner's edge-to-edge header (-mx-4)
+            relies on it, otherwise it overshoots both screen edges on phones. */}
+        <main className="h-full w-full overflow-y-auto px-4 sm:px-6">{children}</main>
       </div>
     );
   }

@@ -11,7 +11,7 @@ import { MobileNavMoreSheet } from "./mobile-nav-more-sheet";
 
 const tabClass = (active: boolean) =>
   cn(
-    "relative flex flex-1 min-h-[48px] flex-col items-center justify-center gap-0.5 py-1.5 text-caption font-medium transition-colors touch-manipulation",
+    "relative flex min-w-0 flex-1 min-h-[48px] flex-col items-center justify-center gap-0.5 py-1.5 text-caption font-medium transition-colors touch-manipulation",
     active ? "text-brand font-semibold" : "text-fg-muted hover:text-fg",
   );
 
@@ -52,7 +52,7 @@ export function MobileNav({ role }: { role: Role }) {
                   )}
                 />
                 <Icon className={cn("size-5 shrink-0", active ? "text-brand" : "text-fg-muted")} />
-                <span className="max-w-full truncate px-1 text-[14px] leading-tight">{t(item.key)}</span>
+                <span className="max-w-full truncate px-1 text-[12px] leading-tight min-[380px]:text-[14px]">{t(item.key)}</span>
               </Link>
             );
           })}
@@ -74,7 +74,7 @@ export function MobileNav({ role }: { role: Role }) {
               <MoreHorizontal
                 className={cn("size-5 shrink-0", moreActive ? "text-brand" : "text-fg-muted")}
               />
-              <span className="max-w-full truncate px-1 text-[14px] leading-tight">{t("more")}</span>
+              <span className="max-w-full truncate px-1 text-[12px] leading-tight min-[380px]:text-[14px]">{t("more")}</span>
             </button>
           )}
         </div>

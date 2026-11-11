@@ -18,8 +18,8 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   if (state.isPending) {
     // Same footprint as the loaded card so nothing below jumps when data arrives (O3).
     return (
-      <Card className="my-4 border-slate-800 bg-bg-subtle/90 p-5" aria-busy="true" aria-label={t("loading")} data-testid="exam-track-skeleton">
-        <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+      <Card className="my-4 border-border bg-bg-subtle/90 p-5" aria-busy="true" aria-label={t("loading")} data-testid="exam-track-skeleton">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-border/80 pb-3">
           <Skeleton className="h-9 w-56" />
           <Skeleton className="h-6 w-32" />
         </div>
@@ -32,7 +32,7 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   }
   if (!state.data) {
     return (
-      <div role="alert" className="my-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs text-rose-300">
+      <div role="alert" className="my-4 rounded-2xl border border-danger/20 bg-danger/10 p-4 text-xs text-danger">
         {t("loadError")}
       </div>
     );
@@ -43,23 +43,23 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
   const manage = !!studentId;
 
   return (
-    <Card className="my-4 border-slate-800 bg-bg-subtle/90 backdrop-blur-md p-5 shadow-xl transition-all">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3 mb-4">
+    <Card className="my-4 border-border bg-bg-subtle/90 backdrop-blur-md p-5 shadow-xl transition-all">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 pb-3 mb-4">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-            <Layers className="size-4 text-emerald-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-fg flex items-center gap-2">
+            <Layers className="size-4 text-brand" />
             {t(manage ? "manage" : "title")}
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             {t(accessPolicy === "SELF_SELECT" ? "subtitleSelfSelect" : "subtitleStaffAssigned")}
           </p>
         </div>
-        <Badge variant="neutral" className="border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 text-xs">
+        <Badge variant="neutral" className="border border-brand/30 text-brand bg-brand/10 text-xs">
           {t("activeBadge", { program: current.activeProgram ? t(current.activeProgram === "IELTS" ? "ieltsName" : "multilevelName") : "—" })}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 items-stretch gap-3">
+      <div className="grid grid-cols-1 items-stretch gap-3 min-[420px]:grid-cols-2">
         {(["IELTS", "MULTILEVEL"] as ExamProgram[]).map((program) => {
           const isActive = current.activeProgram === program;
           const available = current.availablePrograms.includes(program);
@@ -102,7 +102,7 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
       </div>
 
       {save.isError && (
-        <p role="alert" className="mt-3 text-xs text-rose-400">
+        <p role="alert" className="mt-3 text-xs text-danger">
           {save.error.message}
         </p>
       )}

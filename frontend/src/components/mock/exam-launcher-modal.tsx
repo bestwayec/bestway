@@ -75,6 +75,10 @@ export function ExamLauncherModal({
     return ["listening", "reading", "writing", "speaking"];
   }, [exam]);
   const durations = exam.sectionDurations ?? {};
+  // The server runs the full_test flow only for full_mock (and Writing+Speaking)
+  // exams; offering it on a practice exam produced HTTP 400 MOCK_FULL_TEST_UNAVAILABLE.
+  const rawProfile = (exam as { rawProfile?: string }).rawProfile ?? exam.profile;
+  const fullMockAvailable = rawProfile === "full_mock" || rawProfile === "writing_speaking";
 
   async function triggerStart(mode: MockAttemptMode, skills?: MockPracticeSkill[]) {
     // Ask for the microphone now, before the exam goes full screen: Android will not show the
@@ -130,6 +134,8 @@ export function ExamLauncherModal({
               <li>Javob saqlanganini ko‘rsatuvchi holatni kuzating; xato bo‘lsa qayta urinib ko‘ring.</li>
             </ul>
           </div>
+          {fullMockAvailable ? (
+            <>
           {/* Tanlov 1: To'liq Mock Imtihon (Full Mock) */}
           <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -151,6 +157,24 @@ export function ExamLauncherModal({
               To&apos;liq imtihonni boshlash (Full Mock)
             </Button>
           </div>
+            </>
+          ) : availableSkills.length > 1 ? (
+            <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
+              <h3 className="text-base font-bold text-fg">Barcha bo&apos;limlar (mashq)</h3>
+              <p className="text-sm text-fg-muted leading-relaxed">
+                Tayyor bo&apos;limlar ketma-ket mashq qilinadi: {availableSkills.map((s) => SKILL_TITLES[s]).join(" → ")}.
+              </p>
+              <Button
+                type="button"
+                loading={isStarting}
+                onClick={() => triggerStart("practice", availableSkills as MockPracticeSkill[])}
+                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-semibold text-base"
+              >
+                <Play className="mr-2 size-4 fill-current" />
+                Barcha bo&apos;limlarni boshlash
+              </Button>
+            </div>
+          ) : null}
 
           {/* Tanlov 2: Alohida Bo'lim Topshirish (Single Section) */}
           <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">

@@ -363,6 +363,13 @@ def student_exam_programs_view(request, student_id):
     return success(exam_programs.enroll(request.user, student_id, programs, active))
 
 
+def catalogue_version() -> str:
+    from django.db.models import Count, Max
+    from apps.legacy_schema.models import MockExam
+    row = MockExam.objects.aggregate(changed=Max("updated_at"), total=Count("id"))
+    return f"{row['total']}:{row['changed'].timestamp() if row['changed'] else 0}"
+
+
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
 @authentication_classes([OptionalMockJWTAuthentication])
@@ -381,7 +388,9 @@ def mock_exams_view(request):
     user = request.user if getattr(request.user, "is_authenticated", False) else None
     role = getattr(user, "role", None)
     should_cache = user is None or role == "student"
-    cache_key = f"mock_exams_list_{getattr(user, 'id', 'anon')}_{role or 'anon'}_{program}_{exam_type}_{practice}"
+    # The key carries a catalogue version (latest change + exam count), so a publish,
+    # unpublish, edit or delete is visible at once instead of after the 60 s TTL.
+    cache_key = f"mock_exams_list_{getattr(user, 'id', 'anon')}_{role or 'anon'}_{program}_{exam_type}_{practice}_{catalogue_version()}" if should_cache else None
     if should_cache:
         try:
             from django.core.cache import cache
