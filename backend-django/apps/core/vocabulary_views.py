@@ -11,6 +11,26 @@ from .views import require_authenticated, require_role, success
 from . import vocabulary_service as service
 
 
+def assert_manages_set(user, vocab_set):
+    """Admins manage every set; a teacher only sets they created or that belong to
+    a group they teach. Checked before any delete or student-result read."""
+    if getattr(user, "role", None) in ("admin", "super_admin"):
+        return
+    group_teacher = getattr(vocab_set.group, "teacher_id", None) if vocab_set.group_id else None
+    if user.id not in (vocab_set.created_by_id, group_teacher):
+        raise ContractAPIException("FORBIDDEN", "Bu lug'at to'plami sizga tegishli emas", 403)
+
+
+def managed_set(request, set_id):
+    require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    vocab_set = VocabularySet.objects.select_related("group").filter(id=set_id).first()
+    if not vocab_set:
+        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
+    assert_manages_set(request.user, vocab_set)
+    return vocab_set
+
+
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
 def vocabulary_sets_view(request):
@@ -115,6 +135,7 @@ def vocabulary_set_detail_view(request, set_id):
 
     if request.method == "DELETE":
         require_role(request, "teacher", "admin", "super_admin")
+        assert_manages_set(request.user, vocab_set)
         vocab_set.delete()
         return success({"deleted": True})
 
@@ -184,18 +205,16 @@ def vocabulary_submit_view(request, set_id):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def vocabulary_group_report_view(request, set_id):
-    require_authenticated(request)
-    require_role(request, "teacher", "admin", "super_admin")
+    managed_set(request, set_id)
 
-    report_data = get_vocabulary_set_report(set_id)
+    report_data = service.get_vocabulary_set_report(set_id)
     return success(report_data)
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def vocabulary_export_excel_view(request, set_id):
-    require_authenticated(request)
-    require_role(request, "teacher", "admin", "super_admin")
+    managed_set(request, set_id)
 
     excel_bytes = service.export_vocabulary_set_excel(set_id)
     response = HttpResponse(
