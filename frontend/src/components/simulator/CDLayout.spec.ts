@@ -13,7 +13,7 @@ vi.mock("next-intl", () => ({
 }));
 
 import { normalizeExamPayload } from "@/lib/normalize-exam";
-import { flattenGroups } from "./CDLayout";
+import { CDLayout, flattenGroups } from "./CDLayout";
 import { StrictErrorBoundary } from "@/components/common/StrictErrorBoundary";
 
 describe("CDLayout Data Pipeline & Normalization", () => {
@@ -29,6 +29,26 @@ describe("CDLayout Data Pipeline & Normalization", () => {
   afterEach(() => {
     React.act(() => root.unmount());
     container.remove();
+  });
+
+  it("keeps demo answers local and reports storage failures without a server save", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    localStorage.clear();
+    const exam = normalizeExamPayload({ id: "demo-test", title: "Demo", sections: [{ id: "r", skill: "reading", groups: [{ id: "g", partNumber: 2, questions: [{ id: "q", prompt: "Question?", options: ["A", "B"] }] }] }] });
+    expect(exam).not.toBeNull();
+    React.act(() => root.render(React.createElement(CDLayout, { exam })));
+    const option = container.querySelector<HTMLButtonElement>('[role="radio"]');
+    expect(option).not.toBeNull();
+    React.act(() => option!.click());
+    expect(JSON.parse(localStorage.getItem("bw_sim_draft_demo-test")!).answers.q).toBe("A");
+    expect(container.textContent).toContain("Faqat shu brauzerda saqlandi");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const failed = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
+    React.act(() => option!.click());
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("saqlanmadi");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    failed.mockRestore();
+    fetchSpy.mockRestore();
   });
 
   it("normalizes a full active CD exam payload with 81 questions into 4 sections", () => {

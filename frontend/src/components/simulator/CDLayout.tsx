@@ -15,9 +15,7 @@ import {
   Pause,
   Play,
   RotateCcw,
-  CheckCircle2,
   GripVertical,
-  RefreshCw,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -426,9 +424,7 @@ export function CDLayout({
   const [highlights, setHighlights] = React.useState<string[]>([]);
   const [showHighlightTooltip, setShowHighlightTooltip] = React.useState<boolean>(false);
 
-  // Real-time Auto-save state
-  const [saveStatus, setSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
-  const saveDebounceTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const [saveStatus, setSaveStatus] = React.useState<"idle" | "saved" | "error">("idle");
 
   // Load drafts from localStorage on exam initialization
   React.useEffect(() => {
@@ -518,31 +514,16 @@ export function CDLayout({
   function handleAnswer(qid: string, val: string) {
     const updated = { ...answers, [qid]: val };
     setAnswers(updated);
-    setSaveStatus("saving");
-
-    // Local draft caching
-    if (typeof window !== "undefined" && exam?.id) {
-      try {
-        const draft = JSON.parse(localStorage.getItem(`bw_sim_draft_${exam.id}`) || "{}");
-        draft.answers = updated;
-        localStorage.setItem(`bw_sim_draft_${exam.id}`, JSON.stringify(draft));
-      } catch {}
+    // This screen is a demo, not an attempt. Only store a browser-local draft.
+    try {
+      if (!exam?.id) throw new Error("Missing exam ID");
+      const key = `bw_sim_draft_${exam.id}`;
+      const draft = JSON.parse(localStorage.getItem(key) || "{}");
+      localStorage.setItem(key, JSON.stringify({ ...draft, answers: updated }));
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
     }
-
-    // Debounced real-time API call (save-answer)
-    if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
-    saveDebounceTimer.current = setTimeout(async () => {
-      try {
-        await fetch(`/api/backend/mock/attempts/${exam?.id || "active"}/save-answer`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questionId: qid, response: val }),
-        }).catch(() => {});
-        setSaveStatus("saved");
-      } catch {
-        setSaveStatus("saved");
-      }
-    }, 500);
   }
 
   function handlePassageMouseUp() {
@@ -671,17 +652,8 @@ export function CDLayout({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Real-time Auto-save status */}
-              {saveStatus === "saving" && (
-                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-400 font-medium animate-pulse">
-                  <RefreshCw className="size-3 animate-spin" /> Saqlanmoqda...
-                </span>
-              )}
-              {saveStatus === "saved" && (
-                <span className="hidden sm:inline-flex items-center gap-1 text-xs text-emerald-400 font-medium">
-                  <CheckCircle2 className="size-3" /> Saqlandi
-                </span>
-              )}
+              {saveStatus === "saved" && <span role="status" className="text-xs text-emerald-400">Faqat shu brauzerda saqlandi</span>}
+              {saveStatus === "error" && <span role="alert" className="text-xs text-red-500">Brauzerga saqlanmadi. Javobni o‘zgartirib qayta urinib ko‘ring.</span>}
 
               {/* Timer */}
               <div
@@ -721,7 +693,7 @@ export function CDLayout({
 
         {/* Demo banner */}
         <div role="note" className="border-b border-warning-border bg-warning-bg px-3 py-2 text-center text-xs font-medium text-fg sm:px-6">
-          Demo rejim — bu yerdagi javoblar saqlanmaydi va baholanmaydi.{" "}
+          Demo rejim — javoblar faqat shu brauzerda saqlanadi, serverga yuborilmaydi va baholanmaydi.{" "}
           {exam?.id ? (
             <Link href={`/mock/${encodeURIComponent(exam.id)}`} className="font-semibold text-brand underline underline-offset-2">
               Haqiqiy imtihonni boshlash
@@ -1022,7 +994,7 @@ export function CDLayout({
                 <li>Keyinchalik qaytmoqchi bo&apos;lgan savollaringizni bayroqcha (Flag) bilan belgilab qo&apos;ying.</li>
                 <li>Yashil rangli raqamlar javob berilgan savollarni bildiradi.</li>
                 <li>Matndan kerakli so&apos;zlarni belgilab, sariq rangda saqlab qolishingiz mumkin.</li>
-                <li>Javoblaringiz real vaqtda avtomatik saqlanib boradi.</li>
+                <li>Demo javoblari faqat shu brauzerda saqlanadi; serverga yuborilmaydi.</li>
               </ul>
             </DialogBody>
           </DialogContent>

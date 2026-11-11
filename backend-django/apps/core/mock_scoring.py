@@ -31,6 +31,10 @@ def choice_index(value, options):
     for index, option in enumerate(options):
         if strict_answer_text(option)==normalized:
             return index
+    if options == list('ABCDEFGH'):
+        legacy = re.fullmatch(r'([a-h]) room \1', normalized)
+        if legacy:
+            normalized = legacy.group(1)
     if len(normalized)==1 and 'a'<=normalized<='z':
         index=ord(normalized)-ord('a')
         return index if index<len(options) else None

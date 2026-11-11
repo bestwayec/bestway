@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import filecmp
+import wave
 from pathlib import Path
 from uuid import uuid4
 
@@ -31,7 +33,8 @@ from apps.legacy_schema.models import (
 EXAM_ID = "MOCK-RECORD-01"
 EXAM_TITLE = "Multi-Level (CEFR) Mock Test 1 (Record Mock)"
 MAP_IMAGE_PATH = "exams/record_mock_1/map.png"
-SPEAKING_SPORT_IMAGE_PATH = "exams/mock1/speaking_part12_sport.png"
+MAP_OPTION_LETTERS = ("A", "B", "C", "D", "E", "F", "G", "H")
+SPEAKING_SPORT_IMAGE_PATH ="exams/mock1/speaking_part12_sport.png"
 SPEAKING_EDU_IMAGE_PATH = "exams/mock1/speaking_part2_education.png"
 
 
@@ -54,6 +57,32 @@ REQUIRED_MEDIA: tuple[tuple[str, str], ...] = (
 )
 
 
+MIN_REAL_LISTENING_SECONDS = 60
+DECLARED_LISTENING_PART_SECONDS = 360
+
+
+def wav_seconds(path: Path) -> float | None:
+    try:
+        with wave.open(str(path), "rb") as handle:
+            return handle.getnframes() / float(handle.getframerate())
+    except (wave.Error, EOFError, OSError, ZeroDivisionError):
+        return None
+
+
+def placeholder_audio(source_root: Path) -> list[tuple[str, float]]:
+    """Listening files far shorter than a real exam part (the declared length is 360 s).
+
+    Reported, never repaired: this command must not invent audio.
+    """
+    found = []
+    for src, _ in REQUIRED_MEDIA:
+        if src.endswith(".wav"):
+            seconds = wav_seconds(source_root / src)
+            if seconds is not None and seconds < MIN_REAL_LISTENING_SECONDS:
+                found.append((src, seconds))
+    return found
+
+
 def ensure_media_assets(stdout) -> dict[int, str]:
     """Copy the exam media from SEED_MEDIA_DIR into MEDIA_ROOT. Never synthesises files.
 
@@ -65,15 +94,29 @@ def ensure_media_assets(stdout) -> dict[int, str]:
     missing = [src for src, _ in REQUIRED_MEDIA if not (source_root / src).is_file()]
     if missing:
         raise SeedMediaMissing(f"SEED_MEDIA_DIR={source_root} is missing: " + ", ".join(missing))
+    # Compare contents, not sizes, before copying anything. Existing assets may be
+    # authored recordings that must never be replaced by the repository fixtures.
+    conflicts = [dst for src, dst in REQUIRED_MEDIA
+                 if (media_root / dst).exists() and
+                 (not (media_root / dst).is_file() or not filecmp.cmp(source_root / src, media_root / dst, shallow=False))]
+    if conflicts:
+        raise SeedMediaMissing("Existing media differs; refusing to overwrite: " + ", ".join(conflicts))
     copied = 0
     for src, dst_key in REQUIRED_MEDIA:
         src_path, dst_path = source_root / src, media_root / dst_key
-        if dst_path.is_file() and dst_path.stat().st_size == src_path.stat().st_size:
+        if dst_path.is_file():
             continue
         dst_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src_path, dst_path)
         copied += 1
     stdout.write(f"Media verified from {source_root} into {media_root} ({copied} copied)")
+    short = placeholder_audio(source_root)
+    if short:
+        stdout.write(
+            "WARNING: listening audio looks like placeholder media, not the real recordings "
+            f"(declared {DECLARED_LISTENING_PART_SECONDS}s per part): "
+            + ", ".join(f"{name.rsplit('/', 1)[-1]}={seconds:.0f}s" for name, seconds in short)
+        )
     return {n: f"multilevel/assets/record_mock1_audio_part_{n}.wav" for n in range(1, 7)}
 
 
@@ -309,16 +352,9 @@ def seed_record_mock_1(stdout, style=None):
             )
 
         # Listening Part 4 (Questions 19-23): Community Centre Map Labeling (A-H)
-        part4_rooms = [
-            "A  Room A",
-            "B  Room B",
-            "C  Room C",
-            "D  Room D",
-            "E  Room E",
-            "F  Room F",
-            "G  Room G",
-            "H  Room H",
-        ]
+        # The plan prints the letters A-H inside eight unnamed rooms, so the
+        # options are the bare letters the student sees on the map.
+        part4_rooms = list(MAP_OPTION_LETTERS)
         lg4, _ = MockQuestionGroup.objects.update_or_create(
             id=f"{EXAM_ID.lower()}-grp-l4",
             defaults={
@@ -335,11 +371,9 @@ def seed_record_mock_1(stdout, style=None):
                     "Questions 19–23. You will hear someone giving a talk. Label the places (19–23) "
                     "on the map (A–H). There are THREE extra options which you do not need to use."
                 ),
-                "passage_text": (
-                    "COMMUNITY CENTRE PLAN:\n"
-                    "Medical Centre [C] | Computer room [E] | Gymnasium [A] | Baby Care room [B]\n"
-                    "Games room [F] | Sports Hall [D, G, H] | Public Library | Reception / Main Entrance"
-                ),
+                # No passage text: a prose description of the plan contradicted
+                # the printed map (it put letters on the wrong rooms).
+                "passage_text": "",
             },
         )
 

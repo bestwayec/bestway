@@ -989,7 +989,29 @@
       "finalizingStatus": "Preparing upload",
       "uploadingStatus": "Uploading",
       "uploadedStatus": "Uploaded",
-      "retryStatus": "Retry required"
+      "retryStatus": "Retry required",
+      "listeningRegion": "Listening audio",
+      "listeningStart": "Preview this part",
+      "listeningPlay": "Play audio",
+      "listeningRules": "The audio plays a limited number of times and cannot be paused or rewound. Start the preview first; the audio unlocks when the preview ends.",
+      "listeningPreview": "Preview: audio unlocks in {seconds}s",
+      "listeningPlaying": "Audio is playing",
+      "listeningReady": "Ready: press Play audio",
+      "listeningFinished": "All plays of this part are used",
+      "listeningPlays": "Plays {plays}/{limit}",
+      "listeningVolume": "Volume",
+      "listeningLoading": "Loading audio…",
+      "listeningPrepareError": "The preview could not be started. Please try again.",
+      "listeningPlayError": "The audio could not be loaded or played. Please try again.",
+      "listeningMediaError": "The audio failed to play. Tell your supervisor.",
+      "nextSection": "Next section",
+      "nextSectionDone": "Moved to the next section",
+      "saveSaved": "Saved",
+      "saveSaving": "Saving…",
+      "saveError": "Save failed",
+      "saveOffline": "Offline — changes not yet saved to server",
+      "saveRetry": "Retry",
+      "practiceBadge": "{skill} practice"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1088,6 +1110,35 @@
       "title": "No answers were submitted",
       "body": "This attempt has no saved answers or recordings, so no score, level or certificate was calculated and nothing was sent for AI or teacher review.",
       "retry": "Back to mock exams"
+    },
+    "stepper": {
+      "partsLabel": "Parts",
+      "palette": "Question palette",
+      "legendAnswered": "Answered",
+      "legendFlagged": "Flagged",
+      "legendUnanswered": "Not answered",
+      "questionLabel": "Question {label}, {part}",
+      "stateAnswered": "answered",
+      "stateNotAnswered": "not answered",
+      "stateFlagged": "flagged",
+      "previousPart": "Previous part",
+      "nextPart": "Next part",
+      "flag": "Flag question",
+      "flagged": "Flagged for review",
+      "nextSection": "Next section",
+      "submitSection": "Submit section",
+      "scrollHint": "Swipe to see more questions"
+    },
+    "advanceConfirm": {
+      "title": "Move to the next section?",
+      "body": "You cannot return to this section afterwards. Your answers will be saved before moving on; if saving fails, try again.",
+      "stay": "Stay here",
+      "confirm": "Yes, next section"
+    },
+    "locker": {
+      "startTitle": "This exam runs in full screen",
+      "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Do not leave full screen and do not switch apps or tabs: every exit is recorded and three warnings submit the exam.",
+      "startButton": "I understand, start"
     }
   },
   "wizard": {

@@ -54,7 +54,7 @@ import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
 import { ObjectiveQuestionInput } from './objective-question-input';
 import { usedMatchingOptions } from '@/lib/objective-question';
-import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSaveMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
+import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
@@ -72,6 +72,7 @@ import {
   loadAttemptNotes,
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
+import { AdvanceConfirmModal } from "./advance-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
@@ -142,6 +143,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const tm = useTranslations("errorPanel");
+  const tr = useTranslations("mock.runnerUx");
   const examQ = useMockExam(attempt.examId);
   const audioTimestampsQ = useAudioTimestamps(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
@@ -295,6 +297,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
   const [showSubmitConfirm, setShowSubmitConfirm] = React.useState(false);
+  const [showAdvanceConfirm, setShowAdvanceConfirm] = React.useState(false);
   const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
@@ -305,7 +308,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
-  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error">("saved");
+  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -328,15 +331,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
     if (!ids.length) return;
     const snapshot = { ...answersRef.current };
-    if (versioned) setSaveState("saving");
+    setSaveState("saving");
     let succeeded = false;
     saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then((result) => {
       if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
       succeeded = true;
       ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
-      if (versioned && !dirty.current.size) setSaveState("saved");
+      if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
-      if (versioned) setSaveState("error");
+      setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
       toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
     }).finally(() => {
       saveInFlight.current = null;
@@ -356,15 +359,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     dirty.current.add(qid);
     const next = { ...answersRef.current, [qid]: val };
     answersRef.current = next;
-    if (versioned) setSaveState("saving");
+    setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saving");
     setAnswers(next);
   }
   React.useEffect(() => {
-    if (!versioned) return;
     window.addEventListener('online', flush);
+    const onOffline = () => { if (dirty.current.size) setSaveState("offline"); };
+    window.addEventListener('offline', onOffline);
     const id = window.setInterval(flush, 10000);
-    return () => { window.removeEventListener('online', flush); window.clearInterval(id); };
-  }, [flush, versioned]);
+    return () => { window.removeEventListener('online', flush); window.removeEventListener('offline', onOffline); window.clearInterval(id); };
+  }, [flush]);
 
   // Native-feeling tap feedback on answer options and buttons (touch devices only).
   React.useEffect(() => installHaptics(), []);
@@ -508,11 +512,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       if (currentSkill && nextSkill) {
         setTransitionModal({ completedSkill: currentSkill, nextSkill });
       }
-      toast.success("Next section");
+      toast.success(tr("nextSectionDone"));
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { submittingRef.current = false; }
-  }, [advanceMutateAsync, tc, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
+  }, [advanceMutateAsync, tc, tr, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
 
   React.useEffect(() => {
     if (!deadline) return;
@@ -658,7 +662,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               {isSingleSection && targetSkill ? (
                 <div className="flex items-center gap-2">
                   <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
-                    {targetSkill} Practice
+                    {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
                   </span>
                   <p className="truncate font-semibold text-fg">{exam.title}</p>
                 </div>
@@ -675,8 +679,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             <div className="flex items-center gap-3">
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
-                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : void goNextSection())}>
-                  Next section
+                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
+                  {tr("nextSection")}
                 </Button>
               ) : null}
               <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand/90 text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
@@ -685,10 +689,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               </Button>
             </div>
           </div>
-          {versioned && <div className="mt-2 flex items-center gap-2 text-xs text-fg-muted" role="status">
-            <span className={cn(saveState === "error" && "text-danger")}>{studentSaveMessage(saveState)}</span>
-            {saveState === "error" && <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>Retry</button>}
-          </div>}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted" role="status" aria-live="polite">
+            <span className={cn((saveState === "error" || saveState === "offline") && "text-danger")}>{tr({idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline"}[saveState])}</span>
+            {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[44px] font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>{tr("saveRetry")}</button>}
+          </div>
           <ResponseProgress answered={answered} total={total} />
         </div>
 
@@ -784,7 +788,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
               onNextSection={() => {
                 if (multilevelReview && missingWork) setReview("advance");
-                else void goNextSection();
+                else setShowAdvanceConfirm(true);
               }}
               onSubmitSection={() => {
                 void doSubmit(false);
@@ -824,6 +828,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           completedSkill={transitionModal?.completedSkill ?? "listening"}
           nextSkill={transitionModal?.nextSkill ?? "reading"}
           onStartNext={() => setTransitionModal(null)}
+        />
+
+        <AdvanceConfirmModal
+          open={showAdvanceConfirm}
+          onOpenChange={setShowAdvanceConfirm}
+          busy={advance.isPending}
+          onConfirm={() => { setShowAdvanceConfirm(false); void goNextSection(); }}
         />
 
         <SubmitConfirmModal
@@ -997,7 +1008,7 @@ function GroupBlock({
     <Card className="p-4 sm:p-5">
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
-        <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 p-3 backdrop-blur-xl shadow-md sm:-mx-5 sm:-mt-5">
+        <div className="z-20 -mx-4 -mt-4 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 p-3 backdrop-blur-xl shadow-md sm:-mx-5 sm:-mt-5 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-0">
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
