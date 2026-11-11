@@ -31,8 +31,8 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W2.5 Full Mock Finish 502 | NOT REPRODUCED | API full_test flow on Record Mock: start 201, 4 sections via advance, submit 201 in 0.11 s, repeat submit idempotent (same status), 1 Writing job only, honest `grading` state. Prod 502 cause UNVERIFIED (needs prod logs) |
 | W2 map 401 | FIXED/VERIFIED | Real runner map via proxy: owner 200, anonymous 401. Simulator (CDLayout) used raw /media path (404 on web origin) + hard-coded Record Mock map for every Part 4 → now proxy GroupImage, no invented map |
 | W2.6 content/media | FIXED | 6 Record Mock WAVs measured 8.0 s each. Importer (run by deploy-release.sh) copied and published them. Now never copied, exam unpublished with BLOCKED list until real recordings are in MEDIA_ROOT; `--allow-placeholder-audio` only for *_local loopback DB |
-| W3 Exam Builder | TODO | |
-| W4 Vocabulary | TODO | |
+| W3 Exam Builder | PARTIAL | Browser (teacher, 1440px): create Multilevel practice → passage title/instructions/text → question with custom text + 3 custom options + answer key; keyboard text selection inside option works; Save Draft → reload → all values persisted. Backend author→publish→student→grade: verify_mock_authoring_postgres 171/171. FIXED: outline label 'No exams here yet' on empty passages; hard-coded Uzbek quick-import labels in English UI. Not done: publishing a tiny real exam end-to-end in the browser (Multilevel blueprint needs full part counts) |
+| W4 Vocabulary | PARTIAL | FIXED (P0 points integrity): quiz submit counted repeated/foreign answers and re-awarded points on every resubmit; staff got student profiles. Live: exploit 1/5=20% 0 pts; 3 perfect submits → PointsLog [5] only. FIXED: any teacher could delete any set / read any set's results+Excel (now author, group teacher or admin). FIXED: set report always 500 (unimported function). Not done: browser UX pass on vocabulary pages |
 | W5 Other functions | PARTIAL | Attendance: frontend called /attendance/group-summary/<id> (404) → dialog defaulted everyone to present and could overwrite absences; route added, live-verified |
 | W6 UI/UX | TODO | |
 | W7 Perf/security | TODO | review findings from PR #111 below |
@@ -110,8 +110,9 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 
 ## Open questions
 
-- None yet for the owner beyond content blockers.
+- Runner game (`games/runner`): score, distance and correct answers are client-reported; up to 150 points per game, no daily cap and no idempotency key (a retried POST is credited twice). Needs a product decision on a daily cap; the idempotency key needs a frontend change.
+- Vocabulary set list (`GET vocabulary/sets`) shows every group's sets to every user; confirm whether sets should be limited to the student's own group.
 
 ## NEXT STEP
 
-Start W3: Exam Builder round-trip (teacher creates draft → questions → readiness → publish → student takes it) on the local stack.
+Continue W5 (other functions: homework, notifications, placement, payments with mocks) then W6 screenshots at 4 sizes.
