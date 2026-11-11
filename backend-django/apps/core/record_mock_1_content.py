@@ -32,7 +32,8 @@ from apps.legacy_schema.models import (
 EXAM_ID = "MOCK-RECORD-01"
 EXAM_TITLE = "Multi-Level (CEFR) Mock Test 1 (Record Mock)"
 MAP_IMAGE_PATH = "exams/record_mock_1/map.png"
-SPEAKING_SPORT_IMAGE_PATH = "exams/mock1/speaking_part12_sport.png"
+MAP_OPTION_LETTERS = ("A", "B", "C", "D", "E", "F", "G", "H")
+SPEAKING_SPORT_IMAGE_PATH ="exams/mock1/speaking_part12_sport.png"
 SPEAKING_EDU_IMAGE_PATH = "exams/mock1/speaking_part2_education.png"
 
 
@@ -317,16 +318,9 @@ def seed_record_mock_1(stdout, style=None):
             )
 
         # Listening Part 4 (Questions 19-23): Community Centre Map Labeling (A-H)
-        part4_rooms = [
-            "A  Room A",
-            "B  Room B",
-            "C  Room C",
-            "D  Room D",
-            "E  Room E",
-            "F  Room F",
-            "G  Room G",
-            "H  Room H",
-        ]
+        # The plan prints the letters A-H inside eight unnamed rooms, so the
+        # options are the bare letters the student sees on the map.
+        part4_rooms = list(MAP_OPTION_LETTERS)
         lg4, _ = MockQuestionGroup.objects.update_or_create(
             id=f"{EXAM_ID.lower()}-grp-l4",
             defaults={
@@ -343,11 +337,9 @@ def seed_record_mock_1(stdout, style=None):
                     "Questions 19–23. You will hear someone giving a talk. Label the places (19–23) "
                     "on the map (A–H). There are THREE extra options which you do not need to use."
                 ),
-                "passage_text": (
-                    "COMMUNITY CENTRE PLAN:\n"
-                    "Medical Centre [C] | Computer room [E] | Gymnasium [A] | Baby Care room [B]\n"
-                    "Games room [F] | Sports Hall [D, G, H] | Public Library | Reception / Main Entrance"
-                ),
+                # No passage text: a prose description of the plan contradicted
+                # the printed map (it put letters on the wrong rooms).
+                "passage_text": "",
             },
         )
 
