@@ -92,7 +92,8 @@
       "strengths": "Kuchli tomonlar",
       "issues": "Asosiy kamchiliklar",
       "missedPrompts": "Qoldirilgan savollar / fikrlar",
-      "usefulPhrases": "Foydali iboralar"
+      "usefulPhrases": "Foydali iboralar",
+      "bamboozle": "Bamboozle Arena"
     },
     "forCoverage": "Qo‘llab-quvvatlovchi tomon",
     "againstCoverage": "Qarshi tomon",
@@ -1016,7 +1017,19 @@
       "saveRetry": "Qayta urinish",
       "practiceBadge": "{skill} mashqi",
       "questionPosition": "{number}-savol",
-      "flaggedCount": "{count} ta belgilangan"
+      "flaggedCount": "{count} ta belgilangan",
+      "flagAction": "Belgilash",
+      "flagActionTitle": "Savolni ko‘rib chiqish uchun belgilash",
+      "unflagTitle": "Belgini olib tashlash",
+      "flaggedShort": "Belgilangan",
+      "noQuestionsToSubmit": "Savollar yuklanmadi (0/0), shuning uchun topshirib bo‘lmaydi.",
+      "sectionLoadError": "{section} bo‘limini yuklashda xatolik yuz berdi",
+      "passageTab": "Matn",
+      "questionsTab": "Savollar ({count})",
+      "writingModeType": "Matn terish",
+      "writingModeOcr": "Qog‘oz / rasm yuklash (OCR)",
+      "ocrEditTitle": "OCR olingan / saqlangan matn",
+      "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1144,6 +1157,21 @@
       "startTitle": "Imtihon to‘liq ekranda o‘tadi",
       "startBody": "Brauzer «to‘liq ekrandan chiqish…» kabi tizim xabarini ko‘rsatishi mumkin. U brauzerdan keladi, BestWay’dan emas. To‘liq ekrandan chiqmang va boshqa ilova yoki tabga o‘tmang: har bir chiqish qayd etiladi, uchta ogohlantirishdan keyin imtihon topshiriladi.",
       "startButton": "Tushundim, boshlayman"
+    },
+    "transition": {
+      "completed": "{skill} bo‘limi yakunlandi",
+      "saved": "Javoblaringiz saqlandi.",
+      "next": "Keyingi bo‘lim",
+      "autoStart": "Avtomatik boshlanishiga",
+      "seconds": "{count} soniya",
+      "startNow": "{skill} — hozir boshlash",
+      "tips": {
+        "listening": "Audio avtomatik yangraydi. Diqqat bilan tinglang va javoblarni belgilang.",
+        "reading": "Matnlarni o‘qib, savollarga javob bering. Qismlar orasida tablar orqali o‘ting.",
+        "writing": "Har bir vazifa bo‘yicha javob yozing. So‘zlar hisoblagichiga e’tibor bering.",
+        "speaking": "Savollarni tinglang va mikrofon orqali aniq javob bering.",
+        "default": "Keyingi bo‘limga tayyorlaning."
+      }
     }
   },
   "wizard": {

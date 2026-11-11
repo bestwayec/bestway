@@ -391,7 +391,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     async (auto = false, confirmed = false) => {
       if (submittingRef.current) return;
       if (total <= 0) {
-        toast.error("Savollar yuklanmadi yoki mavjud emas (0/0). Topshirib bo'lmaydi.");
+        toast.error(tr("noQuestionsToSubmit"));
         return;
       }
       if (!auto && !confirmed) {
@@ -712,7 +712,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         }).map((item) => item.skill)} /></div>}
 
         {section && (
-          <ErrorBoundary fallbackTitle={`${section.title || section.skill} bo'limini yuklashda xatolik yuz berdi`}>
+          <ErrorBoundary fallbackTitle={tr("sectionLoadError", { section: section.title || t(`skills.${section.skill}`) })}>
           <div className="space-y-4">
             {section.instructions && (
               <p className="text-sm text-fg-muted">{section.instructions}</p>
@@ -998,6 +998,7 @@ function GroupBlock({
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
 }) {
+  const tg = useTranslations("mock.runnerUx");
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
   const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
@@ -1097,7 +1098,7 @@ function GroupBlock({
                 : "text-fg-muted hover:text-fg"
             )}
           >
-            📖 Matn (Passage)
+            {tg("passageTab")}
           </button>
           <button
             type="button"
@@ -1109,7 +1110,7 @@ function GroupBlock({
                 : "text-fg-muted hover:text-fg"
             )}
           >
-            ❓ Savollar ({(group?.questions || []).length})
+            {tg("questionsTab", { count: (group?.questions || []).length })}
           </button>
         </div>
       )}
@@ -1313,7 +1314,7 @@ export function EssayQuestionEditor({
                 : "text-fg-muted hover:bg-surface hover:text-fg"
             )}
           >
-            <Keyboard className="size-3.5" /> ⌨️ Matn terish
+            <Keyboard className="size-3.5" aria-hidden /> {tx("writingModeType")}
           </button>
           <button
             type="button"
@@ -1325,7 +1326,7 @@ export function EssayQuestionEditor({
                 : "text-fg-muted hover:bg-surface hover:text-fg"
             )}
           >
-            <Camera className="size-3.5" /> 📷 Qog&apos;oz / Rasm yuklash (OCR)
+            <Camera className="size-3.5" aria-hidden /> {tx("writingModeOcr")}
           </button>
         </div>
         {value.trim() && (
@@ -1352,14 +1353,14 @@ export function EssayQuestionEditor({
           {value.trim() && (
             <div className="space-y-1.5 rounded-xl border border-brand/20 bg-brand-subtle/20 p-3">
               <div className="flex items-center justify-between text-xs font-semibold text-brand">
-                <span>📝 OCR olingan / Saqlangan matn tahriri</span>
-                <span className="font-mono text-[11px]">{value.trim().split(/\s+/).filter(Boolean).length} so&apos;z</span>
+                <span>{tx("ocrEditTitle")}</span>
+                <span className="tabular-nums">{tx("wordCount", { count: value.trim().split(/\s+/).filter(Boolean).length })}</span>
               </div>
               <Textarea
                 value={value}
                 onChange={(e) => handleWritingChange(e.target.value)}
                 className="min-h-36 resize-y font-sans text-base leading-relaxed"
-                placeholder="OCR qilingan matn bu yerda chiqadi yoki bemalol o'zgartirishingiz mumkin..."
+                placeholder={tx("ocrPlaceholder")}
               />
             </div>
           )}
@@ -1427,7 +1428,7 @@ function QuestionInput({
         <button
           type="button"
           onClick={onToggleFlag}
-          title={isFlagged ? "Belgini olib tashlash" : "Belgilash (Flag)"}
+          title={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
           className={cn(
             "inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
             isFlagged
@@ -1436,7 +1437,7 @@ function QuestionInput({
           )}
         >
           <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
-          <span className="hidden sm:inline">{isFlagged ? "Belgilangan" : "Belgilash"}</span>
+          <span className="hidden sm:inline">{isFlagged ? tx("flaggedShort") : tx("flagAction")}</span>
         </button>
       )}
     </div>
@@ -1475,7 +1476,7 @@ function QuestionInput({
           <button
             type="button"
             onClick={onToggleFlag}
-            title={isFlagged ? "Belgini olib tashlash" : "Belgilash (Flag)"}
+            title={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
             className={cn(
               "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
               isFlagged
@@ -1484,7 +1485,7 @@ function QuestionInput({
             )}
           >
             <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
-            <span>{isFlagged ? "Belgilangan" : "Belgilash"}</span>
+            <span>{isFlagged ? tx("flaggedShort") : tx("flagAction")}</span>
           </button>
         </div>
       )}
