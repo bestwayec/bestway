@@ -158,14 +158,14 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
             <h2 className="text-lg font-bold">Vocab Battle O'yiniga Kirish</h2>
           </div>
           {onClose && (
-            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground">
+            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 text-fg-muted">
               <X className="h-5 w-5" />
             </button>
           )}
         </div>
 
         <div className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-fg-muted">
             O'qituvchi taqdim etgan 6 xonali PIN-kodni kiriting:
           </p>
 
@@ -179,7 +179,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           />
 
           {errorMsg && (
-            <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-xl border border-destructive/20 font-medium">
+            <p className="text-xs text-danger bg-danger/10 p-2.5 rounded-xl border border-danger/20 font-medium">
               {errorMsg}
             </p>
           )}
@@ -210,7 +210,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
       {/* Top player header */}
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
         <div>
-          <span className="text-xs text-muted-foreground">O'yinchi</span>
+          <span className="text-xs text-fg-muted">O'yinchi</span>
           <p className="text-sm font-bold text-white flex items-center gap-1.5">
             👤 {state?.myState?.name || "Siz"}
           </p>
@@ -229,7 +229,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           </div>
 
           {onClose && (
-            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground">
+            <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 text-fg-muted">
               <X className="h-5 w-5" />
             </button>
           )}
@@ -241,7 +241,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
         <div className="py-12 text-center space-y-4 my-auto">
           <Loader2 className="h-10 w-10 animate-spin text-emerald-400 mx-auto" />
           <h3 className="text-xl font-bold text-white">Siz o'yindasiz! 🎉</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-fg-muted">
             O'qituvchi barcha o'quvchilarni kutib, bellashuvni boshlashini kuting...
           </p>
           <div className="inline-block bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-xs font-mono text-emerald-400">
@@ -254,13 +254,13 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
       {state?.status === "QUESTION" && state.currentQuestion && (
         <div className="py-4 space-y-6 flex-1 flex flex-col justify-between">
           <div className="text-center space-y-2">
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-fg-muted">
               Savol {state.currentQuestionIndex + 1} / {state.totalQuestions}
             </span>
             <h2 className="text-3xl font-black text-white capitalize">
               {state.currentQuestion.english}
             </h2>
-            <p className="text-xs text-muted-foreground">{state.currentQuestion.prompt}</p>
+            <p className="text-xs text-fg-muted">{state.currentQuestion.prompt}</p>
           </div>
 
           {/* Answer confirmation overlay or option tiles */}
@@ -279,7 +279,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
                   <>
                     <XCircle className="h-14 w-14 text-red-400 mx-auto" />
                     <h3 className="text-2xl font-black text-red-400">Noto'g'ri ❌</h3>
-                    <p className="text-xs text-muted-foreground">Keyingi savolda omad tilaymiz!</p>
+                    <p className="text-xs text-fg-muted">Keyingi savolda omad tilaymiz!</p>
                   </>
                 )
               ) : (
@@ -308,7 +308,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
             </div>
           )}
 
-          <div className="text-center text-xs text-muted-foreground">
+          <div className="text-center text-xs text-fg-muted">
             Barcha javob bergach o'qituvchi keyingi bosqichga o'tkazadi
           </div>
         </div>
@@ -321,13 +321,13 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           <h3 className="text-xl font-bold text-white">Natijalar jadvali</h3>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-w-sm mx-auto space-y-2">
-            <span className="text-xs text-muted-foreground">Sizning jami ballingiz:</span>
+            <span className="text-xs text-fg-muted">Sizning jami ballingiz:</span>
             <div className="text-3xl font-black text-emerald-400 font-mono">
               {state.myState?.score || 0} ball
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-fg-muted">
             O'qituvchi keyingi savolni ochishini kuting...
           </p>
         </div>
@@ -340,7 +340,7 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           <h2 className="text-2xl font-black text-white">O'yin yakunlandi! 🏆</h2>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 max-w-sm mx-auto space-y-2">
-            <span className="text-xs text-muted-foreground">Siz to'plagan yakuniy ball:</span>
+            <span className="text-xs text-fg-muted">Siz to'plagan yakuniy ball:</span>
             <div className="text-4xl font-black text-amber-400 font-mono">
               {state.myState?.score || 0}
             </div>

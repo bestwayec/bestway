@@ -64,7 +64,10 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
 };
 
 const root = path.resolve(__dirname, "..");
-type Codemod = { tokenizeSource: (src: string, opts?: { neutralOnly?: boolean }) => string };
+type Codemod = {
+  tokenizeSource: (src: string, opts?: { neutralOnly?: boolean }) => string;
+  fixUndefinedAliases: (src: string) => string;
+};
 let codemod: Codemod;
 
 beforeAll(async () => {
@@ -98,6 +101,30 @@ describe("colour codemod", () => {
     expect(codemod.tokenizeSource('"text-red-500 bg-slate-900"', { neutralOnly: true })).toBe(
       '"text-red-500 bg-surface"',
     );
+  });
+});
+
+describe("no undefined colour names", () => {
+  it("maps shadcn names that globals.css never defined", () => {
+    expect(codemod.fixUndefinedAliases('"text-muted-foreground bg-destructive/10 hover:bg-muted bg-card text-foreground"')).toBe(
+      '"text-fg-muted bg-danger/10 hover:bg-bg-subtle bg-surface text-fg"',
+    );
+  });
+
+  it("are used nowhere in src (they compile to no CSS)", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith(".spec.ts")) {
+          const source = fs.readFileSync(full, "utf8");
+          if (codemod.fixUndefinedAliases(source) !== source) offenders.push(path.relative(root, full));
+        }
+      }
+    };
+    walk(path.join(root, "src"));
+    expect(offenders).toEqual([]);
   });
 });
 

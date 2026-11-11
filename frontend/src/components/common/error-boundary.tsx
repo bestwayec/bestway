@@ -38,8 +38,8 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10 p-6 text-center text-fg">
-          <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-destructive/20 text-destructive">
+        <div className="flex min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-danger/20 bg-danger/10 p-6 text-center text-fg">
+          <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-danger/20 text-danger">
             <AlertCircle className="size-6" />
           </div>
           <h3 className="text-base font-semibold text-fg">

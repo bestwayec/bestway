@@ -140,15 +140,15 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-xl space-y-6">
+    <div className="rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <h2 className="text-xl font-bold text-fg flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-brand" />
             Yangi Lug'at To'plamini Yaratish
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-fg-muted mt-0.5">
             O'quvchilar uchun interaktiv testlar va SRS xatolar bankini shakllantiring
           </p>
         </div>
@@ -171,7 +171,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       </div>
 
       {errorMsg && (
-        <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-4 text-sm text-destructive border border-destructive/20">
+        <div className="flex items-center gap-2 rounded-xl bg-danger/10 p-4 text-sm text-danger border border-danger/20">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -180,24 +180,24 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       {/* Meta Inputs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
             To'plam Sarlavhasi *
           </label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Masalan: Unit 5: Environment & Global Warming"
-            className="bg-background"
+            className="bg-bg"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
             CEFR / Kurs Darajasi
           </label>
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full h-10 px-3 rounded-md border border-input bg-bg text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-brand"
           >
             {LEVELS.map((lvl) => (
               <option key={lvl} value={lvl}>
@@ -209,20 +209,20 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
           Tavsif (ixtiyoriy)
         </label>
         <Input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="To'plam haqida qisqacha ma'lumot yoki dars mavzusi"
-          className="bg-background"
+          className="bg-bg"
         />
       </div>
 
       {/* Add single word row */}
-      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-border bg-bg-subtle/30 p-4 space-y-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
           Yangi So'z Qo'shish
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -230,26 +230,26 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
             value={engInput}
             onChange={(e) => setEngInput(e.target.value)}
             placeholder="English word (e.g. resilient)"
-            className="bg-background"
+            className="bg-bg"
           />
           <Input
             value={uzbInput}
             onChange={(e) => setUzbInput(e.target.value)}
             placeholder="O'zbekcha tarjimasi (e.g. chidamli)"
-            className="bg-background"
+            className="bg-bg"
           />
           <Input
             value={posInput}
             onChange={(e) => setPosInput(e.target.value)}
             placeholder="So'z turkumi (noun, verb, adj)"
-            className="bg-background"
+            className="bg-bg"
           />
           <div className="flex gap-2">
             <Input
               value={contextInput}
               onChange={(e) => setContextInput(e.target.value)}
               placeholder="Misol jumla (context)"
-              className="bg-background flex-1"
+              className="bg-bg flex-1"
               onKeyDown={(e) => e.key === "Enter" && handleAddSingleWord()}
             />
             <Button
@@ -268,7 +268,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       {/* Words List Table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
             <span>Kiritilgan So'zlar</span>
             <Badge variant="neutral" className="border-brand/40 text-brand">
               {words.length} ta
@@ -286,13 +286,13 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
         </div>
 
         {words.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-fg-muted">
             Hozircha birorta ham so'z kiritilmadi. Yuqoridagi maydonlardan foydalaning yoki "Smart Paste" orqali butun ro'yxatni tashlang.
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border max-h-80 overflow-y-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-muted text-muted-foreground sticky top-0 z-10 text-xs uppercase tracking-wider">
+              <thead className="bg-bg-subtle text-fg-muted sticky top-0 z-10 text-xs uppercase tracking-wider">
                 <tr>
                   <th className="py-2.5 px-4 font-semibold">#</th>
                   <th className="py-2.5 px-4 font-semibold">English</th>
@@ -304,19 +304,19 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
               </thead>
               <tbody className="divide-y divide-border">
                 {words.map((w, idx) => (
-                  <tr key={idx} className="hover:bg-muted/50 transition-colors">
-                    <td className="py-2.5 px-4 text-muted-foreground font-mono text-xs">{idx + 1}</td>
-                    <td className="py-2.5 px-4 font-medium text-foreground">{w.english}</td>
+                  <tr key={idx} className="hover:bg-bg-subtle/50 transition-colors">
+                    <td className="py-2.5 px-4 text-fg-muted font-mono text-xs">{idx + 1}</td>
+                    <td className="py-2.5 px-4 font-medium text-fg">{w.english}</td>
                     <td className="py-2.5 px-4 text-brand font-medium">{w.uzbek}</td>
-                    <td className="py-2.5 px-4 text-xs text-muted-foreground">{w.part_of_speech || "—"}</td>
-                    <td className="py-2.5 px-4 text-xs text-muted-foreground max-w-xs truncate">
+                    <td className="py-2.5 px-4 text-xs text-fg-muted">{w.part_of_speech || "—"}</td>
+                    <td className="py-2.5 px-4 text-xs text-fg-muted max-w-xs truncate">
                       {w.context_sentence || "—"}
                     </td>
                     <td className="py-2.5 px-4 text-right">
                       <button
                         type="button"
                         onClick={() => handleRemoveWord(idx)}
-                        className="text-muted-foreground hover:text-danger transition-colors p-1"
+                        className="text-fg-muted hover:text-danger transition-colors p-1"
                         aria-label="O'chirish"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -332,7 +332,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
 
       {/* Footer Submit */}
       <div className="flex items-center justify-between border-t border-border pt-4">
-        <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-fg-muted">
           <input
             type="checkbox"
             checked={isPublic}
@@ -354,22 +354,22 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       {/* Smart Paste Dialog */}
       {isSmartPasteOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-lg font-bold text-fg flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-brand" />
                 Aqlli Matn Tashlash (Smart Paste)
               </h3>
               <button
                 type="button"
                 onClick={() => setIsSmartPasteOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-fg-muted hover:text-fg"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-fg-muted leading-relaxed">
               Word, Telegram yoki lug'at daftaringizdan matnni nusxalab bu yerga tashlang.
               Tizim barcha formatlarni (<code>apple - olma</code>, <code>1. banana : banan</code>, <code>• car = mashina</code>) avtomatik ajratib oladi.
             </p>
@@ -379,7 +379,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
               value={rawPasteText}
               onChange={(e) => setRawPasteText(e.target.value)}
               placeholder={`Masalan:\n1. environment - atrof-muhit\n2. pollution — ifloslanish\n• recycle : qayta ishlamoq\nresilient [adj] (e.g. He is very resilient) - chidamli`}
-              className="w-full rounded-xl border border-input bg-background p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+              className="w-full rounded-xl border border-input bg-bg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand resize-none"
             />
 
             <div className="flex items-center justify-between">
@@ -402,7 +402,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
             {parsedPreview.length > 0 && (
               <div className="flex-1 overflow-y-auto max-h-48 border border-border rounded-xl">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-muted text-muted-foreground sticky top-0">
+                  <thead className="bg-bg-subtle text-fg-muted sticky top-0">
                     <tr>
                       <th className="py-2 px-3">English</th>
                       <th className="py-2 px-3">O'zbekcha</th>
@@ -412,9 +412,9 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
                   <tbody className="divide-y divide-border">
                     {parsedPreview.slice(0, 15).map((p, i) => (
                       <tr key={i}>
-                        <td className="py-1.5 px-3 font-medium text-foreground">{p.english}</td>
+                        <td className="py-1.5 px-3 font-medium text-fg">{p.english}</td>
                         <td className="py-1.5 px-3 text-brand font-medium">{p.uzbek}</td>
-                        <td className="py-1.5 px-3 text-muted-foreground">{p.part_of_speech || "—"}</td>
+                        <td className="py-1.5 px-3 text-fg-muted">{p.part_of_speech || "—"}</td>
                       </tr>
                     ))}
                   </tbody>

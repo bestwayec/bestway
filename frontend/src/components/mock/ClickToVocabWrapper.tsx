@@ -145,7 +145,7 @@ export function ClickToVocabWrapper({
                   <span>{Math.floor(s.timestamp / 60)}:{String(Math.floor(s.timestamp % 60)).padStart(2, "0")}</span>
                 </button>
               )}
-              <div className="text-foreground leading-relaxed">
+              <div className="text-fg leading-relaxed">
                 {renderInteractiveText(s.text)}
               </div>
             </div>
@@ -164,7 +164,7 @@ export function ClickToVocabWrapper({
             left: Math.max(10, Math.min(popoverPosition.x, (containerRef.current?.offsetWidth || 300) - 280)),
             top: popoverPosition.y,
           }}
-          className="absolute z-50 w-72 rounded-2xl border border-brand/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl shadow-brand/30 text-foreground animate-in fade-in zoom-in-95 duration-150"
+          className="absolute z-50 w-72 rounded-2xl border border-brand/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl shadow-brand/30 text-fg animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-start justify-between gap-2 border-b border-border pb-2.5 mb-2.5">
             <div className="flex items-center gap-2">
@@ -181,14 +181,14 @@ export function ClickToVocabWrapper({
             <button
               type="button"
               onClick={closePopover}
-              className="p-1 rounded-lg text-muted-foreground hover:text-fg hover:bg-surface-hover transition-colors"
+              className="p-1 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-hover transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {isLoading ? (
-            <div className="py-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+            <div className="py-4 text-center text-xs text-fg-muted flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-brand" />
               <span>Tarjima qidirilmoqda...</span>
             </div>
@@ -197,14 +197,14 @@ export function ClickToVocabWrapper({
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-sm font-semibold text-brand">{lookupData.uzbek}</span>
                 {lookupData.partOfSpeech && (
-                  <Badge variant="neutral" className="text-[10px] text-muted-foreground border-border">
+                  <Badge variant="neutral" className="text-[10px] text-fg-muted border-border">
                     {lookupData.partOfSpeech}
                   </Badge>
                 )}
               </div>
 
               {lookupData.contextSentence && (
-                <p className="text-xs text-muted-foreground italic border-l-2 border-brand/30 pl-2">
+                <p className="text-xs text-fg-muted italic border-l-2 border-brand/30 pl-2">
                   "{lookupData.contextSentence}"
                 </p>
               )}

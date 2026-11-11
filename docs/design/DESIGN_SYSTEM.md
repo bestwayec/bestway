@@ -51,7 +51,12 @@ node scripts/tokenize-colors.mjs --check src/components/foo.tsx
 node scripts/tokenize-colors.mjs src/components/foo.tsx
 ```
 
-Use `--neutral-only` for files whose hues are categories. Always review the result in both themes.
+Use `--neutral-only` for files whose hues are categories.
+
+Do not use shadcn colour names (`text-muted-foreground`, `text-foreground`, `bg-card`, `bg-muted`,
+`bg-background`, `*-destructive`): `globals.css` never defined them, so Tailwind emits no CSS and the
+element silently gets no colour. `--aliases-only` maps them to the tokens above, and the guard test
+fails if one appears anywhere in `src`. Always review the result in both themes.
 Files that have been migrated are listed in `frontend/src/design-system.spec.ts`, which fails CI if
 a raw palette class comes back.
 

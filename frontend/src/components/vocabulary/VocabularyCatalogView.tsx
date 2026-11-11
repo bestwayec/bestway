@@ -114,10 +114,10 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               <BookA className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
                 Lug'at Boyligi va So'z Mashqlari
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-sm text-fg-muted mt-0.5">
                 Mavzulashtirilgan leksika, audio talaffuz, SRS xatolar banki va +5 ballik gamifikatsiya
               </p>
             </div>
@@ -151,7 +151,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             variant="outline"
             onClick={fetchData}
             disabled={isLoading}
-            className="border-border text-foreground"
+            className="border-border text-fg"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Yangilash
@@ -204,19 +204,19 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
       {/* SRS Quick Alert Banner (if user has weak words) */}
       {srsStats && srsStats.totalWeakWords > 0 && (
-        <div className="rounded-2xl border border-warning/30 bg-gradient-to-r from-warning/10 via-card to-brand/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-warning/30 bg-gradient-to-r from-warning/10 via-surface to-brand/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-warning/20 text-warning shrink-0">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-base font-bold text-fg flex flex-wrap items-center gap-2">
                 <span>Shaxsiy Xatolar Banki (SRS)</span>
-                <Badge variant="danger" className="h-5 px-2 text-xs">
+                <Badge variant="danger" className="shrink-0 whitespace-nowrap px-2 text-xs">
                   {srsStats.totalWeakWords} ta xato
                 </Badge>
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-fg-muted mt-0.5">
                 Oldingi testlarda xato qilingan so'zlaringiz saqlangan. Ular ustida mashq qilib, 2 marta ketma-ket to'g'ri topshirib o'zlashtiring!
               </p>
             </div>
@@ -242,7 +242,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedLevel === lvl
                   ? "bg-brand text-brand-fg shadow-md shadow-brand/25"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
               }`}
             >
               {lvl}
@@ -252,28 +252,28 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Lug'at nomidan qidirish..."
             aria-label="Lug'at nomidan qidirish"
             type="search"
-            className="pl-9 h-9 text-xs bg-card"
+            className="pl-9 h-9 text-xs bg-surface"
           />
         </div>
       </div>
 
       {/* Loading & Error States */}
       {isLoading && (
-        <div className="py-20 text-center text-muted-foreground flex flex-col items-center gap-3">
+        <div className="py-20 text-center text-fg-muted flex flex-col items-center gap-3">
           <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           <span>Lug'at to'plamlari yuklanmoqda...</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive border border-destructive/20">
+        <div className="rounded-xl bg-danger/10 p-4 text-sm text-danger border border-danger/20">
           {errorMsg}
         </div>
       )}
@@ -282,10 +282,10 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {!isLoading && (
         <>
           {filteredSets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground space-y-3">
-              <BookOpen className="h-10 w-10 text-muted-foreground/60 mx-auto" />
-              <h3 className="text-base font-semibold text-foreground">Lug'at to'plamlari topilmadi</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-fg-muted space-y-3">
+              <BookOpen className="h-10 w-10 text-fg-muted/60 mx-auto" />
+              <h3 className="text-base font-semibold text-fg">Lug'at to'plamlari topilmadi</h3>
+              <p className="text-xs text-fg-muted max-w-sm mx-auto">
                 Tanlangan darajada yoki qidiruv bo'yicha hech narsa topilmadi.
               </p>
             </div>
@@ -296,31 +296,31 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                 return (
                   <div
                     key={s.id}
-                    className="group rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-xl hover:border-brand/40 transition-all duration-300 flex flex-col justify-between space-y-5"
+                    className="group rounded-2xl border border-border bg-surface p-6 shadow-sm hover:shadow-xl hover:border-brand/40 transition-all duration-300 flex flex-col justify-between space-y-5"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <Badge className="bg-brand/10 text-brand border border-brand/20 font-mono text-xs">
                           {s.level}
                         </Badge>
-                        <span className="text-xs text-muted-foreground font-mono">
+                        <span className="text-xs text-fg-muted font-mono">
                           {s.wordCount} ta so'z
                         </span>
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
+                        <h3 className="text-lg font-bold text-fg group-hover:text-brand transition-colors line-clamp-1">
                           {s.title}
                         </h3>
                         {s.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-fg-muted mt-1 line-clamp-2 leading-relaxed">
                             {s.description}
                           </p>
                         )}
                       </div>
 
                       {s.groupName && (
-                        <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-md">
+                        <div className="inline-flex items-center gap-1.5 text-[11px] text-fg-muted bg-bg-subtle/50 px-2.5 py-1 rounded-md">
                           <Layers className="h-3 w-3" />
                           <span>Guruh: {s.groupName}</span>
                         </div>
@@ -330,13 +330,13 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                     <div className="space-y-3 border-t border-border pt-4">
                       {hasScore ? (
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Eng yaxshi natijangiz:</span>
+                          <span className="text-fg-muted">Eng yaxshi natijangiz:</span>
                           <span className="font-bold text-brand">
                             {s.userBestPercentage}%
                           </span>
                         </div>
                       ) : (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-fg-muted">
                           Hali topshirilmagan (+5 ball kutilmoqda)
                         </div>
                       )}
@@ -364,7 +364,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               type="button"
                               variant="outline"
                               onClick={() => setReportSetId(s.id)}
-                              className="border-border text-foreground hover:bg-muted"
+                              className="border-border text-fg hover:bg-bg-subtle"
                               title="Guruh hisoboti va Excel"
                             >
                               <FileSpreadsheet className="h-4 w-4 text-brand" />

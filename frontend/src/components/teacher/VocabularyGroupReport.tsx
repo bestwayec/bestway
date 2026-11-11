@@ -96,12 +96,12 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-xl space-y-6">
+    <div className="rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-foreground">
+            <h2 className="text-xl font-bold text-fg">
               {report?.title || "Guruh Lug'at Tahlili"}
             </h2>
             {report && (
@@ -110,7 +110,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-fg-muted mt-0.5">
             O'quvchilar natijalari, xatolar tahlili va Excel (.xlsx) eksporti
           </p>
         </div>
@@ -121,7 +121,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
             variant="outline"
             onClick={fetchReport}
             disabled={isLoading}
-            className="border-border text-foreground"
+            className="border-border text-fg"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Yangilash
@@ -146,14 +146,14 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
       </div>
 
       {isLoading && (
-        <div className="py-16 text-center text-muted-foreground flex flex-col items-center gap-3">
+        <div className="py-16 text-center text-fg-muted flex flex-col items-center gap-3">
           <RefreshCw className="h-8 w-8 animate-spin text-brand" />
           <span>Guruh natijalari tahlil qilinmoqda...</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive border border-destructive/20">
+        <div className="rounded-xl bg-danger/10 p-4 text-sm text-danger border border-danger/20">
           {errorMsg}
         </div>
       )}
@@ -162,26 +162,26 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
         <>
           {/* Summary KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
+              <span className="text-xs uppercase tracking-wider text-fg-muted font-semibold">
                 Jami So'zlar
               </span>
-              <p className="text-2xl font-bold text-foreground mt-1">
+              <p className="text-2xl font-bold text-fg mt-1">
                 {Number(report.totalWords ?? (report as any).total_words ?? 0)} ta
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
+              <span className="text-xs uppercase tracking-wider text-fg-muted font-semibold">
                 Topshirganlar
               </span>
-              <p className="text-2xl font-bold text-foreground mt-1">
+              <p className="text-2xl font-bold text-fg mt-1">
                 {Number(report.totalAttempts ?? (report as any).total_attempts ?? (report as any).submitted_count ?? (report as any).totalStudentsSubmitted ?? report.roster?.length ?? 0)} ta
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
+              <span className="text-xs uppercase tracking-wider text-fg-muted font-semibold">
                 O'rtacha Natija
               </span>
               <p className="text-2xl font-bold text-brand mt-1">
@@ -189,11 +189,11 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
+              <span className="text-xs uppercase tracking-wider text-fg-muted font-semibold">
                 Format
               </span>
-              <p className="text-2xl font-bold text-foreground mt-1 flex items-center gap-1.5">
+              <p className="text-2xl font-bold text-fg mt-1 flex items-center gap-1.5">
                 <FileSpreadsheet className="h-5 w-5 text-brand" />
                 Emerald .XLSX
               </p>
@@ -222,10 +222,10 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                     return (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs shadow-sm"
+                        className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs shadow-sm"
                       >
-                        <span className="font-semibold text-foreground">{english}</span>
-                        {uzbek && <span className="text-muted-foreground">({uzbek})</span>}
+                        <span className="font-semibold text-fg">{english}</span>
+                        {uzbek && <span className="text-fg-muted">({uzbek})</span>}
                         <Badge variant="danger" className="h-5 px-1.5 text-[10px]">
                           {count} xato
                         </Badge>
@@ -239,7 +239,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
 
           {/* Student Roster Table */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
               <Users className="h-4 w-4 text-brand" />
               <span>O'quvchilar Ro'yxati va Baholari</span>
               <Badge variant="neutral" className="text-xs">
@@ -248,13 +248,13 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
             </h3>
 
             {report.roster.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
+              <div className="rounded-xl border border-dashed border-border p-8 text-center text-fg-muted">
                 Hozircha ushbu to'plam bo'yicha birorta o'quvchi test topshirmagan.
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-muted text-muted-foreground text-xs uppercase tracking-wider">
+                  <thead className="bg-bg-subtle text-fg-muted text-xs uppercase tracking-wider">
                     <tr>
                       <th className="py-2.5 px-4 font-semibold">#</th>
                       <th className="py-2.5 px-4 font-semibold">O'quvchi Ismi</th>
@@ -270,12 +270,12 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                       const isPerfect = row.percentage === 100;
                       const isGood = row.percentage >= 80 && row.percentage < 100;
                       return (
-                        <tr key={row.attemptId} className="hover:bg-muted/50 transition-colors">
-                          <td className="py-2.5 px-4 text-muted-foreground font-mono text-xs">{idx + 1}</td>
-                          <td className="py-2.5 px-4 font-medium text-foreground">
+                        <tr key={row.attemptId} className="hover:bg-bg-subtle/50 transition-colors">
+                          <td className="py-2.5 px-4 text-fg-muted font-mono text-xs">{idx + 1}</td>
+                          <td className="py-2.5 px-4 font-medium text-fg">
                             <div>{row.studentName}</div>
                             {row.phone && (
-                              <div className="text-[11px] text-muted-foreground font-mono">{row.phone}</div>
+                              <div className="text-[11px] text-fg-muted font-mono">{row.phone}</div>
                             )}
                           </td>
                           <td className="py-2.5 px-4 font-mono text-xs">
@@ -288,7 +288,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                                   ? "text-brand font-bold"
                                   : isGood
                                   ? "text-brand"
-                                  : "text-muted-foreground"
+                                  : "text-fg-muted"
                               }`}
                             >
                               {row.percentage}%
@@ -306,13 +306,13 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                                 +{row.pointsAwarded} ball
                               </Badge>
                             ) : (
-                              <span className="text-xs text-muted-foreground">0 ball</span>
+                              <span className="text-xs text-fg-muted">0 ball</span>
                             )}
                           </td>
-                          <td className="py-2.5 px-4 text-xs text-muted-foreground uppercase font-mono">
+                          <td className="py-2.5 px-4 text-xs text-fg-muted uppercase font-mono">
                             {row.mode}
                           </td>
-                          <td className="py-2.5 px-4 text-xs text-muted-foreground text-right font-mono">
+                          <td className="py-2.5 px-4 text-xs text-fg-muted text-right font-mono">
                             {new Date(row.completedAt).toLocaleDateString()}
                           </td>
                         </tr>

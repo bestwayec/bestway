@@ -142,17 +142,17 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
 
   if (isLoading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-bg-subtle p-12 text-center text-foreground flex flex-col items-center gap-4">
+      <div className="rounded-3xl border border-white/10 bg-bg-subtle p-12 text-center text-fg flex flex-col items-center gap-4">
         <RefreshCw className="h-10 w-10 animate-spin text-emerald-500" />
         <h2 className="text-xl font-bold">Jonli Vocab Battle xonasi tayyorlanmoqda...</h2>
-        <p className="text-sm text-muted-foreground">Savollar generatsiya qilinib, PIN-kod olinmoqda</p>
+        <p className="text-sm text-fg-muted">Savollar generatsiya qilinib, PIN-kod olinmoqda</p>
       </div>
     );
   }
 
   if (errorMsg && !battleState) {
     return (
-      <div className="rounded-3xl border border-destructive/20 bg-destructive/10 p-8 text-destructive flex flex-col items-center gap-4">
+      <div className="rounded-3xl border border-danger/20 bg-danger/10 p-8 text-danger flex flex-col items-center gap-4">
         <p className="font-semibold">{errorMsg}</p>
         <Button variant="outline" onClick={onClose}>Yopish</Button>
       </div>
@@ -169,11 +169,11 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
           <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1">
             ⚡️ LIVE VOCAB BATTLE
           </Badge>
-          <span className="text-sm font-semibold text-muted-foreground">{battleState.setTitle}</span>
+          <span className="text-sm font-semibold text-fg-muted">{battleState.setTitle}</span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+          <div className="flex items-center gap-1.5 text-xs text-fg-muted bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
             <Users className="h-3.5 w-3.5 text-emerald-400" />
             <span>{battleState.totalParticipants} nafar o'quvchi</span>
           </div>
@@ -181,7 +181,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-fg-muted hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -199,7 +199,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
             <div className="text-6xl md:text-8xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 drop-shadow-md select-all">
               {battleState.pin}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-fg-muted">
               Sayt: <span className="text-white font-mono font-bold">bestwayec.uz/vocabulary</span> yoki PIN orqali ulaning
             </p>
           </div>
@@ -207,7 +207,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
           {/* Participant chips */}
           <div className="w-full max-w-2xl bg-white/5 border border-white/10 rounded-2xl p-6 min-h-[140px] flex flex-col items-center justify-center">
             {battleState.leaderboard.length === 0 ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <div className="flex items-center gap-2 text-fg-muted text-sm">
                 <RefreshCw className="h-4 w-4 animate-spin text-emerald-400" />
                 <span>O'quvchilar ulanishi kutilmoqda...</span>
               </div>
@@ -243,7 +243,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
         <div className="py-6 space-y-6 flex-1 flex flex-col justify-between">
           {/* Question progress and timer */}
           <div className="flex items-center justify-between">
-            <Badge variant="neutral" className="text-xs text-muted-foreground border-white/10">
+            <Badge variant="neutral" className="text-xs text-fg-muted border-white/10">
               Savol {battleState.currentQuestionIndex + 1} / {battleState.totalQuestions}
             </Badge>
 
@@ -254,7 +254,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
               </span>
             </div>
 
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-fg-muted">
               Javob berdi: <strong className="text-emerald-400">{battleState.answeredCount}</strong> / {battleState.totalParticipants}
             </div>
           </div>
@@ -274,7 +274,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
                 <Volume2 className="h-6 w-6" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground">{battleState.currentQuestion.prompt}</p>
+            <p className="text-sm text-fg-muted">{battleState.currentQuestion.prompt}</p>
           </div>
 
           {/* 4 Colored Option Tiles */}
@@ -377,7 +377,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
               <Crown className="h-8 w-8" />
             </div>
             <h2 className="text-3xl md:text-4xl font-black text-white">G'oliblar Podium Shoxsupasi!</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-fg-muted">
               1, 2 va 3-o'rin sohiblariga avtomatik +10, +7, +5 platforma ballari taqdim etildi! 🎉
             </p>
           </div>
@@ -390,7 +390,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
                 <span className="text-sm font-bold text-slate-300 truncate max-w-[100px]">
                   {battleState.leaderboard[1].name}
                 </span>
-                <span className="text-xs text-muted-foreground font-mono">{battleState.leaderboard[1].score} b</span>
+                <span className="text-xs text-fg-muted font-mono">{battleState.leaderboard[1].score} b</span>
                 <div className="w-full h-28 bg-slate-700/60 border border-slate-500/30 rounded-t-2xl flex flex-col items-center justify-center mt-2">
                   <span className="text-2xl font-bold text-slate-300">2</span>
                   <Badge className="bg-slate-500/20 text-slate-300 border-none text-[10px] mt-1">+7 ball</Badge>
@@ -419,7 +419,7 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
                 <span className="text-sm font-bold text-amber-600 truncate max-w-[100px]">
                   {battleState.leaderboard[2].name}
                 </span>
-                <span className="text-xs text-muted-foreground font-mono">{battleState.leaderboard[2].score} b</span>
+                <span className="text-xs text-fg-muted font-mono">{battleState.leaderboard[2].score} b</span>
                 <div className="w-full h-20 bg-amber-800/40 border border-amber-700/30 rounded-t-2xl flex flex-col items-center justify-center mt-2">
                   <span className="text-xl font-bold text-amber-600">3</span>
                   <Badge className="bg-amber-700/20 text-amber-400 border-none text-[10px] mt-1">+5 ball</Badge>
