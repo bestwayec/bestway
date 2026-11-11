@@ -149,19 +149,30 @@ def _normalize_question_for_practice(q_dict):
     return q_dict
 
 
+def _bulk_tree(sections):
+    """Groups and questions of these sections in two queries (instead of one per
+    section and one per group), in the same order as the per-row queries."""
+    from apps.legacy_schema.models import MockQuestion, MockQuestionGroup
+    groups_by_section, questions_by_group = {}, {}
+    groups = list(MockQuestionGroup.objects.filter(section_id__in=[x.id for x in sections]).order_by('sort_order', 'id'))
+    for group in groups:
+        groups_by_section.setdefault(group.section_id, []).append(group)
+    for q in MockQuestion.objects.filter(group_id__in=[g.id for g in groups]).order_by('sort_order', 'number', 'id'):
+        questions_by_group.setdefault(q.group_id, []).append(q)
+    return groups_by_section, questions_by_group
+
+
 def _authored_skill_question_ids(exam, skill):
-    from apps.legacy_schema.models import (
-        MockQuestion,
-        MockQuestionGroup,
-        MockSection,
-    )
+    from apps.legacy_schema.models import MockSection
     ids = []
-    for section in MockSection.objects.filter(exam_id=exam.id, skill=skill).order_by('sort_order', 'id'):
-        for group in MockQuestionGroup.objects.filter(section_id=section.id).order_by('sort_order', 'id'):
+    sections = list(MockSection.objects.filter(exam_id=exam.id, skill=skill).order_by('sort_order', 'id'))
+    groups_by_section, questions_by_group = _bulk_tree(sections)
+    for section in sections:
+        for group in groups_by_section.get(section.id, []):
             text = [group.title, group.instructions, group.passage_text, group.content_html]
             if any(isinstance(v, str) and PLACEHOLDER.search(v) for v in text):
                 continue
-            for q in MockQuestion.objects.filter(group_id=group.id).order_by('sort_order', 'number', 'id'):
+            for q in questions_by_group.get(group.id, []):
                 prompt = q.prompt if isinstance(q.prompt, str) else ''
                 # A Listening choice item may have a spoken-only stem (Part 1);
                 # dropping it silently removed a whole part from practice.
@@ -172,12 +183,7 @@ def _authored_skill_question_ids(exam, skill):
 
 
 def practice_plan(exam, _auto_seed=True):
-    from apps.legacy_schema.models import (
-        MockImportReviewIssue,
-        MockQuestion,
-        MockQuestionGroup,
-        MockSection,
-    )
+    from apps.legacy_schema.models import MockImportReviewIssue, MockSection
 
     from .mock_authoring import group_payload, question_payload
     from .mock_media import resolve_key
@@ -187,13 +193,15 @@ def practice_plan(exam, _auto_seed=True):
     if MockImportReviewIssue.objects.filter(import_record__exam_id=exam.id, status='open').exists():
         return dict(skills=[], questionIds=[])
     sections = []
-    for section in MockSection.objects.filter(exam_id=exam.id, skill__in=PRACTICE_SKILLS).order_by('sort_order', 'id'):
+    rows = list(MockSection.objects.filter(exam_id=exam.id, skill__in=PRACTICE_SKILLS).order_by('sort_order', 'id'))
+    groups_by_section, questions_by_group = _bulk_tree(rows)
+    for section in rows:
         groups = []
-        for group in MockQuestionGroup.objects.filter(section_id=section.id).order_by('sort_order', 'id'):
+        for group in groups_by_section.get(section.id, []):
             value = group_payload(group)
             value['questions'] = [
                 _normalize_question_for_practice(question_payload(q))
-                for q in MockQuestion.objects.filter(group_id=group.id).order_by('sort_order', 'number', 'id')
+                for q in questions_by_group.get(group.id, [])
             ]
             groups.append(value)
         sections.append(dict(skill=section.skill, groups=groups))
