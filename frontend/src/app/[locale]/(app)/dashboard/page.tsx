@@ -4,6 +4,9 @@ import { getPathname } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { setRequestLocale } from "next-intl/server";
 import { getRefreshToken, getSessionRole, getVerifiedSessionRole } from "@/lib/auth";
+import { HydrationGate } from "@/components/common/hydration-gate";
+
+const skeleton = <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />;
 
 const AdminDashboard = dynamic(() => import("@/components/dashboard/admin-dashboard").then((m) => m.AdminDashboard), {
   loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
@@ -39,13 +42,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
     case "super_admin":
       redirect(getPathname({ locale: locale as Locale, href: "/super-admin" }));
     case "admin":
-      return <AdminDashboard />;
+      return <HydrationGate fallback={skeleton}><AdminDashboard /></HydrationGate>;
     case "teacher":
-      return <TeacherDashboard />;
+      return <HydrationGate fallback={skeleton}><TeacherDashboard /></HydrationGate>;
     case "student":
-      return <StudentDashboard />;
+      return <HydrationGate fallback={skeleton}><StudentDashboard /></HydrationGate>;
     case "parent":
-      return <ParentDashboard />;
+      return <HydrationGate fallback={skeleton}><ParentDashboard /></HydrationGate>;
     default:
       return null;
   }

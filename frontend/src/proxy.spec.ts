@@ -60,3 +60,19 @@ describe("super-admin URL routing", () => {
     expect(proxy(request("/en/login?next=%2Fen%2Fsuper-admin&reauth=1", "super_admin")).headers.get("x-intl")).toBe("pass");
   });
 });
+
+describe("teacher workspace routing", () => {
+  it("sends students and parents to their home instead of a page whose API refuses them", () => {
+    for (const role of ["student", "parent"] as Role[]) {
+      const response = proxy(request("/en/teacher", role));
+      expect(destination(response).pathname).not.toContain("/teacher");
+    }
+  });
+
+  it("lets staff open it and sends signed-out visitors to login", () => {
+    for (const role of ["teacher", "admin", "super_admin"] as Role[]) {
+      expect(proxy(request("/en/teacher", role)).headers.get("x-intl")).toBe("pass");
+    }
+    expect(destination(proxy(request("/en/teacher"))).pathname).toBe("/en/login");
+  });
+});

@@ -132,13 +132,23 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
         result['speakingProfile'] = profile
     if not include_sections: return result
     sections = list(MockSection.objects.filter(exam_id=exam.id).order_by("sort_order"))
+    # Two bulk queries instead of one per section and one per group (N+1): the
+    # catalogue shapes every exam, so this ran ~100 queries for three exams.
+    # Ordering inside a section / group is the same as _groups / _questions.
+    groups_by_section: dict = {}
+    for group in MockQuestionGroup.objects.filter(section_id__in=[x.id for x in sections]).order_by("sort_order"):
+        groups_by_section.setdefault(group.section_id, []).append(group)
+    group_ids = [g.id for gs in groups_by_section.values() for g in gs]
+    questions_by_group: dict = {}
+    for question in MockQuestion.objects.filter(group_id__in=group_ids).order_by("sort_order", "number"):
+        questions_by_group.setdefault(question.group_id, []).append(question)
     for section in sections:
         shaped = {
             "id": section.id, "skill": section.skill, "title": section.title, "sortOrder": section.sort_order,
             "durationMinutes": section.duration_minutes, "instructions": section.instructions, "groups": [],
         }
-        for group_index, group in enumerate(_groups(section)):
-            questions = [shape_question(question, answers) for question in _questions(group)]
+        for group_index, group in enumerate(groups_by_section.get(section.id, [])):
+            questions = [shape_question(question, answers) for question in questions_by_group.get(group.id, [])]
             if specification:
                 for qi, q in enumerate(questions):
                     guidance = task_guidance(section.skill, group_index, qi, exam.speaking_profile_version, exam.specification_version)
