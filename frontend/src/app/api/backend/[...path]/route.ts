@@ -50,6 +50,29 @@ function forwardHeaders(req: NextRequest, accessToken?: string): Headers {
 }
 
 /** Backenddan yangi tokenlar so'rash. Muvaffaqiyatsiz bo'lsa — null. */
+type ProxyFailure = "timeout" | "network" | "refresh_unavailable" | "retry_failed";
+
+/**
+ * One structured line per proxy failure, so a 502 can be traced in the Next
+ * container logs. Never logs tokens, cookies, bodies or query strings.
+ */
+function proxyFailure(req: NextRequest, reason: ProxyFailure, startedAt: number, timeoutMs: number) {
+  console.error(JSON.stringify({
+    event: "backend_proxy_error",
+    reason,
+    method: req.method,
+    path: req.nextUrl.pathname,
+    elapsedMs: Date.now() - startedAt,
+    timeoutMs,
+    at: new Date().toISOString(),
+  }));
+  return { "x-bw-proxy-error": reason, "cache-control": "no-store" };
+}
+
+function failureReason(error: unknown): ProxyFailure {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError") ? "timeout" : "network";
+}
+
 async function refreshSession(
   refreshToken: string,
 ): Promise<{ accessToken: string; refreshToken?: string } | "pending" | "unavailable" | null> {
@@ -109,13 +132,14 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
       ...(body && body.byteLength > 0 ? { duplex: "half" as const } : {}),
     } as RequestInit & { duplex?: "half"; signal?: AbortSignal });
 
+  const startedAt = Date.now();
   let upstream: Response;
   try {
     upstream = await send(accessToken);
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       { success: false, error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" } },
-      { status: 502 },
+      { status: 502, headers: proxyFailure(req, failureReason(error), startedAt, timeoutMs) },
     );
   }
 
@@ -134,7 +158,7 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
     if (result === "unavailable") {
       return NextResponse.json(
         { success: false, error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" } },
-        { status: 502, headers: { "cache-control": "no-store" } },
+        { status: 502, headers: proxyFailure(req, "refresh_unavailable", startedAt, timeoutMs) },
       );
     }
     renewed = result;
@@ -145,7 +169,7 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
         // Rotation consumed the old token. Keep the replacement on an outage.
         const response = NextResponse.json(
           { success: false, error: { code: "BACKEND_UNREACHABLE", message: "Server bilan aloqa yo'q" } },
-          { status: 502, headers: { "cache-control": "no-store" } },
+          { status: 502, headers: proxyFailure(req, "retry_failed", startedAt, timeoutMs) },
         );
         response.cookies.set(COOKIE.access, renewed.accessToken, sessionCookieOptions(req, ACCESS_MAX_AGE));
         if (renewed.refreshToken) response.cookies.set(COOKIE.refresh, renewed.refreshToken, sessionCookieOptions(req, REFRESH_MAX_AGE));
