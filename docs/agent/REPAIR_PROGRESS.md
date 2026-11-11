@@ -1,7 +1,9 @@
 # BestWay platform repair — progress
 
-Program branch (both repos): `claude/affectionate-bell-uid86z` (the session may push only to this branch;
-topic branches are not allowed, so PRs are split by commit range where needed).
+Program branch: `claude/affectionate-bell-uid86z` (PR #113). Since the owner asked for separate PRs, new work
+is on topic branches `claude/<topic>`, each starting from #113's head e328f58. This file is kept current on
+`claude/repair-progress` (#113 + this file only). Owner rules: no force-push (plain pushes only), commits and PR
+text authored by rozievkomiljon with no Claude attribution, reports in Uzbek.
 
 ## Verified SHAs (2026-11-11)
 
@@ -33,11 +35,14 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W2.6 content/media | FIXED | 6 Record Mock WAVs measured 8.0 s each. Importer (run by deploy-release.sh) copied and published them. Now never copied, exam unpublished with BLOCKED list until real recordings are in MEDIA_ROOT; `--allow-placeholder-audio` only for *_local loopback DB |
 | W3 Exam Builder | PARTIAL | Browser (teacher, 1440px): create Multilevel practice → passage title/instructions/text → question with custom text + 3 custom options + answer key; keyboard text selection inside option works; Save Draft → reload → all values persisted. Backend author→publish→student→grade: verify_mock_authoring_postgres 171/171. FIXED: outline label 'No exams here yet' on empty passages; hard-coded Uzbek quick-import labels in English UI. Not done: publishing a tiny real exam end-to-end in the browser (Multilevel blueprint needs full part counts) |
 | W4 Vocabulary | PARTIAL | FIXED (P0 points integrity): quiz submit counted repeated/foreign answers and re-awarded points on every resubmit; staff got student profiles. Live: exploit 1/5=20% 0 pts; 3 perfect submits → PointsLog [5] only. FIXED: any teacher could delete any set / read any set's results+Excel (now author, group teacher or admin). FIXED: set report always 500 (unimported function). Not done: browser UX pass on vocabulary pages |
-| W5 Other functions | PARTIAL | Attendance: frontend called /attendance/group-summary/<id> (404) → dialog defaulted everyone to present and could overwrite absences; route added, live-verified |
-| W6 UI/UX | TODO | |
-| W7 Perf/security | TODO | review findings from PR #111 below |
-| W8 Final verification | TODO | |
-| GATE | TODO | |
+| W5 Other functions | DONE (2 BLOCKED on owner) | Crawl of 24 app routes × 4 roles in Chromium: before, 16 hydration errors (dashboards) + /teacher open to students/parents (403 API) → after, 0 API errors ≥400, 0 page errors (PR #117). Attendance per-day summary (PR #113). API sweep: notifications broadcast (group, 2 notified, Telegram off), read by non-owner 404; placement questions anon 200; payments scoped (student own, teacher own groups); attempt/assessment/certificate of another student 403; parent unlinked 403; student /users 403. BLOCKED: homework submit takes a client-reported score (empty POST = 100% passed), and no UI calls it → owner must define the score source. OPEN: teacher /users lists all students with phones (needed by the group enrolment picker) |
+| W5 runner points (owner decision) | FIXED | PR #114: server session, server-side replay of choices, retry idempotent, 300/day cap, staff no points. Live: too fast → 400, retry → no new ledger row, ledger [150,150] then 0 |
+| W5 vocabulary visibility (owner decision) | FIXED | PR #115: student sees own group teacher's sets, sets of own group, own sets; others 404 for detail/quiz/submit; admin all. Live verified |
+| W5 Finish 502 diagnosis | PARTIAL | PR #116: proxy logs `backend_proxy_error` + header `x-bw-proxy-error` (timeout/network/refresh_unavailable/retry_failed). Needs production logs (owner) |
+| W6 UI/UX | PARTIAL | PR #118: responsive audit (15 pages × 4 sizes, docs/design/w6 before/after + report.json). Fixed: exam runner/result overshoot on phones, staff bottom nav hiding "More", exam-track cards at 360, 2 unlabeled search inputs. Exam smoke re-run 16/16. NOT DONE: design-system consolidation (needs its own plan); small touch targets on vocabulary chips/icons |
+| W7 Perf/security | DONE (BW-16 server side open) | PR #119: /mock/exams 118→33 (student) / 141→44 (staff) queries, byte-identical output, regression test. Client retries 409 REFRESH_IN_PROGRESS. Security scripts on disposable bestway_security_w7: phase0 17 PASS, phase3 auth 22 PASS, refresh contention PASS, refresh race FAIL BW-16 (server-side, mitigated in client). Login: 31st bad attempt/min → 429 |
+| W8 Final verification | DONE (local) | Local integration of #113 + #114–#119 (unpushed, no conflicts): pytest 889 pass/4 skip; all CI PostgreSQL scripts pass (authoring 171/171, HTTP 67/67, workers); schema/manifest/deploy checks pass; lint 0 errors, vitest 81 files/466, tsc, next build pass; browser smoke 16/16; crawl 4 roles × 24 routes clean |
+| GATE | PENDING | waiting for GitHub CI on #117 (fixed in 65c2686), #118, #119 head SHAs; owner decisions listed below |
 | D1–D3 desktop | TODO | not started (order rule) |
 
 ## Findings to review (from PR #111, external fork, merged 2026-11-10)
@@ -104,15 +109,25 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI
+## PRs / CI (merge order: #113 first; then #114–#119 in any order, each is independent of the others)
 
-- https://github.com/bestwayec/bestway/pull/113 (draft). CI run 43017256251 on 6b38720: success.
+| PR | Topic | Head | CI |
+|---|---|---|---|
+| #113 | Platform repair (practice start, drafts, Record Mock audio, attendance, vocabulary points, builder/simulator) | e328f58 | green (run 43021890229) |
+| #114 | Runner points integrity | c9d9a06 | green (run 43025769620) |
+| #115 | Vocabulary visibility | 67c6014 | green (run 43025787683) |
+| #116 | Proxy 502 diagnostics | 6455043 | green (run 43025986777) |
+| #117 | Dashboard hydration + /teacher guard | 65c2686 | first run red (spec typing), fix pushed |
+| #118 | Phone layout fixes | 6522b3b | pending |
+| #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | pending |
 
-## Open questions
+## Open questions (owner)
 
-- Runner game (`games/runner`): score, distance and correct answers are client-reported; up to 150 points per game, no daily cap and no idempotency key (a retried POST is credited twice). Needs a product decision on a daily cap; the idempotency key needs a frontend change.
-- Vocabulary set list (`GET vocabulary/sets`) shows every group's sets to every user; confirm whether sets should be limited to the student's own group.
+- Homework: where does a homework score come from (e.g. the student's completed attempt on the linked exam, and how to turn it into a percentage)? Until then, the submit endpoint accepts a self-reported score; no UI uses it.
+- Teacher student list (`GET users` as teacher) returns every student with phone/email, because the group enrolment picker searches all students. Mask phones outside the teacher's groups?
+- BW-16 server side: should simultaneous refreshes both succeed (grace window for the just-rotated token)? The client now recovers by retrying.
+- Finish 502: production logs needed (see list in the session report).
 
 ## NEXT STEP
 
-Continue W5 (other functions: homework, notifications, placement, payments with mocks) then W6 screenshots at 4 sizes.
+Wait for green CI on #117, #118 and #119 head SHAs, send the WEBSITE GATE report, then start D1 (desktop contract + student flow) in bestwayec/bw-tauri.
