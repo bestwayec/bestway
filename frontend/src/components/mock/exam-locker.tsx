@@ -4,6 +4,7 @@ import * as React from "react";
 import { AlertOctagon, Maximize2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { FULLSCREEN_GUARD_EVENT } from "@/lib/microphone";
 
 export interface ExamLockerProps {
   active: boolean;
@@ -63,6 +64,8 @@ export function ExamLocker({
   const [warningModalOpen, setWarningModalOpen] = React.useState(false);
   const [, setLastWarningEvent] = React.useState<string>("");
   const forceSubmittedRef = React.useRef(false);
+  // Paused while the app itself leaves full screen for a moment (microphone permission prompt).
+  const guardPausedRef = React.useRef(false);
   const lastViolationTimeRef = React.useRef(0);
 
   // Keep callback refs stable
@@ -98,7 +101,7 @@ export function ExamLocker({
 
   const triggerViolation = React.useCallback(
     (eventType: string) => {
-      if (!active || forceSubmittedRef.current) return;
+      if (!active || forceSubmittedRef.current || guardPausedRef.current) return;
 
       onAnomalyRef.current(eventType);
 
@@ -157,6 +160,7 @@ export function ExamLocker({
     if (!active) return;
 
     const handleFullscreenChange = () => {
+      if (guardPausedRef.current) return;
       const full = Boolean(getFullscreenElement());
       setIsFullscreen(full);
       if (!full && !forceSubmittedRef.current) {
@@ -171,6 +175,30 @@ export function ExamLocker({
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
     };
   }, [active, triggerViolation]);
+
+  // 2b. Short, app-initiated full-screen exit (see requestMicrophoneStream)
+  React.useEffect(() => {
+    if (!active) return;
+    let expire: ReturnType<typeof setTimeout> | undefined;
+    const onGuard = (event: Event) => {
+      const paused = Boolean((event as CustomEvent<{ paused?: boolean }>).detail?.paused);
+      if (expire) clearTimeout(expire);
+      guardPausedRef.current = paused;
+      if (paused) {
+        // Never stay unguarded: a permission prompt that is never answered must not disable the guard.
+        expire = setTimeout(() => { guardPausedRef.current = false; setIsFullscreen(Boolean(getFullscreenElement())); }, 60_000);
+      } else {
+        lastViolationTimeRef.current = Date.now();
+        setIsFullscreen(Boolean(getFullscreenElement()));
+      }
+    };
+    window.addEventListener(FULLSCREEN_GUARD_EVENT, onGuard);
+    return () => {
+      if (expire) clearTimeout(expire);
+      guardPausedRef.current = false;
+      window.removeEventListener(FULLSCREEN_GUARD_EVENT, onGuard);
+    };
+  }, [active]);
 
   // 3. Tab switch & blur detection
   React.useEffect(() => {
