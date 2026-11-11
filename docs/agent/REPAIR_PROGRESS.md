@@ -25,12 +25,15 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 |---|---|---|
 | W0 inventory, SHAs, stack | DONE | this file |
 | W1.1 CI MOCK_FULL_TEST_UNAVAILABLE | FIXED | Root cause: PR #111 (4cc2c72) deleted `partial = True` after inferring legacy practice skills in `mock_attempts.start`; practice exams fell through to `full_test`. Fixture was right. `verify_readiness_contract_postgres.py` failed before, passes after. pytest 860 pass / 4 skip; all CI PostgreSQL scripts, HTTP (67/67), worker, schema checks pass locally |
-| W1.2 writing draft recovery | FIXED | 0383618 cherry-picked (no conflicts) + cross-tab and reload tests; vitest 77 files / 458 tests |
+| W1.2 writing draft recovery | FIXED | 0383618 cherry-picked (no conflicts) + cross-tab and reload tests |
 | W1.3 #103–#107, #112 | DONE | all merged into main, no unmerged work |
-| W2 exam journey | TODO | open leads: Full Mock map 401, Finish 502 (not reproduced yet) |
+| W2 exam journey | PARTIAL | Browser smoke (scripts/e2e-local/smoke.mjs, real Chromium, local stack) 16/16 PASS: login, catalogue, practice start, 3 answers persist across reload, section nav, submit 201, result, logout, RBAC 403, Record Mock Listening 6 parts + answer persists |
+| W2.5 Full Mock Finish 502 | NOT REPRODUCED | API full_test flow on Record Mock: start 201, 4 sections via advance, submit 201 in 0.11 s, repeat submit idempotent (same status), 1 Writing job only, honest `grading` state. Prod 502 cause UNVERIFIED (needs prod logs) |
+| W2 map 401 | FIXED/VERIFIED | Real runner map via proxy: owner 200, anonymous 401. Simulator (CDLayout) used raw /media path (404 on web origin) + hard-coded Record Mock map for every Part 4 → now proxy GroupImage, no invented map |
+| W2.6 content/media | FIXED | 6 Record Mock WAVs measured 8.0 s each. Importer (run by deploy-release.sh) copied and published them. Now never copied, exam unpublished with BLOCKED list until real recordings are in MEDIA_ROOT; `--allow-placeholder-audio` only for *_local loopback DB |
 | W3 Exam Builder | TODO | |
 | W4 Vocabulary | TODO | |
-| W5 Other functions | TODO | |
+| W5 Other functions | PARTIAL | Attendance: frontend called /attendance/group-summary/<id> (404) → dialog defaulted everyone to present and could overwrite absences; route added, live-verified |
 | W6 UI/UX | TODO | |
 | W7 Perf/security | TODO | review findings from PR #111 below |
 | W8 Final verification | TODO | |
@@ -43,6 +46,7 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 - `start`: duplicate in-progress attempts are now marked `completed` without submit/grading.
 - Speaking upload minimum lowered 10 KB → 1 KB; any multipart field name accepted.
 - `assessment_views.attempt`: GET now starts a background worker thread per request with pending jobs.
+- Media policy (P2, unchanged): everything under /media except private/ and speaking_submissions/ is public; exam media keys are random UUIDs; Record Mock is a public demo.
 - New alias routes `attempts/*`, `save-answer`, PUT on answer.
 
 ## Desktop (bw-tauri) web contract — DO NOT BREAK
@@ -88,6 +92,13 @@ Live: `GET live-room/join`, `POST mock/live-rooms/join`, `POST mock/live-rooms`,
 | Parents | parent | (app)/children | parent_views | ? |
 | Admin / teacher pages | admin, teacher | super-admin, staff, students, teacher | user_admin, lms_views | ? |
 
+## Local stack recipe
+
+`/root/local.env`-style dummy env (DB `education_center_local`, `config.settings.local`), `prisma migrate deploy`, `manage.py migrate`,
+`seed_local_dev`, `seed_cbt_multilevel_exam`, `import_cd_record_mock_1 --allow-placeholder-audio` (local only),
+Django `runserver 127.0.0.1:8100`, `frontend/.env.local` API_URL=http://127.0.0.1:8100/v1, `next dev -p 3300`,
+smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
+
 ## Content blockers (kept visible)
 
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
@@ -95,7 +106,7 @@ Live: `GET live-room/join`, `POST mock/live-rooms/join`, `POST mock/live-rooms`,
 
 ## PRs / CI
 
-- (pending) draft PR from `claude/affectionate-bell-uid86z`.
+- https://github.com/bestwayec/bestway/pull/113 (draft). CI run 43017256251 on 6b38720: success.
 
 ## Open questions
 
@@ -103,4 +114,4 @@ Live: `GET live-room/join`, `POST mock/live-rooms/join`, `POST mock/live-rooms`,
 
 ## NEXT STEP
 
-Reproduce the Full Mock map 401 and Finish 502 on the local stack (W2.5).
+Start W3: Exam Builder round-trip (teacher creates draft → questions → readiness → publish → student takes it) on the local stack.
