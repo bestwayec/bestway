@@ -89,12 +89,38 @@ function buildQuery(query?: RequestOptions["query"]): string {
   return s ? `?${s}` : "";
 }
 
+const REFRESH_RETRIES = 3;
+
+/**
+ * When the access token expires, several parallel requests reach the proxy at
+ * once; one rotates the refresh token and the others get 409 REFRESH_IN_PROGRESS
+ * with Retry-After. The backend rejected those requests with 401 before doing
+ * anything, so retrying them after the rotation is safe and recovers the session
+ * instead of surfacing an error (e.g. a failed exam autosave).
+ */
+async function fetchWithRefreshRetry(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 409 || attempt >= REFRESH_RETRIES) return res;
+    let code: string | undefined;
+    try {
+      code = ((await res.clone().json()) as { error?: { code?: string } }).error?.code;
+    } catch {
+      return res;
+    }
+    if (code !== "REFRESH_IN_PROGRESS") return res;
+    const seconds = Number(res.headers.get("retry-after"));
+    const delayMs = Math.min(Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 500, 2000);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, query, headers, ...rest } = options;
   const isFormData = body instanceof FormData;
   const cleanPath = normalizePath(path);
 
-  const res = await fetch(`${BASE}${cleanPath}${buildQuery(query)}`, {
+  const res = await fetchWithRefreshRetry(`${BASE}${cleanPath}${buildQuery(query)}`, {
     ...rest,
     headers: {
       ...(isFormData ? {} : body !== undefined ? { "content-type": "application/json" } : {}),
@@ -137,7 +163,7 @@ async function requestPaged<T>(
 ): Promise<{ data: T; meta?: PageMeta }> {
   const { body, query, headers, ...rest } = options;
   const cleanPath = normalizePath(path);
-  const res = await fetch(`${BASE}${cleanPath}${buildQuery(query)}`, {
+  const res = await fetchWithRefreshRetry(`${BASE}${cleanPath}${buildQuery(query)}`, {
     ...rest,
     headers: {
       ...(body !== undefined ? { "content-type": "application/json" } : {}),
