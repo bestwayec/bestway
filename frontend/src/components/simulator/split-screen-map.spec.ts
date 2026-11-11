@@ -16,8 +16,9 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
-const render = (props: { groupId?: string; hasImage: boolean }) => act(async () => root.render(
-  React.createElement(SplitScreenMap, { ...props, title: 'Plan' }, React.createElement('p', null, 'questions'))));
+type MapProps = React.ComponentProps<typeof SplitScreenMap>;
+const render = (props: Omit<MapProps, 'children' | 'title'>) => act(async () => root.render(
+  React.createElement(SplitScreenMap, { ...props, title: 'Plan' } as MapProps, React.createElement('p', null, 'questions'))));
 
 describe('simulator Part 4 map', () => {
   it('loads the map through the authenticated proxy, never a raw /media path', async () => {
