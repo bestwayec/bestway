@@ -289,6 +289,10 @@ def start(actor, exam_id, data):
             if not inferred:
                 fail('MOCK_NOT_READY', 'No validated practice skills are available')
             data = dict(data, skills=inferred)
+            # The inferred skills form a scoped practice attempt; without this
+            # the request falls through to the full_test flow and a practice
+            # exam is refused with MOCK_FULL_TEST_UNAVAILABLE.
+            partial = True
         existing_list = list(MockAttempt.objects.filter(exam_id=exam_id, student_id=actor.id, status='in_progress').order_by('-started_at'))
         existing = existing_list[0] if existing_list else None
         if len(existing_list) > 1:
