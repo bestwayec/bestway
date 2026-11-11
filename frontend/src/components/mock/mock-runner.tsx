@@ -628,13 +628,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         {/* Yuqori panel */}
         <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               {isSingleSection && targetSkill ? (
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
                     {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
                   </span>
-                  <p className="truncate font-semibold text-fg">{exam.title}</p>
+                  <p className="w-full min-w-0 truncate font-semibold text-fg sm:w-auto">{exam.title}</p>
                 </div>
               ) : (
                 <p className="truncate font-semibold text-fg">{exam.title}</p>
@@ -642,7 +642,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             </div>
 
             {/* Distraction-Free Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
                 <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
