@@ -42,7 +42,7 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W6 UI/UX | PARTIAL | PR #118: responsive audit (15 pages × 4 sizes, docs/design/w6 before/after + report.json). Fixed: exam runner/result overshoot on phones, staff bottom nav hiding "More", exam-track cards at 360, 2 unlabeled search inputs. Exam smoke re-run 16/16. NOT DONE: design-system consolidation (needs its own plan); small touch targets on vocabulary chips/icons |
 | W7 Perf/security | DONE (BW-16 server side open) | PR #119: /mock/exams 118→33 (student) / 141→44 (staff) queries, byte-identical output, regression test. Client retries 409 REFRESH_IN_PROGRESS. Security scripts on disposable bestway_security_w7: phase0 17 PASS, phase3 auth 22 PASS, refresh contention PASS, refresh race FAIL BW-16 (server-side, mitigated in client). Login: 31st bad attempt/min → 429 |
 | W8 Final verification | DONE (local) | Local integration of #113 + #114–#119 (unpushed, no conflicts): pytest 889 pass/4 skip; all CI PostgreSQL scripts pass (authoring 171/171, HTTP 67/67, workers); schema/manifest/deploy checks pass; lint 0 errors, vitest 81 files/466, tsc, next build pass; browser smoke 16/16; crawl 4 roles × 24 routes clean |
-| GATE | PENDING | waiting for GitHub CI on #117 (fixed in 65c2686), #118, #119 head SHAs; owner decisions listed below |
+| GATE | PASSED with listed blockers | CI green on all 7 PR heads; no known open P0; open P1 items are BLOCKED on owner decisions (homework score source) or mitigated (BW-16 server side); Finish 502 needs production logs |
 | D1–D3 desktop | TODO | not started (order rule) |
 
 ## Findings to review (from PR #111, external fork, merged 2026-11-10)
@@ -117,9 +117,9 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 | #114 | Runner points integrity | c9d9a06 | green (run 43025769620) |
 | #115 | Vocabulary visibility | 67c6014 | green (run 43025787683) |
 | #116 | Proxy 502 diagnostics | 6455043 | green (run 43025986777) |
-| #117 | Dashboard hydration + /teacher guard | 65c2686 | first run red (spec typing), fix pushed |
-| #118 | Phone layout fixes | 6522b3b | pending |
-| #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | pending |
+| #117 | Dashboard hydration + /teacher guard | 65c2686 | green (run 43029326557; earlier red run 43027637040 = spec typing, fixed) |
+| #118 | Phone layout fixes | 6522b3b | green (run 43029117470) |
+| #119 | Catalogue N+1 + refresh-race retry | 0dd4991 | green (run 43030243067) |
 
 ## Open questions (owner)
 
@@ -130,4 +130,4 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 
 ## NEXT STEP
 
-Wait for green CI on #117, #118 and #119 head SHAs, send the WEBSITE GATE report, then start D1 (desktop contract + student flow) in bestwayec/bw-tauri.
+D1: in bestwayec/bw-tauri, verify the desktop leads (main 900c563, v1.0.12 release run 42982782068, PR #30), then check the web↔desktop API contract against the updated website.
