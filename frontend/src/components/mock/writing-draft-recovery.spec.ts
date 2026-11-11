@@ -58,4 +58,24 @@ describe('writing browser draft recovery', () => {
     await act(async () => restore.click());
     expect(onChange).toHaveBeenCalledExactlyOnceWith('');
   });
+
+  it('a draft written in another tab is only offered, never applied to the server answer', async () => {
+    await render('server answer');
+    expect(host.textContent).not.toContain('writingDraftFound');
+    await act(async () => {
+      localStorage.setItem('bw_writing_draft_attempt1_q1', 'other tab text');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'bw_writing_draft_attempt1_q1' }));
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(host.querySelector('textarea')!.value).toBe('server answer');
+    expect(host.textContent).toContain('other tab text');
+  });
+
+  it('after reload with a newer server answer the older draft never replaces it', async () => {
+    localStorage.setItem('bw_writing_draft_attempt1_q1', 'old');
+    await render('');
+    await render('newer server answer');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(host.querySelector('textarea')!.value).toBe('newer server answer');
+  });
 });
