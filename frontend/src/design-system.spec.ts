@@ -1,0 +1,86 @@
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { beforeAll, describe, expect, it } from "vitest";
+
+/**
+ * Design-system guard (docs/design/DESIGN_SYSTEM.md).
+ *
+ * Every file listed here has been moved onto the semantic colour tokens. Running the colour codemod
+ * on it again must change nothing; otherwise a raw palette class (fixed colour that ignores the
+ * light/dark theme) came back. Fix it with:  node scripts/tokenize-colors.mjs <file>
+ */
+const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
+  // Student shell: landing, login, dashboards, exam list, result
+  "src/app/[locale]/(marketing)/page.tsx": {},
+  "src/app/[locale]/(auth)/login/page.tsx": {},
+  "src/components/auth/login-form.tsx": {},
+  "src/components/placement/ExpressPlacementTest.tsx": {},
+  "src/components/marketing/teacher-card.tsx": {},
+  "src/components/mobile/mobile-welcome-screen.tsx": {},
+  "src/components/dashboard/StudentAssignmentsWidget.tsx": {},
+  "src/components/dashboard/teacher-dashboard.tsx": {},
+  "src/components/teacher/live-exam-room-panel.tsx": {},
+  "src/components/profile/exam-track-selector.tsx": {},
+  "src/components/mock/exam-resume-modal.tsx": {},
+  "src/components/mock/mock-result-view.tsx": {},
+  "src/components/mock/attempt-score-summary.tsx": {},
+  "src/components/mock/assessment-panel.tsx": {},
+  "src/components/mock/exam-feedback-modal.tsx": {},
+  "src/components/mock/ai-diagnostic-coach.tsx": {},
+  "src/components/mock/cefr-result-infographic.tsx": { neutralOnly: true },
+  "src/components/common/StrictErrorBoundary.tsx": {},
+};
+
+const root = path.resolve(__dirname, "..");
+type Codemod = { tokenizeSource: (src: string, opts?: { neutralOnly?: boolean }) => string };
+let codemod: Codemod;
+
+beforeAll(async () => {
+  const modulePath = pathToFileURL(path.join(root, "scripts/tokenize-colors.mjs")).href;
+  codemod = (await import(/* @vite-ignore */ modulePath)) as Codemod;
+});
+
+describe("colour codemod", () => {
+  it("maps neutrals, brand and status colours to theme tokens", () => {
+    expect(codemod.tokenizeSource('className="bg-white dark:bg-slate-900 text-slate-900 border-slate-200"')).toBe(
+      'className="bg-surface text-fg border-border"',
+    );
+    expect(codemod.tokenizeSource('"bg-emerald-500 text-white hover:bg-emerald-600"')).toBe(
+      '"bg-brand text-brand-fg hover:bg-brand-hover"',
+    );
+    expect(codemod.tokenizeSource('"bg-red-50 text-red-700 border-red-200"')).toBe(
+      '"bg-danger-bg text-danger border-danger-border"',
+    );
+    expect(codemod.tokenizeSource('"text-white/60 bg-white/5 border-white/10"')).toBe(
+      '"text-fg-muted bg-surface-hover border-border"',
+    );
+  });
+
+  it("keeps overlays, text on saturated fills and categorical hues", () => {
+    expect(codemod.tokenizeSource('"fixed inset-0 bg-black/60"')).toBe('"fixed inset-0 bg-black/60"');
+    expect(codemod.tokenizeSource('"bg-red-600 text-white"')).toBe('"bg-danger text-white"');
+    expect(codemod.tokenizeSource('"bg-amber-400 text-slate-950"')).toBe('"bg-warning text-slate-950"');
+    expect(codemod.tokenizeSource("a text-blue-500\nb text-purple-500 bg-white")).toBe(
+      "a text-blue-500\nb text-purple-500 bg-surface",
+    );
+    expect(codemod.tokenizeSource('"text-red-500 bg-slate-900"', { neutralOnly: true })).toBe(
+      '"text-red-500 bg-surface"',
+    );
+  });
+});
+
+describe("migrated screens use theme tokens only", () => {
+  for (const [file, opts] of Object.entries(MIGRATED)) {
+    it(file, () => {
+      const source = fs.readFileSync(path.join(root, file), "utf8");
+      const again = codemod.tokenizeSource(source, opts);
+      const changed = source
+        .split("\n")
+        .map((line, i) => [i + 1, line, again.split("\n")[i]] as const)
+        .filter(([, before, after]) => before !== after)
+        .map(([n, before]) => `${file}:${n}: ${before.trim()}`);
+      expect(changed).toEqual([]);
+    });
+  }
+});

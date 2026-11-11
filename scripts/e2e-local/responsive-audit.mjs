@@ -1,5 +1,8 @@
 // Local-only responsive audit: screenshots + layout checks at 4 sizes (synthetic accounts).
 // RUNNER_URL / RESULT_URL: paths of an in-progress and a completed attempt.
+// SECTIONS_URL (optional): path of an in-progress attempt with all 4 sections, owned by +998900000011;
+//   adds exam-runner-<skill> pages via ?skill=. BW_THEME=light|dark (default: the app default, dark).
+// BW_ONLY (optional): comma-separated page names to capture.
 // node responsive-audit.mjs <out-dir>
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -10,6 +13,10 @@ const PAGES=[ ["landing",null,"/en"], ["login",null,"/en/login"], ["student-dash
   ["profile","+998900000011","/en/profile"], ["exam-runner","+998900000010","RUNNER"], ["exam-result","+998900000011","RESULT"],
   ["teacher-dashboard","+998900000003","/en/dashboard"], ["exam-builder","+998900000003","/en/exam-builder"], ["groups","+998900000003","/en/groups"],
   ["attendance","+998900000003","/en/attendance"], ["admin-dashboard","+998900000002","/en/dashboard"], ["students-admin","+998900000002","/en/students"] ];
+if (process.env.SECTIONS_URL) for (const skill of ["listening","reading","writing","speaking"])
+  PAGES.push([`exam-runner-${skill}`,"+998900000011",`${process.env.SECTIONS_URL}?skill=${skill}`]);
+const ONLY=(process.env.BW_ONLY||"").split(",").filter(Boolean);
+const THEME=process.env.BW_THEME||"";
 const b=await chromium.launch(); const report={};
 const sessions={};
 async function ctxFor(phone,w,h){ const c=await b.newContext({viewport:{width:w,height:h},deviceScaleFactor:1});
@@ -20,8 +27,10 @@ async function ctxFor(phone,w,h){ const c=await b.newContext({viewport:{width:w,
   return c; }
 const resolve={ RUNNER: process.env.RUNNER_URL, RESULT: process.env.RESULT_URL };
 for (const [name,phone,path] of PAGES) for (const [w,h] of SIZES) {
+  if (ONLY.length && !ONLY.includes(name)) continue;
   const c=await ctxFor(phone,w,h); const p=await c.newPage();
   await p.addInitScript(()=>{ try{ sessionStorage.setItem("bw_fullscreen_notice_seen","1"); }catch{} });
+  if (THEME) await p.addInitScript((t)=>{ try{ localStorage.setItem("theme",t); }catch{} }, THEME);
   try { await p.goto(WEB+(resolve[path]||path),{waitUntil:"networkidle",timeout:90000}); } catch {}
   await p.waitForTimeout(1200);
   const checks=await p.evaluate(()=>{ const vw=document.documentElement.clientWidth; const out={overflowX: document.documentElement.scrollWidth-vw, wide:[], smallTargets:0, unlabeled:0};
