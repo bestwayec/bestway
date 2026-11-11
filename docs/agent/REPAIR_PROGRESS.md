@@ -117,7 +117,102 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-11, main 445f2b4)
 
 #113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
-OPEN: #123 (this file), #125 W6b 2/3 runner, #126 W6b 3/3 builder/vocabulary/teacher (stacked on #125), #127 U0 test/smoke hardening.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation (each stacked on the previous; plain merges, no force-push). #123 = this file.
+CI: #125 green (run 43077063817, before the main merge); later heads pending.
+
+## Open questions (owner)
+
+- BW-16 server side: accept a short grace window (weaker reuse detection) or keep client-side recovery only?
+- Score display for tiny practice sets: 1/1 correct shows "Band 9.0" (IELTS table). Show accuracy only for practice scopes?
+- P2 noted, not changed: start dialog and vocabulary pages hard-coded in Uzbek on /en; mic-check dialog reopens on every Speaking tab visit; vocabulary mode page lacks the set title; /media public policy.
+- Finish 502: production logs needed (see list in the session report).
+
+## NEXT LEVEL PROGRAM (owner brief 2026-11-11: premium UI/UX, website first, then desktop)
+
+| Phase | Status | Evidence / PR |
+|---|---|---|
+| U0 post-merge health | DONE | PR states verified. Main CI green at 5d0b82b. Backend 900 pass / 4 skip (CI-like env), makemigrations --check clean, single leaf core.0008. Env-only test issues fixed in #127. smoke.mjs 16/16, full-journey.mjs 13/13 on main + #125/#126. A/B/W8b merged (#120/#121/#122); C BW-16 client recovery merged (#119), server grace window = owner decision; W6b 3/3 = #126. Record Mock hidden on production until authentic audio (expected) |
+| U1 audit + design direction | PARTIAL | docs/design/NEXT_LEVEL_AUDIT.md (top 25, ranked, status) in #128, based on 19 pages × 4 sizes × 2 themes + E2E runs. Not done: every route per role (parent, admin sub-pages); DESIGN_SYSTEM v2 sections for elevation/motion/data-viz palette |
+| U2 foundation v2 | PARTIAL | #128: light default (pre-paint script, no flash, verified), Inter Latin-Ext + Cyrillic faces, runner + transition i18n, i18n parity + hard-coded-text guard tests. Not done: component library additions (DataTable, Sheet, StatCard, Stepper...), dev UI gallery |
+| U3 shell | TODO | audit #16 (bottom-nav truncation) |
+| U4 student | TODO | audit #9–#11, #14, #15 |
+| U5 vocabulary | TODO | audit #20, #21, #24 |
+| U6 teacher/admin/builder | TODO | audit #19, #22 |
+| U7 public/auth/onboarding | TODO | audit #17 |
+| U8 motion/i18n/a11y | TODO | audit #8 (~200 hard-coded strings / ~60 files; extend FILES in no-hardcoded-ui-text.spec.ts) |
+| U9 performance | TODO | |
+| U10 verification | TODO | all-roles crawl, axe, compressed visual baseline |
+| D1–D3 desktop | TODO | not started (order rule) |
+
+## Findings to review (from PR #111, external fork, merged 2026-11-10)
+
+- `my_attempts`: no longer filters by the active exam track when `program` is omitted (own data only; behaviour change).
+- `start`: duplicate in-progress attempts are now marked `completed` without submit/grading.
+- Speaking upload minimum lowered 10 KB → 1 KB; any multipart field name accepted.
+- `assessment_views.attempt`: GET now starts a background worker thread per request with pending jobs.
+- Media policy (P2, unchanged): everything under /media except private/ and speaking_submissions/ is public; exam media keys are random UUIDs; Record Mock is a public demo.
+- New alias routes `attempts/*`, `save-answer`, PUT on answer.
+
+## Desktop (bw-tauri) web contract — DO NOT BREAK
+
+Base `https://api.bestwayec.uz/v1`; client strips `/api/v1`, `/api`, `/v1` prefixes.
+Auth: `POST auth/login`, `GET auth/me`, `POST auth/refresh`, `POST auth/logout-refresh`, `POST auth/desktop/exchange`.
+App: `GET desktop-version`, `POST exam-desktop/heartbeat`, `GET|PATCH exam-programs/mine`, `GET assessment/tracks`,
+`GET assessment/overview`, `GET assessment/attempts/:id`, `GET mock/prediction/me`.
+Mock: `GET mock/exams`, `POST mock/exams/:id/start`, `DELETE mock/exams/:id`, `GET exams/:id/cd-session/`,
+`GET mock/attempts/mine`, `GET mock/attempts/:id`, `POST mock/attempts/:id/{answer,answers,submit,advance,flag-cheat}`,
+`POST mock/attempts/:id/speaking/:qid`, `POST .../speaking/:qid/start`, `POST .../listening/:gid/{prepare,play}`,
+`POST mock/attempts/:id/writing/:qid/ocr`, media `GET mock/groups/:id/audio`, `GET tests/questions/:id/audio`.
+Legacy tests: `GET tests`, `POST tests/:id/start`, `DELETE tests/:id`, `POST tests/attempts/:id/{answer,submit,marks,flag-cheat}`,
+`GET tests/attempts/:id`, `GET tests/attempts/mine`.
+Live: `GET live-room/join`, `POST mock/live-rooms/join`, `POST mock/live-rooms`, `GET live-room/:pin/proctor-status`,
+`POST live-room/:pin/action`, `POST live-room/telemetry`.
+
+## Feature / role inventory (status: V verified, B broken, ? missing evidence)
+
+| Area | Roles | Frontend | Backend | Status |
+|---|---|---|---|---|
+| Auth login/register/refresh/Google | all | (auth)/login, register | auth_views, auth_service | ? (tests exist) |
+| Telegram login/OTP/link | all | login | telegram_views | ? |
+| Desktop auth/update | student | (auth)/oauth/desktop | auth/desktop/*, desktop-version | ? |
+| Dashboard / study plan | student | (app)/dashboard, exam-track | study_plan_views, statistics_views | ? |
+| Legacy tests | all | (app)/tests/* | legacy_test_views | ? |
+| Mock catalogue/start/runner/result | student | (app)/mock/* | mock_attempts, mock_scoring | B→FIXED practice start (P0) |
+| Full mock / CD / live room | student, teacher | (fullscreen)/simulator, demo | cd_exam_views, live_exam_service | ? map 401 / finish 502 leads |
+| Assessment / AI grading | student, teacher | mock result | assessment_views | V (grading consistency 76/76) |
+| Exam Builder | teacher, admin | (app)/exam-builder/* | mock_authoring | ? |
+| Mock imports | teacher, admin | exam-builder | mock_import_views | ? |
+| Vocabulary / SRS | all | (app)/vocabulary/* | vocabulary_views | ? |
+| Games / Bamboozle / runner | all | (app)/bamboozle | apps/bamboozle, runner_game_views | ? |
+| Homework / cohorts | teacher, student | (app)/teacher | lms_views | ? |
+| Lessons / videos | student | (app)/videos | video_views | ? |
+| Groups / attendance | teacher, admin | (app)/groups, attendance | group_views, attendance_views | ? |
+| Payments | admin | (app)/payments | payment_views | ? |
+| Points / leaderboard | student, teacher | (app)/leaderboard | game_points_views | V (AI rankings 35/35) |
+| Notifications | all | (app)/notifications | notification_views | ? |
+| Placement | guest, student | marketing | placement-test/* | ? |
+| Certificates | student | result modal | mock_certificate | ? |
+| Blog/news/gallery | public, admin | (marketing)/news | article_views | ? |
+| Parents | parent | (app)/children | parent_views | ? |
+| Admin / teacher pages | admin, teacher | super-admin, staff, students, teacher | user_admin, lms_views | ? |
+
+## Local stack recipe
+
+`/root/local.env`-style dummy env (DB `education_center_local`, `config.settings.local`), `prisma migrate deploy`, `manage.py migrate`,
+`seed_local_dev`, `seed_cbt_multilevel_exam`, `import_cd_record_mock_1 --allow-placeholder-audio` (local only),
+Django `runserver 127.0.0.1:8100`, `frontend/.env.local` API_URL=http://127.0.0.1:8100/v1, `next dev -p 3300`,
+smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
+
+## Content blockers (kept visible)
+
+- Reading Q7 and Q15: authoritative PDF required — unchanged.
+- Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
+
+## PRs / CI (state 2026-11-11, main 445f2b4)
+
+#113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation (each stacked on the previous; plain merges, no force-push). #123 = this file.
+CI: #125 green (run 43077063817, before the main merge); later heads pending.
 
 ## Open questions (owner)
 
@@ -143,8 +238,8 @@ OPEN: #123 (this file), #125 W6b 2/3 runner, #126 W6b 3/3 builder/vocabulary/tea
 | U10 verification | TODO | |
 | D1–D3 desktop | TODO | after WEBSITE GATE |
 
-Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` (see Local stack recipe); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
+Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
 
 ## NEXT STEP
 
-U0: finish full-journey.mjs on main + stack, all-roles crawl; then U1 audit (NEXT_LEVEL_AUDIT.md) and U2 foundation (branch claude/u2-foundation).
+U3 shell (bottom-nav labels, PageHeader pattern, route skeletons/error pages) and U4 student (mic-check once per attempt, practice notice per tab, phone palette sheet height, dashboard "Today", catalogue status) on a new branch stacked on claude/u2-foundation (#128). Run with BW_WEB=http://localhost:3300.
