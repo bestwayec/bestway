@@ -21,6 +21,40 @@ def assert_manages_set(user, vocab_set):
         raise ContractAPIException("FORBIDDEN", "Bu lug'at to'plami sizga tegishli emas", 403)
 
 
+STAFF_ROLES = ("teacher", "admin", "super_admin")
+
+
+def student_visibility(user):
+    """Q filter of the sets a non-staff user may see: sets created by the teacher of
+    their own group, sets assigned to their group, and their own sets. Staff see all.
+    Returns None for staff (no filter)."""
+    from django.db.models import Q
+    from apps.legacy_schema.models import Group, StudentProfile
+    if getattr(user, "role", None) in STAFF_ROLES:
+        return None
+    visible = Q(created_by_id=user.id)
+    group_id = StudentProfile.objects.filter(user_id=user.id).values_list("group_id", flat=True).first()
+    if group_id:
+        visible |= Q(group_id=group_id)
+        teacher_id = Group.objects.filter(id=group_id).values_list("teacher_id", flat=True).first()
+        if teacher_id:
+            visible |= Q(created_by_id=teacher_id)
+    return visible
+
+
+def visible_set(request, set_id):
+    """The set if this user may study it; 404 otherwise (no existence leak)."""
+    require_authenticated(request)
+    rows = VocabularySet.objects.select_related("group", "created_by").filter(id=set_id)
+    visible = student_visibility(request.user)
+    if visible is not None:
+        rows = rows.filter(visible)
+    vocab_set = rows.first()
+    if not vocab_set:
+        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
+    return vocab_set
+
+
 def managed_set(request, set_id):
     require_authenticated(request)
     require_role(request, "teacher", "admin", "super_admin")
@@ -38,6 +72,9 @@ def vocabulary_sets_view(request):
 
     if request.method == "GET":
         qs = VocabularySet.objects.select_related("group", "created_by").prefetch_related("words")
+        visible = student_visibility(request.user)
+        if visible is not None:
+            qs = qs.filter(visible)
 
         group_id = request.query_params.get("group_id") or request.query_params.get("groupId")
         level = request.query_params.get("level")
@@ -128,10 +165,7 @@ def parse_text_preview_view(request):
 @api_view(["GET", "DELETE"])
 @permission_classes([AllowAny])
 def vocabulary_set_detail_view(request, set_id):
-    require_authenticated(request)
-    vocab_set = VocabularySet.objects.select_related("group", "created_by").filter(id=set_id).first()
-    if not vocab_set:
-        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
+    vocab_set = visible_set(request, set_id)
 
     if request.method == "DELETE":
         require_role(request, "teacher", "admin", "super_admin")
@@ -180,7 +214,7 @@ def vocabulary_set_detail_view(request, set_id):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def vocabulary_quiz_view(request, set_id):
-    require_authenticated(request)
+    visible_set(request, set_id)
     mode = request.query_params.get("mode", "mixed")
     quiz = service.generate_quiz_for_set(set_id, mode=mode, student_id=request.user.id)
     return success(quiz)
@@ -189,7 +223,7 @@ def vocabulary_quiz_view(request, set_id):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def vocabulary_submit_view(request, set_id):
-    require_authenticated(request)
+    visible_set(request, set_id)
     answers = request.data.get("answers", [])
     mode = request.data.get("mode", "mixed")
 

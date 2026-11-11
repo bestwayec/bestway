@@ -39,10 +39,11 @@ export interface StudentAssignmentItem {
   deadline: string;
   min_pass_percent: number;
   is_submitted: boolean;
-  score_percent: number;
+  /** null until the server has a real result (exam attempt or teacher grade) */
+  score_percent: number | null;
   is_passed: boolean;
   is_overdue: boolean;
-  status: "passed" | "failed" | "pending" | "overdue";
+  status: "passed" | "failed" | "pending" | "overdue" | "awaiting_review" | "awaiting_result";
   completed_at?: string | null;
 }
 
@@ -181,6 +182,12 @@ export function StudentAssignmentsWidget() {
                       <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] px-1.5 py-0">
                         {a.score_percent}% Qayta topshiring
                       </Badge>
+                    )}
+                    {a.status === "awaiting_review" && (
+                      <span className="text-xs font-semibold text-fg-muted">Ustoz tekshiruvida</span>
+                    )}
+                    {a.status === "awaiting_result" && (
+                      <span className="text-xs font-semibold text-fg-muted">Natija hisoblanmoqda</span>
                     )}
                     {a.status === "overdue" && (
                       <Badge className="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] px-1.5 py-0">

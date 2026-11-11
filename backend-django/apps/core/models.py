@@ -455,6 +455,13 @@ class HomeworkSubmission(models.Model):
     score_percent = models.IntegerField(default=0)
     is_passed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(auto_now_add=True)
+    # graded | awaiting_result (exam attempt still being graded) | awaiting_review (teacher must grade)
+    status = models.CharField(max_length=20, default="graded")
+    # exam_attempt | teacher | student | legacy_self_reported (rows written before the score became server-side)
+    source = models.CharField(max_length=30, default="legacy_self_reported")
+    attempt_id = models.CharField(max_length=255, null=True, blank=True)
+    graded_by_id = models.CharField(max_length=255, null=True, blank=True)
+    graded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "HomeworkSubmission"

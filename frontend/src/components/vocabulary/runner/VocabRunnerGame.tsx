@@ -204,6 +204,11 @@ export function VocabRunnerGame() {
   const [totalXp, setTotalXp] = React.useState<number | null>(null);
   const [mistakes, setMistakes] = React.useState<RunnerMistake[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
+  // Server-issued game session and the ordered gate choices: points are computed
+  // on the server from these, never from the client's own score.
+  const sessionIdRef = React.useRef<string | null>(null);
+  const choicesRef = React.useRef<Array<{ questionId: string; chosen: string }>>([]);
+  const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
 
   // Question Management
   const [questions, setQuestions] = React.useState<RunnerQuestion[]>([]);
@@ -247,14 +252,19 @@ export function VocabRunnerGame() {
   // Fetch Questions from API
   const fetchQuestions = React.useCallback(async () => {
     try {
-      const res = await apiClient.get<RunnerQuestion[]>("/v1/games/runner/questions?limit=40");
-      if (res && Array.isArray(res) && res.length > 0) {
-        setQuestions(res);
-        return res;
+      const res = await apiClient.get<{ sessionId: string | null; questions: RunnerQuestion[] }>(
+        "/v1/games/runner/questions?limit=40&session=1",
+      );
+      if (res && Array.isArray(res.questions) && res.questions.length > 0) {
+        sessionIdRef.current = res.sessionId;
+        setQuestions(res.questions);
+        return res.questions;
       }
     } catch {
       /* fallback */
     }
+    // Offline practice: no server session, so the result cannot earn points.
+    sessionIdRef.current = null;
     // Hardcoded high-yield fallback questions if offline
     const fallbackList: RunnerQuestion[] = [
       { id: "f1", category: "Irregular Verbs", prompt: "Past Participle: CHOOSE", correct: "Chosen", options: ["Chose", "Chosen", "Choosed"] },
@@ -334,6 +344,8 @@ export function VocabRunnerGame() {
     setDistance(0);
     setCorrectCount(0);
     setXpEarned(0);
+    setSaveMessage(null);
+    choicesRef.current = [];
     setMistakes([]);
     setCurrentQIndex(0);
 
@@ -361,9 +373,12 @@ export function VocabRunnerGame() {
           distance_meters: number;
           correct_count: number;
           xp_earned: number;
-          total_xp: number;
+          total_xp: number | null;
           saved: boolean;
+          message?: string;
         }>("/v1/games/runner/submit-score", {
+          sessionId: sessionIdRef.current,
+          answers: choicesRef.current,
           score: finalScore,
           distance_meters: finalDistance,
           duration_seconds: durationSeconds,
@@ -372,13 +387,14 @@ export function VocabRunnerGame() {
         });
 
         if (res) {
-          setXpEarned(res.xp_earned);
+          setXpEarned(res.saved ? res.xp_earned : 0);
           if (res.total_xp) setTotalXp(res.total_xp);
+          setSaveMessage(res.message ?? null);
         }
-      } catch {
-        // Fallback local XP calculation
-        const localXp = Math.min(150, Math.floor(finalScore / 15) + finalCorrect * 5);
-        setXpEarned(localXp);
+      } catch (err) {
+        // Never invent XP: tell the player the result was not saved.
+        setXpEarned(0);
+        setSaveMessage(err instanceof Error && err.message ? err.message : "Natija saqlanmadi. Internetni tekshirib, qayta o'ynang.");
       } finally {
         setIsSaving(false);
       }
@@ -537,6 +553,7 @@ export function VocabRunnerGame() {
             const playerLane = playerLaneRef.current;
             const chosenOption = laneOptions[playerLane + 1] || "";
             const isCorrect = chosenOption.trim().toLowerCase() === q.correct.trim().toLowerCase();
+            choicesRef.current.push({ questionId: q.id, chosen: chosenOption });
 
             if (isCorrect) {
               sounds.playCorrectChime();
@@ -1016,7 +1033,7 @@ export function VocabRunnerGame() {
                 <div className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-emerald-400 fill-current" />
                   <span className="text-xs font-bold text-emerald-300">
-                    {isSaving ? "XP hisoblanmoqda..." : `+${xpEarned} XP hisobingizga yozildi!`}
+                    {isSaving ? "XP hisoblanmoqda..." : saveMessage ?? `+${xpEarned} XP`}
                   </span>
                 </div>
                 {totalXp !== null && (

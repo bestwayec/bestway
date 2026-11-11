@@ -730,6 +730,8 @@ urlpatterns = [
     path('student/join-cohort/', teacher_views.student_join_cohort_view),
     path('v1/student/join-cohort', teacher_views.student_join_cohort_view),
     path('v1/student/join-cohort/', teacher_views.student_join_cohort_view),
+    path('teacher/assignments/<str:assignment_id>/grade', teacher_views.teacher_grade_assignment_view),
+    path('teacher/assignments/<str:assignment_id>/grade/', teacher_views.teacher_grade_assignment_view),
     path('student/my-assignments', teacher_views.student_my_assignments_view),
     path('student/my-assignments/', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments', teacher_views.student_my_assignments_view),
