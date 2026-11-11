@@ -6,7 +6,9 @@ import { hydrateRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 import { HydrationGate } from './hydration-gate';
 
-const view = (text: string) => React.createElement(HydrationGate,
+// createElement passes children positionally; type the component accordingly.
+const Gate = HydrationGate as unknown as React.FC<{ fallback: React.ReactNode; children?: React.ReactNode }>;
+const view = (text: string) => React.createElement(Gate,
   { fallback: React.createElement('p', null, 'loading') }, React.createElement('p', null, text));
 
 describe('HydrationGate', () => {
