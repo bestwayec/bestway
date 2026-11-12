@@ -3,6 +3,7 @@
 import * as React from "react";
 import { KeyRound, Play, Radio, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 export function LiveExamPinCard({ className }: { className?: string }) {
+  const tp = useTranslations("mock.livePin");
   const router = useRouter();
   const joinMut = useJoinLiveExamRoom();
   const [pin, setPin] = React.useState("");
@@ -30,7 +32,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
     e?.preventDefault();
     const cleanPin = pin.replace(/\D/g, "").slice(0, 6);
     if (cleanPin.length !== 6) {
-      toast.error("6 xonali imtihon PIN-kodini to'liq kiriting");
+      toast.error(tp("pinIncomplete"));
       return;
     }
 
@@ -56,7 +58,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
         }
       }
 
-      toast.success("Jonli imtihon xonasiga muvaffaqiyatli ulandingiz!");
+      toast.success(tp("joined"));
       router.push(
         `/mock/attempt/${res.attemptId}?simulator=${encodeURIComponent(simMode)}${
           roomId ? `&room=${encodeURIComponent(roomId)}` : ""
@@ -66,7 +68,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
       toast.error(
         err instanceof ApiError
           ? err.message
-          : "Ushbu PIN-kod bilan faol imtihon xonasi topilmadi",
+          : tp("notFound"),
       );
     }
   }
@@ -86,7 +88,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="gap-1.5 text-sm">
               <Radio className="size-3.5 text-brand" />
-              Live PIN Mode
+              {tp("badge")}
             </Badge>
             <span className="inline-flex items-center gap-1 text-sm font-medium text-fg-muted">
               <ShieldCheck className="size-4 text-brand" />
@@ -94,10 +96,10 @@ export function LiveExamPinCard({ className }: { className?: string }) {
             </span>
           </div>
           <h3 className="text-base font-semibold text-fg">
-            O&apos;qituvchi bergan 6 xonali PIN-kod orqali imtihonga kiring
+            {tp("title")}
           </h3>
           <p className="text-sm text-fg-muted">
-            Guruh bilan bir vaqtda imtihon topshirish uchun PIN-kodni kiriting.
+            {tp("description")}
           </p>
         </div>
 
@@ -110,8 +112,8 @@ export function LiveExamPinCard({ className }: { className?: string }) {
               maxLength={6}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="PIN: 482915"
-              aria-label="6 xonali imtihon PIN kodi"
+              placeholder={tp("placeholder")}
+              aria-label={tp("inputLabel")}
               className="min-h-[44px] w-full sm:w-44 pl-9 text-center font-mono text-lg font-bold tracking-[0.2em] text-fg border-border"
             />
           </div>
@@ -123,7 +125,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
             className="min-h-[44px] px-5 font-medium"
           >
             <Play className="size-4 mr-1.5" />
-            Ulanish
+            {tp("join")}
           </Button>
         </div>
       </form>

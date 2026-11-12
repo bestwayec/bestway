@@ -192,7 +192,7 @@ try {
     const dialog = student.getByRole("dialog");
     await dialog.waitFor();
     const resp = student.waitForResponse((r) => r.url().includes("/start") && r.request().method() === "POST");
-    await dialog.getByRole("button", { name: /Barcha bo'limlarni boshlash/ }).click();
+    await dialog.getByRole("button", { name: /Start all sections/ }).click();
     const r = await resp;
     if (r.status() !== 201) throw new Error(`start HTTP ${r.status()} ${(await r.text()).slice(0, 200)}`);
     await student.waitForURL(/\/mock\/attempt\//);

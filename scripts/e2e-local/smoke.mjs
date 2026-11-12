@@ -201,7 +201,7 @@ await step(s, "07-practice-exam-start", async () => {
     await d.waitFor();
     await Promise.all([
       s.waitForResponse((r) => /\/mock\/(exams\/[^/]+\/start|attempts\/start)/.test(r.url()) && r.request().method() === "POST"),
-      d.getByRole("button", { name: /Reading Boshlash/ }).click(),
+      d.getByRole("button", { name: /Start Reading/ }).click(),
     ]);
   }
   await s.waitForURL(/mock\/attempt\//);

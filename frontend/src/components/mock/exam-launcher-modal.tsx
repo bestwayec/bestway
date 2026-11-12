@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { primeMicrophonePermission } from "@/lib/microphone";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,7 @@ export function ExamLauncherModal({
   onStart,
   isStarting,
 }: ExamLauncherModalProps) {
+  const tl = useTranslations("mock.launcher");
   const isMultilevel = exam.type === "multilevel";
   const simulatorMode: ExamSimulatorMode = isMultilevel ? "dtm" : "cdi";
 
@@ -85,7 +87,7 @@ export function ExamLauncherModal({
     // permission dialog over a full-screen page. A refusal never blocks the exam.
     if (!skills || skills.includes("speaking")) {
       const permission = await primeMicrophonePermission();
-      if (permission === "denied") toast.warning("Mikrofonga ruxsat berilmadi. Speaking qismidan oldin brauzer sozlamalarida mikrofonga ruxsat bering.");
+      if (permission === "denied") toast.warning(tl("micDenied"));
     }
     if (typeof window !== "undefined") {
       try {
@@ -109,29 +111,29 @@ export function ExamLauncherModal({
             {exam.durationMinutes != null && (
               <span className="flex items-center gap-1 text-sm text-fg-muted">
                 <Clock className="size-3.5" />
-                {exam.durationMinutes} daqiqa
+                {tl("minutes", { count: exam.durationMinutes })}
               </span>
             )}
             <span className="flex items-center gap-1 text-sm text-fg-muted">
               <FileQuestion className="size-3.5" />
-              {exam.questionCount} savol
+              {tl("questions", { count: exam.questionCount ?? 0 })}
             </span>
           </div>
           <DialogTitle className="text-xl font-bold tracking-tight text-fg">
             {exam.title}
           </DialogTitle>
           <DialogDescription className="text-sm text-fg-muted">
-            To&apos;liq imtihon yoki alohida bo&apos;limni tanlang.
+            {tl("chooseMode")}
           </DialogDescription>
         </DialogHeader>
 
         <DialogBody className="space-y-6 pt-2">
           <div className="rounded-[12px] border border-border bg-bg p-4 text-sm leading-relaxed text-fg-muted">
-            <h3 className="mb-2 font-semibold text-fg">Boshlashdan oldin</h3>
+            <h3 className="mb-2 font-semibold text-fg">{tl("beforeTitle")}</h3>
             <ul className="list-disc space-y-1 pl-5">
-              <li>Barqaror internet ulanishini tekshiring.</li>
-              <li>Listening uchun ovozni, Speaking uchun mikrofon va ruxsatlarni tekshiring.</li>
-              <li>Javob saqlanganini ko‘rsatuvchi holatni kuzating; xato bo‘lsa qayta urinib ko‘ring.</li>
+              <li>{tl("before1")}</li>
+              <li>{tl("before2")}</li>
+              <li>{tl("before3")}</li>
             </ul>
           </div>
           {fullMockAvailable ? (
@@ -140,12 +142,12 @@ export function ExamLauncherModal({
           <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-fg">
-                To&apos;liq Mock Imtihon (Full Mock)
+                {tl("fullTitle")}
               </h3>
-              <Badge variant="brand" className="text-sm">Rasmiy Tartib</Badge>
+              <Badge variant="brand" className="text-sm">{tl("officialOrder")}</Badge>
             </div>
             <p className="text-sm text-fg-muted leading-relaxed">
-              Barcha 4 ta bo&apos;lim ketma-ket topshiriladi: Listening → Reading → Writing → Speaking.
+              {tl("fullDescription")}
             </p>
             <Button
               type="button"
@@ -154,15 +156,15 @@ export function ExamLauncherModal({
               className="w-full min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-semibold text-base"
             >
               <Play className="mr-2 size-4 fill-current" />
-              To&apos;liq imtihonni boshlash (Full Mock)
+              {tl("startFull")}
             </Button>
           </div>
             </>
           ) : availableSkills.length > 1 ? (
             <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
-              <h3 className="text-base font-bold text-fg">Barcha bo&apos;limlar (mashq)</h3>
+              <h3 className="text-base font-bold text-fg">{tl("allTitle")}</h3>
               <p className="text-sm text-fg-muted leading-relaxed">
-                Tayyor bo&apos;limlar ketma-ket mashq qilinadi: {availableSkills.map((s) => SKILL_TITLES[s]).join(" → ")}.
+                {tl("allDescription", { skills: availableSkills.map((s) => SKILL_TITLES[s]).join(" → ") })}
               </p>
               <Button
                 type="button"
@@ -171,7 +173,7 @@ export function ExamLauncherModal({
                 className="w-full min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-semibold text-base"
               >
                 <Play className="mr-2 size-4 fill-current" />
-                Barcha bo&apos;limlarni boshlash
+                {tl("startAll")}
               </Button>
             </div>
           ) : null}
@@ -180,19 +182,19 @@ export function ExamLauncherModal({
           <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-fg">
-                Alohida Bo&apos;lim (Single Section)
+                {tl("singleTitle")}
               </h3>
-              <span className="text-sm text-fg-muted">Alohida baholanadi</span>
+              <span className="text-sm text-fg-muted">{tl("gradedSeparately")}</span>
             </div>
             <p className="text-sm text-fg-muted leading-relaxed">
-              Ixtiyoriy bitta bo&apos;limni tanlab, mashq qiling:
+              {tl("singleDescription")}
             </p>
 
             <div className="grid grid-cols-1 gap-2.5 pt-1 sm:grid-cols-2">
               {availableSkills.map((skill) => {
                 const Icon = SKILL_ICONS[skill] || Headphones;
                 const minutes = durations[skill];
-                const meta = { title: SKILL_TITLES[skill] || skill, time: minutes ? `${minutes} daq` : "" };
+                const meta = { title: SKILL_TITLES[skill] || skill, time: minutes ? tl("minutesShort", { count: minutes }) : "" };
 
                 return (
                   <Button
@@ -205,7 +207,7 @@ export function ExamLauncherModal({
                   >
                     <span className="flex items-center gap-2">
                       <Icon className="size-4 shrink-0 text-brand" />
-                      <span>{meta.title} Boshlash</span>
+                      <span>{tl("startSkill", { skill: meta.title })}</span>
                     </span>
                     <span className="text-sm font-normal text-fg-muted">{meta.time}</span>
                   </Button>

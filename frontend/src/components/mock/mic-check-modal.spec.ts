@@ -3,6 +3,14 @@ import * as React from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('next-intl', async () => {
+  const uz = (await import('../../../messages/uz.json')).default as Record<string, unknown>;
+  const lookup = (path: string) => path.split('.').reduce<unknown>((v, k) => (v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined), uz);
+  return { useTranslations: (ns: string) => (key: string, values?: Record<string, unknown>) => {
+    const found = lookup(`${ns}.${key}`);
+    return typeof found === 'string' ? found.replace(/\{(\w+)\}/g, (_, n: string) => String(values?.[n] ?? '')) : key;
+  } };
+});
 import { MicCheckModal } from './mic-check-modal';
 
 class FakeRecorder {
