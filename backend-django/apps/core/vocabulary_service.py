@@ -381,6 +381,9 @@ def submit_quiz_attempt(
         "totalWords": total_words,
         "percentage": percentage,
         "pointsAwarded": points_awarded,
+        # Lets the client explain a zero honestly: earned by this result vs already paid for this set.
+        "pointsEarned": earned if is_student else 0,
+        "pointsAlreadyAwarded": already,
         "mode": mode,
         "wrongAnswers": wrong_answers,
         "completedAt": attempt.completed_at.isoformat(),

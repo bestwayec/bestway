@@ -437,6 +437,8 @@ class VocabularyQuizIntegrityTests(SimpleTestCase):
         perfect = [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
         result, *_ = self.submit(perfect, already=5)
         self.assertEqual(result["pointsAwarded"], 0)
+        # The client can tell "already paid for this set" from "score too low".
+        self.assertEqual((result["pointsEarned"], result["pointsAlreadyAwarded"]), (5, 5))
         result, _a, _p, log, _prior = self.submit(perfect, already=3)
         self.assertEqual(result["pointsAwarded"], 2)
         self.assertEqual(log.call_args.kwargs["change"], 2)

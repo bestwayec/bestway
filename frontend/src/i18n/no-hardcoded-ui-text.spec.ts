@@ -15,6 +15,7 @@ const FILES = [
   "src/components/mock/mic-check-modal.tsx",
   "src/components/mock/live-exam-pin-card.tsx",
   "src/components/mock/mock-result-view.tsx",
+  "src/components/vocabulary/VocabularyQuizRunner.tsx",
 ];
 const UZBEK_UI = /\b(Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*)\b/;
 

@@ -294,7 +294,7 @@ try {
     await student.getByRole("button", { name: "Testni Boshlash" }).click();
     const words = { harbour: "bandargoh", bridge: "ko'prik", ferry: "parom" };
     const submit = student.waitForResponse((r) => /\/vocabulary\/sets\/[^/]+\/submit/.test(r.url()) && r.request().method() === "POST", { timeout: 60000 });
-    const promptWord = () => student.getByRole("button", { name: "Talaffuzni tinglash" })
+    const promptWord = () => student.getByRole("button", { name: /Listen to the pronunciation|Talaffuzni tinglash/ })
       .locator("xpath=preceding-sibling::*[1]").textContent().then((t) => (t ?? "").trim());
     let previous = "";
     let quizLoads = 0;
