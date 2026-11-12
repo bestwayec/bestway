@@ -1293,6 +1293,31 @@
       "gradingProgramAll": "Barcha dasturlar",
       "gradingProgramLabel": "Topshiriqlarni dastur bo'yicha saralash",
       "gradingLoadFailed": "Tekshiruvlarni yuklab bo'lmadi."
+    },
+    "deviceCheck": {
+      "intro": "Ixtiyoriy: boshlashdan oldin shu qurilmada internet, ovoz va mikrofonni tekshiring.",
+      "run": "Qurilmani tekshirish",
+      "net": "Internet",
+      "netOk": "Ulangan · server {ms} ms da javob berdi",
+      "netSlow": "Ulangan, lekin sekin · server {ms} ms da javob berdi. Javoblar sekinroq saqlanishi mumkin.",
+      "netFail": "Server javob bermadi. Boshlashdan oldin internetni tekshiring.",
+      "netOffline": "Bu qurilma internetga ulanmagan.",
+      "netRetest": "Internetni qayta tekshirish",
+      "sound": "Ovoz",
+      "soundAsk": "Qisqa sinov signali chalindi. Eshitdingizmi?",
+      "heardYes": "Ha, eshitdim",
+      "heardNo": "Yo'q",
+      "playAgain": "Qayta chalish",
+      "soundHeard": "Sinov signalini eshitganingizni tasdiqladingiz.",
+      "soundNotHeard": "Ovozni balandlating yoki quloqchin ulang, so'ng signalni qayta chaling.",
+      "soundUnsupported": "Bu brauzer sinov signalini chala olmaydi.",
+      "mic": "Mikrofon (Speaking)",
+      "micTest": "Mikrofonni tekshirish",
+      "micRetest": "Qayta tekshirish",
+      "micSpeak": "Hozir bir necha so'z ayting…",
+      "micOk": "Ovozingiz eshitildi.",
+      "micSilent": "Mikrofon ishlayapti, lekin deyarli hech narsa eshitilmadi. Balandroq gapiring yoki boshqa mikrofonni tanlang va qayta tekshiring.",
+      "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning."
     }
   },
   "wizard": {

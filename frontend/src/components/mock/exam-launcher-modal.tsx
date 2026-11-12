@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { DeviceCheck } from "./device-check";
 import { primeMicrophonePermission } from "@/lib/microphone";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -135,6 +136,7 @@ export function ExamLauncherModal({
               <li>{tl("before2")}</li>
               <li>{tl("before3")}</li>
             </ul>
+            <DeviceCheck needsMicrophone={availableSkills.includes("speaking")} />
           </div>
           {fullMockAvailable ? (
             <>
