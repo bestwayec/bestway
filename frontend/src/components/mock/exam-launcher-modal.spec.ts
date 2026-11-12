@@ -6,6 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/microphone', () => ({ primeMicrophonePermission: vi.fn(async () => 'granted') }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
+vi.mock('next-intl', async () => {
+  const en = (await import('../../../messages/en.json')).default as Record<string, unknown>;
+  const lookup = (ns: string, key: string) => `${ns}.${key}`.split('.').reduce<unknown>((v, k) => (v && typeof v === 'object' ? (v as Record<string, unknown>)[k] : undefined), en);
+  return { useTranslations: (ns: string) => (key: string, values?: Record<string, unknown>) => {
+    const found = lookup(ns, key);
+    return typeof found === 'string' ? found.replace(/\{(\w+)[^}]*\}/g, (_, n: string) => String(values?.[n] ?? '')) : key;
+  } };
+});
 import { ExamLauncherModal } from './exam-launcher-modal';
 
 let host: HTMLDivElement;
@@ -33,7 +41,7 @@ describe('exam launcher', () => {
   it('does not offer Full Mock on a practice exam; it starts all ready sections as practice', async () => {
     const onStart = await render('practice');
     expect(buttons().some((t) => t.includes('Full Mock'))).toBe(false);
-    const all = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.includes("Barcha bo'limlarni boshlash"))!;
+    const all = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.includes("Start all sections"))!;
     await act(async () => all.click());
     expect(onStart).toHaveBeenCalledWith('practice', ['listening', 'reading', 'writing', 'speaking'], 'cdi');
   });

@@ -2,26 +2,9 @@
 
 import * as React from "react";
 import { Mic, Square, Play, Pause, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, recordedAudioBlob, requestMicrophoneStream, type MicrophoneProblem } from "@/lib/microphone";
-
-/** What to tell the student, in Uzbek, for each way the microphone can fail. */
-export function microphoneHelpUz(problem: MicrophoneProblem): string {
-  switch (problem) {
-    case "denied":
-      return "Mikrofonga ruxsat berilmadi. «Qayta urinish» tugmasini bosing va ruxsat oynasida «Ruxsat berish»ni tanlang. Oyna chiqmasa: brauzer manzil qatoridagi sozlamalar belgisi → Mikrofon → Ruxsat berish. Telefonda boshqa ilovalarning oynalari (suzuvchi tugmalar, ekran filtri, yon panel) yopiq bo‘lsin.";
-    case "notFound":
-      return "Mikrofon topilmadi. Mikrofonni ulang (yoki telefonning mikrofoni yopilmaganini tekshiring) va qayta urinib ko‘ring.";
-    case "busy":
-      return "Mikrofonni ochib bo‘lmadi. Uni ishlatayotgan boshqa ilovalarni (qo‘ng‘iroq, yozuv, boshqa tab) yoping va qayta urinib ko‘ring.";
-    case "insecure":
-      return "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.";
-    case "unsupported":
-      return "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.";
-    default:
-      return "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.";
-  }
-}
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, recordedAudioBlob, requestMicrophoneStream } from "@/lib/microphone";
 
 interface MicCheckModalProps {
   open: boolean;
@@ -30,6 +13,7 @@ interface MicCheckModalProps {
 }
 
 export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) {
+  const tm = useTranslations("mock.mic");
   const [step, setStep] = React.useState<"idle" | "recording" | "review" | "error">("idle");
   const [countdown, setCountdown] = React.useState(5);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
@@ -98,7 +82,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
       mr.onerror = () => {
         if (timerRef.current) clearInterval(timerRef.current);
         stopStream();
-        setErrorMsg("Ovoz yozishda xatolik yuz berdi.");
+        setErrorMsg(tm("recordFailed"));
         setStep("error");
       };
 
@@ -111,7 +95,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
           setAudioUrl(url);
           setStep("review");
         } catch (err) {
-          setErrorMsg(microphoneHelpUz(microphoneProblem(err)));
+          setErrorMsg(tm(`help.${microphoneProblem(err)}`));
           setStep("error");
         }
       };
@@ -137,7 +121,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
     } catch (err) {
       if (timerRef.current) clearInterval(timerRef.current);
       stopStream();
-      setErrorMsg(microphoneHelpUz(microphoneProblem(err)));
+      setErrorMsg(tm(`help.${microphoneProblem(err)}`));
       setStep("error");
     }
   };
@@ -191,8 +175,8 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
             <Mic className="size-6" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-fg">Mikrofonni sinovdan o&apos;tkazish</h3>
-            <p className="text-xs text-fg-muted">Speaking qismidan oldin mikrofoni tekshiring</p>
+            <h3 className="text-lg font-semibold text-fg">{tm("title")}</h3>
+            <p className="text-xs text-fg-muted">{tm("subtitle")}</p>
           </div>
         </div>
 
@@ -200,11 +184,11 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
           {step === "idle" && (
             <div className="space-y-3 py-2">
               <p className="text-sm text-fg-muted">
-                Tugmani bosing va 5 soniya davomida mikrofonga biror narsa gapiring.
+                {tm("instructions")}
               </p>
               <Button onClick={startTest} className="w-full min-h-[44px] touch-manipulation">
                 <Mic className="mr-2 size-4" />
-                Sinovni boshlash (5 soniya)
+                {tm("startTest")}
               </Button>
             </div>
           )}
@@ -215,7 +199,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
                 <Square className="size-8 fill-danger" />
                 <span className="absolute text-xl font-bold">{countdown}</span>
               </div>
-              <p className="text-sm font-medium text-fg">Ovoz yozilmoqda... Iltimos gapiring ({countdown}s)</p>
+              <p className="text-sm font-medium text-fg">{tm("recording", { seconds: countdown })}</p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                 <div
                   className="h-full bg-danger transition-all duration-1000"
@@ -229,7 +213,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
             <div className="space-y-4 py-2">
               <div className="flex items-center justify-center gap-2 text-success">
                 <CheckCircle2 className="size-5" />
-                <span className="text-sm font-medium">Yozuv tayyor! O&apos;zingizni eshitib ko&apos;ring:</span>
+                <span className="text-sm font-medium">{tm("ready")}</span>
               </div>
 
               {audioUrl && (
@@ -250,11 +234,11 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
               <div className="flex flex-col gap-2 pt-2">
                 <Button onClick={handleConfirm} className="w-full min-h-[44px] touch-manipulation">
                   <CheckCircle2 className="mr-2 size-4" />
-                  Ovoz eshitildi — Speakingni boshlash
+                  {tm("confirm")}
                 </Button>
                 <Button variant="ghost" size="sm" className="min-h-[44px] px-4 touch-manipulation" onClick={startTest}>
                   <RefreshCw className="mr-1.5 size-3.5" />
-                  Qayta sinab ko&apos;rish
+                  {tm("retest")}
                 </Button>
               </div>
             </div>
@@ -264,15 +248,15 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
             <div className="space-y-3 py-2 text-left">
               <div className="flex items-start gap-2 text-danger">
                 <AlertTriangle className="size-5 shrink-0 mt-0.5" />
-                <p className="text-sm" role="alert">{errorMsg || "Mikrofon bilan bog'lanishda xatolik yuz berdi."}</p>
+                <p className="text-sm" role="alert">{errorMsg || tm("help.default")}</p>
               </div>
               <Button onClick={startTest} variant="outline" className="w-full min-h-[44px] mt-2 touch-manipulation">
                 <RefreshCw className="mr-2 size-4" />
-                Qayta urinish
+                {tm("retry")}
               </Button>
               {/* Never trap the student: without a microphone the other sections and Finish stay usable. */}
               <Button onClick={handleConfirm} variant="ghost" className="h-auto min-h-[44px] w-full whitespace-normal px-3 py-2 text-center text-xs text-fg-muted touch-manipulation" data-testid="mic-continue-without">
-                Mikrofonsiz davom etish (Speaking yozib bo&apos;lmaydi)
+                {tm("continueWithout")}
               </Button>
             </div>
           )}
@@ -285,7 +269,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
               onClick={handleClose}
               className="inline-flex min-h-[44px] items-center justify-center px-4 text-xs text-fg-muted hover:text-fg underline-offset-4 hover:underline touch-manipulation"
             >
-              Yopish
+              {tm("close")}
             </button>
           </div>
         )}

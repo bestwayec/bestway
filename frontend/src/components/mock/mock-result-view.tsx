@@ -33,12 +33,13 @@ const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
 
 /** Shown only while a real assessment is outstanding; no scripted steps, the panel below shows the true job state. */
 function GradingNotice() {
+  const t = useTranslations("mock");
   return (
     <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl border border-brand/20 bg-brand/[0.03] p-4 text-left">
       <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-brand" />
       <div className="text-sm">
-        <p className="font-semibold text-fg">Natijalar tekshirilmoqda</p>
-        <p className="mt-0.5 text-xs text-fg-subtle">Writing va Speaking javoblari baholanmoqda. Sahifa har 3 soniyada avtomatik yangilanadi.</p>
+        <p className="font-semibold text-fg">{t("resultView.checkingTitle")}</p>
+        <p className="mt-0.5 text-xs text-fg-subtle">{t("resultView.checkingBody")}</p>
       </div>
     </div>
   );
@@ -128,14 +129,14 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
-          {partialPractice && <Badge variant="outline">Bo&apos;lim mashqi</Badge>}
+          {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
           {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
               <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
-              <Sparkles className="size-3.5" /> AI bahosi (Ustoz ko&apos;rib chiqishi kutilmoqda)
+              <Sparkles className="size-3.5" aria-hidden /> {t("resultView.aiPending")}
             </span>
           )}
         </div>
@@ -152,7 +153,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           <div className="mt-4 space-y-1">
             <p className="font-semibold text-fg">{t("partialPracticeResult")}</p>
             <p className="text-sm text-fg-muted">
-              Bu faqat tanlangan bo&apos;lim natijasi. Umumiy ball va CEFR darajasi to&apos;liq imtihon (4 bo&apos;lim) topshirilganda chiqariladi.
+              {t("resultView.partialNote")}
             </p>
           </div>
         )}
@@ -210,7 +211,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                   </span>
                   {isSkipped ? (
                     <Badge variant="neutral" className="text-[11px] font-medium">
-                      O&apos;tkazib yuborilgan
+                      {t("resultView.skipped")}
                     </Badge>
                   ) : pendingManual ? (
                     <Badge variant="warning" className="text-[11px]">
@@ -282,7 +283,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
-              {partialPractice ? "Mashq hisoboti (PDF)" : `${t("certificate")} (PDF)`}
+              {partialPractice ? t("resultView.practiceReport") : `${t("certificate")} (PDF)`}
             </a>
             <button
               type="button"
@@ -290,7 +291,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-fg transition-all hover:bg-surface-hover hover:scale-[1.02]"
             >
               <Printer className="size-4 text-brand" />
-              Chop etish
+              {t("resultView.print")}
             </button>
           </div>
         )}

@@ -1034,7 +1034,8 @@
       "writingModeOcr": "Upload paper photo (OCR)",
       "ocrEditTitle": "Recognised / saved text",
       "ocrPlaceholder": "The recognised text appears here, and you can edit it.",
-      "goToQuestions": "Go to questions"
+      "goToQuestions": "Go to questions",
+      "questionCount": "{count, plural, one {# question} other {# questions}}"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1180,7 +1181,73 @@
         "default": "Get ready for the next section."
       }
     },
-    "rawCorrect": "{score}/{max} correct · {percent}%"
+    "rawCorrect": "{score}/{max} correct · {percent}%",
+    "launcher": {
+      "micDenied": "Microphone access was not allowed. Allow the microphone in your browser settings before the Speaking section.",
+      "minutes": "{count} min",
+      "minutesShort": "{count} min",
+      "questions": "{count, plural, one {# question} other {# questions}}",
+      "chooseMode": "Choose the full exam or a single section.",
+      "beforeTitle": "Before you start",
+      "before1": "Check that your internet connection is stable.",
+      "before2": "Check the sound for Listening, and the microphone and its permission for Speaking.",
+      "before3": "Watch the save status; if saving fails, try again.",
+      "fullTitle": "Full mock exam",
+      "officialOrder": "Official order",
+      "fullDescription": "All 4 sections in order: Listening → Reading → Writing → Speaking.",
+      "startFull": "Start the full exam (Full Mock)",
+      "allTitle": "All sections (practice)",
+      "allDescription": "The ready sections are practised in order: {skills}.",
+      "startAll": "Start all sections",
+      "singleTitle": "Single section",
+      "gradedSeparately": "Scored separately",
+      "singleDescription": "Pick any one section to practise:",
+      "startSkill": "Start {skill}"
+    },
+    "mic": {
+      "title": "Test your microphone",
+      "subtitle": "Check your microphone before the Speaking section",
+      "instructions": "Press the button and say something into the microphone for 5 seconds.",
+      "startTest": "Start the test (5 seconds)",
+      "recording": "Recording… please speak ({seconds}s)",
+      "ready": "Recording ready. Listen to yourself:",
+      "confirm": "I can hear it — start Speaking",
+      "retest": "Test again",
+      "retry": "Try again",
+      "continueWithout": "Continue without a microphone (Speaking cannot be recorded)",
+      "close": "Close",
+      "recordFailed": "Recording failed.",
+      "help": {
+        "denied": "Microphone access was not allowed. Press “Try again” and choose “Allow” in the permission prompt. If no prompt appears: settings icon in the browser address bar → Microphone → Allow. On phones, close other apps’ overlays (floating buttons, screen filters, side panels).",
+        "notFound": "No microphone was found. Connect a microphone (or check that the phone microphone is not covered) and try again.",
+        "busy": "The microphone could not be opened. Close other apps that use it (calls, recorders, another tab) and try again.",
+        "insecure": "The microphone only works over a secure (https) connection. Open the site over https.",
+        "unsupported": "This browser cannot record audio. Use a recent version of Chrome or Safari.",
+        "default": "Something went wrong with the microphone. Try again.",
+        "other": "Something went wrong with the microphone. Try again."
+      }
+    },
+    "livePin": {
+      "pinIncomplete": "Enter the full 6-digit exam PIN.",
+      "joined": "You joined the live exam room.",
+      "notFound": "No active exam room was found for this PIN.",
+      "badge": "Live PIN mode",
+      "title": "Join an exam with the 6-digit PIN from your teacher",
+      "description": "Enter the PIN to take the exam together with your group.",
+      "placeholder": "6-digit PIN",
+      "inputLabel": "6-digit exam PIN",
+      "join": "Join"
+    },
+    "resultView": {
+      "checkingTitle": "Checking results",
+      "checkingBody": "Writing and Speaking answers are being graded. This page refreshes automatically every 3 seconds.",
+      "aiPending": "AI estimate (awaiting teacher review)",
+      "sectionPractice": "Section practice",
+      "partialNote": "This is the result of the selected sections only. The overall score and CEFR level appear after a full exam (all 4 sections).",
+      "skipped": "Skipped",
+      "practiceReport": "Practice report (PDF)",
+      "print": "Print"
+    }
   },
   "wizard": {
     "title": "Create exam",
@@ -1926,7 +1993,35 @@
     "loadErrorEmpty": "No questions were found for this attempt. Try again or contact your teacher."
   },
   "vocabQuiz": {
-    "preparing": "Preparing vocabulary questions…"
+    "preparing": "Preparing vocabulary questions…",
+    "defaultTitle": "Vocabulary test",
+    "loadFailed": "The test questions could not be loaded.",
+    "saveFailed": "The test result could not be saved.",
+    "retry": "Try again",
+    "exit": "Exit",
+    "emptyTitle": "No questions",
+    "emptyBody": "There are no words to practise in this mode or in your mistakes bank yet.",
+    "backToVocabulary": "Back to vocabulary",
+    "headingPerfect": "Perfect result!",
+    "headingGood": "Good result, well done!",
+    "headingDone": "Practice finished",
+    "srsReviewed": "You reviewed the words from your mistakes bank.",
+    "setSubmitted": "Test for “{title}” submitted.",
+    "pointsAdded": "+{points} platform points added",
+    "pointsRule": "100% earns 5 points, 80–99% earns 3; each set pays out once (a retry adds only the improvement).",
+    "pointsAlreadyPaid": "No new points: this set has already paid out for this result.",
+    "pointsNeed80": "Score at least 80% to earn platform points. Keep practising!",
+    "correct": "Correct",
+    "accuracy": "Accuracy",
+    "mistakes": "Mistakes",
+    "wrongWords": "Words you got wrong (added to your SRS bank):",
+    "retake": "Retake",
+    "srsBank": "Mistakes bank (SRS)",
+    "listen": "Listen to the pronunciation",
+    "firstLetter": "First letter:",
+    "spellingPlaceholder": "Type the correct English spelling…",
+    "check": "Check",
+    "stop": "Stop practice"
   },
   "trackDashboard": {
     "officialStandard": "Official CBT standard",

@@ -1212,7 +1212,7 @@ function GroupBlock({
           >
             {hasPassage && !hasGappedContent && (
               <div className="mb-2 flex items-center justify-between pb-2 border-b border-border/60 lg:hidden">
-                <span className="text-xs font-medium text-fg-muted">{(group?.questions || []).length} ta savol</span>
+                <span className="text-xs font-medium text-fg-muted">{tg("questionCount", { count: (group?.questions || []).length })}</span>
                 <button
                   type="button"
                   onClick={() => setReadingMobileTab("passage")}

@@ -192,7 +192,7 @@ try {
     const dialog = student.getByRole("dialog");
     await dialog.waitFor();
     const resp = student.waitForResponse((r) => r.url().includes("/start") && r.request().method() === "POST");
-    await dialog.getByRole("button", { name: /Barcha bo'limlarni boshlash/ }).click();
+    await dialog.getByRole("button", { name: /Start all sections/ }).click();
     const r = await resp;
     if (r.status() !== 201) throw new Error(`start HTTP ${r.status()} ${(await r.text()).slice(0, 200)}`);
     await student.waitForURL(/\/mock\/attempt\//);
@@ -211,7 +211,7 @@ try {
     await student.waitForTimeout(2500);
     await student.getByRole("button", { name: "Speaking", exact: true }).click();
     await student.waitForTimeout(1500);
-    const close = student.getByRole("button", { name: "Yopish" });
+    const close = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await close.count()) await close.first().click();
     await student.getByRole("button", { name: "Record", exact: true }).click();
     await student.waitForTimeout(4000);
@@ -225,7 +225,7 @@ try {
   await step(student, "09-reload-keeps-answers", async () => {
     await student.reload({ waitUntil: "networkidle" });
     await student.waitForTimeout(2000);
-    const close = student.getByRole("button", { name: "Yopish" });
+    const close = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await close.count()) await close.first().click();
     const listening = await student.getByRole("radio", { name: "Coffee" }).isChecked();
     await student.getByRole("button", { name: "Reading", exact: true }).click();
@@ -239,7 +239,7 @@ try {
     return "all four answers present after reload";
   });
   await step(student, "10-finish", async () => {
-    const micCheck = student.getByRole("button", { name: "Yopish" });
+    const micCheck = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await micCheck.count()) await micCheck.first().click();
     await student.getByRole("button", { name: "Finish", exact: true }).click();
     const dialog = student.getByRole("dialog");
@@ -294,7 +294,7 @@ try {
     await student.getByRole("button", { name: "Testni Boshlash" }).click();
     const words = { harbour: "bandargoh", bridge: "ko'prik", ferry: "parom" };
     const submit = student.waitForResponse((r) => /\/vocabulary\/sets\/[^/]+\/submit/.test(r.url()) && r.request().method() === "POST", { timeout: 60000 });
-    const promptWord = () => student.getByRole("button", { name: "Talaffuzni tinglash" })
+    const promptWord = () => student.getByRole("button", { name: /Listen to the pronunciation|Talaffuzni tinglash/ })
       .locator("xpath=preceding-sibling::*[1]").textContent().then((t) => (t ?? "").trim());
     let previous = "";
     let quizLoads = 0;

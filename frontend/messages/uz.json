@@ -1034,7 +1034,8 @@
       "writingModeOcr": "Qog‘oz / rasm yuklash (OCR)",
       "ocrEditTitle": "OCR olingan / saqlangan matn",
       "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin.",
-      "goToQuestions": "Savollarga o‘tish"
+      "goToQuestions": "Savollarga o‘tish",
+      "questionCount": "{count} ta savol"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1180,7 +1181,73 @@
         "default": "Keyingi bo‘limga tayyorlaning."
       }
     },
-    "rawCorrect": "{score}/{max} to‘g‘ri · {percent}%"
+    "rawCorrect": "{score}/{max} to‘g‘ri · {percent}%",
+    "launcher": {
+      "micDenied": "Mikrofonga ruxsat berilmadi. Speaking qismidan oldin brauzer sozlamalarida mikrofonga ruxsat bering.",
+      "minutes": "{count} daqiqa",
+      "minutesShort": "{count} daq",
+      "questions": "{count} savol",
+      "chooseMode": "To‘liq imtihon yoki alohida bo‘limni tanlang.",
+      "beforeTitle": "Boshlashdan oldin",
+      "before1": "Barqaror internet ulanishini tekshiring.",
+      "before2": "Listening uchun ovozni, Speaking uchun mikrofon va ruxsatlarni tekshiring.",
+      "before3": "Javob saqlanganini ko‘rsatuvchi holatni kuzating; xato bo‘lsa qayta urinib ko‘ring.",
+      "fullTitle": "To‘liq mock imtihon (Full Mock)",
+      "officialOrder": "Rasmiy tartib",
+      "fullDescription": "Barcha 4 ta bo‘lim ketma-ket topshiriladi: Listening → Reading → Writing → Speaking.",
+      "startFull": "To‘liq imtihonni boshlash (Full Mock)",
+      "allTitle": "Barcha bo‘limlar (mashq)",
+      "allDescription": "Tayyor bo‘limlar ketma-ket mashq qilinadi: {skills}.",
+      "startAll": "Barcha bo‘limlarni boshlash",
+      "singleTitle": "Alohida bo‘lim (Single Section)",
+      "gradedSeparately": "Alohida baholanadi",
+      "singleDescription": "Ixtiyoriy bitta bo‘limni tanlab, mashq qiling:",
+      "startSkill": "{skill} — boshlash"
+    },
+    "mic": {
+      "title": "Mikrofonni sinovdan o‘tkazish",
+      "subtitle": "Speaking qismidan oldin mikrofonni tekshiring",
+      "instructions": "Tugmani bosing va 5 soniya davomida mikrofonga biror narsa gapiring.",
+      "startTest": "Sinovni boshlash (5 soniya)",
+      "recording": "Ovoz yozilmoqda... Iltimos gapiring ({seconds}s)",
+      "ready": "Yozuv tayyor! O‘zingizni eshitib ko‘ring:",
+      "confirm": "Ovoz eshitildi — Speakingni boshlash",
+      "retest": "Qayta sinab ko‘rish",
+      "retry": "Qayta urinish",
+      "continueWithout": "Mikrofonsiz davom etish (Speaking yozib bo‘lmaydi)",
+      "close": "Yopish",
+      "recordFailed": "Ovoz yozishda xatolik yuz berdi.",
+      "help": {
+        "denied": "Mikrofonga ruxsat berilmadi. «Qayta urinish» tugmasini bosing va ruxsat oynasida «Ruxsat berish»ni tanlang. Oyna chiqmasa: brauzer manzil qatoridagi sozlamalar belgisi → Mikrofon → Ruxsat berish. Telefonda boshqa ilovalarning oynalari (suzuvchi tugmalar, ekran filtri, yon panel) yopiq bo‘lsin.",
+        "notFound": "Mikrofon topilmadi. Mikrofonni ulang (yoki telefonning mikrofoni yopilmaganini tekshiring) va qayta urinib ko‘ring.",
+        "busy": "Mikrofonni ochib bo‘lmadi. Uni ishlatayotgan boshqa ilovalarni (qo‘ng‘iroq, yozuv, boshqa tab) yoping va qayta urinib ko‘ring.",
+        "insecure": "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.",
+        "unsupported": "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.",
+        "default": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.",
+        "other": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring."
+      }
+    },
+    "livePin": {
+      "pinIncomplete": "6 xonali imtihon PIN-kodini to‘liq kiriting.",
+      "joined": "Jonli imtihon xonasiga ulandingiz.",
+      "notFound": "Ushbu PIN-kod bilan faol imtihon xonasi topilmadi.",
+      "badge": "Jonli PIN rejimi",
+      "title": "O‘qituvchi bergan 6 xonali PIN-kod orqali imtihonga kiring",
+      "description": "Guruh bilan bir vaqtda imtihon topshirish uchun PIN-kodni kiriting.",
+      "placeholder": "6 xonali PIN",
+      "inputLabel": "6 xonali imtihon PIN kodi",
+      "join": "Ulanish"
+    },
+    "resultView": {
+      "checkingTitle": "Natijalar tekshirilmoqda",
+      "checkingBody": "Writing va Speaking javoblari baholanmoqda. Sahifa har 3 soniyada avtomatik yangilanadi.",
+      "aiPending": "AI bahosi (ustoz ko‘rib chiqishi kutilmoqda)",
+      "sectionPractice": "Bo‘lim mashqi",
+      "partialNote": "Bu faqat tanlangan bo‘lim natijasi. Umumiy ball va CEFR darajasi to‘liq imtihon (4 bo‘lim) topshirilganda chiqariladi.",
+      "skipped": "O‘tkazib yuborilgan",
+      "practiceReport": "Mashq hisoboti (PDF)",
+      "print": "Chop etish"
+    }
   },
   "wizard": {
     "title": "Imtihon yaratish",
@@ -1926,7 +1993,35 @@
     "loadErrorEmpty": "Bu urinish uchun savollar topilmadi. Qayta urinib ko'ring yoki o'qituvchingizga murojaat qiling."
   },
   "vocabQuiz": {
-    "preparing": "Lug'at savollari tayyorlanmoqda…"
+    "preparing": "Lug'at savollari tayyorlanmoqda…",
+    "defaultTitle": "Lug‘at testi",
+    "loadFailed": "Test savollarini yuklab bo‘lmadi.",
+    "saveFailed": "Test natijasini saqlashda xatolik yuz berdi.",
+    "retry": "Qayta urinish",
+    "exit": "Chiqish",
+    "emptyTitle": "Savollar mavjud emas",
+    "emptyBody": "Ushbu rejimda yoki xatolar bankida hozircha mashq qilish uchun so‘zlar yo‘q.",
+    "backToVocabulary": "Lug‘atga qaytish",
+    "headingPerfect": "Ajoyib! Mukammal natija!",
+    "headingGood": "Yaxshi natija! Barakalla!",
+    "headingDone": "Mashq yakunlandi",
+    "srsReviewed": "Xatolar bankidagi so‘zlaringiz qayta ko‘rib chiqildi.",
+    "setSubmitted": "“{title}” to‘plami bo‘yicha test topshirildi.",
+    "pointsAdded": "+{points} platforma balli qo‘shildi",
+    "pointsRule": "100% uchun 5 ball, 80–99% uchun 3 ball; har bir to‘plam bir marta ball beradi (qayta topshirishda faqat o‘sish qo‘shiladi).",
+    "pointsAlreadyPaid": "Yangi ball yo‘q: bu to‘plam bu natija uchun ball berib bo‘lgan.",
+    "pointsNeed80": "Platforma ballini olish uchun natijangiz kamida 80% bo‘lishi kerak. Yana mashq qiling!",
+    "correct": "To‘g‘ri",
+    "accuracy": "Aniqlik",
+    "mistakes": "Xatolar",
+    "wrongWords": "Xato qilingan so‘zlar (SRS bankiga qo‘shildi):",
+    "retake": "Qayta topshirish",
+    "srsBank": "Xatolar banki (SRS)",
+    "listen": "Talaffuzni tinglash",
+    "firstLetter": "Bosh harfi:",
+    "spellingPlaceholder": "Inglizcha to‘g‘ri yozilishini kiriting…",
+    "check": "Tekshirish",
+    "stop": "Mashqni to‘xtatish"
   },
   "trackDashboard": {
     "officialStandard": "Rasmiy CBT standarti",

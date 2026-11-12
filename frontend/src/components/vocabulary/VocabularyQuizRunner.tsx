@@ -41,6 +41,9 @@ export interface QuizResult {
   totalWords: number;
   percentage: number;
   pointsAwarded: number;
+  /** Points this result earns by the rule, and points this set already paid (server-provided). */
+  pointsEarned?: number;
+  pointsAlreadyAwarded?: number;
   mode: string;
   wrongAnswers: Array<{
     wordId: string;
@@ -134,7 +137,7 @@ export function VocabularyQuizRunner({
         }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}`);
         if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
-        setQuizTitle(res.setTitle || "Lug'at Testi");
+        setQuizTitle(res.setTitle || t("defaultTitle"));
       }
       setCurrentIndex(0);
       setAnswers([]);
@@ -145,7 +148,7 @@ export function VocabularyQuizRunner({
       setQuizResult(null);
     } catch (err: any) {
       if (seq !== loadSeq.current) return;
-      setErrorMsg(err.message || "Test savollarini yuklab bo'lmadi");
+      setErrorMsg(err.message || t("loadFailed"));
     } finally {
       if (seq === loadSeq.current) setIsLoading(false);
     }
@@ -232,7 +235,7 @@ export function VocabularyQuizRunner({
         onFinish(result);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Test natijasini saqlashda xatolik yuz berdi");
+      setErrorMsg(err.message || t("saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -265,11 +268,11 @@ export function VocabularyQuizRunner({
         <p className="font-medium">{errorMsg}</p>
         <div className="flex justify-center gap-3">
           <Button variant="outline" onClick={loadQuiz}>
-            Qayta urinish
+            {t("retry")}
           </Button>
           {onExit && (
             <Button variant="ghost" onClick={onExit}>
-              Chiqish
+              {t("exit")}
             </Button>
           )}
         </div>
@@ -281,13 +284,13 @@ export function VocabularyQuizRunner({
     return (
       <div className="rounded-2xl border border-border bg-surface/90 backdrop-blur-xl p-12 text-center text-fg-muted space-y-4">
         <CheckCircle2 className="h-12 w-12 text-brand mx-auto" />
-        <h3 className="text-xl font-bold text-fg">Savollar mavjud emas</h3>
+        <h3 className="text-xl font-bold text-fg">{t("emptyTitle")}</h3>
         <p className="text-sm text-fg-muted">
-          Ushbu rejimda yoki xatolar bankida hozircha mashq qilish uchun so'zlar yo'q.
+          {t("emptyBody")}
         </p>
         {onExit && (
           <Button onClick={onExit} className="bg-brand hover:bg-brand-hover text-brand-fg">
-            Lug'atga qaytish
+            {t("backToVocabulary")}
           </Button>
         )}
       </div>
@@ -308,16 +311,12 @@ export function VocabularyQuizRunner({
             <Trophy className="h-10 w-10 text-brand" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-fg">
-            {isPerfect
-              ? "Ajoyib! Mukammal Natija! 🏆"
-              : isGood
-              ? "Yaxshi Natija! Barakalla! ✨"
-              : "Mashq Yakunlandi! 🎯"}
+            {isPerfect ? t("headingPerfect") : isGood ? t("headingGood") : t("headingDone")}
           </h2>
           <p className="text-sm text-fg-muted">
             {isSrs
-              ? "Xatolar bankidagi so'zlaringiz qayta ko'rib chiqildi"
-              : `${quizTitle} to'plami bo'yicha test topshirildi`}
+              ? t("srsReviewed")
+              : t("setSubmitted", { title: quizTitle })}
           </p>
         </div>
 
@@ -326,37 +325,35 @@ export function VocabularyQuizRunner({
           <div className="rounded-xl border border-warning/30 bg-gradient-to-r from-warning/10 via-brand/10 to-warning/10 p-5 text-center space-y-1 shadow-lg shadow-brand/5">
             <div className="flex items-center justify-center gap-2 text-warning font-extrabold text-lg">
               <Sparkles className="h-5 w-5" />
-              <span>+{quizResult.pointsAwarded} PLATFORMA BALLI QO'SHILDI!</span>
+              <span>{t("pointsAdded", { points: quizResult.pointsAwarded })}</span>
               <Sparkles className="h-5 w-5" />
             </div>
             <p className="text-xs text-fg-muted">
-              {isPerfect
-                ? "100% aniqlik uchun maksimal +5 bonus balli hisobingizga o'tkazildi."
-                : "80% dan yuqori natija uchun +3 bonus balli hisobingizga o'tkazildi."}
+              {t("pointsRule")}
             </p>
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-surface-hover/40 p-4 text-center text-xs text-fg-muted">
-            Platforma ballini qo'lga kiritish uchun natijangiz kamida 80% bo'lishi kerak. Yana mashq qiling!
+            {(quizResult.pointsAlreadyAwarded ?? 0) > 0 && (quizResult.pointsEarned ?? 0) > 0 ? t("pointsAlreadyPaid") : t("pointsNeed80")}
           </div>
         )}
 
         {/* Score Breakdown Cards */}
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="rounded-xl border border-border bg-surface-hover/30 p-3">
-            <div className="text-xs uppercase tracking-wider text-fg-muted">To'g'ri</div>
+            <div className="text-xs uppercase tracking-wider text-fg-muted">{t("correct")}</div>
             <div className="text-xl font-bold text-brand mt-1">
               {quizResult.score} / {quizResult.totalWords}
             </div>
           </div>
           <div className="rounded-xl border border-border bg-surface-hover/30 p-3">
-            <div className="text-xs uppercase tracking-wider text-fg-muted">Aniqlik</div>
+            <div className="text-xs uppercase tracking-wider text-fg-muted">{t("accuracy")}</div>
             <div className="text-xl font-bold text-fg mt-1">
               {quizResult.percentage}%
             </div>
           </div>
           <div className="rounded-xl border border-border bg-surface-hover/30 p-3">
-            <div className="text-xs uppercase tracking-wider text-fg-muted">Xatolar</div>
+            <div className="text-xs uppercase tracking-wider text-fg-muted">{t("mistakes")}</div>
             <div className="text-xl font-bold text-danger mt-1">
               {quizResult.wrongAnswers?.length || 0} ta
             </div>
@@ -368,7 +365,7 @@ export function VocabularyQuizRunner({
           <div className="space-y-3 border-t border-border pt-4">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-muted flex items-center gap-1.5">
               <XCircle className="h-4 w-4 text-danger" />
-              <span>Xato Qilingan So'zlar (SRS Bankiga qo'shildi):</span>
+              <span>{t("wrongWords")}</span>
             </h4>
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {quizResult.wrongAnswers.map((w, idx) => (
@@ -400,7 +397,7 @@ export function VocabularyQuizRunner({
             className="border-border-strong text-fg hover:bg-surface-hover"
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Qayta Topshtirish
+            {t("retake")}
           </Button>
 
           <div className="flex items-center gap-2">
@@ -410,7 +407,7 @@ export function VocabularyQuizRunner({
                 variant="outline"
                 className="border-brand/40 text-brand hover:bg-brand-hover/10"
               >
-                Xatolar Banki (SRS)
+                {t("srsBank")}
               </Button>
             </Link>
 
@@ -420,7 +417,7 @@ export function VocabularyQuizRunner({
                 onClick={onExit}
                 className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
               >
-                Lug'atga Qaytish
+                {t("backToVocabulary")}
               </Button>
             ) : (
               <Link href="/vocabulary">
@@ -428,7 +425,7 @@ export function VocabularyQuizRunner({
                   type="button"
                   className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
                 >
-                  Lug'atga Qaytish
+                  {t("backToVocabulary")}
                 </Button>
               </Link>
             )}
@@ -491,8 +488,8 @@ export function VocabularyQuizRunner({
               type="button"
               onClick={() => speakWord(currentQ.prompt)}
               className="p-2 rounded-full bg-surface-hover hover:bg-border-strong text-brand hover:text-brand transition-colors shadow-sm"
-              title="Talaffuzni tinglash"
-              aria-label="Talaffuzni tinglash"
+              title={t("listen")}
+              aria-label={t("listen")}
             >
               <Volume2 className="h-5 w-5" />
             </button>
@@ -508,7 +505,7 @@ export function VocabularyQuizRunner({
         {currentQ.type === "spelling" && currentQ.firstLetter && (
           <div className="inline-flex items-center gap-1.5 text-xs text-warning bg-warning/10 px-3 py-1 rounded-lg border border-warning/20">
             <HelpCircle className="h-3.5 w-3.5" />
-            <span>Bosh harfi: <strong>{currentQ.firstLetter}...</strong></span>
+            <span>{t("firstLetter")} <strong>{currentQ.firstLetter}...</strong></span>
           </div>
         )}
       </div>
@@ -522,7 +519,7 @@ export function VocabularyQuizRunner({
               value={spellingText}
               onChange={(e) => setSpellingText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSpellingSubmit()}
-              placeholder="Inglizcha to'g'ri yozilishini kiriting..."
+              placeholder={t("spellingPlaceholder")}
               disabled={isAnswered}
               className="bg-bg/80 border-border-strong text-fg placeholder:text-fg-subtle text-base h-12 px-4 rounded-xl focus:border-brand focus:ring-brand"
             />
@@ -532,7 +529,7 @@ export function VocabularyQuizRunner({
               disabled={!spellingText.trim() || isAnswered}
               className="bg-brand hover:bg-brand-hover text-brand-fg h-12 px-6 rounded-xl font-semibold shrink-0"
             >
-              Tekshirish
+              {t("check")}
             </Button>
           </div>
         </div>
@@ -570,15 +567,15 @@ export function VocabularyQuizRunner({
             onClick={onExit}
             className="hover:text-fg transition-colors"
           >
-            Mashqni to'xtatish
+            {t("stop")}
           </button>
         ) : (
           <Link href="/vocabulary" className="hover:text-fg transition-colors">
-            Mashqni to'xtatish
+            {t("stop")}
           </Link>
         )}
         <span className="text-fg-subtle">
-          Natija: 100% uchun +5 ball, 80-99% uchun +3 ball
+          {t("pointsRule")}
         </span>
       </div>
     </div>
