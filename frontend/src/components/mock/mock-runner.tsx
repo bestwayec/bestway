@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   AlertTriangle,
   Camera,
+  Clock,
   CheckCircle2,
   Keyboard,
   Contrast,
@@ -588,13 +589,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }
 
   const guidedMultilevel = versioned && exam.type === "multilevel" && (section?.skill === "writing" || section?.skill === "speaking");
+  // Guided writing/speaking tasks have their own task tabs; the stepper reports the question in view.
+  const showQuestionPosition = Boolean(section) && !guidedMultilevel;
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
   const contrastClasses =
     simulatorMode === "cdi" && contrastTheme === "yellow_on_black"
-      ? "bg-[#09090b] text-[#fde047] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#18181b] [&_.bg-bg]:bg-[#09090b] [&_.bg-bg-subtle]:bg-[#18181b] [&_.text-fg]:text-[#fde047] [&_.text-fg-muted]:text-[#fef08a]/80 [&_.border-border]:border-amber-400/30"
+      ? "bg-[#09090b] text-[#fde047] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#18181b] [&_.bg-bg]:bg-[#09090b] [&_.bg-bg-subtle]:bg-[#18181b] [&_.text-fg]:text-[#fde047] [&_.text-fg-muted]:text-[#fef08a]/80 [&_.border-border]:border-warning/30"
       : simulatorMode === "cdi" && contrastTheme === "grey"
-      ? "bg-[#374151] text-[#f3f4f6] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#1f2937] [&_.bg-bg]:bg-[#374151] [&_.bg-bg-subtle]:bg-[#1f2937] [&_.text-fg]:text-[#f3f4f6] [&_.text-fg-muted]:text-gray-300 [&_.border-border]:border-gray-500"
+      ? "bg-[#374151] text-[#f3f4f6] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#1f2937] [&_.bg-bg]:bg-[#374151] [&_.bg-bg-subtle]:bg-[#1f2937] [&_.text-fg]:text-[#f3f4f6] [&_.text-fg-muted]:text-fg-muted [&_.border-border]:border-border-strong"
       : "";
 
   const examAudioTimestamps: AudioTimestampItem[] =
@@ -625,25 +628,21 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         {/* Yuqori panel */}
         <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               {isSingleSection && targetSkill ? (
-                <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
                     {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
                   </span>
-                  <p className="truncate font-semibold text-fg">{exam.title}</p>
+                  <p className="w-full min-w-0 truncate font-semibold text-fg sm:w-auto">{exam.title}</p>
                 </div>
               ) : (
                 <p className="truncate font-semibold text-fg">{exam.title}</p>
               )}
-              <p className="text-xs text-fg-muted">
-                {answered} / {total} {t("answered")}
-                {bulk.isPending && <Loader2 className="ml-2 inline size-3 animate-spin" />}
-              </p>
             </div>
 
             {/* Distraction-Free Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
                 <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
@@ -656,9 +655,22 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               </Button>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted" role="status" aria-live="polite">
-            <span className={cn((saveState === "error" || saveState === "offline") && "text-danger")}>{tr({idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline"}[saveState])}</span>
-            {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[44px] font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>{tr("saveRetry")}</button>}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {showQuestionPosition && (
+              <StatusChip>{tr("questionPosition", { number: activeQuestionNumber })}</StatusChip>
+            )}
+            <StatusChip>
+              {answered} / {total} {t("answered")}
+              {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+            </StatusChip>
+            {flaggedQuestions.size > 0 && (
+              <StatusChip tone="warning">
+                <Flag className="size-3.5" aria-hidden />
+                {tr("flaggedCount", { count: flaggedQuestions.size })}
+              </StatusChip>
+            )}
+            <SaveStatusChip state={saveState} label={tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline" }[saveState])} />
+            {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[44px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>{tr("saveRetry")}</button>}
           </div>
           <ResponseProgress answered={answered} total={total} />
         </div>
@@ -820,6 +832,42 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   );
 }
 
+/** Compact header chip (docs/design/DESIGN_SYSTEM.md §5). */
+export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | "warning" | "success" | "danger"; children?: React.ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm font-medium tabular-nums",
+        tone === "neutral" && "border-border bg-bg-subtle text-fg-muted",
+        tone === "warning" && "border-warning-border bg-warning-bg text-warning",
+        tone === "success" && "border-success-border bg-success-bg text-success",
+        tone === "danger" && "border-danger-border bg-danger-bg text-danger",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Save state as an icon + text chip; the only live region in the runner header. */
+export function SaveStatusChip({ state, label }: { state: "idle" | "saving" | "saved" | "error" | "offline"; label: string }) {
+  const failed = state === "error" || state === "offline";
+  return (
+    <span role="status" aria-live="polite">
+      <StatusChip tone={failed ? "danger" : state === "saving" ? "neutral" : "success"}>
+        {state === "saving" ? (
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        ) : failed ? (
+          <AlertTriangle className="size-3.5" aria-hidden />
+        ) : (
+          <CheckCircle2 className="size-3.5" aria-hidden />
+        )}
+        {label}
+      </StatusChip>
+    </span>
+  );
+}
+
 function Timer({ ms, label }: { ms: number; label: string }) {
   const safe = Math.max(0, ms);
   const total = Math.floor(safe / 1000);
@@ -836,6 +884,7 @@ function Timer({ ms, label }: { ms: number; label: string }) {
       )}
       aria-label={label}
     >
+      <Clock className="size-4" aria-hidden />
       {h > 0 ? `${pad(h)}:` : ""}
       {pad(m)}:{pad(s)}
     </span>
@@ -1272,7 +1321,7 @@ export function EssayQuestionEditor({
             className={cn(
               "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
               writingMode === "image"
-                ? "bg-emerald-600 text-white shadow-sm"
+                ? "bg-brand text-brand-fg shadow-sm"
                 : "text-fg-muted hover:bg-surface hover:text-fg"
             )}
           >
@@ -1280,7 +1329,7 @@ export function EssayQuestionEditor({
           </button>
         </div>
         {value.trim() && (
-          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+          <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
             <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
           </span>
         )}
@@ -1301,15 +1350,15 @@ export function EssayQuestionEditor({
             }}
           />
           {value.trim() && (
-            <div className="space-y-1.5 rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-emerald-400">
+            <div className="space-y-1.5 rounded-xl border border-brand/20 bg-brand-subtle/20 p-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-brand">
                 <span>📝 OCR olingan / Saqlangan matn tahriri</span>
                 <span className="font-mono text-[11px]">{value.trim().split(/\s+/).filter(Boolean).length} so&apos;z</span>
               </div>
               <Textarea
                 value={value}
                 onChange={(e) => handleWritingChange(e.target.value)}
-                className="min-h-36 resize-y font-mono text-sm leading-relaxed"
+                className="min-h-36 resize-y font-sans text-base leading-relaxed"
                 placeholder="OCR qilingan matn bu yerda chiqadi yoki bemalol o'zgartirishingiz mumkin..."
               />
             </div>
@@ -1320,7 +1369,7 @@ export function EssayQuestionEditor({
           <Textarea
             value={value}
             onChange={(e) => handleWritingChange(e.target.value)}
-            className="min-h-72 resize-y font-mono text-base leading-relaxed touch-manipulation focus-visible:border-brand sm:font-sans sm:text-sm"
+            className="min-h-72 resize-y font-sans text-base leading-relaxed touch-manipulation focus-visible:border-brand"
             aria-label={tx("writingResponseLabel", { number: q.number })}
             placeholder={tx("writingPlaceholder")}
             spellCheck={false}
@@ -1382,11 +1431,11 @@ function QuestionInput({
           className={cn(
             "inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
             isFlagged
-              ? "border-amber-500/60 bg-amber-400/20 text-amber-600 dark:text-amber-300"
+              ? "border-warning/60 bg-warning/20 text-warning"
               : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
           )}
         >
-          <Flag className={cn("size-3", isFlagged && "fill-amber-400 text-amber-500")} />
+          <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
           <span className="hidden sm:inline">{isFlagged ? "Belgilangan" : "Belgilash"}</span>
         </button>
       )}
@@ -1430,11 +1479,11 @@ function QuestionInput({
             className={cn(
               "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
               isFlagged
-                ? "border-amber-500/60 bg-amber-400/20 text-amber-600 dark:text-amber-300"
+                ? "border-warning/60 bg-warning/20 text-warning"
                 : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
             )}
           >
-            <Flag className={cn("size-3", isFlagged && "fill-amber-400 text-amber-500")} />
+            <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
             <span>{isFlagged ? "Belgilangan" : "Belgilash"}</span>
           </button>
         </div>

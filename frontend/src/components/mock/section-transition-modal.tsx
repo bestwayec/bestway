@@ -79,16 +79,16 @@ export function SectionTransitionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-bg-subtle/95 p-6 sm:p-8 shadow-2xl text-center text-white">
+      <div className="relative w-full max-w-lg rounded-3xl border border-border bg-bg-subtle/95 p-6 sm:p-8 shadow-2xl text-center text-fg">
         {/* Success badge */}
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 ring-4 ring-emerald-500/10">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand/20 text-brand ring-4 ring-brand/10">
           <CheckCircle2 className="size-8" />
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-fg">
           {completedInfo.name} bo&apos;limi yakunlandi!
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-fg-muted">
           Javoblaringiz tizimda to&apos;liq saqlandi.
         </p>
 
@@ -99,7 +99,7 @@ export function SectionTransitionModal({
               <Sparkles className="size-3.5" />
               Keyingi bo&apos;lim
             </span>
-            <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <span className="flex items-center gap-1.5 text-xs text-fg-muted">
               <Clock className="size-3.5" />
               {nextInfo.duration}
             </span>
@@ -108,22 +108,22 @@ export function SectionTransitionModal({
           <div className="mt-2 flex items-center gap-3">
             <span className="text-3xl">{nextInfo.icon}</span>
             <div>
-              <p className="text-lg font-bold text-white">{nextInfo.name}</p>
-              <p className="text-xs text-zinc-400">{nextInfo.tips}</p>
+              <p className="text-lg font-bold text-fg">{nextInfo.name}</p>
+              <p className="text-xs text-fg-muted">{nextInfo.tips}</p>
             </div>
           </div>
         </div>
 
         {/* Countdown */}
         <div className="mt-6 flex flex-col items-center">
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 text-sm text-fg-muted">
             <Clock className="size-4 animate-pulse text-brand" />
             <span>Avtomatik boshlanishiga:</span>
-            <span className="font-bold tabular-nums text-white text-base">
+            <span className="font-bold tabular-nums text-fg text-base">
               {secondsLeft} soniya
             </span>
           </div>
-          <div className="mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-zinc-800">
+          <div className="mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-surface-hover">
             <div
               className="h-full bg-brand transition-all duration-1000 ease-linear"
               style={{ width: `${(secondsLeft / 60) * 100}%` }}

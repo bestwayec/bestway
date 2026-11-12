@@ -59,10 +59,10 @@ export function SubmitConfirmModal({
           </div>
 
           {!hasQuestions ? (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500 dark:text-red-400">
+            <div className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-400">
+                <p className="font-semibold text-danger">
                   Savollar yuklanmadi yoki mavjud emas (0 / 0)
                 </p>
                 <p className="mt-1 text-fg-muted">
@@ -71,15 +71,15 @@ export function SubmitConfirmModal({
               </div>
             </div>
           ) : isAllAnswered ? (
-            <div className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand/10 p-3 text-xs text-brand">
               <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
               <p>Siz barcha topshiriqlarga to&apos;liq javob berdingiz. Ishingizni xotirjam topshirishingiz mumkin.</p>
             </div>
           ) : (
-            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+            <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-400">
+                <p className="font-semibold text-warning">
                   Siz {total} tadan {answered} ta savolga javob berdingiz.
                 </p>
                 <p className="mt-1 text-fg-muted">

@@ -324,7 +324,7 @@ export function ExamLocker({
       {/* FULLSCREEN BLOCKING OVERLAY */}
       {active && !isFullscreen && (
         <div
-          className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-black/95 p-6 text-center text-white backdrop-blur-md"
+          className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-black/95 p-6 text-center text-fg backdrop-blur-md"
           role="alertdialog"
           aria-modal="true"
         >
@@ -334,7 +334,7 @@ export function ExamLocker({
           <h2 className="text-2xl font-bold tracking-tight">
             Imtihon faqat to&apos;liq ekranda o&apos;tkaziladi
           </h2>
-          <p className="mt-2 max-w-md text-sm text-neutral-300">
+          <p className="mt-2 max-w-md text-sm text-fg-muted">
             Tizimdan chiqish yoki oynani kichraytirish taqiqlanadi. Imtihonni davom ettirish uchun to&apos;liq ekranga qayting.
           </p>
           <div className="mt-6">

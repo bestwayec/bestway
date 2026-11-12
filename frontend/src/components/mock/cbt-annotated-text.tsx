@@ -562,7 +562,7 @@ export function CbtAnnotatedText({
       {activeNotePopover && (
         <div className="mb-3 flex items-start justify-between gap-2 rounded-lg border border-amber-400/50 bg-amber-500/10 p-2.5 text-xs text-fg">
           <div>
-            <p className="font-semibold text-amber-600 dark:text-amber-300">
+            <p className="font-semibold text-amber-600">
               📝 Izoh: &ldquo;{activeNotePopover.quote}&rdquo;
             </p>
             <p className="mt-0.5 text-fg">{activeNotePopover.text}</p>
@@ -633,7 +633,7 @@ export function CbtAnnotatedText({
                   content = (
                     <mark
                       key={`mp-${sIdx}`}
-                      className="cursor-pointer rounded-xs bg-pink-300/70 px-0.5 text-slate-900 dark:bg-pink-500/40 dark:text-pink-100"
+                      className="cursor-pointer rounded-xs bg-pink-300/70 px-0.5 text-fg"
                       onClick={() => clearAnnotation(seg.text)}
                       title="Bo'yoqni o'chirish uchun bosing"
                     >
@@ -653,7 +653,7 @@ export function CbtAnnotatedText({
                           setActiveNotePopover(seg.note ?? null);
                         }}
                         title={`Izoh: ${seg.note.text}`}
-                        className="inline-flex items-center rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-300 hover:bg-amber-500/30"
+                        className="inline-flex items-center rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold text-amber-600 hover:bg-amber-500/30"
                       >
                         📝
                       </button>

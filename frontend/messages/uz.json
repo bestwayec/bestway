@@ -1014,7 +1014,9 @@
       "saveError": "Saqlanmadi",
       "saveOffline": "Internet yo‘q — javoblar serverga hali saqlanmadi",
       "saveRetry": "Qayta urinish",
-      "practiceBadge": "{skill} mashqi"
+      "practiceBadge": "{skill} mashqi",
+      "questionPosition": "{number}-savol",
+      "flaggedCount": "{count} ta belgilangan"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
