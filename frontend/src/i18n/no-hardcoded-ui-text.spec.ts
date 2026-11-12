@@ -6,8 +6,13 @@ import { describe, expect, it } from "vitest";
  * Files moved onto next-intl must not regain hard-coded Uzbek UI text (English users saw it mid-exam).
  * Comments are stripped first: code comments in Uzbek are fine. Extend FILES as more screens are migrated.
  */
-const FILES = ["src/components/mock/mock-runner.tsx", "src/components/mock/section-transition-modal.tsx"];
-const UZBEK_UI = /\b(Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*)\b/;
+const FILES = [
+  "src/components/mock/mock-runner.tsx",
+  "src/components/mock/section-transition-modal.tsx",
+  "src/components/dashboard/student-dashboard.tsx",
+  "src/components/dashboard/today-card.tsx",
+];
+const UZBEK_UI = /\b(o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 

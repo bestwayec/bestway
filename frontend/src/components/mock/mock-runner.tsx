@@ -260,7 +260,23 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     : selectedSection !== null
     ? selectedSection
     : resolvedSectionIndex;
-  const [micChecked, setMicChecked] = React.useState(false);
+  // The microphone check is done once per attempt (remembered for the browser session), not on every visit
+  // to the Speaking tab or after a reload. Read after mount so server and client render the same markup.
+  const [micChecked, setMicCheckedState] = React.useState(false);
+  const [micCheckLoaded, setMicCheckLoaded] = React.useState(false);
+  const micCheckKey = `bw_mic_checked_${attempt.id}`;
+  React.useEffect(() => {
+    try {
+      setMicCheckedState(sessionStorage.getItem(micCheckKey) === "1");
+    } catch {}
+    setMicCheckLoaded(true);
+  }, [micCheckKey]);
+  const setMicChecked = React.useCallback((value: boolean) => {
+    setMicCheckedState(value);
+    try {
+      if (value) sessionStorage.setItem(micCheckKey, "1");
+    } catch {}
+  }, [micCheckKey]);
   // Pre-submit completeness surface (STEP 19): 'submit' = final hand-in,
   // 'advance' = warning before the one-way "Next section" move.
   const [review, setReview] = React.useState<null | "submit" | "advance">(null);
@@ -705,7 +721,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
         )}
 
-        {partialPractice && !isSingleSection && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
+        {partialPractice && !isSingleSection && (section?.skill === "writing" || section?.skill === "speaking") && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
         {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
           const questions = (item.groups || (item as any).parts || []).flatMap((group: any) => group?.questions || []);
           return questions.length > 0 && questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet));
@@ -797,7 +813,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         )}
 
         <MicCheckModal
-          open={section?.skill === "speaking" && !micChecked}
+          open={section?.skill === "speaking" && micCheckLoaded && !micChecked}
           onConfirm={() => setMicChecked(true)}
           onClose={!strict ? () => setMicChecked(true) : undefined}
         />
@@ -1153,7 +1169,7 @@ function GroupBlock({
                 className="w-full bg-brand text-bg font-semibold touch-manipulation"
                 onClick={() => setReadingMobileTab("questions")}
               >
-                Savollarga o&apos;tish →
+                {tg("goToQuestions")} →
               </Button>
             </div>
           </div>

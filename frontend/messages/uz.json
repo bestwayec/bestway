@@ -868,7 +868,11 @@
     "browseExams": "Imtihonlarni ko'rish",
     "moreTools": "Qo'shimcha bo'limlar",
     "liveExamTitle": "Jonli imtihon xonasi",
-    "assignmentsTitle": "Topshiriqlar"
+    "assignmentsTitle": "Topshiriqlar",
+    "placementLinked": "Express Placement Test natijangiz profilingizga bog‘landi.",
+    "sectionInProgress": "{skill} bo‘limi jarayonda",
+    "resumeWhereLeft": "Imtihonni to‘xtagan joyingizdan davom ettiring",
+    "minutes": "{count} daqiqa"
   },
   "parent": {
     "children": "Farzandlarim",
@@ -1029,7 +1033,8 @@
       "writingModeType": "Matn terish",
       "writingModeOcr": "Qog‘oz / rasm yuklash (OCR)",
       "ocrEditTitle": "OCR olingan / saqlangan matn",
-      "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin."
+      "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin.",
+      "goToQuestions": "Savollarga o‘tish"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1145,7 +1150,9 @@
       "flagged": "Belgilandi",
       "nextSection": "Keyingi bo‘lim",
       "submitSection": "Bo‘limni topshirish",
-      "scrollHint": "Yana savollarni ko‘rish uchun suring"
+      "scrollHint": "Yana savollarni ko‘rish uchun suring",
+      "paletteShowAll": "Hammasini ko‘rsatish",
+      "paletteShowLess": "Kamroq ko‘rsatish"
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1942,5 +1949,21 @@
     "start": "Boshlash",
     "latestResult": "Oxirgi imtihon natijangiz",
     "fullBreakdown": "To'liq tahlil"
+  },
+  "navShort": {
+    "dashboard": "Asosiy",
+    "mock": "Imtihon"
+  },
+  "today": {
+    "title": "Bugun",
+    "resumeTitle": "Imtihonni davom ettiring",
+    "homeworkTitle": "{count} ta uy vazifasi bajarilishi kerak",
+    "homeworkOverdue": "{count} tasi muddati o‘tgan",
+    "wordsTitle": "Takrorlash uchun {count} ta so‘z",
+    "wordsDetail": "Xatolar bankingiz (oraliqli takrorlash)",
+    "resultPending": "Natija o‘qituvchi tekshiruvida",
+    "resultReady": "Oxirgi natija tayyor",
+    "empty": "Bugun bajariladigan ish yo‘q.",
+    "emptyAction": "Imtihonlarni ko‘rish"
   }
 }
