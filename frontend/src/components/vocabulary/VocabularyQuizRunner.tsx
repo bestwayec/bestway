@@ -128,7 +128,8 @@ export function VocabularyQuizRunner({
         }>("/v1/vocabulary/srs/quiz");
         if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
-        setQuizTitle(res.title || "Xatolar Banki (SRS)");
+        // The server title is always Uzbek ("Zaif So'zlar Banki ..."); the SRS quiz has a fixed, translated name.
+        setQuizTitle(t("srsBank"));
       } else if (setId) {
         const res = await api.get<{
           setTitle: string;

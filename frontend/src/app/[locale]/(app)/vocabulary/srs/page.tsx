@@ -1,13 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
-  AlertTriangle,
   ArrowLeft,
-  Award,
   CheckCircle2,
   Flame,
-  HelpCircle,
   Play,
   RefreshCw,
   Sparkles,
@@ -36,6 +34,8 @@ export interface SrsStatsResponse {
 }
 
 export default function VocabularySrsPage() {
+  const t = useTranslations("vocabulary");
+  const ts = useTranslations("vocabulary.srs");
   const [stats, setStats] = React.useState<SrsStatsResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -47,12 +47,12 @@ export default function VocabularySrsPage() {
     try {
       const data = await api.get<SrsStatsResponse>("/v1/vocabulary/srs/stats");
       setStats(data);
-    } catch (err: any) {
-      setErrorMsg(err.message || "SRS ma'lumotlarini yuklab bo'lmadi");
+    } catch {
+      setErrorMsg(ts("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [ts]);
 
   React.useEffect(() => {
     fetchStats();
@@ -82,7 +82,7 @@ export default function VocabularySrsPage() {
         <Link href="/vocabulary">
           <Button variant="ghost" size="sm" className="text-fg-muted hover:text-fg">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Lug'atlar ro'yxatiga qaytish
+            {t("backToCatalog")}
           </Button>
         </Link>
       </div>
@@ -93,17 +93,17 @@ export default function VocabularySrsPage() {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-warning bg-warning/10 px-2.5 py-1 rounded-md border border-warning/20">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Spaced Repetition System (SRS)</span>
+              <span>{ts("badge")}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-fg">
-              Mening Xatolar Bankim
+              {ts("title")}
             </h1>
             <p className="text-sm text-fg-muted max-w-xl">
-              Lug'at testlarida adashgan so'zlaringiz bu yerda to'planadi. Har bir so'zga 2 marta ketma-ket to'g'ri javob bersangiz, u to'liq <strong>O'zlashtirilgan</strong> hisoblanadi.
+              {ts("intro")}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -112,7 +112,7 @@ export default function VocabularySrsPage() {
               className="border-border text-fg"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              Yangilash
+              {t("refresh")}
             </Button>
 
             <Button
@@ -122,7 +122,7 @@ export default function VocabularySrsPage() {
               className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md shadow-brand/20"
             >
               <Play className="mr-2 h-4 w-4" />
-              Xatolar Mashqini Boshlash
+              {ts("start")}
             </Button>
           </div>
         </div>
@@ -132,31 +132,31 @@ export default function VocabularySrsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-6">
             <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
               <div className="text-xs uppercase tracking-wider text-warning font-semibold flex items-center justify-between">
-                <span>O'rganilayotgan Xatolar</span>
+                <span>{ts("statLearning")}</span>
                 <Flame className="h-4 w-4" />
               </div>
               <p className="text-2xl font-bold text-fg mt-2">
-                {stats.totalWeakWords} ta so'z
+                {t("words", { count: stats.totalWeakWords })}
               </p>
             </div>
 
             <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
               <div className="text-xs uppercase tracking-wider text-brand font-semibold flex items-center justify-between">
-                <span>O'zlashtirilgan (Mastered)</span>
+                <span>{ts("statMastered")}</span>
                 <CheckCircle2 className="h-4 w-4" />
               </div>
               <p className="text-2xl font-bold text-brand mt-2">
-                {stats.totalMasteredWords} ta so'z
+                {t("words", { count: stats.totalMasteredWords })}
               </p>
             </div>
 
             <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
               <div className="text-xs uppercase tracking-wider text-fg-muted font-semibold flex items-center justify-between">
-                <span>Jami Tahlil Qilingan</span>
+                <span>{ts("statTotal")}</span>
                 <Trophy className="h-4 w-4" />
               </div>
               <p className="text-2xl font-bold text-fg mt-2">
-                {stats.totalWeakWords + stats.totalMasteredWords} ta
+                {t("words", { count: stats.totalWeakWords + stats.totalMasteredWords })}
               </p>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function VocabularySrsPage() {
       {isLoading && (
         <div className="py-16 text-center text-fg-muted flex flex-col items-center gap-3">
           <RefreshCw className="h-8 w-8 animate-spin text-brand" />
-          <span>Xatolar banki yuklanmoqda...</span>
+          <span>{ts("loading")}</span>
         </div>
       )}
 
@@ -179,22 +179,24 @@ export default function VocabularySrsPage() {
       {!isLoading && stats && (
         <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-4">
           <h2 className="text-base font-bold text-fg flex items-center justify-between">
-            <span>So'zlar Ro'yxati va O'zlashtirish Holati</span>
+            <span>{ts("listTitle")}</span>
             <Badge variant="neutral" className="text-xs">
-              {stats.weakWords.length} ta so'z
+              {stats.weakWords.length < stats.totalWeakWords + stats.totalMasteredWords
+                ? ts("shownOfTotal", { shown: stats.weakWords.length, total: stats.totalWeakWords + stats.totalMasteredWords })
+                : t("words", { count: stats.weakWords.length })}
             </Badge>
           </h2>
 
           {stats.weakWords.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-12 text-center text-fg-muted space-y-3">
               <CheckCircle2 className="h-12 w-12 text-brand mx-auto" />
-              <h3 className="text-base font-bold text-fg">Hozircha xatolaringiz yo'q! 🎉</h3>
+              <h3 className="text-base font-bold text-fg">{ts("emptyTitle")}</h3>
               <p className="text-xs text-fg-muted max-w-sm mx-auto">
-                Barcha topshirilgan testlardagi so'zlar to'liq o'zlashtirilgan. Yangi lug'at to'plamlarini yechib ko'ring!
+                {ts("emptyBody")}
               </p>
               <Link href="/vocabulary">
                 <Button variant="outline" className="mt-2 text-xs">
-                  Lug'atlar katalogiga o'tish
+                  {ts("goCatalog")}
                 </Button>
               </Link>
             </div>
@@ -204,11 +206,11 @@ export default function VocabularySrsPage() {
                 <thead className="bg-bg-subtle text-fg-muted text-xs uppercase tracking-wider">
                   <tr>
                     <th className="py-2.5 px-4 font-semibold">#</th>
-                    <th className="py-2.5 px-4 font-semibold">Inglizcha So'z</th>
-                    <th className="py-2.5 px-4 font-semibold">O'zbekcha Tarjimasi</th>
-                    <th className="py-2.5 px-4 font-semibold text-center">Xatolar Soni</th>
-                    <th className="py-2.5 px-4 font-semibold text-center">Ketma-ket to'g'ri</th>
-                    <th className="py-2.5 px-4 font-semibold text-right">Holati</th>
+                    <th className="py-2.5 px-4 font-semibold">{ts("colEnglish")}</th>
+                    <th className="py-2.5 px-4 font-semibold">{ts("colUzbek")}</th>
+                    <th className="py-2.5 px-4 font-semibold text-center">{ts("colMistakes")}</th>
+                    <th className="py-2.5 px-4 font-semibold text-center">{ts("colStreak")}</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">{ts("colStatus")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -221,7 +223,7 @@ export default function VocabularySrsPage() {
                       </td>
                       <td className="py-2.5 px-4 text-center">
                         <Badge variant="danger" className="h-5 px-2 text-xs">
-                          {w.mistakeCount} marta
+                          {ts("times", { count: w.mistakeCount })}
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-center font-mono text-xs">
@@ -230,11 +232,11 @@ export default function VocabularySrsPage() {
                       <td className="py-2.5 px-4 text-right">
                         {w.isMastered ? (
                           <Badge variant="success" className="text-xs">
-                            O'zlashtirildi ✅
+                            {ts("mastered")}
                           </Badge>
                         ) : (
                           <Badge variant="warning" className="text-xs">
-                            O'rganilmoqda ⏳
+                            {ts("learning")}
                           </Badge>
                         )}
                       </td>

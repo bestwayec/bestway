@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Headphones, BookOpenText, PenLine, Mic, ArrowRight } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
 import {
   Dialog,
   DialogContent,
@@ -20,35 +21,17 @@ interface ExamResumeModalProps {
   examTitle?: string;
 }
 
-const SKILL_CONFIG: Record<
-  string,
-  { label: string; icon: React.ReactNode; desc: string; emoji: string }
-> = {
-  writing: {
-    label: "Writing",
-    icon: <PenLine className="size-5 text-warning" />,
-    desc: "Insholar va xat yozish topshiriqlari",
-    emoji: "✍️",
-  },
-  speaking: {
-    label: "Speaking",
-    icon: <Mic className="size-5 text-brand" />,
-    desc: "Og'zaki javoblar va audio yozish topshiriqlari",
-    emoji: "🗣️",
-  },
-  reading: {
-    label: "Reading",
-    icon: <BookOpenText className="size-5 text-blue-500" />,
-    desc: "Matnlarni o'qish va tahlil qilish",
-    emoji: "📖",
-  },
-  listening: {
-    label: "Listening",
-    icon: <Headphones className="size-5 text-purple-500" />,
-    desc: "Audio eshitish va savollarga javob berish",
-    emoji: "🎧",
-  },
+const KNOWN_SKILLS = ["listening", "reading", "writing", "speaking"] as const;
+type KnownSkill = (typeof KNOWN_SKILLS)[number];
+
+const SKILL_ICON: Record<KnownSkill, typeof Headphones> = {
+  listening: Headphones,
+  reading: BookOpenText,
+  writing: PenLine,
+  speaking: Mic,
 };
+
+const isKnownSkill = (skill: string): skill is KnownSkill => (KNOWN_SKILLS as readonly string[]).includes(skill);
 
 export function ExamResumeModal({
   open,
@@ -57,6 +40,9 @@ export function ExamResumeModal({
   skills,
   examTitle,
 }: ExamResumeModalProps) {
+  const t = useTranslations("mock.resumeDialog");
+  const tSkills = useTranslations("mock.skills");
+  // Locale-aware router: an English user stays on /en/... instead of bouncing through the Uzbek path.
   const router = useRouter();
 
   const handleSelectSkill = (skill: MockSkill) => {
@@ -69,21 +55,19 @@ export function ExamResumeModal({
       <DialogContent className="max-w-md p-6 bg-bg-subtle border border-border text-fg">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-fg">
-            Qaysi bo&apos;limni davom ettirmoqchisiz?
+            {t("title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-fg-muted">
-            {examTitle ? `${examTitle} — ` : ""}Istalgan bo&apos;limni tanlab, o&apos;sha yerdan davom ettirishingiz mumkin.
+            {examTitle ? t("descriptionWithTitle", { title: examTitle }) : t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 space-y-2.5">
           {skills.map((skill) => {
-            const config = SKILL_CONFIG[skill] || {
-              label: skill.toUpperCase(),
-              icon: <PenLine className="size-5 text-brand" />,
-              desc: `${skill} bo'limi`,
-              emoji: "📝",
-            };
+            const known = isKnownSkill(skill);
+            const Icon = known ? SKILL_ICON[skill] : PenLine;
+            const label = known ? tSkills(skill) : String(skill).toUpperCase();
+            const desc = known ? t(skill) : t("other", { skill: String(skill) });
             return (
               <button
                 key={skill}
@@ -92,14 +76,14 @@ export function ExamResumeModal({
                 className="group flex w-full items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition-all hover:border-brand/50 hover:bg-brand-hover/5 active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-subtle group-hover:border-brand/30">
-                    <span className="text-lg">{config.emoji}</span>
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-subtle text-fg-muted group-hover:border-brand/30 group-hover:text-brand">
+                    <Icon className="size-5" aria-hidden="true" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-fg group-hover:text-brand">
-                      {config.label}
+                      {label}
                     </h3>
-                    <p className="text-xs text-fg-muted">{config.desc}</p>
+                    <p className="text-xs text-fg-muted">{desc}</p>
                   </div>
                 </div>
                 <ArrowRight className="size-4 text-fg-muted transition-transform group-hover:translate-x-1 group-hover:text-brand" />
