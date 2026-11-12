@@ -22,6 +22,9 @@ const tabClass = (active: boolean) =>
  */
 export function MobileNav({ role }: { role: Role }) {
   const t = useTranslations("nav");
+  // Bottom-bar labels must fit five tabs at 360px; long names get a short form (sidebar keeps the full one).
+  const tShort = useTranslations("navShort");
+  const label = (key: string) => (tShort.has(key) ? tShort(key) : t(key));
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = React.useState(false);
 
@@ -52,7 +55,7 @@ export function MobileNav({ role }: { role: Role }) {
                   )}
                 />
                 <Icon className={cn("size-5 shrink-0", active ? "text-brand" : "text-fg-muted")} />
-                <span className="max-w-full truncate px-1 text-[12px] leading-tight min-[380px]:text-[14px]">{t(item.key)}</span>
+                <span className="max-w-full truncate px-1 text-[12px] leading-tight min-[380px]:text-[14px]">{label(item.key)}</span>
               </Link>
             );
           })}

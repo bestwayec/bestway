@@ -161,6 +161,7 @@ export function CbtSectionStepper({
 
   // The palette wraps into rows (a sideways-scrolling row hid everything after question 9 on phones).
   // When it holds more rows than fit, say so and keep the current question in view.
+  const [paletteExpanded, setPaletteExpanded] = React.useState(false);
   const paletteRef = React.useRef<HTMLDivElement>(null);
   const [paletteHasMore, setPaletteHasMore] = React.useState(false);
   const refreshPaletteHint = React.useCallback(() => {
@@ -252,6 +253,15 @@ export function CbtSectionStepper({
                   }
                   /{flattenedQuestions.length})
                 </span>
+                <button
+                  type="button"
+                  className="min-h-[36px] rounded-md px-2 text-[12px] font-semibold text-brand sm:hidden"
+                  aria-expanded={paletteExpanded}
+                  aria-controls="question-palette-grid"
+                  onClick={() => setPaletteExpanded((value) => !value)}
+                >
+                  {paletteExpanded ? t("paletteShowLess") : t("paletteShowAll")}
+                </button>
                 <div className="hidden sm:flex flex-wrap items-center gap-3 text-[11px]">
                   <span className="flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-brand " />
@@ -273,7 +283,12 @@ export function CbtSectionStepper({
                 ref={paletteRef}
                 onScroll={refreshPaletteHint}
                 data-testid="question-palette"
-                className="relative flex max-h-[7.25rem] flex-wrap gap-1.5 overflow-y-auto overscroll-contain px-0.5 py-1 pr-1 sm:max-h-24"
+                id="question-palette-grid"
+                className={cn(
+                  "relative flex flex-wrap gap-1.5 overflow-y-auto overscroll-contain px-0.5 py-1 pr-1 sm:max-h-24",
+                  // Phones: one row by default so the palette never covers the question; expand on demand.
+                  paletteExpanded ? "max-h-[7.25rem]" : "max-h-[2.85rem]",
+                )}
                 role="group"
                 aria-label={t("palette")}
               >

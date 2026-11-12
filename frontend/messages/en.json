@@ -868,7 +868,11 @@
     "browseExams": "Browse exams",
     "moreTools": "More sections",
     "liveExamTitle": "Live exam room",
-    "assignmentsTitle": "Assignments"
+    "assignmentsTitle": "Assignments",
+    "placementLinked": "Your Express Placement Test result is linked to your profile.",
+    "sectionInProgress": "{skill} section in progress",
+    "resumeWhereLeft": "Continue where you stopped",
+    "minutes": "{count} min"
   },
   "parent": {
     "children": "My children",
@@ -1029,7 +1033,8 @@
       "writingModeType": "Type",
       "writingModeOcr": "Upload paper photo (OCR)",
       "ocrEditTitle": "Recognised / saved text",
-      "ocrPlaceholder": "The recognised text appears here, and you can edit it."
+      "ocrPlaceholder": "The recognised text appears here, and you can edit it.",
+      "goToQuestions": "Go to questions"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1145,7 +1150,9 @@
       "flagged": "Flagged for review",
       "nextSection": "Next section",
       "submitSection": "Submit section",
-      "scrollHint": "Swipe to see more questions"
+      "scrollHint": "Swipe to see more questions",
+      "paletteShowAll": "Show all",
+      "paletteShowLess": "Show less"
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -1942,5 +1949,21 @@
     "start": "Start",
     "latestResult": "Your latest exam result",
     "fullBreakdown": "Full breakdown"
+  },
+  "navShort": {
+    "dashboard": "Home",
+    "mock": "Exams"
+  },
+  "today": {
+    "title": "Today",
+    "resumeTitle": "Continue your exam",
+    "homeworkTitle": "{count, plural, one {# homework to do} other {# homework tasks to do}}",
+    "homeworkOverdue": "{count} overdue",
+    "wordsTitle": "{count, plural, one {# word to review} other {# words to review}}",
+    "wordsDetail": "Your mistakes bank (spaced repetition)",
+    "resultPending": "Result awaiting teacher review",
+    "resultReady": "Latest result is ready",
+    "empty": "Nothing is due today.",
+    "emptyAction": "Browse exams"
   }
 }

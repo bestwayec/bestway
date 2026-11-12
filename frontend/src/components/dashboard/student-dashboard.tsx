@@ -25,6 +25,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { NamePromptCard } from "@/components/dashboard/name-prompt-card";
 import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
 import { StudentAssignmentsWidget } from "@/components/dashboard/StudentAssignmentsWidget";
+import { TodayCard } from "@/components/dashboard/today-card";
 import { useMe } from "@/hooks/use-me";
 import {
   useMockExams,
@@ -64,6 +65,7 @@ export function StudentDashboard() {
   const ts = useTranslations("student");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
+  const tm = useTranslations("mock");
 
   const { data: me, isLoading: meLoading, refetch } = useMe();
   const { data: attempts, isLoading: attemptsLoading } = useMyMockAttempts();
@@ -103,7 +105,7 @@ export function StudentDashboard() {
       .then((json) => {
         if (json?.success) {
           localStorage.removeItem("bestway_placement_result_token");
-          toast.success("Express Placement Test natijangiz profilingizga bog'landi!");
+          toast.success(ts("placementLinked"));
         }
       })
       .catch(() => {});
@@ -190,12 +192,12 @@ export function StudentDashboard() {
                 {ts("unfinishedExam")}
               </Badge>
               <h2 className="text-2xl font-bold tracking-tight text-fg">
-                {unfinishedAttempt.examTitle ?? "IELTS Mock Exam"}
+                {unfinishedAttempt.examTitle ?? ts("unfinishedExam")}
               </h2>
               <p className="text-base text-fg-muted">
                 {unfinishedAttempt.currentSkill
-                  ? `${unfinishedAttempt.currentSkill.toUpperCase()} bo'limi jarayonda`
-                  : "Imtihonni to'xtagan joyidan davom ettiring"}
+                  ? ts("sectionInProgress", { skill: tm(`skills.${unfinishedAttempt.currentSkill}`) })
+                  : ts("resumeWhereLeft")}
               </p>
             </div>
             <Button
@@ -221,7 +223,7 @@ export function StudentDashboard() {
                 {recommendedExam.title}
               </h2>
               <p className="text-base text-fg-muted">
-                {recommendedExam.type ?? "Full Mock"} • {recommendedExam.durationMinutes ?? 180} daqiqa
+                {[recommendedExam.type, recommendedExam.durationMinutes ? ts("minutes", { count: recommendedExam.durationMinutes }) : null].filter(Boolean).join(" • ")}
               </p>
             </div>
             <Button
@@ -262,6 +264,9 @@ export function StudentDashboard() {
         </Card>
       )}
 
+      {/* Today: real next actions (homework, words due, latest result); resume lives in the card above */}
+      <TodayCard skipResume />
+
       {/* 3. Pastida 3 ta oddiy raqam */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -291,7 +296,9 @@ export function StudentDashboard() {
         <LiveExamPinCard />
 
         {/* O'qituvchi topshiriqlari */}
+        <div id="assignments" className="scroll-mt-20">
         <StudentAssignmentsWidget />
+      </div>
 
         {/* Guruh, ballar va ota-ona bog'lash kodi */}
         <div className="grid gap-4 sm:grid-cols-2">
