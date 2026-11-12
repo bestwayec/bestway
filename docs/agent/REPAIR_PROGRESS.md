@@ -44,7 +44,7 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W8 Final verification | DONE (local) | Local integration of #113 + #114–#119 (unpushed, no conflicts): pytest 889 pass/4 skip; all CI PostgreSQL scripts pass (authoring 171/171, HTTP 67/67, workers); schema/manifest/deploy checks pass; lint 0 errors, vitest 81 files/466, tsc, next build pass; browser smoke 16/16; crawl 4 roles × 24 routes clean |
 | Owner decision: homework score | FIXED | PR #120: exam-linked → server-side from the student's own attempt (sum raw score / sum raw max); otherwise awaiting teacher review; teacher grade endpoint + 'Baholang' UI; client score ignored; migration core.0008. Live + browser verified |
 | Owner decision: teacher /users | FIXED | PR #121: outside own groups phone '+998 ** *** 12 34' and email masked; teacher search by name/ID only; admins unchanged; browser enrolment verified (390×844) |
-| BW-16 server side | DECISION NEEDED | No server fix without weakening reuse detection: a grace window must keep the new raw tokens in Redis and lets a stolen old token get valid tokens for its duration. Client recovery is in #119. Owner: grace window yes/no |
+| BW-16 server side | CLOSED (owner decision 2026-11-12) | No server-side grace window for now; keep the client retry of 409 REFRESH_IN_PROGRESS from #119. Previous analysis: | No server fix without weakening reuse detection: a grace window must keep the new raw tokens in Redis and lets a stolen old token get valid tokens for its duration. Client recovery is in #119. Owner: grace window yes/no |
 | W8b full browser E2E | DONE | PR #122: scripts/e2e-local/full-journey.mjs 13/13 twice (Builder → publish → student all 4 sections → reload → finish → honest pending → teacher view; vocabulary list → quiz 3/3 server-scored). Found and fixed: catalogue cache hid new exams 60 s; launcher offered Full Mock on practice exams (HTTP 400); quiz double load re-scored answers; unnamed add-word button |
 | W6b unified design system | TODO | not started (context budget); next session |
 | GATE | NOT CLOSED | waiting for W6b (CI green on all 10 PR heads #113–#122) |
@@ -117,7 +117,7 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-11, main 445f2b4)
 
 #113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation (each stacked on the previous; plain merges, no force-push). #123 = this file.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student (each stacked on the previous; plain merges, no force-push). #123 = this file.
 CI: #125 green (run 43077063817, before the main merge); later heads pending.
 
 ## Open questions (owner)
@@ -134,12 +134,13 @@ CI: #125 green (run 43077063817, before the main merge); later heads pending.
 | U0 post-merge health | DONE | PR states verified. Main CI green at 5d0b82b. Backend 900 pass / 4 skip (CI-like env), makemigrations --check clean, single leaf core.0008. Env-only test issues fixed in #127. smoke.mjs 16/16, full-journey.mjs 13/13 on main + #125/#126. A/B/W8b merged (#120/#121/#122); C BW-16 client recovery merged (#119), server grace window = owner decision; W6b 3/3 = #126. Record Mock hidden on production until authentic audio (expected) |
 | U1 audit + design direction | PARTIAL | docs/design/NEXT_LEVEL_AUDIT.md (top 25, ranked, status) in #128, based on 19 pages × 4 sizes × 2 themes + E2E runs. Not done: every route per role (parent, admin sub-pages); DESIGN_SYSTEM v2 sections for elevation/motion/data-viz palette |
 | U2 foundation v2 | PARTIAL | #128: light default (pre-paint script, no flash, verified), Inter Latin-Ext + Cyrillic faces, runner + transition i18n, i18n parity + hard-coded-text guard tests. Not done: component library additions (DataTable, Sheet, StatCard, Stepper...), dev UI gallery |
-| U3 shell | TODO | audit #16 (bottom-nav truncation) |
-| U4 student | TODO | audit #9–#11, #14, #15 |
+| Owner decision: band in short practice | DONE (#129) | No IELTS band / CEFR level for short or partial sets; raw "5/6 correct · 83%". Band only for full sections (IELTS 40 / Multilevel 35 objective questions; IELTS Writing both tasks) or a full mock; tables unchanged. Tests both ways; result view hides bands stored by older attempts. CI PostgreSQL scripts pass with CI env |
+| U3 shell | PARTIAL (#130) | Bottom-nav short labels. Not done: PageHeader pattern audit, route skeletons, 403/404 pages |
+| U4 student | PARTIAL (#130) | Today card (real data), mic check once per attempt, practice notice per tab, compact phone palette, dashboard/runner i18n leftovers, no invented 180-min duration. Not done: catalogue status chips + filters, pre-exam lobby device check, result charts, progress page |
 | U5 vocabulary | TODO | audit #20, #21, #24 |
 | U6 teacher/admin/builder | TODO | audit #19, #22 |
 | U7 public/auth/onboarding | TODO | audit #17 |
-| U8 motion/i18n/a11y | TODO | audit #8 (~200 hard-coded strings / ~60 files; extend FILES in no-hardcoded-ui-text.spec.ts) |
+| U8 motion/i18n/a11y | IN PROGRESS | Hard-coded Uzbek: runner, transition dialog, student dashboard, Today card migrated + guarded (no-hardcoded-ui-text.spec.ts). Next: catalogue (exam-launcher-modal "daqiqa"), result view ("O'tkazib yuborilgan"), vocabulary pages, mic-check modal, live PIN card |
 | U9 performance | TODO | |
 | U10 verification | TODO | all-roles crawl, axe, compressed visual baseline |
 | D1–D3 desktop | TODO | not started (order rule) |
@@ -211,7 +212,7 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-11, main 445f2b4)
 
 #113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation (each stacked on the previous; plain merges, no force-push). #123 = this file.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student (each stacked on the previous; plain merges, no force-push). #123 = this file.
 CI: #125 green (run 43077063817, before the main merge); later heads pending.
 
 ## Open questions (owner)
@@ -238,8 +239,8 @@ CI: #125 green (run 43077063817, before the main merge); later heads pending.
 | U10 verification | TODO | |
 | D1–D3 desktop | TODO | after WEBSITE GATE |
 
-Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
+Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. CI PostgreSQL scripts need CI's env: `/root/ci-like.env` (DB education_center, ALLOWED_HOSTS=testserver,localhost,127.0.0.1, CORS http://localhost:3000, no DJANGO_SETTINGS_MODULE) — with local.env they fail with 403/400 on unchanged main too. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
 
 ## NEXT STEP
 
-U3 shell (bottom-nav labels, PageHeader pattern, route skeletons/error pages) and U4 student (mic-check once per attempt, practice notice per tab, phone palette sheet height, dashboard "Today", catalogue status) on a new branch stacked on claude/u2-foundation (#128). Run with BW_WEB=http://localhost:3300.
+U8 i18n on the screens students see most (exam catalogue + launcher, result view, vocabulary catalogue/quiz/SRS, mic-check, live PIN card), extending FILES in frontend/src/i18n/no-hardcoded-ui-text.spec.ts file by file; then U4 rest (catalogue status chips/filters, pre-exam lobby device check). New branch stacked on claude/u4-student (#130). After each PR: tsc + next build + vitest + smoke (BW_WEB=http://localhost:3300) + light/dark phone/desktop screenshots; strip the Claude footer from the PR body.
