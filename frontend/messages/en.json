@@ -862,7 +862,7 @@
     "estimatedLevel": "Estimated level",
     "completedTests": "Completed tests",
     "dayStreak": "Day streak",
-    "daysCount": "{count} days",
+    "daysCount": "{count, plural, one {# day} other {# days}}",
     "noTestsYet": "No tests yet",
     "startFirstTest": "Start your first test",
     "browseExams": "Browse exams",
