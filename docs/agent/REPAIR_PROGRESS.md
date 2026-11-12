@@ -1,7 +1,9 @@
 # BestWay platform repair — progress
 
-Program branch (both repos): `claude/affectionate-bell-uid86z` (the session may push only to this branch;
-topic branches are not allowed, so PRs are split by commit range where needed).
+Program branch: `claude/affectionate-bell-uid86z` (PR #113). Since the owner asked for separate PRs, new work
+is on topic branches `claude/<topic>`, each starting from #113's head e328f58. This file is kept current on
+`claude/repair-progress` (#113 + this file only). Owner rules: no force-push (plain pushes only), commits and PR
+text authored by rozievkomiljon with no Claude attribution, reports in Uzbek.
 
 ## Verified SHAs (2026-11-11)
 
@@ -33,11 +35,19 @@ PostgreSQL 16 (CI uses 17.11), Redis 7, Python 3.13 venv (CI 3.12), Node 22 (CI 
 | W2.6 content/media | FIXED | 6 Record Mock WAVs measured 8.0 s each. Importer (run by deploy-release.sh) copied and published them. Now never copied, exam unpublished with BLOCKED list until real recordings are in MEDIA_ROOT; `--allow-placeholder-audio` only for *_local loopback DB |
 | W3 Exam Builder | PARTIAL | Browser (teacher, 1440px): create Multilevel practice → passage title/instructions/text → question with custom text + 3 custom options + answer key; keyboard text selection inside option works; Save Draft → reload → all values persisted. Backend author→publish→student→grade: verify_mock_authoring_postgres 171/171. FIXED: outline label 'No exams here yet' on empty passages; hard-coded Uzbek quick-import labels in English UI. Not done: publishing a tiny real exam end-to-end in the browser (Multilevel blueprint needs full part counts) |
 | W4 Vocabulary | PARTIAL | FIXED (P0 points integrity): quiz submit counted repeated/foreign answers and re-awarded points on every resubmit; staff got student profiles. Live: exploit 1/5=20% 0 pts; 3 perfect submits → PointsLog [5] only. FIXED: any teacher could delete any set / read any set's results+Excel (now author, group teacher or admin). FIXED: set report always 500 (unimported function). Not done: browser UX pass on vocabulary pages |
-| W5 Other functions | PARTIAL | Attendance: frontend called /attendance/group-summary/<id> (404) → dialog defaulted everyone to present and could overwrite absences; route added, live-verified |
-| W6 UI/UX | TODO | |
-| W7 Perf/security | TODO | review findings from PR #111 below |
-| W8 Final verification | TODO | |
-| GATE | TODO | |
+| W5 Other functions | DONE (2 BLOCKED on owner) | Crawl of 24 app routes × 4 roles in Chromium: before, 16 hydration errors (dashboards) + /teacher open to students/parents (403 API) → after, 0 API errors ≥400, 0 page errors (PR #117). Attendance per-day summary (PR #113). API sweep: notifications broadcast (group, 2 notified, Telegram off), read by non-owner 404; placement questions anon 200; payments scoped (student own, teacher own groups); attempt/assessment/certificate of another student 403; parent unlinked 403; student /users 403. BLOCKED: homework submit takes a client-reported score (empty POST = 100% passed), and no UI calls it → owner must define the score source. OPEN: teacher /users lists all students with phones (needed by the group enrolment picker) |
+| W5 runner points (owner decision) | FIXED | PR #114: server session, server-side replay of choices, retry idempotent, 300/day cap, staff no points. Live: too fast → 400, retry → no new ledger row, ledger [150,150] then 0 |
+| W5 vocabulary visibility (owner decision) | FIXED | PR #115: student sees own group teacher's sets, sets of own group, own sets; others 404 for detail/quiz/submit; admin all. Live verified |
+| W5 Finish 502 diagnosis | PARTIAL | PR #116: proxy logs `backend_proxy_error` + header `x-bw-proxy-error` (timeout/network/refresh_unavailable/retry_failed). Needs production logs (owner) |
+| W6 UI/UX | PARTIAL | PR #118: responsive audit (15 pages × 4 sizes, docs/design/w6 before/after + report.json). Fixed: exam runner/result overshoot on phones, staff bottom nav hiding "More", exam-track cards at 360, 2 unlabeled search inputs. Exam smoke re-run 16/16. NOT DONE: design-system consolidation (needs its own plan); small touch targets on vocabulary chips/icons |
+| W7 Perf/security | DONE (BW-16 server side open) | PR #119: /mock/exams 118→33 (student) / 141→44 (staff) queries, byte-identical output, regression test. Client retries 409 REFRESH_IN_PROGRESS. Security scripts on disposable bestway_security_w7: phase0 17 PASS, phase3 auth 22 PASS, refresh contention PASS, refresh race FAIL BW-16 (server-side, mitigated in client). Login: 31st bad attempt/min → 429 |
+| W8 Final verification | DONE (local) | Local integration of #113 + #114–#119 (unpushed, no conflicts): pytest 889 pass/4 skip; all CI PostgreSQL scripts pass (authoring 171/171, HTTP 67/67, workers); schema/manifest/deploy checks pass; lint 0 errors, vitest 81 files/466, tsc, next build pass; browser smoke 16/16; crawl 4 roles × 24 routes clean |
+| Owner decision: homework score | FIXED | PR #120: exam-linked → server-side from the student's own attempt (sum raw score / sum raw max); otherwise awaiting teacher review; teacher grade endpoint + 'Baholang' UI; client score ignored; migration core.0008. Live + browser verified |
+| Owner decision: teacher /users | FIXED | PR #121: outside own groups phone '+998 ** *** 12 34' and email masked; teacher search by name/ID only; admins unchanged; browser enrolment verified (390×844) |
+| BW-16 server side | CLOSED (owner decision 2026-11-12) | No server-side grace window for now; keep the client retry of 409 REFRESH_IN_PROGRESS from #119. Previous analysis: | No server fix without weakening reuse detection: a grace window must keep the new raw tokens in Redis and lets a stolen old token get valid tokens for its duration. Client recovery is in #119. Owner: grace window yes/no |
+| W8b full browser E2E | DONE | PR #122: scripts/e2e-local/full-journey.mjs 13/13 twice (Builder → publish → student all 4 sections → reload → finish → honest pending → teacher view; vocabulary list → quiz 3/3 server-scored). Found and fixed: catalogue cache hid new exams 60 s; launcher offered Full Mock on practice exams (HTTP 400); quiz double load re-scored answers; unnamed add-word button |
+| W6b unified design system | TODO | not started (context budget); next session |
+| GATE | NOT CLOSED | waiting for W6b (CI green on all 10 PR heads #113–#122) |
 | D1–D3 desktop | TODO | not started (order rule) |
 
 ## Findings to review (from PR #111, external fork, merged 2026-11-10)
@@ -104,15 +114,55 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI
+## PRs / CI (state 2026-11-12, main 445f2b4)
 
-- https://github.com/bestwayec/bestway/pull/113 (draft). CI run 43017256251 on 6b38720: success.
+#113–#122 and #124 MERGED. Nothing else merged since (verified 2026-11-12 via the PR list).
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 exam entry/result/quiz → #132 U8 vocabulary pages + Finish/Resume dialogs → #133 U4 catalogue chips/filter → #134 U4 device check → #135 U4 results progress charts → #136 U5 Live Vocab Battle → #137 U5 builder + mode-page set title (each stacked on the previous; plain merges, no force-push). #123 = this file.
+CI (GitHub; django, frontend, CodeQL js/python): success on #123, #125–#136 (checked 2026-11-12, second session; #125–#134 heads unchanged since the first check). #137: see the session report.
+Merge check: `git merge-tree` of #127 with the stack head is clean and the merged smoke.mjs keeps the English labels ("Start Reading", "Yes, finish"). #127's own smoke.mjs still clicks "Reading Boshlash" — only correct after the merge with #131.
 
-## Open questions
+## Open questions (owner)
 
-- Runner game (`games/runner`): score, distance and correct answers are client-reported; up to 150 points per game, no daily cap and no idempotency key (a retried POST is credited twice). Needs a product decision on a daily cap; the idempotency key needs a frontend change.
-- Vocabulary set list (`GET vocabulary/sets`) shows every group's sets to every user; confirm whether sets should be limited to the student's own group.
+- Decided: BW-16 closed, no server grace window (client retry from #119 stays). Short/partial practice: no band/CEFR, raw "N/M correct · %" (#129).
+- P2 noted, not changed: vocabulary mode page lacks the set title; /media public policy.
+- Finish 502: production logs needed. Record Mock: authentic audio needed. Reading Q7/Q15: official PDF needed. Desktop: Android keystore secret needed.
+- Backend (needs owner OK, not changed): (1) prediction_service derives per-skill IELTS bands from short practice sets (1/1 → 9.0) and an overall band for full mocks still `grading`, and invents bands for legacy tests (rawMax 40) — conflicts with #129; (2) study-plan/targeted-practice/submit gives +50 points on every submit (no cap, no idempotency); (3) vocab battle: podium points are awarded inside /next but not reported in the state; /finish does not check FINISHED and would award again; awards also go to players with 0 score; proposal: add `winners` to the FINISHED state and make /finish idempotent.
+
+## NEXT LEVEL PROGRAM (owner brief 2026-11-11: premium UI/UX, website first, then desktop)
+
+| Phase | Status | Evidence / PR |
+|---|---|---|
+| U0 post-merge health | DONE | PR states verified. Main CI green at 5d0b82b. Backend 900 pass / 4 skip (CI-like env), makemigrations --check clean, single leaf core.0008. Env-only test issues fixed in #127. smoke.mjs 16/16, full-journey.mjs 13/13 on main + #125/#126. A/B/W8b merged (#120/#121/#122); C BW-16 client recovery merged (#119), server grace window = owner decision; W6b 3/3 = #126. Record Mock hidden on production until authentic audio (expected) |
+| U1 audit + design direction | PARTIAL | docs/design/NEXT_LEVEL_AUDIT.md (top 25, ranked, status) in #128, based on 19 pages × 4 sizes × 2 themes + E2E runs. Not done: every route per role (parent, admin sub-pages); DESIGN_SYSTEM v2 sections for elevation/motion/data-viz palette |
+| U2 foundation v2 | PARTIAL | #128: light default (pre-paint script, no flash, verified), Inter Latin-Ext + Cyrillic faces, runner + transition i18n, i18n parity + hard-coded-text guard tests. Not done: component library additions (DataTable, Sheet, StatCard, Stepper...), dev UI gallery |
+| Owner decision: band in short practice | DONE (#129) | No IELTS band / CEFR level for short or partial sets; raw "5/6 correct · 83%". Band only for full sections (IELTS 40 / Multilevel 35 objective questions; IELTS Writing both tasks) or a full mock; tables unchanged. Tests both ways; result view hides bands stored by older attempts. CI PostgreSQL scripts pass with CI env |
+| U3 shell | PARTIAL (#130) | Bottom-nav short labels. Not done: PageHeader pattern audit, route skeletons, 403/404 pages |
+| U4 student | PARTIAL (#130, #133, #134, #135) | #130: Today card, mic check once per attempt, compact phone palette. #133: catalogue chips/filter from GET mock/attempts/mine (finished = submittedAt). #134: optional device check. #135: Results page progress card — finished/being-checked counts; full-mock chart on the official scale per family (IELTS 0–9, Multilevel 0–75, dots + line only between real points, no fitted trend); practice bar chart of raw N/M · % (Listening+Reading, never a band, #129); empty state without placeholder points; tooltips + table view; --chart-series token (validator); recent results table translated; prediction card + drill on tokens, drill shows server pointsAwarded. Not done: browser view of the full-mock chart with real data (no completed full mock locally; covered by jsdom test) |
+| U5 vocabulary | DONE frontend (#136, #137); backend items for owner | #136: Live Vocab Battle host/player translated + tokens; podium shows game scores only (battle state has no pointsAwarded; /finish is never called and would double-award); in-game score called pts/ochko; no example PIN; countdown from server timeLimit; question line from the word; answer tiles fixed dark category hues ≥4.5:1 + shapes. #137: VocabularyBuilder translated (labels tied to inputs), mode page shows set title/level/size from GET vocabulary/sets/:id |
+| U6 teacher/admin/builder | TODO | audit #19, #22 |
+| U7 public/auth/onboarding | TODO | audit #17 |
+| U8 motion/i18n/a11y | IN PROGRESS (#128, #130–#134) | Translated + guarded: runner, transition dialog, student dashboard, Today card, exam launcher, mic check, live PIN card, result view, vocabulary quiz, vocabulary catalogue, mode page, SRS page, Finish dialog, Resume dialog (#132), exam catalogue (#133), device check (#134). Guard regex extended with vocabulary/exam words; it found the quiz runner's Uzbek SRS title. Fixed in #132: Resume dialog used next/navigation (English users sent to the Uzbek URL); catalogue promised "+5 points" before any test; failed set list shown as "no sets"; SRS empty state claimed "all mastered". Next: Live Vocab Battle host/player (Uzbek + raw colours; podium "+10/+7/+5 awarded" text not tied to the server's pointsAwarded), VocabularyBuilder, CDLayout, teacher/builder screens |
+| U9 performance | TODO | |
+| U10 verification | TODO | all-roles crawl, axe, compressed visual baseline |
+| D1–D3 desktop | TODO | not started (order rule) |
+
+Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. CI PostgreSQL scripts need CI's env: `/root/ci-like.env` (DB education_center, ALLOWED_HOSTS=testserver,localhost,127.0.0.1, CORS http://localhost:3000, no DJANGO_SETTINGS_MODULE) — with local.env they fail with 403/400 on unchanged main too. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
+
+## Session 2026-11-12, second session (VERIFIED / UNVERIFIED)
+
+VERIFIED (local stack, synthetic accounts): per PR (#135, #136, #137) vitest (589 tests on #137), tsc, lint 0 errors, next build, key parity; smoke.mjs (#127 version, labels adapted) 16/16 and full-journey.mjs 13/13 on each head (smoke once failed step 07 on a cold dev compile, then 16/16 twice); browser light + dark, 390×844 + 1440×900, en + uz: Results page (IELTS: all grading → empty state; Multilevel: 3 real Reading practice bars 13/35 · 37%, tooltip, "12 Noy" dates), teacher /profile without the card; two full Live Vocab Battles (teacher desktop + student phone, themes swapped); builder + Smart Paste; mode page set title.
+UNVERIFIED: full-mock chart with real completed full mocks (none locally; jsdom test only); real speakers/microphones and Safari/iOS (owner tests by hand).
+Found: Chromium prints "M11 12" for short Uzbek month names via Intl — use the monthsShort/months messages (done on the Results page).
+
+## Session 2026-11-12, first session (VERIFIED / UNVERIFIED)
+
+VERIFIED (local stack, synthetic accounts): frontend vitest 92 files / 564 tests, tsc, lint 0 errors, next build on #134 head (also on #132, #133 heads); smoke.mjs 16/16 (#127 version, labels adapted) and full-journey.mjs 13/13 on #133 and #134; browser light + dark at 390×844 and 1440×900 for vocabulary catalogue/mode/SRS (en + uz), Finish and Resume dialogs, exam catalogue (student + teacher), device check (Chromium synthetic mic); Resume opens /en/mock/attempt/...?skill=reading; GitHub CI green on #123, #125–#132.
+UNVERIFIED: real speakers/microphones (only Chromium's synthetic devices); Safari/iOS audio gesture rules for the test tone; production data.
+Local note: the branch's own smoke.mjs (without #127) fails steps 06–10 after a full-journey run because full-journey switches the student to the IELTS track — data dependency, fixed by #127. Use `NEXT_LOCALE=uz` cookie to view Uzbek pages after visiting /en.
 
 ## NEXT STEP
 
-Continue W5 (other functions: homework, notifications, placement, payments with mocks) then W6 screenshots at 4 sizes.
+1. Owner merges in order: #127 · #125 → … → #134 → #135 → #136 → #137 (then #123). After the merge, check that main's smoke.mjs uses "Start Reading" / "Yes, finish" (merge-tree says it will).
+2. Owner decisions on the three backend items under Open questions; then small backend PRs (prediction bands per #129, drill points cap/idempotency, battle winners in state + idempotent /finish).
+3. U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, score-prediction card and drill texts, teacher/builder screens.
+Checks per PR: tsc + next build + vitest + lint + parity + smoke (#127 version; run it before full-journey, which switches the student to IELTS) + full-journey (BW_WEB=http://localhost:3300, BW_AUDIO synthetic WAV); browser with NEXT_LOCALE cookie for Uzbek; no Claude footer in PR bodies.
