@@ -117,8 +117,8 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-12, main 445f2b4)
 
 #113–#122 and #124 MERGED. Nothing else merged since (verified 2026-11-12 via the PR list).
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 exam entry/result/quiz → #132 U8 vocabulary pages + Finish/Resume dialogs → #133 U4 catalogue progress chips/filter → #134 U4 pre-exam device check (each stacked on the previous; plain merges, no force-push). #123 = this file.
-CI (GitHub, head SHAs): #125 892ae84, #126 242970d, #127 0e8094d, #128 dc119d1, #129 60d26fc, #130 569f94a, #131 d4cfee2, #123 04f9269 — django, frontend, CodeQL js/python all success (checked 2026-11-12). #132 ca4960e success. #133 3af28b1 success. #134 c12a102 success. #123 7b75676 success.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 exam entry/result/quiz → #132 U8 vocabulary pages + Finish/Resume dialogs → #133 U4 catalogue chips/filter → #134 U4 device check → #135 U4 results progress charts → #136 U5 Live Vocab Battle → #137 U5 builder + mode-page set title (each stacked on the previous; plain merges, no force-push). #123 = this file.
+CI (GitHub; django, frontend, CodeQL js/python): success on #123, #125–#136 (checked 2026-11-12, second session; #125–#134 heads unchanged since the first check). #137: see the session report.
 Merge check: `git merge-tree` of #127 with the stack head is clean and the merged smoke.mjs keeps the English labels ("Start Reading", "Yes, finish"). #127's own smoke.mjs still clicks "Reading Boshlash" — only correct after the merge with #131.
 
 ## Open questions (owner)
@@ -126,6 +126,7 @@ Merge check: `git merge-tree` of #127 with the stack head is clean and the merge
 - Decided: BW-16 closed, no server grace window (client retry from #119 stays). Short/partial practice: no band/CEFR, raw "N/M correct · %" (#129).
 - P2 noted, not changed: vocabulary mode page lacks the set title; /media public policy.
 - Finish 502: production logs needed. Record Mock: authentic audio needed. Reading Q7/Q15: official PDF needed. Desktop: Android keystore secret needed.
+- Backend (needs owner OK, not changed): (1) prediction_service derives per-skill IELTS bands from short practice sets (1/1 → 9.0) and an overall band for full mocks still `grading`, and invents bands for legacy tests (rawMax 40) — conflicts with #129; (2) study-plan/targeted-practice/submit gives +50 points on every submit (no cap, no idempotency); (3) vocab battle: podium points are awarded inside /next but not reported in the state; /finish does not check FINISHED and would award again; awards also go to players with 0 score; proposal: add `winners` to the FINISHED state and make /finish idempotent.
 
 ## NEXT LEVEL PROGRAM (owner brief 2026-11-11: premium UI/UX, website first, then desktop)
 
@@ -136,8 +137,8 @@ Merge check: `git merge-tree` of #127 with the stack head is clean and the merge
 | U2 foundation v2 | PARTIAL | #128: light default (pre-paint script, no flash, verified), Inter Latin-Ext + Cyrillic faces, runner + transition i18n, i18n parity + hard-coded-text guard tests. Not done: component library additions (DataTable, Sheet, StatCard, Stepper...), dev UI gallery |
 | Owner decision: band in short practice | DONE (#129) | No IELTS band / CEFR level for short or partial sets; raw "5/6 correct · 83%". Band only for full sections (IELTS 40 / Multilevel 35 objective questions; IELTS Writing both tasks) or a full mock; tables unchanged. Tests both ways; result view hides bands stored by older attempts. CI PostgreSQL scripts pass with CI env |
 | U3 shell | PARTIAL (#130) | Bottom-nav short labels. Not done: PageHeader pattern audit, route skeletons, 403/404 pages |
-| U4 student | PARTIAL (#130, #133, #134) | #130: Today card (real data), mic check once per attempt, practice notice per tab, compact phone palette, no invented 180-min duration. #133: catalogue chips In progress / Being checked / Completed from GET mock/attempts/mine only (attempts closed without submittedAt never count as finished — mock_attempts.start marks duplicate open attempts 'completed'), progress filter with counts, level row only when exams carry a level, catalogue i18n. #134: optional launcher device check (GET /health round trip, synthetic tone confirmed by the student, mic level over 2 s), never blocks start. Not done: result charts, progress page |
-| U5 vocabulary | TODO | audit #20, #21, #24 |
+| U4 student | PARTIAL (#130, #133, #134, #135) | #130: Today card, mic check once per attempt, compact phone palette. #133: catalogue chips/filter from GET mock/attempts/mine (finished = submittedAt). #134: optional device check. #135: Results page progress card — finished/being-checked counts; full-mock chart on the official scale per family (IELTS 0–9, Multilevel 0–75, dots + line only between real points, no fitted trend); practice bar chart of raw N/M · % (Listening+Reading, never a band, #129); empty state without placeholder points; tooltips + table view; --chart-series token (validator); recent results table translated; prediction card + drill on tokens, drill shows server pointsAwarded. Not done: browser view of the full-mock chart with real data (no completed full mock locally; covered by jsdom test) |
+| U5 vocabulary | DONE frontend (#136, #137); backend items for owner | #136: Live Vocab Battle host/player translated + tokens; podium shows game scores only (battle state has no pointsAwarded; /finish is never called and would double-award); in-game score called pts/ochko; no example PIN; countdown from server timeLimit; question line from the word; answer tiles fixed dark category hues ≥4.5:1 + shapes. #137: VocabularyBuilder translated (labels tied to inputs), mode page shows set title/level/size from GET vocabulary/sets/:id |
 | U6 teacher/admin/builder | TODO | audit #19, #22 |
 | U7 public/auth/onboarding | TODO | audit #17 |
 | U8 motion/i18n/a11y | IN PROGRESS (#128, #130–#134) | Translated + guarded: runner, transition dialog, student dashboard, Today card, exam launcher, mic check, live PIN card, result view, vocabulary quiz, vocabulary catalogue, mode page, SRS page, Finish dialog, Resume dialog (#132), exam catalogue (#133), device check (#134). Guard regex extended with vocabulary/exam words; it found the quiz runner's Uzbek SRS title. Fixed in #132: Resume dialog used next/navigation (English users sent to the Uzbek URL); catalogue promised "+5 points" before any test; failed set list shown as "no sets"; SRS empty state claimed "all mastered". Next: Live Vocab Battle host/player (Uzbek + raw colours; podium "+10/+7/+5 awarded" text not tied to the server's pointsAwarded), VocabularyBuilder, CDLayout, teacher/builder screens |
@@ -147,7 +148,13 @@ Merge check: `git merge-tree` of #127 with the stack head is clean and the merge
 
 Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. CI PostgreSQL scripts need CI's env: `/root/ci-like.env` (DB education_center, ALLOWED_HOSTS=testserver,localhost,127.0.0.1, CORS http://localhost:3000, no DJANGO_SETTINGS_MODULE) — with local.env they fail with 403/400 on unchanged main too. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
 
-## Session 2026-11-12 (VERIFIED / UNVERIFIED)
+## Session 2026-11-12, second session (VERIFIED / UNVERIFIED)
+
+VERIFIED (local stack, synthetic accounts): per PR (#135, #136, #137) vitest (589 tests on #137), tsc, lint 0 errors, next build, key parity; smoke.mjs (#127 version, labels adapted) 16/16 and full-journey.mjs 13/13 on each head (smoke once failed step 07 on a cold dev compile, then 16/16 twice); browser light + dark, 390×844 + 1440×900, en + uz: Results page (IELTS: all grading → empty state; Multilevel: 3 real Reading practice bars 13/35 · 37%, tooltip, "12 Noy" dates), teacher /profile without the card; two full Live Vocab Battles (teacher desktop + student phone, themes swapped); builder + Smart Paste; mode page set title.
+UNVERIFIED: full-mock chart with real completed full mocks (none locally; jsdom test only); real speakers/microphones and Safari/iOS (owner tests by hand).
+Found: Chromium prints "M11 12" for short Uzbek month names via Intl — use the monthsShort/months messages (done on the Results page).
+
+## Session 2026-11-12, first session (VERIFIED / UNVERIFIED)
 
 VERIFIED (local stack, synthetic accounts): frontend vitest 92 files / 564 tests, tsc, lint 0 errors, next build on #134 head (also on #132, #133 heads); smoke.mjs 16/16 (#127 version, labels adapted) and full-journey.mjs 13/13 on #133 and #134; browser light + dark at 390×844 and 1440×900 for vocabulary catalogue/mode/SRS (en + uz), Finish and Resume dialogs, exam catalogue (student + teacher), device check (Chromium synthetic mic); Resume opens /en/mock/attempt/...?skill=reading; GitHub CI green on #123, #125–#132.
 UNVERIFIED: real speakers/microphones (only Chromium's synthetic devices); Safari/iOS audio gesture rules for the test tone; production data.
@@ -155,8 +162,7 @@ Local note: the branch's own smoke.mjs (without #127) fails steps 06–10 after 
 
 ## NEXT STEP
 
-1. Owner merges in order: #127 · #125 → #126 → #128 → #129 → #130 → #131 → #132 → #133 → #134 (then #123).
-2. U4 rest: result charts and a progress page from real attempts (rawScores / sectionBands only where #129 allows bands).
-3. U5 vocabulary: Live Vocab Battle host/player i18n + tokens (game answer colours stay as categories), podium points from the server's pointsAwarded; VocabularyBuilder i18n; set title on the mode page.
-4. Then U6 → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3).
-Checks per PR: tsc + next build + vitest + lint + smoke (#127 version) + full-journey (BW_WEB=http://localhost:3300, BW_AUDIO synthetic WAV); strip the Claude footer from every PR body.
+1. Owner merges in order: #127 · #125 → … → #134 → #135 → #136 → #137 (then #123). After the merge, check that main's smoke.mjs uses "Start Reading" / "Yes, finish" (merge-tree says it will).
+2. Owner decisions on the three backend items under Open questions; then small backend PRs (prediction bands per #129, drill points cap/idempotency, battle winners in state + idempotent /finish).
+3. U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, score-prediction card and drill texts, teacher/builder screens.
+Checks per PR: tsc + next build + vitest + lint + parity + smoke (#127 version; run it before full-journey, which switches the student to IELTS) + full-journey (BW_WEB=http://localhost:3300, BW_AUDIO synthetic WAV); browser with NEXT_LOCALE cookie for Uzbek; no Claude footer in PR bodies.
