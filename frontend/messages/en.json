@@ -1270,6 +1270,29 @@
       "writing": "Essay and letter writing tasks",
       "speaking": "Spoken answers recorded as audio",
       "other": "{skill} section"
+    },
+    "catalog": {
+      "level": "Level:",
+      "levelFilter": "Filter by level",
+      "statusFilter": "Filter by your progress",
+      "statusAll": "All ({count})",
+      "statusNotStarted": "Not started ({count})",
+      "statusInProgress": "In progress ({count})",
+      "statusDone": "Finished ({count})",
+      "chipInProgress": "In progress",
+      "chipChecking": "Being checked",
+      "chipCompleted": "Completed",
+      "noMatch": "No exams match this filter.",
+      "liveTab": "Live Exam Room (PIN)",
+      "preparing": "Being prepared",
+      "deleted": "Exam deleted.",
+      "deleteLabel": "Delete exam",
+      "deleteTitle": "Delete this exam?",
+      "deleteBody": "“{title}” will be deleted permanently. This cannot be undone.",
+      "gradingProgram": "Program:",
+      "gradingProgramAll": "All programs",
+      "gradingProgramLabel": "Filter submissions by exam program",
+      "gradingLoadFailed": "Submissions could not be loaded."
     }
   },
   "wizard": {

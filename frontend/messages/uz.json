@@ -1270,6 +1270,29 @@
       "writing": "Insho va xat yozish topshiriqlari",
       "speaking": "Og'zaki javoblar audio sifatida yoziladi",
       "other": "{skill} bo'limi"
+    },
+    "catalog": {
+      "level": "Daraja:",
+      "levelFilter": "Daraja bo'yicha saralash",
+      "statusFilter": "Natijangiz bo'yicha saralash",
+      "statusAll": "Hammasi ({count})",
+      "statusNotStarted": "Boshlanmagan ({count})",
+      "statusInProgress": "Davom etmoqda ({count})",
+      "statusDone": "Tugagan ({count})",
+      "chipInProgress": "Davom etmoqda",
+      "chipChecking": "Tekshirilmoqda",
+      "chipCompleted": "Tugagan",
+      "noMatch": "Bu saralash bo'yicha imtihon yo'q.",
+      "liveTab": "Live Exam Room (PIN)",
+      "preparing": "Tayyorlanmoqda",
+      "deleted": "Imtihon o'chirildi.",
+      "deleteLabel": "Imtihonni o'chirish",
+      "deleteTitle": "Imtihonni o'chirishni tasdiqlang",
+      "deleteBody": "“{title}” imtihonini butunlay o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.",
+      "gradingProgram": "Dastur:",
+      "gradingProgramAll": "Barcha dasturlar",
+      "gradingProgramLabel": "Topshiriqlarni dastur bo'yicha saralash",
+      "gradingLoadFailed": "Tekshiruvlarni yuklab bo'lmadi."
     }
   },
   "wizard": {

@@ -56,6 +56,7 @@ import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/type
 import { cn, formatMoney, formatPhone } from "@/lib/utils";
 import { MultilevelReadiness } from "./multilevel-student-ui";
 import { availablePracticeSkills } from "@/lib/mock-practice";
+import { examProgress, matchesProgressFilter, type ExamProgress, type ProgressFilter } from "@/lib/exam-progress";
 
 const SKILL_ICON: Record<MockSkill, typeof Headphones> = {
   listening: Headphones,
@@ -69,8 +70,16 @@ type LevelFilter = (typeof LEVELS)[number];
 
 type Tab = "exams" | "live" | "grading" | "purchases";
 
+const PROGRESS_FILTERS: Array<{ id: ProgressFilter; key: "statusAll" | "statusNotStarted" | "statusInProgress" | "statusDone" }> = [
+  { id: "all", key: "statusAll" },
+  { id: "not_started", key: "statusNotStarted" },
+  { id: "in_progress", key: "statusInProgress" },
+  { id: "done", key: "statusDone" },
+];
+
 export function MockExamsView() {
   const t = useTranslations("mock");
+  const tCat = useTranslations("mock.catalog");
   const tc = useTranslations("common");
   const { data: me } = useMe();
   const role = me?.user.role;
@@ -80,6 +89,7 @@ export function MockExamsView() {
   const scope = useStudentProgramScope();
 
   const [levelFilter, setLevelFilter] = React.useState<LevelFilter>("all");
+  const [progressFilter, setProgressFilter] = React.useState<ProgressFilter>("all");
   const [tab, setTab] = React.useState<Tab>("exams");
 
   const examsQ = useMockExams(
@@ -123,7 +133,7 @@ export function MockExamsView() {
   }
 
   // Filter exams by selected level
-  const displayedExams = React.useMemo(() => {
+  const levelExams = React.useMemo(() => {
     const list = examsQ.data ?? [];
     if (levelFilter === "all") return list;
     return list.filter((e) => {
@@ -134,6 +144,30 @@ export function MockExamsView() {
       return false;
     });
   }, [examsQ.data, levelFilter]);
+
+  // The student's own progress per exam, from their attempts only (no attempts data -> no chips, no filter).
+  const myAttempts = attemptsQ.data;
+  const progressById = React.useMemo(() => {
+    const map = new Map<string, ExamProgress>();
+    if (!isStudent || !myAttempts) return map;
+    for (const e of levelExams) map.set(e.id, examProgress(myAttempts, e.id));
+    return map;
+  }, [isStudent, myAttempts, levelExams]);
+  const showProgress = isStudent && !!myAttempts && myAttempts.length > 0;
+  const progressCounts = React.useMemo(() => {
+    const counts: Record<ProgressFilter, number> = { all: 0, not_started: 0, in_progress: 0, done: 0 };
+    for (const p of progressById.values()) {
+      counts.all += 1;
+      for (const f of ["not_started", "in_progress", "done"] as const) if (matchesProgressFilter(p, f)) counts[f] += 1;
+    }
+    return counts;
+  }, [progressById]);
+  const displayedExams = React.useMemo(() => {
+    if (!showProgress || progressFilter === "all") return levelExams;
+    return levelExams.filter((e) => matchesProgressFilter(progressById.get(e.id) ?? "not_started", progressFilter));
+  }, [levelExams, progressById, progressFilter, showProgress]);
+  // Levels only mean something when exams carry one (Multilevel); IELTS lists hide the row.
+  const showLevels = levelFilter !== "all" || (examsQ.data ?? []).some((e) => e.level || e.practiceLevel);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -155,12 +189,14 @@ export function MockExamsView() {
       {isStudent && <ExamTrackSelector />}
 
       {/* Daraja filtri (A1–C1) */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-fg mr-1">Daraja:</span>
+      {showLevels && (
+      <div role="group" aria-label={tCat("levelFilter")} className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-fg mr-1">{tCat("level")}</span>
         {LEVELS.map((lvl) => (
           <button
             key={lvl}
             type="button"
+            aria-pressed={levelFilter === lvl}
             onClick={() => setLevelFilter(lvl)}
             className={cn(
               "min-h-[44px] px-4 rounded-[8px] border text-sm font-medium transition-colors",
@@ -169,16 +205,39 @@ export function MockExamsView() {
                 : "border-border bg-surface text-fg hover:border-brand/40"
             )}
           >
-            {lvl === "all" ? "Hammasi" : lvl}
+            {lvl === "all" ? tc("all") : lvl}
           </button>
         ))}
       </div>
+      )}
+
+      {/* Talabaning o'z natijasi bo'yicha filtr: faqat serverdagi urinishlardan */}
+      {showProgress && tab === "exams" && !scope.needsProgramSelection && (
+        <div role="group" aria-label={tCat("statusFilter")} className="flex gap-2 overflow-x-auto pb-1">
+          {PROGRESS_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              aria-pressed={progressFilter === f.id}
+              onClick={() => setProgressFilter(f.id)}
+              className={cn(
+                "min-h-[44px] shrink-0 rounded-full border px-4 text-sm font-medium tabular-nums transition-colors",
+                progressFilter === f.id
+                  ? "border-brand bg-brand-subtle text-brand-subtle-fg"
+                  : "border-border bg-surface text-fg-muted hover:border-brand/40 hover:text-fg"
+              )}
+            >
+              {tCat(f.key, { count: progressCounts[f.id] })}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
             <TabsTrigger value="exams">{t("title")}</TabsTrigger>
-            <TabsTrigger value="live">Live Exam Room (PIN)</TabsTrigger>
+            <TabsTrigger value="live">{tCat("liveTab")}</TabsTrigger>
             <TabsTrigger value="grading">{t("grading")}</TabsTrigger>
             {isOffice && <TabsTrigger value="purchases">{t("purchases")}</TabsTrigger>}
           </TabsList>
@@ -209,7 +268,7 @@ export function MockExamsView() {
           ))}
         </div>
       ) : displayedExams.length === 0 ? (
-        <EmptyState icon={ClipboardCheck} title={t("noExams")} />
+        <EmptyState icon={ClipboardCheck} title={levelFilter !== "all" || (showProgress && progressFilter !== "all") ? tCat("noMatch") : t("noExams")} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {displayedExams.map((e) => (
@@ -219,6 +278,7 @@ export function MockExamsView() {
               isStaff={isStaff}
               isStudent={isStudent}
               attempts={attemptsQ.data ?? []}
+              progress={progressById.get(e.id)}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
               onStart={(mode, skills, simulatorMode) => onStart(e.id, mode, skills, simulatorMode)}
@@ -238,6 +298,7 @@ export function MockExamCard({
   isStaff,
   isStudent,
   attempts,
+  progress,
   buying,
   onBuy,
   onStart,
@@ -247,12 +308,15 @@ export function MockExamCard({
   isStaff: boolean;
   isStudent: boolean;
   attempts: MockAttemptSummary[];
+  /** Student's own progress (from their attempts); undefined -> no chip. */
+  progress?: ExamProgress;
   buying: boolean;
   onBuy: () => void;
   onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) => void;
   onDelete?: () => Promise<unknown> | void;
 }) {
   const t = useTranslations("mock");
+  const tCat = useTranslations("mock.catalog");
   const tc = useTranslations("common");
   const [launcherOpen, setLauncherOpen] = React.useState(false);
   const [resumeOpen, setResumeOpen] = React.useState(false);
@@ -277,7 +341,7 @@ export function MockExamCard({
     setDeleting(true);
     try {
       await onDelete();
-      toast.success("Imtihon muvaffaqiyatli o'chirildi");
+      toast.success(tCat("deleted"));
       setConfirmDeleteOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : tc("unknownError"));
@@ -305,6 +369,9 @@ export function MockExamCard({
             </Badge>
           )}
           {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
+          {progress === "in_progress" && <Badge variant="info">{tCat("chipInProgress")}</Badge>}
+          {progress === "checking" && <Badge variant="warning">{tCat("chipChecking")}</Badge>}
+          {progress === "completed" && <Badge variant="success">{tCat("chipCompleted")}</Badge>}
           {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
           {isStaff && (
             <Badge variant={exam.isPublished ? "success" : "warning"}>
@@ -344,10 +411,10 @@ export function MockExamCard({
             return (
               <span
                 key={s}
-                className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted capitalize"
+                className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
               >
                 <Icon className="size-3.5" />
-                {s}
+                {t(`skills.${s}`)}
               </span>
             );
           })}
@@ -369,8 +436,8 @@ export function MockExamCard({
               type="button"
               variant="outline"
               size="icon-sm"
-              aria-label="Imtihonni o'chirish"
-              title="Imtihonni o'chirish"
+              aria-label={tCat("deleteLabel")}
+              title={tCat("deleteLabel")}
               onClick={() => setConfirmDeleteOpen(true)}
               className="min-h-[44px] min-w-[44px] border-danger/30 text-danger hover:bg-danger/10"
             >
@@ -379,9 +446,9 @@ export function MockExamCard({
             <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Imtihonni o&apos;chirishni tasdiqlang</DialogTitle>
+                  <DialogTitle>{tCat("deleteTitle")}</DialogTitle>
                   <DialogDescription>
-                    &ldquo;{exam.title}&rdquo; imtihonini butunlay o&apos;chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo&apos;lmaydi.
+                    {tCat("deleteBody", { title: exam.title })}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -397,7 +464,7 @@ export function MockExamCard({
                     loading={deleting}
                     onClick={() => void handleConfirmDelete()}
                   >
-                    O&apos;chirish
+                    {tc("delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -406,7 +473,7 @@ export function MockExamCard({
         ) : multilevel && exam.ready === false && availablePracticeSkills(exam).length === 0 && !inProgress ? (
           <Button className="w-full min-h-[44px]" disabled>
             <Play className="fill-current mr-1.5 size-4" />
-            Tayyorlanmoqda
+            {tCat("preparing")}
           </Button>
         ) : inProgress ? (
           <>
@@ -487,6 +554,7 @@ export function MockExamCard({
 
 function GradingPanel() {
   const t = useTranslations("mock");
+  const tCat = useTranslations("mock.catalog");
   const ta = useTranslations("assessment");
   const [program, setProgram] = React.useState<"all" | "IELTS" | "MULTILEVEL">("all");
   const [status, setStatus] = React.useState<"grading" | "completed">("grading");
@@ -500,14 +568,14 @@ function GradingPanel() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-medium">
-          Dastur:
+          {tCat("gradingProgram")}
           <select
-            aria-label="Filter submissions by exam program"
+            aria-label={tCat("gradingProgramLabel")}
             value={program}
             onChange={(e) => setProgram(e.target.value as typeof program)}
             className="ml-2 rounded-[8px] border border-border bg-surface p-2 text-sm"
           >
-            <option value="all">Barcha dasturlar</option>
+            <option value="all">{tCat("gradingProgramAll")}</option>
             <option value="IELTS">IELTS</option>
             <option value="MULTILEVEL">Multilevel</option>
           </select>
@@ -526,7 +594,7 @@ function GradingPanel() {
       </div>
 
       {isLoading && <Skeleton className="h-16 rounded-[12px]" />}
-      {isError && <p role="alert" className="text-sm text-danger">Tekshiruvlarni yuklab bo&apos;lmadi.</p>}
+      {isError && <p role="alert" className="text-sm text-danger">{tCat("gradingLoadFailed")}</p>}
       {!isLoading && !isError && attempts.length === 0 && (
         <EmptyState icon={CheckCircle2} title={t("noAttempts")} />
       )}
