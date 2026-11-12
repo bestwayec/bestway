@@ -158,6 +158,16 @@ def parse_band_table(raw):
     return sorted(result.items(), reverse=True)
 
 
+# Owner decision 2026-11-12: a band (IELTS) or a standard score / CEFR level (Multilevel) is shown only for
+# a full section, i.e. one with the official number of objective questions. A short or partial set gets its
+# raw result only (e.g. 5/6 correct): scaling 1/1 to 40/40 would claim "Band 9.0". Tables are unchanged.
+OFFICIAL_OBJECTIVE_QUESTIONS = {'ielts': 40, 'multilevel': 35}
+
+
+def is_full_objective_section(exam_family, question_count):
+    return question_count == OFFICIAL_OBJECTIVE_QUESTIONS.get(exam_family)
+
+
 def band_from_raw(skill, exam_type, score, maximum, tables=None, attempted=True):
     if maximum<=0 or not attempted: return 0
     key = 'listening' if skill=='listening' else 'readingGeneral' if exam_type=='ielts_general' else 'readingAcademic'
@@ -202,12 +212,12 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
     versioned = versioned and not ielts
     for section in sections:
         skill = section['skill']; auto = skill in ('listening','reading')
-        agg = dict(skill=skill,score=0,max=0,pending=False,answered=0,tasks=[])
+        agg = dict(skill=skill,score=0,max=0,pending=False,answered=0,tasks=[],count=0)
         for group in section['groups']:
             qs = group['questions']; group_scores = []
             duplicate = duplicate_matching(qs,{qid:a.get('response','') for qid,a in answers.items()}) if group.get('optionsReusable') is False else set()
             for q in qs:
-                agg['max'] += q['points']; answer = answers.get(q['id'])
+                agg['max'] += q['points']; agg['count'] += 1; answer = answers.get(q['id'])
                 if auto:
                     if answer and trim(answer.get('response','')): agg['answered'] += 1
                     matches = bool(answer) and q['id'] not in duplicate and correct(q['type'],answer['response'],q.get('correctAnswers') or [],word_limit=q.get('wordLimit'),accepted_variants=q.get('acceptedVariants'),answer_rule=q.get('answerRule'),options=q.get('options'))
@@ -240,12 +250,19 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
             if a['answered'] == 0 and not a['score']:
                 bands[skill] = None
                 continue
-            if skill in ('listening','reading'): bands[skill] = band_from_raw(skill,exam_type,a['score'],a['max'],tables,a['answered']>0)
+            if skill in ('listening','reading'):
+                bands[skill] = (band_from_raw(skill,exam_type,a['score'],a['max'],tables,a['answered']>0)
+                    if is_full_objective_section('ielts', a['count']) else None)
             elif not a['pending']:
                 tasks = a['tasks']; t1 = next((s for t,s in tasks if t=='essay_task1'),None); t2 = next((s for t,s in tasks if t=='essay_task2'),None)
-                bands[skill] = round_half((t1+2*t2)/3) if skill=='writing' and t1 is not None and t2 is not None else round_half(sum(s for _,s in tasks)/len(tasks)) if tasks else 0
+                if skill == 'writing':
+                    # A Writing band needs both tasks (official weighting); one task alone is practice.
+                    bands[skill] = round_half((t1+2*t2)/3) if t1 is not None and t2 is not None else None
+                else:
+                    bands[skill] = round_half(sum(s for _,s in tasks)/len(tasks)) if tasks else 0
         valid_bands = [b for b in bands.values() if b is not None]
-        if not pending and valid_bands:
+        short = any(a['skill'] in ('listening','reading') and a['answered'] and not is_full_objective_section('ielts', a['count']) for a in aggregates)
+        if not pending and valid_bands and not short:
             divisor = 4 if full_test else len(valid_bands)
             overall = round_half(sum(valid_bands)/divisor); cefr = cefr_band(overall)
     elif versioned:
@@ -255,13 +272,17 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
             skill = a['skill']
             if a['answered'] == 0 and not a['score']:
                 item = dict(rawScore=0, rawMax=a['max'], estimatedStandardScore=None, scoreMethod='SKIPPED', scoreVersion=ESTIMATE_VERSION, isOfficial=False, level='NOT_TAKEN', status='SKIPPED')
+            elif skill in ('listening','reading') and not is_full_objective_section('multilevel', a['count']):
+                item = dict(rawScore=a['score'], rawMax=a['max'], estimatedStandardScore=None, scoreMethod='RAW_ONLY',
+                    scoreVersion=None, isOfficial=False, level=None, cefrLevel=None, status='COMPLETED', reason='SHORT_SECTION')
             else:
                 item = estimate_objective(a['score'],a['max']) if skill in ('listening','reading') else dict(rawScore=a['score'],rawMax=a['max'],estimatedStandardScore=convert_expert(skill,a['score']),scoreMethod='ESTIMATED',scoreVersion=ESTIMATE_VERSION,isOfficial=False,gradingSource='HUMAN')
                 item['level'] = multilevel_level(item['estimatedStandardScore'])
                 item['cefrLevel'] = item['level']
                 item['status'] = 'COMPLETED'
             standards[skill] = item
-        if not pending:
+        short = any(item.get('scoreMethod') == 'RAW_ONLY' for item in standards.values())
+        if not pending and not short:
             completed_scores = [standards[s]['estimatedStandardScore'] for s in standards if standards[s].get('estimatedStandardScore') is not None]
             if completed_scores:
                 overall_score = round(sum(completed_scores) / len(completed_scores), 1)
