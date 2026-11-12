@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
-  Award,
   BookA,
   BookOpen,
-  CheckCircle2,
   ChevronRight,
   FileSpreadsheet,
   Layers,
@@ -15,7 +14,6 @@ import {
   RefreshCw,
   Search,
   Sparkles,
-  Trophy,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -49,12 +47,15 @@ export interface SrsStats {
   weakWords: any[];
 }
 
-const LEVELS = ["Hammasi", "A1", "A2", "B1", "B2", "C1", "C2", "IELTS", "MULTILEVEL"];
+const ALL_LEVELS = "ALL";
+const LEVELS = [ALL_LEVELS, "A1", "A2", "B1", "B2", "C1", "C2", "IELTS", "MULTILEVEL"];
 
 export function VocabularyCatalogView({ userRole = "student" }: { userRole?: string }) {
+  const t = useTranslations("vocabulary");
+  const tc = useTranslations("vocabulary.catalog");
   const [sets, setSets] = React.useState<VocabularySetSummary[]>([]);
   const [srsStats, setSrsStats] = React.useState<SrsStats | null>(null);
-  const [selectedLevel, setSelectedLevel] = React.useState("Hammasi");
+  const [selectedLevel, setSelectedLevel] = React.useState(ALL_LEVELS);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -78,16 +79,19 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
       if (setsRes.status === "fulfilled") {
         setSets(setsRes.value || []);
+      } else {
+        // Without this the page said "no vocabulary sets found" when the request failed.
+        setErrorMsg(tc("loadFailed"));
       }
       if (statsRes.status === "fulfilled") {
         setSrsStats(statsRes.value || null);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Lug'atlar ro'yxatini yuklab bo'lmadi");
+    } catch {
+      setErrorMsg(tc("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tc]);
 
   React.useEffect(() => {
     fetchData();
@@ -95,7 +99,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
   const filteredSets = React.useMemo(() => {
     return sets.filter((s) => {
-      const matchesLevel = selectedLevel === "Hammasi" || s.level === selectedLevel;
+      const matchesLevel = selectedLevel === ALL_LEVELS || s.level === selectedLevel;
       const matchesSearch =
         !searchQuery.trim() ||
         s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -115,16 +119,16 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
-                Lug'at Boyligi va So'z Mashqlari
+                {tc("title")}
               </h1>
               <p className="text-sm text-fg-muted mt-0.5">
-                Mavzulashtirilgan leksika, audio talaffuz, SRS xatolar banki va +5 ballik gamifikatsiya
+                {tc("subtitle")}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -132,17 +136,18 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             className="border-warning/30 text-warning hover:bg-warning/10"
           >
             <Gamepad2 className="mr-2 h-4 w-4" />
-            PIN Bilan Kirish
+            {tc("joinWithPin")}
           </Button>
 
           {isTeacherOrAdmin && sets.length > 0 && (
             <Button
               type="button"
               onClick={() => setBattleSetId(sets[0].id)}
-              className="bg-warning hover:bg-warning text-white font-medium shadow-md shadow-warning/20"
+              variant="outline"
+              className="border-warning-border bg-warning-bg text-warning hover:bg-warning/15 font-medium"
             >
               <Zap className="mr-2 h-4 w-4" />
-              Live Vocab Battle
+              {tc("liveBattle")}
             </Button>
           )}
 
@@ -154,7 +159,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             className="border-border text-fg"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Yangilash
+            {t("refresh")}
           </Button>
 
           {isTeacherOrAdmin && (
@@ -164,7 +169,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md shadow-brand/20"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Yangi Lug'at Yaratish
+              {tc("createSet")}
             </Button>
           )}
         </div>
@@ -177,13 +182,13 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
               <Zap className="h-3.5 w-3.5 text-brand animate-pulse" />
-              <span>Yangi 3D Gamifikatsiya • Subway Vocab Runner</span>
+              <span>{tc("runnerBadge")}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-fg tracking-tight flex items-center gap-2">
-              ⚡️ Subway Vocab Runner — So'zlarni yugurib o'rganing!
+              {tc("runnerTitle")}
             </h2>
             <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">
-              3 yo'lakli dinamik yugurish trassasi, 60 FPS silliq harakat, CEFR (A1–C1) so'z boyligi, Irregular Verbs va kollokatsiyalar! To'g'ri darvozani tanlang, xavfli to'siqlardan sakrab o'ting va o'z rekordingizni o'rnating.
+              {tc("runnerBody")}
             </p>
           </div>
 
@@ -194,7 +199,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                 className="bg-brand hover:bg-brand-hover text-brand-fg font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-brand/25 transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
               >
                 <Gamepad2 className="h-5 w-5" />
-                <span>Hoziroq O'ynash</span>
+                <span>{tc("playNow")}</span>
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
@@ -211,21 +216,21 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             </div>
             <div>
               <h3 className="text-base font-bold text-fg flex flex-wrap items-center gap-2">
-                <span>Shaxsiy Xatolar Banki (SRS)</span>
+                <span>{tc("srsTitle")}</span>
                 <Badge variant="danger" className="shrink-0 whitespace-nowrap px-2 text-xs">
-                  {srsStats.totalWeakWords} ta xato
+                  {tc("srsCount", { count: srsStats.totalWeakWords })}
                 </Badge>
               </h3>
               <p className="text-xs text-fg-muted mt-0.5">
-                Oldingi testlarda xato qilingan so'zlaringiz saqlangan. Ular ustida mashq qilib, 2 marta ketma-ket to'g'ri topshirib o'zlashtiring!
+                {tc("srsBody")}
               </p>
             </div>
           </div>
 
           <Link href="/vocabulary/srs">
-            <Button className="bg-warning hover:bg-warning text-white font-semibold shrink-0 shadow-md shadow-warning/20">
+            <Button variant="outline" className="border-warning-border bg-warning-bg text-warning hover:bg-warning/15 font-semibold shrink-0">
               <Sparkles className="mr-2 h-4 w-4" />
-              Xatolar Ustida Ishlash
+              {tc("srsCta")}
             </Button>
           </Link>
         </div>
@@ -234,10 +239,12 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {/* Filters and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Level Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
+        <div role="group" aria-label={tc("levelFilter")} className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
           {LEVELS.map((lvl) => (
             <button
               key={lvl}
+              type="button"
+              aria-pressed={selectedLevel === lvl}
               onClick={() => setSelectedLevel(lvl)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedLevel === lvl
@@ -245,7 +252,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                   : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
               }`}
             >
-              {lvl}
+              {lvl === ALL_LEVELS ? tc("levelAll") : lvl}
             </button>
           ))}
         </div>
@@ -256,8 +263,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Lug'at nomidan qidirish..."
-            aria-label="Lug'at nomidan qidirish"
+            placeholder={tc("searchPlaceholder")}
+            aria-label={tc("searchLabel")}
             type="search"
             className="pl-9 h-9 text-xs bg-surface"
           />
@@ -268,7 +275,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {isLoading && (
         <div className="py-20 text-center text-fg-muted flex flex-col items-center gap-3">
           <RefreshCw className="h-8 w-8 animate-spin text-brand" />
-          <span>Lug'at to'plamlari yuklanmoqda...</span>
+          <span>{tc("loading")}</span>
         </div>
       )}
 
@@ -279,14 +286,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       )}
 
       {/* Sets Grid */}
-      {!isLoading && (
+      {!isLoading && !errorMsg && (
         <>
           {filteredSets.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border p-12 text-center text-fg-muted space-y-3">
               <BookOpen className="h-10 w-10 text-fg-muted/60 mx-auto" />
-              <h3 className="text-base font-semibold text-fg">Lug'at to'plamlari topilmadi</h3>
+              <h3 className="text-base font-semibold text-fg">{tc("emptyTitle")}</h3>
               <p className="text-xs text-fg-muted max-w-sm mx-auto">
-                Tanlangan darajada yoki qidiruv bo'yicha hech narsa topilmadi.
+                {sets.length === 0 ? tc("emptyNone") : tc("emptyBody")}
               </p>
             </div>
           ) : (
@@ -304,7 +311,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                           {s.level}
                         </Badge>
                         <span className="text-xs text-fg-muted font-mono">
-                          {s.wordCount} ta so'z
+                          {t("words", { count: s.wordCount })}
                         </span>
                       </div>
 
@@ -322,7 +329,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                       {s.groupName && (
                         <div className="inline-flex items-center gap-1.5 text-[11px] text-fg-muted bg-bg-subtle/50 px-2.5 py-1 rounded-md">
                           <Layers className="h-3 w-3" />
-                          <span>Guruh: {s.groupName}</span>
+                          <span>{tc("group", { name: s.groupName })}</span>
                         </div>
                       )}
                     </div>
@@ -330,14 +337,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                     <div className="space-y-3 border-t border-border pt-4">
                       {hasScore ? (
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-fg-muted">Eng yaxshi natijangiz:</span>
+                          <span className="text-fg-muted">{tc("bestScore")}</span>
                           <span className="font-bold text-brand">
                             {s.userBestPercentage}%
                           </span>
                         </div>
                       ) : (
                         <div className="text-xs text-fg-muted">
-                          Hali topshirilmagan (+5 ball kutilmoqda)
+                          {userRole === "student" ? tc("notTakenPoints") : tc("notTaken")}
                         </div>
                       )}
 
@@ -345,7 +352,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                         <Link href={`/vocabulary/${s.id}`} className="flex-1">
                           <Button className="w-full bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-sm">
                             <Play className="mr-1.5 h-4 w-4" />
-                            Mashqni Boshlash
+                            {tc("startPractice")}
                           </Button>
                         </Link>
 
@@ -356,7 +363,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               variant="outline"
                               onClick={() => setBattleSetId(s.id)}
                               className="border-warning/30 text-warning hover:bg-warning/10"
-                              title="Ushbu to'plam bo'yicha Live Battle (PIN) ochish"
+                              title={tc("battleForSet")}
+                              aria-label={tc("battleForSet")}
                             >
                               <Zap className="h-4 w-4" />
                             </Button>
@@ -365,7 +373,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               variant="outline"
                               onClick={() => setReportSetId(s.id)}
                               className="border-border text-fg hover:bg-bg-subtle"
-                              title="Guruh hisoboti va Excel"
+                              title={tc("groupReport")}
+                              aria-label={tc("groupReport")}
                             >
                               <FileSpreadsheet className="h-4 w-4 text-brand" />
                             </Button>
@@ -386,7 +395,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="w-full max-w-3xl my-8">
             <VocabularyBuilder
-              onSuccess={(created) => {
+              onSuccess={() => {
                 setIsBuilderOpen(false);
                 fetchData();
               }}

@@ -269,7 +269,7 @@ try {
   });
   await step(teacher, "12-teacher-creates-vocabulary", async () => {
     await teacher.goto(`${WEB}/en/vocabulary`, { waitUntil: "networkidle" });
-    await teacher.getByRole("button", { name: "Yangi Lug'at Yaratish" }).click();
+    await teacher.getByRole("button", { name: "New vocabulary set" }).click();
     await teacher.getByPlaceholder("Masalan: Unit 5: Environment & Global Warming").fill(VOCAB);
     for (const [en, uz] of [["harbour", "bandargoh"], ["bridge", "ko'prik"], ["ferry", "parom"]]) {
       await teacher.getByPlaceholder("English word (e.g. resilient)").fill(en);
@@ -285,13 +285,13 @@ try {
   });
   await step(student, "13-student-studies-vocabulary", async () => {
     await student.goto(`${WEB}/en/vocabulary`, { waitUntil: "networkidle" });
-    const card = student.locator("div").filter({ hasText: VOCAB }).filter({ has: student.getByText("Mashqni Boshlash") }).last();
-    await card.getByText("Mashqni Boshlash").click();
+    const card = student.locator("div").filter({ hasText: VOCAB }).filter({ has: student.getByText("Start practice") }).last();
+    await card.getByText("Start practice").click();
     await student.waitForURL(/\/vocabulary\/[0-9a-f-]+/);
     await student.waitForLoadState("networkidle");
     if (!student.url().includes(vocabSetId)) throw new Error(`opened ${student.url()}, expected set ${vocabSetId}`);
-    await student.getByRole("button", { name: /Inglizcha → O'zbekcha/ }).click();
-    await student.getByRole("button", { name: "Testni Boshlash" }).click();
+    await student.getByRole("radio", { name: /English → Uzbek/ }).click();
+    await student.getByRole("button", { name: "Start the test" }).click();
     const words = { harbour: "bandargoh", bridge: "ko'prik", ferry: "parom" };
     const submit = student.waitForResponse((r) => /\/vocabulary\/sets\/[^/]+\/submit/.test(r.url()) && r.request().method() === "POST", { timeout: 60000 });
     const promptWord = () => student.getByRole("button", { name: /Listen to the pronunciation|Talaffuzni tinglash/ })

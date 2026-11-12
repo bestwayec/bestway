@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, Layers, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,9 @@ import { VocabularyQuizRunner } from "@/components/vocabulary/VocabularyQuizRunn
 type QuizModeType = "mixed" | "eng_uzb" | "uzb_eng" | "spelling";
 
 export default function VocabularyDetailPage() {
+  const t = useTranslations("vocabulary");
+  const tm = useTranslations("vocabulary.mode");
+  const tq = useTranslations("vocabQuiz");
   const params = useParams();
   const setId = params.id as string;
 
@@ -18,26 +22,10 @@ export default function VocabularyDetailPage() {
   const [isQuizStarted, setIsQuizStarted] = React.useState(false);
 
   const MODES: Array<{ id: QuizModeType; label: string; desc: string }> = [
-    {
-      id: "mixed",
-      label: "Aralash (Tavsiya etiladi)",
-      desc: "Tanlov, tarjima va imlo mashqlari navbatma-navbat almashadi",
-    },
-    {
-      id: "eng_uzb",
-      label: "Inglizcha → O'zbekcha",
-      desc: "Inglizcha so'z beriladi, to'g'ri o'zbekcha variantni tanlaysiz",
-    },
-    {
-      id: "uzb_eng",
-      label: "O'zbekcha → Inglizcha",
-      desc: "O'zbekcha so'z beriladi, inglizcha to'g'ri variantni tanlaysiz",
-    },
-    {
-      id: "spelling",
-      label: "Imlo (Spelling)",
-      desc: "So'zni eshitasiz yoki o'qiysiz, inglizcha to'g'ri yozasiz",
-    },
+    { id: "mixed", label: tm("mixed"), desc: tm("mixedDesc") },
+    { id: "eng_uzb", label: tm("engUzb"), desc: tm("engUzbDesc") },
+    { id: "uzb_eng", label: tm("uzbEng"), desc: tm("uzbEngDesc") },
+    { id: "spelling", label: tm("spelling"), desc: tm("spellingDesc") },
   ];
 
   if (isQuizStarted) {
@@ -59,7 +47,7 @@ export default function VocabularyDetailPage() {
         <Link href="/vocabulary">
           <Button variant="ghost" size="sm" className="text-fg-muted hover:text-fg">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Lug'atlar ro'yxatiga qaytish
+            {t("backToCatalog")}
           </Button>
         </Link>
       </div>
@@ -71,21 +59,23 @@ export default function VocabularyDetailPage() {
             <Sparkles className="h-8 w-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-fg">
-            Test Rejimini Tanlang
+            {tm("title")}
           </h1>
           <p className="text-sm text-fg-muted max-w-md mx-auto">
-            100% natija uchun <strong>+5 platforma balli</strong>, 80-99% uchun esa <strong>+3 ball</strong> qo'lga kiriting!
+            {tq("pointsRule")}
           </p>
         </div>
 
         {/* Mode cards */}
-        <div className="space-y-3">
+        <div role="radiogroup" aria-label={tm("title")} className="space-y-3">
           {MODES.map((m) => {
             const isSelected = mode === m.id;
             return (
               <button
                 key={m.id}
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => setMode(m.id)}
                 className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex items-center justify-between gap-4 ${
                   isSelected
@@ -98,7 +88,7 @@ export default function VocabularyDetailPage() {
                     <span>{m.label}</span>
                     {isSelected && (
                       <Badge className="bg-brand text-brand-fg text-[10px] h-4 px-1.5">
-                        Tanlandi
+                        {tm("selected")}
                       </Badge>
                     )}
                   </div>
@@ -122,7 +112,7 @@ export default function VocabularyDetailPage() {
           onClick={() => setIsQuizStarted(true)}
           className="w-full bg-brand hover:bg-brand-hover text-brand-fg h-12 text-base font-semibold shadow-lg shadow-brand/20"
         >
-          Testni Boshlash
+          {tm("start")}
         </Button>
       </div>
     </div>
