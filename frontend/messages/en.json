@@ -1247,6 +1247,29 @@
       "skipped": "Skipped",
       "practiceReport": "Practice report (PDF)",
       "print": "Print"
+    },
+    "submitDialog": {
+      "title": "Finish the exam",
+      "titleSection": "{skill} — finish the exam",
+      "description": "Your answers will be sent for final scoring.",
+      "answeredLabel": "Answered tasks:",
+      "noQuestionsTitle": "The questions did not load or there are none (0 / 0)",
+      "noQuestionsBody": "The exam cannot be submitted because the question list did not load. Refresh the page or contact the administrator.",
+      "allAnswered": "You have answered every task. You can submit your work.",
+      "partialTitle": "You answered {answered} of {total} questions.",
+      "partialBody": "Unanswered questions score 0. Finish the exam?",
+      "keepWorking": "Keep working",
+      "confirm": "Yes, finish"
+    },
+    "resumeDialog": {
+      "title": "Which section do you want to continue?",
+      "description": "Pick any section and continue from where you left off.",
+      "descriptionWithTitle": "{title} — pick any section and continue from where you left off.",
+      "listening": "Listening to audio and answering questions",
+      "reading": "Reading passages and answering questions",
+      "writing": "Essay and letter writing tasks",
+      "speaking": "Spoken answers recorded as audio",
+      "other": "{skill} section"
     }
   },
   "wizard": {

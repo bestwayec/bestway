@@ -4,9 +4,17 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockPush = vi.fn();
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
+vi.mock("next-intl", async () => {
+  const uz = (await import("../../../messages/uz.json")).default as Record<string, unknown>;
+  const lookup = (path: string) => path.split(".").reduce<unknown>((v, k) => (v && typeof v === "object" ? (v as Record<string, unknown>)[k] : undefined), uz);
+  return { useTranslations: (ns: string) => (key: string, values?: Record<string, unknown>) => {
+    const found = lookup(`${ns}.${key}`);
+    return typeof found === "string" ? found.replace(/\{(\w+)\}/g, (_, n: string) => String(values?.[n] ?? "")) : key;
+  } };
+});
 
 import { ExamResumeModal } from "./exam-resume-modal";
 
@@ -46,6 +54,7 @@ describe("ExamResumeModal", () => {
     expect(bodyText).toContain("Qaysi bo'limni davom ettirmoqchisiz?");
     expect(bodyText).toContain("Writing");
     expect(bodyText).toContain("Speaking");
+    expect(bodyText).toContain("Multi-Level Test 1 — istalgan bo'limni tanlab");
 
     // Click Writing button
     const buttons = document.querySelectorAll("button");

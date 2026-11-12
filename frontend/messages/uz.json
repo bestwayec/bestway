@@ -1247,6 +1247,29 @@
       "skipped": "O‘tkazib yuborilgan",
       "practiceReport": "Mashq hisoboti (PDF)",
       "print": "Chop etish"
+    },
+    "submitDialog": {
+      "title": "Imtihonni topshirish",
+      "titleSection": "{skill} — imtihonni topshirish",
+      "description": "Javoblaringiz yakuniy baholash uchun yuboriladi.",
+      "answeredLabel": "Javob berilgan topshiriqlar:",
+      "noQuestionsTitle": "Savollar yuklanmadi yoki mavjud emas (0 / 0)",
+      "noQuestionsBody": "Savollar ro'yxati yuklanmaganligi sababli imtihonni topshirib bo'lmaydi. Sahifani yangilang yoki administratorga murojaat qiling.",
+      "allAnswered": "Siz barcha topshiriqlarga javob berdingiz. Ishingizni topshirishingiz mumkin.",
+      "partialTitle": "Siz {total} tadan {answered} ta savolga javob berdingiz.",
+      "partialBody": "Javob berilmagan savollarga 0 ball qo'yiladi. Imtihonni yakunlaysizmi?",
+      "keepWorking": "Davom etish",
+      "confirm": "Ha, yakunlash"
+    },
+    "resumeDialog": {
+      "title": "Qaysi bo'limni davom ettirmoqchisiz?",
+      "description": "Istalgan bo'limni tanlab, to'xtagan joyingizdan davom ettirishingiz mumkin.",
+      "descriptionWithTitle": "{title} — istalgan bo'limni tanlab, to'xtagan joyingizdan davom ettirishingiz mumkin.",
+      "listening": "Audio eshitish va savollarga javob berish",
+      "reading": "Matnlarni o'qish va savollarga javob berish",
+      "writing": "Insho va xat yozish topshiriqlari",
+      "speaking": "Og'zaki javoblar audio sifatida yoziladi",
+      "other": "{skill} bo'limi"
     }
   },
   "wizard": {

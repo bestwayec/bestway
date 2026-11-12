@@ -245,7 +245,7 @@ try {
     const dialog = student.getByRole("dialog");
     await dialog.waitFor();
     const submit = student.waitForResponse((r) => r.url().endsWith("/submit") && r.request().method() === "POST", { timeout: 60000 });
-    await dialog.getByRole("button", { name: /Ha, yakunlash/ }).click();
+    await dialog.getByRole("button", { name: /Yes, finish/ }).click();
     const res = await submit;
     const data = (await res.json()).data ?? {};
     if (res.status() >= 300) throw new Error(`submit HTTP ${res.status()}`);

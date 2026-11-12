@@ -259,7 +259,7 @@ await step(s, "10-exam-submission", async () => {
   await d.waitFor();
   await s.screenshot({ path: join(OUT, "10-submit-confirm.png") });
   const submitResp = s.waitForResponse((r) => /\/submit/.test(r.url()) && r.request().method() === "POST", { timeout: 60000 });
-  await d.getByRole("button", { name: /Submit exam|Ha, yakunlash/ }).click();
+  await d.getByRole("button", { name: /Submit exam|Yes, finish/ }).click();
   const resp = await submitResp;
   if (resp.status() >= 400) throw new Error(`submit HTTP ${resp.status()}`);
   return `35/35 answered, submit HTTP ${resp.status()}`;
