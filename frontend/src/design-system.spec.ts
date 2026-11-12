@@ -40,6 +40,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/multilevel-submit-review.tsx": {},
   "src/components/mock/mic-check-modal.tsx": {},
   "src/components/mock/device-check.tsx": {},
+  "src/components/profile/results-progress-card.tsx": {},
   "src/components/mock/ClickToVocabWrapper.tsx": {},
   "src/components/simulator/CDLayout.tsx": {},
   "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },

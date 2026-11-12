@@ -23,19 +23,23 @@ import { ApiError } from "@/lib/api-client";
 import { formatPhone, isSafeHref } from "@/lib/utils";
 import { ExamTrackSelector } from './exam-track-selector';
 import { ScorePredictionCard } from "@/components/dashboard/score-prediction-card";
+import { ResultsProgressCard } from "@/components/profile/results-progress-card";
+import { isFinished } from "@/lib/results-progress";
 import { AttemptScoreSummary } from "@/components/mock/attempt-score-summary";
 
 export function ProfileView() {
   const t = useTranslations("profile");
+  const tRecent = useTranslations("profile.recent");
+  const tMonths = useTranslations("monthsShort");
+  const tMonthsLong = useTranslations("months");
   const tc = useTranslations("common");
   const tr = useTranslations("roles");
   const format = useFormatter();
   const { data: me, isLoading } = useMe();
   const attemptsQ = useMyMockAttempts();
   const attempts = React.useMemo(() => attemptsQ.data ?? [], [attemptsQ.data]);
-  const completedCount = React.useMemo(() => {
-    return attempts.filter((a) => a.status === "completed" || a.status === "grading").length;
-  }, [attempts]);
+  // Finished = submitted (#133 rule): attempts the server closed without a submission do not count.
+  const completedCount = React.useMemo(() => attempts.filter(isFinished).length, [attempts]);
   const statusQ = useTelegramStatus();
   const linkToken = useTelegramLinkToken();
   const unlink = useUnlinkTelegram();
@@ -122,6 +126,7 @@ export function ProfileView() {
         <>
           <ExamTrackSelector />
           <ScorePredictionCard attempts={attempts} />
+          <ResultsProgressCard attempts={attempts} loading={attemptsQ.isLoading} />
 
           {/* Student Stats & Recent Mock Results */}
           <Card className="rounded-[12px] border border-border bg-surface p-5 sm:p-6">
@@ -161,7 +166,7 @@ export function ProfileView() {
                   <Award className="mx-auto size-10 text-fg-muted/60 mb-2" />
                   <p className="text-sm font-medium text-fg">{t("noResultsYet")}</p>
                   <p className="text-xs text-fg-muted mt-1 max-w-sm mx-auto">
-                    Mock imtihonlarni topshiring va natijalaringiz hamda diagnostik tahlilingizni shu yerda kuzatib boring.
+                    {tRecent("emptyHint")}
                   </p>
                   <Button asChild size="sm" className="mt-4 bg-brand hover:bg-brand/90 text-brand-fg">
                     <Link href="/mock">
@@ -175,48 +180,51 @@ export function ProfileView() {
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-border text-xs text-fg-muted font-medium">
-                        <th className="pb-2.5 font-medium">Imtihon</th>
-                        <th className="pb-2.5 font-medium">Holat</th>
-                        <th className="pb-2.5 font-medium text-center">Natija</th>
-                        <th className="pb-2.5 font-medium text-right">Amal</th>
+                        <th className="pb-2.5 font-medium">{tRecent("colExam")}</th>
+                        <th className="pb-2.5 font-medium">{tRecent("colStatus")}</th>
+                        <th className="pb-2.5 font-medium text-center">{tRecent("colResult")}</th>
+                        <th className="pb-2.5 font-medium text-right">{tRecent("colAction")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {attempts.slice(0, 5).map((a) => (
                         <tr key={a.id} className="group hover:bg-surface-hover/60 transition-colors">
                           <td className="py-3 pr-3">
-                            <p className="font-semibold text-fg text-sm">{a.examTitle ?? "Mock Exam"}</p>
+                            <p className="font-semibold text-fg text-sm">{a.examTitle ?? tRecent("untitled")}</p>
                             <p className="text-xs text-fg-muted">
                               {a.finishedAt || a.startedAt
-                                ? format.dateTime(new Date(a.finishedAt || a.startedAt), {
-                                    day: "numeric",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })
+                                ? (() => {
+                                    // Month names from messages: browsers print "M11" for short Uzbek months.
+                                    const d = new Date(a.finishedAt || a.startedAt);
+                                    return `${d.getDate()} ${tMonths(String(d.getMonth() + 1))}, ${format.dateTime(d, { hour: "2-digit", minute: "2-digit" })}`;
+                                  })()
                                 : "—"}{" "}
                               ·{" "}
                               <span className="font-medium">
-                                {a.flowMode === "partial_practice" ? "Section Practice" : "Full Mock"}
+                                {a.flowMode === "full_test" ? tRecent("kindFull") : tRecent("kindPractice")}
                               </span>
                             </p>
                           </td>
                           <td className="py-3 pr-3 whitespace-nowrap">
                             <Badge
                               variant={
-                                a.status === "completed"
-                                  ? "success"
+                                a.status === "in_progress"
+                                  ? "info"
+                                  : !isFinished(a)
+                                  ? "neutral"
                                   : a.status === "grading"
                                   ? "warning"
-                                  : "neutral"
+                                  : "success"
                               }
                               className="text-xs"
                             >
-                              {a.status === "grading"
-                                ? "AI Tekshiruvda"
-                                : a.status === "completed"
-                                ? "Yakunlangan"
-                                : "Jarayonda"}
+                              {a.status === "in_progress"
+                                ? tRecent("statusInProgress")
+                                : !isFinished(a)
+                                ? tRecent("statusClosed")
+                                : a.status === "grading"
+                                ? tRecent("statusChecking")
+                                : tRecent("statusCompleted")}
                             </Badge>
                           </td>
                           <td className="py-3 px-3 text-center whitespace-nowrap">
@@ -301,11 +309,10 @@ export function ProfileView() {
                 <div className="mt-1.5 flex items-center gap-2">
                   <Badge variant="brand">{tr(me.user.role)}</Badge>
                   <span className="text-xs text-fg-subtle">
-                    {format.dateTime(new Date(me.user.createdAt), {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {(() => {
+                      const d = new Date(me.user.createdAt);
+                      return `${d.getDate()} ${tMonthsLong(String(d.getMonth() + 1))} ${d.getFullYear()}`;
+                    })()}
                   </span>
                 </div>
               </>

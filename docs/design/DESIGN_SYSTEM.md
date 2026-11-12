@@ -24,6 +24,7 @@ wrongly in one of the two themes (white cards in dark mode, white text on white 
 | Warning | `warning`, `warning-bg`, `warning-border` | flagged questions, needs attention |
 | Info | `info`, `info-bg`, `info-border` | neutral notices |
 | Orange | `orange`, `orange-fg`, `orange-subtle` | secondary highlight (streaks, rewards) |
+| Chart | `chart-series` | the mark of a single-series chart (bars, dots, line); `#16a34a` in both themes because the dark `brand` (`#22c55e`) fails the chart lightness band on the dark surface (dataviz validator) |
 
 Use them with any colour utility: `bg-surface`, `text-fg-muted`, `border-danger-border`,
 `ring-brand/40`, `from-brand`.

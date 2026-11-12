@@ -315,7 +315,41 @@
     "accuracy": "Aniqlik",
     "correct": "to'g'ri",
     "error_rate": "xato",
-    "recommendation": "Tavsiya"
+    "recommendation": "Tavsiya",
+    "progress": {
+      "title": "Rivojlanishingiz",
+      "subtitle": "Faqat siz topshirgan imtihon va mashqlar asosida.",
+      "finished": "Topshirilgan",
+      "checking": "Tekshirilmoqda",
+      "emptyNone": "Rivojlanishingizni shu yerda ko'rish uchun imtihon yoki mashq topshiring.",
+      "emptyChecking": "Tekshiruv tugagach, natijalaringiz shu yerda paydo bo'ladi.",
+      "mockIeltsTitle": "To'liq mock imtihonlar · IELTS umumiy band",
+      "mockMultilevelTitle": "To'liq mock imtihonlar · Multilevel ball (75 dan)",
+      "mockCaption": "Faqat to'liq mock imtihonlar; bo'lim mashqlariga band berilmaydi. Ko'pi bilan oxirgi {count} ta.",
+      "practiceTitle": "Bo'lim mashqlari · to'g'ri javoblar",
+      "practiceCaption": "Mashqlardagi Listening va Reading javoblari, faqat to'g'ri javoblar soni bilan (band yo'q). Ko'pi bilan oxirgi {count} ta.",
+      "band": "Band {value}",
+      "score": "{value}/75",
+      "practiceValue": "{total} tadan {correct} ta to'g'ri · {percent}%",
+      "showTable": "Jadval ko'rinishida",
+      "colDate": "Sana",
+      "colExam": "Imtihon",
+      "colResult": "Natija"
+    },
+    "recent": {
+      "colExam": "Imtihon",
+      "colStatus": "Holat",
+      "colResult": "Natija",
+      "colAction": "Amal",
+      "statusInProgress": "Jarayonda",
+      "statusChecking": "Tekshirilmoqda",
+      "statusCompleted": "Yakunlangan",
+      "statusClosed": "Yopilgan, topshirilmagan",
+      "kindFull": "To'liq mock",
+      "kindPractice": "Bo'lim mashqi",
+      "untitled": "Mock imtihon",
+      "emptyHint": "Mock imtihonlarni topshiring va natijalaringiz hamda diagnostik tahlilingizni shu yerda kuzatib boring."
+    }
   },
   "broadcast": {
     "title": "E'lon yuborish",
@@ -1318,6 +1352,11 @@
       "micOk": "Ovozingiz eshitildi.",
       "micSilent": "Mikrofon ishlayapti, lekin deyarli hech narsa eshitilmadi. Balandroq gapiring yoki boshqa mikrofonni tanlang va qayta tekshiring.",
       "micUnsupported": "Bu brauzer ovoz yozolmaydi. Chrome, Edge yoki Safari'ning yangi versiyasidan foydalaning."
+    },
+    "scoreSummary": {
+      "singleSection": "Bitta bo'lim: {skill}",
+      "sectionPractice": "Bo'lim mashqi",
+      "fullMock": "To'liq mock"
     }
   },
   "wizard": {

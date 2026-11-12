@@ -24,6 +24,8 @@
   --border-strong: #cbd5e1;
 
   --brand: #16a34a;
+  /* Single-series chart mark; validated (dataviz validator) against the light surface. */
+  --chart-series: #16a34a;
   --brand-hover: #15803d;
   --brand-fg: #ffffff;
   --brand-subtle: #f0fdf4;
@@ -72,6 +74,8 @@
   --border-strong: #334155;
 
   --brand: #22c55e;
+  /* #22c55e is too light for a chart mark on the dark surface (lightness band); #16a34a passes. */
+  --chart-series: #16a34a;
   --brand-hover: #16a34a;
   --brand-fg: #052e16;
   --brand-subtle: #14532d40;
@@ -148,6 +152,7 @@
   --color-brand-fg: var(--brand-fg);
   --color-brand-subtle: var(--brand-subtle);
   --color-brand-subtle-fg: var(--brand-subtle-fg);
+  --color-chart-series: var(--chart-series);
 
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);

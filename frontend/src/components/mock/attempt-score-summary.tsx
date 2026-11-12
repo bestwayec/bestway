@@ -43,8 +43,12 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
       >
         <span className="rounded-md bg-brand-subtle px-2 py-0.5 text-xs font-semibold text-brand-subtle-fg">
           {isSingle && singleSkillName
-            ? `Single Section: ${singleSkillName.charAt(0).toUpperCase() + singleSkillName.slice(1)}`
-            : "Section Practice"}
+            ? t("scoreSummary.singleSection", {
+                skill: ["listening", "reading", "writing", "speaking"].includes(singleSkillName)
+                  ? t(`skills.${singleSkillName}`)
+                  : singleSkillName,
+              })
+            : t("scoreSummary.sectionPractice")}
         </span>
 
         {skills.length === 0 ? (
@@ -76,7 +80,7 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
       <span className="rounded-md bg-info/10 px-2 py-0.5 text-xs font-semibold text-info">
-        Full Mock
+        {t("scoreSummary.fullMock")}
       </span>
       {attempt.examType === "multilevel" ? (
         <span className="font-semibold text-brand tabular-nums">
