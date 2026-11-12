@@ -117,7 +117,7 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-11, main 445f2b4)
 
 #113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student (each stacked on the previous; plain merges, no force-push). #123 = this file.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 i18n exam entry/result/quiz (each stacked on the previous; plain merges, no force-push). #123 = this file.
 CI: #125 green (run 43077063817, before the main merge); later heads pending.
 
 ## Open questions (owner)
@@ -140,7 +140,7 @@ CI: #125 green (run 43077063817, before the main merge); later heads pending.
 | U5 vocabulary | TODO | audit #20, #21, #24 |
 | U6 teacher/admin/builder | TODO | audit #19, #22 |
 | U7 public/auth/onboarding | TODO | audit #17 |
-| U8 motion/i18n/a11y | IN PROGRESS | Hard-coded Uzbek: runner, transition dialog, student dashboard, Today card migrated + guarded (no-hardcoded-ui-text.spec.ts). Next: catalogue (exam-launcher-modal "daqiqa"), result view ("O'tkazib yuborilgan"), vocabulary pages, mic-check modal, live PIN card |
+| U8 motion/i18n/a11y | IN PROGRESS (#128, #130, #131) | Translated + guarded: runner, transition dialog, student dashboard, Today card, exam launcher, mic check (+ missing 'other' help key found), live PIN card, result view, vocabulary quiz (+ honest zero-points message, API pointsEarned/pointsAlreadyAwarded). Next: vocabulary catalogue, vocabulary set page ([id]), SRS page, submit-confirm modal, exam-resume modal, CDLayout, then teacher/builder screens |
 | U9 performance | TODO | |
 | U10 verification | TODO | all-roles crawl, axe, compressed visual baseline |
 | D1–D3 desktop | TODO | not started (order rule) |
@@ -212,7 +212,7 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 ## PRs / CI (state 2026-11-11, main 445f2b4)
 
 #113–#122 and #124 MERGED. Main CI green at 5d0b82b (run 43071841882; contains every backend merge); run for 445f2b4 in progress.
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student (each stacked on the previous; plain merges, no force-push). #123 = this file.
+OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 i18n exam entry/result/quiz (each stacked on the previous; plain merges, no force-push). #123 = this file.
 CI: #125 green (run 43077063817, before the main merge); later heads pending.
 
 ## Open questions (owner)
@@ -243,4 +243,4 @@ Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next d
 
 ## NEXT STEP
 
-U8 i18n on the screens students see most (exam catalogue + launcher, result view, vocabulary catalogue/quiz/SRS, mic-check, live PIN card), extending FILES in frontend/src/i18n/no-hardcoded-ui-text.spec.ts file by file; then U4 rest (catalogue status chips/filters, pre-exam lobby device check). New branch stacked on claude/u4-student (#130). After each PR: tsc + next build + vitest + smoke (BW_WEB=http://localhost:3300) + light/dark phone/desktop screenshots; strip the Claude footer from the PR body.
+U8 continued on a branch stacked on claude/u8-i18n-student (#131): vocabulary catalogue (VocabularyCatalogView), set page (vocabulary/[id]), SRS page, submit-confirm and exam-resume modals; update full-journey.mjs selectors ("Mashqni Boshlash", "Testni Boshlash", "Inglizcha → O'zbekcha") to English in the same commit. Then U4 rest (catalogue status chips/filters, pre-exam device check). Checks per PR: tsc + next build + vitest + smoke (#127 version) + full-journey (BW_WEB=http://localhost:3300); strip the Claude footer from every PR body.
