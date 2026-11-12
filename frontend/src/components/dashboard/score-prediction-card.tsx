@@ -228,18 +228,18 @@ export function ScorePredictionCard({
   }
 
   return (
-    <Card className={cn("mb-5 overflow-hidden border-emerald-500/15 bg-surface/90 backdrop-blur-md  transition-all", className)}>
-      <CardHeader className="border-b border-slate-800/80 bg-slate-900/60 pb-3">
+    <Card className={cn("mb-5 overflow-hidden border-brand/15 bg-surface/90 backdrop-blur-md  transition-all", className)}>
+      <CardHeader className="border-b border-border/80 bg-surface/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand/15 text-brand border border-brand/30">
               <Compass className="size-4" />
             </span>
             <div>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
+              <CardTitle className="text-base font-bold text-fg flex items-center gap-2">
                 {ti("cardTitle")}
               </CardTitle>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-fg-muted">
                 {ti("cardSubtitle", { count: evidenceCount })}
               </p>
             </div>
@@ -253,9 +253,9 @@ export function ScorePredictionCard({
                 size="sm"
                 variant="outline"
                 onClick={() => setEditingGoal((v) => !v)}
-                className="h-8 text-xs border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-700"
+                className="h-8 text-xs border-border-strong bg-surface-hover/80 text-fg hover:bg-border-strong"
               >
-                <Target className="size-3.5 mr-1 text-emerald-400" />
+                <Target className="size-3.5 mr-1 text-brand" />
                 {editingGoal ? ti("close") : ti("changeTarget")}
               </Button>
             )}
@@ -264,7 +264,7 @@ export function ScorePredictionCard({
 
         {/* Scale switcher */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="inline-flex rounded-xl border border-slate-800 bg-slate-950/60 p-1">
+          <div className="inline-flex rounded-xl border border-border bg-bg/60 p-1">
             {(
               [
                 { id: "both", label: ti("scaleBoth") },
@@ -279,8 +279,8 @@ export function ScorePredictionCard({
                 className={cn(
                   "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                   scaleTab === t.id
-                    ? "bg-emerald-600 text-white  shadow-emerald-950/40 ring-1 ring-emerald-500/50"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50",
+                    ? "bg-brand text-brand-fg  shadow-brand/30 ring-1 ring-brand/50"
+                    : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
                 )}
               >
                 {t.label}
@@ -457,8 +457,8 @@ export function ScorePredictionCard({
                   </h4>
                 </div>
                 <div className="text-right">
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-1.5 border border-emerald-500/25">
-                    <span className="text-2xl font-black text-emerald-400 tabular-nums">
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-brand/10 px-3 py-1.5 border border-brand/25">
+                    <span className="text-2xl font-black text-brand tabular-nums">
                       {fmtScore(multilevel.predictedScore)}
                     </span>
                     <span className="text-xs font-bold text-fg-muted">/ 75</span>
@@ -480,7 +480,7 @@ export function ScorePredictionCard({
                   <span className="font-medium text-fg-muted">
                     Maqsad: <strong className="text-fg">{multilevel.targetScore || 65} ball</strong>
                   </span>
-                  <span className="font-bold text-emerald-400 tabular-nums">
+                  <span className="font-bold text-brand tabular-nums">
                     {ti("targetProgress", { percent: Math.min(100, Math.max(0, Math.round(multilevel.targetProgressPercent || 0))) })}
                   </span>
                 </div>
@@ -494,7 +494,7 @@ export function ScorePredictionCard({
                         className={cn(
                           "rounded-md border px-1.5 py-1 transition-all",
                           isActiveLevel
-                            ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 font-bold "
+                            ? "border-brand bg-brand/20 text-brand font-bold "
                             : "border-border bg-surface text-fg-muted",
                         )}
                       >
@@ -551,12 +551,12 @@ export function ScorePredictionCard({
         {/* Zaif Nuqtalar Xaritasi (Weak Points Map) */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Flame className="size-3.5 text-emerald-400" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-fg-muted flex items-center gap-1.5">
+              <Flame className="size-3.5 text-brand" />
               {tp("weak_points_map")}
             </h4>
             {data.weakModules && data.weakModules.length > 0 && (
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-fg-muted">
                 {tp("weak_points_sub")}
               </span>
             )}
@@ -581,13 +581,13 @@ export function ScorePredictionCard({
                     return (
                       <div
                         key={`${wm.module}-${idx}`}
-                        className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-3.5 space-y-2 backdrop-blur-sm  transition hover:border-slate-700"
+                        className="rounded-xl border border-border/80 bg-surface/60 p-3.5 space-y-2 backdrop-blur-sm  transition hover:border-border-strong"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-bold text-slate-100">{wm.module}</p>
-                            <p className="text-[11px] text-slate-400">
-                              {tp("accuracy")}: <strong className="text-emerald-400">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} {tp("correct")})
+                            <p className="truncate text-xs font-bold text-fg">{wm.module}</p>
+                            <p className="text-[11px] text-fg-muted">
+                              {tp("accuracy")}: <strong className="text-brand">{Math.round(wm.accuracyPercent)}%</strong> ({wm.correctCount}/{wm.totalQuestions} {tp("correct")})
                             </p>
                           </div>
                           <Badge
@@ -598,11 +598,11 @@ export function ScorePredictionCard({
                           </Badge>
                         </div>
 
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
                           <div
                             className={cn(
                               "h-full rounded-full transition-all",
-                              isHigh ? "bg-rose-500" : isMed ? "bg-teal-400" : "bg-emerald-400",
+                              isHigh ? "bg-danger" : isMed ? "bg-brand" : "bg-brand",
                             )}
                             style={{
                               width: `${Math.min(100, Math.max(6, Math.round(wm.errorRatePercent)))}%`,
@@ -611,8 +611,8 @@ export function ScorePredictionCard({
                         </div>
 
                         {wm.recommendation && (
-                          <p className="text-[11px] text-slate-400 leading-relaxed flex items-start gap-1.5">
-                            <AlertTriangle className="size-3.5 shrink-0 text-emerald-400 mt-0.5" />
+                          <p className="text-[11px] text-fg-muted leading-relaxed flex items-start gap-1.5">
+                            <AlertTriangle className="size-3.5 shrink-0 text-brand mt-0.5" />
                             <span>{wm.recommendation}</span>
                           </p>
                         )}
@@ -621,9 +621,9 @@ export function ScorePredictionCard({
                           type="button"
                           size="sm"
                           onClick={() => setActiveDrill({ module: wm.module, categoryId: resolveCategory(wm.module) })}
-                          className="w-full mt-2 h-8 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all "
+                          className="w-full mt-2 h-8 rounded-lg bg-brand/15 hover:bg-brand-hover/25 text-brand border border-brand/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all "
                         >
-                          <Zap className="size-3.5 fill-emerald-400 text-emerald-400" />
+                          <Zap className="size-3.5 fill-brand text-brand" />
                           <span>{ti("workOnMistakes")}</span>
                         </Button>
                       </div>
@@ -694,8 +694,8 @@ function PredictionSvgChart({
       >
         <defs>
           <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#16a34a" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="var(--chart-series)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--chart-series)" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -722,7 +722,7 @@ function PredictionSvgChart({
         {points.length > 1 && (
           <polyline
             fill="none"
-            stroke="#16a34a"
+            stroke="var(--chart-series)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -736,8 +736,8 @@ function PredictionSvgChart({
               cx={p.x}
               cy={p.y}
               r="4.5"
-              fill="#16a34a"
-              stroke="#171A10"
+              fill="var(--chart-series)"
+              stroke="var(--surface)"
               strokeWidth="2"
             />
             <text

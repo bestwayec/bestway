@@ -65,6 +65,8 @@ export function WeakPointsTargetDrillModal({
   >([]);
   const [isFinished, setIsFinished] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  // Points shown only as the server reports them (null until it answers; never a fixed promise).
+  const [pointsAwarded, setPointsAwarded] = React.useState<number | null>(null);
 
   // Fetch drill questions when modal opens
   React.useEffect(() => {
@@ -157,12 +159,14 @@ export function WeakPointsTargetDrillModal({
     );
 
     try {
-      await apiClient.post("/api/v1/study-plan/targeted-practice/submit", {
+      const res = await apiClient.post<{ pointsAwarded?: number }>("/api/v1/study-plan/targeted-practice/submit", {
         categoryId,
         answers: answersLog,
       });
-      toast.success("⚡️ +50 XP hisobingizga muvaffaqiyatli qo'shildi!");
-      onCompleted?.({ correctCount, pointsAwarded: 50 });
+      const awarded = typeof res?.pointsAwarded === "number" ? res.pointsAwarded : 0;
+      setPointsAwarded(awarded);
+      if (awarded > 0) toast.success(`⚡️ +${awarded} XP hisobingizga qo'shildi!`);
+      onCompleted?.({ correctCount, pointsAwarded: awarded });
     } catch (err) {
       console.error("Failed to submit drill:", err);
     } finally {
@@ -176,31 +180,29 @@ export function WeakPointsTargetDrillModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl overflow-hidden border border-emerald-500/30 bg-bg-subtle p-0 text-slate-100 shadow-2xl backdrop-blur-xl sm:rounded-2xl">
+      <DialogContent className="max-w-2xl overflow-hidden border border-brand/30 bg-bg-subtle p-0 text-fg shadow-2xl backdrop-blur-xl sm:rounded-2xl">
         {/* Header Bar */}
-        <div className="relative border-b border-slate-800 bg-slate-900/80 p-5">
+        <div className="relative border-b border-border bg-surface/80 p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="grid size-10 place-items-center rounded-xl border border-emerald-500/40 bg-emerald-500/20 text-emerald-400 shadow-xs">
-                <Zap className="size-5 fill-emerald-400" />
+              <div className="grid size-10 place-items-center rounded-xl border border-brand/40 bg-brand/20 text-brand shadow-xs">
+                <Zap className="size-5 fill-brand" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-slate-100 sm:text-lg">
+                <DialogTitle className="text-base font-bold text-fg sm:text-lg">
                   {moduleTitle}
                 </DialogTitle>
-                <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                  <span className="font-semibold text-emerald-400">Target Drill</span>
+                <p className="text-xs text-fg-muted flex items-center gap-1.5 mt-0.5">
+                  <span className="font-semibold text-brand">Target Drill</span>
                   <span>·</span>
-                  <span>10 ta chuqurlashtirilgan mashq topshirig&apos;i</span>
-                  <span>·</span>
-                  <span className="text-amber-400 font-bold">+50 XP</span>
+                  {questions.length > 0 && <span>{questions.length} ta chuqurlashtirilgan mashq topshirig&apos;i</span>}
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+              className="rounded-lg p-1.5 text-fg-muted hover:bg-surface-hover hover:text-fg transition"
             >
               <X className="size-5" />
             </button>
@@ -209,15 +211,15 @@ export function WeakPointsTargetDrillModal({
           {/* Progress Indicator */}
           {!loading && !isFinished && questions.length > 0 && (
             <div className="mt-4 space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="flex items-center justify-between text-xs text-fg-muted">
                 <span className="font-medium">
-                  Savol: <strong className="text-emerald-400">{currentIndex + 1}</strong> / {totalQuestions}
+                  Savol: <strong className="text-brand">{currentIndex + 1}</strong> / {totalQuestions}
                 </span>
-                <span className="text-emerald-400 font-mono font-bold">{progressPercent}%</span>
+                <span className="text-brand font-mono font-bold">{progressPercent}%</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                  className="h-full rounded-full bg-gradient-to-r from-brand to-brand transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -229,53 +231,55 @@ export function WeakPointsTargetDrillModal({
         <div className="p-5 sm:p-6">
           {loading ? (
             <div className="space-y-4 py-8">
-              <Skeleton className="h-6 w-3/4 bg-slate-800" />
-              <Skeleton className="h-24 w-full bg-slate-800" />
+              <Skeleton className="h-6 w-3/4 bg-surface-hover" />
+              <Skeleton className="h-24 w-full bg-surface-hover" />
               <div className="space-y-2 pt-2">
-                <Skeleton className="h-12 w-full bg-slate-800" />
-                <Skeleton className="h-12 w-full bg-slate-800" />
-                <Skeleton className="h-12 w-full bg-slate-800" />
+                <Skeleton className="h-12 w-full bg-surface-hover" />
+                <Skeleton className="h-12 w-full bg-surface-hover" />
+                <Skeleton className="h-12 w-full bg-surface-hover" />
               </div>
             </div>
           ) : isFinished ? (
             /* Finished Summary View */
             <div className="py-6 text-center space-y-5">
-              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-emerald-500/40 bg-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10">
+              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-brand/40 bg-brand/20 text-brand shadow-lg shadow-brand/10">
                 <Award className="size-10" />
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-xl font-black text-slate-100">
+                <h3 className="text-xl font-black text-fg">
                   Mashq Muvaffaqiyatli Yakunlandi!
                 </h3>
-                <p className="text-sm text-slate-400 max-w-md mx-auto">
+                <p className="text-sm text-fg-muted max-w-md mx-auto">
                   Siz ushbu zaif mavzu bo&apos;yicha 10 ta diagnostik savolni tahlil qilib chiqdingiz va mustahkamlab oldingiz.
                 </p>
               </div>
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-2">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-slate-400">To&apos;g&apos;ri</p>
-                  <p className="mt-1 text-2xl font-black text-emerald-400">{correctCount}</p>
+                <div className="rounded-xl border border-border bg-surface/60 p-3">
+                  <p className="text-[11px] font-semibold uppercase text-fg-muted">To&apos;g&apos;ri</p>
+                  <p className="mt-1 text-2xl font-black text-brand">{correctCount}</p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-slate-400">Aniqlik</p>
-                  <p className="mt-1 text-2xl font-black text-teal-400">
+                <div className="rounded-xl border border-border bg-surface/60 p-3">
+                  <p className="text-[11px] font-semibold uppercase text-fg-muted">Aniqlik</p>
+                  <p className="mt-1 text-2xl font-black text-brand">
                     {Math.round((correctCount / totalQuestions) * 100)}%
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-slate-400">Mukofot</p>
-                  <p className="mt-1 text-2xl font-black text-amber-400">+50 XP</p>
-                </div>
+                {pointsAwarded != null && pointsAwarded > 0 && (
+                  <div className="rounded-xl border border-border bg-surface/60 p-3">
+                    <p className="text-[11px] font-semibold uppercase text-fg-muted">Mukofot</p>
+                    <p className="mt-1 text-2xl font-black text-warning">+{pointsAwarded} XP</p>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 flex items-center justify-center gap-3">
                 <Button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20"
+                  className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover shadow-md shadow-brand/20"
                 >
                   Zaif Nuqtalar Xaritasiga Qaytish
                 </Button>
@@ -286,8 +290,8 @@ export function WeakPointsTargetDrillModal({
             <div className="space-y-5">
               {/* Context Callout if present */}
               {currentQ.context && (
-                <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-xs leading-relaxed text-slate-300">
-                  <span className="font-semibold text-emerald-400 uppercase tracking-wide text-[10px] block mb-1">
+                <div className="rounded-xl border border-border bg-surface/60 p-4 text-xs leading-relaxed text-fg-muted">
+                  <span className="font-semibold text-brand uppercase tracking-wide text-[10px] block mb-1">
                     Kontekst Matni:
                   </span>
                   {currentQ.context}
@@ -296,7 +300,7 @@ export function WeakPointsTargetDrillModal({
 
               {/* Prompt */}
               <div>
-                <h4 className="text-sm sm:text-base font-bold text-slate-100 leading-snug">
+                <h4 className="text-sm sm:text-base font-bold text-fg leading-snug">
                   {currentQ.prompt}
                 </h4>
               </div>
@@ -315,18 +319,18 @@ export function WeakPointsTargetDrillModal({
 
                   if (isChecked) {
                     if (isCorrectAnswer) {
-                      optClasses += "border-emerald-500/80 bg-emerald-500/20 text-emerald-300 font-bold";
+                      optClasses += "border-brand/80 bg-brand/20 text-brand font-bold";
                     } else if (isSelected && !isCorrectAnswer) {
-                      optClasses += "border-rose-500/80 bg-rose-500/20 text-rose-300 line-through";
+                      optClasses += "border-danger/80 bg-danger/20 text-danger line-through";
                     } else {
-                      optClasses += "border-slate-800 bg-slate-900/30 text-slate-500 opacity-60";
+                      optClasses += "border-border bg-surface/30 text-fg-subtle opacity-60";
                     }
                   } else {
                     if (isSelected) {
                       optClasses +=
-                        "border-emerald-500 bg-emerald-500/15 text-emerald-300 font-semibold shadow-xs ring-1 ring-emerald-500/30";
+                        "border-brand bg-brand/15 text-brand font-semibold shadow-xs ring-1 ring-brand/30";
                     } else {
-                      optClasses += "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60";
+                      optClasses += "border-border bg-surface/60 text-fg-muted hover:border-border-strong hover:bg-surface-hover/60";
                     }
                   }
 
@@ -340,10 +344,10 @@ export function WeakPointsTargetDrillModal({
                     >
                       <span className="pr-3">{opt}</span>
                       {isChecked && isCorrectAnswer && (
-                        <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                        <CheckCircle2 className="size-4 shrink-0 text-brand" />
                       )}
                       {isChecked && isSelected && !isCorrectAnswer && (
-                        <XCircle className="size-4 shrink-0 text-rose-400" />
+                        <XCircle className="size-4 shrink-0 text-danger" />
                       )}
                     </button>
                   );
@@ -352,23 +356,23 @@ export function WeakPointsTargetDrillModal({
 
               {/* Explanation Callout after checking */}
               {isChecked && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-xs leading-relaxed text-slate-200 animate-in fade-in duration-200">
-                  <div className="flex items-center gap-1.5 font-bold text-emerald-400 mb-1">
+                <div className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-xs leading-relaxed text-fg animate-in fade-in duration-200">
+                  <div className="flex items-center gap-1.5 font-bold text-brand mb-1">
                     <Sparkles className="size-3.5" />
                     <span>Tushuntirish & Ekspert Tahlili:</span>
                   </div>
-                  <p className="text-slate-300">{currentQ.explanation}</p>
+                  <p className="text-fg-muted">{currentQ.explanation}</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800/80">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/80">
                 {!isChecked ? (
                   <Button
                     type="button"
                     disabled={!selectedAnswer}
                     onClick={handleCheckAnswer}
-                    className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40"
+                    className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover disabled:opacity-40"
                   >
                     Tekshirish
                   </Button>
@@ -376,7 +380,7 @@ export function WeakPointsTargetDrillModal({
                   <Button
                     type="button"
                     onClick={handleNext}
-                    className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 flex items-center gap-1.5"
+                    className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover flex items-center gap-1.5"
                   >
                     <span>{currentIndex < totalQuestions - 1 ? "Keyingi Savol" : "Natijani Ko'rish"}</span>
                     <ChevronRight className="size-4" />
@@ -385,7 +389,7 @@ export function WeakPointsTargetDrillModal({
               </div>
             </div>
           ) : (
-            <div className="py-8 text-center text-slate-400">
+            <div className="py-8 text-center text-fg-muted">
               <p>Savollar topilmadi.</p>
             </div>
           )}
