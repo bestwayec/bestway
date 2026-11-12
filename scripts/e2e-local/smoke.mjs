@@ -177,6 +177,14 @@ await step(s, "04-student-dashboard", async () => {
 
 await step(s, "06-exam-catalogue", async () => {
   await s.goto(`${WEB}/en/mock`, { waitUntil: "domcontentloaded" });
+  // The catalogue lists the student's active track only; other local runs may have left it on IELTS.
+  const toCefr = s.getByRole("button", { name: /Switch to Multi-Level/i });
+  await Promise.race([toCefr.first().waitFor().catch(() => {}), s.getByText("Multi-Level CEFR CBT Mock 1").first().waitFor().catch(() => {})]);
+  if (await toCefr.count()) {
+    await toCefr.first().click();
+    await s.getByText(/Active track: Multi-Level/).first().waitFor();
+    await s.reload({ waitUntil: "domcontentloaded" }); // persisted, not just optimistic
+  }
   await s.getByText("Multi-Level CEFR CBT Mock 1").first().waitFor();
   await s.screenshot({ path: join(OUT, "06-exam-catalogue.png") });
 });
@@ -308,7 +316,7 @@ await step(t, "05b-teacher-exam-catalogue", async () => {
 });
 await step(t, "05c-teacher-groups", async () => {
   await t.goto(`${WEB}/en/groups`, { waitUntil: "domcontentloaded" });
-  await t.getByText("2 students").first().waitFor(); // group card (the name also sits in a hidden <option>)
+  await t.getByText(/^\d+ students$/).first().waitFor(); // group card (the name also sits in a hidden <option>)
   await t.screenshot({ path: join(OUT, "05c-teacher-groups.png") });
 });
 
