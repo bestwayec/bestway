@@ -211,7 +211,7 @@ try {
     await student.waitForTimeout(2500);
     await student.getByRole("button", { name: "Speaking", exact: true }).click();
     await student.waitForTimeout(1500);
-    const close = student.getByRole("button", { name: "Yopish" });
+    const close = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await close.count()) await close.first().click();
     await student.getByRole("button", { name: "Record", exact: true }).click();
     await student.waitForTimeout(4000);
@@ -225,7 +225,7 @@ try {
   await step(student, "09-reload-keeps-answers", async () => {
     await student.reload({ waitUntil: "networkidle" });
     await student.waitForTimeout(2000);
-    const close = student.getByRole("button", { name: "Yopish" });
+    const close = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await close.count()) await close.first().click();
     const listening = await student.getByRole("radio", { name: "Coffee" }).isChecked();
     await student.getByRole("button", { name: "Reading", exact: true }).click();
@@ -239,7 +239,7 @@ try {
     return "all four answers present after reload";
   });
   await step(student, "10-finish", async () => {
-    const micCheck = student.getByRole("button", { name: "Yopish" });
+    const micCheck = student.getByRole("button", { name: /^(Close|Yopish)$/ });
     if (await micCheck.count()) await micCheck.first().click();
     await student.getByRole("button", { name: "Finish", exact: true }).click();
     const dialog = student.getByRole("dialog");
