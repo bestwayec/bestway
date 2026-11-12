@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../messages/en.json";
 import type { MockAttemptDetail } from "@/lib/types";
 
-vi.mock("next-intl", () => ({ useTranslations: (namespace: string) => (key: string) => {
+vi.mock("next-intl", () => ({ useTranslations: (namespace: string) => (key: string, values?: Record<string, string | number>) => {
   const source = namespace === "mock" ? en.mock : en.common;
-  return key.split(".").reduce<unknown>((value, field) => value && typeof value === "object" ? (value as Record<string, unknown>)[field] : undefined, source) ?? key;
+  const found = key.split(".").reduce<unknown>((value, field) => value && typeof value === "object" ? (value as Record<string, unknown>)[field] : undefined, source) ?? key;
+  return typeof found === "string" && values ? found.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? `{${name}}`)) : found;
 } }));
 vi.mock("@/i18n/navigation", () => ({ Link: ({ children, ...props }: React.ComponentProps<"a">) => React.createElement("a", props, children) }));
 const viewer = vi.hoisted(() => ({ role: "teacher" }));
@@ -192,5 +193,18 @@ describe("attempt with no answers", () => {
     expect(out).toContain("Natijalar tekshirilmoqda");
     expect(out).not.toContain("Deepgram");
     expect(out).not.toContain("Ultra-tezkor");
+  });
+  it("shows a short objective practice as raw correct and percent, never a band (owner decision)", () => {
+    const value = attempt(false);
+    value.examType = "ielts_academic";
+    value.flowMode = "single_skill";
+    value.scoreMethod = "PRACTICE_PARTIAL";
+    value.overallScore = null;
+    value.cefrLevel = null;
+    value.overallBand = null;
+    value.sections = [{ ...value.sections[0], id: "reading", skill: "reading", score: 5, max: 6, standardScore: null, band: null, groups: [] }];
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain("5/6 correct · 83%");
+    expect(html).not.toMatch(/Band \d/);
   });
 });

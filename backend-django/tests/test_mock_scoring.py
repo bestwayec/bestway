@@ -122,15 +122,16 @@ def test_timeout_completeness_and_unreachable_sections():
 
 
 def test_skipped_sections_do_not_auto_zero_overall_score():
+    # A full Listening section (35 questions): only full sections get a standard score.
     sections = [
-        section('listening', [question('l1', points=1)]),
+        section('listening', [question(f'l{i}', points=1) for i in range(1, 36)]),
         section('reading', [question('r1', points=1)]),
         section('writing', [question('w1', 'essay_task1', points=5)], maxScore=5),
         section('speaking', [question('s1', 'speaking_task', points=5)], maxScore=5),
     ]
     # Candidate answered only Listening correctly; Reading, Writing, Speaking were skipped/unanswered
     answers = {
-        'l1': dict(response='yes'),
+        **{f'l{i}': dict(response='yes') for i in range(1, 36)},
         'r1': dict(response='', isGraded=True, score=0.0),
         'w1': dict(response='', isGraded=True, score=0.0),
         's1': dict(response='', isGraded=True, score=0.0),
@@ -149,3 +150,58 @@ def test_skipped_sections_do_not_auto_zero_overall_score():
     # Overall score should be strictly based on the completed section (75), not dragged down to 18.75 or 0!
     assert result['overallScore'] == 75.0
 
+
+# Owner decision 2026-11-12: no band / level for short or partial sets; full sections use the official tables.
+
+def _objective(skill, total, correct):
+    qs = [question(f'{skill[0]}{i}') for i in range(total)]
+    answers = {q['id']: dict(response='yes' if i < correct else 'no') for i, q in enumerate(qs)}
+    return section(skill, qs), answers
+
+
+def test_short_ielts_practice_shows_no_band():
+    sec, answers = _objective('listening', 1, 1)
+    result, _ = score.calculate('ielts_academic', [sec], answers)
+    assert result['sectionBands']['listening'] is None
+    assert result['rawScores']['listening'] == dict(score=1, max=1)
+    assert result['overallBand'] is None and result['cefrLevel'] is None
+
+
+def test_full_ielts_section_band_comes_from_the_official_table():
+    sec, answers = _objective('reading', 40, 30)
+    result, _ = score.calculate('ielts_academic', [sec], answers)
+    assert result['sectionBands']['reading'] == score.band_from_raw('reading', 'ielts_academic', 30, 40)
+    assert result['sectionBands']['reading'] == next(b for minimum, b in score.ACADEMIC if 30 >= minimum)
+
+
+def test_short_multilevel_practice_shows_raw_result_only():
+    sec, answers = _objective('reading', 6, 5)
+    result, _ = score.calculate('multilevel', [sec], answers, versioned=True)
+    item = result['standardScores']['reading']
+    assert item['estimatedStandardScore'] is None and item['level'] is None and item['cefrLevel'] is None
+    assert (item['rawScore'], item['rawMax'], item['scoreMethod']) == (5, 6, 'RAW_ONLY')
+    assert result['overallScore'] is None and result['cefrLevel'] is None
+
+
+def test_full_multilevel_section_uses_the_official_conversion():
+    sec, answers = _objective('listening', 35, 20)
+    result, _ = score.calculate('multilevel', [sec], answers, versioned=True)
+    item = result['standardScores']['listening']
+    expected = score.estimate_objective(20, 35)['estimatedStandardScore']
+    assert item['estimatedStandardScore'] == expected
+    assert item['level'] == score.multilevel_level(expected)
+
+
+def test_single_ielts_writing_task_is_not_a_band():
+    sections = [section('writing', [question('w1', 'essay_task1', points=9)])]
+    answers = {'w1': dict(response='essay', isGraded=True, score=6.0)}
+    result, _ = score.calculate('ielts_academic', sections, answers)
+    assert result['sectionBands']['writing'] is None
+
+
+def test_a_mock_with_a_short_section_has_no_overall_band():
+    lis, a1 = _objective('listening', 40, 30)
+    rea, a2 = _objective('reading', 3, 3)
+    result, _ = score.calculate('ielts_academic', [lis, rea], {**a1, **a2})
+    assert result['sectionBands']['listening'] is not None and result['sectionBands']['reading'] is None
+    assert result['overallBand'] is None and result['cefrLevel'] is None

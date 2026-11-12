@@ -19,6 +19,7 @@ import {
 import { useMe } from "@/hooks/use-me";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { mayShowSectionBand } from "@/lib/score-display";
 import { AssessmentPanel } from "./assessment-panel";
 import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
 import { CefrResultInfographic } from "./cefr-result-infographic";
@@ -193,6 +194,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             const practiceGrade = s.practiceGrade ?? rawSkill?.practiceGrade;
             const pendingManual = MANUAL_SKILLS.has(s.skill) && !practiceGrade && !hasCompleteManualGrade(s);
             const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
+            const questionCount = (s.groups ?? []).reduce((sum, g) => sum + (g.questions?.length ?? 0), 0);
+            const fullSection = mayShowSectionBand(attempt.examType, s.skill, questionCount);
             return (
               <div
                 key={s.id}
@@ -217,17 +220,18 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                     <span className="font-bold text-sm text-brand tabular-nums">
                       {practiceGrade.score} /{practiceGrade.scaleMax}
                     </span>
-                  ) : !isIelts && s.standardScore != null ? (
+                  ) : !isIelts && s.standardScore != null && fullSection ? (
                     <span className="font-bold text-sm text-brand tabular-nums">
                       {s.standardScore} /75 <span className="text-xs font-normal text-fg-muted">({s.score}/{s.max})</span>
                     </span>
-                  ) : s.band != null ? (
+                  ) : s.band != null && fullSection ? (
                     <span className="font-bold text-sm text-brand tabular-nums">
                       Band {isIelts ? s.band.toFixed(1) : s.band}
                     </span>
                   ) : s.score != null && s.max != null ? (
+                    // Short / partial sets: raw result only, never a band or level (owner decision 2026-11-12).
                     <span className="font-bold text-sm text-brand tabular-nums">
-                      {s.score}/{s.max}
+                      {MANUAL_SKILLS.has(s.skill) ? `${s.score}/${s.max}` : t("rawCorrect", { score: s.score, max: s.max, percent: accuracy ?? 0 })}
                     </span>
                   ) : (
                     <Badge variant="neutral" className="text-[11px]">

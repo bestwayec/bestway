@@ -1172,7 +1172,8 @@
         "speaking": "Savollarni tinglang va mikrofon orqali aniq javob bering.",
         "default": "Keyingi bo‘limga tayyorlaning."
       }
-    }
+    },
+    "rawCorrect": "{score}/{max} to‘g‘ri · {percent}%"
   },
   "wizard": {
     "title": "Imtihon yaratish",
