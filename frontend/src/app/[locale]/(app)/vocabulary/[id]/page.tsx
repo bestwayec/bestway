@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,13 @@ export default function VocabularyDetailPage() {
   const tq = useTranslations("vocabQuiz");
   const params = useParams();
   const setId = params.id as string;
+
+  // The set's own title, level and size from the server; nothing is shown until (or unless) it loads.
+  const setQ = useQuery({
+    queryKey: ["vocabulary-set", setId],
+    queryFn: () => api.get<{ title: string; level: string; wordCount: number }>(`/v1/vocabulary/sets/${setId}`),
+    enabled: !!setId,
+  });
 
   const [mode, setMode] = React.useState<QuizModeType>("mixed");
   const [isQuizStarted, setIsQuizStarted] = React.useState(false);
@@ -58,6 +67,13 @@ export default function VocabularyDetailPage() {
           <div className="inline-flex p-3 rounded-full bg-brand/10 border border-brand/20 text-brand mb-2">
             <Sparkles className="h-8 w-8" />
           </div>
+          {setQ.data && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-lg font-bold text-fg">{setQ.data.title}</span>
+              {setQ.data.level && <Badge variant="brand" className="text-xs">{setQ.data.level}</Badge>}
+              <span className="text-sm text-fg-muted">{t("words", { count: setQ.data.wordCount })}</span>
+            </div>
+          )}
           <h1 className="text-2xl sm:text-3xl font-extrabold text-fg">
             {tm("title")}
           </h1>

@@ -270,14 +270,14 @@ try {
   await step(teacher, "12-teacher-creates-vocabulary", async () => {
     await teacher.goto(`${WEB}/en/vocabulary`, { waitUntil: "networkidle" });
     await teacher.getByRole("button", { name: "New vocabulary set" }).click();
-    await teacher.getByPlaceholder("Masalan: Unit 5: Environment & Global Warming").fill(VOCAB);
+    await teacher.getByLabel("Set title *").fill(VOCAB);
     for (const [en, uz] of [["harbour", "bandargoh"], ["bridge", "ko'prik"], ["ferry", "parom"]]) {
       await teacher.getByPlaceholder("English word (e.g. resilient)").fill(en);
-      await teacher.getByPlaceholder("O'zbekcha tarjimasi (e.g. chidamli)").fill(uz);
-      await teacher.getByRole("button", { name: "So'zni ro'yxatga qo'shish" }).click();
+      await teacher.getByPlaceholder("Uzbek translation (e.g. chidamli)").fill(uz);
+      await teacher.getByRole("button", { name: "Add the word to the list" }).click();
     }
     const created = teacher.waitForResponse((r) => r.url().includes("/vocabulary/sets") && r.request().method() === "POST" && !r.url().includes("parse"));
-    await teacher.getByRole("button", { name: "Lug'at To'plamini E'lon Qilish" }).click();
+    await teacher.getByRole("button", { name: "Publish the vocabulary set" }).click();
     const res = await created;
     if (res.status() !== 201) throw new Error(`create HTTP ${res.status()}`);
     vocabSetId = (await res.json()).data.id;
