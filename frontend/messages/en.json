@@ -1293,6 +1293,31 @@
       "gradingProgramAll": "All programs",
       "gradingProgramLabel": "Filter submissions by exam program",
       "gradingLoadFailed": "Submissions could not be loaded."
+    },
+    "deviceCheck": {
+      "intro": "Optional: check your connection, sound and microphone on this device before you start.",
+      "run": "Check my device",
+      "net": "Connection",
+      "netOk": "Connected · server replied in {ms} ms",
+      "netSlow": "Connected, but slow · server replied in {ms} ms. Answers may take longer to save.",
+      "netFail": "The server did not reply. Check your internet before starting.",
+      "netOffline": "This device is offline.",
+      "netRetest": "Check the connection again",
+      "sound": "Sound",
+      "soundAsk": "A short test tone was played. Did you hear it?",
+      "heardYes": "Yes, I heard it",
+      "heardNo": "No",
+      "playAgain": "Play again",
+      "soundHeard": "You confirmed you heard the test tone.",
+      "soundNotHeard": "Turn the volume up or connect headphones, then play the tone again.",
+      "soundUnsupported": "This browser cannot play the test tone.",
+      "mic": "Microphone (Speaking)",
+      "micTest": "Test the microphone",
+      "micRetest": "Test again",
+      "micSpeak": "Say a few words now…",
+      "micOk": "Your voice was picked up.",
+      "micSilent": "The microphone works but heard almost nothing. Speak louder or choose another microphone, then test again.",
+      "micUnsupported": "This browser cannot record audio. Use a current Chrome, Edge or Safari."
     }
   },
   "wizard": {
