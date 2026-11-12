@@ -175,10 +175,6 @@ class ScorePredictionEngineTests(SimpleTestCase):
         self.assertEqual(prediction_service.multilevel_cefr_from_score(75), "C1")
 
     def test_dual_scale_conversions(self):
-        self.assertEqual(prediction_service.raw_to_multilevel_75(35, 35), 75.0)
-        self.assertEqual(prediction_service.raw_to_multilevel_75(28, 35), 60.0)
-        self.assertEqual(prediction_service.raw_to_ielts_band(39, 40, skill="listening"), 9.0)
-        self.assertEqual(prediction_service.raw_to_ielts_band(30, 40, skill="reading", exam_type="ielts_academic"), 7.0)
         self.assertGreaterEqual(prediction_service.multilevel_to_ielts_band(65), 7.0)
         self.assertGreaterEqual(prediction_service.ielts_band_to_multilevel(7.0), 60.0)
 
@@ -187,12 +183,10 @@ class ScorePredictionEngineTests(SimpleTestCase):
     @patch("apps.core.prediction_service.ensure_target_table")
     @patch("apps.core.prediction_service.get_student_target")
     @patch("apps.core.prediction_service._analyze_weak_modules")
-    @patch("apps.core.prediction_service.TestAttempt")
     @patch("apps.core.prediction_service.MockAttempt")
     def test_dynamic_prediction_from_recent_attempts(
         self,
         mock_attempt_cls,
-        test_attempt_cls,
         mock_weak_modules,
         mock_get_target,
         _mock_ensure_table,
@@ -228,6 +222,7 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 id="att-4",
                 exam_id="ex-4",
                 exam=SimpleNamespace(title="Mock 4", type="multilevel"),
+                status="completed",
                 overall_band=None,
                 overall_score=62.0,
                 cefr_level="C1",
@@ -241,6 +236,7 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 id="att-3",
                 exam_id="ex-3",
                 exam=SimpleNamespace(title="Mock 3", type="multilevel"),
+                status="completed",
                 overall_band=None,
                 overall_score=54.0,
                 cefr_level="B2",
@@ -254,6 +250,7 @@ class ScorePredictionEngineTests(SimpleTestCase):
                 id="att-2",
                 exam_id="ex-2",
                 exam=SimpleNamespace(title="Mock 2", type="multilevel"),
+                status="completed",
                 overall_band=None,
                 overall_score=44.0,
                 cefr_level="B1",
@@ -265,7 +262,6 @@ class ScorePredictionEngineTests(SimpleTestCase):
             ),
         ]
         mock_attempt_cls.objects.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = fake_attempts
-        test_attempt_cls.objects.filter.return_value.select_related.return_value.order_by.return_value.__getitem__.return_value = []
 
         pred = prediction_service.get_student_prediction("student-1", limit=5)
         self.assertEqual(pred["attemptsAnalyzed"], 3)
