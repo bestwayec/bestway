@@ -1017,7 +1017,19 @@
       "saveRetry": "Retry",
       "practiceBadge": "{skill} practice",
       "questionPosition": "Question {number}",
-      "flaggedCount": "{count} flagged"
+      "flaggedCount": "{count} flagged",
+      "flagAction": "Flag",
+      "flagActionTitle": "Flag this question for review",
+      "unflagTitle": "Remove flag",
+      "flaggedShort": "Flagged",
+      "noQuestionsToSubmit": "No questions are loaded (0/0), so the exam cannot be submitted.",
+      "sectionLoadError": "The {section} section could not be loaded",
+      "passageTab": "Passage",
+      "questionsTab": "Questions ({count})",
+      "writingModeType": "Type",
+      "writingModeOcr": "Upload paper photo (OCR)",
+      "ocrEditTitle": "Recognised / saved text",
+      "ocrPlaceholder": "The recognised text appears here, and you can edit it."
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1145,6 +1157,21 @@
       "startTitle": "This exam runs in full screen",
       "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Do not leave full screen and do not switch apps or tabs: every exit is recorded and three warnings submit the exam.",
       "startButton": "I understand, start"
+    },
+    "transition": {
+      "completed": "{skill} section completed",
+      "saved": "Your answers are saved.",
+      "next": "Next section",
+      "autoStart": "Starts automatically in",
+      "seconds": "{count} s",
+      "startNow": "Start {skill} now",
+      "tips": {
+        "listening": "The audio plays automatically. Listen carefully and mark your answers.",
+        "reading": "Read the texts and answer the questions. Move between parts with the tabs.",
+        "writing": "Write your responses for each task. Keep an eye on the word counter.",
+        "speaking": "Listen to each question and answer clearly into the microphone.",
+        "default": "Get ready for the next section."
+      }
     }
   },
   "wizard": {

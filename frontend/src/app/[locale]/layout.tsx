@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-init";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -227,14 +228,15 @@ export default async function LocaleLayout({
   };
 
   return (
-    // Dark-only — white/light theme deleted. `<html>` is always `dark`.
+    // Light by default; THEME_INIT_SCRIPT applies a remembered dark choice before the first paint.
     <html
       lang={locale}
       data-scroll-behavior="smooth"
-      className={`${inter.variable} dark h-full`}
+      className={`${inter.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

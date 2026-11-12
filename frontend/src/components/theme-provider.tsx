@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { DEFAULT_THEME, THEME_STORAGE_KEY, resolveStoredTheme } from "@/lib/theme-init";
 
 interface UseThemeProps {
   themes: string[];
@@ -17,11 +18,11 @@ export function useTheme(): UseThemeProps {
   const ctx = React.useContext(ThemeContext);
   if (ctx) return ctx;
   return {
-    themes: ["dark", "light"],
+    themes: ["light", "dark"],
     setTheme: () => {},
-    theme: "dark",
-    resolvedTheme: "dark",
-    systemTheme: "dark",
+    theme: DEFAULT_THEME,
+    resolvedTheme: DEFAULT_THEME,
+    systemTheme: undefined,
     forcedTheme: undefined,
   };
 }
@@ -41,32 +42,29 @@ interface ThemeProviderProps extends React.PropsWithChildren {
 
 export function ThemeProvider({
   children,
-  storageKey = "theme",
-  defaultTheme = "dark",
+  storageKey = THEME_STORAGE_KEY,
+  defaultTheme = DEFAULT_THEME,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<string>(defaultTheme);
+  // The <head> script (lib/theme-init.ts) already applied the stored theme before paint. Do not touch
+  // <html> until the stored value has been read, otherwise a dark user would flash to light on hydration.
+  const [resolved, setResolved] = React.useState(false);
 
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved === "light" || saved === "dark") {
-        setThemeState(saved);
-      }
+      setThemeState(resolveStoredTheme(localStorage.getItem(storageKey)));
     } catch {}
+    setResolved(true);
   }, [storageKey]);
 
   React.useEffect(() => {
+    if (!resolved) return;
     const el = document.documentElement;
-    if (theme === "light") {
-      el.classList.remove("dark");
-      el.style.colorScheme = "light";
-      el.setAttribute("data-theme", "light");
-    } else {
-      el.classList.add("dark");
-      el.style.colorScheme = "dark";
-      el.setAttribute("data-theme", "dark");
-    }
-  }, [theme]);
+    const next = theme === "dark" ? "dark" : "light";
+    el.classList.toggle("dark", next === "dark");
+    el.style.colorScheme = next;
+    el.setAttribute("data-theme", next);
+  }, [theme, resolved]);
 
   const setTheme = React.useCallback(
     (next: string | ((prev: string) => string)) => {
@@ -87,8 +85,8 @@ export function ThemeProvider({
       setTheme,
       forcedTheme: undefined,
       resolvedTheme: theme,
-      systemTheme: "dark",
-      themes: ["dark", "light"],
+      systemTheme: undefined,
+      themes: ["light", "dark"],
     }),
     [theme, setTheme],
   );
