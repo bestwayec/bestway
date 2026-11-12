@@ -118,7 +118,7 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 
 #113–#122 and #124 MERGED. Nothing else merged since (verified 2026-11-12 via the PR list).
 OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 exam entry/result/quiz → #132 U8 vocabulary pages + Finish/Resume dialogs → #133 U4 catalogue progress chips/filter → #134 U4 pre-exam device check (each stacked on the previous; plain merges, no force-push). #123 = this file.
-CI (GitHub, head SHAs): #125 892ae84, #126 242970d, #127 0e8094d, #128 dc119d1, #129 60d26fc, #130 569f94a, #131 d4cfee2, #123 04f9269 — django, frontend, CodeQL js/python all success (checked 2026-11-12). #132 ca4960e success. #133 3af28b1 success. #134 c12a102 running when this was written (see the session report).
+CI (GitHub, head SHAs): #125 892ae84, #126 242970d, #127 0e8094d, #128 dc119d1, #129 60d26fc, #130 569f94a, #131 d4cfee2, #123 04f9269 — django, frontend, CodeQL js/python all success (checked 2026-11-12). #132 ca4960e success. #133 3af28b1 success. #134 c12a102 success. #123 7b75676 success.
 Merge check: `git merge-tree` of #127 with the stack head is clean and the merged smoke.mjs keeps the English labels ("Start Reading", "Yes, finish"). #127's own smoke.mjs still clicks "Reading Boshlash" — only correct after the merge with #131.
 
 ## Open questions (owner)
