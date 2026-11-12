@@ -527,7 +527,7 @@ export function ImportPanel({
                 </div>
               )}
               {preview.instructions?.trim() && (
-                <p className="rounded-[8px] bg-sky-500/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-sky-500/20">
+                <p className="rounded-[8px] bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
                   Instructions found in paste: {preview.instructions.trim()}
                 </p>
               )}

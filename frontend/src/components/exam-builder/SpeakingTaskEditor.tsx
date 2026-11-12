@@ -321,7 +321,7 @@ export function SpeakingTaskEditor({
           </p>
           <h4 className="mt-1 text-base font-bold text-fg">{partLabel}</h4>
           {instructions.trim() && (
-            <p className="mt-1.5 rounded-[8px] bg-sky-500/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-sky-500/20">
+            <p className="mt-1.5 rounded-[8px] bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
               {instructions.trim()}
             </p>
           )}

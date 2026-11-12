@@ -566,7 +566,7 @@ export function SmartBulkImportModal({
                 <div className="space-y-3 rounded-xl border border-brand/30 bg-bg-subtle/40 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 text-emerald-500" />
+                      <CheckCircle2 className="size-4 text-brand" />
                       <span className="text-sm font-bold text-fg">
                         Tahlil natijasi: {editableQuestions.length} ta savol topildi
                       </span>
@@ -692,7 +692,7 @@ export function SmartBulkImportModal({
                                     }));
                                   }}
                                   className={`h-8 text-xs font-semibold ${
-                                    !ansVal.trim() ? "border-warning" : "border-emerald-500/40"
+                                    !ansVal.trim() ? "border-warning" : "border-brand/40"
                                   }`}
                                 />
                               </td>
@@ -741,7 +741,7 @@ export function SmartBulkImportModal({
                 }}
                 className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-bg-subtle/30 p-8 text-center transition hover:border-brand"
               >
-                <FileSpreadsheet className="size-10 text-emerald-500" />
+                <FileSpreadsheet className="size-10 text-brand" />
                 <p className="mt-2 text-sm font-bold text-fg">
                   2-qadam: To&apos;ldirilgan Excel (.xlsx) yoki CSV faylni shu yerga tashlang
                 </p>
@@ -769,7 +769,7 @@ export function SmartBulkImportModal({
                   {excelFile ? "Boshqa fayl tanlash" : "Fayl tanlash (.xlsx / .csv)"}
                 </Button>
                 {excelFile && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400">
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
                     <CheckCircle2 className="size-3.5" />
                     <span>{excelFile.name}</span>
                     <span className="text-fg-muted">
@@ -822,7 +822,7 @@ export function SmartBulkImportModal({
                 </div>
 
                 {audioFile && (
-                  <p className="text-xs text-emerald-400 font-medium">
+                  <p className="text-xs text-brand font-medium">
                     Tanlangan fayl: {audioFile.name} ({(audioFile.size / (1024 * 1024)).toFixed(2)} MB)
                   </p>
                 )}

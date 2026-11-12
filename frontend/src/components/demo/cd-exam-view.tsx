@@ -186,7 +186,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
   if (!part) {
     return (
       <div className="flex min-h-[500px] w-full items-center justify-center bg-bg p-8 text-center">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+        <div className="max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
           <h2 className="text-lg font-bold text-fg">Imtihon topshiriqlari tayyorlanmoqda...</h2>
           <p className="mt-2 text-xs text-fg-muted">Agar bir necha soniyada ochilmasa, iltimos sahifani yangilang.</p>
         </div>

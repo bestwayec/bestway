@@ -15,6 +15,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/app/[locale]/(marketing)/page.tsx": {},
   "src/app/[locale]/(auth)/login/page.tsx": {},
   "src/components/auth/login-form.tsx": {},
+  "src/components/auth/google-auth-button.tsx": {},
   "src/components/placement/ExpressPlacementTest.tsx": {},
   "src/components/marketing/teacher-card.tsx": {},
   "src/components/mobile/mobile-welcome-screen.tsx": {},
@@ -41,10 +42,33 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/ClickToVocabWrapper.tsx": {},
   "src/components/simulator/CDLayout.tsx": {},
   "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },
+  // Exam Builder, vocabulary, teacher workspace
+  "src/components/exam-builder/BulkQuestionImporterModal.tsx": {},
+  "src/components/exam-builder/ExamBuilderList.tsx": {},
+  "src/components/exam-builder/ExamQuestionsEditorDialog.tsx": {},
+  "src/components/exam-builder/ImportPanel.tsx": {},
+  "src/components/exam-builder/OverviewPanel.tsx": {},
+  "src/components/exam-builder/SmartBulkImportModal.tsx": {},
+  "src/components/exam-builder/SpeakingTaskEditor.tsx": {},
+  "src/components/exam-builder/WritingTaskEditor.tsx": {},
+  "src/components/vocabulary/VocabularyCatalogView.tsx": {},
+  "src/components/vocabulary/VocabularyQuizRunner.tsx": {},
+  "src/app/[locale]/(app)/vocabulary/[id]/page.tsx": {},
+  "src/app/[locale]/(app)/vocabulary/srs/page.tsx": {},
+  "src/components/teacher/CohortProgressTable.tsx": {},
+  "src/components/teacher/CreateAssignmentModal.tsx": {},
+  "src/components/teacher/TeacherCohortList.tsx": {},
+  "src/components/teacher/TeacherWorkspaceView.tsx": {},
+  "src/components/teacher/VocabularyBuilder.tsx": {},
+  "src/components/teacher/VocabularyGroupReport.tsx": {},
+  "src/components/exam-builder/visual-editor/QuestionChip.tsx": { neutralOnly: true },
 };
 
 const root = path.resolve(__dirname, "..");
-type Codemod = { tokenizeSource: (src: string, opts?: { neutralOnly?: boolean }) => string };
+type Codemod = {
+  tokenizeSource: (src: string, opts?: { neutralOnly?: boolean }) => string;
+  fixUndefinedAliases: (src: string) => string;
+};
 let codemod: Codemod;
 
 beforeAll(async () => {
@@ -78,6 +102,30 @@ describe("colour codemod", () => {
     expect(codemod.tokenizeSource('"text-red-500 bg-slate-900"', { neutralOnly: true })).toBe(
       '"text-red-500 bg-surface"',
     );
+  });
+});
+
+describe("no undefined colour names", () => {
+  it("maps shadcn names that globals.css never defined", () => {
+    expect(codemod.fixUndefinedAliases('"text-muted-foreground bg-destructive/10 hover:bg-muted bg-card text-foreground"')).toBe(
+      '"text-fg-muted bg-danger/10 hover:bg-bg-subtle bg-surface text-fg"',
+    );
+  });
+
+  it("are used nowhere in src (they compile to no CSS)", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith(".spec.ts")) {
+          const source = fs.readFileSync(full, "utf8");
+          if (codemod.fixUndefinedAliases(source) !== source) offenders.push(path.relative(root, full));
+        }
+      }
+    };
+    walk(path.join(root, "src"));
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -250,15 +250,15 @@ export function ExamQuestionsEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : undefined)}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto border border-slate-800 bg-bg-subtle/95 p-6 text-slate-100 shadow-2xl backdrop-blur-2xl">
-        <DialogHeader className="border-b border-slate-800/80 pb-4">
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto border border-border bg-bg-subtle/95 p-6 text-fg shadow-2xl backdrop-blur-2xl">
+        <DialogHeader className="border-b border-border/80 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white">
-                <Sparkles className="size-5 text-emerald-400" />
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-fg">
+                <Sparkles className="size-5 text-brand" />
                 Savollar Redaktori — {exam.title}
               </DialogTitle>
-              <DialogDescription className="mt-1 text-xs text-slate-400">
+              <DialogDescription className="mt-1 text-xs text-fg-muted">
                 Savollarni to&apos;g&apos;ridan-to&apos;g&apos;ri tahrirlang yoki standart shablonni yuklab, 1-klikda nashr qiling.
               </DialogDescription>
             </div>
@@ -267,9 +267,9 @@ export function ExamQuestionsEditorDialog({
                 type="button"
                 size="sm"
                 onClick={() => setBulkImporterOpen(true)}
-                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold shadow-md shadow-emerald-500/20"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md shadow-brand/20"
               >
-                <Zap className="size-3.5 fill-slate-950" />
+                <Zap className="size-3.5 fill-fg" />
                 ⚡️ Tezkor Matn Orqali Kiritish (Bulk Paste)
               </Button>
               <Button
@@ -277,7 +277,7 @@ export function ExamQuestionsEditorDialog({
                 size="sm"
                 variant="outline"
                 onClick={handleLoadStandardTemplate}
-                className="border-emerald-600/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 hover:text-emerald-100"
+                className="border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50 hover:text-brand"
               >
                 <Sparkles className="size-3.5" />
                 Standart Shablonni Yuklash
@@ -292,8 +292,8 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("writing")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "writing"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/40"
-                  : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
               <PenLine className="size-3.5" />
@@ -304,8 +304,8 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("speaking")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "speaking"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/40"
-                  : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
               <Mic className="size-3.5" />
@@ -316,8 +316,8 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("reading")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "reading"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/40"
-                  : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
               <BookOpenText className="size-3.5" />
@@ -328,8 +328,8 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("listening")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "listening"
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-900/40"
-                  : "bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
               <Headphones className="size-3.5" />
@@ -343,65 +343,65 @@ export function ExamQuestionsEditorDialog({
           {activeTab === "writing" && (
             <div className="space-y-5">
               {/* Task 1 Card */}
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
+              <div className="rounded-xl border border-border/80 bg-surface/60 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h4 className="flex items-center gap-2 text-sm font-bold text-white">
-                    <PenLine className="size-4 text-emerald-400" />
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-fg">
+                    <PenLine className="size-4 text-brand" />
                     {isMultilevel ? "Task 1.1 & 1.2 — Letter Tasks" : "Task 1 — Visual / Report Prompt"}
                   </h4>
-                  <span className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-xs text-slate-300">
+                  <span className="rounded-md border border-border-strong bg-surface-hover/80 px-2 py-0.5 text-xs text-fg-muted">
                     Min: {wTask1WordLimit} so&apos;z
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-300">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       Savol matni (Prompt):
                     </label>
                     <Textarea
                       value={wTask1Prompt}
                       onChange={(e) => setWTask1Prompt(e.target.value)}
                       rows={3}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                       placeholder="Talabaga ko'rinadigan vazifa sharti..."
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-300">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       Bog&apos;lovchi matn / Stimulus text (Passage):
                     </label>
                     <Textarea
                       value={wTask1Passage}
                       onChange={(e) => setWTask1Passage(e.target.value)}
                       rows={2}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                       placeholder="Email yoki grafik tavsifi matni..."
                     />
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">
+                      <label className="mb-1 block text-xs font-medium text-fg-muted">
                         Rasm kaliti (Image Key / URL):
                       </label>
                       <Input
                         value={wTask1ImageKey}
                         onChange={(e) => setWTask1ImageKey(e.target.value)}
-                        className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                        className="border-border bg-bg/80 text-fg focus:border-brand"
                         placeholder="masalan: multilevel/assets/chart.png"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-300">
+                      <label className="mb-1 block text-xs font-medium text-fg-muted">
                         Minimal so&apos;zlar soni (Word limit):
                       </label>
                       <Input
                         type="number"
                         value={wTask1WordLimit}
                         onChange={(e) => setWTask1WordLimit(Number(e.target.value))}
-                        className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                        className="border-border bg-bg/80 text-fg focus:border-brand"
                       />
                     </div>
                   </div>
@@ -409,40 +409,40 @@ export function ExamQuestionsEditorDialog({
               </div>
 
               {/* Task 2 Card */}
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
+              <div className="rounded-xl border border-border/80 bg-surface/60 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h4 className="flex items-center gap-2 text-sm font-bold text-white">
-                    <PenLine className="size-4 text-emerald-400" />
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-fg">
+                    <PenLine className="size-4 text-brand" />
                     {isMultilevel ? "Task 2 — Publication / Opinion" : "Task 2 — Essay Prompt"}
                   </h4>
-                  <span className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-xs text-slate-300">
+                  <span className="rounded-md border border-border-strong bg-surface-hover/80 px-2 py-0.5 text-xs text-fg-muted">
                     Min: {wTask2WordLimit} so&apos;z
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-300">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       Essay mavzusi (Prompt):
                     </label>
                     <Textarea
                       value={wTask2Prompt}
                       onChange={(e) => setWTask2Prompt(e.target.value)}
                       rows={4}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                       placeholder="Essay savoli va talablari..."
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-300">
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">
                       Minimal so&apos;zlar soni (Word limit):
                     </label>
                     <Input
                       type="number"
                       value={wTask2WordLimit}
                       onChange={(e) => setWTask2WordLimit(Number(e.target.value))}
-                      className="w-48 border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="w-48 border-border bg-bg/80 text-fg focus:border-brand"
                     />
                   </div>
                 </div>
@@ -454,73 +454,73 @@ export function ExamQuestionsEditorDialog({
           {activeTab === "speaking" && (
             <div className="space-y-5">
               {/* Part 1 */}
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
-                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-                  <Mic className="size-4 text-emerald-400" />
+              <div className="rounded-xl border border-border/80 bg-surface/60 p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-fg">
+                  <Mic className="size-4 text-brand" />
                   Part 1 — Interview Savollari (3 ta savol)
                 </h4>
                 <div className="space-y-2.5">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-400">1-savol:</label>
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">1-savol:</label>
                     <Input
                       value={sp1Q1}
                       onChange={(e) => setSp1Q1(e.target.value)}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-400">2-savol:</label>
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">2-savol:</label>
                     <Input
                       value={sp1Q2}
                       onChange={(e) => setSp1Q2(e.target.value)}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-400">3-savol:</label>
+                    <label className="mb-1 block text-xs font-medium text-fg-muted">3-savol:</label>
                     <Input
                       value={sp1Q3}
                       onChange={(e) => setSp1Q3(e.target.value)}
-                      className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                      className="border-border bg-bg/80 text-fg focus:border-brand"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Part 2 */}
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
-                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-                  <Mic className="size-4 text-emerald-400" />
+              <div className="rounded-xl border border-border/80 bg-surface/60 p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-fg">
+                  <Mic className="size-4 text-brand" />
                   Part 2 — Cue Card (1 daqiqa tayyorgarlik, 2 daqiqa gapirish)
                 </h4>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
                     Cue Card mavzusi va bandlari (Bullet points):
                   </label>
                   <Textarea
                     value={sp2CueCard}
                     onChange={(e) => setSp2CueCard(e.target.value)}
                     rows={5}
-                    className="border-slate-800 bg-slate-950/80 font-mono text-sm text-slate-100 focus:border-emerald-500"
+                    className="border-border bg-bg/80 font-mono text-sm text-fg focus:border-brand"
                   />
                 </div>
               </div>
 
               {/* Part 3 */}
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
-                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-                  <Mic className="size-4 text-emerald-400" />
+              <div className="rounded-xl border border-border/80 bg-surface/60 p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-fg">
+                  <Mic className="size-4 text-brand" />
                   Part 3 — Chuqurlashtirilgan Muhokama (Discussion)
                 </h4>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-300">
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
                     Discussion savollari:
                   </label>
                   <Textarea
                     value={sp3Discussion}
                     onChange={(e) => setSp3Discussion(e.target.value)}
                     rows={4}
-                    className="border-slate-800 bg-slate-950/80 text-slate-100 focus:border-emerald-500"
+                    className="border-border bg-bg/80 text-fg focus:border-brand"
                   />
                 </div>
               </div>
@@ -531,7 +531,7 @@ export function ExamQuestionsEditorDialog({
           {activeTab === "reading" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-fg-muted">
                   Multiple Choice savollari: savol matni, 4 ta variant va to&apos;g&apos;ri javob kaliti.
                 </p>
                 <div className="flex items-center gap-2">
@@ -540,9 +540,9 @@ export function ExamQuestionsEditorDialog({
                     size="sm"
                     variant="outline"
                     onClick={() => setBulkImporterOpen(true)}
-                    className="border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 text-xs"
+                    className="border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50 text-xs"
                   >
-                    <Zap className="size-3.5 mr-1 text-emerald-400" />
+                    <Zap className="size-3.5 mr-1 text-brand" />
                     ⚡️ Bulk Paste
                   </Button>
                   <Button
@@ -560,7 +560,7 @@ export function ExamQuestionsEditorDialog({
                         },
                       ])
                     }
-                    className="border-slate-700 bg-slate-800 text-xs text-slate-200"
+                    className="border-border-strong bg-surface-hover text-xs text-fg"
                   >
                     <Plus className="size-3.5" /> Savol Qo&apos;shish
                   </Button>
@@ -568,13 +568,13 @@ export function ExamQuestionsEditorDialog({
               </div>
 
               {readingQuestions.map((q, idx) => (
-                <div key={q.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                <div key={q.id} className="rounded-xl border border-border bg-surface/60 p-4">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-400">Savol #{idx + 1}</span>
+                    <span className="text-xs font-bold text-brand">Savol #{idx + 1}</span>
                     <button
                       type="button"
                       onClick={() => setReadingQuestions((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-slate-500 hover:text-rose-400"
+                      className="text-fg-subtle hover:text-danger"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -588,7 +588,7 @@ export function ExamQuestionsEditorDialog({
                       );
                     }}
                     rows={2}
-                    className="mb-3 border-slate-800 bg-slate-950 text-xs text-slate-100"
+                    className="mb-3 border-border bg-bg text-xs text-fg"
                   />
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {(["A", "B", "C", "D"] as const).map((letter, optIdx) => (
@@ -603,8 +603,8 @@ export function ExamQuestionsEditorDialog({
                           }}
                           className={`flex size-6 cursor-pointer items-center justify-center rounded-md font-bold ${
                             q.correctAnswer === letter
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-800 text-slate-400"
+                              ? "bg-brand text-brand-fg"
+                              : "bg-surface-hover text-fg-muted"
                           }`}
                         >
                           {letter}
@@ -622,7 +622,7 @@ export function ExamQuestionsEditorDialog({
                               }),
                             );
                           }}
-                          className="h-7 border-slate-800 bg-slate-950 text-xs text-slate-200"
+                          className="h-7 border-border bg-bg text-xs text-fg"
                         />
                       </div>
                     ))}
@@ -636,7 +636,7 @@ export function ExamQuestionsEditorDialog({
           {activeTab === "listening" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-fg-muted">
                   Listening Multiple Choice savollari: audio asosidagi savollar va javob kalitlari.
                 </p>
                 <div className="flex items-center gap-2">
@@ -645,9 +645,9 @@ export function ExamQuestionsEditorDialog({
                     size="sm"
                     variant="outline"
                     onClick={() => setBulkImporterOpen(true)}
-                    className="border-emerald-500/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 text-xs"
+                    className="border-brand/40 bg-brand-subtle/30 text-brand hover:bg-brand-subtle/50 text-xs"
                   >
-                    <Zap className="size-3.5 mr-1 text-emerald-400" />
+                    <Zap className="size-3.5 mr-1 text-brand" />
                     ⚡️ Bulk Paste
                   </Button>
                   <Button
@@ -665,7 +665,7 @@ export function ExamQuestionsEditorDialog({
                         },
                       ])
                     }
-                    className="border-slate-700 bg-slate-800 text-xs text-slate-200"
+                    className="border-border-strong bg-surface-hover text-xs text-fg"
                   >
                     <Plus className="size-3.5" /> Savol Qo&apos;shish
                   </Button>
@@ -673,13 +673,13 @@ export function ExamQuestionsEditorDialog({
               </div>
 
               {listeningQuestions.map((q, idx) => (
-                <div key={q.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                <div key={q.id} className="rounded-xl border border-border bg-surface/60 p-4">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-400">Listening Savol #{idx + 1}</span>
+                    <span className="text-xs font-bold text-brand">Listening Savol #{idx + 1}</span>
                     <button
                       type="button"
                       onClick={() => setListeningQuestions((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-slate-500 hover:text-rose-400"
+                      className="text-fg-subtle hover:text-danger"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -693,7 +693,7 @@ export function ExamQuestionsEditorDialog({
                       );
                     }}
                     rows={2}
-                    className="mb-3 border-slate-800 bg-slate-950 text-xs text-slate-100"
+                    className="mb-3 border-border bg-bg text-xs text-fg"
                   />
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {(["A", "B", "C", "D"] as const).map((letter, optIdx) => (
@@ -708,8 +708,8 @@ export function ExamQuestionsEditorDialog({
                           }}
                           className={`flex size-6 cursor-pointer items-center justify-center rounded-md font-bold ${
                             q.correctAnswer === letter
-                              ? "bg-emerald-600 text-white"
-                              : "bg-slate-800 text-slate-400"
+                              ? "bg-brand text-brand-fg"
+                              : "bg-surface-hover text-fg-muted"
                           }`}
                         >
                           {letter}
@@ -727,7 +727,7 @@ export function ExamQuestionsEditorDialog({
                               }),
                             );
                           }}
-                          className="h-7 border-slate-800 bg-slate-950 text-xs text-slate-200"
+                          className="h-7 border-border bg-bg text-xs text-fg"
                         />
                       </div>
                     ))}
@@ -738,11 +738,11 @@ export function ExamQuestionsEditorDialog({
           )}
         </div>
 
-        <DialogFooter className="mt-4 flex flex-col-reverse items-center justify-between gap-3 border-t border-slate-800/80 pt-4 sm:flex-row">
+        <DialogFooter className="mt-4 flex flex-col-reverse items-center justify-between gap-3 border-t border-border/80 pt-4 sm:flex-row">
           <Button
             type="button"
             variant="outline"
-            className="border-slate-800 bg-slate-900/60 text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="border-border bg-surface/60 text-fg-muted hover:bg-surface-hover hover:text-fg"
             onClick={onClose}
             disabled={saving}
           >
@@ -751,7 +751,7 @@ export function ExamQuestionsEditorDialog({
 
           <Button
             type="button"
-            className="border border-emerald-500/50 bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 hover:bg-emerald-700"
+            className="border border-brand/50 bg-brand text-brand-fg shadow-lg shadow-brand/30 hover:bg-brand-hover"
             onClick={handleSaveAndPublish}
             loading={saving}
           >

@@ -7,12 +7,13 @@
 // other (white cards in dark mode, white text on white in light mode).
 //
 // Not migrated on purpose: components/common/StrictErrorBoundary.tsx (crash report is a white box in both
-// themes, see CDLayout.spec.ts), certificate-modal.tsx (print artwork), google-auth-button.tsx (brand mark).
+// themes, see CDLayout.spec.ts), certificate-modal.tsx (print artwork).
 //
 // Usage: node scripts/tokenize-colors.mjs [--check] [--neutral-only] <file...>
 //   --check         report what would change and exit 1 if anything would; do not write.
 //   --neutral-only  only rewrite neutrals (slate/gray/white/black ...); keep every hue. For files whose hues
 //                   carry meaning (per-skill colours, highlighter colours, question-type chips).
+//   --aliases-only  only rewrite the undefined shadcn names (text-muted-foreground, bg-card, ...); safe on any file.
 //
 // The mapping is deterministic and documented in docs/design/DESIGN_SYSTEM.md. Deliberate exceptions:
 //   bg-black/<n>  modal and media overlays stay black in both themes.
@@ -112,7 +113,23 @@ const SOLID_HUE_BG = new RegExp(
   String.raw`(?<![\w-])bg-(?:(?:${HUES.filter((h) => !NEUTRAL.has(h)).join("|")})-[3-7]00|brand|danger|warning|info|orange)(?![\w/-])`,
 );
 
+// shadcn-style names that globals.css never defined: Tailwind emits nothing for them, so they rendered
+// with no colour at all (transparent cards, uncoloured error panels). Map them onto the real tokens.
+const UNDEFINED_ALIASES = {
+  foreground: { text: "fg", bg: "fg", border: "border-strong" },
+  "muted-foreground": { text: "fg-muted", bg: "fg-muted", border: "border-strong" },
+  card: { text: "fg", bg: "surface", border: "border" },
+  muted: { text: "fg-muted", bg: "bg-subtle", border: "border" },
+  background: { text: "fg", bg: "bg", border: "border" },
+  destructive: { text: "danger", bg: "danger", border: "danger" },
+};
+export const UNDEFINED_ALIAS_RE = new RegExp(
+  String.raw`(?<![\w-])((?:[a-z0-9-]+:)*)(bg|text|border|ring|from|via|to|fill|stroke|divide|outline|placeholder)-(${Object.keys(UNDEFINED_ALIASES).join("|")})(\/\d{1,3})?(?![\w-])`,
+  "g",
+);
+
 export function tokenizeLine(line, { neutralOnly = false, keepInfo = false } = {}) {
+  line = fixUndefinedAliases(line);
   const keepWhiteText = SATURATED_BG.test(line);
   const solidHueBg = SOLID_HUE_BG.test(line);
   const brandSolidBg = /(?<![\w-])bg-(?:(?:emerald|green|teal|lime)-[4-7]00|brand)(?![\w/-])/.test(line);
@@ -143,6 +160,10 @@ export function tokenizeLine(line, { neutralOnly = false, keepInfo = false } = {
   });
 }
 
+export function fixUndefinedAliases(src) {
+  return src.replace(UNDEFINED_ALIAS_RE, (whole, variants, util, name, alpha = "") => `${variants}${util}-${UNDEFINED_ALIASES[name][ROLE[util]]}${alpha}`);
+}
+
 export function tokenizeSource(src, { neutralOnly = false } = {}) {
   const infoHues = new Set([...src.matchAll(new RegExp(String.raw`-(${[...INFO].join("|")})-\d{2,3}`, "g"))].map((m) => m[1]));
   const opts = { neutralOnly, keepInfo: infoHues.size > 1 };
@@ -160,10 +181,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const check = args.includes("--check");
   const neutralOnly = args.includes("--neutral-only");
+  const aliasesOnly = args.includes("--aliases-only");
   let changed = 0;
   for (const file of args.filter((a) => !a.startsWith("--"))) {
     const before = fs.readFileSync(file, "utf8");
-    const after = tokenizeSource(before, { neutralOnly });
+    const after = aliasesOnly ? fixUndefinedAliases(before) : tokenizeSource(before, { neutralOnly });
     if (after !== before) {
       changed += 1;
       if (check) console.log(`would change: ${file}`);

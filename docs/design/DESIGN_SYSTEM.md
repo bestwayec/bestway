@@ -34,7 +34,7 @@ Use them with any colour utility: `bg-surface`, `text-fg-muted`, `border-danger-
 - Colours that carry meaning as categories: per-skill colours, annotation highlighter colours,
   question-type chips, game answer colours. They must stay distinct, so they keep their hues; their
   neutrals still use tokens.
-- Third-party brand marks (Google sign-in), print-only artwork (certificates) and the crash report
+- Third-party brand marks (the Google logo's own SVG fills; the button around it uses tokens), print-only artwork (certificates) and the crash report
   of `StrictErrorBoundary` (a white diagnostic box in both themes).
 
 ### Migrating a component
@@ -51,7 +51,12 @@ node scripts/tokenize-colors.mjs --check src/components/foo.tsx
 node scripts/tokenize-colors.mjs src/components/foo.tsx
 ```
 
-Use `--neutral-only` for files whose hues are categories. Always review the result in both themes.
+Use `--neutral-only` for files whose hues are categories.
+
+Do not use shadcn colour names (`text-muted-foreground`, `text-foreground`, `bg-card`, `bg-muted`,
+`bg-background`, `*-destructive`): `globals.css` never defined them, so Tailwind emits no CSS and the
+element silently gets no colour. `--aliases-only` maps them to the tokens above, and the guard test
+fails if one appears anywhere in `src`. Always review the result in both themes.
 Files that have been migrated are listed in `frontend/src/design-system.spec.ts`, which fails CI if
 a raw palette class comes back.
 

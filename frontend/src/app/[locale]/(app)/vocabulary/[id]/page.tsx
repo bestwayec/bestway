@@ -57,7 +57,7 @@ export default function VocabularyDetailPage() {
       {/* Back button */}
       <div>
         <Link href="/vocabulary">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="text-fg-muted hover:text-fg">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Lug'atlar ro'yxatiga qaytish
           </Button>
@@ -65,15 +65,15 @@ export default function VocabularyDetailPage() {
       </div>
 
       {/* Mode Selection Header */}
-      <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-xl space-y-6">
+      <div className="rounded-2xl border border-border bg-surface p-6 md:p-8 shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 mb-2">
+          <div className="inline-flex p-3 rounded-full bg-brand/10 border border-brand/20 text-brand mb-2">
             <Sparkles className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-fg">
             Test Rejimini Tanlang
           </h1>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          <p className="text-sm text-fg-muted max-w-md mx-auto">
             100% natija uchun <strong>+5 platforma balli</strong>, 80-99% uchun esa <strong>+3 ball</strong> qo'lga kiriting!
           </p>
         </div>
@@ -89,27 +89,27 @@ export default function VocabularyDetailPage() {
                 onClick={() => setMode(m.id)}
                 className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex items-center justify-between gap-4 ${
                   isSelected
-                    ? "border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500"
-                    : "border-border bg-card hover:bg-muted/50 hover:border-border"
+                    ? "border-brand bg-brand/10 shadow-md shadow-brand/5 ring-1 ring-brand"
+                    : "border-border bg-surface hover:bg-bg-subtle/50 hover:border-border"
                 }`}
               >
                 <div className="space-y-1">
-                  <div className="font-semibold text-foreground text-sm flex items-center gap-2">
+                  <div className="font-semibold text-fg text-sm flex items-center gap-2">
                     <span>{m.label}</span>
                     {isSelected && (
-                      <Badge className="bg-emerald-600 text-white text-[10px] h-4 px-1.5">
+                      <Badge className="bg-brand text-brand-fg text-[10px] h-4 px-1.5">
                         Tanlandi
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{m.desc}</p>
+                  <p className="text-xs text-fg-muted">{m.desc}</p>
                 </div>
                 <div
                   className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${
-                    isSelected ? "border-emerald-500 bg-emerald-500 text-brand-fg" : "border-muted-foreground"
+                    isSelected ? "border-brand bg-brand text-brand-fg" : "border-border-strong"
                   }`}
                 >
-                  {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                  {isSelected && <div className="h-2 w-2 rounded-full bg-surface" />}
                 </div>
               </button>
             );
@@ -120,7 +120,7 @@ export default function VocabularyDetailPage() {
         <Button
           type="button"
           onClick={() => setIsQuizStarted(true)}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-semibold shadow-lg shadow-emerald-600/20"
+          className="w-full bg-brand hover:bg-brand-hover text-brand-fg h-12 text-base font-semibold shadow-lg shadow-brand/20"
         >
           Testni Boshlash
         </Button>
