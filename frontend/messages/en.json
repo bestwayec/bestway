@@ -315,7 +315,41 @@
     "accuracy": "Accuracy",
     "correct": "correct",
     "error_rate": "error",
-    "recommendation": "Recommendation"
+    "recommendation": "Recommendation",
+    "progress": {
+      "title": "Your progress",
+      "subtitle": "Built only from the exams and practice sets you submitted.",
+      "finished": "Finished",
+      "checking": "Being checked",
+      "emptyNone": "Submit an exam or a practice set to see your progress here.",
+      "emptyChecking": "Your results appear here once checking is finished.",
+      "mockIeltsTitle": "Full mock exams · IELTS overall band",
+      "mockMultilevelTitle": "Full mock exams · Multilevel score (out of 75)",
+      "mockCaption": "Full mock exams only; section practice never gets a band. Last {count} at most.",
+      "practiceTitle": "Section practice · correct answers",
+      "practiceCaption": "Listening and Reading answers in practice sets, shown as correct answers only (no band). Last {count} at most.",
+      "band": "Band {value}",
+      "score": "{value}/75",
+      "practiceValue": "{correct}/{total} correct · {percent}%",
+      "showTable": "Show as table",
+      "colDate": "Date",
+      "colExam": "Exam",
+      "colResult": "Result"
+    },
+    "recent": {
+      "colExam": "Exam",
+      "colStatus": "Status",
+      "colResult": "Result",
+      "colAction": "Action",
+      "statusInProgress": "In progress",
+      "statusChecking": "Being checked",
+      "statusCompleted": "Completed",
+      "statusClosed": "Closed, not submitted",
+      "kindFull": "Full mock",
+      "kindPractice": "Section practice",
+      "untitled": "Mock exam",
+      "emptyHint": "Take mock exams and follow your results and diagnostics here."
+    }
   },
   "broadcast": {
     "title": "Send announcement",
@@ -1318,6 +1352,11 @@
       "micOk": "Your voice was picked up.",
       "micSilent": "The microphone works but heard almost nothing. Speak louder or choose another microphone, then test again.",
       "micUnsupported": "This browser cannot record audio. Use a current Chrome, Edge or Safari."
+    },
+    "scoreSummary": {
+      "singleSection": "Single section: {skill}",
+      "sectionPractice": "Section practice",
+      "fullMock": "Full mock"
     }
   },
   "wizard": {
