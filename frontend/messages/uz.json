@@ -1034,7 +1034,8 @@
       "writingModeOcr": "Qog‘oz / rasm yuklash (OCR)",
       "ocrEditTitle": "OCR olingan / saqlangan matn",
       "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin.",
-      "goToQuestions": "Savollarga o‘tish"
+      "goToQuestions": "Savollarga o‘tish",
+      "questionCount": "{count} ta savol"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1222,7 +1223,8 @@
         "busy": "Mikrofonni ochib bo‘lmadi. Uni ishlatayotgan boshqa ilovalarni (qo‘ng‘iroq, yozuv, boshqa tab) yoping va qayta urinib ko‘ring.",
         "insecure": "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.",
         "unsupported": "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.",
-        "default": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring."
+        "default": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.",
+        "other": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring."
       }
     },
     "livePin": {
@@ -1235,6 +1237,16 @@
       "placeholder": "6 xonali PIN",
       "inputLabel": "6 xonali imtihon PIN kodi",
       "join": "Ulanish"
+    },
+    "resultView": {
+      "checkingTitle": "Natijalar tekshirilmoqda",
+      "checkingBody": "Writing va Speaking javoblari baholanmoqda. Sahifa har 3 soniyada avtomatik yangilanadi.",
+      "aiPending": "AI bahosi (ustoz ko‘rib chiqishi kutilmoqda)",
+      "sectionPractice": "Bo‘lim mashqi",
+      "partialNote": "Bu faqat tanlangan bo‘lim natijasi. Umumiy ball va CEFR darajasi to‘liq imtihon (4 bo‘lim) topshirilganda chiqariladi.",
+      "skipped": "O‘tkazib yuborilgan",
+      "practiceReport": "Mashq hisoboti (PDF)",
+      "print": "Chop etish"
     }
   },
   "wizard": {

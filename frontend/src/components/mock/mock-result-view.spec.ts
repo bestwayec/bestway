@@ -115,9 +115,9 @@ describe("partial teacher result presentation", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
     expect(html).not.toContain("Below B1");
     expect(html).not.toContain("Estimated Multilevel Result");
-    expect(html).not.toContain("AI bahosi");
+    expect(html).not.toContain("AI estimate");
     expect(html).not.toContain("Sertifikatni");
-    expect(html).toContain("Mashq hisoboti (PDF)");
+    expect(html).toContain("Practice report (PDF)");
   });
   it("preserves the full-result certificate flow", () => {
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: attempt(false) }));
@@ -162,7 +162,7 @@ describe("attempt with no answers", () => {
     const out = html(emptied());
     expect(out).toContain('data-testid="empty-attempt"');
     expect(out).toContain(en.mock.emptyAttempt.title);
-    for (const banned of ["AI bahosi", "Natijalar tekshirilmoqda", "/certificate", "Estimated Multilevel Result", ">B2<", "/75", "raw", en.mock.awaitingGrade]) {
+    for (const banned of ["AI estimate", "Checking results", "/certificate", "Estimated Multilevel Result", ">B2<", "/75", "raw", en.mock.awaitingGrade]) {
       expect(out).not.toContain(banned);
     }
   });
@@ -171,7 +171,7 @@ describe("attempt with no answers", () => {
     viewer.role = "student";
     const out = html(emptied("grading"));
     expect(out).toContain(en.mock.emptyAttempt.title);
-    expect(out).not.toContain("Natijalar tekshirilmoqda");
+    expect(out).not.toContain("Checking results");
   });
 
   it("any recording or answer makes it a normal result again", () => {
@@ -190,7 +190,7 @@ describe("attempt with no answers", () => {
     const value = attempt(false);
     value.status = "grading";
     const out = html(value);
-    expect(out).toContain("Natijalar tekshirilmoqda");
+    expect(out).toContain("Checking results");
     expect(out).not.toContain("Deepgram");
     expect(out).not.toContain("Ultra-tezkor");
   });

@@ -1034,7 +1034,8 @@
       "writingModeOcr": "Upload paper photo (OCR)",
       "ocrEditTitle": "Recognised / saved text",
       "ocrPlaceholder": "The recognised text appears here, and you can edit it.",
-      "goToQuestions": "Go to questions"
+      "goToQuestions": "Go to questions",
+      "questionCount": "{count, plural, one {# question} other {# questions}}"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1222,7 +1223,8 @@
         "busy": "The microphone could not be opened. Close other apps that use it (calls, recorders, another tab) and try again.",
         "insecure": "The microphone only works over a secure (https) connection. Open the site over https.",
         "unsupported": "This browser cannot record audio. Use a recent version of Chrome or Safari.",
-        "default": "Something went wrong with the microphone. Try again."
+        "default": "Something went wrong with the microphone. Try again.",
+        "other": "Something went wrong with the microphone. Try again."
       }
     },
     "livePin": {
@@ -1235,6 +1237,16 @@
       "placeholder": "6-digit PIN",
       "inputLabel": "6-digit exam PIN",
       "join": "Join"
+    },
+    "resultView": {
+      "checkingTitle": "Checking results",
+      "checkingBody": "Writing and Speaking answers are being graded. This page refreshes automatically every 3 seconds.",
+      "aiPending": "AI estimate (awaiting teacher review)",
+      "sectionPractice": "Section practice",
+      "partialNote": "This is the result of the selected sections only. The overall score and CEFR level appear after a full exam (all 4 sections).",
+      "skipped": "Skipped",
+      "practiceReport": "Practice report (PDF)",
+      "print": "Print"
     }
   },
   "wizard": {

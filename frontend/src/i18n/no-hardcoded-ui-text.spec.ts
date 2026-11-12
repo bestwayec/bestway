@@ -11,8 +11,12 @@ const FILES = [
   "src/components/mock/section-transition-modal.tsx",
   "src/components/dashboard/student-dashboard.tsx",
   "src/components/dashboard/today-card.tsx",
+  "src/components/mock/exam-launcher-modal.tsx",
+  "src/components/mock/mic-check-modal.tsx",
+  "src/components/mock/live-exam-pin-card.tsx",
+  "src/components/mock/mock-result-view.tsx",
 ];
-const UZBEK_UI = /\b(o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*)\b/;
+const UZBEK_UI = /\b(Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 

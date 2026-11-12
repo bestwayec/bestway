@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FULLSCREEN_GUARD_EVENT, microphoneProblem, primeMicrophonePermission, requestMicrophoneStream } from './microphone';
-import { microphoneHelpUz } from '../components/mock/mic-check-modal';
+import uz from '../../messages/uz.json';
+import en from '../../messages/en.json';
+
+const microphoneHelpUz = (problem: string) => (uz.mock.mic.help as Record<string, string>)[problem];
 
 const calls: string[] = [];
 let fullscreenElement: Element | null;
@@ -54,6 +57,13 @@ describe('microphoneProblem', () => {
     expect(text).toContain('suzuvchi tugmalar');
     for (const problem of ['notFound', 'busy', 'insecure', 'unsupported', 'other'] as const) {
       expect(microphoneHelpUz(problem)).not.toMatch(/\b(permission|denied|retry)\b/i);
+    }
+  });
+
+  it('has help text in every locale for every problem the runtime can report', () => {
+    for (const problem of ['denied', 'notFound', 'busy', 'insecure', 'unsupported', 'other'] as const) {
+      expect((uz.mock.mic.help as Record<string, string>)[problem]).toBeTruthy();
+      expect((en.mock.mic.help as Record<string, string>)[problem]).toBeTruthy();
     }
   });
 });

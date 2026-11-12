@@ -4,25 +4,7 @@ import * as React from "react";
 import { Mic, Square, Play, Pause, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, recordedAudioBlob, requestMicrophoneStream, type MicrophoneProblem } from "@/lib/microphone";
-
-/** Uzbek microphone help (kept for non-React callers); the modal uses messages `mock.mic.help.*`. */
-export function microphoneHelpUz(problem: MicrophoneProblem): string {
-  switch (problem) {
-    case "denied":
-      return "Mikrofonga ruxsat berilmadi. «Qayta urinish» tugmasini bosing va ruxsat oynasida «Ruxsat berish»ni tanlang. Oyna chiqmasa: brauzer manzil qatoridagi sozlamalar belgisi → Mikrofon → Ruxsat berish. Telefonda boshqa ilovalarning oynalari (suzuvchi tugmalar, ekran filtri, yon panel) yopiq bo‘lsin.";
-    case "notFound":
-      return "Mikrofon topilmadi. Mikrofonni ulang (yoki telefonning mikrofoni yopilmaganini tekshiring) va qayta urinib ko‘ring.";
-    case "busy":
-      return "Mikrofonni ochib bo‘lmadi. Uni ishlatayotgan boshqa ilovalarni (qo‘ng‘iroq, yozuv, boshqa tab) yoping va qayta urinib ko‘ring.";
-    case "insecure":
-      return "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.";
-    case "unsupported":
-      return "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.";
-    default:
-      return "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.";
-  }
-}
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, recordedAudioBlob, requestMicrophoneStream } from "@/lib/microphone";
 
 interface MicCheckModalProps {
   open: boolean;
