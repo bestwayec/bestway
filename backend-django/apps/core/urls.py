@@ -31,12 +31,16 @@ from . import parent_views as parents
 from . import vocab_battle_views as vocab_battle
 from . import runner_game_views as runner_game
 from . import lms_views as lms
+from .item_bank_views import item_bank_view
 from .mock_attempt_views import (
     advance_view,
     switch_section_view,
     annotations_view,
     answer_view,
     answers_view,
+    listening_start_view,
+    session_release_view,
+    session_view,
     cheat_view,
     detail_view,
     mine_view,
@@ -211,8 +215,11 @@ urlpatterns = [
     path('mock/attempts/start', start_view),
     path('mock/attempts/start/', start_view),
     path('mock/attempts/mine', mine_view),
+    path('mock/item-bank', item_bank_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
     path('mock/attempts/<str:attempt_id>/annotations', annotations_view),
+    path('mock/attempts/<str:attempt_id>/session', session_view),
+    path('mock/attempts/<str:attempt_id>/session/release', session_release_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>', speaking_upload_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr/', writing_ocr_view),
@@ -252,6 +259,7 @@ urlpatterns = [
     path('v1/mock/attempts/<str:attempt_id>/switch-section/', switch_section_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/prepare', prepare_view),
     path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/play', play_view),
+    path('mock/attempts/<str:attempt_id>/listening/<str:group_id>/start', listening_start_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>/start', speaking_start_view),
     path('mock/attempts/<str:attempt_id>/flag-cheat', cheat_view),
     path('mock/attempts/<str:attempt_id>/flag-cheat/', cheat_view),

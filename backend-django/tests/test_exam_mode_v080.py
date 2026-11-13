@@ -162,21 +162,16 @@ class SmartTextParserAndExcelTests(SimpleTestCase):
 
 class ScorePredictionEngineTests(SimpleTestCase):
     def test_multilevel_cefr_scale_thresholds(self):
-        """Verification Checklist #3: Multi-Level (0-75) CEFR boundaries:
-        A2: 0-33, B1: 34-45, B2: 46-59, C1: 60-75."""
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(0), "A2")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(25), "A2")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(33), "A2")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(34), "B1")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(45), "B1")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(46), "B2")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(59), "B2")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(60), "C1")
-        self.assertEqual(prediction_service.multilevel_cefr_from_score(75), "C1")
+        """Agency criteria (blueprint table): below 38 no level, B1 38-50, B2 51-64, C1 65-75."""
+        for score, level in [(0, "BELOW_B1"), (25, "BELOW_B1"), (37, "BELOW_B1"), (37.9, "BELOW_B1"),
+                             (38, "B1"), (50, "B1"), (50.9, "B1"), (51, "B2"), (64, "B2"),
+                             (64.9, "B2"), (65, "C1"), (75, "C1")]:
+            with self.subTest(score=score):
+                self.assertEqual(prediction_service.multilevel_cefr_from_score(score), level)
 
     def test_dual_scale_conversions(self):
         self.assertGreaterEqual(prediction_service.multilevel_to_ielts_band(65), 7.0)
-        self.assertGreaterEqual(prediction_service.ielts_band_to_multilevel(7.0), 60.0)
+        self.assertGreaterEqual(prediction_service.ielts_band_to_multilevel(7.0), 65.0)
 
     @patch("apps.core.prediction_service.StudentProfile")
     @patch("apps.core.prediction_service.User")
@@ -268,7 +263,8 @@ class ScorePredictionEngineTests(SimpleTestCase):
         self.assertEqual(pred["trend"], "improving")
         self.assertEqual(pred["multilevel"]["currentScore"], 62.0)
         self.assertGreaterEqual(pred["multilevel"]["predictedScore"], 60.0)
-        self.assertEqual(pred["multilevel"]["cefrLevel"], "C1")
+        # 60-64 is B2 under the agency criteria (C1 starts at 65).
+        self.assertEqual(pred["multilevel"]["cefrLevel"], "B2" if pred["multilevel"]["predictedScore"] < 65 else "C1")
         self.assertEqual(len(pred["history"]), 3)
         self.assertEqual(pred["weakModules"][0]["module"], "Reading — Matching Headings")
 

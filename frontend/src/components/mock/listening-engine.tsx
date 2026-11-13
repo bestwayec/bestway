@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EXAM_VOLUME_EVENT, broadcastVolume, loadExamSettings } from "@/lib/exam-settings";
 import type { AudioTimestampItem } from "@/lib/types";
+import { listeningPosition, reviewSecondsLeft, type ListeningPosition, type ListeningSchedule } from "@/lib/listening-schedule";
 
 const REVIEW_SEC = 120;
 
@@ -51,17 +52,7 @@ export function clearMediaBlobCache(): void {
  * When `startSec` is provided (from Single Audio Timestamps or part switching),
  * automatically seeks `audioRef.current.currentTime = startSec`.
  */
-export function ListeningAudio({
-  src,
-  strict,
-  startSec,
-  endSec,
-  partLabel,
-  timestamps,
-  onEnded,
-  onReviewComplete,
-  reviewAtEnd = true,
-}: {
+type ListeningAudioProps = {
   src: string;
   strict: boolean;
   startSec?: number | null;
@@ -72,7 +63,193 @@ export function ListeningAudio({
   onReviewComplete?: () => void;
   /** Only the last part of the Listening section ends with the 2-minute check. */
   reviewAtEnd?: boolean;
-}) {
+  /** Timed IELTS exam: the server schedule recorded for this part (after a reload). */
+  schedule?: ListeningSchedule | null;
+  /** Timed IELTS exam: records the part's start on the server (reading time, then the recording). */
+  startSchedule?: () => Promise<ListeningSchedule>;
+  /** Server clock minus device clock, in ms. */
+  serverOffsetMs?: number;
+};
+
+export function ListeningAudio(props: ListeningAudioProps) {
+  return props.strict && props.startSchedule ? <ScheduledListeningAudio {...props} startSchedule={props.startSchedule} /> : <PlainListeningAudio {...props} />;
+}
+
+/**
+ * Timed IELTS Listening on the server clock: Play records the start once; the questions can be
+ * read for the reading time, then the recording plays once. A reload or a lost connection
+ * resumes it at the point the server clock has reached; nothing is replayed or skipped back.
+ */
+function ScheduledListeningAudio({
+  src,
+  startSec,
+  endSec,
+  partLabel,
+  onEnded,
+  onReviewComplete,
+  reviewAtEnd = true,
+  schedule: initialSchedule = null,
+  startSchedule,
+  serverOffsetMs = 0,
+}: ListeningAudioProps & { startSchedule: () => Promise<ListeningSchedule> }) {
+  const t = useTranslations("mock.examTools");
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [volume, setVolume] = React.useState(() => (typeof window === "undefined" ? 1 : loadExamSettings().volume));
+  React.useEffect(() => { if (audioRef.current) audioRef.current.volume = volume; }, [volume]);
+  React.useEffect(() => {
+    const onVolume = (event: Event) => { const next = Number((event as CustomEvent<number>).detail); if (Number.isFinite(next)) setVolume(next); };
+    window.addEventListener(EXAM_VOLUME_EVENT, onVolume);
+    return () => window.removeEventListener(EXAM_VOLUME_EVENT, onVolume);
+  }, []);
+  const [schedule, setSchedule] = React.useState<ListeningSchedule | null>(initialSchedule);
+  const offsetRef = React.useRef(serverOffsetMs);
+  const [busy, setBusy] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
+  const [needsGesture, setNeedsGesture] = React.useState(false);
+  const [position, setPosition] = React.useState<ListeningPosition | null>(null);
+  const [reviewLeft, setReviewLeft] = React.useState<number | null>(null);
+  const [objectUrl, setObjectUrl] = React.useState<string | null>(null);
+  const endedRef = React.useRef(false);
+  const doneRef = React.useRef(false);
+  const base = startSec != null && startSec > 0 ? startSec : 0;
+  const partLength = endSec != null && endSec > base ? endSec - base : null;
+
+  // The recording is fetched only after the start is recorded (the server opens it for this window).
+  React.useEffect(() => {
+    if (!schedule || objectUrl) return;
+    let alive = true;
+    const ctrl = new AbortController();
+    fetchAudioBlobUrl(src, ctrl.signal).then((url) => { if (alive) setObjectUrl(url); }).catch(() => { if (alive) setObjectUrl(src); });
+    return () => { alive = false; ctrl.abort(); };
+  }, [schedule, objectUrl, src]);
+
+  const playFrom = React.useCallback(async (offsetSec: number) => {
+    const el = audioRef.current;
+    if (!el || !el.paused) return;
+    try {
+      el.currentTime = base + offsetSec;
+      await el.play();
+      setNeedsGesture(false);
+    } catch {
+      setNeedsGesture(true); // after a reload the browser waits for a click before sound
+    }
+  }, [base]);
+
+  React.useEffect(() => {
+    if (!schedule) return;
+    const tick = () => {
+      const el = audioRef.current;
+      const known = partLength ?? (el && Number.isFinite(el.duration) && el.duration > 0 ? el.duration - base : null);
+      const next = listeningPosition(schedule, Date.now() + offsetRef.current, known);
+      setPosition(next);
+      if (next.phase === "playing" && objectUrl && el && el.paused && !needsGesture) void playFrom(next.offsetSec);
+      if (next.phase === "ended" && !endedRef.current) {
+        endedRef.current = true;
+        el?.pause();
+        onEnded?.();
+        if (reviewAtEnd) setReviewLeft(reviewSecondsLeft(next, REVIEW_SEC));
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [schedule, objectUrl, needsGesture, playFrom, partLength, base, onEnded, reviewAtEnd]);
+
+  React.useEffect(() => {
+    if (reviewLeft == null) return;
+    if (reviewLeft <= 0) { if (!doneRef.current) { doneRef.current = true; onReviewComplete?.(); } return; }
+    const id = setTimeout(() => setReviewLeft((v) => (v == null ? v : v - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [reviewLeft, onReviewComplete]);
+
+  function resume() {
+    if (!schedule) return;
+    const now = listeningPosition(schedule, Date.now() + offsetRef.current, partLength);
+    if (now.phase === "playing") { setNeedsGesture(false); void playFrom(now.offsetSec); }
+  }
+
+  async function begin() {
+    setBusy(true); setFailed(false);
+    try {
+      const next = await startSchedule();
+      if (next.serverTime) offsetRef.current = Date.parse(next.serverTime) - Date.now();
+      setSchedule(next);
+    } catch {
+      setFailed(true);
+    } finally { setBusy(false); }
+  }
+
+  const status = !schedule ? null
+    : position?.phase === "reading" ? t("listeningReading", { time: fmt(position.readingLeft) })
+    : position?.phase === "playing" ? (needsGesture ? t("listeningInterrupted") : t("listeningPlaying"))
+    : position?.phase === "ended" ? (reviewAtEnd ? null : t("listeningNextPart"))
+    : null;
+
+  return (
+    <div className="mt-3 space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3" data-testid="listening-scheduled">
+      {objectUrl && (
+        <audio
+          ref={audioRef}
+          src={objectUrl}
+          preload="auto"
+          controlsList="nodownload noplaybackrate"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <track kind="captions" />
+        </audio>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        {!schedule ? (
+          <Button size="sm" onClick={begin} disabled={busy}>
+            <Play />
+            {t("listeningPlayOnce")}
+          </Button>
+        ) : needsGesture && position?.phase === "playing" ? (
+          <Button size="sm" onClick={resume}>
+            <Play />
+            {t("listeningResume")}
+          </Button>
+        ) : (
+          <Button size="sm" disabled>
+            <Play />
+            {position?.phase === "ended" ? t("listeningPlayed") : position?.phase === "reading" ? t("listeningReadingButton") : t("listeningPlaying")}
+          </Button>
+        )}
+        {startSec != null && startSec >= 0 && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand tabular-nums">
+            <Clock className="size-3" />
+            {partLabel ? `${partLabel} · ` : ""}
+            {fmt(startSec)}
+            {endSec != null ? ` – ${fmt(endSec)}` : ""}
+          </span>
+        )}
+        <label className="flex items-center gap-2 text-sm text-fg-muted">
+          <Volume2 className="size-4" />
+          <input type="range" min={0} max={1} step={0.05} value={volume} aria-label={t("volume")} className="h-1 w-28 accent-current"
+            onChange={(e) => broadcastVolume(Number(e.target.value))} />
+        </label>
+        {status && <span className="ml-auto text-sm font-medium tabular-nums" role="status" aria-live="polite">{status}</span>}
+        {reviewLeft != null && reviewLeft > 0 && (
+          <span className="ml-auto text-sm font-semibold tabular-nums" aria-live="polite">{t("listeningReview", { time: fmt(reviewLeft) })}</span>
+        )}
+        {reviewLeft === 0 && <span className="ml-auto text-sm font-semibold text-warning">{t("listeningReviewOver")}</span>}
+      </div>
+      {!schedule && <p className="text-xs text-fg-muted">{failed ? t("listeningStartFailed") : t("listeningRulesScheduled")}</p>}
+    </div>
+  );
+}
+
+function PlainListeningAudio({
+  src,
+  strict,
+  startSec,
+  endSec,
+  partLabel,
+  timestamps,
+  onEnded,
+  onReviewComplete,
+  reviewAtEnd = true,
+}: ListeningAudioProps) {
   const t = useTranslations("mock.examTools");
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   // Volume is shared with Settings and every player of the exam window.

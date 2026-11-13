@@ -140,6 +140,12 @@
         "3c825ee2d55f2919ff1dff1fe38dc6e62b5de3c07328c7254004edbcaa106e1c",
         "c84e6d9f914df576e563ff13c89dcb5170ef0a7084108a81aa19d222e7bd8be4"
       ]
+    },
+    {
+      "name": "20261113000000_question_item_metadata",
+      "checksums": [
+        "ebee0e3554771945f7c6e0704d0bf70abcd57f4a5798897d1f30c655822f3ea0"
+      ]
     }
   ]
 }

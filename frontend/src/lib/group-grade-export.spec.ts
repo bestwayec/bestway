@@ -50,7 +50,7 @@ describe("group Writing and Speaking export", () => {
     expect(groupGradeRows(writing, { ...speaking, skill: "writing" })).toEqual([]);
   });
 
-  it("exports formatted leaderboard CSV with ranks, student names, phones, all skills, overall, CEFR and status", () => {
+  it("exports formatted leaderboard CSV with ranks, student names, phones, all skills, overall and status, without a CEFR level", () => {
     const writing = data("writing", [row]);
     const speaking = data("speaking", [{ ...row, finalScore: 50, finalPracticeGrade: { policyId: "policy", score: 50, scaleMax: 75, rawScore: 4, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } }]);
     const phoneMap = new Map([["student", "+998901234567"]]);
@@ -65,14 +65,15 @@ describe("group Writing and Speaking export", () => {
     expect(csv).toContain("Listening balli");
     expect(csv).toContain("Reading balli");
     expect(csv).toContain("Umumiy ball");
-    expect(csv).toContain("CEFR darajasi");
+    // Writing + Speaking are two of four sections: no level from them (#129).
+    expect(csv).not.toContain("CEFR darajasi");
     expect(csv).toContain("Holati");
 
     // Row values check
     expect(csv).toContain("+998901234567");
     expect(csv).toContain("47 / 75");
     expect(csv).toContain("50 / 75");
-    expect(csv).toContain("B2"); // (47 + 50) / 2 = 48.5 -> B2
+    expect(csv).not.toMatch(/\b(B1|B2|C1|A2)\b/);
     expect(csv).toContain("Baholangan");
   });
 });

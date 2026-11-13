@@ -95,6 +95,25 @@ describe('MultilevelListening (exam player)', () => {
     log.mockRestore();
   });
 
+  it('after a reload during a play, continues it at the server clock instead of from the start', async () => {
+    // The play started 260 s ago and has 100 s left (a 360 s recording).
+    prepare.mockResolvedValue(phase({ plays: 1, prepEndsAt: new Date(NOW - 280_000).toISOString(), expiresAt: new Date(NOW + 100_000).toISOString() }));
+    load.mockResolvedValue(new Blob(['wav']));
+    URL.createObjectURL = vi.fn(() => 'blob:part'); URL.revokeObjectURL = vi.fn();
+    Object.defineProperty(HTMLMediaElement.prototype, 'duration', { configurable: true, get: () => 360 });
+    const started = vi.fn(async () => undefined);
+    HTMLMediaElement.prototype.play = started as unknown as HTMLMediaElement['play'];
+    await render();
+    await act(async () => button('Preview this part')!.click());
+    expect(host.querySelector('[role="status"]')?.textContent).toContain('continues from where the exam is now');
+    await act(async () => button('Continue listening')!.click());
+    expect(play).not.toHaveBeenCalled();                 // no new play is spent
+    expect(started).toHaveBeenCalledOnce();
+    expect(host.querySelector('audio')!.currentTime).toBeGreaterThanOrEqual(259);
+    expect(host.querySelector('audio')!.currentTime).toBeLessThanOrEqual(261);
+    expect(button('Continue listening')).toBeUndefined();
+  });
+
   it('renders Uzbek copy without English leftovers', async () => {
     locale.current = 'uz';
     await render();

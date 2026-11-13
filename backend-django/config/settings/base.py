@@ -64,7 +64,7 @@ PASSWORD_HASHERS = [
 
 from corsheaders.defaults import default_headers as _cors_default_headers
 
-CORS_ALLOW_HEADERS = (*_cors_default_headers, 'x-attempt-signature')
+CORS_ALLOW_HEADERS = (*_cors_default_headers, 'x-attempt-signature', 'x-exam-session')
 ATTEMPT_SIGNATURE_REQUIRED = env_bool('ATTEMPT_SIGNATURE_REQUIRED', False)
 ANDROID_LATEST_VERSION = env('ANDROID_LATEST_VERSION', '0.8.0')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
