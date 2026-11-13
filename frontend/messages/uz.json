@@ -1472,7 +1472,8 @@
       "bodyWithTime": "Imtihon soat {time} da boshqa tabda yoki boshqa qurilmada ochildi. Bir vaqtda faqat bitta joydan javob berish mumkin.",
       "answersSafe": "Bu yerda yozgan javoblaringiz shu qurilmada saqlanadi va shu yerda davom ettirsangiz yuboriladi. Vaqt to‘xtamaydi.",
       "continueHere": "Shu yerda davom ettirish"
-    }
+    },
+    "levelBelowB1": "B1 dan quyi"
   },
   "wizard": {
     "title": "Imtihon yaratish",

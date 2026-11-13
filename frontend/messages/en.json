@@ -1472,7 +1472,8 @@
       "bodyWithTime": "The exam was opened in another tab or on another device at {time}. Only one place can answer at a time.",
       "answersSafe": "Answers you typed here are kept on this device and are sent when you continue here. The clock keeps running.",
       "continueHere": "Continue here"
-    }
+    },
+    "levelBelowB1": "Below B1"
   },
   "wizard": {
     "title": "Create exam",
