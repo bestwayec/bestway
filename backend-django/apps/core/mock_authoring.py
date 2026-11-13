@@ -22,6 +22,7 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
+from . import item_metadata
 from .auth_service import audit
 from .mock_rules import (
     QUESTION_TYPES,
@@ -191,6 +192,9 @@ def _question_payload(data: dict, exam: MockExam, skill: str, *, complete: bool 
     _assert_question(data, is_auto, complete=complete)
     payload = {"number": data["number"], "type": data["type"], "prompt": data.get("prompt", "").strip(), "options": data.get("options"), "correct_answers": data.get("correctAnswers"), "accepted_variants": data.get("acceptedVariants"), "word_limit": data.get("wordLimit"), "answer_rule": data.get("answerRule"), "points": _resolve_points(exam.type, is_auto, data.get("points"))}
     if "sortOrder" in data: payload["sort_order"] = data["sortOrder"]
+    # Item bank metadata (optional; unknown when not given).
+    if "cefrLevel" in data: payload["cefr_level"] = item_metadata.clean_cefr(data["cefrLevel"])
+    if "skillTags" in data: payload["skill_tags"] = item_metadata.clean_tags(data["skillTags"])
     return payload
 
 
@@ -270,6 +274,7 @@ def question_payload(question: MockQuestion) -> dict:
         "correctAnswers": question.correct_answers,
         "acceptedVariants": question.accepted_variants, "points": question.points,
         "wordLimit": question.word_limit, "answerRule": question.answer_rule,
+        "cefrLevel": question.cefr_level or item_metadata.UNKNOWN, "skillTags": list(question.skill_tags or []),
         "createdAt": question.created_at,
     }
 
@@ -554,7 +559,7 @@ def update_question(actor, question_id: str, data: dict):
     try: question = MockQuestion.objects.select_related("group__section__exam").get(id=question_id)
     except MockQuestion.DoesNotExist: raise ContractAPIException("MOCK_QUESTION_NOT_FOUND", "Savol topilmadi", 404)
     group, exam, skill = question.group, question.group.section.exam, question.group.section.skill
-    merged = {"number": data.get("number", question.number), "sortOrder": data.get("sortOrder", question.sort_order), "type": data.get("type", question.type), "prompt": data.get("prompt", question.prompt), "options": data.get("options", question.options), "correctAnswers": data.get("correctAnswers", question.correct_answers), "acceptedVariants": data.get("acceptedVariants", question.accepted_variants), "wordLimit": data.get("wordLimit", question.word_limit), "answerRule": data.get("answerRule", question.answer_rule), "points": data.get("points", question.points)}
+    merged = {"number": data.get("number", question.number), "sortOrder": data.get("sortOrder", question.sort_order), "type": data.get("type", question.type), "prompt": data.get("prompt", question.prompt), "options": data.get("options", question.options), "correctAnswers": data.get("correctAnswers", question.correct_answers), "acceptedVariants": data.get("acceptedVariants", question.accepted_variants), "wordLimit": data.get("wordLimit", question.word_limit), "answerRule": data.get("answerRule", question.answer_rule), "points": data.get("points", question.points), "cefrLevel": data.get("cefrLevel", question.cefr_level), "skillTags": data.get("skillTags", question.skill_tags)}
     def write(locked):
         _assert_numbers(locked, skill, [merged], excluding_group=group.id)
         same_group = MockQuestion.objects.filter(group_id=group.id, number=merged["number"]).exclude(id=question.id).exists()
@@ -770,7 +775,7 @@ def _copy_exam(actor, source: MockExam) -> MockExam:
         for group in MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"):
             copied_group = MockQuestionGroup.objects.create(id=new_id(), section_id=copied_section.id, sort_order=group.sort_order, title=group.title, instructions=group.instructions, passage_text=group.passage_text, content_html=group.content_html, audio_script=group.audio_script, content_layout=group.content_layout, options_reusable=group.options_reusable, audio_key=group.audio_key, image_key=group.image_key, max_score=group.max_score, stimulus_ref=group.stimulus_ref, part_number=group.part_number, audio_play_limit=group.audio_play_limit, audio_duration_sec=group.audio_duration_sec, created_at=stamp)
             for question in MockQuestion.objects.filter(group_id=group.id).order_by("sort_order", "number", "id"):
-                MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, created_at=stamp)
+                MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, cefr_level=question.cefr_level, skill_tags=question.skill_tags, created_at=stamp)
     return clone
 
 
