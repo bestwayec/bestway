@@ -1,6 +1,8 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 import { CbtAnnotatedText } from "./cbt-annotated-text";
 
 describe("CbtAnnotatedText component", () => {

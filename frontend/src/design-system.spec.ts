@@ -40,6 +40,8 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/exam-log-panel.tsx": {},
   "src/components/mock/multilevel-submit-review.tsx": {},
   "src/components/mock/mic-check-modal.tsx": {},
+  "src/components/mock/exam-toolbar.tsx": {},
+  "src/components/mock/listening-engine.tsx": {},
   "src/components/mock/device-check.tsx": {},
   "src/components/profile/results-progress-card.tsx": {},
   "src/components/dashboard/score-prediction-card.tsx": {},
@@ -47,6 +49,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/ClickToVocabWrapper.tsx": {},
   "src/components/simulator/CDLayout.tsx": {},
   "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },
+  "src/components/mock/exam-notes-panel.tsx": {},
   // Exam Builder, vocabulary, teacher workspace
   "src/components/exam-builder/BulkQuestionImporterModal.tsx": {},
   "src/components/exam-builder/ExamBuilderList.tsx": {},

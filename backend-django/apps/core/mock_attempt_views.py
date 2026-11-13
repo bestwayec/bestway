@@ -1,4 +1,6 @@
 """HTTP boundary for the migrated student attempt mutations."""
+import json
+import math
 from datetime import datetime
 
 from rest_framework.decorators import api_view, permission_classes
@@ -32,10 +34,14 @@ def student(request):
     require_role(request, 'student', 'super_admin', 'admin')
 
 
+ANNOTATIONS_MAX_ITEMS = 1000
+ANNOTATIONS_MAX_BYTES = 256 * 1024
+
+
 def validate_answer(data):
     if not isinstance(data, dict):
         engine.fail('VALIDATION_ERROR', 'nested property answers must be either object or array')
-    extra = next((k for k in data if k not in {'questionId', 'response'}), None)
+    extra = next((k for k in data if k not in {'questionId', 'response', 'editedAt'}), None)
     if extra:
         engine.fail('VALIDATION_ERROR', f'property {extra} should not exist')
     if not isinstance(data.get('questionId'), str) or not data['questionId']:
@@ -44,6 +50,9 @@ def validate_answer(data):
         engine.fail('VALIDATION_ERROR', 'response must be a string')
     if len(data['response']) > 10000:
         engine.fail('VALIDATION_ERROR', 'response must be shorter than or equal to 10000 characters')
+    edited = data.get('editedAt')
+    if edited is not None and (isinstance(edited, bool) or not isinstance(edited, (int, float)) or not math.isfinite(edited) or edited <= 0):
+        engine.fail('VALIDATION_ERROR', 'editedAt must be a positive number of milliseconds')
 
 
 @api_view(['POST'])
@@ -252,6 +261,13 @@ def annotations_view(request, attempt_id):
     data = body(request, {'annotations'})
     if data.get('annotations') is not None and not isinstance(data['annotations'], list):
         engine.fail('VALIDATION_ERROR', 'annotations must be an array')
+    # Highlights, notes and review flags of one attempt: bounded so one client cannot
+    # store an unlimited document on the attempt row.
+    values = data.get('annotations') or []
+    if len(values) > ANNOTATIONS_MAX_ITEMS:
+        engine.fail('VALIDATION_ERROR', f'annotations must contain no more than {ANNOTATIONS_MAX_ITEMS} elements')
+    if len(json.dumps(values, ensure_ascii=False, default=str).encode()) > ANNOTATIONS_MAX_BYTES:
+        engine.fail('VALIDATION_ERROR', 'annotations are too large')
     return success(engine.annotations(request.user, attempt_id, data.get('annotations')))
 
 

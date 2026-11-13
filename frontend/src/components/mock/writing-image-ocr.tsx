@@ -1,5 +1,6 @@
 "use client";
 
+import { countWords } from "@/lib/writing-rules";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
@@ -354,7 +355,7 @@ export function WritingImageOcr({
         );
       }
 
-      const words = extracted.split(/\s+/).filter(Boolean).length;
+      const words = countWords(extracted);
       setLastExtractedCount(words);
       onExtractedText(extracted, mode);
       toast.success(`Qo'lyozma o'qildi (${words} ta so'z). Matn muharririga ko'chirildi.`);
