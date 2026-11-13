@@ -113,6 +113,14 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
   return n;
 }
 
+// Sections list their groups as `groups` (newer exams) or `parts` (older ones).
+type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ type?: unknown }> };
+function sectionGroupsOf(section: unknown): SectionGroupShape[] {
+  const value = section as { groups?: unknown; parts?: unknown } | null | undefined;
+  if (value?.groups) return value.groups as SectionGroupShape[];
+  return (value?.parts as SectionGroupShape[] | undefined) || [];
+}
+
 export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
@@ -177,7 +185,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   // Send the workspace to the server one second after the last change; retried on the next
   // change or when the connection comes back. Failures never interrupt the exam.
-  const workspaceOffset = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  // Server clock offset, measured once when the attempt opens; edit times and deadlines are on the server clock.
+  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
+  const serverOffsetRef = React.useRef(openingOffset);
   const workspacePending = React.useRef(workspaceAtOpen.push);
   const workspaceTimer = React.useRef<number | null>(null);
   const flagsRef = React.useRef(flaggedQuestions);
@@ -191,7 +201,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
   const scheduleWorkspace = React.useCallback(() => {
     workspacePending.current = true;
-    touchLocal(attempt.id, [...flagsRef.current], Date.now() + workspaceOffset.current);
+    touchLocal(attempt.id, [...flagsRef.current], Date.now() + serverOffsetRef.current);
     if (workspaceTimer.current) window.clearTimeout(workspaceTimer.current);
     workspaceTimer.current = window.setTimeout(pushWorkspace, 1000);
   }, [attempt.id, pushWorkspace]);
@@ -241,8 +251,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     scheduleWorkspace();
   }, [scheduleWorkspace]);
 
-  // Server clock offset; edit times and deadlines are on the server clock.
-  const serverOffsetRef = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
@@ -349,7 +357,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
   // Edit time of each unsent answer (ms, server clock).
   const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
-  const [queuedCount, setQueuedCount] = React.useState(() => dirty.current.size);
+  const [queuedCount, setQueuedCount] = React.useState(() => Object.keys(queuedAtStart).filter((id) => id in initial.ans).length);
   // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
   const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
   const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
@@ -717,12 +725,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const contrastClasses = COLOUR_CLASS[examSettings.colours];
   // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
-  const listeningGroups = (section?.skill === "listening" ? (section.groups || (section as any).parts || []) : []) as any[];
+  const listeningGroups = section?.skill === "listening" ? sectionGroupsOf(section) : [];
   const sharedListeningAudio = Boolean(audioTimestampsQ.data?.audioUrl);
   const lastListeningAudioPart = sharedListeningAudio
     ? listeningGroups.length - 1
-    : listeningGroups.reduce((last: number, g: any, index: number) => (g?.hasAudio ? index : last), -1);
-  const sectionQuestionTypes = [...new Set(((section?.groups || (section as any)?.parts || []) as any[]).flatMap((g: any) => (g?.questions || []).map((q: any) => String(q.type))))];
+    : listeningGroups.reduce((last, g, index) => (g?.hasAudio ? index : last), -1);
+  const sectionQuestionTypes = [...new Set(sectionGroupsOf(section).flatMap((g) => (g?.questions || []).map((q) => String(q.type))))];
 
   const examAudioTimestamps: AudioTimestampItem[] =
     audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
