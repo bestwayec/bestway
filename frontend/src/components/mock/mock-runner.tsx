@@ -1255,7 +1255,7 @@ function GroupBlock({
         </section>
       )}
       {skill === "writing" && sharedWritingStimulus && (
-        <section className="mt-3 rounded-[10px] border border-brand/20 bg-brand-subtle p-4" aria-label="Shared situation">
+        <section className="mt-3 rounded-[10px] border border-brand/20 bg-brand-subtle p-4" aria-label={tg("sharedSituation")}>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtle-fg">Shared situation</p>
           <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-fg">{sharedWritingStimulus}</p>
         </section>
@@ -1317,6 +1317,10 @@ function GroupBlock({
               "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
+            // The passage scrolls on its own: keyboard users can focus and scroll it.
+            tabIndex={0}
+            role="region"
+            aria-label={tg("passageRegion")}
           >
             <CbtAnnotatedText
               text={group.passageText!}
@@ -1348,7 +1352,7 @@ function GroupBlock({
                     <Input
                       value={answers[question.id] ?? ""}
                       onChange={(event) => onAnswer(question.id, event.target.value)}
-                      aria-label={`Answer for question ${number}`}
+                      aria-label={tg("answerFor", { number })}
                       className="inline-flex h-8 min-w-24 w-32 sm:w-40"
                     />
                   </span>

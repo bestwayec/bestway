@@ -33,9 +33,9 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
       <div className={cn(q.prompt && q.prompt.trim() ? "pl-[34px]" : "pt-1")}>
         {isObjectiveChoice(q) ? (
           <fieldset>
-            <legend className="sr-only">Question {q.number}</legend>
+            <legend className="sr-only">{t("questionNumber", { number: q.number })}</legend>
             {isShortOptions ? (
-              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={`Question ${q.number} options`}>
+              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={t("questionOptions", { number: q.number })}>
                 {options.map((option) => {
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
@@ -79,7 +79,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
             )}
           </fieldset>
         ) : (
-          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={`Answer for question ${q.number}`} autoComplete="off" spellCheck={false} className="min-h-10" />
+          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: q.number })} autoComplete="off" spellCheck={false} className="min-h-10" />
         )}
         {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
         {hasResponse && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">

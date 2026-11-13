@@ -1104,7 +1104,12 @@
       "submitUnconfirmed": "Your answers are saved on the server, but the hand-in was not confirmed. Try again — sending again never creates a second attempt.",
       "submitUnconfirmedQueued": "The hand-in was not confirmed and {count, plural, one {# answer is} other {# answers are}} still on this device. Check the connection and try again — sending again never creates a second attempt.",
       "retrySubmit": "Try again",
-      "answerUpdatedElsewhere": "An answer was changed later in another tab or device; the newer answer is shown."
+      "answerUpdatedElsewhere": "An answer was changed later in another tab or device; the newer answer is shown.",
+      "passageRegion": "Reading passage",
+      "questionNumber": "Question {number}",
+      "questionOptions": "Question {number} options",
+      "answerFor": "Answer for question {number}",
+      "sharedSituation": "Shared situation"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1222,7 +1227,9 @@
       "submitSection": "Submit section",
       "scrollHint": "Swipe to see more questions",
       "paletteShowAll": "Show all",
-      "paletteShowLess": "Show less"
+      "paletteShowLess": "Show less",
+      "navigatorLabel": "Question navigation",
+      "announceQuestion": "Question {label} of {total}, {state}"
     },
     "advanceConfirm": {
       "title": "Move to the next section?",

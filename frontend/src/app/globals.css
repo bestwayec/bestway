@@ -409,6 +409,18 @@
  * Status text on its own background: yellow-on-black success 8.6, warning 11.0, danger 6.6, info 8.3;
  * black-on-cream success 6.5, warning 6.2, danger 5.3, info 6.5.
  */
+/*
+ * "Standard" colours in the exam window follow the site theme, except that in the light theme
+ * the brand and success greens are one step darker so every text on them meets WCAG AA
+ * (computed): white on brand 7.1:1, brand text on brand/10 6.1:1, white on brand/90 (hover) 5.7:1,
+ * success text on success-bg 6.8:1. The site's own #16a34a gives 3.3:1 with white text.
+ */
+html:not(.dark) .exam-theme-standard {
+  --brand: #166534;
+  --brand-hover: #14532d;
+  --brand-subtle-fg: #166534;
+  --success: #166534;
+}
 .exam-theme-yellow-on-black {
   --bg: #0a0a0a;
   --bg-subtle: #171717;
