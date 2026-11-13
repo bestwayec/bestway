@@ -75,6 +75,7 @@ import {
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
 import { NetworkBanner } from "@/components/common/network-banner";
+import { clipboardDecision, countWords, WRITING_AREA_ATTRIBUTE } from "@/lib/writing-rules";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
 import { ErrorBoundary } from "@/components/common/error-boundary";
@@ -570,6 +571,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   function blockClipboard(e: React.ClipboardEvent | React.MouseEvent | React.DragEvent) {
     if (!strict) return;
+    const kind = e.type === "copy" || e.type === "cut" || e.type === "paste" ? e.type : null;
+    // The locker already decided (and logged) clipboard events; repeat its decision here.
+    if (kind && clipboardDecision(kind, e as unknown as { target: EventTarget | null; clipboardData?: DataTransfer | null }) === "allow") return;
     e.preventDefault();
   }
 
@@ -1370,13 +1374,17 @@ export function EssayQuestionEditor({
             <div className="space-y-1.5 rounded-xl border border-brand/20 bg-brand-subtle/20 p-3">
               <div className="flex items-center justify-between text-xs font-semibold text-brand">
                 <span>{tx("ocrEditTitle")}</span>
-                <span className="tabular-nums">{tx("wordCount", { count: value.trim().split(/\s+/).filter(Boolean).length })}</span>
+                <span className="tabular-nums">{tx("wordCount", { count: countWords(value) })}</span>
               </div>
               <Textarea
                 value={value}
                 onChange={(e) => handleWritingChange(e.target.value)}
                 className="min-h-36 resize-y font-sans text-base leading-relaxed"
                 placeholder={tx("ocrPlaceholder")}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
+                {...{ [WRITING_AREA_ATTRIBUTE]: "" }}
               />
             </div>
           )}
@@ -1393,6 +1401,7 @@ export function EssayQuestionEditor({
             autoCorrect="off"
             autoCapitalize="off"
             autoComplete="off"
+            {...{ [WRITING_AREA_ATTRIBUTE]: "" }}
           />
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
             <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />

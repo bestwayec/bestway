@@ -75,3 +75,28 @@ describe('ExamLocker full-screen guard', () => {
     expect(window.sessionStorage.getItem('bw_fullscreen_notice_a1')).toBe('1');
   });
 });
+
+describe('ExamLocker clipboard policy in the timed exam', () => {
+  const clip = (type: 'copy' | 'cut' | 'paste', target: Element, text = '') => {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  it('blocks and logs pasting outside text, allows moving the student\'s own text inside the answer', async () => {
+    await mount();
+    const area = document.createElement('div'); area.setAttribute('data-exam-writing', '');
+    const answer = document.createElement('textarea'); answer.value = 'Cities are growing quickly.'; area.appendChild(answer); document.body.appendChild(area);
+    expect(clip('paste', answer, 'a model answer from a website')).toBe(true);
+    expect(onAnomaly).toHaveBeenCalledWith('paste_blocked');
+    onAnomaly.mockReset();
+    answer.setSelectionRange(0, 6);
+    expect(clip('cut', answer)).toBe(false);
+    expect(clip('paste', answer, 'Cities')).toBe(false);
+    expect(onAnomaly).not.toHaveBeenCalled();
+    const passage = document.querySelector('p')!;
+    expect(clip('copy', passage)).toBe(true);
+    expect(onAnomaly).toHaveBeenCalledWith('copy_blocked');
+    area.remove();
+  });
+});
