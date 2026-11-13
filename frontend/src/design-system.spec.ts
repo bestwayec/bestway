@@ -39,6 +39,8 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/exam-locker.tsx": {},
   "src/components/mock/multilevel-submit-review.tsx": {},
   "src/components/mock/mic-check-modal.tsx": {},
+  "src/components/mock/exam-toolbar.tsx": {},
+  "src/components/mock/listening-engine.tsx": {},
   "src/components/mock/device-check.tsx": {},
   "src/components/profile/results-progress-card.tsx": {},
   "src/components/dashboard/score-prediction-card.tsx": {},
