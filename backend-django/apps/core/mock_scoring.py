@@ -7,6 +7,8 @@ import math
 import re
 import unicodedata
 
+from .exam_blueprint import MULTILEVEL_LEVELS
+
 # ECMAScript whitespace is not Python's \s/strip set (BOM is whitespace;
 # U+0085 and U+001C are not). Keep this direct port separate from authoring.
 JS_SPACE = '\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff'
@@ -192,10 +194,10 @@ def convert_expert(skill, raw):
     return table[int(raw*2)]
 
 
-# Lowest standard score of each Multilevel level, highest first. The one place these
-# thresholds live; everything else calls multilevel_level().
-MULTILEVEL_LEVEL_FLOORS = [(60, 'C1'), (46, 'B2'), (34, 'B1')]
+# Lowest standard score of each Multilevel level, highest first, read from the blueprint's
+# one level table (agency criteria 38 / 51 / 65); everything else calls multilevel_level().
 MULTILEVEL_BELOW_B1 = 'BELOW_B1'
+MULTILEVEL_LEVEL_FLOORS = [(item['min'], item['level']) for item in MULTILEVEL_LEVELS if item['level'] != MULTILEVEL_BELOW_B1]
 
 
 def multilevel_level(score):

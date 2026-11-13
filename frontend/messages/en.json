@@ -1112,7 +1112,9 @@
       "sharedSituation": "Shared situation",
       "splitDivider": "Resize passage and questions",
       "splitValue": "Passage {passage}%, questions {questions}%",
-      "questionsRegion": "Questions"
+      "questionsRegion": "Questions",
+      "listeningResume": "Continue listening",
+      "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now."
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1457,7 +1459,13 @@
       "hiddenNote": "Your questions are hidden. The time keeps running.",
       "hiddenTime": "Time left: {time}",
       "resume": "Resume test",
-      "timeWarning": "{minutes} minutes left."
+      "timeWarning": "{minutes} minutes left.",
+      "listeningReading": "Read the questions: {time}",
+      "listeningReadingButton": "Reading time",
+      "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now.",
+      "listeningResume": "Continue listening",
+      "listeningStartFailed": "The recording could not be started. Check the connection and press Play again.",
+      "listeningRulesScheduled": "Exam mode: after Play you first have time to read the questions, then the recording plays once, with no pause or rewind. If the page reloads, it continues from where the exam is."
     },
     "textTools": {
       "toolbar": "Text tools",
@@ -1475,7 +1483,15 @@
       "removeUnderline": "Click to remove the underline",
       "removeHighlight": "Click to remove the highlight",
       "noteTitle": "Note: {text}"
-    }
+    },
+    "examSession": {
+      "title": "This exam is open somewhere else",
+      "body": "The exam was opened in another tab or on another device. Only one place can answer at a time.",
+      "bodyWithTime": "The exam was opened in another tab or on another device at {time}. Only one place can answer at a time.",
+      "answersSafe": "Answers you typed here are kept on this device and are sent when you continue here. The clock keeps running.",
+      "continueHere": "Continue here"
+    },
+    "levelBelowB1": "Below B1"
   },
   "wizard": {
     "title": "Create exam",

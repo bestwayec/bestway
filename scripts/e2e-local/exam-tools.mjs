@@ -4,6 +4,7 @@
 // Reading: Settings (text size, colours), Help (types of this section), Hide (time keeps running).
 // Listening (recordings replaced by the synthetic WAV): an earlier part ends without the
 // 2-minute check and the section stays open; the last part starts the 2:00 check.
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,6 +95,20 @@ async function tools(name, opts) {
   await ctx.close();
 }
 
+// The timed IELTS parts follow the server schedule (reading time, then the recorded length):
+// the seeded parts are set to 3 s for these runs and restored at the end.
+function shell(code) {
+  return execFileSync(process.env.BW_PYTHON || "python", ["manage.py", "shell", "-c", code], { cwd: join(here, "..", "..", "backend-django"), encoding: "utf8" }).trim().split("\n").pop();
+}
+const listeningLengths = JSON.parse(shell(`import json
+from apps.legacy_schema.models import MockQuestionGroup as G
+print(json.dumps({g.id: g.audio_duration_sec for g in G.objects.filter(section__exam_id='${EXAM}', section__skill='listening')}))`));
+function setListeningLengths(map) {
+  shell(`from apps.legacy_schema.models import MockQuestionGroup as G
+for gid, sec in ${JSON.stringify(map).replace(/null/g, "None")}.items():
+    G.objects.filter(id=gid).update(audio_duration_sec=sec)`);
+}
+
 async function listening(name, opts) {
   const { ctx, page, errors, api, json, fresh, open } = await session(opts);
   const T = M[opts.locale].examTools;
@@ -101,7 +116,9 @@ async function listening(name, opts) {
   const id = await fresh("listening");
   await open(id, "listening");
   await page.getByRole("button", { name: T.listeningPlayOnce }).first().click();
-  await page.getByText(T.listeningNextPart).waitFor({ timeout: 30000 });
+  await page.getByText(T.listeningReading.replace("{time}", "00:30")).or(page.getByText(T.listeningReading.replace("{time}", "00:29"))).first().waitFor({ timeout: 10000 });
+  ok(true, `${name}: Play first gives 30 s to read the questions`);
+  await page.getByText(T.listeningNextPart).waitFor({ timeout: 60000 });
   ok(true, `${name}: part 1 ends with "go on to the next part"`);
   ok(!(await page.locator("body").innerText()).includes(T.listeningReview.split(":")[0]), `${name}: no 2-minute check after part 1`);
   await page.waitForTimeout(3000);
@@ -109,7 +126,7 @@ async function listening(name, opts) {
   const next = page.getByRole("button", { name: new RegExp(`^${M[opts.locale].stepper?.nextPart ?? "Next part"}`) });
   for (let i = 0; i < 6; i++) { if (await next.isVisible().catch(() => false)) await next.click(); else break; await page.waitForTimeout(500); }
   await page.getByRole("button", { name: T.listeningPlayOnce }).first().click();
-  await page.getByText(T.listeningReview.replace("{time}", "02:00")).or(page.getByText(T.listeningReview.replace("{time}", "01:59"))).waitFor({ timeout: 30000 });
+  await page.getByText(T.listeningReview.replace("{time}", "02:00")).or(page.getByText(T.listeningReview.replace("{time}", "01:59"))).waitFor({ timeout: 60000 });
   ok(true, `${name}: the last part starts the 2:00 check`);
   await page.screenshot({ path: join(OUT, `listening-${name}-${opts.locale}-${opts.dark ? "dark" : "light"}-${opts.width}.png`) });
   ok(errors.length === 0, `${name}: no page errors ${errors.slice(0, 2).join(" | ")}`);
@@ -119,8 +136,13 @@ async function listening(name, opts) {
 
 await tools("A", { locale: "en", dark: false, width: 1440, height: 900 });
 await tools("B", { locale: "uz", dark: true, width: 390, height: 844 });
-await listening("C", { locale: "en", dark: true, width: 1440, height: 900 });
-await listening("D", { locale: "uz", dark: false, width: 390, height: 844 });
+setListeningLengths(Object.fromEntries(Object.keys(listeningLengths).map((id) => [id, 3])));
+try {
+  await listening("C", { locale: "en", dark: true, width: 1440, height: 900 });
+  await listening("D", { locale: "uz", dark: false, width: 390, height: 844 });
+} finally {
+  setListeningLengths(listeningLengths);
+}
 await browser.close();
 const failed = results.filter(([c]) => !c).length;
 console.log(`${results.length - failed}/${results.length} PASS`);

@@ -95,8 +95,11 @@ class BlueprintFactsTests(SimpleTestCase):
 
     def test_unconfirmed_facts_are_listed_not_stated(self):
         ielts = blueprint("ielts_academic")
-        self.assertNotIn("reviewSeconds", section(ielts, "listening"))
-        self.assertIn("listening.reviewSeconds", [row["field"] for row in ielts["unverified"]])
+        # The 2-minute check on computer is confirmed by IDP; the reading time is BestWay's choice.
+        self.assertEqual(section(ielts, "listening")["reviewSeconds"], 120)
+        self.assertIn("idp-computer-delivered", section(ielts, "listening")["sources"])
+        self.assertNotIn("listening.reviewSeconds", [row["field"] for row in ielts["unverified"]])
+        self.assertIn("listening.previewSeconds", [row["field"] for row in ielts["unverified"]])
         fields = [row["field"] for row in blueprint("multilevel")["unverified"]]
         self.assertIn("speaking.durationSeconds", fields)
         self.assertIn("scale.speakingRawToStandard", fields)

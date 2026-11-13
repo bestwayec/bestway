@@ -1,5 +1,7 @@
 "use client";
 
+import type * as React from "react";
+
 import { Input } from "@/components/ui/input";
 import { Check, CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -7,12 +9,14 @@ import { cn } from "@/lib/utils";
 import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false }: {
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
   unavailableOptions?: string[];
   disabled?: boolean;
+  /** Lets the exam window make the question text highlightable (Listening). */
+  renderPrompt?: (text: string) => React.ReactNode;
 }) {
   const t = useTranslations("mock.runnerUx");
   const multiple = q.type === "multi_select";
@@ -27,7 +31,8 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
       <div className="flex items-start gap-2.5">
         <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.number}</span>
         {q.prompt && q.prompt.trim() ? (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
+          renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line text-sm leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
+            : <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
         ) : null}
       </div>
       <div className={cn(q.prompt && q.prompt.trim() ? "pl-[34px]" : "pt-1")}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { multilevelLevelText } from "@/lib/multilevel-scale";
 import type { MockAttemptSummary, MockPracticeSkill } from "@/lib/types";
 
 const INTERNAL_POLICY = "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
@@ -85,7 +86,7 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
       {attempt.examType === "multilevel" ? (
         <span className="font-semibold text-brand tabular-nums">
           {attempt.overallScore != null ? `${attempt.overallScore}/75` : attempt.cefrLevel ? "" : "—"}
-          {attempt.cefrLevel ? `${attempt.overallScore != null ? " · " : ""}${attempt.cefrLevel}` : ""}
+          {attempt.cefrLevel ? `${attempt.overallScore != null ? " · " : ""}${multilevelLevelText(attempt.cefrLevel, t("levelBelowB1"))}` : ""}
         </span>
       ) : (
         <span className="font-semibold text-brand tabular-nums">
