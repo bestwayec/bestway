@@ -1,5 +1,7 @@
 "use client";
 
+import type * as React from "react";
+
 import { Input } from "@/components/ui/input";
 import { Check, CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -7,12 +9,14 @@ import { cn } from "@/lib/utils";
 import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false }: {
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
   unavailableOptions?: string[];
   disabled?: boolean;
+  /** Lets the exam window make the question text highlightable (Listening). */
+  renderPrompt?: (text: string) => React.ReactNode;
 }) {
   const t = useTranslations("mock.runnerUx");
   const multiple = q.type === "multi_select";
@@ -27,15 +31,16 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
       <div className="flex items-start gap-2.5">
         <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.number}</span>
         {q.prompt && q.prompt.trim() ? (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
+          renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line text-sm leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
+            : <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
         ) : null}
       </div>
       <div className={cn(q.prompt && q.prompt.trim() ? "pl-[34px]" : "pt-1")}>
         {isObjectiveChoice(q) ? (
           <fieldset>
-            <legend className="sr-only">Question {q.number}</legend>
+            <legend className="sr-only">{t("questionNumber", { number: q.number })}</legend>
             {isShortOptions ? (
-              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={`Question ${q.number} options`}>
+              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={t("questionOptions", { number: q.number })}>
                 {options.map((option) => {
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
@@ -79,7 +84,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
             )}
           </fieldset>
         ) : (
-          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={`Answer for question ${q.number}`} autoComplete="off" spellCheck={false} className="min-h-10" />
+          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: q.number })} autoComplete="off" spellCheck={false} className="min-h-10" />
         )}
         {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
         {hasResponse && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">

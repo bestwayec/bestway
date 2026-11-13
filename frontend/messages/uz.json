@@ -1104,7 +1104,17 @@
       "submitUnconfirmed": "Javoblaringiz serverda saqlangan, lekin topshirish tasdiqlanmadi. Qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
       "submitUnconfirmedQueued": "Topshirish tasdiqlanmadi va {count} ta javob hali shu qurilmada. Aloqani tekshirib, qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
       "retrySubmit": "Qayta urinish",
-      "answerUpdatedElsewhere": "Javob keyinroq boshqa tab yoki qurilmada o'zgartirilgan; yangisi ko'rsatildi."
+      "answerUpdatedElsewhere": "Javob keyinroq boshqa tab yoki qurilmada o'zgartirilgan; yangisi ko'rsatildi.",
+      "passageRegion": "O‘qish matni",
+      "questionNumber": "Savol {number}",
+      "questionOptions": "Savol {number} variantlari",
+      "answerFor": "Savol {number} javobi",
+      "sharedSituation": "Umumiy vaziyat",
+      "splitDivider": "Matn va savollar kengligini o‘zgartirish",
+      "splitValue": "Matn {passage}%, savollar {questions}%",
+      "questionsRegion": "Savollar",
+      "listeningResume": "Tinglashni davom ettirish",
+      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1222,7 +1232,9 @@
       "submitSection": "Bo‘limni topshirish",
       "scrollHint": "Yana savollarni ko‘rish uchun suring",
       "paletteShowAll": "Hammasini ko‘rsatish",
-      "paletteShowLess": "Kamroq ko‘rsatish"
+      "paletteShowLess": "Kamroq ko‘rsatish",
+      "navigatorLabel": "Savollar bo‘yicha harakat",
+      "announceQuestion": "{label}-savol, jami {total} ta, {state}"
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1447,7 +1459,13 @@
       "hiddenNote": "Savollaringiz yashirilgan. Vaqt davom etmoqda.",
       "hiddenTime": "Qolgan vaqt: {time}",
       "resume": "Testni davom ettirish",
-      "timeWarning": "{minutes} daqiqa qoldi."
+      "timeWarning": "{minutes} daqiqa qoldi.",
+      "listeningReading": "Savollarni o‘qing: {time}",
+      "listeningReadingButton": "O‘qish vaqti",
+      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi.",
+      "listeningResume": "Tinglashni davom ettirish",
+      "listeningStartFailed": "Yozuvni boshlab bo‘lmadi. Internetni tekshiring va Play tugmasini qayta bosing.",
+      "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi."
     },
     "textTools": {
       "toolbar": "Matn vositalari",
@@ -1465,7 +1483,15 @@
       "removeUnderline": "Chiziqni olib tashlash uchun bosing",
       "removeHighlight": "Bo'yoqni olib tashlash uchun bosing",
       "noteTitle": "Eslatma: {text}"
-    }
+    },
+    "examSession": {
+      "title": "Bu imtihon boshqa joyda ochiq",
+      "body": "Imtihon boshqa tabda yoki boshqa qurilmada ochildi. Bir vaqtda faqat bitta joydan javob berish mumkin.",
+      "bodyWithTime": "Imtihon soat {time} da boshqa tabda yoki boshqa qurilmada ochildi. Bir vaqtda faqat bitta joydan javob berish mumkin.",
+      "answersSafe": "Bu yerda yozgan javoblaringiz shu qurilmada saqlanadi va shu yerda davom ettirsangiz yuboriladi. Vaqt to‘xtamaydi.",
+      "continueHere": "Shu yerda davom ettirish"
+    },
+    "levelBelowB1": "B1 dan quyi"
   },
   "wizard": {
     "title": "Imtihon yaratish",

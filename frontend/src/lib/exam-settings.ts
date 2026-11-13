@@ -9,7 +9,7 @@ export type ExamSettings = { textSize: ExamTextSize; colours: ExamColours; volum
 export const DEFAULT_EXAM_SETTINGS: ExamSettings = { textSize: "regular", colours: "standard", volume: 1 };
 export const TEXT_ZOOM: Record<ExamTextSize, number> = { regular: 1, large: 1.15, xlarge: 1.3 };
 export const COLOUR_CLASS: Record<ExamColours, string> = {
-  standard: "",
+  standard: "exam-theme-standard",
   yellow_on_black: "exam-theme-yellow-on-black",
   black_on_cream: "exam-theme-black-on-cream",
 };

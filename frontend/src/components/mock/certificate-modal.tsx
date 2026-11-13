@@ -18,7 +18,8 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
   const isPartial = attempt.flowMode === "partial_practice" || attempt.sections.length < 4;
   const singleSec = attempt.sections[0];
   const displayScore = attempt.overallScore ?? (singleSec?.standardScore ?? singleSec?.score);
-  const displayCefr = attempt.cefrLevel ?? (displayScore != null && !isIelts ? (displayScore >= 60 ? "C1" : displayScore >= 46 ? "B2" : displayScore >= 34 ? "B1" : "A2") : "—");
+  // The level comes only from the server (full mock, blueprint thresholds); never guessed here.
+  const displayCefr = attempt.cefrLevel ?? "—";
   const finishedDate = attempt.finishedAt ? new Date(attempt.finishedAt).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",

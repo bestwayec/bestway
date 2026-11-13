@@ -74,7 +74,7 @@ export function getCefrMeta(level?: string | null) {
     };
   }
   return {
-    label: norm ? `${norm} — Basic User` : "A2 / Below B1",
+    label: "Below B1",
     color: "from-fg-subtle to-fg-subtle",
     badge: "border-border-strong/40 bg-fg-subtle/15 text-fg-muted",
     bandMin: MULTILEVEL_CEFR_BANDS[0].min,
@@ -121,12 +121,12 @@ export function CefrResultInfographic({
                 ? "Bo'lim natijasi"
                 : isIelts
                 ? `Overall Band: ${overallBand?.toFixed(1) ?? "—"}`
-                : `CEFR Level: ${cefrLevel}`}
+                : `CEFR Level: ${cefrLevel === "BELOW_B1" ? meta.label : cefrLevel}`}
             </h2>
             {hasOverall && (
               <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.badge}`}>
                 <Award className="size-3.5" aria-hidden />
-                {cefrLevel || "CEFR"}
+                {cefrLevel === "BELOW_B1" ? meta.label : cefrLevel || "CEFR"}
               </span>
             )}
           </div>

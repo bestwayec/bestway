@@ -32,7 +32,7 @@ import { MockRunner } from './mock-runner';
 let host: HTMLDivElement;
 let root: Root;
 const tick = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
-const input = () => host.querySelector<HTMLInputElement>('input[aria-label="Answer for question 1"]')!;
+const input = () => host.querySelector<HTMLInputElement>('input[aria-label^="answerFor"]')!;
 async function answer(value: string) {
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input(), value);

@@ -84,6 +84,7 @@ jobs:
           python scripts/verify_readiness_contract_postgres.py
           python scripts/verify_partial_practice_postgres.py
           python scripts/verify_exam_window_postgres.py
+          python scripts/verify_listening_schedule_postgres.py
           python scripts/verify_grading_consistency_postgres.py
           python scripts/verify_ai_rankings_postgres.py
           python scripts/verify_points_integrity_postgres.py
