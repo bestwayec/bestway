@@ -213,6 +213,15 @@ def play_view(request, attempt_id, group_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def listening_start_view(request, attempt_id, group_id):
+    """IELTS timed Listening: record when this part starts (reading time, then the recording)."""
+    from . import ielts_listening
+    student(request)
+    return success(ielts_listening.start(request.user, attempt_id, group_id), 201)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def speaking_start_view(request, attempt_id, question_id):
     student(request)
     return success(engine.media_phase(request.user, attempt_id, question_id, 'speaking'), 201)

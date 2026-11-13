@@ -793,6 +793,9 @@ def summary(attempt, *, detail=False):
         startedAt=attempt.started_at, submittedAt=attempt.submitted_at, finishedAt=attempt.finished_at)
     if detail:
         result['studentName'] = attempt.student.user.name
+        if attempt.status == 'in_progress':
+            from .ielts_listening import started_parts
+            result['listeningSchedule'] = started_parts(attempt)
     if versioned(attempt):
         result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
