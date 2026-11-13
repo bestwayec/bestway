@@ -498,6 +498,8 @@ urlpatterns = [
     path('study-plan/targeted-practice/', study_plans.targeted_practice_view),
     path('v1/study-plan/targeted-practice', study_plans.targeted_practice_view),
     path('v1/study-plan/targeted-practice/', study_plans.targeted_practice_view),
+    path('study-plan/targeted-practice/answer', study_plans.answer_targeted_practice_view),
+    path('v1/study-plan/targeted-practice/answer', study_plans.answer_targeted_practice_view),
     path('study-plan/targeted-practice/submit', study_plans.submit_targeted_practice_view),
     path('study-plan/targeted-practice/submit/', study_plans.submit_targeted_practice_view),
     path('v1/study-plan/targeted-practice/submit', study_plans.submit_targeted_practice_view),
