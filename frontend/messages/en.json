@@ -1109,7 +1109,10 @@
       "questionNumber": "Question {number}",
       "questionOptions": "Question {number} options",
       "answerFor": "Answer for question {number}",
-      "sharedSituation": "Shared situation"
+      "sharedSituation": "Shared situation",
+      "splitDivider": "Resize passage and questions",
+      "splitValue": "Passage {passage}%, questions {questions}%",
+      "questionsRegion": "Questions"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",

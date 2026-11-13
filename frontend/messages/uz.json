@@ -1109,7 +1109,10 @@
       "questionNumber": "Savol {number}",
       "questionOptions": "Savol {number} variantlari",
       "answerFor": "Savol {number} javobi",
-      "sharedSituation": "Umumiy vaziyat"
+      "sharedSituation": "Umumiy vaziyat",
+      "splitDivider": "Matn va savollar kengligini o‘zgartirish",
+      "splitValue": "Matn {passage}%, savollar {questions}%",
+      "questionsRegion": "Savollar"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
