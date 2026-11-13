@@ -34,7 +34,7 @@ async function session({ locale, dark, width, height }) {
   await page.goto(`${WEB}/en/login`); await page.waitForSelector("#phone"); await page.waitForLoadState("networkidle").catch(() => {}); await page.waitForTimeout(1500);
   await page.fill("#phone", STUDENT); await page.fill("#password", PASSWORD);
   await Promise.all([page.waitForResponse((r) => r.url().includes("/api/auth/login")), page.click('button[type="submit"]')]);
-  await page.waitForURL(/dashboard/);
+  await page.waitForURL(/dashboard/); await page.waitForLoadState("networkidle").catch(() => {});
   await ctx.addCookies([{ name: "NEXT_LOCALE", value: locale, url: WEB }]);
   const api = (path, init) => page.evaluate(async ([p, i]) => { const r = await fetch(`/api/backend${p}`, i); return { status: r.status, body: await r.json().catch(() => null) }; }, [path, init]);
   const json = (body) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -46,6 +46,8 @@ async function session({ locale, dark, width, height }) {
     }
   }
   async function open(id, skill) {
+    // Requests still in flight from the dashboard can set the cookie back; set it right before opening.
+    await ctx.addCookies([{ name: "NEXT_LOCALE", value: locale, url: WEB }]);
     await page.goto(`${WEB}${locale === "en" ? "/en" : ""}/mock/attempt/${id}?skill=${skill}`, { waitUntil: "domcontentloaded" });
     const notice = page.getByTestId("fullscreen-notice");
     await notice.waitFor({ timeout: 15000 }).then(() => notice.getByRole("button").click()).catch(() => {});
