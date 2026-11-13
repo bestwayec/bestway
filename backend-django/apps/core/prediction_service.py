@@ -13,15 +13,16 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
-from .mock_scoring import cefr_band, is_full_objective_section, round_half
+from .exam_blueprint import MULTILEVEL_LEVELS
+from .mock_scoring import MULTILEVEL_BELOW_B1, cefr_band, is_full_objective_section, multilevel_level, round_half
 
 _target_table_ensured = False
 
+# Level ranges shown with the prediction: the blueprint's one table (agency criteria).
 MULTILEVEL_SCALE_BANDS = [
-    {"level": "A2", "min": 0, "max": 33, "label": "A2 (0–33)"},
-    {"level": "B1", "min": 34, "max": 45, "label": "B1 (34–45)"},
-    {"level": "B2", "min": 46, "max": 59, "label": "B2 (46–59)"},
-    {"level": "C1", "min": 60, "max": 75, "label": "C1 (60–75)"},
+    {"level": item["level"], "min": item["min"], "max": item["max"],
+     "label": f"{'Below B1' if item['level'] == MULTILEVEL_BELOW_B1 else item['level']} ({item['min']}–{item['max']})"}
+    for item in reversed(MULTILEVEL_LEVELS)
 ]
 
 QUESTION_TYPE_LABELS = {
@@ -76,19 +77,11 @@ def ensure_target_table() -> None:
 
 
 def multilevel_cefr_from_score(score: float) -> str:
-    """Multi-Level (DTM / Milliy sertifikat) 0–75 scale CEFR mapping:
-    A2: 0–33, B1: 34–45, B2: 46–59, C1: 60–75.
-    """
+    """Multilevel 0–75 score → level from the blueprint table (B1 38–50, B2 51–64, C1 65–75);
+    below 38 there is no level (BELOW_B1)."""
     if score is None or not isinstance(score, (int, float)) or not math.isfinite(score):
-        return "A2"
-    clamped = max(0.0, min(75.0, float(score)))
-    if clamped >= 60.0:
-        return "C1"
-    if clamped >= 46.0:
-        return "B2"
-    if clamped >= 34.0:
-        return "B1"
-    return "A2"
+        return MULTILEVEL_BELOW_B1
+    return multilevel_level(max(0.0, min(75.0, float(score))))
 
 
 def multilevel_to_ielts_band(score_75: float) -> float:
@@ -96,9 +89,10 @@ def multilevel_to_ielts_band(score_75: float) -> float:
     if score_75 is None or not isinstance(score_75, (int, float)) or not math.isfinite(score_75) or score_75 <= 0:
         return 0.0
     s = max(0.0, min(75.0, float(score_75)))
-    #Piecewise anchor mapping aligned with CEFR thresholds:
-    # 0->0, 33(A2 top)->4.5, 45(B1 top)->5.5, 59(B2 top)->6.5, 68->7.5, 75(C1 top)->8.5
-    anchors = [(0.0, 2.0), (33.0, 4.5), (45.0, 5.5), (59.0, 6.5), (68.0, 7.5), (75.0, 8.5)]
+    # BestWay estimate, not an official concordance: the lowest score of each Multilevel level
+    # (blueprint table) is placed at the lowest IELTS band commonly given for that CEFR level.
+    floors = {item["level"]: float(item["min"]) for item in MULTILEVEL_LEVELS}
+    anchors = [(0.0, 2.0), (floors["B1"], 4.0), (floors["B2"], 5.5), (floors["C1"], 7.0), (75.0, 8.5)]
     for i in range(1, len(anchors)):
         x1, y1 = anchors[i - 1]
         x2, y2 = anchors[i]
@@ -113,7 +107,9 @@ def ielts_band_to_multilevel(band_9: float) -> float:
     if band_9 is None or not isinstance(band_9, (int, float)) or not math.isfinite(band_9) or band_9 <= 0:
         return 0.0
     b = max(0.0, min(9.0, float(band_9)))
-    anchors = [(0.0, 0.0), (4.0, 28.0), (4.5, 33.0), (5.0, 39.0), (5.5, 45.0), (6.0, 52.0), (6.5, 59.0), (7.0, 63.0), (7.5, 68.0), (8.0, 72.0), (9.0, 75.0)]
+    # BestWay estimate, the inverse of multilevel_to_ielts_band's anchors.
+    floors = {item["level"]: float(item["min"]) for item in MULTILEVEL_LEVELS}
+    anchors = [(0.0, 0.0), (4.0, floors["B1"]), (5.5, floors["B2"]), (7.0, floors["C1"]), (9.0, 75.0)]
     for i in range(1, len(anchors)):
         x1, y1 = anchors[i - 1]
         x2, y2 = anchors[i]
@@ -229,10 +225,10 @@ def get_student_target(student_id: str) -> dict:
     if row:
         return {
             "targetBand": float(row[0] or 7.0),
-            "targetScore": float(row[1] or 60.0),
+            "targetScore": float(row[1] or 65.0),
             "targetCefr": str(row[2] or "C1"),
         }
-    return {"targetBand": 7.0, "targetScore": 60.0, "targetCefr": "C1"}
+    return {"targetBand": 7.0, "targetScore": 65.0, "targetCefr": "C1"}
 
 
 def update_student_target(student_id: str, data: dict) -> dict:
@@ -250,9 +246,9 @@ def update_student_target(student_id: str, data: dict) -> dict:
     try:
         target_score = round(max(10.0, min(75.0, float(target_score))), 1)
     except (TypeError, ValueError):
-        target_score = 60.0
+        target_score = 65.0
 
-    if not target_cefr or str(target_cefr).upper() not in ("A2", "B1", "B2", "C1"):
+    if not target_cefr or str(target_cefr).upper() not in ("B1", "B2", "C1"):
         target_cefr = multilevel_cefr_from_score(target_score)
     else:
         target_cefr = str(target_cefr).upper()

@@ -147,8 +147,8 @@ class SingleSkillScoringTests(SimpleTestCase):
         self.assertIn('writing', result['standardScores'])
         self.assertEqual(result['standardScores']['writing']['rawScore'], 8.0)
         self.assertEqual(result['standardScores']['writing']['estimatedStandardScore'], 47)
-        self.assertEqual(result['standardScores']['writing']['level'], 'B2')
-        self.assertEqual(result['standardScores']['writing']['cefrLevel'], 'B2')
+        self.assertEqual(result['standardScores']['writing']['level'], 'B1')  # 47: B1 is 38-50
+        self.assertEqual(result['standardScores']['writing']['cefrLevel'], 'B1')
         # Overall score and band must remain None for partial practice
         self.assertIsNone(result['overallScore'])
         self.assertIsNone(result['overallBand'])

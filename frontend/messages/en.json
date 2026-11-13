@@ -1465,7 +1465,8 @@
       "removeUnderline": "Click to remove the underline",
       "removeHighlight": "Click to remove the highlight",
       "noteTitle": "Note: {text}"
-    }
+    },
+    "levelBelowB1": "Below B1"
   },
   "wizard": {
     "title": "Create exam",

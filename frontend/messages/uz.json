@@ -1465,7 +1465,8 @@
       "removeUnderline": "Chiziqni olib tashlash uchun bosing",
       "removeHighlight": "Bo'yoqni olib tashlash uchun bosing",
       "noteTitle": "Eslatma: {text}"
-    }
+    },
+    "levelBelowB1": "B1 dan quyi"
   },
   "wizard": {
     "title": "Imtihon yaratish",

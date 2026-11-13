@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-
-function getMultilevelCefr(score: number): "A2" | "B1" | "B2" | "C1" {
-  const clamped = Math.max(0, Math.min(75, score));
-  if (clamped < 34) return "A2";
-  if (clamped < 46) return "B1";
-  if (clamped < 60) return "B2";
-  return "C1";
-}
+import { multilevelLevelFromScore as getMultilevelCefr } from "@/lib/multilevel-scale";
 
 function getDtmQuestionStatusClass(opts: {
   isAnswered: boolean;
@@ -34,14 +27,14 @@ function parseTimestampInput(raw: string | number): number {
 }
 
 describe("BestWay v0.8.0 Frontend Simulator & Prediction Logic", () => {
-  it("maps Multi-Level 0-75 score to CEFR levels (A2: 0-33, B1: 34-45, B2: 46-59, C1: 60-75)", () => {
-    expect(getMultilevelCefr(0)).toBe("A2");
-    expect(getMultilevelCefr(33)).toBe("A2");
-    expect(getMultilevelCefr(34)).toBe("B1");
-    expect(getMultilevelCefr(45)).toBe("B1");
-    expect(getMultilevelCefr(46)).toBe("B2");
-    expect(getMultilevelCefr(59)).toBe("B2");
-    expect(getMultilevelCefr(60)).toBe("C1");
+  it("maps Multi-Level 0-75 score to CEFR levels with the agency criteria (below 38 none, B1 38-50, B2 51-64, C1 65-75)", () => {
+    expect(getMultilevelCefr(0)).toBe("BELOW_B1");
+    expect(getMultilevelCefr(37)).toBe("BELOW_B1");
+    expect(getMultilevelCefr(38)).toBe("B1");
+    expect(getMultilevelCefr(50)).toBe("B1");
+    expect(getMultilevelCefr(51)).toBe("B2");
+    expect(getMultilevelCefr(64)).toBe("B2");
+    expect(getMultilevelCefr(65)).toBe("C1");
     expect(getMultilevelCefr(75)).toBe("C1");
   });
 
