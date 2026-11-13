@@ -62,7 +62,6 @@ export function groupLeaderboardExcelCsv(
     "Listening balli",
     "Reading balli",
     "Umumiy ball",
-    "CEFR darajasi",
     "Holati",
   ];
 
@@ -81,13 +80,7 @@ export function groupLeaderboardExcelCsv(
       overallScore = sScore;
     }
 
-    let cefrLevel = "—";
-    if (overallScore != null) {
-      if (overallScore >= 60) cefrLevel = "C1";
-      else if (overallScore >= 45) cefrLevel = "B2";
-      else if (overallScore >= 35) cefrLevel = "B1";
-      else cefrLevel = "A2";
-    }
+    // No CEFR level here: a level needs all four sections of a full mock (#129, blueprint table).
 
     const rank = st.writing?.row.rank ?? st.speaking?.row.rank ?? null;
     const phone = phoneMap?.get(st.studentId) ?? "—";
@@ -118,7 +111,6 @@ export function groupLeaderboardExcelCsv(
         "—",
         "—",
         overallLabel,
-        cefrLevel,
         statusLabel,
       ] as CsvCell[],
     };

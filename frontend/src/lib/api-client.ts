@@ -71,6 +71,34 @@ function signatureHeader(path: string): Record<string, string> {
   return signature ? { "x-attempt-signature": signature } : {};
 }
 
+/**
+ * One active exam session per attempt: the tab that holds it sends its session id on every
+ * change, and the server refuses changes from another tab or device (409
+ * EXAM_SESSION_ELSEWHERE). Set by the exam runner; requests of other pages carry nothing.
+ */
+const examSessions = new Map<string, string>();
+const ATTEMPT_CHANGE = /^\/mock\/attempts\/([^/]+)\/(?!session(?:\/|$))[^?]+/;
+export const EXAM_SESSION_ELSEWHERE_EVENT = "bw-exam-session-elsewhere";
+
+export function setExamSession(attemptId: string, sessionId: string | null): void {
+  if (sessionId) examSessions.set(attemptId, sessionId);
+  else examSessions.delete(attemptId);
+}
+
+function examSessionHeader(path: string, method: string | undefined): Record<string, string> {
+  if (!method || method.toUpperCase() === "GET") return {};
+  const id = ATTEMPT_CHANGE.exec(normalizePath(path))?.[1];
+  const session = id ? examSessions.get(id) : undefined;
+  return session ? { "x-exam-session": session } : {};
+}
+
+function reportSessionElsewhere(path: string, code: string | undefined, details: unknown): void {
+  if (code !== "EXAM_SESSION_ELSEWHERE" || typeof window === "undefined") return;
+  const id = /^\/mock\/attempts\/([^/]+)/.exec(normalizePath(path))?.[1];
+  const claimedAt = (details as { claimedAt?: number } | undefined)?.claimedAt ?? null;
+  window.dispatchEvent(new CustomEvent(EXAM_SESSION_ELSEWHERE_EVENT, { detail: { attemptId: id, claimedAt } }));
+}
+
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Query parametrlari — undefined/null qiymatlar tashlab yuboriladi */
@@ -125,6 +153,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers: {
       ...(isFormData ? {} : body !== undefined ? { "content-type": "application/json" } : {}),
       ...signatureHeader(cleanPath),
+      ...examSessionHeader(cleanPath, rest.method),
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
@@ -145,6 +174,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!res.ok || !json.success) {
     const error = "error" in json ? json.error : undefined;
+    reportSessionElsewhere(cleanPath, error?.code, (error as { details?: unknown } | undefined)?.details);
     throw new ApiError(
       error?.code ?? "UNKNOWN",
       error?.message ?? "Kutilmagan xatolik yuz berdi",

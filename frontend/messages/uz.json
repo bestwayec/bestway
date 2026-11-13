@@ -1109,7 +1109,9 @@
       "questionNumber": "Savol {number}",
       "questionOptions": "Savol {number} variantlari",
       "answerFor": "Savol {number} javobi",
-      "sharedSituation": "Umumiy vaziyat"
+      "sharedSituation": "Umumiy vaziyat",
+      "listeningResume": "Tinglashni davom ettirish",
+      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1454,7 +1456,13 @@
       "hiddenNote": "Savollaringiz yashirilgan. Vaqt davom etmoqda.",
       "hiddenTime": "Qolgan vaqt: {time}",
       "resume": "Testni davom ettirish",
-      "timeWarning": "{minutes} daqiqa qoldi."
+      "timeWarning": "{minutes} daqiqa qoldi.",
+      "listeningReading": "Savollarni o‘qing: {time}",
+      "listeningReadingButton": "O‘qish vaqti",
+      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi.",
+      "listeningResume": "Tinglashni davom ettirish",
+      "listeningStartFailed": "Yozuvni boshlab bo‘lmadi. Internetni tekshiring va Play tugmasini qayta bosing.",
+      "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi."
     },
     "textTools": {
       "toolbar": "Matn vositalari",
@@ -1472,7 +1480,15 @@
       "removeUnderline": "Chiziqni olib tashlash uchun bosing",
       "removeHighlight": "Bo'yoqni olib tashlash uchun bosing",
       "noteTitle": "Eslatma: {text}"
-    }
+    },
+    "examSession": {
+      "title": "Bu imtihon boshqa joyda ochiq",
+      "body": "Imtihon boshqa tabda yoki boshqa qurilmada ochildi. Bir vaqtda faqat bitta joydan javob berish mumkin.",
+      "bodyWithTime": "Imtihon soat {time} da boshqa tabda yoki boshqa qurilmada ochildi. Bir vaqtda faqat bitta joydan javob berish mumkin.",
+      "answersSafe": "Bu yerda yozgan javoblaringiz shu qurilmada saqlanadi va shu yerda davom ettirsangiz yuboriladi. Vaqt to‘xtamaydi.",
+      "continueHere": "Shu yerda davom ettirish"
+    },
+    "levelBelowB1": "B1 dan quyi"
   },
   "wizard": {
     "title": "Imtihon yaratish",

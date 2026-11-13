@@ -62,6 +62,8 @@ import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
+import type { ListeningSchedule } from "@/lib/listening-schedule";
+import { ExamSessionGate, useExamSession } from "./exam-session-gate";
 import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
@@ -374,6 +376,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
+  // One active session per attempt: another tab or device that takes over stops this one
+  // from changing answers; everything typed here stays queued until "continue here".
+  const examSession = useExamSession(attempt.id, attempt.status === "in_progress", () => {
+    setSaveRevision((revision) => revision + 1);
+    pushWorkspace();
+  });
+  const sessionElsewhereRef = React.useRef(false);
+  React.useEffect(() => { sessionElsewhereRef.current = examSession.elsewhere; }, [examSession.elsewhere]);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -391,7 +401,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
 
   const flush = React.useCallback(() => {
-    if (saveInFlight.current || submittingRef.current) return;
+    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current) return;
     const targetSection = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
     const targetGroups = targetSection?.groups || (targetSection as any)?.parts || [];
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
@@ -409,6 +419,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       setQueuedCount(dirty.current.size);
       if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
+      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") { setSaveState("idle"); return; }
       setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
       toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
     }).finally(() => {
@@ -620,7 +631,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const id = setInterval(() => {
       const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
-      if (r <= 0) {
+      if (r <= 0 && !sessionElsewhereRef.current) {
         if (!versioned) { clearInterval(id); void doSubmit(true); return; }
         if (Date.now() < nextRetry || submittingRef.current) return;
         nextRetry = Date.now() + 10000;
@@ -743,6 +754,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         attemptId={attempt.id}
         onAnomaly={(event) => flagMutate(event)}
       >
+      {examSession.state.status === "elsewhere" && (
+        <ExamSessionGate claimedAt={examSession.state.claimedAt} onTakeOver={examSession.takeOver} />
+      )}
       <AnswerQueueBanner
         queued={queuedCount}
         failing={saveState === "error" || saveState === "offline"}
@@ -925,6 +939,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   partIndex={partIdx}
                   audioTimestamps={examAudioTimestamps}
                   sharedSingleAudioUrl={sharedSingleAudioUrl}
+                  // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
+                  listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
+                  startListening={strict && section.skill === "listening" && !versioned && g.hasAudio
+                    ? () => api.post<ListeningSchedule>(`/mock/attempts/${attempt.id}/listening/${g.id}/start`)
+                    : undefined}
+                  serverOffsetMs={openingOffset}
                 />
               )}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
@@ -1153,6 +1173,9 @@ function GroupBlock({
   reviewAtEnd = true,
   audioTimestamps = [],
   sharedSingleAudioUrl,
+  listeningSchedule = null,
+  startListening,
+  serverOffsetMs = 0,
 }: {
   group: MockSection["groups"][number];
   skill: MockSkill;
@@ -1172,6 +1195,9 @@ function GroupBlock({
   reviewAtEnd?: boolean;
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
+  listeningSchedule?: ListeningSchedule | null;
+  startListening?: () => Promise<ListeningSchedule>;
+  serverOffsetMs?: number;
 }) {
   const tg = useTranslations("mock.runnerUx");
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
@@ -1214,6 +1240,9 @@ function GroupBlock({
             endSec={endSec}
             partLabel={group.title || `Part ${partIndex + 1}`}
             timestamps={audioTimestamps}
+            schedule={listeningSchedule}
+            startSchedule={group.hasAudio ? startListening : undefined}
+            serverOffsetMs={serverOffsetMs}
           />}
         </div>
       ) : (
@@ -1674,7 +1703,14 @@ function QuestionInput({
           </button>
         </div>
       )}
-      <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />
+      <ObjectiveQuestionInput
+        question={q}
+        value={value}
+        onChange={onChange}
+        unavailableOptions={unavailableOptions}
+        // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
+        renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}
+      />
     </div>
   );
 }
