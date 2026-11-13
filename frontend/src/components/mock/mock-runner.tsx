@@ -74,7 +74,9 @@ import {
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
-import { NetworkBanner } from "@/components/common/network-banner";
+import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
+import { AnswerQueueBanner } from "./answer-queue-banner";
+import { ApiError } from "@/lib/api-client";
 import { installHaptics } from "@/lib/haptics";
 import { WritingImageOcr } from "./writing-image-ocr";
 import { ErrorBoundary } from "@/components/common/error-boundary";
@@ -192,6 +194,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     });
   }, []);
 
+  // Server clock offset; edit times and deadlines are on the server clock.
+  const serverOffsetRef = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
@@ -231,7 +235,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   // Server answers are the authoritative resume state. Edits stay in memory only
   // until autosave persists them, so a reload cannot manufacture a second attempt.
-  const [answers, setAnswers] = React.useState<Record<string, string>>(() => initial.ans);
+  // Unsent edits from this device (a reload or a lost connection) are shown and sent
+  // again; the server keeps whichever edit is newer.
+  const [queuedAtStart] = React.useState(() => loadQueue(attempt.id));
+  const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
+    const merged = { ...initial.ans };
+    for (const [questionId, entry] of Object.entries(queuedAtStart)) if (questionId in merged) merged[questionId] = entry.response;
+    return merged;
+  });
   const [audioSet, setAudioSet] = React.useState<Set<string>>(initial.audio);
   const [audioDurations, setAudioDurations] = React.useState(initial.durations);
   const [selectedSection, setSelectedSection] = React.useState<number | null>(null);
@@ -288,7 +299,23 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   React.useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
-  const dirty = React.useRef<Set<string>>(new Set());
+  const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
+  // Edit time of each unsent answer (ms, server clock).
+  const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
+  const [queuedCount, setQueuedCount] = React.useState(() => dirty.current.size);
+  // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
+  const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
+  const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
+    ids.map((id) => ({ questionId: id, response: snapshot[id] ?? "", editedAt: editedAt.current.get(id) ?? Date.now() + serverOffsetRef.current })), []);
+  // A newer answer from another tab or device wins; show it instead of the old edit.
+  const adoptServerValues = React.useCallback((stale: Record<string, string> | undefined) => {
+    if (!stale || !Object.keys(stale).length) return;
+    const next = { ...answersRef.current, ...stale };
+    answersRef.current = next;
+    for (const id of Object.keys(stale)) { dirty.current.delete(id); editedAt.current.delete(id); }
+    setAnswers(next);
+    toast.info(tr("answerUpdatedElsewhere"));
+  }, [tr]);
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
@@ -315,12 +342,16 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
     if (!ids.length) return;
     const snapshot = { ...answersRef.current };
+    const items = outgoing(ids, snapshot).sort((a, b) => a.editedAt - b.editedAt);
     setSaveState("saving");
     let succeeded = false;
-    saveInFlight.current = bulkMutateAsync(ids.map((id) => ({questionId:id,response:snapshot[id] ?? ''}))).then((result) => {
+    saveInFlight.current = bulkMutateAsync(items).then((result) => {
       if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
       succeeded = true;
-      ids.forEach((id) => { if (answersRef.current[id] === snapshot[id]) dirty.current.delete(id); });
+      confirmQueuedAnswers(attempt.id, items);
+      items.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt || answersRef.current[item.questionId] === snapshot[item.questionId]) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
+      adoptServerValues(result.stale);
+      setQueuedCount(dirty.current.size);
       if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
       setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
@@ -330,7 +361,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       // Edits made while saving remain dirty; debounce their latest snapshot.
       if (succeeded && dirty.current.size) setSaveRevision((revision) => revision + 1);
     });
-  }, [bulkMutateAsync, tc, versioned, isFullTest, attempt.sections, attempt.currentSkill]);
+  }, [bulkMutateAsync, tc, versioned, isFullTest, attempt.id, attempt.sections, attempt.currentSkill, outgoing, adoptServerValues]);
 
   // Debounce autosave
   React.useEffect(() => {
@@ -341,6 +372,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   function setAnswer(qid: string, val: string) {
     if (submittingRef.current) return;
     dirty.current.add(qid);
+    const stamp = Math.max(Date.now() + serverOffsetRef.current, (editedAt.current.get(qid) ?? 0) + 1);
+    editedAt.current.set(qid, stamp);
+    enqueueAnswer(attempt.id, qid, val, stamp);
+    setQueuedCount(dirty.current.size);
     const next = { ...answersRef.current, [qid]: val };
     answersRef.current = next;
     setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saving");
@@ -442,17 +477,37 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         const targetSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
         if (isFullTest && !targetSec) throw new Error('Current section could not be loaded. Keep this page open and retry.');
         const targetGrps = targetSec?.groups || (targetSec as any)?.parts || [];
-        const all = Object.entries(answersRef.current)
-          .filter(([qid]) => (!auto || dirty.current.has(qid)) && (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))))
-          .map(([questionId, response]) => ({ questionId, response }));
+        const ids = Object.keys(answersRef.current)
+          .filter((qid) => (!auto || dirty.current.has(qid)) && (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))));
+        const all = outgoing(ids, answersRef.current);
         for (let offset = 0; offset < all.length; offset += 200) {
           const batch = all.slice(offset, offset + 200);
           const saved = await bulkMutateAsync(batch);
           if (saved.saved !== batch.length) {
             throw new Error("Some answers could not be saved. Keep this page open and retry.");
           }
+          confirmQueuedAnswers(attempt.id, batch);
+          batch.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
+          adoptServerValues(saved.stale);
         }
-        await submitMutateAsync({ confirm: true, confirmed: true, force: true });
+        setQueuedCount(dirty.current.size);
+        try {
+          await submitMutateAsync({ confirm: true, confirmed: true, force: true });
+        } catch (error) {
+          // A gateway error (e.g. 502) or a lost connection does not tell whether the
+          // hand-in happened. Ask the server: submitting again never makes a second attempt.
+          if (error instanceof ApiError && error.status > 0 && error.status < 500) throw error;
+          const current = await api.get<{ status: string }>(`/mock/attempts/${attempt.id}`).catch(() => null);
+          if (!current || current.status === "in_progress") {
+            setSubmitUnconfirmed(true);
+            submittingRef.current = false;
+            return;
+          }
+          // Already handed in: the repeated submit returns the stored state and refreshes the page data.
+          await submitMutateAsync({ confirm: true, confirmed: true, force: true }).catch(() => undefined);
+        }
+        setSubmitUnconfirmed(false);
+        clearQueue(attempt.id);
         if (liveRoomId) {
           reportProgressMutate({
             attemptId: attempt.id,
@@ -468,7 +523,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate, total],
+    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate, total, outgoing, adoptServerValues],
   );
 
   // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
@@ -481,14 +536,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       if (!curSec) throw new Error('Current section could not be loaded');
       const curGrps = curSec?.groups || (curSec as any)?.parts || [];
       const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) as string[];
-      const answers = ids.filter((id) => Object.hasOwn(answersRef.current, id) && (!automatic || dirty.current.has(id)))
-        .map((questionId) => ({ questionId, response: answersRef.current[questionId] ?? '' }));
+      const answers = outgoing(ids.filter((id) => Object.hasOwn(answersRef.current, id) && (!automatic || dirty.current.has(id))), answersRef.current);
       for (let offset = 0; offset < answers.length; offset += 200) {
         const batch = answers.slice(offset, offset + 200);
         const saved = await bulkMutateAsync(batch);
         if (saved.saved !== batch.length) throw new Error('Some answers could not be saved');
+        confirmQueuedAnswers(attempt.id, batch);
       }
-      ids.forEach((id) => dirty.current.delete(id));
+      ids.forEach((id) => { dirty.current.delete(id); editedAt.current.delete(id); });
+      setQueuedCount(dirty.current.size);
       const currentSkill = attempt.currentSkill;
       await advanceMutateAsync();
       const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
@@ -500,7 +556,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     } catch (e) {
       toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
     } finally { submittingRef.current = false; }
-  }, [advanceMutateAsync, tc, tr, versioned, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam]);
+  }, [advanceMutateAsync, tc, tr, versioned, attempt.id, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam, outgoing]);
 
   React.useEffect(() => {
     if (!deadline) return;
@@ -628,7 +684,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         onAnomaly={(event) => flagMutate(event)}
         onForceSubmit={() => void doSubmit(true)}
       >
-      <NetworkBanner />
+      <AnswerQueueBanner
+        queued={queuedCount}
+        failing={saveState === "error" || saveState === "offline"}
+        submitUnconfirmed={submitUnconfirmed}
+        onRetrySubmit={() => void doSubmit(false, true)}
+      />
       <div
         className={cn(
           "mx-auto pb-24 transition-colors",
