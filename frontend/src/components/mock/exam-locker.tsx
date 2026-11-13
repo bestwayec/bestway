@@ -1,5 +1,6 @@
 "use client";
 
+import { clipboardDecision } from "@/lib/writing-rules";
 import * as React from "react";
 import { AlertOctagon, Maximize2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -252,9 +253,15 @@ export function ExamLocker({
       reportAnomalyThrottled(type);
     };
 
-    const onCopy = (e: Event) => blockEvent(e, "copy_blocked");
-    const onCut = (e: Event) => blockEvent(e, "cut_blocked");
-    const onPaste = (e: Event) => blockEvent(e, "paste_blocked");
+    // Inside a writing answer the student may move their own text; anything else is blocked
+    // and logged (exam content cannot be copied out, outside text cannot be pasted in).
+    const guard = (kind: "copy" | "cut" | "paste", type: string) => (e: Event) => {
+      if (clipboardDecision(kind, e as ClipboardEvent) === "allow") return;
+      blockEvent(e, type);
+    };
+    const onCopy = guard("copy", "copy_blocked");
+    const onCut = guard("cut", "cut_blocked");
+    const onPaste = guard("paste", "paste_blocked");
     const onContextMenu = (e: Event) => blockEvent(e, "contextmenu_blocked");
 
     const onKeyDown = (e: KeyboardEvent) => {
