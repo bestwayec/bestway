@@ -176,7 +176,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   // Send the workspace to the server one second after the last change; retried on the next
   // change or when the connection comes back. Failures never interrupt the exam.
-  const workspaceOffset = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  // Server clock offset, measured once when the attempt opens; edit times and deadlines are on the server clock.
+  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
+  const serverOffsetRef = React.useRef(openingOffset);
   const workspacePending = React.useRef(workspaceAtOpen.push);
   const workspaceTimer = React.useRef<number | null>(null);
   const flagsRef = React.useRef(flaggedQuestions);
@@ -190,7 +192,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
   const scheduleWorkspace = React.useCallback(() => {
     workspacePending.current = true;
-    touchLocal(attempt.id, [...flagsRef.current], Date.now() + workspaceOffset.current);
+    touchLocal(attempt.id, [...flagsRef.current], Date.now() + serverOffsetRef.current);
     if (workspaceTimer.current) window.clearTimeout(workspaceTimer.current);
     workspaceTimer.current = window.setTimeout(pushWorkspace, 1000);
   }, [attempt.id, pushWorkspace]);
@@ -240,8 +242,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     scheduleWorkspace();
   }, [scheduleWorkspace]);
 
-  // Server clock offset; edit times and deadlines are on the server clock.
-  const serverOffsetRef = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
@@ -348,7 +348,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
   // Edit time of each unsent answer (ms, server clock).
   const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
-  const [queuedCount, setQueuedCount] = React.useState(() => dirty.current.size);
+  const [queuedCount, setQueuedCount] = React.useState(() => Object.keys(queuedAtStart).filter((id) => id in initial.ans).length);
   // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
   const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
   const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
