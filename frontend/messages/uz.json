@@ -1122,7 +1122,21 @@
       "ocrEditTitle": "OCR olingan / saqlangan matn",
       "ocrPlaceholder": "OCR qilingan matn shu yerda chiqadi, uni tahrirlashingiz mumkin.",
       "goToQuestions": "Savollarga o‘tish",
-      "questionCount": "{count} ta savol"
+      "questionCount": "{count} ta savol",
+      "notesButton": "Eslatmalar ({count})",
+      "notesTitle": "Eslatmalaringiz ({count})",
+      "notesClose": "Eslatmalarni yopish",
+      "notesEmpty": "Hali eslatma yo'q. Eslatma qo'shish uchun matndan bir qismini belgilang.",
+      "noteDelete": "O'chirish",
+      "noteDeleteConfirm": "Bu eslatma o'chirilsinmi?",
+      "noteDeleteYes": "Ha, o'chirish",
+      "noteDeleteNo": "Qoldirish",
+      "queueWaiting": "Server bilan aloqa yo'q. {count} ta javob shu qurilmada saqlangan va aloqa tiklanganda tartib bilan yuboriladi. Sahifani yopmang.",
+      "queueOfflineAllSaved": "Internet aloqasi yo'q. Hozirgacha berilgan barcha javoblar serverda saqlangan.",
+      "submitUnconfirmed": "Javoblaringiz serverda saqlangan, lekin topshirish tasdiqlanmadi. Qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
+      "submitUnconfirmedQueued": "Topshirish tasdiqlanmadi va {count} ta javob hali shu qurilmada. Aloqani tekshirib, qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
+      "retrySubmit": "Qayta urinish",
+      "answerUpdatedElsewhere": "Javob keyinroq boshqa tab yoki qurilmada o'zgartirilgan; yangisi ko'rsatildi."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1410,6 +1424,23 @@
       "singleSection": "Bitta bo'lim: {skill}",
       "sectionPractice": "Bo'lim mashqi",
       "fullMock": "To'liq mock"
+    },
+    "textTools": {
+      "toolbar": "Matn vositalari",
+      "highlight": "Bo'yash",
+      "highlightYellow": "Sariq bo'yash (Alt+H)",
+      "highlightGreen": "Yashil bo'yash",
+      "highlightPink": "Pushti bo'yash",
+      "underline": "Tagiga chizish",
+      "underlineHint": "Tagiga chizish (Alt+U)",
+      "note": "Eslatma",
+      "addNote": "Eslatma qo'shish",
+      "clear": "Belgilarni olib tashlash",
+      "notePlaceholder": "Eslatma matnini yozing…",
+      "saveNote": "Saqlash",
+      "removeUnderline": "Chiziqni olib tashlash uchun bosing",
+      "removeHighlight": "Bo'yoqni olib tashlash uchun bosing",
+      "noteTitle": "Eslatma: {text}"
     }
   },
   "wizard": {
