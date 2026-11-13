@@ -5,10 +5,17 @@ import { ShieldAlert } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 
-const KNOWN = new Set([
+export const EXAM_LOG_EVENTS = new Set([
   "tab_switch", "window_blur", "exit_fullscreen", "fullscreen_exit", "mouse_leave", "copy_blocked", "cut_blocked",
   "paste_blocked", "contextmenu_blocked", "devtools_attempt", "view_source_attempt",
 ]);
+
+const KNOWN = EXAM_LOG_EVENTS;
+
+/** Plain-language text of a recorded exam-window event (translator of the `mock.examLog` namespace). */
+export function examLogEventText(t: (key: string, values?: Record<string, string>) => string, event: string): string {
+  return EXAM_LOG_EVENTS.has(event) ? t(`events.${event}`) : t("events.other", { event });
+}
 
 /**
  * Staff only: what the exam window recorded during this attempt (leaving full screen,
