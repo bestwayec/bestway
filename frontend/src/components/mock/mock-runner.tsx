@@ -63,6 +63,7 @@ import { ResponseProgress, WritingResponseGuide } from './exam-response-progress
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
 import type { ListeningSchedule } from "@/lib/listening-schedule";
+import { ExamSessionGate, useExamSession } from "./exam-session-gate";
 import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
 import { SectionTransitionModal } from "./section-transition-modal";
@@ -375,6 +376,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
+  // One active session per attempt: another tab or device that takes over stops this one
+  // from changing answers; everything typed here stays queued until "continue here".
+  const examSession = useExamSession(attempt.id, attempt.status === "in_progress", () => {
+    setSaveRevision((revision) => revision + 1);
+    pushWorkspace();
+  });
+  const sessionElsewhereRef = React.useRef(false);
+  React.useEffect(() => { sessionElsewhereRef.current = examSession.elsewhere; }, [examSession.elsewhere]);
   const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -392,7 +401,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
 
   const flush = React.useCallback(() => {
-    if (saveInFlight.current || submittingRef.current) return;
+    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current) return;
     const targetSection = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
     const targetGroups = targetSection?.groups || (targetSection as any)?.parts || [];
     const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
@@ -410,6 +419,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       setQueuedCount(dirty.current.size);
       if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
+      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") { setSaveState("idle"); return; }
       setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
       toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
     }).finally(() => {
@@ -621,7 +631,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const id = setInterval(() => {
       const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
-      if (r <= 0) {
+      if (r <= 0 && !sessionElsewhereRef.current) {
         if (!versioned) { clearInterval(id); void doSubmit(true); return; }
         if (Date.now() < nextRetry || submittingRef.current) return;
         nextRetry = Date.now() + 10000;
@@ -744,6 +754,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         attemptId={attempt.id}
         onAnomaly={(event) => flagMutate(event)}
       >
+      {examSession.state.status === "elsewhere" && (
+        <ExamSessionGate claimedAt={examSession.state.claimedAt} onTakeOver={examSession.takeOver} />
+      )}
       <AnswerQueueBanner
         queued={queuedCount}
         failing={saveState === "error" || saveState === "offline"}

@@ -3,7 +3,9 @@
 Answers: the last edit wins by edit time on the server clock (an edit queued offline
 never overwrites a newer saved answer; the newer value comes back as `stale`); clients
 that send no edit time keep the old behaviour. Finish: submitting again returns the
-stored state and never creates a second attempt. Every fixture row is removed.
+stored state and never creates a second attempt. Session: one tab or device holds the attempt;
+another one is refused (409) until it takes over, and requests without a session id (desktop)
+are not checked. Every fixture row is removed.
 """
 import os
 import sys
@@ -103,6 +105,37 @@ try:
     check('stale' not in plain and stored(q1).response == 'desktop client', 'a client without edit times keeps the old behaviour')
     bad = save([{'questionId': q1, 'response': 'x', 'editedAt': 'yesterday'}], status=400)
     check(bad['error']['code'] == 'VALIDATION_ERROR', 'an invalid edit time is refused')
+
+    tab_a, tab_b = 'tab-a-' + run_id, 'tab-b-' + run_id
+    claim = lambda sid, takeover=False: client.post(f'/v1/mock/attempts/{attempt_id}/session', {'sessionId': sid, 'takeover': takeover}, format='json')
+    def save_from(sid, value, status):
+        response = client.post(f'/v1/mock/attempts/{attempt_id}/answers', {'answers': [{'questionId': q2, 'response': value, 'editedAt': ms(timezone.now())}]},
+                               format='json', HTTP_X_EXAM_SESSION=sid)
+        if response.status_code != status:
+            raise AssertionError(f'session save HTTP {response.status_code}: {response.data}')
+        return response
+    first_claim = claim(tab_a)
+    check(first_claim.status_code == 200 and first_claim.data['data']['active'] is True, 'the first tab holds the attempt')
+    second = claim(tab_b)
+    check(second.status_code == 409 and second.data['error']['code'] == 'EXAM_SESSION_ELSEWHERE'
+          and second.data['error'].get('details', {}).get('claimedAt'), 'a second tab is told the exam is open elsewhere, with the time')
+    save_from(tab_b, 'from tab b', 409)
+    check(stored(q2).response != 'from tab b', 'a change from the second tab is refused and not stored')
+    save_from(tab_a, 'from tab a', 201)
+    check(stored(q2).response == 'from tab a', 'the holding tab keeps saving')
+    check(claim(tab_b, takeover=True).status_code == 200, '"continue here" moves the attempt to the second tab')
+    save_from(tab_a, 'old tab after takeover', 409)
+    save_from(tab_b, 'new tab after takeover', 201)
+    check(stored(q2).response == 'new tab after takeover', 'after takeover only the new tab saves; the old one is refused')
+    other = SimpleNamespace(id='win-other-' + run_id, role='student', is_authenticated=True)
+    intruder = APIClient(); intruder.force_authenticate(other)
+    stolen = intruder.post(f'/v1/mock/attempts/{attempt_id}/session', {'sessionId': 'intruder-' + run_id, 'takeover': True}, format='json')
+    check(stolen.status_code == 404 and claim(tab_b).data['data']['active'] is True, 'another student cannot claim the attempt')
+    legacy = save([{'questionId': q2, 'response': 'desktop without session'}])
+    check(stored(q2).response == 'desktop without session', 'a client without a session id is not checked (desktop)')
+    released = client.post(f'/v1/mock/attempts/{attempt_id}/session/release', {'sessionId': tab_b}, format='json')
+    check(released.status_code == 200 and claim(tab_a).data['data']['active'] is True, 'a released attempt can be claimed by another tab')
+    client.post(f'/v1/mock/attempts/{attempt_id}/session/release', {'sessionId': tab_a}, format='json')
 
     one = client.post(f'/v1/mock/attempts/{attempt_id}/submit', {'confirm': True, 'confirmed': True, 'force': True}, format='json')
     two = client.post(f'/v1/mock/attempts/{attempt_id}/submit', {'confirm': True, 'confirmed': True, 'force': True}, format='json')
