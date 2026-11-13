@@ -36,10 +36,11 @@ const fixture = vi.hoisted(() => ({
 // Real messages: the page must read the same in both languages (Uzbek checked below).
 const locale = vi.hoisted(() => ({ current: "uz" as "en" | "uz" }));
 vi.mock("next-intl", async () => {
-  const messages = { en: (await import("../../../messages/en.json")).default, uz: (await import("../../../messages/uz.json")).default } as Record<string, any>;
+  type Tree = { [key: string]: Tree | string | undefined };
+  const messages = { en: (await import("../../../messages/en.json")).default, uz: (await import("../../../messages/uz.json")).default } as unknown as Record<string, Tree>;
   return {
     useTranslations: (ns: string) => (key: string, values?: Record<string, unknown>) => {
-      const found = `${ns}.${key}`.split(".").reduce((node: any, part) => node?.[part], messages[locale.current]);
+      const found = `${ns}.${key}`.split(".").reduce<Tree | string | undefined>((node, part) => (typeof node === "object" ? node[part] : undefined), messages[locale.current]);
       return typeof found === "string" ? found.replace(/\{(\w+)\}/g, (_: string, n: string) => String(values?.[n] ?? "")) : key;
     },
   };
