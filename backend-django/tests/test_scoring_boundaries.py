@@ -147,6 +147,30 @@ def test_multilevel_level_boundaries_follow_the_one_threshold_table():
     assert score.multilevel_level(75) == "C1"
 
 
+@pytest.mark.parametrize("value,level", [
+    (0, "BELOW_B1"), (37, "BELOW_B1"), (37.9, "BELOW_B1"), (38, "B1"), (50, "B1"), (50.9, "B1"),
+    (51, "B2"), (64, "B2"), (64.9, "B2"), (65, "C1"), (75, "C1"),
+])
+def test_multilevel_level_follows_the_agency_criteria(value, level):
+    """uzbmb.uz Multilevel-bm.pdf: C1 65-75, B2 51-64, B1 38-50, below 38 no certificate."""
+    assert score.multilevel_level(value) == level
+
+
+def test_multilevel_floors_are_read_from_the_blueprint_table():
+    from apps.core.exam_blueprint import MULTILEVEL_LEVELS, blueprint as get_blueprint
+    assert score.MULTILEVEL_LEVEL_FLOORS == [(65, "C1"), (51, "B2"), (38, "B1")]
+    assert [item["min"] for item in MULTILEVEL_LEVELS] == [65, 51, 38, 0]
+    levels = get_blueprint("multilevel")["scale"]["levels"]
+    assert [(item["level"], item["min"], item["max"]) for item in levels] == [
+        ("C1", 65, 75), ("B2", 51, 64), ("B1", 38, 50), ("BELOW_B1", 0, 37)]
+
+
+def test_prediction_scale_bands_are_the_blueprint_table():
+    from apps.core import prediction_service
+    assert [(b["level"], b["min"], b["max"]) for b in prediction_service.MULTILEVEL_SCALE_BANDS] == [
+        ("BELOW_B1", 0, 37), ("B1", 38, 50), ("B2", 51, 64), ("C1", 65, 75)]
+
+
 @pytest.mark.parametrize("value", [-1, 75.1, float("inf"), float("nan")])
 def test_multilevel_level_rejects_scores_outside_the_scale(value):
     with pytest.raises(ValueError):

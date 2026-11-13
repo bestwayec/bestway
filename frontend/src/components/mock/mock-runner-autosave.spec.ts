@@ -38,7 +38,7 @@ async function tick(ms: number) {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
 async function answer(value: string) {
-  const input = host.querySelector<HTMLInputElement>('input[aria-label="Answer for question 1"]')!;
+  const input = host.querySelector<HTMLInputElement>('input[aria-label^="answerFor"]')!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));

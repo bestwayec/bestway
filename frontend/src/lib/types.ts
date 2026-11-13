@@ -888,6 +888,8 @@ export interface MockAttemptSummary {
   serverTime?: string;
   isTeacherReviewed?: boolean;
   mediaState?: Record<string, any>;
+  /** Timed IELTS Listening: when each part was started on the server (resume after a reload). */
+  listeningSchedule?: Record<string, import("./listening-schedule").ListeningSchedule>;
   antiCheatCount: number;
   startedAt: string;
   submittedAt: string | null;
