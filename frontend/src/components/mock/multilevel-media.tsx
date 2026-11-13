@@ -1,4 +1,5 @@
 "use client";
+import { EXAM_VOLUME_EVENT, broadcastVolume, loadExamSettings } from '@/lib/exam-settings';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
@@ -34,6 +35,14 @@ export function MultilevelListening({ prepare, play, load }: {
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState(0);
   const audio = useRef<HTMLAudioElement>(null);
+  // Volume shared with the exam Settings and every other player.
+  const [volume, setVolume] = useState(() => (typeof window === 'undefined' ? 1 : loadExamSettings().volume));
+  useEffect(() => { if (audio.current) audio.current.volume = volume; }, [volume]);
+  useEffect(() => {
+    const onVolume = (event: Event) => { const next = Number((event as CustomEvent<number>).detail); if (Number.isFinite(next)) setVolume(next); };
+    window.addEventListener(EXAM_VOLUME_EVENT, onVolume);
+    return () => window.removeEventListener(EXAM_VOLUME_EVENT, onVolume);
+  }, []);
   // A play the server granted whose audio has not started yet (load or start failed): retrying
   // must not spend another of the limited plays while the grant is still valid.
   const grant = useRef<MediaPhase | null>(null);
@@ -82,7 +91,7 @@ export function MultilevelListening({ prepare, play, load }: {
         : <Button type="button" size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation" disabled={busy || playing || left > 0 || (phase.plays >= phase.playLimit && !grantValid)} onClick={() => void playAudio()}>{t('listeningPlay')}</Button>}
       {phase && <p role="status" className="min-w-0 flex-1 basis-40 font-medium">{status}<span className="block text-xs font-normal text-fg-muted">{t('listeningPlays', { plays: phase.plays, limit: phase.playLimit })}</span></p>}
       <label className="flex items-center gap-2 text-xs text-fg-muted">{t('listeningVolume')}
-        <input aria-label={t('listeningVolume')} className="h-6 w-28 accent-brand" type="range" min="0" max="1" step="0.05" defaultValue="1" onChange={(e) => { if (audio.current) audio.current.volume = Number(e.target.value); }} />
+        <input aria-label={t('listeningVolume')} className="h-6 w-28 accent-brand" type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => broadcastVolume(Number(e.target.value))} />
       </label>
     </div>
     {!phase && <p className="text-xs text-fg-muted">{t('listeningRules')}</p>}
