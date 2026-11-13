@@ -29,8 +29,8 @@ Bu fayl dasturning yagona holat jadvali. Har sessiya boshida to'liq o'qiladi (RE
 |---|---|---|---|
 | 1 | Poydevor: rasmiy format, blueprint, savol turlari, yagona ball mexanizmi, backend qarorlari, kalitlar xavfsizligi | YOPILDI (2-qism — item bank metadata — 2-bosqich boshiga ko'chirildi, pastga qarang) | #138 blueprint · #139 ball moduli · #140 prediction (#129) · #141 vocab battle winners · #142 drill (kalit serverda, bir martalik ball, kunlik chegara) · #143 demo test kalitlari · shu fayl |
 | 2 | CD IELTS imtihon oynasi (computer-delivered ko'rinish va vaqt oqimi) | YOPILDI (asosiy qism; qolganlari aniq ro'yxatda, 3-bosqich boshiga ko'chirildi) | #145 javoblar navbati + LWW + Finish 502 · #146 highlight/izoh/belgi serverda · #147 taymer, Settings, Help, Hide, Listening 2 daqiqa · #148 Writing so'z hisobi + clipboard · #149 imtihon rejimi jurnali · shu fayl |
-| 3 | Multilevel to'liq moslik (2025 yozish formati, gapirish, daraja chegaralari) + 2-bosqich qoldig'i | KEYINGI | egasi qarori kerak: daraja chegaralari; NEXT STEP ga qarang |
-| 4 | AI baholash (Writing/Speaking, mezonlar bo'yicha) | TODO | |
+| 3 | 2-bosqich qoldig'i, item bank, Multilevel to'liq moslik | YOPILDI (asosiy qism; Builder shablonlari, IELTS Speaking rejimlari va to'liq Builder→natija E2E 4-bosqich boshiga ko'chirildi) | tarmoqlar (PR'lar 1–2-bosqich merge bo'lgach ochiladi): `claude/exam3-levels` · `-single-session` · `-listening` · `-a11y` · `-reading-split` · `-live-i18n` · `-item-bank` · `-multilevel` · shu fayl |
+| 4 | 3-bosqich qoldig'i + AI baholash (Writing/Speaking, mezonlar bo'yicha) | KEYINGI | NEXT STEP ga qarang |
 | 5 | Tahlil va o'quv halqasi (zaif nuqtalar → mashq → takror) | TODO | |
 | 6 | Sifat darvozasi (barcha rollar, a11y, vizual baza, yuklama) | TODO | |
 
@@ -43,6 +43,7 @@ Har fakt yonida manba. "Tasdiqlanmagan" — rasmiy manbada topilmadi; kodda fakt
 - [IELTS-F] ielts.org — IELTS Academic test format (Listening, Reading, Writing, Speaking sahifalari): https://ielts.org/take-a-test/test-types/ielts-academic-test
 - [IELTS-S] ielts.org — IELTS scoring in detail: https://ielts.org/take-a-test/your-results/ielts-scoring-in-detail
 - [UZ-F] uzbmb.uz — Test sinovlari formati, Multilevel bo'limi: https://uzbmb.uz/page/test_sinovlari_formati
+- [UZ-B26] Baholash mezoni (Multilevel uchun), gov.uz'da 2026-01-26 qayta joylangan: https://api-portal.gov.uz/uploads/165/2026/01/26/529855da-9421-d2ef-9021-7a6d28900b08_media_.pdf
 - [UZ-B] Bilimni baholash agentligi — ko'p darajali test baholash mezonlari (2023-03-16; gov.uz da 2026-01-26 qayta joylangan): https://uzbmb.uz/upload/file/pdf/Multilevel-bm.pdf
 - [UZ-W] Yozish bo'limi topshiriq tafsilotlari, yangi format (2025-10-13): https://api-portal.gov.uz/uploads/165/2025/10/13/99dfbb36-0f1d-2c70-8a4e-e1382a5f255b_media_.pdf
 - [UZ-S] Gapirish ko'nikmasi yangi formati: https://uzbmb.uz/upload/file/pdf/phone/Speaking_format.pdf
@@ -81,7 +82,8 @@ Har fakt yonida manba. "Tasdiqlanmagan" — rasmiy manbada topilmadi; kodda fakt
 | Speaking kompyuterda, jami 15 daqiqa | tasdiqlanmagan | — |
 | Speaking 21 → 75 jadvali | tasdiqlanmagan (agentlik jadvali topilmadi; BestWay jadvali taxminiy) | — |
 | L/R natijasi Rasch modeli bilan, T = 50 + 10Z, +2.5 logitdan yuqori → 75; BestWay jadvali faqat taxminiy | tasdiqlandi | UZ-B |
-| Har bo'lim 0–75; daraja 4 bo'lim o'rtachasidan: C1 65–75, B2 51–64, B1 38–50, 38 dan past — B1 dan quyi (sertifikat yo'q); taxminiy to'g'ri javoblar 28–35 / 18–27 / 10–17 / 0–9 | tasdiqlandi | UZ-B |
+| Har bo'lim 0–75; daraja 4 bo'lim o'rtachasidan: C1 65–75, B2 51–64, B1 38–50, 38 dan past — B1 dan quyi (sertifikat yo'q); taxminiy to'g'ri javoblar 28–35 / 18–27 / 10–17 / 0–9. "Mart oyidan o'zgardi" xabari 2023-yil martidagi kengash qaroriga tegishli (har bo'lim 75 ball); 2026-01-26 da gov.uz'da qayta joylangan mezon ham shu jadval. Kod 3-bosqichda shu jadvalga o'tdi (egasi qarori) | tasdiqlandi | UZ-B, UZ-B26 |
+| O'rtacha ballni daraja uchun yaxlitlash (masalan 37.8 → 38?) | tasdiqlanmagan (mezonda yo'q); BestWay yaxlitlamaydi: 37.8 — B1 dan quyi | — |
 
 ## CD IELTS imtihon oynasi (2-bosqich, 2026-11-13)
 
@@ -117,27 +119,60 @@ Tekshiruv (stack uchi #149): pytest 915/4 skip, CI PostgreSQL skriptlari (yangi 
 - Multilevel Listening oqimi (ikki marta eshittirish, 15–30 s o'qish vaqti — UZ-F) shu oynada alohida tekshirilmagan.
 - Blueprint: `unverified` ro'yxatidagi "Listening 2 daqiqa tekshirish" ni IDP-CD manbasi bilan tasdiqlanganga o'tkazish.
 
+## 3-bosqich (2026-11-13): 2-bosqich qoldig'i, item bank, Multilevel
+
+Tarmoqlar ketma-ket stack (oddiy merge, rebase yo'q); merge tartibi: levels → single-session → listening → a11y → reading-split → live-i18n → item-bank → multilevel. Hammasi `claude/exam3-base` (main + 1- va 2-bosqich PR'lari) ustida; PR'lar 1–2-bosqich merge bo'lgach ochiladi (egasi ko'rsatmasi: bosqichlarni aralashtirmaslik).
+
+| Ish | Natija | Tarmoq |
+|---|---|---|
+| Multilevel daraja chegaralari | agentlik jadvali (B1 38–50, B2 51–64, C1 65–75) blueprint'da bitta jadval; scoring, prediction va web shu jadvaldan o'qiydi (web nusxasi parity testi bilan); 37/38, 50/51, 64/65 testlari; guruh eksportida Writing+Speaking'dan daraja chiqarilmaydi, sertifikat oynasi darajani o'zi hisoblamaydi; eski urinishlar uchun faqat o'qiydigan `report_multilevel_levels` | levels |
+| Bitta faol sessiya | urinish bo'yicha kesh qulfi (90 s, sxema o'zgarmagan); ikkinchi tab/qurilmada "boshqa joyda ochiq" oynasi va "Shu yerda davom ettirish"; eski joy to'xtatiladi, yozgani qurilmada saqlanib qaytganda yuboriladi; sarlavhasiz (desktop) so'rovlar tekshirilmaydi | single-session |
+| Listening | IELTS timed: Play boshlanishni serverda bir marta yozadi (30 s o'qish vaqti — BestWay tanlovi, keyin yozuv); qayta yuklashda yozuv server soati bo'yicha davom etadi, oxirgi qismdagi 2 daqiqadan faqat qolgani beriladi; Multilevel: uzilgan ijro yangi ijro sarflamasdan davom etadi; Listening savol matnida highlight; blueprint: 2 daqiqa IDP bilan tasdiqlangan | listening |
+| Klaviatura, ARIA, axe | savollar navigatori `nav` + bitta tab to'xtashi (o'qlar, Home, End), Enter savolning javobiga olib boradi, joriy savol va holati e'lon qilinadi; imtihon oynasida axe (WCAG 2.0/2.1 A+AA) — kritik/jiddiy 0 (Reading, Listening, Writing; en 1440 yorug', uz 390 qorong'i) | a11y |
+| Reading split | sudraladigan ajratgich (25–75 %, klaviatura, Enter = 50 %), ikki ustun alohida aylanadi, tanlov qurilmada eslab qolinadi; telefonda tablar | reading-split |
+| Jonli kuzatuv | ustozning jonli PIN xonasi va guruh kuzatuvi uz/en kalitlarda, mavzu tokenlarida; "qoidabuzarlik" o'rniga "Qayd etildi: n"; uydirma qiymatlar olib tashlandi (40 savol, "reading", savol raqami, "B2" darajasi) | live-i18n |
+| Item bank | `MockQuestion.cefrLevel`, `skillTags` (Prisma migratsiyasi `20261113000000_question_item_metadata`, faqat qo'shiladi); imtihon/bo'lim/qism/tur qatorlardan; aniqlanmagani `unknown`; xodimlar uchun `GET mock/item-bank` (javob kalitlarisiz); javob qoidalari uchun 59 jadvalli test | item-bank |
+| Multilevel UI | Writing 2025: har qismda so'z soni va maqsad (~50 / 120–150 / 180–200), oshib ketsa bloklamaydigan ogohlantirish, 60 daqiqa umumiy taymer (mavjud edi, tekshirildi); qism vaqtlari va so'z matnlari tarjima kalitlarida | multilevel |
+
+Qarorlar:
+- IELTS'da qismdan oldin o'qish vaqti (30 s) BestWay tanlovi: rasmiy yozuvlarda pauzalar audio ichida, uzunligi e'lon qilinmagan (blueprint `unverified`).
+- Imtihon oynasida "Standart" ranglar yorug' mavzuda to'qroq yashil (#166534): sayt brendi #16a34a oq matn bilan 3.3:1 — WCAG AA dan o'tmaydi (butun sayt bo'yicha qaror egasida).
+- Daraja uchun o'rtacha ball yaxlitlanmaydi (mezonda yaxlitlash yo'q).
+
+Tekshiruv (stack uchi `claude/exam3-multilevel`, production build): pytest 1167/4 skip; CI PostgreSQL skriptlari (exam window 23/23, listening schedule 10/10, item bank 10/10, points 48/48 va boshqalar); vitest 722; tsc; lint 0 xato (ogohlantirishlar bazadagi 446 bilan teng); next build; E2E (production build) 190/190: smoke 17, full-journey 13, exam-window 12, exam-workspace 20, exam-tools 30, exam-writing 6, exam-mode 8, exam-session 20, exam-listening 16, exam-a11y 12, exam-reading-split 20, teacher-live 16.
+
+3-bosqichdan qolganlar (4-bosqich boshiga, aniq ro'yxat):
+- Builder shablonlari: IELTS Academic/GT to'liq mock va bo'lim, Multilevel to'liq mock va bo'lim (blueprint'dan qism, savol soni, vaqt); e'lon qilishdan oldin moslik tekshiruvi aniq joyga havola bilan (backend `check_exam_blueprints` va `conformity` bor, UI yo'q); "to'liq mock" belgisini moslikka bog'lash; Builder avtosaqlash belgisi.
+- IELTS Speaking: (a) ustoz bilan jonli rejim (vaqt rejasi, savollar kartasi, FC/LR/GRA/P formasi), (b) yozib olingan mashq (Part 1, Part 2 kartasi 1 + 2 daqiqa, Part 3).
+- Multilevel Speaking oqimini brauzerda oxirigacha tekshirish (vaqt tugaganda avtomatik keyingi savol, orqaga qaytmaslik, har javob alohida yuklanishi, ustozning qism bo'yicha baholash oynasi) — komponentlar bor, to'liq E2E yo'q.
+- To'liq E2E: Builder shablonidan Multilevel va IELTS imtihon → e'lon → talaba 4 bo'lim (sintetik mikrofon) → ustoz Writing (3 qism) va Speaking'ni baholaydi → natijada 75 lik ballar va yangi daraja.
+- Multilevel rasmiy namunaviy topshiriqlar bilan qism savol turlarini solishtirish (uzbmb.uz zip — proksi orqali yuklab bo'lmadi).
+- IELTS savol turlarini aniqroq ajratish (Prisma enum migratsiyasi).
+
 ## Muhim topilmalar (egasi uchun)
 
-1. **Multilevel daraja chegaralari koddagi rasmiy manbaga zid.** `mock_scoring.multilevel_level`: C1 ≥ 60, B2 ≥ 46, B1 ≥ 34 (commit b92405a). Rasmiy: 65 / 51 / 38. `prediction_service.MULTILEVEL_SCALE_BANDS` va frontenddagi sertifikat oynasi (60/46/34), guruh bahosi eksporti (60/45/35) ham boshqa. Jadval o'zgartirilmadi (qoida). Qaror kerak: rasmiy 65/51/38 ga o'tkazishmi.
+1. **(3-bosqichda hal qilindi, egasi qarori)** Multilevel daraja chegaralari koddagi rasmiy manbaga zid edi. `mock_scoring.multilevel_level`: C1 ≥ 60, B2 ≥ 46, B1 ≥ 34 (commit b92405a). Rasmiy: 65 / 51 / 38. `prediction_service.MULTILEVEL_SCALE_BANDS` va frontenddagi sertifikat oynasi (60/46/34), guruh bahosi eksporti (60/45/35) ham boshqa. Egasi qarori bilan agentlik jadvaliga o'tkazildi (levels). Eski urinishlarda saqlangan daraja qayta hisoblanmagan; `manage.py report_multilevel_levels` farqlarni ro'yxat qiladi (lokal: 10 urinishdan 0 tasi farq qiladi). Ma'lumotni o'zgartirish faqat egasi ruxsati bilan.
 2. Javob kalitlari sizishi: drill (#142) va ochiq demo test (#143) tuzatildi. Boshqa o'quvchi javoblari (mock katalog, CD sessiya, urinish, javob saqlash, lug'at, placement) toza. Runner o'yini `correct` ni dizayn bo'yicha oladi (ball serverda qayta hisoblanadi, #114).
 3. Drill savollar banki faqat 3 toifa uchun (tfng, headings, grammar_cohesion); boshqa toifalar tfng ga tushadi; "Reading — Short Answer" kartasi ham TFNG mashqini ochadi. Drill modal matnlari en tilida ham o'zbekcha (eski muammo).
 4. (2-bosqich) Listening'da har qism pleeri o'z yozuvi tugaganda 2 daqiqalik tekshiruvni boshlab, keyin bo'limni topshirardi: 1-qismdan keyin 2–4-qismlar eshitilmay Listening yopilishi mumkin edi. #147 da tuzatildi (faqat oxirgi qism).
 5. (2-bosqich) Imtihon rejimi 3-ogohlantirishda urinishni avtomatik topshirardi, har chiqishni uch marta yozardi va matnlari faqat o'zbekcha edi. #149 da: faqat qayd, bloklamaydi, bir marta yoziladi, uz/en.
+6. (3-bosqich) IELTS Listening pleeri audio'ni sahifa ochilganda oldindan yuklardi va server shu paytning o'zida "1 marta eshitildi" deb yozardi: Play bosilmasdan sahifa qayta yuklansa, audio butunlay bloklanardi. Endi boshlanish serverda yoziladi va qism oynasi ichida audio qayta olinadi (listening).
+7. (3-bosqich) Ustozning jonli xona jadvali ma'lumot bo'lmaganda o'zi qiymat qo'yardi: 40 savol, "reading" bo'limi, 1-savol va "B2" darajasi; guruh eksporti Writing+Speaking o'rtachasidan CEFR darajasi chiqarardi (#129 qoidasiga zid). Ikkalasi olib tashlandi (live-i18n, levels).
+8. (3-bosqich) Sayt brend yashili (#16a34a) oq matn bilan 3.3:1 — WCAG AA dan o'tmaydi. Imtihon oynasida tuzatildi; butun sayt bo'yicha qaror kerak.
+9. (3-bosqich) Lokal seed'dagi IELTS Academic Mock 1 Listening'da qismlar tabida 2-qism ko'rinmaydi va jami 24 savol (40 emas) — seed ma'lumoti, kod emas; blueprint moslik tekshiruvi buni ko'rsatishi kerak.
 
-## 2-qism (taksonomiya va item bank) — 3-bosqich boshiga ko'chirildi (2-bosqichda imtihon oynasi ustuvor bo'ldi)
+## 2-qism (taksonomiya va item bank) — 3-bosqichda asosiy qismi bajarildi
 
 Qilingan: savol turlarining yagona ro'yxati blueprint'da (har qism uchun `allowedTypes`, faqat bazadagi `MockQuestionType` qiymatlari); javob tekshirish qoidalari bitta joyda (`mock_scoring.correct`, `mock_rules`) va mavjud testlar bilan.
 Qolgan (aniq ro'yxat):
 - IELTS turlarini aniqroq ajratish (form/flow-chart completion, matching features/sentence endings, plan/diagram labelling) — hozir umumiy turlarga tushadi; yangi tur qo'shish = Prisma enum migratsiyasi.
-- Har savolga metadata: imtihon, bo'lim, qism, tur, CEFR maqsad darajasi, ko'nikma teglari — additive migratsiya, aniqlab bo'lmaganida `unknown`.
-- Javob qoidalari uchun alohida jadval testlari: katta-kichik harf, bo'shliq, muqobil javob, "NO MORE THAN TWO WORDS AND/OR A NUMBER", raqam yozilishi (one/1), defisli so'z bitta so'z.
+- (bajarildi, item-bank) metadata: CEFR darajasi va ko'nikma teglari ustunlari, `unknown`; javob qoidalari jadval testlari (59).
 - Multilevel rasmiy namuna (uzbmb.uz `Ingliz_Multi_V1.zip`) bilan turlarni solishtirish — zip yuklab olinmadi (proksi).
 
-## NEXT STEP (3-bosqich)
+## NEXT STEP (4-bosqich)
 
-1. Egasi merge qiladi: 1-bosqich #138 → #139 → #140 → #141 → #142 → #143 → #144; 2-bosqich #145 → #146 → #147 → #148 → #149 → shu docs PR (#144 ustida). Ikki stack bir-biriga bog'liq emas. Qaror: Multilevel daraja chegaralari (topilma 1).
-2. 3-bosqich boshida 2-bosqich qoldig'i (yuqoridagi ro'yxat), ustuvorlik: bitta faol sessiya → Listening o'qish vaqti va davom ettirish → navigatsiya klaviaturasi + axe → Reading ajratgichi → jonli kuzatuv i18n.
-3. Item bank metadata migratsiyasi (additive) va javob qoidalari jadval testlari (2-qism ro'yxati).
-4. Multilevel to'liq moslik: Listening ikki marta + o'qish vaqti, 2025 Writing formati UI da (50 / 120–150 / 180–200 so'z), Speaking qism vaqtlari, daraja chegaralari egasi qaroridan keyin bitta jadvalda.
-5. Har yangi oqimga E2E skript (`scripts/e2e-local/`); uz sahifa uchun dashboard tinchlangach NEXT_LOCALE cookie'si (prefetch uni `en` ga qaytaradi).
+1. Egasi merge qiladi: 1-bosqich #138 → … → #144; 2-bosqich #145 → … → #149 → #150. Shundan keyin 3-bosqich PR'lari ochiladi va shu tartibda merge qilinadi: levels → single-session → listening → a11y → reading-split → live-i18n → item-bank → multilevel → 3-bosqich docs.
+2. Egasi qarorlari: sayt brend yashilining kontrasti (topilma 8); eski Multilevel urinishlaridagi saqlangan darajani qayta hisoblash kerakmi (`report_multilevel_levels` natijasiga qarab; ma'lumotni o'zgartiradigan migratsiya faqat ruxsat bilan).
+3. 4-bosqich boshida 3-bosqich qoldig'i, ustuvorlik: Builder shablonlari + e'lon oldidan moslik tekshiruvi UI → to'liq E2E (Multilevel va IELTS: Builder → talaba → ustoz → natija) → Multilevel Speaking oqimi va ustoz baholash oynasi → IELTS Speaking ikki rejimi.
+4. Keyin AI baholash (Writing/Speaking, mezonlar bo'yicha, ustoz tasdig'i bilan).
+5. Har yangi oqimga E2E skript (`scripts/e2e-local/`); production build bilan ishga tushirish (dev serverda CSS keshi `git stash`dan keyin eskirib qolishi mumkin).
