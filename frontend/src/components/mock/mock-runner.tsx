@@ -74,6 +74,8 @@ import {
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
+import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
+import { ExamNotesPanel } from "./exam-notes-panel";
 import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
 import { ApiError } from "@/lib/api-client";
@@ -134,7 +136,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [notesDrawerOpen, setNotesDrawerOpen] = React.useState(false);
   const [attemptNotes, setAttemptNotes] = React.useState<CbtStickyNote[]>([]);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [flaggedQuestions, setFlaggedQuestions] = React.useState<Set<string>>(new Set());
+  // Flags, highlights and notes are kept with the attempt on the server; the newer of the
+  // server copy and this device's cache is shown when the exam opens.
+  const [workspaceAtOpen] = React.useState(() => resolveOnOpen(attempt.id, attempt.annotations));
+  const [flaggedQuestions, setFlaggedQuestions] = React.useState<Set<string>>(() => new Set(workspaceAtOpen.workspace.flags));
   const [activeQuestionNumber, setActiveQuestionNumber] = React.useState<number>(1);
   const [liveRoomId, setLiveRoomId] = React.useState<string | null>(null);
 
@@ -158,12 +163,44 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     }
   }, [attempt.id, exam?.type]);
 
+  // Send the workspace to the server one second after the last change; retried on the next
+  // change or when the connection comes back. Failures never interrupt the exam.
+  // Server clock offset, measured once when the attempt opens; edit times and deadlines are on the server clock.
+  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
+  const serverOffsetRef = React.useRef(openingOffset);
+  const workspacePending = React.useRef(workspaceAtOpen.push);
+  const workspaceTimer = React.useRef<number | null>(null);
+  const flagsRef = React.useRef(flaggedQuestions);
+  const pushWorkspace = React.useCallback(() => {
+    if (!workspacePending.current) return;
+    const local = readLocal(attempt.id);
+    const document = toDocument({ ...local, flags: [...flagsRef.current] });
+    api.put(`/mock/attempts/${attempt.id}/annotations`, { annotations: document })
+      .then(() => { workspacePending.current = false; })
+      .catch(() => { workspacePending.current = true; });
+  }, [attempt.id]);
+  const scheduleWorkspace = React.useCallback(() => {
+    workspacePending.current = true;
+    touchLocal(attempt.id, [...flagsRef.current], Date.now() + serverOffsetRef.current);
+    if (workspaceTimer.current) window.clearTimeout(workspaceTimer.current);
+    workspaceTimer.current = window.setTimeout(pushWorkspace, 1000);
+  }, [attempt.id, pushWorkspace]);
+  React.useEffect(() => {
+    if (workspaceAtOpen.push) pushWorkspace();
+    window.addEventListener("online", pushWorkspace);
+    return () => {
+      window.removeEventListener("online", pushWorkspace);
+      if (workspaceTimer.current) window.clearTimeout(workspaceTimer.current);
+    };
+  }, [pushWorkspace, workspaceAtOpen.push]);
+
   React.useEffect(() => {
     const syncNotes = () => setAttemptNotes(loadAttemptNotes(attempt.id));
     syncNotes();
-    window.addEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, syncNotes);
-    return () => window.removeEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, syncNotes);
-  }, [attempt.id]);
+    const changed = () => { syncNotes(); scheduleWorkspace(); };
+    window.addEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, changed);
+    return () => window.removeEventListener(CBT_ANNOTATIONS_UPDATED_EVENT, changed);
+  }, [attempt.id, scheduleWorkspace]);
 
   React.useEffect(() => {
     if (typeof document === "undefined") return;
@@ -186,17 +223,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, []);
 
   const toggleQuestionFlag = React.useCallback((qid: string) => {
-    setFlaggedQuestions((prev) => {
-      const next = new Set(prev);
-      if (next.has(qid)) next.delete(qid);
-      else next.add(qid);
-      return next;
-    });
-  }, []);
+    const next = new Set(flagsRef.current);
+    if (next.has(qid)) next.delete(qid);
+    else next.add(qid);
+    flagsRef.current = next;
+    setFlaggedQuestions(next);
+    scheduleWorkspace();
+  }, [scheduleWorkspace]);
 
-  // Server clock offset; edit times and deadlines are on the server clock.
-  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
-  const serverOffsetRef = React.useRef(openingOffset);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
@@ -741,6 +775,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               {answered} / {total} {t("answered")}
               {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             </StatusChip>
+            <button
+              type="button"
+              onClick={() => setNotesDrawerOpen((open) => !open)}
+              aria-expanded={notesDrawerOpen}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-hover"
+            >
+              <StickyNote className="size-3.5 text-warning" aria-hidden />
+              {tr("notesButton", { count: attemptNotes.length })}
+            </button>
             {flaggedQuestions.size > 0 && (
               <StatusChip tone="warning">
                 <Flag className="size-3.5" aria-hidden />
@@ -752,6 +795,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
           <ResponseProgress answered={answered} total={total} />
         </div>
+
+        {notesDrawerOpen && (
+          <ExamNotesPanel
+            notes={attemptNotes}
+            onClose={() => setNotesDrawerOpen(false)}
+            onDelete={(note) => { if (note.storageKey) deleteAttemptNote(note.storageKey, note.id); }}
+          />
+        )}
 
         {/* Bo'lim tablari (faqat to'liq imtihonda yoki bittadan ortiq bo'lim bo'lsa) */}
         {!isSingleSection && exam.sections.length > 1 && (
