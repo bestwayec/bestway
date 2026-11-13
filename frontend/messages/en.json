@@ -1104,7 +1104,11 @@
       "submitUnconfirmed": "Your answers are saved on the server, but the hand-in was not confirmed. Try again — sending again never creates a second attempt.",
       "submitUnconfirmedQueued": "The hand-in was not confirmed and {count, plural, one {# answer is} other {# answers are}} still on this device. Check the connection and try again — sending again never creates a second attempt.",
       "retrySubmit": "Try again",
-      "answerUpdatedElsewhere": "An answer was changed later in another tab or device; the newer answer is shown."
+      "answerUpdatedElsewhere": "An answer was changed later in another tab or device; the newer answer is shown.",
+      "taskTimingNoPrep": "{response} s to answer, no preparation",
+      "taskTimingPrep": "{prep} s preparation · {response} s to answer",
+      "taskWordsAbout": "about {count} words",
+      "taskWordsRange": "{min}–{max} words"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",

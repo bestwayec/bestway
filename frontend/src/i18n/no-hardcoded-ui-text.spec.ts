@@ -32,6 +32,7 @@ const FILES = [
   "src/components/mock/listening-engine.tsx",
   "src/components/mock/exam-locker.tsx",
   "src/components/mock/exam-log-panel.tsx",
+  "src/components/mock/multilevel-student-ui.tsx",
   "src/components/vocabulary/VocabBattleHost.tsx",
   "src/components/vocabulary/VocabBattlePlayer.tsx",
   "src/components/teacher/VocabularyBuilder.tsx",

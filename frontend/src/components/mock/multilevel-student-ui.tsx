@@ -85,13 +85,16 @@ export function studentSaveMessage(state: "idle" | "saving" | "saved" | "error" 
   return { idle: "Saved", saving: "Saving…", saved: "Saved", error: "Save failed — Retry", offline: "Offline — changes not yet saved to server" }[state];
 }
 
-export function taskDuration(guidance: TaskGuidance | undefined): string | null {
+type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+/** Timing of a speaking task in the page language: preparation (if any) and response seconds. */
+export function taskDuration(guidance: TaskGuidance | undefined, t: Translate): string | null {
   if (!guidance) return null;
   const prep = guidance.prepSeconds ?? 0;
   const response = guidance.responseSeconds;
   if (response == null) return null;
-  if (!prep) return `${response} sec each · no official prep`;
-  return `${prep} sec prep · ${response} sec response`;
+  if (!prep) return t("taskTimingNoPrep", { response });
+  return t("taskTimingPrep", { prep, response });
 }
 
 export function MultilevelReadiness({ ready, practiceReady }: { ready: boolean | undefined; practiceReady?: boolean }) {
@@ -166,10 +169,12 @@ export function MultilevelTaskProgress({
 }
 
 export function MultilevelTaskMeta({ question }: { question: Pick<MockQuestion, "guidance" | "points"> }) {
+  const t = useTranslations("mock.runnerUx");
   const max = scoreMaximum(question.guidance) ?? question.points;
-  const timing = taskDuration(question.guidance);
+  const timing = taskDuration(question.guidance, t);
+  const g = question.guidance;
   return <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
-    {question.guidance?.wordMin != null && <span>{question.guidance.wordMin === question.guidance.wordMax ? `~${question.guidance.wordMin} words` : `${question.guidance.wordMin}–${question.guidance.wordMax} words`}</span>}
+    {g?.wordMin != null && <span>{g.wordMin === g.wordMax ? t("taskWordsAbout", { count: g.wordMin }) : t("taskWordsRange", { min: g.wordMin, max: g.wordMax ?? g.wordMin })}</span>}
     {timing && <span className="inline-flex items-center gap-1"><Clock3 className="size-3.5" />{timing}</span>}
     <span>/{max}</span>
   </div>;

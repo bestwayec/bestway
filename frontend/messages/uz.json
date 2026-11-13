@@ -1104,7 +1104,11 @@
       "submitUnconfirmed": "Javoblaringiz serverda saqlangan, lekin topshirish tasdiqlanmadi. Qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
       "submitUnconfirmedQueued": "Topshirish tasdiqlanmadi va {count} ta javob hali shu qurilmada. Aloqani tekshirib, qayta urinib ko'ring — qayta yuborish ikkinchi urinish yaratmaydi.",
       "retrySubmit": "Qayta urinish",
-      "answerUpdatedElsewhere": "Javob keyinroq boshqa tab yoki qurilmada o'zgartirilgan; yangisi ko'rsatildi."
+      "answerUpdatedElsewhere": "Javob keyinroq boshqa tab yoki qurilmada o'zgartirilgan; yangisi ko'rsatildi.",
+      "taskTimingNoPrep": "Javob uchun {response} soniya, tayyorlanishsiz",
+      "taskTimingPrep": "{prep} soniya tayyorlanish · {response} soniya javob",
+      "taskWordsAbout": "taxminan {count} so‘z",
+      "taskWordsRange": "{min}–{max} so‘z"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
