@@ -983,6 +983,12 @@
   },
   "mock": {
     "runnerUx": {
+      "queueWaiting": "No connection to the server. {count, plural, one {# answer is} other {# answers are}} kept on this device and will be sent in order when the connection is back. Keep this page open.",
+      "queueOfflineAllSaved": "No internet connection. All answers given so far are saved on the server.",
+      "submitUnconfirmed": "Your answers are saved on the server, but the hand-in was not confirmed. Try again — sending again never creates a second attempt.",
+      "submitUnconfirmedQueued": "The hand-in was not confirmed and {count, plural, one {# answer is} other {# answers are}} still on this device. Check the connection and try again — sending again never creates a second attempt.",
+      "retrySubmit": "Try again",
+      "answerUpdatedElsewhere": "An answer was changed later in another tab or device; the newer answer is shown.",
       "responseProgress": "Your response progress",
       "responseProgressHint": "Written answers count as drafts. Speaking counts after the recording uploads.",
       "wordCount": "{count} words",
