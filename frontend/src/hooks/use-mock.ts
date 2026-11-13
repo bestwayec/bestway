@@ -176,8 +176,10 @@ export function useSaveMockAnswer(attemptId: string) {
 
 export function useBulkMockAnswers(attemptId: string) {
   return useMutation({
-    mutationFn: (answers: { questionId: string; response: string }[]) =>
-      api.post<{ saved: number }>(`/mock/attempts/${attemptId}/answers`, { answers }),
+    // `editedAt`: edit time on the server clock (ms); the server keeps the newer edit and
+    // returns the newer value in `stale` when a sent edit was older.
+    mutationFn: (answers: { questionId: string; response: string; editedAt?: number }[]) =>
+      api.post<{ saved: number; stale?: Record<string, string> }>(`/mock/attempts/${attemptId}/answers`, { answers }),
   });
 }
 

@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { Clock, Play, Volume2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { EXAM_VOLUME_EVENT, broadcastVolume, loadExamSettings } from "@/lib/exam-settings";
 import type { AudioTimestampItem } from "@/lib/types";
 
 const REVIEW_SEC = 120;
@@ -58,6 +60,7 @@ export function ListeningAudio({
   timestamps,
   onEnded,
   onReviewComplete,
+  reviewAtEnd = true,
 }: {
   src: string;
   strict: boolean;
@@ -67,8 +70,24 @@ export function ListeningAudio({
   timestamps?: AudioTimestampItem[] | null;
   onEnded?: () => void;
   onReviewComplete?: () => void;
+  /** Only the last part of the Listening section ends with the 2-minute check. */
+  reviewAtEnd?: boolean;
 }) {
+  const t = useTranslations("mock.examTools");
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  // Volume is shared with Settings and every player of the exam window.
+  const [volume, setVolume] = React.useState(() => (typeof window === "undefined" ? 1 : loadExamSettings().volume));
+  React.useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+  React.useEffect(() => {
+    const onVolume = (event: Event) => {
+      const next = Number((event as CustomEvent<number>).detail);
+      if (Number.isFinite(next)) setVolume(next);
+    };
+    window.addEventListener(EXAM_VOLUME_EVENT, onVolume);
+    return () => window.removeEventListener(EXAM_VOLUME_EVENT, onVolume);
+  }, []);
   const [started, setStarted] = React.useState(false);
   const [ended, setEnded] = React.useState(false);
   const [reviewLeft, setReviewLeft] = React.useState<number | null>(null);
@@ -143,7 +162,7 @@ export function ListeningAudio({
   function handleEnded() {
     setEnded(true);
     onEnded?.();
-    if (strict) setReviewLeft(REVIEW_SEC);
+    if (strict && reviewAtEnd) setReviewLeft(REVIEW_SEC);
   }
 
   function handleTimeUpdate() {
@@ -199,7 +218,7 @@ export function ListeningAudio({
                   }}
                   className="rounded-md border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-fg hover:border-brand hover:text-brand transition-colors"
                 >
-                  {ts.label || `Part ${ts.partNumber}`} ({fmt(ts.startSec)})
+                  {ts.label || t("listeningPart", { number: ts.partNumber })} ({fmt(ts.startSec)})
                 </button>
               ))}
           </div>
@@ -244,7 +263,7 @@ export function ListeningAudio({
       <div className="flex flex-wrap items-center gap-3">
         <Button size="sm" onClick={playOnce} disabled={started}>
           <Play />
-          {started ? (ended ? "Played once" : "Playing… (once only)") : "Play audio (once only)"}
+          {started ? (ended ? t("listeningPlayed") : t("listeningPlaying")) : t("listeningPlayOnce")}
         </Button>
         {startSec != null && startSec >= 0 && (
           <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand tabular-nums">
@@ -261,28 +280,31 @@ export function ListeningAudio({
             min={0}
             max={1}
             step={0.05}
-            defaultValue={1}
-            aria-label="Volume"
+            value={volume}
+            aria-label={t("volume")}
             className="h-1 w-28 accent-current"
-            onChange={(e) => {
-              if (audioRef.current) audioRef.current.volume = Number(e.target.value);
-            }}
+            onChange={(e) => broadcastVolume(Number(e.target.value))}
           />
         </label>
         {reviewLeft != null && reviewLeft > 0 && (
           <span className="ml-auto text-sm font-semibold tabular-nums" aria-live="polite">
-            Review: {fmt(reviewLeft)}
+            {t("listeningReview", { time: fmt(reviewLeft) })}
+          </span>
+        )}
+        {ended && strict && !reviewAtEnd && (
+          <span className="ml-auto text-sm font-medium text-fg-muted" role="status">
+            {t("listeningNextPart")}
           </span>
         )}
         {reviewLeft === 0 && (
           <span className="ml-auto text-sm font-semibold text-warning">
-            Review over — moving on…
+            {t("listeningReviewOver")}
           </span>
         )}
       </div>
       {!started && (
         <p className="text-xs text-fg-muted">
-          Exam mode: audio plays once, no pause / rewind / fast-forward.
+          {t("listeningRules")}
         </p>
       )}
     </div>
