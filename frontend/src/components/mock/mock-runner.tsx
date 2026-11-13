@@ -230,7 +230,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [scheduleWorkspace]);
 
   // Server clock offset; edit times and deadlines are on the server clock.
-  const serverOffsetRef = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
+  const serverOffsetRef = React.useRef(openingOffset);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
@@ -337,7 +338,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
   // Edit time of each unsent answer (ms, server clock).
   const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
-  const [queuedCount, setQueuedCount] = React.useState(() => dirty.current.size);
+  const [queuedCount, setQueuedCount] = React.useState(() => Object.keys(queuedAtStart).filter((id) => id in initial.ans).length);
   // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
   const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
   const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
