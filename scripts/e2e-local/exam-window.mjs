@@ -33,7 +33,7 @@ page.on("pageerror", (e) => { if (!/\bgis\b/.test(e.message)) errors.push(e.mess
 await page.goto(`${WEB}/en/login`); await page.waitForSelector("#phone"); await page.waitForLoadState("networkidle").catch(() => {}); await page.waitForTimeout(1500);
 await page.fill("#phone", STUDENT); await page.fill("#password", PASSWORD);
 await Promise.all([page.waitForResponse((r) => r.url().includes("/api/auth/login")), page.click('button[type="submit"]')]);
-await page.waitForURL(/dashboard/);
+await page.waitForURL(/dashboard/); await page.waitForLoadState("networkidle").catch(() => {});
 const api = (path, init) => page.evaluate(async ([p, i]) => { const r = await fetch(`/api/backend${p}`, i); return { status: r.status, body: await r.json().catch(() => null) }; }, [path, init]);
 
 async function freshAttempt() {
