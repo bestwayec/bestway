@@ -112,6 +112,14 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
   return n;
 }
 
+// Sections list their groups as `groups` (newer exams) or `parts` (older ones).
+type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ type?: unknown }> };
+function sectionGroupsOf(section: unknown): SectionGroupShape[] {
+  const value = section as { groups?: unknown; parts?: unknown } | null | undefined;
+  if (value?.groups) return value.groups as SectionGroupShape[];
+  return (value?.parts as SectionGroupShape[] | undefined) || [];
+}
+
 export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
@@ -713,12 +721,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const contrastClasses = COLOUR_CLASS[examSettings.colours];
   // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
-  const listeningGroups = (section?.skill === "listening" ? (section.groups || (section as any).parts || []) : []) as any[];
+  const listeningGroups = section?.skill === "listening" ? sectionGroupsOf(section) : [];
   const sharedListeningAudio = Boolean(audioTimestampsQ.data?.audioUrl);
   const lastListeningAudioPart = sharedListeningAudio
     ? listeningGroups.length - 1
-    : listeningGroups.reduce((last: number, g: any, index: number) => (g?.hasAudio ? index : last), -1);
-  const sectionQuestionTypes = [...new Set(((section?.groups || (section as any)?.parts || []) as any[]).flatMap((g: any) => (g?.questions || []).map((q: any) => String(q.type))))];
+    : listeningGroups.reduce((last, g, index) => (g?.hasAudio ? index : last), -1);
+  const sectionQuestionTypes = [...new Set(sectionGroupsOf(section).flatMap((g) => (g?.questions || []).map((q) => String(q.type))))];
 
   const examAudioTimestamps: AudioTimestampItem[] =
     audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
