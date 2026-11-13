@@ -114,16 +114,18 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI (state 2026-11-13, main 7603d7f)
+## PRs / CI (state 2026-11-13 evening, main 7603d7f)
 
 #113–#137 MERGED (#123 included; verified 2026-11-13 via the PR list: only dependabot PRs open before this session).
 OPEN, exam program phase 1 (docs/agent/EXAM_PROGRAM.md), merge order: #138 blueprint → #139 scoring module → #140 prediction #129 → #141 vocab battle winners → #142 targeted practice (contains #141's commit) → #143 demo test keys → docs PR (EXAM_PROGRAM.md + this file). Merging all six onto main locally is conflict-free; on that integration: pytest 1061 pass / 4 skip, all CI PostgreSQL scripts (incl. new verify_points_integrity_postgres 48/48), vitest 604, tsc, lint 0 errors, next build, smoke 17/17, full-journey 13/13, vocab-battle 20/20, drill 24/24, demo 15/15.
+OPEN, exam program phase 2 (CD IELTS exam window), stacked with plain merges, merge order: #145 answer queue + last-write-wins + Finish 502 → #146 workspace (highlights/notes/flags on the server) → #147 timer, Settings, Help, Hide, Listening 2-minute check → #148 Writing word count + clipboard → #149 exam mode log → phase 2 docs PR (stacked on #144). Independent of phase 1. All 12 branches merge onto main without conflicts; on that integration: pytest 1070 pass / 4 skip, all CI PostgreSQL scripts (points 48/48, exam window 14/14), vitest 669, tsc. Top of the phase 2 stack alone: pytest 915 / 4 skip, vitest 654, lint 0 errors (446 warnings, main 453), next build, smoke 16/16, full-journey 13/13, exam-window 12/12, exam-workspace 20/20, exam-tools 28/28, exam-writing 6/6, exam-mode 8/8.
 
 ## Open questions (owner)
 
 - Decided: BW-16 closed, no server grace window (client retry from #119 stays). Short/partial practice: no band/CEFR, raw "N/M correct · %" (#129).
 - Decided 2026-11-13 and implemented: prediction follows #129 (#140); drill one award per drill + daily cap 300 (#142); battle winners in the state + idempotent /finish + no podium for 0 score (#141).
-- NEW: Multilevel level thresholds in code (60/46/34) differ from the agency criteria (65/51/38) — see EXAM_PROGRAM.md, finding 1. Not changed.
+- OPEN: Multilevel level thresholds in code (60/46/34) differ from the agency criteria (65/51/38) — see EXAM_PROGRAM.md, finding 1. Not changed.
+- Implemented as the owner asked in phase 2: exam-mode exits are recorded, never punished (the old 3-strike auto-submit is removed, #149).
 - Finish 502: production logs needed. Record Mock: authentic audio needed. Reading Q7/Q15: official PDF needed. Desktop: Android keystore secret needed.
 - P2 noted, not changed: /media public policy.
 
@@ -147,6 +149,12 @@ OPEN, exam program phase 1 (docs/agent/EXAM_PROGRAM.md), merge order: #138 bluep
 
 Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. CI PostgreSQL scripts need CI's env: `/root/ci-like.env` (DB education_center, ALLOWED_HOSTS=testserver,localhost,127.0.0.1, CORS http://localhost:3000, no DJANGO_SETTINGS_MODULE) — with local.env they fail with 403/400 on unchanged main too. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
 
+## Session 2026-11-13, second part (exam program phase 2)
+
+VERIFIED (local stack, synthetic accounts, production `next build` + `next start`): offline answer queue survives reload and is sent in order; newer edit wins on the server; 502 on Finish → "answers saved, hand-in not confirmed" → retry hands in, one attempt; double Finish → one request; highlight + note + flag → reload / cleared device cache → restored from the server; timer warnings, Settings (text size, colours, volume), Help per section, Hide keeps the clock running; Listening part 1 ends without the check, last part starts 02:00 (synthetic 2 s recording); Writing word count, outside paste refused and logged, own text movable; four window exits recorded, exam not stopped, admin sees the exam log. en/uz, light/dark, 390×844/1440×900, student and admin.
+UNVERIFIED: real tab switches in headless Chromium (simulated with window blur, same handler); real speakers and Safari/iOS full screen; the official software's exact word-count algorithm, colour options, text-size steps and copy/paste rules (not published); GitHub CI on the updated heads at the time of writing (see the session report).
+Found: on the dashboard, Next prefetches /en/... pages after login; their responses set NEXT_LOCALE back to en, so E2E scripts must set the Uzbek cookie after the dashboard settles (fixed in the phase 2 scripts).
+
 ## Session 2026-11-13 (exam program phase 1)
 
 VERIFIED (local stack, synthetic accounts; details in EXAM_PROGRAM.md and the PR texts #138–#143): official format checked on ielts.org and the agency's documents; blueprint conformity of all 5 seeded exams (0 differences); scoring boundary tests incl. all 33 rows of the 2025 Multilevel Writing table; points integrity on the real schema (48 checks); browser runs of battle podium, drill and public demo in en/uz, light/dark, 390×844/1440×900, student and staff; key-leak sweep of student exam endpoints.
@@ -166,7 +174,7 @@ Local note: the branch's own smoke.mjs (without #127) fails steps 06–10 after 
 
 ## NEXT STEP
 
-The exam program (docs/agent/EXAM_PROGRAM.md) is the active track; its NEXT STEP is phase 2 (CD IELTS exam window), starting with the item-bank metadata left from phase 1.
-1. Owner merges #138 → #139 → #140 → #141 → #142 → #143 → docs PR; decides the Multilevel level thresholds.
-2. Website program items still open: U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, drill modal, teacher/builder screens.
-Checks per PR: as in EXAM_PROGRAM.md (UMUMIY QOIDALAR). Local E2E: smoke.mjs (before full-journey, which switches the student to IELTS), full-journey.mjs, vocab-battle.mjs, drill.mjs, demo.mjs (BW_WEB=http://localhost:3300, BW_PYTHON, BW_CHROMIUM).
+The exam program (docs/agent/EXAM_PROGRAM.md) is the active track; phase 2 is closed, its NEXT STEP is phase 3 (Multilevel conformity), starting with the phase 2 leftovers listed there (single active session first).
+1. Owner merges phase 1: #138 → #139 → #140 → #141 → #142 → #143 → #144; phase 2: #145 → #146 → #147 → #148 → #149 → phase 2 docs PR; decides the Multilevel level thresholds.
+2. Website program items still open: U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, drill modal, teacher/builder screens, teacher live monitoring.
+Checks per PR: as in EXAM_PROGRAM.md (UMUMIY QOIDALAR). Local E2E: smoke.mjs (before full-journey, which switches the student to IELTS), full-journey.mjs, vocab-battle.mjs, drill.mjs, demo.mjs, exam-window.mjs, exam-workspace.mjs, exam-tools.mjs (BW_AUDIO = short WAV), exam-writing.mjs, exam-mode.mjs (BW_WEB=http://localhost:3300, BW_PYTHON, BW_CHROMIUM). Restart the local Django server after switching branches (an old process on :8100 serves old code).
