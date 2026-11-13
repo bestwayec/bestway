@@ -2344,5 +2344,10 @@
     "found": "{count, plural, one {# word found} other {# words found}}",
     "foundPreview": "{count} words found; the first {shown} are shown",
     "addParsed": "Add {count, plural, one {# word} other {# words}} to the set"
+  },
+  "drill": {
+    "checkFailed": "Could not check the answer. Try again.",
+    "submitFailed": "Could not save the result. Your answers are kept; try again.",
+    "dailyCapReached": "Today's drill points limit is reached, so no more points are added today."
   }
 }
