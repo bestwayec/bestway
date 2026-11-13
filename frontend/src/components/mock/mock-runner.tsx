@@ -165,7 +165,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   // Send the workspace to the server one second after the last change; retried on the next
   // change or when the connection comes back. Failures never interrupt the exam.
-  const workspaceOffset = React.useRef(attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  // Server clock offset, measured once when the attempt opens; edit times and deadlines are on the server clock.
+  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
+  const serverOffsetRef = React.useRef(openingOffset);
   const workspacePending = React.useRef(workspaceAtOpen.push);
   const workspaceTimer = React.useRef<number | null>(null);
   const flagsRef = React.useRef(flaggedQuestions);
@@ -179,7 +181,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [attempt.id]);
   const scheduleWorkspace = React.useCallback(() => {
     workspacePending.current = true;
-    touchLocal(attempt.id, [...flagsRef.current], Date.now() + workspaceOffset.current);
+    touchLocal(attempt.id, [...flagsRef.current], Date.now() + serverOffsetRef.current);
     if (workspaceTimer.current) window.clearTimeout(workspaceTimer.current);
     workspaceTimer.current = window.setTimeout(pushWorkspace, 1000);
   }, [attempt.id, pushWorkspace]);
@@ -229,9 +231,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     scheduleWorkspace();
   }, [scheduleWorkspace]);
 
-  // Server clock offset; edit times and deadlines are on the server clock.
-  const [openingOffset] = React.useState(() => (attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0));
-  const serverOffsetRef = React.useRef(openingOffset);
   const bulk = useBulkMockAnswers(attempt.id);
   const submit = useSubmitMock(attempt.id);
   const flag = useFlagMockCheat(attempt.id);
