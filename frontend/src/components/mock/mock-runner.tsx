@@ -626,7 +626,6 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         active={strict}
         attemptId={attempt.id}
         onAnomaly={(event) => flagMutate(event)}
-        onForceSubmit={() => void doSubmit(true)}
       >
       <NetworkBanner />
       <div

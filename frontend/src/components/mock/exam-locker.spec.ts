@@ -21,12 +21,11 @@ let host: HTMLDivElement;
 let root: Root;
 let fullscreenElement: Element | null;
 const onAnomaly = vi.fn();
-const onForceSubmit = vi.fn();
 
-const mount = () => act(async () => root.render(React.createElement(Locker, { active: true, attemptId: 'a1', onAnomaly, onForceSubmit }, React.createElement('p', null, 'exam'))));
+const mount = () => act(async () => root.render(React.createElement(Locker, { active: true, attemptId: 'a1', onAnomaly }, React.createElement('p', null, 'exam'))));
 const guard = (paused: boolean) => act(async () => { window.dispatchEvent(new CustomEvent(FULLSCREEN_GUARD_EVENT, { detail: { paused } })); });
 const leaveFullscreen = () => act(async () => { fullscreenElement = null; document.dispatchEvent(new Event('fullscreenchange')); });
-const returnButtonShown = () => document.body.textContent?.includes('Imtihon faqat to') ?? false;
+const returnButtonShown = () => [...document.body.querySelectorAll('button')].some((b) => b.textContent?.includes('Return to full screen'));
 
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -36,7 +35,7 @@ beforeEach(() => {
   window.sessionStorage.setItem('bw_fullscreen_notice_a1', '1');
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true })));
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
-  onAnomaly.mockReset(); onForceSubmit.mockReset();
+  onAnomaly.mockReset();
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); window.sessionStorage.clear(); vi.unstubAllGlobals(); });
 
@@ -73,5 +72,36 @@ describe('ExamLocker full-screen guard', () => {
     await act(async () => (notice!.querySelector('button') as HTMLButtonElement).click());
     expect(document.body.querySelector('[data-testid="fullscreen-notice"]')).toBeNull();
     expect(window.sessionStorage.getItem('bw_fullscreen_notice_a1')).toBe('1');
+  });
+});
+
+describe('ExamLocker records but never stops the exam', () => {
+  it('every exit is recorded, the notice is not modal, and three or more exits do not hand the exam in', async () => {
+    let now = Date.parse('2026-11-13T10:00:00Z');
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    await mount();
+    for (let i = 0; i < 4; i++) {
+      await leaveFullscreen();
+      await act(async () => { fullscreenElement = document.documentElement; document.dispatchEvent(new Event('fullscreenchange')); });
+      now += 2000;   // separate exits, not one double event
+    }
+    clock.mockRestore();
+    expect(onAnomaly.mock.calls.filter(([e]) => e === 'exit_fullscreen').length).toBe(4);
+    const notice = document.querySelector('[data-testid="exam-integrity-notice"]')!;
+    expect(notice.getAttribute('role')).toBe('status');
+    expect(notice.textContent).toContain('Leaving the exam window was recorded');
+    expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+    expect(host.textContent).toContain('exam');
+  });
+
+  it('does not ask for full screen without a click by the student', async () => {
+    window.sessionStorage.clear();
+    fullscreenElement = null;
+    const request = document.documentElement.requestFullscreen as ReturnType<typeof vi.fn>;
+    await mount();
+    expect(request).not.toHaveBeenCalled();
+    const start = [...document.body.querySelectorAll('button')].find((b) => b.textContent === 'I understand, start')!;
+    await act(async () => start.click());
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

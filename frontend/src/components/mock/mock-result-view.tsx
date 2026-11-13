@@ -17,6 +17,7 @@ import {
   useReopenMock,
 } from "@/hooks/use-mock";
 import { useMe } from "@/hooks/use-me";
+import { ExamLogPanel } from "./exam-log-panel";
 import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { mayShowSectionBand } from "@/lib/score-display";
@@ -86,6 +87,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       </Link>
 
       {isStaff && !completed && <div className="print:hidden"><AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} /></div>}
+      {/* Staff: what the exam window recorded, also when no answer was given. */}
+      {isStaff && Array.isArray(attempt.cheatEvents) && <ExamLogPanel events={attempt.cheatEvents.filter((item) => !item.event.startsWith("telemetry:"))} />}
 
       {empty && (
         <Card className="p-6 text-center" data-testid="empty-attempt">

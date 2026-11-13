@@ -981,6 +981,25 @@
     "sun": "Sun"
   },
   "mock": {
+    "examLog": {
+      "title": "Exam log ({count})",
+      "note": "What the exam window recorded during this attempt. Recorded events never stopped the exam; the student was told before starting.",
+      "empty": "Nothing was recorded during this attempt.",
+      "events": {
+        "tab_switch": "Switched to another tab or app",
+        "window_blur": "The exam window lost focus",
+        "exit_fullscreen": "Left full screen",
+        "fullscreen_exit": "Left full screen",
+        "mouse_leave": "Pointer left the exam window",
+        "copy_blocked": "Tried to copy exam content (refused)",
+        "cut_blocked": "Tried to cut exam content (refused)",
+        "paste_blocked": "Tried to paste text from outside (refused)",
+        "contextmenu_blocked": "Opened the context menu (refused)",
+        "devtools_attempt": "Tried to open developer tools (refused)",
+        "view_source_attempt": "Tried to view the page source (refused)",
+        "other": "Other event: {event}"
+      }
+    },
     "runnerUx": {
       "responseProgress": "Your response progress",
       "responseProgressHint": "Written answers count as drafts. Speaking counts after the recording uploads.",
@@ -1197,8 +1216,12 @@
     },
     "locker": {
       "startTitle": "This exam runs in full screen",
-      "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Do not leave full screen and do not switch apps or tabs: every exit is recorded and three warnings submit the exam.",
-      "startButton": "I understand, start"
+      "startBody": "Your browser may show a system message such as “to exit full screen…”. It comes from the browser, not from BestWay. Stay in full screen and in this tab: if you leave full screen, switch tabs or apps, or paste text from outside, it is recorded with the time and your teacher sees it with your result. The exam is not stopped.",
+      "startButton": "I understand, start",
+      "recorded": "Leaving the exam window was recorded ({count} so far). Your teacher will see it with your result; the exam continues.",
+      "notFullscreen": "You are not in full screen. This is recorded for your teacher; you can continue.",
+      "returnFullscreen": "Return to full screen",
+      "dismiss": "Continue"
     },
     "transition": {
       "completed": "{skill} section completed",

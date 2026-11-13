@@ -981,6 +981,25 @@
     "sun": "Ya"
   },
   "mock": {
+    "examLog": {
+      "title": "Imtihon jurnali ({count})",
+      "note": "Imtihon oynasi ushbu urinish davomida qayd etgan hodisalar. Qayd etilgan hodisalar imtihonni to'xtatmagan; o'quvchi boshlashdan oldin ogohlantirilgan.",
+      "empty": "Ushbu urinishda hech narsa qayd etilmagan.",
+      "events": {
+        "tab_switch": "Boshqa tab yoki ilovaga o'tdi",
+        "window_blur": "Imtihon oynasi fokusni yo'qotdi",
+        "exit_fullscreen": "To'liq ekrandan chiqdi",
+        "fullscreen_exit": "To'liq ekrandan chiqdi",
+        "mouse_leave": "Kursor imtihon oynasidan chiqdi",
+        "copy_blocked": "Imtihon matnini nusxalashga urindi (rad etildi)",
+        "cut_blocked": "Imtihon matnini kesishga urindi (rad etildi)",
+        "paste_blocked": "Tashqaridan matn qo'yishga urindi (rad etildi)",
+        "contextmenu_blocked": "Kontekst menyuni ochdi (rad etildi)",
+        "devtools_attempt": "Dasturchi vositalarini ochishga urindi (rad etildi)",
+        "view_source_attempt": "Sahifa kodini ko'rishga urindi (rad etildi)",
+        "other": "Boshqa hodisa: {event}"
+      }
+    },
     "runnerUx": {
       "responseProgress": "Javob berish jarayoni",
       "responseProgressHint": "Yozma javoblar qoralama sifatida sanaladi. Speaking yozuvi yuklangandan keyin hisoblanadi.",
@@ -1197,8 +1216,12 @@
     },
     "locker": {
       "startTitle": "Imtihon to‘liq ekranda o‘tadi",
-      "startBody": "Brauzer «to‘liq ekrandan chiqish…» kabi tizim xabarini ko‘rsatishi mumkin. U brauzerdan keladi, BestWay’dan emas. To‘liq ekrandan chiqmang va boshqa ilova yoki tabga o‘tmang: har bir chiqish qayd etiladi, uchta ogohlantirishdan keyin imtihon topshiriladi.",
-      "startButton": "Tushundim, boshlayman"
+      "startBody": "Brauzer «to‘liq ekrandan chiqish…» kabi tizim xabarini ko‘rsatishi mumkin. U brauzerdan keladi, BestWay’dan emas. To‘liq ekranda va shu tabda qoling: to‘liq ekrandan chiqsangiz, boshqa tab yoki ilovaga o‘tsangiz yoki tashqaridan matn qo‘ysangiz, bu vaqti bilan qayd etiladi va ustozingiz natijangiz bilan birga ko‘radi. Imtihon to‘xtatilmaydi.",
+      "startButton": "Tushundim, boshlayman",
+      "recorded": "Imtihon oynasidan chiqish qayd etildi (hozircha {count} marta). Ustozingiz buni natijangiz bilan birga ko‘radi; imtihon davom etadi.",
+      "notFullscreen": "Siz to‘liq ekranda emassiz. Bu ustozingiz uchun qayd etiladi; davom etishingiz mumkin.",
+      "returnFullscreen": "To‘liq ekranga qaytish",
+      "dismiss": "Davom etish"
     },
     "transition": {
       "completed": "{skill} bo‘limi yakunlandi",
