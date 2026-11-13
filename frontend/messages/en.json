@@ -2253,6 +2253,7 @@
     "listen": "Listen to the pronunciation",
     "streak": "{count} in a row",
     "gameScore": "{score} pts",
+    "pointsAwarded": "+{points} points added",
     "host": {
       "loadingTitle": "Preparing the Live Vocab Battle room…",
       "loadingBody": "Questions are prepared and a PIN is issued.",
@@ -2271,6 +2272,7 @@
       "nextQuestion": "Next question",
       "podiumTitle": "Winners' podium",
       "podiumNote": "Final scores of this game.",
+      "noPodium": "Nobody scored in this game, so there is no podium.",
       "place": "#{rank}",
       "finishClose": "Close the battle"
     },
@@ -2298,6 +2300,7 @@
       "waitNext": "Wait for your teacher to open the next question…",
       "finishedTitle": "The game is over!",
       "finalScore": "Your final score in this game:",
+      "yourPlace": "Your place: #{rank}",
       "exit": "Exit"
     },
     "prompt": "Which is the correct translation of “{word}”?"

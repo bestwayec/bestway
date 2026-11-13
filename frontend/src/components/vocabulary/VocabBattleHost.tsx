@@ -40,12 +40,22 @@ export interface BattleStateResponse {
   answeredCount: number;
   totalParticipants: number;
   leaderboard: ParticipantItem[];
+  /** Recorded by the server when the battle ends. Absent on an older API. */
+  winners?: BattleWinner[];
+}
+
+export interface BattleWinner {
+  rank: number;
+  studentId: string;
+  name: string;
+  score: number;
+  pointsAwarded: number;
 }
 
 /**
- * Host screen. Scores shown here are the battle's own game score. The server also gives platform points to
- * the podium when the battle ends, but the battle state does not report them, so this screen does not claim
- * any points were given.
+ * Host screen. Scores shown here are the battle's own game score. Platform points appear on the podium only
+ * when the FINISHED state lists them in `winners` with `pointsAwarded` above zero: nothing is claimed that the
+ * server did not record.
  */
 export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
   const t = useTranslations("vocabBattle");
@@ -143,6 +153,9 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
 
   if (!battleState) return null;
   const board = battleState.leaderboard;
+  // Podium: the server's recorded winners; on an older API the top of the board, without any points claim.
+  const podium: BattleWinner[] = battleState.winners
+    ?? board.slice(0, 3).map((p, index) => ({ rank: index + 1, studentId: p.id, name: p.name, score: p.score, pointsAwarded: 0 }));
   const isLastQuestion = battleState.currentQuestionIndex + 1 >= battleState.totalQuestions;
 
   return (
@@ -327,27 +340,34 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
             <p className="text-sm text-fg-muted">{t("host.podiumNote")}</p>
           </div>
 
-          <ol className="flex items-end justify-center gap-4 max-w-lg w-full pt-6">
-            {[1, 0, 2].map((rank) => {
-              const p = board[rank];
-              if (!p) return null;
-              const tone = rank === 0
-                ? { box: "h-36 bg-warning-bg border-warning-border", num: "text-3xl text-warning" }
-                : rank === 1
-                ? { box: "h-28 bg-surface-hover border-border-strong", num: "text-2xl text-fg-muted" }
-                : { box: "h-20 bg-orange-subtle border-border", num: "text-xl text-orange" };
-              return (
-                <li key={p.id} className={cn("flex-1 min-w-0 flex flex-col items-center", rank === 0 && "-mt-6")}>
-                  {rank === 0 && <Crown className="h-6 w-6 text-warning mb-1" aria-hidden="true" />}
-                  <span className="text-sm font-bold text-fg truncate max-w-full">{p.name}</span>
-                  <span className="text-sm text-fg-muted font-mono tabular-nums">{t("gameScore", { score: p.score })}</span>
-                  <div className={cn("w-full border rounded-t-2xl flex items-center justify-center mt-2", tone.box)}>
-                    <span className={cn("font-black", tone.num)}>{t("host.place", { rank: rank + 1 })}</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          {podium.length === 0 ? (
+            <p className="text-sm text-fg-muted max-w-sm">{t("host.noPodium")}</p>
+          ) : (
+            <ol className="flex items-end justify-center gap-4 max-w-lg w-full pt-6">
+              {[2, 1, 3].map((rank) => {
+                const p = podium.find((w) => w.rank === rank);
+                if (!p) return null;
+                const tone = rank === 1
+                  ? { box: "h-36 bg-warning-bg border-warning-border", num: "text-3xl text-warning" }
+                  : rank === 2
+                  ? { box: "h-28 bg-surface-hover border-border-strong", num: "text-2xl text-fg-muted" }
+                  : { box: "h-20 bg-orange-subtle border-border", num: "text-xl text-orange" };
+                return (
+                  <li key={p.studentId} className={cn("flex-1 min-w-0 flex flex-col items-center", rank === 1 && "-mt-6")}>
+                    {rank === 1 && <Crown className="h-6 w-6 text-warning mb-1" aria-hidden="true" />}
+                    <span className="text-sm font-bold text-fg truncate max-w-full">{p.name}</span>
+                    <span className="text-sm text-fg-muted font-mono tabular-nums">{t("gameScore", { score: p.score })}</span>
+                    {p.pointsAwarded > 0 && (
+                      <span className="text-xs font-semibold text-success">{t("pointsAwarded", { points: p.pointsAwarded })}</span>
+                    )}
+                    <div className={cn("w-full border rounded-t-2xl flex items-center justify-center mt-2", tone.box)}>
+                      <span className={cn("font-black", tone.num)}>{t("host.place", { rank })}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
           <Button type="button" size="lg" onClick={onClose} className="font-bold px-8">{t("host.finishClose")}</Button>
         </div>
