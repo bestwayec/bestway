@@ -981,7 +981,32 @@
     "sun": "Ya"
   },
   "mock": {
+    "textTools": {
+      "toolbar": "Matn vositalari",
+      "highlight": "Bo'yash",
+      "highlightYellow": "Sariq bo'yash (Alt+H)",
+      "highlightGreen": "Yashil bo'yash",
+      "highlightPink": "Pushti bo'yash",
+      "underline": "Tagiga chizish",
+      "underlineHint": "Tagiga chizish (Alt+U)",
+      "note": "Eslatma",
+      "addNote": "Eslatma qo'shish",
+      "clear": "Belgilarni olib tashlash",
+      "notePlaceholder": "Eslatma matnini yozing…",
+      "saveNote": "Saqlash",
+      "removeUnderline": "Chiziqni olib tashlash uchun bosing",
+      "removeHighlight": "Bo'yoqni olib tashlash uchun bosing",
+      "noteTitle": "Eslatma: {text}"
+    },
     "runnerUx": {
+      "notesButton": "Eslatmalar ({count})",
+      "notesTitle": "Eslatmalaringiz ({count})",
+      "notesClose": "Eslatmalarni yopish",
+      "notesEmpty": "Hali eslatma yo'q. Eslatma qo'shish uchun matndan bir qismini belgilang.",
+      "noteDelete": "O'chirish",
+      "noteDeleteConfirm": "Bu eslatma o'chirilsinmi?",
+      "noteDeleteYes": "Ha, o'chirish",
+      "noteDeleteNo": "Qoldirish",
       "responseProgress": "Javob berish jarayoni",
       "responseProgressHint": "Yozma javoblar qoralama sifatida sanaladi. Speaking yozuvi yuklangandan keyin hisoblanadi.",
       "wordCount": "{count} ta so‘z",

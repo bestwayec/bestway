@@ -29,6 +29,8 @@ const FILES = [
   "src/components/vocabulary/VocabBattleHost.tsx",
   "src/components/vocabulary/VocabBattlePlayer.tsx",
   "src/components/teacher/VocabularyBuilder.tsx",
+  "src/components/mock/cbt-annotated-text.tsx",
+  "src/components/mock/exam-notes-panel.tsx",
 ];
 const UZBEK_UI = /\b(Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
 

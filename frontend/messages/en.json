@@ -981,7 +981,32 @@
     "sun": "Sun"
   },
   "mock": {
+    "textTools": {
+      "toolbar": "Text tools",
+      "highlight": "Highlight",
+      "highlightYellow": "Highlight in yellow (Alt+H)",
+      "highlightGreen": "Highlight in green",
+      "highlightPink": "Highlight in pink",
+      "underline": "Underline",
+      "underlineHint": "Underline (Alt+U)",
+      "note": "Note",
+      "addNote": "Add a note",
+      "clear": "Remove marks",
+      "notePlaceholder": "Write your note…",
+      "saveNote": "Save",
+      "removeUnderline": "Click to remove the underline",
+      "removeHighlight": "Click to remove the highlight",
+      "noteTitle": "Note: {text}"
+    },
     "runnerUx": {
+      "notesButton": "Notes ({count})",
+      "notesTitle": "Your notes ({count})",
+      "notesClose": "Close notes",
+      "notesEmpty": "No notes yet. Select text in a passage to add a note.",
+      "noteDelete": "Delete",
+      "noteDeleteConfirm": "Delete this note?",
+      "noteDeleteYes": "Yes, delete",
+      "noteDeleteNo": "Keep",
       "responseProgress": "Your response progress",
       "responseProgressHint": "Written answers count as drafts. Speaking counts after the recording uploads.",
       "wordCount": "{count} words",

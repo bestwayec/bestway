@@ -1,4 +1,5 @@
 """HTTP boundary for the migrated student attempt mutations."""
+import json
 from datetime import datetime
 
 from rest_framework.decorators import api_view, permission_classes
@@ -30,6 +31,10 @@ def success(data, status=200):
 def student(request):
     require_authenticated(request)
     require_role(request, 'student', 'super_admin', 'admin')
+
+
+ANNOTATIONS_MAX_ITEMS = 1000
+ANNOTATIONS_MAX_BYTES = 256 * 1024
 
 
 def validate_answer(data):
@@ -252,6 +257,13 @@ def annotations_view(request, attempt_id):
     data = body(request, {'annotations'})
     if data.get('annotations') is not None and not isinstance(data['annotations'], list):
         engine.fail('VALIDATION_ERROR', 'annotations must be an array')
+    # Highlights, notes and review flags of one attempt: bounded so one client cannot
+    # store an unlimited document on the attempt row.
+    values = data.get('annotations') or []
+    if len(values) > ANNOTATIONS_MAX_ITEMS:
+        engine.fail('VALIDATION_ERROR', f'annotations must contain no more than {ANNOTATIONS_MAX_ITEMS} elements')
+    if len(json.dumps(values, ensure_ascii=False, default=str).encode()) > ANNOTATIONS_MAX_BYTES:
+        engine.fail('VALIDATION_ERROR', 'annotations are too large')
     return success(engine.annotations(request.user, attempt_id, data.get('annotations')))
 
 

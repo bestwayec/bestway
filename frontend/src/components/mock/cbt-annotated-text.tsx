@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Underline as UnderlineIcon, Trash2, StickyNote, Plus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export interface CbtStickyNote {
@@ -196,6 +197,7 @@ export function CbtAnnotatedText({
   className,
   fontSize,
 }: CbtAnnotatedTextProps) {
+  const t = useTranslations("mock.textTools");
   const [annotations, setAnnotations] = React.useState<CbtAnnotations>(() =>
     loadAnnotations(storageKey)
   );
@@ -445,7 +447,7 @@ export function CbtAnnotatedText({
       {menu && (
         <div
           role="toolbar"
-          aria-label="CBT Text Tools"
+          aria-label={t("toolbar")}
           className="absolute z-50 flex flex-col gap-2 rounded-xl border border-border/80 bg-surface/95 p-2 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
           style={{
             left: `${menu.x}px`,
@@ -462,18 +464,20 @@ export function CbtAnnotatedText({
             <button
               type="button"
               onClick={() => addHighlight("yellow")}
-              title="Sariq bo'yash (Alt+H)"
+              title={t("highlightYellow")}
+              aria-label={t("highlightYellow")}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-amber-500 hover:bg-amber-500/15 transition-colors touch-manipulation"
             >
               <span className="size-3.5 rounded-full bg-amber-400 border border-amber-600/30" />
-              <span>Highlight</span>
+              <span>{t("highlight")}</span>
             </button>
 
             {/* Highlight Green */}
             <button
               type="button"
               onClick={() => addHighlight("green")}
-              title="Yashil bo'yash"
+              title={t("highlightGreen")}
+              aria-label={t("highlightGreen")}
               className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/15 transition-colors touch-manipulation"
             >
               <span className="size-3.5 rounded-full bg-emerald-400 border border-emerald-600/30" />
@@ -483,7 +487,8 @@ export function CbtAnnotatedText({
             <button
               type="button"
               onClick={() => addHighlight("pink")}
-              title="Pushti bo'yash"
+              title={t("highlightPink")}
+              aria-label={t("highlightPink")}
               className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-pink-500 hover:bg-pink-500/15 transition-colors touch-manipulation"
             >
               <span className="size-3.5 rounded-full bg-pink-400 border border-pink-600/30" />
@@ -493,18 +498,18 @@ export function CbtAnnotatedText({
             <button
               type="button"
               onClick={addUnderline}
-              title="Tagiga chizish (Alt+U)"
+              title={t("underlineHint")}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-sky-500 hover:bg-sky-500/15 transition-colors touch-manipulation"
             >
               <UnderlineIcon className="size-3.5" />
-              <span>Underline</span>
+              <span>{t("underline")}</span>
             </button>
 
             {/* Sticky Note ("Izoh") */}
             <button
               type="button"
               onClick={() => setNoteDraftOpen((v) => !v)}
-              title="Izoh (Sticky Note) qo'shish"
+              title={t("addNote")}
               className={cn(
                 "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors touch-manipulation",
                 noteDraftOpen
@@ -513,7 +518,7 @@ export function CbtAnnotatedText({
               )}
             >
               <StickyNote className="size-3.5" />
-              <span>Izoh</span>
+              <span>{t("note")}</span>
             </button>
 
             <div className="h-4 w-px bg-border/60 mx-0.5" />
@@ -522,7 +527,8 @@ export function CbtAnnotatedText({
             <button
               type="button"
               onClick={() => clearAnnotation()}
-              title="Tozalash"
+              title={t("clear")}
+              aria-label={t("clear")}
               className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-fg-muted hover:text-danger hover:bg-danger-subtle/30 transition-colors touch-manipulation"
             >
               <Trash2 className="size-3.5" />
@@ -541,7 +547,8 @@ export function CbtAnnotatedText({
                     saveStickyNote();
                   }
                 }}
-                placeholder="Izoh matnini yozing..."
+                placeholder={t("notePlaceholder")}
+                aria-label={t("notePlaceholder")}
                 className="h-7 w-48 rounded-md border border-border bg-bg px-2 text-xs text-fg focus:border-brand focus:outline-none"
                 autoFocus
               />
@@ -551,7 +558,7 @@ export function CbtAnnotatedText({
                 className="inline-flex h-7 items-center gap-1 rounded-md bg-brand px-2.5 text-xs font-semibold text-brand-fg hover:bg-brand-hover"
               >
                 <Plus className="size-3" />
-                Saqlash
+                {t("saveNote")}
               </button>
             </div>
           )}
@@ -600,7 +607,7 @@ export function CbtAnnotatedText({
                       key={`u-${sIdx}`}
                       className="cbt-underline cursor-pointer"
                       onClick={() => clearAnnotation(seg.text)}
-                      title="Chiziqni o'chirish uchun bosing"
+                      title={t("removeUnderline")}
                     >
                       {content}
                     </span>
@@ -613,7 +620,7 @@ export function CbtAnnotatedText({
                       key={`my-${sIdx}`}
                       className="cbt-highlight cursor-pointer"
                       onClick={() => clearAnnotation(seg.text)}
-                      title="Bo'yoqni o'chirish uchun bosing"
+                      title={t("removeHighlight")}
                     >
                       {content}
                     </mark>
@@ -624,7 +631,7 @@ export function CbtAnnotatedText({
                       key={`mg-${sIdx}`}
                       className="cbt-highlight-green cursor-pointer"
                       onClick={() => clearAnnotation(seg.text)}
-                      title="Bo'yoqni o'chirish uchun bosing"
+                      title={t("removeHighlight")}
                     >
                       {content}
                     </mark>
@@ -635,7 +642,7 @@ export function CbtAnnotatedText({
                       key={`mp-${sIdx}`}
                       className="cursor-pointer rounded-xs bg-pink-300/70 px-0.5 text-fg"
                       onClick={() => clearAnnotation(seg.text)}
-                      title="Bo'yoqni o'chirish uchun bosing"
+                      title={t("removeHighlight")}
                     >
                       {content}
                     </mark>
@@ -652,7 +659,7 @@ export function CbtAnnotatedText({
                           e.stopPropagation();
                           setActiveNotePopover(seg.note ?? null);
                         }}
-                        title={`Izoh: ${seg.note.text}`}
+                        title={t("noteTitle", { text: seg.note.text })}
                         className="inline-flex items-center rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold text-amber-600 hover:bg-amber-500/30"
                       >
                         📝
