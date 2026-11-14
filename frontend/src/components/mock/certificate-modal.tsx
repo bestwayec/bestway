@@ -26,7 +26,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
     day: "numeric",
     month: "long",
     year: "numeric",
-  }) : "Recent";
+  }) : "—";
 
   const verifyUrl = `https://bestwayec.uz/tests/attempt/${attempt.id}`;
 
@@ -50,7 +50,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6 print:hidden">
           <div className="flex items-center gap-2">
             <Award className="size-6 text-emerald-400" />
-            <h3 className="text-lg font-bold text-white">Rasmiy Natijalar Sertifikati</h3>
+            <h3 className="text-lg font-bold text-white">{tu("certificateModal.title")}</h3>
           </div>
           <div className="flex items-center gap-2">
             <Button
