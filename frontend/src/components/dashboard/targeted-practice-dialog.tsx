@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import {
   AlertCircle,
@@ -41,6 +42,7 @@ export function TargetedPracticeDialog({
   onOpenChange,
   onComplete,
 }: TargetedPracticeDialogProps) {
+  const tu = useTranslations("uiText");
   const { data: practice, isLoading, refetch } = useTargetedPractice(categoryId ?? undefined, open);
 
   const [currentIndex, setCurrentIndex] = React.useState<number>(0);
@@ -85,8 +87,8 @@ export function TargetedPracticeDialog({
       setIsAnswerChecked(false);
     } else {
       setIsFinished(true);
-      toast.success("Bo'shliqlarni yopish mashqi yakunlandi!", {
-        description: `Natijangiz: ${score + (selectedAnswer?.trim().toUpperCase() === currentQ?.correctAnswer.trim().toUpperCase() && !isAnswerChecked ? 1 : 0)} / ${totalQuestions} to'g'ri.`,
+      toast.success(tu("practice.done"), {
+        description: tu("practice.result", { correct: score + (selectedAnswer?.trim().toUpperCase() === currentQ?.correctAnswer.trim().toUpperCase() && !isAnswerChecked ? 1 : 0), total: totalQuestions }),
       });
       if (onComplete) onComplete();
     }
@@ -112,7 +114,7 @@ export function TargetedPracticeDialog({
                 Targeted Practice: {categoryName ?? practice?.categoryName ?? "Mini-mashq"}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                Aynan zaif nuqtalaringiz bo&apos;yicha 10 ta tasodifiy savoldan iborat mustahkamlash mashqi
+                {tu("practice.intro")}
               </DialogDescription>
             </div>
             {!isFinished && totalQuestions > 0 && (
@@ -141,9 +143,9 @@ export function TargetedPracticeDialog({
                 <Award className="size-8 text-emerald-400" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Mashq Muvaffaqiyatli Yakunlandi!</h3>
+                <h3 className="text-xl font-bold text-white">{tu("practice.finishedTitle")}</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Siz ushbu zaif nuqta bo&apos;yicha 10 ta savolni tahlil qilib chiqdingiz.
+                  {tu("practice.finishedText", { count: totalQuestions })}
                 </p>
               </div>
 
@@ -152,7 +154,7 @@ export function TargetedPracticeDialog({
                   {score} / {totalQuestions}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  Aniqlik darajasi: {Math.round((score / Math.max(1, totalQuestions)) * 100)}%
+                  {tu("practice.accuracy", { percent: Math.round((score / Math.max(1, totalQuestions)) * 100) })}
                 </div>
               </div>
 
@@ -163,7 +165,7 @@ export function TargetedPracticeDialog({
                   className="border-slate-700 bg-slate-900 text-xs text-slate-300 hover:bg-slate-800"
                 >
                   <RotateCcw className="mr-1.5 size-3.5" />
-                  Qayta topshirish
+                  {tu("practice.retry")}
                 </Button>
                 <Button
                   onClick={() => onOpenChange(false)}
@@ -197,7 +199,7 @@ export function TargetedPracticeDialog({
 
               {/* Savol Matni */}
               <div className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
-                <div className="text-xs text-slate-400 mb-1 font-mono">Savol {currentIndex + 1}:</div>
+                <div className="text-xs text-slate-400 mb-1 font-mono">{tu("practice.question", { number: currentIndex + 1 })}</div>
                 <p className="text-sm font-semibold text-white leading-snug">{currentQ.question}</p>
               </div>
 
@@ -262,12 +264,12 @@ export function TargetedPracticeDialog({
                     {selectedAnswer?.trim().toUpperCase() === currentQ.correctAnswer.trim().toUpperCase() ? (
                       <>
                         <CheckCircle2 className="size-3.5 text-emerald-400" />
-                        To&apos;g&apos;ri javob!
+                        {tu("practice.correct")}
                       </>
                     ) : (
                       <>
                         <AlertCircle className="size-3.5 text-rose-400" />
-                        Xato! To&apos;g&apos;ri javob: <span className="underline font-bold">{currentQ.correctAnswer}</span>
+                        {tu("practice.wrong")} <span className="underline font-bold">{currentQ.correctAnswer}</span>
                       </>
                     )}
                   </div>
@@ -279,7 +281,7 @@ export function TargetedPracticeDialog({
             </div>
           ) : (
             <div className="py-8 text-center text-xs text-slate-400">
-              Ushbu toifa uchun mashq savollari topilmadi.
+              {tu("practice.empty")}
             </div>
           )}
         </div>
@@ -292,7 +294,7 @@ export function TargetedPracticeDialog({
               onClick={() => onOpenChange(false)}
               className="text-xs text-slate-400 hover:text-white"
             >
-              Bekor qilish
+              {tu("practice.cancel")}
             </Button>
 
             <div className="flex items-center gap-2">
@@ -311,7 +313,7 @@ export function TargetedPracticeDialog({
                   onClick={handleNext}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-4 flex items-center gap-1"
                 >
-                  {currentIndex + 1 < totalQuestions ? "Keyingi savol" : "Natijani ko'rish"}
+                  {currentIndex + 1 < totalQuestions ? tu("practice.next") : tu("practice.seeResult")}
                   <ChevronRight className="size-3.5" />
                 </Button>
               )}

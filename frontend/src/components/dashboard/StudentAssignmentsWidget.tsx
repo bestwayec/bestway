@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import {
   AlertCircle,
@@ -48,6 +49,7 @@ export interface StudentAssignmentItem {
 }
 
 export function StudentAssignmentsWidget() {
+  const tu = useTranslations("uiText");
   const [assignments, setAssignments] = React.useState<StudentAssignmentItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [joinModalOpen, setJoinModalOpen] = React.useState(false);
@@ -75,7 +77,7 @@ export function StudentAssignmentsWidget() {
     e.preventDefault();
     const code = inviteCode.trim().toUpperCase();
     if (!code) {
-      toast.error("Taklif kodini kiriting");
+      toast.error(tu("assignments.codeRequired"));
       return;
     }
 
@@ -84,12 +86,12 @@ export function StudentAssignmentsWidget() {
       const res = await apiClient.post<{ cohort_name: string }>("/student/join-cohort", {
         invite_code: code,
       });
-      toast.success(`"${res.cohort_name}" guruhiga muvaffaqiyatli a'zo bo'ldingiz! 🎉`);
+      toast.success(tu("assignments.joined", { name: res.cohort_name }));
       setInviteCode("");
       setJoinModalOpen(false);
       fetchAssignments();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Taklif kodi noto'g'ri yoki topilmadi";
+      const msg = err instanceof Error ? err.message : tu("assignments.codeInvalid");
       toast.error(msg);
     } finally {
       setIsJoining(false);
@@ -113,11 +115,11 @@ export function StudentAssignmentsWidget() {
             <GraduationCap className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-fg">O'qituvchidan Vazifalar</h3>
+            <h3 className="text-sm font-semibold text-fg">{tu("assignments.title")}</h3>
             <p className="text-[11px] text-fg-muted">
               {pendingAssignments.length > 0
-                ? `${pendingAssignments.length} ta kutilayotgan topshiriq`
-                : "Barcha topshiriqlar bajarilgan"}
+                ? tu("assignments.pending", { count: pendingAssignments.length })
+                : tu("assignments.allDone")}
             </p>
           </div>
         </div>
@@ -129,7 +131,7 @@ export function StudentAssignmentsWidget() {
           className="border-brand/30 text-brand hover:bg-brand-hover/10 text-xs gap-1.5 h-8"
         >
           <Plus className="h-3.5 w-3.5" />
-          Guruhga qo'shilish
+          {tu("assignments.join")}
         </Button>
       </div>
 
@@ -138,10 +140,10 @@ export function StudentAssignmentsWidget() {
         <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
           <GraduationCap className="h-8 w-8 text-brand/80 mb-2" />
           <p className="text-xs font-medium text-fg">
-            Hozircha siz hech qaysi guruhga a'zo emassiz
+            {tu("assignments.noGroup")}
           </p>
           <p className="text-[11px] text-fg-muted mt-0.5 max-w-xs">
-            O'qituvchingiz bergan 6 xonali taklif kodini kiriting va topshiriqlarni boshlang.
+            {tu("assignments.noGroupHint")}
           </p>
           <Button
             size="sm"
@@ -149,7 +151,7 @@ export function StudentAssignmentsWidget() {
             className="mt-3 bg-brand hover:bg-brand-hover text-brand-fg text-xs h-7 gap-1"
           >
             <Plus className="h-3 w-3" />
-            Kodni Kiritish
+            {tu("assignments.enterCode")}
           </Button>
         </Card>
       ) : (
@@ -175,23 +177,23 @@ export function StudentAssignmentsWidget() {
                     <span className="text-xs font-semibold text-fg">{a.title}</span>
                     {a.status === "passed" && (
                       <Badge className="bg-brand/20 text-brand-subtle-fg border border-brand/30 text-[10px] px-1.5 py-0">
-                        {a.score_percent}% O'tdi ✓
+                        {tu("assignments.passed", { percent: a.score_percent ?? 0 })}
                       </Badge>
                     )}
                     {a.status === "failed" && (
                       <Badge className="bg-warning/20 text-warning border border-warning/30 text-[10px] px-1.5 py-0">
-                        {a.score_percent}% Qayta topshiring
+                        {tu("assignments.retry", { percent: a.score_percent ?? 0 })}
                       </Badge>
                     )}
                     {a.status === "awaiting_review" && (
-                      <span className="text-xs font-semibold text-fg-muted">Ustoz tekshiruvida</span>
+                      <span className="text-xs font-semibold text-fg-muted">{tu("assignments.withTeacher")}</span>
                     )}
                     {a.status === "awaiting_result" && (
                       <span className="text-xs font-semibold text-fg-muted">Natija hisoblanmoqda</span>
                     )}
                     {a.status === "overdue" && (
                       <Badge className="bg-danger/20 text-danger border border-danger/30 text-[10px] px-1.5 py-0">
-                        Muddati o'tdi ✕
+                        {tu("assignments.overdue")}
                       </Badge>
                     )}
                     {a.status === "pending" && (
@@ -201,7 +203,7 @@ export function StudentAssignmentsWidget() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-fg-muted">
-                    <span>Guruh: {a.cohort_name}</span>
+                    <span>{tu("assignments.group", { name: a.cohort_name })}</span>
                     <span className="flex items-center gap-1">
                       <Clock
                         className={`h-3 w-3 ${
@@ -226,12 +228,12 @@ export function StudentAssignmentsWidget() {
                     {a.is_submitted ? (
                       <>
                         <CheckCircle2 className="h-3 w-3 text-brand" />
-                        Qayta ko'rish
+                        {tu("assignments.review")}
                       </>
                     ) : (
                       <>
                         <Play className="h-3 w-3 fill-current" />
-                        Bajarish
+                        {tu("assignments.start")}
                       </>
                     )}
                   </Button>
@@ -248,16 +250,16 @@ export function StudentAssignmentsWidget() {
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-lg font-bold text-fg flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-brand" />
-              O'quv Guruhiga Qo'shilish
+              {tu("assignments.dialogTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-fg-muted">
-              O'qituvchingiz bergan 6 xonali taklif kodini kiriting (masalan: <span className="font-mono text-brand">BW-7892</span>).
+              {tu("assignments.dialogHint")}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleJoinCohort} className="mt-4 space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted">Guruh Taklif Kodi</label>
+              <label className="text-xs font-medium text-fg-muted">{tu("assignments.codeLabel")}</label>
               <input
                 type="text"
                 value={inviteCode}
@@ -277,7 +279,7 @@ export function StudentAssignmentsWidget() {
                 onClick={() => setJoinModalOpen(false)}
                 disabled={isJoining}
               >
-                Bekor qilish
+                {tu("assignments.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -288,10 +290,10 @@ export function StudentAssignmentsWidget() {
                 {isJoining ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Tekshirilmoqda...
+                    {tu("assignments.checking")}
                   </>
                 ) : (
-                  "Guruhga A'zo Bo'lish"
+                  tu("assignments.submit")
                 )}
               </Button>
             </div>

@@ -61,10 +61,10 @@ describe("WeakPointsTargetDrillModal", () => {
 
   it("finishes with the server's own score and the points it reports", async () => {
     await answer("A) alpha", { isCorrect: true, correctAnswer: "A) alpha", explanation: "one" });
-    await click("Keyingi Savol");
+    await click("Keyingi savol");
     await answer("A) gamma", { isCorrect: false, correctAnswer: "B) delta", explanation: "two" });
     apiPost.mockResolvedValueOnce({ correctCount: 1, totalQuestions: 2, pointsAwarded: 50, dailyCapReached: false });
-    await click("Natijani Ko'rish");
+    await click("Natijani ko'rish");
     expect(apiPost).toHaveBeenLastCalledWith("/api/v1/study-plan/targeted-practice/submit", { practiceId: "p-1" });
     expect(text()).toContain("50%");
     expect(text()).toContain("+50 XP");
@@ -74,10 +74,10 @@ describe("WeakPointsTargetDrillModal", () => {
 
   it("claims no points when the server gave none and says when the daily limit is reached", async () => {
     await answer("A) alpha", { isCorrect: true, correctAnswer: "A) alpha", explanation: "one" });
-    await click("Keyingi Savol");
+    await click("Keyingi savol");
     await answer("B) delta", { isCorrect: true, correctAnswer: "B) delta", explanation: "two" });
     apiPost.mockResolvedValueOnce({ correctCount: 2, totalQuestions: 2, pointsAwarded: 0, dailyCapReached: true });
-    await click("Natijani Ko'rish");
+    await click("Natijani ko'rish");
     expect(text()).toContain("100%");
     expect(text()).not.toMatch(/\+\d+ XP/);
     expect(text()).toContain("Bugungi mashq ballari chegarasiga yetdingiz");
@@ -85,10 +85,10 @@ describe("WeakPointsTargetDrillModal", () => {
 
   it("shows no score at all when the result could not be saved", async () => {
     await answer("A) alpha", { isCorrect: true, correctAnswer: "A) alpha", explanation: "one" });
-    await click("Keyingi Savol");
+    await click("Keyingi savol");
     await answer("B) delta", { isCorrect: true, correctAnswer: "B) delta", explanation: "two" });
     apiPost.mockRejectedValueOnce(new Error("offline"));
-    await click("Natijani Ko'rish");
+    await click("Natijani ko'rish");
     expect(text()).not.toMatch(/\d+%/);
     expect(text()).not.toMatch(/\+\d+ XP/);
     expect(onCompleted).not.toHaveBeenCalled();

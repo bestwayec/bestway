@@ -60,7 +60,7 @@ def generate(data):
     elif data.get('isPartial'):
         cert_heading = 'IELTS SKILL PRACTICE REPORT' if data.get('isIelts') else 'MULTILEVEL SKILL PRACTICE REPORT'
     elif not data.get('specificationVersion'):
-        cert_heading = 'OFFICIAL MOCK TEST REPORT'
+        cert_heading = 'MOCK TEST REPORT'
     else:
         cert_heading = 'MULTILEVEL CEFR ESTIMATED RESULT'
     center(cert_heading, 145, 13, True, accent)

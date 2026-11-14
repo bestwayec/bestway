@@ -80,6 +80,7 @@ export function ExpressPlacementTest({
   isAuthenticated = false,
 }: ExpressPlacementTestProps) {
   const locale = useLocale();
+  const tu = useTranslations("uiText");
   const router = useRouter();
 
   const [status, setStatus] = React.useState<"idle" | "loading" | "running" | "submitting" | "result" | "error">(
@@ -106,7 +107,7 @@ export function ExpressPlacementTest({
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json?.error || "Savollarni yuklab bo'lmadi");
+        throw new Error(json?.error || tu("placement.loadFailed"));
       }
       setQuestions(json.data.questions || []);
       setGuestSessionId(json.data.guest_session_id || "");
@@ -115,7 +116,7 @@ export function ExpressPlacementTest({
       setTimeLeft(600);
       setStatus("running");
     } catch (err: any) {
-      setErrorMessage(err?.message || "Aloqa xatoligi. Qaytadan urinib ko'ring.");
+      setErrorMessage(err?.message || tu("placement.network"));
       setStatus("error");
     }
   }, []);
@@ -144,7 +145,7 @@ export function ExpressPlacementTest({
         if (typeof window !== "undefined") {
           localStorage.removeItem(LOCAL_STORAGE_PLACEMENT_KEY);
         }
-        toast.success("🎉 Natijangiz shaxsiy profilingizga muvaffaqiyatli bog'landi!");
+        toast.success(tu("placement.claimed"));
       }
     } catch {
       // Background claim can be retried on dashboard
@@ -169,7 +170,7 @@ export function ExpressPlacementTest({
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json?.error || "Natijani hisoblab bo'lmadi");
+        throw new Error(json?.error || tu("placement.scoreFailed"));
       }
 
       const resData: PlacementResultData = json.data;
@@ -190,7 +191,7 @@ export function ExpressPlacementTest({
         claimPlacementResult(resData.result_token);
       }
     } catch (err: any) {
-      toast.error(err?.message || "Xatolik yuz berdi");
+      toast.error(err?.message || tu("placement.error"));
       setStatus("running");
     }
   }, [answers, claimPlacementResult, guestSessionId, isAuthenticated, status]);
@@ -276,33 +277,32 @@ export function ExpressPlacementTest({
         <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-subtle/60 px-4 py-1.5 text-xs font-semibold text-brand shadow-inner">
             <Sparkles className="size-3.5 animate-pulse text-brand" />
-            <span>AI Diagnostika & Express Placement</span>
+            <span>{tu("placement.badge")}</span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-fg leading-tight">
-            10 Daqiqalik Bepul <span className="bg-gradient-to-r from-brand to-brand bg-clip-text text-transparent">CEFR & IELTS</span> Placement Test
+            {tu("placement.title")}
           </h2>
 
           <p className="text-sm sm:text-base text-fg-muted max-w-2xl mx-auto leading-relaxed">
-            20 ta kalibratsiyalangan savol orqali grammatika, lug'at va reading darajangizni aniqlang.
-            Test yakunida aniq CEFR darajangiz (A2-C1), taxminiy IELTS bali (4.0-8.0) hamda 3 ta zaif grammatik mavzuyingiz aniqlab beriladi.
+            {tu("placement.intro")}
           </p>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-6 py-2 max-w-lg mx-auto">
             <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
               <Clock className="size-5 mx-auto text-brand mb-1" />
-              <div className="text-lg font-bold text-fg">10 daqiqa</div>
-              <div className="text-xs text-fg-muted">Tezkor diagnostika</div>
+              <div className="text-lg font-bold text-fg">{tu("placement.minutes")}</div>
+              <div className="text-xs text-fg-muted">{tu("placement.quick")}</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
               <Award className="size-5 mx-auto text-brand mb-1" />
-              <div className="text-lg font-bold text-fg">20 ta savol</div>
-              <div className="text-xs text-fg-muted">A1 dan C1 gacha</div>
+              <div className="text-lg font-bold text-fg">{tu("placement.questions")}</div>
+              <div className="text-xs text-fg-muted">{tu("placement.range")}</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface/80 p-3.5 text-center">
               <Zap className="size-5 mx-auto text-warning mb-1" />
-              <div className="text-lg font-bold text-fg">0 so'm</div>
-              <div className="text-xs text-fg-muted">Mutlaqo bepul</div>
+              <div className="text-lg font-bold text-fg">{tu("placement.price")}</div>
+              <div className="text-xs text-fg-muted">{tu("placement.free")}</div>
             </div>
           </div>
 
@@ -313,7 +313,7 @@ export function ExpressPlacementTest({
               className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl shadow-brand/30 transition-all duration-200 hover:from-brand-hover hover:to-brand-hover hover:scale-[1.02] active:scale-95"
             >
               <Zap className="size-5 fill-current" />
-              <span>⚡️ Bepul Darajangizni Aniqlang (10 daqiqa)</span>
+              <span>{tu("placement.start")}</span>
             </button>
           </div>
         </div>
@@ -326,8 +326,8 @@ export function ExpressPlacementTest({
     return (
       <div className={cn("rounded-3xl border border-border bg-bg-subtle p-12 text-center shadow-2xl", className)}>
         <Loader2 className="size-12 animate-spin text-brand mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-fg">Diagnostik Savollar Yuklanmoqda...</h3>
-        <p className="text-sm text-fg-muted mt-2">Sun’iy intellekt CEFR savollar bazasini kalibratsiya qilmoqda.</p>
+        <h3 className="text-xl font-bold text-fg">{tu("placement.loading")}</h3>
+        
       </div>
     );
   }
@@ -337,7 +337,7 @@ export function ExpressPlacementTest({
     return (
       <div className={cn("rounded-3xl border border-danger-border/60 bg-bg-subtle p-8 text-center shadow-2xl", className)}>
         <AlertCircle className="size-10 text-danger mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-fg">Xatolik yuz berdi</h3>
+        <h3 className="text-lg font-bold text-fg">{tu("placement.errorTitle")}</h3>
         <p className="text-sm text-fg-muted mt-1 max-w-md mx-auto">{errorMessage}</p>
         <button
           type="button"
@@ -345,7 +345,7 @@ export function ExpressPlacementTest({
           className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg hover:bg-brand-hover transition"
         >
           <RotateCcw className="size-4" />
-          <span>Qaytadan urinish</span>
+          <span>{tu("placement.retry")}</span>
         </button>
       </div>
     );
@@ -361,9 +361,9 @@ export function ExpressPlacementTest({
             <Sparkles className="size-10 text-brand animate-spin" />
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-fg">Natijalar Tahlil Qilinmoqda...</h3>
+        <h3 className="text-2xl font-bold text-fg">{tu("placement.checking")}</h3>
         <p className="text-sm text-fg-muted mt-2 max-w-md mx-auto">
-          Sun’iy intellekt sizning javoblaringizni tekshirmoqda, CEFR darajasi va zaif grammatik nuqtalaringizni shakllantirmoqda.
+          {tu("placement.checkingText")}
         </p>
       </div>
     );
@@ -476,7 +476,7 @@ export function ExpressPlacementTest({
                 key={q.id}
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
-                aria-label={`Savol ${idx + 1}`}
+                aria-label={tu("placement.question", { number: idx + 1 })}
                 className={cn(
                   "size-7 rounded-lg text-xs font-semibold transition-all flex items-center justify-center",
                   isCurrent
@@ -501,7 +501,7 @@ export function ExpressPlacementTest({
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-fg-muted hover:bg-surface-hover hover:text-fg disabled:opacity-30 disabled:pointer-events-none transition"
           >
             <ArrowLeft className="size-4" />
-            <span>Oldingisi</span>
+            <span>{tu("placement.prev")}</span>
           </button>
 
           <div className="flex items-center gap-3">
@@ -511,7 +511,7 @@ export function ExpressPlacementTest({
                 onClick={handleNext}
                 className="inline-flex items-center gap-2 rounded-xl bg-surface-hover hover:bg-border-strong px-5 py-2.5 text-sm font-semibold text-fg transition shadow"
               >
-                <span>Keyingisi</span>
+                <span>{tu("placement.next")}</span>
                 <ArrowRight className="size-4" />
               </button>
             ) : null}
@@ -549,7 +549,7 @@ export function ExpressPlacementTest({
         <div className="relative text-center space-y-4 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-subtle/60 px-4 py-1 text-xs font-bold text-brand">
             <Award className="size-4 text-brand" />
-            <span>Rasmiy CEFR & IELTS Express Diagnostika</span>
+            <span>{tu("placement.resultBadge")}</span>
           </div>
 
           <div className="flex flex-col items-center justify-center">
@@ -568,7 +568,7 @@ export function ExpressPlacementTest({
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-3 gap-3 pt-2">
             <div className="rounded-2xl border border-border bg-surface/90 p-4 text-center">
-              <div className="text-xs text-fg-muted mb-1">Aniqlik darajasi</div>
+              <div className="text-xs text-fg-muted mb-1">{tu("placement.score")}</div>
               <div className="text-lg sm:text-xl font-extrabold text-brand">
                 {result.score} / {result.total_questions}
               </div>
@@ -599,7 +599,7 @@ export function ExpressPlacementTest({
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-5 text-warning" />
               <h4 className="text-base sm:text-lg font-bold text-fg">
-                Sizning zaif grammatik nuqtalaringiz (Top 3):
+                {tu("placement.weak")}
               </h4>
             </div>
 
@@ -613,7 +613,7 @@ export function ExpressPlacementTest({
                     <div className="flex items-center justify-between text-xs text-fg-muted mb-1">
                       <span className="font-semibold text-brand">#{i + 1}-mavzu</span>
                       {wt.mistakes_count > 0 && (
-                        <span className="text-danger font-medium">{wt.mistakes_count} ta xato</span>
+                        <span className="text-danger font-medium">{tu("placement.mistakes", { count: wt.mistakes_count })}</span>
                       )}
                     </div>
                     <h5 className="font-semibold text-fg text-sm leading-snug">{wt.topic}</h5>
@@ -626,7 +626,7 @@ export function ExpressPlacementTest({
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand pt-1 transition"
                     >
                       <Play className="size-3 fill-current" />
-                      <span>{wt.lesson_order ? `${wt.lesson_order}-darsni ko'rish` : "Darsni ko'rish"}</span>
+                      <span>{wt.lesson_order ? tu("placement.lessonN", { number: wt.lesson_order }) : tu("placement.lesson")}</span>
                     </Link>
                   )}
                 </div>
@@ -639,10 +639,10 @@ export function ExpressPlacementTest({
         <div className="rounded-3xl border-2 border-brand/50 bg-gradient-to-br from-brand-subtle/40 via-surface to-bg-subtle p-6 sm:p-8 text-center space-y-5 shadow-2xl">
           <div className="max-w-xl mx-auto space-y-2">
             <h4 className="text-lg sm:text-2xl font-bold text-fg leading-snug">
-              Batafsil xatolar tahlili, o'qituvchilar tavsiyasi va shaxsiy o'quv rejangizni saqlab qolish uchun kiring:
+              {tu("placement.signInTitle")}
             </h4>
             <p className="text-xs sm:text-sm text-fg-muted">
-              Ushbu test natijasi avtomatik ravishda shaxsiy o'quvchi profilingiz (MistakeVault) bazasiga biriktiriladi.
+              {tu("placement.signInText")}
             </p>
           </div>
 
@@ -650,13 +650,13 @@ export function ExpressPlacementTest({
             <div className="flex flex-col items-center justify-center space-y-3 pt-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand/50 bg-brand-subtle/70 px-4 py-1.5 text-sm font-semibold text-brand">
                 <CheckCircle2 className="size-4 text-brand" />
-                <span>Natijangiz profilingizga muvaffaqiyatli bog'landi!</span>
+                <span>{tu("placement.claimedBadge")}</span>
               </div>
               <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-bold text-brand-fg shadow-lg hover:bg-brand-hover transition"
               >
-                <span>O'quvchi Kabinetiga O'tish</span>
+                <span>{tu("placement.toDashboard")}</span>
                 <ArrowRight className="size-4" />
               </Link>
             </div>
@@ -671,7 +671,7 @@ export function ExpressPlacementTest({
                 <svg className="size-5 fill-current shrink-0" viewBox="0 0 24 24">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
                 </svg>
-                <span>✈️ Telegram orqali kirish</span>
+                <span>{tu("placement.telegram")}</span>
               </button>
 
               {/* Google Sign-in */}
@@ -692,14 +692,14 @@ export function ExpressPlacementTest({
                 href={`/login?redirect=/${locale}/dashboard`}
                 className="underline hover:text-fg transition"
               >
-                Telefon va parol bilan kirish
+                {tu("placement.phone")}
               </Link>
               <span>•</span>
               <Link
                 href={`/register?redirect=/${locale}/dashboard`}
                 className="underline hover:text-brand transition"
               >
-                Ro'yxatdan o'tish
+                {tu("placement.register")}
               </Link>
             </div>
           )}
@@ -713,7 +713,7 @@ export function ExpressPlacementTest({
             className="inline-flex items-center gap-2 text-xs font-semibold text-fg-muted hover:text-brand transition"
           >
             <RotateCcw className="size-3.5" />
-            <span>Testni qayta topshirish</span>
+            <span>{tu("placement.retake")}</span>
           </button>
         </div>
       </div>

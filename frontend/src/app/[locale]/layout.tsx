@@ -42,12 +42,12 @@ export async function generateMetadata({
 
   const title =
     locale === "en"
-      ? "BestWay — Official IELTS & Multi-Level (CEFR) Mock Platform | Do your best, forget the rest!"
-      : "BestWay — IELTS va Multi-Level (CEFR) Mock Imtihon Platformasi | Do your best, forget the rest!";
+      ? "BestWay — IELTS-style and Multi-Level (CEFR) mock exams | Do your best, forget the rest!"
+      : "BestWay — IELTS uslubidagi va Multi-Level (CEFR) mock imtihonlar | Do your best, forget the rest!";
   const description =
     locale === "en"
-      ? "BestWay Education Center — Advanced Computer-Based IELTS and Multi-Level (CEFR) mock testing platform with AI assessment, score prediction, and comprehensive exam analytics."
-      : "BestWay o'quv markazi — IELTS va Milliy Sertifikat (Multi-Level CEFR) mock imtihonlari, AI orqali Speaking va Writing tekshiruvi, ball bashorati va o'quvchilar tahlil tizimi.";
+      ? "BestWay Education Center — computer-delivered IELTS-style and Multi-Level (CEFR) mock exams, teacher grading of Writing and Speaking, and progress analytics."
+      : "BestWay o'quv markazi — kompyuterda IELTS uslubidagi va Multi-Level (CEFR) mock imtihonlar, Writing va Speaking bo'yicha o'qituvchi tekshiruvi hamda natijalar tahlili.";
 
   const baseUrl = "https://bestwayec.uz";
   const canonicalUrl = locale === "uz" ? baseUrl : `${baseUrl}/${locale}`;

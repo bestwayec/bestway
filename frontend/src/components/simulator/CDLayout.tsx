@@ -199,22 +199,23 @@ export function QuestionPalette({
   flagged: Record<string, boolean>;
   onJump: (id: string) => void;
 }) {
+  const tu = useTranslations("uiText");
   const safeQuestions = questions || [];
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-muted">
         <span className="font-bold text-[11px] text-fg uppercase tracking-wider">
-          Savollar Palitrasi ({safeQuestions.filter((q) => (answers?.[q.id] ?? "").trim() !== "").length}/{safeQuestions.length})
+          {tu("cd.palette")} ({safeQuestions.filter((q) => (answers?.[q.id] ?? "").trim() !== "").length}/{safeQuestions.length})
         </span>
         <div className="flex items-center gap-3 text-[11px]">
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-brand" /> Ishlangan
+            <span className="size-2 rounded-full bg-brand" /> {tu("cd.answered")}
           </span>
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-warning" /> Belgilangan
+            <span className="size-2 rounded-full bg-warning" /> {tu("cd.flagged")}
           </span>
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-border" /> Javobsiz
+            <span className="size-2 rounded-full bg-border" /> {tu("cd.unanswered")}
           </span>
         </div>
       </div>
@@ -331,6 +332,7 @@ export function CDLayout({
   exam?: MockExamDetail | null;
   children?: React.ReactNode;
 }) {
+  const tu = useTranslations("uiText");
   const [exam, setExam] = React.useState<MockExamDetail | null>(() =>
     initialExam ? normalizeExamPayload(initialExam) : null
   );
@@ -365,8 +367,8 @@ export function CDLayout({
         if (!res.ok) {
           setFetchError(
             res.status === 404 || res.status === 401 || res.status === 403
-              ? "Aktiv imtihon topilmadi yoki unga kirish huquqingiz yo'q. Tizimga kiring yoki administratorga murojaat qiling."
-              : `Server imtihonni qaytarmadi (HTTP ${res.status}). Birozdan so'ng qayta urining.`
+              ? tu("cd.notFound")
+              : tu("cd.serverError", { status: res.status })
           );
           setIsLoading(false);
           return;
@@ -649,8 +651,8 @@ export function CDLayout({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {saveStatus === "saved" && <span role="status" className="text-xs text-brand">Faqat shu brauzerda saqlandi</span>}
-              {saveStatus === "error" && <span role="alert" className="text-xs text-danger">Brauzerga saqlanmadi. Javobni o‘zgartirib qayta urinib ko‘ring.</span>}
+              {saveStatus === "saved" && <span role="status" className="text-xs text-brand">{tu("cd.savedLocal")}</span>}
+              {saveStatus === "error" && <span role="alert" className="text-xs text-danger">{tu("cd.saveFailed")}</span>}
 
               {/* Timer */}
               <div
@@ -690,17 +692,17 @@ export function CDLayout({
 
         {/* Demo banner */}
         <div role="note" className="border-b border-warning-border bg-warning-bg px-3 py-2 text-center text-xs font-medium text-fg sm:px-6">
-          Demo rejim — javoblar faqat shu brauzerda saqlanadi, serverga yuborilmaydi va baholanmaydi.{" "}
+          {tu("cd.demoBanner")}{" "}
           {exam?.id ? (
             <Link href={`/mock/${encodeURIComponent(exam.id)}`} className="font-semibold text-brand underline underline-offset-2">
-              Haqiqiy imtihonni boshlash
+              {tu("cd.startReal")}
             </Link>
           ) : null}
         </div>
 
         {/* Main Body with Resizable Split-Screen for Reading & Writing */}
         <main className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4 pb-28">
-          <ErrorBoundary fallbackTitle="Imtihon qismini yuklashda xatolik yuz berdi">
+          <ErrorBoundary fallbackTitle={tu("cd.partError")}>
             {children ? (
               children
             ) : isPart4Map ? (
@@ -713,7 +715,7 @@ export function CDLayout({
                   {(part.group?.questions || []).map((q, qi) => {
                     const promptText = q?.prompt || (q as any)?.text || "";
                     return (
-                      <StrictErrorBoundary key={q.id || qi} fallbackTitle={`Savol ${part.startIndex + qi + 1} xatosi`}>
+                      <StrictErrorBoundary key={q.id || qi} fallbackTitle={tu("cd.questionError", { number: part.startIndex + qi + 1 })}>
                         <div id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4">
                           <div className="flex items-start justify-between gap-2">
                             <span className="font-semibold text-sm text-fg">
@@ -773,18 +775,18 @@ export function CDLayout({
                           className="h-7 px-2 text-xs bg-warning text-slate-950 hover:bg-warning font-bold"
                         >
                           <Highlighter className="size-3 mr-1" />
-                          Belgilash
+                          {tu("cd.highlight")}
                         </Button>
                       )}
                       {highlights.length > 0 && (
                         <button
                           type="button"
                           onClick={clearAllHighlights}
-                          title="Belgilashlarni tozalash"
+                          title={tu("cd.clearHighlights")}
                           className="flex items-center gap-1 text-[11px] text-fg-muted hover:text-warning px-2 py-0.5 rounded border border-border"
                         >
                           <RotateCcw className="size-3" />
-                          Tozalash
+                          {tu("cd.clear")}
                         </button>
                       )}
                     </div>
@@ -808,7 +810,7 @@ export function CDLayout({
                   ) : (
                     <p className="flex items-center gap-2 text-xs text-fg-muted">
                       <FileText className="size-4 text-brand" />
-                      O&apos;ng tomondagi topshiriqlarni bajaring.
+                      {tu("cd.doTasks")}
                     </p>
                   )}
                 </div>
@@ -818,7 +820,7 @@ export function CDLayout({
                   onMouseDown={() => setIsDragging(true)}
                   onTouchStart={() => setIsDragging(true)}
                   className="hidden lg:flex w-3 items-center justify-center cursor-col-resize hover:bg-brand/20 active:bg-brand/40 transition-colors z-10 select-none group"
-                  title="O'lchamni o'zgartirish uchun suring"
+                  title={tu("cd.resize")}
                 >
                   <div className="flex flex-col gap-1 items-center justify-center py-2 px-0.5 rounded bg-surface border border-border group-hover:border-brand">
                     <GripVertical className="size-3 text-fg-muted group-hover:text-brand" />
@@ -840,7 +842,7 @@ export function CDLayout({
                     {(part.group?.questions || []).map((q, qi) => {
                       const promptText = q?.prompt || (q as any)?.text || "";
                       return (
-                        <StrictErrorBoundary key={q.id || qi} fallbackTitle={`Savol ${part.startIndex + qi + 1} yuklanmadi`}>
+                        <StrictErrorBoundary key={q.id || qi} fallbackTitle={tu("cd.questionNotLoaded", { number: part.startIndex + qi + 1 })}>
                           <div id={`cd-q-${q.id}`} className="rounded-[12px] border border-border bg-surface p-4">
                             <div className="flex items-start justify-between gap-2">
                               <span className="font-semibold text-sm text-fg leading-snug">
@@ -901,7 +903,7 @@ export function CDLayout({
                               <input
                                 value={answers[q.id] ?? ""}
                                 onChange={(e) => handleAnswer(q.id, e.target.value)}
-                                placeholder="Javobingizni yozing..."
+                                placeholder={tu("cd.typeAnswer")}
                                 aria-label={promptText}
                                 className="mt-3 w-full rounded-[12px] border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
                               />
@@ -929,7 +931,7 @@ export function CDLayout({
                 className="shrink-0"
               >
                 <ArrowLeft className="size-4 mr-1" />
-                <span className="hidden sm:inline">Oldingi qism</span>
+                <span className="hidden sm:inline">{tu("cd.prevPart")}</span>
               </Button>
 
               <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-0.5">
@@ -962,7 +964,7 @@ export function CDLayout({
                 onClick={() => setPartIdx((i) => Math.min(parts.length - 1, i + 1))}
                 className="shrink-0"
               >
-                <span className="hidden sm:inline">Keyingi qism</span>
+                <span className="hidden sm:inline">{tu("cd.nextPart")}</span>
                 <ArrowRight className="size-4 ml-1" />
               </Button>
             </div>
@@ -981,18 +983,18 @@ export function CDLayout({
         <Dialog open={helpOpen} onOpenChange={(o) => !o && setHelpOpen(false)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Imtihon Yo&apos;riqnomasi</DialogTitle>
+              <DialogTitle>{tu("cd.helpTitle")}</DialogTitle>
               <DialogDescription>
-                Chap tomonda audio, matn yoki xarita joylashgan. O&apos;ng tomonda savollarga javob bering.
+                {tu("cd.helpIntro")}
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <ul className="list-disc space-y-1.5 pl-5 text-sm text-fg-muted">
-                <li>Pastki palitradan savol raqamini bosib to&apos;g&apos;ridan-to&apos;g&apos;ri o&apos;tishingiz mumkin.</li>
-                <li>Keyinchalik qaytmoqchi bo&apos;lgan savollaringizni bayroqcha (Flag) bilan belgilab qo&apos;ying.</li>
-                <li>Yashil rangli raqamlar javob berilgan savollarni bildiradi.</li>
-                <li>Matndan kerakli so&apos;zlarni belgilab, sariq rangda saqlab qolishingiz mumkin.</li>
-                <li>Demo javoblari faqat shu brauzerda saqlanadi; serverga yuborilmaydi.</li>
+                <li>{tu("cd.help1")}</li>
+                <li>{tu("cd.help2")}</li>
+                <li>{tu("cd.help3")}</li>
+                <li>{tu("cd.help4")}</li>
+                <li>{tu("cd.help5")}</li>
               </ul>
             </DialogBody>
           </DialogContent>
@@ -1002,7 +1004,7 @@ export function CDLayout({
         {hidden && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-bg" role="alertdialog">
             <Pause className="size-10 text-fg-subtle" />
-            <p className="text-lg font-semibold text-fg">Ekran yashirildi — tanaffus vaqti</p>
+            <p className="text-lg font-semibold text-fg">{tu("cd.hidden")}</p>
             <Button onClick={() => setHidden(false)}>
               <Play className="size-4 mr-1.5" />
               Davom ettirish

@@ -279,7 +279,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-5 text-sm font-semibold text-brand-subtle-fg shadow-sm transition-all hover:bg-brand-hover/20 hover:scale-[1.02]"
             >
               <Sparkles className="size-4" />
-              Batafsil AI Tahlil &amp; Zaif Nuqtalar
+              {t("feedbackButton")}
             </button>
             )}
             <a
