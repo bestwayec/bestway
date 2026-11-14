@@ -143,15 +143,42 @@ def delete(actor,attempt_id):
     return dict(deleted=True)
 
 
+def verification_code(attempt_id):
+    """Short, non-guessable code printed on an internal certificate (HMAC of the attempt id)."""
+    import hashlib, hmac
+    from django.conf import settings
+    digest = hmac.new(settings.SECRET_KEY.encode(), f'bestway-internal-certificate:{attempt_id}'.encode(), hashlib.sha256).hexdigest().upper()
+    return f'BW-{digest[:4]}-{digest[4:8]}-{digest[8:12]}'
+
+
+def verify_certificate(attempt_id, code):
+    """Public check of a printed internal certificate. Returns no personal data beyond initials."""
+    import hmac
+    row = MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
+    if row is None or not code or not hmac.compare_digest(str(code).upper(), verification_code(attempt_id)):
+        return dict(valid=False)
+    from .assessment_quality import attempt_practice_grades
+    level = row.cefr_level
+    if row.exam.type != 'multilevel' or not attempt_practice_grades(row) or row.overall_score is None or level in (None, '', 'BELOW_B1'):
+        return dict(valid=False)
+    name = (row.student.user.name if row.student and row.student.user else '') or ''
+    initials = ''.join(part[0].upper() + '.' for part in name.split() if part)
+    return dict(valid=True, certificateType='BESTWAY_INTERNAL_MOCK', isOfficial=False, studentInitials=initials,
+        examTitle=student_title(row.exam.title), overallScore=row.overall_score, level=level,
+        issuedAt=row.finished_at, notice='BestWay internal mock result — not an official CEFR/UZBMB certificate')
+
+
 def certificate_data(actor,attempt_id):
     row=MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None: fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     assert_view(actor,row.student_id)
     from .mock_practice import is_partial, scope
     is_part = is_partial(row)
+    internal = {}
     if not is_part:
         from .assessment_quality import attempt_practice_grades
-        if attempt_practice_grades(row):
+        internal = attempt_practice_grades(row)
+        if internal and row.exam.type != 'multilevel':
             fail('MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE','Internal classroom practice grades do not issue an overall exam or CEFR certificate')
     if row.status not in ('completed', 'submitted'):
         fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
@@ -164,6 +191,11 @@ def certificate_data(actor,attempt_id):
         seen.add(job.skill)
         if job.status != 'SUCCEEDED' or job.final_score is None:
             fail('ASSESSMENT_NEEDS_REVIEW', 'Baholash tasdiqlanmaguncha sertifikat berilmaydi', 409)
+        # Internal result certificate (owner decision B): only once the teacher's grade is final.
+        if internal and job.skill in internal and job.final_score_source != 'TEACHER':
+            fail('INTERNAL_CERTIFICATE_NEEDS_TEACHER_REVIEW', 'An internal mock result certificate is issued only after the teacher has graded Writing and Speaking', 409)
+    if internal and any(skill not in seen for skill in internal):
+        fail('INTERNAL_CERTIFICATE_NEEDS_TEACHER_REVIEW', 'An internal mock result certificate is issued only after the teacher has graded Writing and Speaking', 409)
 
     raw_map = row.raw_scores or {}
     sec_bands = row.section_bands or {}
@@ -184,6 +216,9 @@ def certificate_data(actor,attempt_id):
         band = sec_bands.get(skill)
         std_val = std_scores.get(skill)
         standard_score = std_val.get('estimatedStandardScore') if isinstance(std_val, dict) else std_val
+        if skill in internal:
+            # The internal certificate shows the same internal grade as the result page.
+            standard_score = internal[skill].get('score')
 
         if score is None:
             score = standard_score if standard_score is not None else band
@@ -210,7 +245,11 @@ def certificate_data(actor,attempt_id):
     if row.exam.type == 'multilevel' and not section_only and overall_score is not None and cefr_level in (None, '', 'BELOW_B1'):
         fail('MULTILEVEL_BELOW_B1_NO_CERTIFICATE', 'A Multilevel result below B1 (under 38 of 75) has no certificate', 409)
 
+    internal_certificate = bool(internal) and not section_only
     return dict(
+        certificateType='BESTWAY_INTERNAL_MOCK' if internal_certificate else 'STANDARD',
+        isOfficial=False,
+        verificationCode=verification_code(row.id) if internal_certificate else None,
         studentName=row.student.user.name if row.student and row.student.user else "Student",
         examTitle=student_title(row.exam.title) if actor.role=='student' else row.exam.title,
         examType=row.exam.type,

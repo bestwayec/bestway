@@ -191,6 +191,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/extend',support.extend_view),
     path('mock/attempts/<str:attempt_id>/reopen',support.reopen_view),
     path('mock/attempts/<str:attempt_id>/certificate',support.certificate_view),
+    path('certificates/<str:attempt_id>/verify',support.certificate_verify_view),
     path('tests',legacy_admin.tests),
     path('tests/questions/import/preview',legacy_admin.imports),
     path('tests/questions/<str:question_id>',legacy_admin.question),
