@@ -430,7 +430,7 @@ export function CbtSectionStepper({
                   type="button"
                   size="sm"
                   onClick={() => setActivePartIndex(activePartIndex + 1)}
-                  className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand/90 touch-manipulation"
+                  className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
                 >
                   {t("nextPart")}
                   <ArrowRight className="ml-1.5 size-4" />
@@ -442,7 +442,7 @@ export function CbtSectionStepper({
                       type="button"
                       size="sm"
                       onClick={onNextSection}
-                      className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand/90 touch-manipulation"
+                      className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
                     >
                       {t("nextSection")} →
                     </Button>

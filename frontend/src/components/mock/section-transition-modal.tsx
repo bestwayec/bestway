@@ -57,7 +57,7 @@ export function SectionTransitionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div role="dialog" aria-modal="true" aria-labelledby="section-transition-title" className="relative w-full max-w-lg rounded-3xl border border-border bg-bg-subtle/95 p-6 sm:p-8 shadow-2xl text-center text-fg">
         {/* Success badge */}
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand/20 text-brand ring-4 ring-brand/10">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand/20 text-brand-subtle-fg ring-4 ring-brand/10">
           <CheckCircle2 className="size-8" />
         </div>
 
@@ -106,7 +106,7 @@ export function SectionTransitionModal({
           <Button
             type="button"
             onClick={onStartNext}
-            className="w-full min-h-[48px] bg-brand text-brand-fg font-bold text-sm shadow-lg hover:bg-brand/90 touch-manipulation"
+            className="w-full min-h-[48px] bg-brand text-brand-fg font-bold text-sm shadow-lg hover:bg-brand-hover touch-manipulation"
           >
             {tt("startNow", { skill: skillName(nextSkill) })}
             <ArrowRight className="ml-2 size-4" />

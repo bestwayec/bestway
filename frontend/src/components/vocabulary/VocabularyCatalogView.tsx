@@ -114,7 +114,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/20 text-brand">
+            <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/20 text-brand-subtle-fg">
               <BookA className="h-7 w-7" />
             </div>
             <div>
@@ -180,7 +180,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
               <Zap className="h-3.5 w-3.5 text-brand animate-pulse" />
               <span>{tc("runnerBadge")}</span>
             </div>
@@ -307,7 +307,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <Badge className="bg-brand/10 text-brand border border-brand/20 font-mono text-xs">
+                        <Badge className="bg-brand/10 text-brand-subtle-fg border border-brand/20 font-mono text-xs">
                           {s.level}
                         </Badge>
                         <span className="text-xs text-fg-muted font-mono">

@@ -216,7 +216,7 @@ export function ClickToVocabWrapper({
                 disabled={isAddingSrs || isAddedSrs}
                 className={`w-full text-xs font-medium transition-all ${
                   isAddedSrs
-                    ? "bg-brand/30 text-brand border border-brand/30"
+                    ? "bg-brand/30 text-brand-subtle-fg border border-brand/30"
                     : "bg-brand hover:bg-brand-hover text-brand-fg shadow-md shadow-brand/30"
                 }`}
               >

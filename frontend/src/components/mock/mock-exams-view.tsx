@@ -479,7 +479,7 @@ export function MockExamCard({
           <>
             {availableSkills.length > 1 ? (
               <Button
-                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 font-medium text-brand-fg text-base"
+                className="w-full min-h-[44px] bg-brand hover:bg-brand-hover font-medium text-brand-fg text-base"
                 onClick={() => setResumeOpen(true)}
               >
                 <RefreshCw className="mr-2 size-4" />
@@ -488,7 +488,7 @@ export function MockExamCard({
             ) : (
               <Link
                 href={`/mock/attempt/${inProgress.id}`}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 text-base font-medium text-brand-fg transition-colors"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
               >
                 <RefreshCw className="size-4" />
                 {t("resume")}
@@ -506,7 +506,7 @@ export function MockExamCard({
           onStart ? (
             <>
               <Button
-                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 font-medium text-brand-fg text-base"
+                className="w-full min-h-[44px] bg-brand hover:bg-brand-hover font-medium text-brand-fg text-base"
                 onClick={() => setLauncherOpen(true)}
               >
                 <Play className="size-4 fill-current mr-2" />
@@ -522,7 +522,7 @@ export function MockExamCard({
           ) : (
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand/90 text-base font-medium text-brand-fg transition-colors"
+              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
             >
               <Play className="size-4 fill-current mr-2" />
               {t("start")}

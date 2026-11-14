@@ -158,7 +158,7 @@ export function TeacherCohortList({
                   </div>
                   <Badge
                     
-                    className="border-brand/30 bg-brand/10 text-brand font-mono text-[11px] px-2 py-0.5 shrink-0"
+                    className="border-brand/30 bg-brand/10 text-brand-subtle-fg font-mono text-[11px] px-2 py-0.5 shrink-0"
                   >
                     {cohort.invite_code}
                   </Badge>

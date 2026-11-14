@@ -167,7 +167,7 @@ export function CohortProgressTable({
             </h2>
             <Badge
               
-              className="border-brand/30 bg-brand/10 text-brand font-mono text-xs px-2.5 py-0.5"
+              className="border-brand/30 bg-brand/10 text-brand-subtle-fg font-mono text-xs px-2.5 py-0.5"
             >
               Kod: {cohort.invite_code}
             </Badge>
@@ -230,7 +230,7 @@ export function CohortProgressTable({
       {/* Analytics Matrix Table */}
       {students.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-border/80 bg-surface/50">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand mb-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand-subtle-fg mb-3">
             <Users className="h-6 w-6" />
           </div>
           <h3 className="text-sm font-semibold text-fg">
@@ -321,7 +321,7 @@ export function CohortProgressTable({
                         if (sub && sub.is_passed) {
                           return (
                             <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-brand/20 text-brand border border-brand/30 text-[11px] font-mono font-semibold px-2 py-0.5">
+                              <Badge className="bg-brand/20 text-brand-subtle-fg border border-brand/30 text-[11px] font-mono font-semibold px-2 py-0.5">
                                 {sub.score_percent}% ✓
                               </Badge>
                             </td>

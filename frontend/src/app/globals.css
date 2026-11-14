@@ -23,13 +23,15 @@
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
 
-  --brand: #16a34a;
+  /* Owner-approved brand green (2026-11-14). WCAG (computed): white on brand 5.0:1, white on
+     brand-hover 7.1:1, brand-subtle-fg on brand-subtle 6.8:1, on brand/10 6.2:1, on brand/30 4.7:1. */
+  --brand: #15803d;
   /* Single-series chart mark; validated (dataviz validator) against the light surface. */
   --chart-series: #16a34a;
-  --brand-hover: #15803d;
+  --brand-hover: #166534;
   --brand-fg: #ffffff;
   --brand-subtle: #f0fdf4;
-  --brand-subtle-fg: #15803d;
+  --brand-subtle-fg: #166534;
 
   --accent: #16a34a;
   --accent-fg: #ffffff;
@@ -413,7 +415,7 @@
  * "Standard" colours in the exam window follow the site theme, except that in the light theme
  * the brand and success greens are one step darker so every text on them meets WCAG AA
  * (computed): white on brand 7.1:1, brand text on brand/10 6.1:1, white on brand/90 (hover) 5.7:1,
- * success text on success-bg 6.8:1. The site's own #16a34a gives 3.3:1 with white text.
+ * success text on success-bg 6.8:1. The site brand #15803d gives 5.0:1 with white text (hover #166534 7.1:1).
  */
 html:not(.dark) .exam-theme-standard {
   --brand: #166534;

@@ -75,7 +75,7 @@ export function SubmitConfirmModal({
               </div>
             </div>
           ) : isAllAnswered ? (
-            <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand/10 p-3 text-xs text-brand">
+            <div className="flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand/10 p-3 text-xs text-brand-subtle-fg">
               <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
               <p>{t("allAnswered")}</p>
             </div>

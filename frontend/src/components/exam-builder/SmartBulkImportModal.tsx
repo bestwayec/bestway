@@ -769,7 +769,7 @@ export function SmartBulkImportModal({
                   {excelFile ? "Boshqa fayl tanlash" : "Fayl tanlash (.xlsx / .csv)"}
                 </Button>
                 {excelFile && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
                     <CheckCircle2 className="size-3.5" />
                     <span>{excelFile.name}</span>
                     <span className="text-fg-muted">
