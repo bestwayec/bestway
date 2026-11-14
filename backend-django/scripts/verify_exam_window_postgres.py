@@ -99,7 +99,7 @@ try:
     batch = save([{'questionId': q2, 'response': 'b-late', 'editedAt': ms(base - timedelta(seconds=1))},
                   {'questionId': q2, 'response': 'b-early', 'editedAt': ms(base - timedelta(seconds=5))}])
     check(batch['saved'] == 2 and stored(q2).response == 'b-late', 'inside one batch the latest edit of a question wins')
-    future = save([{'questionId': q2, 'response': 'clock ahead', 'editedAt': ms(timezone.now() + timedelta(hours=2))}])
+    save([{'questionId': q2, 'response': 'clock ahead', 'editedAt': ms(timezone.now() + timedelta(hours=2))}])
     check(stored(q2).response == 'clock ahead' and stored(q2).updated_at <= timezone.now(), 'an edit time in the future is clamped to now')
     plain = save([{'questionId': q1, 'response': 'desktop client'}])
     check('stale' not in plain and stored(q1).response == 'desktop client', 'a client without edit times keeps the old behaviour')
@@ -131,7 +131,7 @@ try:
     intruder = APIClient(); intruder.force_authenticate(other)
     stolen = intruder.post(f'/v1/mock/attempts/{attempt_id}/session', {'sessionId': 'intruder-' + run_id, 'takeover': True}, format='json')
     check(stolen.status_code == 404 and claim(tab_b).data['data']['active'] is True, 'another student cannot claim the attempt')
-    legacy = save([{'questionId': q2, 'response': 'desktop without session'}])
+    save([{'questionId': q2, 'response': 'desktop without session'}])
     check(stored(q2).response == 'desktop without session', 'a client without a session id is not checked (desktop)')
     released = client.post(f'/v1/mock/attempts/{attempt_id}/session/release', {'sessionId': tab_b}, format='json')
     check(released.status_code == 200 and claim(tab_a).data['data']['active'] is True, 'a released attempt can be claimed by another tab')
