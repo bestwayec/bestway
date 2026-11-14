@@ -126,6 +126,10 @@ export function CbtSectionStepper({
       const el = document.getElementById(`q-${q.id}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Keyboard and screen-reader users land on the question itself, not back on the palette.
+        const target = el.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select, [role=radio], button:not([disabled])");
+        if (target) target.focus({ preventScroll: true });
+        else { el.tabIndex = -1; el.focus({ preventScroll: true }); }
       }
     }, 50);
   };
@@ -164,6 +168,20 @@ export function CbtSectionStepper({
   const [paletteExpanded, setPaletteExpanded] = React.useState(false);
   const paletteRef = React.useRef<HTMLDivElement>(null);
   const [paletteHasMore, setPaletteHasMore] = React.useState(false);
+  // Roving tab stop: the palette is one Tab stop; arrows, Home and End move inside it.
+  const currentIndex = Math.max(0, flattenedQuestions.findIndex((q) => q.id === activeQuestionId));
+  const [rovingIndex, setRovingIndex] = React.useState<number | null>(null);
+  const tabStop = Math.min(rovingIndex ?? currentIndex, Math.max(0, flattenedQuestions.length - 1));
+  const onPaletteKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const last = flattenedQuestions.length - 1;
+    const next = { ArrowRight: tabStop + 1, ArrowDown: tabStop + 1, ArrowLeft: tabStop - 1, ArrowUp: tabStop - 1, Home: 0, End: last }[event.key];
+    if (next === undefined || last < 0) return;
+    event.preventDefault();
+    const index = Math.max(0, Math.min(last, next));
+    setRovingIndex(index);
+    paletteRef.current?.querySelectorAll<HTMLButtonElement>("button")[index]?.focus();
+  };
+  const activeQuestion = flattenedQuestions[currentIndex];
   const refreshPaletteHint = React.useCallback(() => {
     const el = paletteRef.current;
     if (el) setPaletteHasMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
@@ -208,7 +226,7 @@ export function CbtSectionStepper({
                   className={cn(
                     "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
                     isActive
-                      ? "bg-black/20 text-brand-fg"
+                      ? "bg-black/20 text-brand-fg dark:bg-fg/25"
                       : "bg-bg-subtle text-fg-muted"
                   )}
                 >
@@ -239,7 +257,18 @@ export function CbtSectionStepper({
             : "border-border/80 bg-surface/95"
         )}
       >
-        <div className="space-y-2 sm:space-y-3">
+        <nav className="space-y-2 sm:space-y-3" aria-label={t("navigatorLabel")}>
+          {/* Screen readers hear which question is open and its state. */}
+          {activeQuestion && (
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+              {t("announceQuestion", {
+                label: activeQuestion.label,
+                total: flattenedQuestions.length,
+                state: multilevelQuestionAnswered(activeQuestion, answers, audioSet) ? t("stateAnswered") : t("stateNotAnswered"),
+              })}
+              {flaggedQuestions.has(activeQuestion.id) ? `, ${t("stateFlagged")}` : ""}
+            </p>
+          )}
           {/* Question Palette Row */}
           {flattenedQuestions.length > 0 && (
             <div>
@@ -289,10 +318,12 @@ export function CbtSectionStepper({
                   // Phones: one row by default so the palette never covers the question; expand on demand.
                   paletteExpanded ? "max-h-[7.25rem]" : "max-h-[2.85rem]",
                 )}
-                role="group"
+                role="toolbar"
                 aria-label={t("palette")}
+                onKeyDown={onPaletteKeyDown}
+                onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setRovingIndex(null); }}
               >
-                {flattenedQuestions.map((q) => {
+                {flattenedQuestions.map((q, index) => {
                   const isAns = multilevelQuestionAnswered(q, answers, audioSet);
                   const isFlag = flaggedQuestions.has(q.id);
                   const isCurrent = q.id === activeQuestionId;
@@ -303,6 +334,7 @@ export function CbtSectionStepper({
                       key={q.id}
                       type="button"
                       onClick={() => jumpToQuestion(q)}
+                      tabIndex={index === tabStop ? 0 : -1}
                       aria-current={isCurrent ? "true" : undefined}
                       aria-label={`${t("questionLabel", { label: q.label, part: q.groupTitle })}, ${
                         isAns ? t("stateAnswered") : t("stateNotAnswered")
@@ -326,7 +358,7 @@ export function CbtSectionStepper({
                           ? "bg-brand text-brand-fg shadow-sm"
                           : isCurrentPart
                           ? "bg-bg-subtle text-fg border border-border/80 hover:bg-surface-hover"
-                          : "bg-surface text-fg-muted/70 border border-border/40 hover:text-fg"
+                          : "bg-surface text-fg-muted border border-border/40 hover:text-fg"
                       )}
                     >
                       {q.label}
@@ -428,7 +460,7 @@ export function CbtSectionStepper({
               )}
             </div>
           </div>
-        </div>
+        </nav>
       </Card>
     </div>
   );
