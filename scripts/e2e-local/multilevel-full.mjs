@@ -180,6 +180,18 @@ async function build() {
     return `${state.examId} — ${shape}, 0 questions`;
   });
 
+  await step(teacher, "01b-pre-publish-check-names-each-part", async () => {
+    await teacher.getByRole("button", { name: /^Review/ }).locator("visible=true").first().click();
+    await teacher.getByText("Review exam").waitFor();
+    const row = teacher.getByText("Reading · Part 3", { exact: true }).first();
+    await row.waitFor();
+    const rows = await teacher.getByText(/^(Listening|Reading|Writing|Speaking) · (Part|Task) /).count();
+    expect(rows >= 17, `per-part issue rows: ${rows}`);
+    await row.locator("xpath=ancestor::*[.//button[starts-with(normalize-space(.),'Fix')]][1]").getByRole("button", { name: /^Fix/ }).first().click();
+    await teacher.locator("main").last().getByText("Passages · Part 3", { exact: true }).waitFor();
+    return `${rows} blueprint issues, one row each; Fix opens Reading · Part 3`;
+  });
+
   await step(teacher, "02-listening-part-1-through-the-builder", async () => {
     await teacher.waitForLoadState("networkidle");
     // Open Listening → Part 1 in the Builder and upload the audio there.
