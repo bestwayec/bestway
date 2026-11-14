@@ -40,6 +40,8 @@ export interface MultilevelSectionWork {
   missing: number;
   expired: boolean;
   required: boolean;
+  /** Full test: a section before the current one was already handed in and is closed. */
+  closed: boolean;
 }
 
 export interface MultilevelMissingWork {
@@ -115,10 +117,13 @@ export function multilevelMissingWork(
   let missing = 0;
   let total = 0;
 
-  for (const section of sections) {
+  const currentIndex = isFullTest ? sections.findIndex((section) => section.skill === state.currentSkill) : -1;
+  for (const [index, section] of sections.entries()) {
+    const closed = currentIndex > 0 && index < currentIndex;
     const questions = section.groups.flatMap((group) => group.questions);
     const deadline = deadlines[section.skill];
-    const expired = !!deadline && deadline.getTime() <= nowMs;
+    // A handed-in section counts as given, even after its own clock would have ended.
+    const expired = !closed && !!deadline && deadline.getTime() <= nowMs;
     const required = !timeExpired && !expired && (!isFullTest || state.currentSkill === section.skill);
     const spoken = questions.some((question) => question.type === "speaking_task");
     let answered = 0;
@@ -135,7 +140,7 @@ export function multilevelMissingWork(
       missing += sectionMissing;
       total += questions.length;
     }
-    work.push({ skill: section.skill, total: questions.length, spoken, answered, recordings, missing: sectionMissing, expired, required });
+    work.push({ skill: section.skill, total: questions.length, spoken, answered, recordings, missing: sectionMissing, expired, required, closed });
   }
 
   return {

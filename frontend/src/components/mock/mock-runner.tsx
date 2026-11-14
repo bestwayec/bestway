@@ -983,7 +983,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         )}
 
         <MicCheckModal
-          open={section?.skill === "speaking" && micCheckLoaded && !micChecked}
+          // Nothing left to record (e.g. reopened only to hand in): no microphone test is needed.
+          open={section?.skill === "speaking" && micCheckLoaded && !micChecked
+            && section.groups.some((group) => group.questions.some((question) => question.type === "speaking_task" && !audioSet.has(question.id)))}
           onConfirm={() => setMicChecked(true)}
           onClose={!strict ? () => setMicChecked(true) : undefined}
         />

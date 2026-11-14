@@ -10,6 +10,7 @@ import type { MockSkill } from "@/lib/types";
 const SKILL_ICON: Record<MockSkill, string> = { listening: "🎧", reading: "📖", writing: "✍️", speaking: "🎙️" };
 
 function statusText(section: MultilevelSectionWork): string {
+  if (section.closed) return `Submitted · ${section.answered} / ${section.total}`;
   if (section.expired) return "Time ended — not counted";
   if (!section.required) return "Not reached yet";
   if (!section.missing) return `Complete · ${section.answered} / ${section.total}`;
@@ -59,8 +60,8 @@ export function MultilevelSubmitReview({
 
         <ul className="mt-3 space-y-2" aria-label="Section completeness">
           {work.sections.map((section) => {
-            const done = section.required && !section.missing;
-            const canJump = !!onJump && !section.expired && (section.missing > 0 || !section.required);
+            const done = section.closed || (section.required && !section.missing);
+            const canJump = !!onJump && !section.expired && !section.closed && (section.missing > 0 || !section.required);
             return (
               <li key={section.skill} className={cn("flex flex-wrap items-center gap-2 rounded-[8px] border px-3 py-2 text-sm", section.required && section.missing > 0 ? "border-warning-border bg-warning-bg" : "border-border bg-bg-subtle")}>
                 {done ? (
