@@ -1315,7 +1315,9 @@
         "unsupported": "This browser cannot record audio. Use a recent version of Chrome or Safari.",
         "default": "Something went wrong with the microphone. Try again.",
         "other": "Something went wrong with the microphone. Try again."
-      }
+      },
+      "playbackStop": "Stop",
+      "playbackPlay": "Play it back"
     },
     "livePin": {
       "pinIncomplete": "Enter the full 6-digit exam PIN.",

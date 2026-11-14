@@ -44,7 +44,7 @@ const FILES = [
   "src/components/demo/demo-runner.tsx",
   "src/app/[locale]/(marketing)/demo/[id]/page.tsx",
 ];
-const UZBEK_UI = /\b(Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
+const UZBEK_UI = /\b(Eshitib|To'xtatish|Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 

@@ -1315,7 +1315,9 @@
         "unsupported": "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.",
         "default": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.",
         "other": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring."
-      }
+      },
+      "playbackStop": "To'xtatish",
+      "playbackPlay": "Eshitib ko'rish"
     },
     "livePin": {
       "pinIncomplete": "6 xonali imtihon PIN-kodini to‘liq kiriting.",

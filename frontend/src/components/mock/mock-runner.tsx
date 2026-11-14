@@ -61,6 +61,7 @@ import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
+import { canSelectSpeakingPart, nextSpeakingTarget, requestSpeakingAutoStart } from '@/lib/speaking-sequence';
 import { ExamLocker } from "./exam-locker";
 import { ReadingSplitDivider, useReadingSplit } from "./reading-split-divider";
 import type { ListeningSchedule } from "@/lib/listening-schedule";
@@ -1121,6 +1122,24 @@ export function GuidedMultilevelGroups({
 }) {
   const safeGroups = groups || [];
   const group = safeGroups[activeTask] ?? safeGroups[0];
+  const sequence = skill === "speaking" && timed;
+  // Timed Speaking: an uploaded answer opens the next question (and its part) automatically.
+  const groupsRef = React.useRef(safeGroups);
+  groupsRef.current = safeGroups;
+  React.useEffect(() => {
+    if (!sequence) return;
+    const onUploaded = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId: string; questionId: string }>).detail;
+      if (detail?.attemptId !== attemptId) return;
+      const next = nextSpeakingTarget(groupsRef.current, detail.questionId);
+      if (!next) return;
+      setActiveTask(next.groupIndex);
+      requestSpeakingAutoStart(attemptId, next.questionId);
+    };
+    window.addEventListener("multilevel:recording-uploaded", onUploaded);
+    return () => window.removeEventListener("multilevel:recording-uploaded", onUploaded);
+  }, [sequence, attemptId, setActiveTask]);
+  const selectTask = (index: number) => { if (canSelectSpeakingPart(sequence, activeTask, index)) setActiveTask(index); };
   if (!group) return null;
   const labels = safeGroups.map((candidate, index) => {
     const key = multilevelTaskLabels(candidate?.questions || [])[0] ?? String(index + 1);
@@ -1132,7 +1151,7 @@ export function GuidedMultilevelGroups({
     : undefined;
   const completed = safeGroups.flatMap((candidate, index) => (candidate?.questions || []).length > 0 && candidate.questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet)) ? [index] : []);
   return <div className="space-y-4">
-    <MultilevelTaskProgress skill={skill} current={activeTask} total={safeGroups.length} labels={labels} onSelect={setActiveTask} practice={practice} completed={completed} rawMaximum={practice ? safeGroups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={safeGroups.length} labels={labels} onSelect={selectTask} practice={practice} completed={completed} rawMaximum={practice ? safeGroups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
     <GroupBlock
       group={group}
       skill={skill}
@@ -1150,7 +1169,7 @@ export function GuidedMultilevelGroups({
       partIndex={activeTask}
     />
     <div className="flex items-center justify-between gap-3">
-      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0 || sequence} onClick={() => selectTask(activeTask - 1)}>Previous</Button>
       <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === safeGroups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
     </div>
   </div>;
