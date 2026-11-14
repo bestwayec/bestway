@@ -1015,6 +1015,7 @@
       "writingPlaceholder": "Write your response here…",
       "writingResponseLabel": "Written response to question {number}",
       "writingDraftFound": "A browser draft is available",
+      "writingDraftKept": "Draft kept on this device",
       "writingDraftExplanation": "This draft may be older than the server response. Review it before replacing your current answer.",
       "writingDraftRestore": "Replace answer with this draft",
       "writingDraftEmpty": "This draft is empty.",

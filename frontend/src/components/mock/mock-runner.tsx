@@ -1549,7 +1549,7 @@ export function EssayQuestionEditor({
         </div>
         {value.trim() && (
           <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
-            <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
+            <CheckCircle2 className="size-3" aria-hidden /> {tx("writingDraftKept")}
           </span>
         )}
       </div>

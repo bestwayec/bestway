@@ -1015,6 +1015,7 @@
       "writingPlaceholder": "Javobingizni shu yerga yozing…",
       "writingResponseLabel": "{number}-savolga yozma javob",
       "writingDraftFound": "Brauzerda qoralama mavjud",
+      "writingDraftKept": "Qoralama shu qurilmada saqlangan",
       "writingDraftExplanation": "Qoralama serverdagi javobdan eski bo‘lishi mumkin. Joriy javobni almashtirishdan oldin uni tekshiring.",
       "writingDraftRestore": "Javobni shu qoralama bilan almashtirish",
       "writingDraftEmpty": "Bu qoralama bo‘sh.",
