@@ -942,6 +942,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   sharedSingleAudioUrl={sharedSingleAudioUrl}
                   // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
                   listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
+                  mediaAlreadyStarted={strict && (attempt.mediaStarted ?? []).includes(g.id)}
                   startListening={strict && section.skill === "listening" && !versioned && g.hasAudio
                     ? () => api.post<ListeningSchedule>(`/mock/attempts/${attempt.id}/listening/${g.id}/start`)
                     : undefined}
@@ -1174,6 +1175,7 @@ function GroupBlock({
   audioTimestamps = [],
   sharedSingleAudioUrl,
   listeningSchedule = null,
+  mediaAlreadyStarted = false,
   startListening,
   serverOffsetMs = 0,
 }: {
@@ -1196,6 +1198,7 @@ function GroupBlock({
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
   listeningSchedule?: ListeningSchedule | null;
+  mediaAlreadyStarted?: boolean;
   startListening?: () => Promise<ListeningSchedule>;
   serverOffsetMs?: number;
 }) {
@@ -1234,6 +1237,7 @@ function GroupBlock({
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
             load={async () => { const res = await fetch(audioSrc); if (!res.ok) throw new Error('Audio loading failed'); return res.blob(); }}
+            alreadyStarted={mediaAlreadyStarted}
           /> : <ListeningAudio
             src={audioSrc}
             strict={strict}

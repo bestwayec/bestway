@@ -796,6 +796,10 @@ def summary(attempt, *, detail=False):
         if attempt.status == 'in_progress':
             from .ielts_listening import started_parts
             result['listeningSchedule'] = started_parts(attempt)
+            # Listening parts and Speaking questions whose server window was already opened, so a
+            # reloaded exam window can show their real state instead of an untouched part.
+            result['mediaStarted'] = [key for key, phase in (attempt.media_state or {}).items()
+                                      if isinstance(phase, dict) and 'prepEndsAt' in phase]
     if versioned(attempt):
         result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)

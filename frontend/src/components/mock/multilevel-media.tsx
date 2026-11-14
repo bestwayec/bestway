@@ -26,8 +26,10 @@ function recorderStatus(status: string, recorded: boolean, translate: (key: stri
  * (and caps the number of plays), so the student can only start a granted play
  * and change the volume: there is no pause, seek or rewind control.
  */
-export function MultilevelListening({ prepare, play, load }: {
+export function MultilevelListening({ prepare, play, load, alreadyStarted = false }: {
   prepare: () => Promise<MediaPhase>; play: () => Promise<MediaPhase>; load: () => Promise<Blob>;
+  /** The server already opened this part (timed exam, page reloaded): show its real state at once. */
+  alreadyStarted?: boolean;
 }) {
   const t = useTranslations('mock.runnerUx');
   const [phase, setPhase] = useState<MediaPhase | null>(null);
@@ -98,6 +100,15 @@ export function MultilevelListening({ prepare, play, load }: {
     } catch (failure) { console.error('Listening audio resume failed', failure); setError(t('listeningPlayError')); }
     finally { setBusy(false); }
   }
+  // After a reload the part is not "untouched": ask the server for the phase it already holds
+  // (the call is idempotent in a timed exam and never spends a play).
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!alreadyStarted || restored.current) return;
+    restored.current = true;
+    void start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, [alreadyStarted]);
   const previewing = !!phase && !playing && left > 0;
   const exhausted = !!phase && !playing && !previewing && phase.plays >= phase.playLimit && !grantValid;
   const status = !phase ? null
