@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/feedback";
+import { useTranslations } from "next-intl";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +29,20 @@ interface PracticeQuestion {
   context?: string;
   prompt: string;
   options: string[];
+}
+
+/** What the server reveals for one question, only after it has been answered. */
+interface AnswerCheck {
+  isCorrect: boolean;
   correctAnswer: string;
   explanation: string;
+}
+
+interface DrillResult {
+  correctCount: number;
+  totalQuestions: number;
+  pointsAwarded: number;
+  dailyCapReached?: boolean;
 }
 
 interface TargetedPracticeData {
@@ -59,14 +72,17 @@ export function WeakPointsTargetDrillModal({
   const [data, setData] = React.useState<TargetedPracticeData | null>(null);
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [selectedAnswer, setSelectedAnswer] = React.useState<string | null>(null);
-  const [isChecked, setIsChecked] = React.useState(false);
-  const [answersLog, setAnswersLog] = React.useState<
-    Array<{ questionId: string; selectedAnswer: string; isCorrect: boolean }>
-  >([]);
+  // The key and explanation of the current question, as the server returned them after the answer.
+  const [check, setCheck] = React.useState<AnswerCheck | null>(null);
+  const [checking, setChecking] = React.useState(false);
+  const isChecked = check !== null;
+  // Final figures come from the server's own record of the drill.
+  const [result, setResult] = React.useState<DrillResult | null>(null);
   const [isFinished, setIsFinished] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   // Points shown only as the server reports them (null until it answers; never a fixed promise).
-  const [pointsAwarded, setPointsAwarded] = React.useState<number | null>(null);
+  const pointsAwarded = result?.pointsAwarded ?? null;
+  const t = useTranslations("drill");
 
   // Fetch drill questions when modal opens
   React.useEffect(() => {
@@ -76,8 +92,9 @@ export function WeakPointsTargetDrillModal({
     setLoading(true);
     setCurrentIndex(0);
     setSelectedAnswer(null);
-    setIsChecked(false);
-    setAnswersLog([]);
+    setCheck(null);
+    setResult(null);
+    setData(null);
     setIsFinished(false);
 
     apiClient
@@ -108,28 +125,26 @@ export function WeakPointsTargetDrillModal({
     setSelectedAnswer(opt);
   };
 
-  const handleCheckAnswer = () => {
-    if (!selectedAnswer || !currentQ) return;
-    setIsChecked(true);
-
-    const isCorrect =
-      selectedAnswer.trim().toLowerCase() === currentQ.correctAnswer.trim().toLowerCase() ||
-      (currentQ.correctAnswer.length > 2 &&
-        selectedAnswer.trim().toLowerCase().startsWith(currentQ.correctAnswer.trim().toLowerCase().slice(0, 2)));
-
-    setAnswersLog((prev) => [
-      ...prev,
-      {
+  const handleCheckAnswer = async () => {
+    if (!selectedAnswer || !currentQ || !data || checking) return;
+    setChecking(true);
+    try {
+      const res = await apiClient.post<AnswerCheck>("/api/v1/study-plan/targeted-practice/answer", {
+        practiceId: data.practiceId,
         questionId: currentQ.id,
         selectedAnswer,
-        isCorrect,
-      },
-    ]);
-
-    if (isCorrect) {
-      toast.success("To'g'ri javob! Barakalla!", { duration: 1500 });
-    } else {
-      toast.error("Noto'g'ri. Tushuntirishga e'tibor bering.", { duration: 2000 });
+      });
+      setCheck({ isCorrect: !!res.isCorrect, correctAnswer: res.correctAnswer, explanation: res.explanation });
+      if (res.isCorrect) {
+        toast.success("To'g'ri javob! Barakalla!", { duration: 1500 });
+      } else {
+        toast.error("Noto'g'ri. Tushuntirishga e'tibor bering.", { duration: 2000 });
+      }
+    } catch (err) {
+      console.error("Failed to check drill answer:", err);
+      toast.error(t("checkFailed"));
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -137,45 +152,33 @@ export function WeakPointsTargetDrillModal({
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setSelectedAnswer(null);
-      setIsChecked(false);
+      setCheck(null);
     } else {
-      finishDrill();
+      void finishDrill();
     }
   };
 
   const finishDrill = async () => {
+    if (!data) return;
     setIsFinished(true);
     setSubmitting(true);
-
-    const correctCount = answersLog.filter((a) => a.isCorrect).length + (
-      // Include current question if just checked
-      isChecked && selectedAnswer && currentQ && (
-        selectedAnswer.trim().toLowerCase() === currentQ.correctAnswer.trim().toLowerCase() ||
-        (currentQ.correctAnswer.length > 2 &&
-          selectedAnswer.trim().toLowerCase().startsWith(currentQ.correctAnswer.trim().toLowerCase().slice(0, 2)))
-      ) && !answersLog.some((a) => a.questionId === currentQ.id)
-        ? 1
-        : 0
-    );
-
     try {
-      const res = await apiClient.post<{ pointsAwarded?: number }>("/api/v1/study-plan/targeted-practice/submit", {
-        categoryId,
-        answers: answersLog,
+      const res = await apiClient.post<DrillResult>("/api/v1/study-plan/targeted-practice/submit", {
+        practiceId: data.practiceId,
       });
       const awarded = typeof res?.pointsAwarded === "number" ? res.pointsAwarded : 0;
-      setPointsAwarded(awarded);
+      setResult({ correctCount: res.correctCount, totalQuestions: res.totalQuestions, pointsAwarded: awarded, dailyCapReached: !!res.dailyCapReached });
       if (awarded > 0) toast.success(`⚡️ +${awarded} XP hisobingizga qo'shildi!`);
-      onCompleted?.({ correctCount, pointsAwarded: awarded });
+      onCompleted?.({ correctCount: res.correctCount, pointsAwarded: awarded });
     } catch (err) {
       console.error("Failed to submit drill:", err);
+      toast.error(t("submitFailed"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const totalQuestions = questions.length || 10;
-  const correctCount = answersLog.filter((a) => a.isCorrect).length;
   const progressPercent = Math.round(((currentIndex + 1) / totalQuestions) * 100);
 
   return (
@@ -259,12 +262,12 @@ export function WeakPointsTargetDrillModal({
               <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-2">
                 <div className="rounded-xl border border-border bg-surface/60 p-3">
                   <p className="text-[11px] font-semibold uppercase text-fg-muted">To&apos;g&apos;ri</p>
-                  <p className="mt-1 text-2xl font-black text-brand">{correctCount}</p>
+                  <p className="mt-1 text-2xl font-black text-brand">{result ? result.correctCount : "—"}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-surface/60 p-3">
                   <p className="text-[11px] font-semibold uppercase text-fg-muted">Aniqlik</p>
                   <p className="mt-1 text-2xl font-black text-brand">
-                    {Math.round((correctCount / totalQuestions) * 100)}%
+                    {result && result.totalQuestions > 0 ? `${Math.round((result.correctCount / result.totalQuestions) * 100)}%` : "—"}
                   </p>
                 </div>
                 {pointsAwarded != null && pointsAwarded > 0 && (
@@ -274,6 +277,10 @@ export function WeakPointsTargetDrillModal({
                   </div>
                 )}
               </div>
+
+              {result?.dailyCapReached && (
+                <p className="text-xs text-fg-muted max-w-md mx-auto" data-testid="drill-daily-cap">{t("dailyCapReached")}</p>
+              )}
 
               <div className="pt-4 flex items-center justify-center gap-3">
                 <Button
@@ -309,10 +316,7 @@ export function WeakPointsTargetDrillModal({
               <div className="space-y-2.5 pt-1">
                 {currentQ.options.map((opt, oIdx) => {
                   const isSelected = selectedAnswer === opt;
-                  const isCorrectAnswer =
-                    opt.trim().toLowerCase() === currentQ.correctAnswer.trim().toLowerCase() ||
-                    (currentQ.correctAnswer.length > 2 &&
-                      opt.trim().toLowerCase().startsWith(currentQ.correctAnswer.trim().toLowerCase().slice(0, 2)));
+                  const isCorrectAnswer = check !== null && opt === check.correctAnswer;
 
                   let optClasses =
                     "relative flex w-full items-center justify-between rounded-xl border p-3.5 text-left text-xs sm:text-sm transition-all ";
@@ -338,7 +342,7 @@ export function WeakPointsTargetDrillModal({
                     <button
                       key={oIdx}
                       type="button"
-                      disabled={isChecked}
+                      disabled={isChecked || checking}
                       onClick={() => handleSelectOption(opt)}
                       className={optClasses}
                     >
@@ -355,13 +359,13 @@ export function WeakPointsTargetDrillModal({
               </div>
 
               {/* Explanation Callout after checking */}
-              {isChecked && (
+              {check && (
                 <div className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-xs leading-relaxed text-fg animate-in fade-in duration-200">
                   <div className="flex items-center gap-1.5 font-bold text-brand mb-1">
                     <Sparkles className="size-3.5" />
                     <span>Tushuntirish & Ekspert Tahlili:</span>
                   </div>
-                  <p className="text-fg-muted">{currentQ.explanation}</p>
+                  <p className="text-fg-muted">{check.explanation}</p>
                 </div>
               )}
 
@@ -370,8 +374,8 @@ export function WeakPointsTargetDrillModal({
                 {!isChecked ? (
                   <Button
                     type="button"
-                    disabled={!selectedAnswer}
-                    onClick={handleCheckAnswer}
+                    disabled={!selectedAnswer || checking}
+                    onClick={() => void handleCheckAnswer()}
                     className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover disabled:opacity-40"
                   >
                     Tekshirish

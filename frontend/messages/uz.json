@@ -410,6 +410,7 @@
     "noAnswer": "Javob berilmagan",
     "awaitingGrade": "Baholash kutilmoqda",
     "correct": "To'g'ri",
+    "answerFor": "{number}-javob",
     "incorrect": "Noto'g'ri",
     "tabSwitchWarning": "Diqqat: boshqa oynaga o'tsangiz, bu qayd etiladi.",
     "cheatFlags": "Shubhali harakatlar",
@@ -1591,9 +1592,6 @@
     "demoRegister": "Ro'yxatdan o'tish",
     "demoLoginCta": "Natijani saqlash",
     "demoLoginCtaHint": "Natijalarni saqlash, tarixni ko'rish va to'liq testlarni ochish uchun akkaunt yarating.",
-    "demoAudioscript": "Audioskript",
-    "demoInstructions": "Quyidagi formani to'ldiring. Har bir javobga BIR SO'Z yozing.",
-    "demoOneWordHint": "Faqat bir so'z",
     "demoScores": "Ballar",
     "demoSubmit": "Topshirish",
     "demoSubmitConfirm": "Javoblarni topshirasizmi? Keyin o'zgartirib bo'lmaydi.",
@@ -1601,8 +1599,8 @@
     "demoResultSubtitle": "Bu mahalliy ko'rinish — saqlash va to'liq testlar uchun kiring.",
     "demoTotalScore": "Umumiy ball",
     "demoPerSection": "Bo'limlar kesimida",
-    "demoSaveLocal": "Qurilmada saqlandi",
-    "demoNeedLogin": "Natijalarni saqlash uchun kiring",
+    "demoSubmitFailed": "Javoblarni tekshirib bo'lmadi. Javoblaringiz saqlangan; qayta urinib ko'ring.",
+    "demoNotAutoChecked": "O'qituvchi tekshiradi, avtomatik emas",
     "desktopApp": "Desktop ilova",
     "desktopBadge": "Nazoratli imtihonlar uchun",
     "desktopTitle": "Kompyuteringizda jamlangan imtihon xonasi",
@@ -2360,6 +2358,7 @@
     "listen": "Talaffuzni tinglash",
     "streak": "ketma-ket {count}",
     "gameScore": "{score} ochko",
+    "pointsAwarded": "+{points} ball qo'shildi",
     "host": {
       "loadingTitle": "Live Vocab Battle xonasi tayyorlanmoqda…",
       "loadingBody": "Savollar tayyorlanib, PIN-kod berilmoqda.",
@@ -2378,6 +2377,7 @@
       "nextQuestion": "Keyingi savol",
       "podiumTitle": "G'oliblar podiumi",
       "podiumNote": "Shu o'yinning yakuniy ochkolari.",
+      "noPodium": "Bu o'yinda hech kim ochko to'plamadi, shuning uchun podium yo'q.",
       "place": "{rank}-o'rin",
       "finishClose": "Bellashuvni yopish"
     },
@@ -2405,6 +2405,7 @@
       "waitNext": "O'qituvchi keyingi savolni ochishini kuting…",
       "finishedTitle": "O'yin yakunlandi!",
       "finalScore": "Bu o'yindagi yakuniy ochkongiz:",
+      "yourPlace": "O'rningiz: {rank}-o'rin",
       "exit": "Chiqish"
     },
     "prompt": "'{word}' so'zining to'g'ri tarjimasi qaysi?"
@@ -2448,5 +2449,10 @@
     "found": "{count} ta so'z topildi",
     "foundPreview": "{count} ta so'z topildi; birinchi {shown} tasi ko'rsatilgan",
     "addParsed": "{count} ta so'zni to'plamga qo'shish"
+  },
+  "drill": {
+    "checkFailed": "Javobni tekshirib bo'lmadi. Qayta urinib ko'ring.",
+    "submitFailed": "Natijani saqlab bo'lmadi. Javoblaringiz saqlangan; qayta urinib ko'ring.",
+    "dailyCapReached": "Bugungi mashq ballari chegarasiga yetdingiz, shuning uchun bugun boshqa ball qo'shilmaydi."
   }
 }

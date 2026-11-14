@@ -46,6 +46,8 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/profile/results-progress-card.tsx": {},
   "src/components/dashboard/score-prediction-card.tsx": {},
   "src/components/dashboard/WeakPointsTargetDrillModal.tsx": {},
+  "src/components/demo/demo-runner.tsx": {},
+  "src/app/[locale]/(marketing)/demo/[id]/page.tsx": {},
   "src/components/mock/ClickToVocabWrapper.tsx": {},
   "src/components/simulator/CDLayout.tsx": {},
   "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },
