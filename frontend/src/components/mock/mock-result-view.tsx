@@ -135,7 +135,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
           {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
-              <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
+              <Award className="size-3.5" aria-hidden /> {t("resultView.teacherReviewed")}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
@@ -145,7 +145,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
         {Boolean(attempt.mediaState?.teacher_comment) && (
           <div className="mt-4 rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Ustozning rasmiy xulosasi:</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">{t("resultView.teacherComment")}</p>
             <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{String(attempt.mediaState?.teacher_comment)}&rdquo;</p>
           </div>
         )}
@@ -248,7 +248,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                 {!isSkipped && !pendingManual && accuracy !== null && (
                   <div className="mt-2.5 space-y-1">
                     <div className="flex items-center justify-between text-xs text-fg-muted">
-                      <span>Aniqlik (Accuracy):</span>
+                      <span>{t("accuracy")}</span>
                       <span className="font-semibold text-fg tabular-nums">{accuracy}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">

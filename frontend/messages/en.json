@@ -131,7 +131,43 @@
     "saveReview": "Save review",
     "openFeedback": "Open feedback",
     "internalPracticeNotice": "Result",
-    "rubricRawScore": "Original rubric score"
+    "rubricRawScore": "Original rubric score",
+    "override": {
+      "title": "Teacher review and final score",
+      "reviewed": "Reviewed",
+      "aiProposal": "AI proposal",
+      "awaitingReview": "Awaiting review",
+      "description": "Check or change the proposed scores, set the final score by hand and leave a comment for the student.",
+      "open": "Review / grade",
+      "close": "Close",
+      "teacherComment": "Teacher's comment:",
+      "writingFinal": "Writing final score",
+      "speakingFinal": "Speaking final score",
+      "scorePlaceholder": "Score on the exam scale",
+      "aiValue": "AI proposal: {value}",
+      "overall": "Overall score",
+      "overallPlaceholder": "Optional",
+      "overallHint": "Left empty, it is calculated from the sections",
+      "commentLabel": "Comment for the student",
+      "commentPlaceholder": "Strengths, weaknesses and what to work on before the exam…",
+      "cancel": "Cancel",
+      "submit": "Confirm final score",
+      "needSomething": "Enter at least one section score or a comment.",
+      "saved": "Teacher score and comment saved.",
+      "saveFailed": "The score could not be saved."
+    },
+    "panel": {
+      "handwritingPages": "Handwritten pages ({count})",
+      "zoomHint": "Click a page to enlarge it",
+      "handwritingPage": "Handwriting {task} · page {page}",
+      "handwritingPageAlt": "Handwritten page {page}",
+      "ocrText": "Text read from the photo (OCR):",
+      "speechAnalysis": "Pronunciation and fluency notes:",
+      "fluency": "Fluency: {score}/9",
+      "unclearWords": "Words that were hard to understand:",
+      "pauses": "Pauses and hesitations: {count}",
+      "exampleAnswer": "Example answer"
+    }
   },
   "examTrack": {
     "title": "Exam Track",
@@ -1338,7 +1374,9 @@
       "partialNote": "This is the result of the selected sections only. The overall score and CEFR level appear after a full exam (all 4 sections).",
       "skipped": "Skipped",
       "practiceReport": "Practice report (PDF)",
-      "print": "Print"
+      "print": "Print",
+      "teacherReviewed": "Reviewed by the teacher",
+      "teacherComment": "Teacher's comment:"
     },
     "submitDialog": {
       "title": "Finish the exam",
@@ -1498,7 +1536,8 @@
       "answersSafe": "Answers you typed here are kept on this device and are sent when you continue here. The clock keeps running.",
       "continueHere": "Continue here"
     },
-    "levelBelowB1": "Below B1"
+    "levelBelowB1": "Below B1",
+    "accuracy": "Accuracy:"
   },
   "wizard": {
     "title": "Create exam",

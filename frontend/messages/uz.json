@@ -131,7 +131,43 @@
     "saveReview": "Tekshiruvni saqlash",
     "openFeedback": "Tahlilni ochish",
     "internalPracticeNotice": "Natija",
-    "rubricRawScore": "Asl rubrika bahosi"
+    "rubricRawScore": "Asl rubrika bahosi",
+    "override": {
+      "title": "Ustoz tekshiruvi va yakuniy ball",
+      "reviewed": "Tasdiqlangan",
+      "aiProposal": "AI taklifi",
+      "awaitingReview": "Tekshiruv kutilmoqda",
+      "description": "Taklif qilingan ballarni tekshiring yoki o‘zgartiring, yakuniy ballni qo‘lda belgilang va o‘quvchiga izoh qoldiring.",
+      "open": "Tahrirlash / Baholash",
+      "close": "Yopish",
+      "teacherComment": "Ustozning izohi:",
+      "writingFinal": "Writing yakuniy ball",
+      "speakingFinal": "Speaking yakuniy ball",
+      "scorePlaceholder": "Imtihon shkalasidagi ball",
+      "aiValue": "AI taklifi: {value}",
+      "overall": "Umumiy ball",
+      "overallPlaceholder": "Ixtiyoriy",
+      "overallHint": "Bo‘sh qoldirilsa, bo‘limlardan hisoblanadi",
+      "commentLabel": "O‘quvchiga izoh",
+      "commentPlaceholder": "Kuchli va zaif tomonlar, imtihongacha nimaga e’tibor berish kerak…",
+      "cancel": "Bekor qilish",
+      "submit": "Yakuniy ballni tasdiqlash",
+      "needSomething": "Kamida bitta bo‘lim ballini yoki izohni kiriting.",
+      "saved": "Ustoz bahosi va izohi saqlandi.",
+      "saveFailed": "Bahoni saqlab bo‘lmadi."
+    },
+    "panel": {
+      "handwritingPages": "Qo‘lyozma sahifalar ({count})",
+      "zoomHint": "Kattalashtirish uchun sahifani bosing",
+      "handwritingPage": "Qo‘lyozma {task} · {page}-sahifa",
+      "handwritingPageAlt": "Qo‘lyozma {page}-sahifa",
+      "ocrText": "Rasmdan o‘qilgan matn (OCR):",
+      "speechAnalysis": "Talaffuz va ravonlik bo‘yicha izohlar:",
+      "fluency": "Ravonlik: {score}/9",
+      "unclearWords": "Tushunish qiyin bo‘lgan so‘zlar:",
+      "pauses": "Pauza va to‘xtalishlar: {count}",
+      "exampleAnswer": "Namuna javob"
+    }
   },
   "examTrack": {
     "title": "Yo'nalish",
@@ -1338,7 +1374,9 @@
       "partialNote": "Bu faqat tanlangan bo‘lim natijasi. Umumiy ball va CEFR darajasi to‘liq imtihon (4 bo‘lim) topshirilganda chiqariladi.",
       "skipped": "O‘tkazib yuborilgan",
       "practiceReport": "Mashq hisoboti (PDF)",
-      "print": "Chop etish"
+      "print": "Chop etish",
+      "teacherReviewed": "Ustoz tomonidan tasdiqlangan",
+      "teacherComment": "Ustozning izohi:"
     },
     "submitDialog": {
       "title": "Imtihonni topshirish",
@@ -1498,7 +1536,8 @@
       "answersSafe": "Bu yerda yozgan javoblaringiz shu qurilmada saqlanadi va shu yerda davom ettirsangiz yuboriladi. Vaqt to‘xtamaydi.",
       "continueHere": "Shu yerda davom ettirish"
     },
-    "levelBelowB1": "B1 dan quyi"
+    "levelBelowB1": "B1 dan quyi",
+    "accuracy": "Aniqlik:"
   },
   "wizard": {
     "title": "Imtihon yaratish",
