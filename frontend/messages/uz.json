@@ -2344,5 +2344,10 @@
     "found": "{count} ta so'z topildi",
     "foundPreview": "{count} ta so'z topildi; birinchi {shown} tasi ko'rsatilgan",
     "addParsed": "{count} ta so'zni to'plamga qo'shish"
+  },
+  "drill": {
+    "checkFailed": "Javobni tekshirib bo'lmadi. Qayta urinib ko'ring.",
+    "submitFailed": "Natijani saqlab bo'lmadi. Javoblaringiz saqlangan; qayta urinib ko'ring.",
+    "dailyCapReached": "Bugungi mashq ballari chegarasiga yetdingiz, shuning uchun bugun boshqa ball qo'shilmaydi."
   }
 }

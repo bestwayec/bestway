@@ -1,8 +1,9 @@
 """Loopback-only check that game points are given once, on the real schema.
 
-Every fixture row is rolled back. Covers the Vocab Battle podium: recorded in the
-FINISHED state, never given twice, never to a player without a game score, never to
-a staff account.
+Every fixture row is rolled back. Covers the Vocab Battle podium (recorded in the
+FINISHED state, never given twice, never to a player without a game score or to a
+staff account) and the targeted practice drill (answers not sent before a question is
+answered, one award per drill, daily cap).
 """
 import os
 import sys
@@ -111,6 +112,45 @@ with transaction.atomic():
     ended = host.post(f'/v1/vocabulary/battle/{empty}/finish')
     check(ended.status_code == 200 and ended.data['data']['winners'] == [], 'a battle without any score has an empty podium')
     check(points('c') == 0 and logs() == 2, 'a player with no game score gets no podium points')
+
+    # ── Targeted practice drill: one award per drill, daily cap, answers not sent early ──
+    from django.core.cache import cache
+
+    from apps.core import study_plan_service as drills
+
+    def drill_logs(name):
+        return PointsLog.objects.filter(student_id=ids[name], reason__startswith=drills.TARGETED_PRACTICE_LOG_PREFIX)
+
+    def run_drill(name, role='student', category='headings'):
+        api = client(name, role)
+        started = api.get(f'/v1/study-plan/targeted-practice?category={category}')
+        body = started.content.decode()
+        check(started.status_code == 200 and 'correctAnswer' not in body and 'explanation' not in body, f'{name}: drill questions carry no key or explanation')
+        data = started.data['data']
+        key = {qid: row['correctAnswer'] for qid, row in cache.get(drills._practice_key(data['practiceId']))['questions'].items()}
+        for question in data['questions']:
+            answer = api.post('/v1/study-plan/targeted-practice/answer', {'practiceId': data['practiceId'], 'questionId': question['id'],
+                                                                         'selectedAnswer': key[question['id']]}, format='json')
+            if answer.status_code != 200 or not answer.data['data']['isCorrect']: raise AssertionError('server rejects its own key')
+        return api, data['practiceId'], api.post('/v1/study-plan/targeted-practice/submit', {'practiceId': data['practiceId']}, format='json').data['data']
+
+    start_points = points('d')
+    api, practice_id, first = run_drill('d')
+    check((first['correctCount'], first['pointsAwarded'], first['replayed']) == (10, drills.TARGETED_PRACTICE_POINTS, False), 'a finished drill gives its points')
+    for attempt in range(3):
+        repeat = api.post('/v1/study-plan/targeted-practice/submit', {'practiceId': practice_id, 'answers': []}, format='json').data['data']
+        check(repeat['replayed'] is True and repeat['pointsAwarded'] == first['pointsAwarded'], f'repeated submit #{attempt + 1} returns the stored result')
+    check(points('d') - start_points == drills.TARGETED_PRACTICE_POINTS and drill_logs('d').count() == 1, 'repeated submits add no points and no ledger row')
+    stolen = client('c', 'student').post('/v1/study-plan/targeted-practice/submit', {'practiceId': practice_id}, format='json').data['data']
+    check(points('c') == 0 and stolen['replayed'] is True, "another student gets no points from someone else's finished drill")
+    bare = api.post('/v1/study-plan/targeted-practice/submit', {'categoryId': 'tfng', 'answers': [{'questionId': 'tfng-q1', 'selectedAnswer': 'TRUE'}]}, format='json')
+    check(bare.status_code == 400, 'a submit without a drill session is rejected')
+    awards = [run_drill('d')[2]['pointsAwarded'] for _ in range(6)]
+    cap = drills.TARGETED_PRACTICE_DAILY_POINTS_CAP
+    check(awards == [50, 50, 50, 50, 50, 0], f'the daily cap stops the points at {cap}: {awards}')
+    check(points('d') - start_points == cap and sum(drill_logs('d').values_list('change', flat=True)) == cap, 'profile and ledger both stop at the daily cap')
+    staff = run_drill('teacher', 'teacher')[2]
+    check(staff['correctCount'] == 10 and staff['pointsAwarded'] == 0, 'a staff account gets a result but no points')
     transaction.set_rollback(True)
 check(not PointsLog.objects.filter(student_id__in=list(ids.values())).exists() and not VocabBattleSession.objects.filter(host_id=ids['teacher']).exists(),
       'all fixture rows are rolled back')
