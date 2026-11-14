@@ -143,7 +143,7 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
                   </div>
 
                   {/* Corrected Green */}
-                  <div className="flex items-start gap-2.5 bg-brand/10 p-3 text-brand">
+                  <div className="flex items-start gap-2.5 bg-brand/10 p-3 text-brand-subtle-fg">
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
                     <div className="min-w-0 flex-1">
                       <span className="block text-[11px] font-bold uppercase tracking-wide opacity-80">
@@ -193,7 +193,7 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
                         </span>
                       </td>
                       <td className="px-4 py-3 font-bold text-brand whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-brand/10 px-2 py-1 text-brand">
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-brand/10 px-2 py-1 text-brand-subtle-fg">
                           <ArrowRight className="size-3 text-brand" />
                           {vocab.alternative}
                         </span>

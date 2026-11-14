@@ -168,7 +168,7 @@ export function ProfileView() {
                   <p className="text-xs text-fg-muted mt-1 max-w-sm mx-auto">
                     {tRecent("emptyHint")}
                   </p>
-                  <Button asChild size="sm" className="mt-4 bg-brand hover:bg-brand/90 text-brand-fg">
+                  <Button asChild size="sm" className="mt-4 bg-brand hover:bg-brand-hover text-brand-fg">
                     <Link href="/mock">
                       <Play className="size-3.5 mr-1.5 fill-current" />
                       {t("browseExams")}
@@ -351,7 +351,7 @@ export function ProfileView() {
                 size="sm"
                 loading={linkToken.isPending}
                 onClick={onLink}
-                className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium"
+                className="min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-medium"
               >
                 {linkToken.isPending ? <Loader2 className="animate-spin" /> : <Link2 />}
                 {t("linkTelegram")}

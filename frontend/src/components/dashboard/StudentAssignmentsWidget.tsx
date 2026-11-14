@@ -109,7 +109,7 @@ export function StudentAssignmentsWidget() {
       {/* Widget Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand-subtle-fg">
             <GraduationCap className="h-4 w-4" />
           </div>
           <div>
@@ -174,7 +174,7 @@ export function StudentAssignmentsWidget() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-fg">{a.title}</span>
                     {a.status === "passed" && (
-                      <Badge className="bg-brand/20 text-brand border border-brand/30 text-[10px] px-1.5 py-0">
+                      <Badge className="bg-brand/20 text-brand-subtle-fg border border-brand/30 text-[10px] px-1.5 py-0">
                         {a.score_percent}% O'tdi ✓
                       </Badge>
                     )}

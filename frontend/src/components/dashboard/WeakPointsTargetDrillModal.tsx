@@ -188,7 +188,7 @@ export function WeakPointsTargetDrillModal({
         <div className="relative border-b border-border bg-surface/80 p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="grid size-10 place-items-center rounded-xl border border-brand/40 bg-brand/20 text-brand shadow-xs">
+              <div className="grid size-10 place-items-center rounded-xl border border-brand/40 bg-brand/20 text-brand-subtle-fg shadow-xs">
                 <Zap className="size-5 fill-brand" />
               </div>
               <div>
@@ -245,7 +245,7 @@ export function WeakPointsTargetDrillModal({
           ) : isFinished ? (
             /* Finished Summary View */
             <div className="py-6 text-center space-y-5">
-              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-brand/40 bg-brand/20 text-brand shadow-lg shadow-brand/10">
+              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-brand/40 bg-brand/20 text-brand-subtle-fg shadow-lg shadow-brand/10">
                 <Award className="size-10" />
               </div>
 
@@ -323,7 +323,7 @@ export function WeakPointsTargetDrillModal({
 
                   if (isChecked) {
                     if (isCorrectAnswer) {
-                      optClasses += "border-brand/80 bg-brand/20 text-brand font-bold";
+                      optClasses += "border-brand/80 bg-brand/20 text-brand-subtle-fg font-bold";
                     } else if (isSelected && !isCorrectAnswer) {
                       optClasses += "border-danger/80 bg-danger/20 text-danger line-through";
                     } else {
@@ -332,7 +332,7 @@ export function WeakPointsTargetDrillModal({
                   } else {
                     if (isSelected) {
                       optClasses +=
-                        "border-brand bg-brand/15 text-brand font-semibold shadow-xs ring-1 ring-brand/30";
+                        "border-brand bg-brand/15 text-brand-subtle-fg font-semibold shadow-xs ring-1 ring-brand/30";
                     } else {
                       optClasses += "border-border bg-surface/60 text-fg-muted hover:border-border-strong hover:bg-surface-hover/60";
                     }

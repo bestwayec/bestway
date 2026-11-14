@@ -163,7 +163,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="marketing-section relative border-b border-border bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand-subtle-fg mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
             <span className="size-2 rounded-full bg-brand animate-pulse" />
             <span>BestWay LMS — Rasmiy imtihon simulyatori</span>
           </div>

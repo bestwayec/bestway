@@ -397,7 +397,7 @@ export function ExamBuilderList() {
                   <Button
                     size="sm"
                     aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
-                    className="min-h-9 w-full justify-center bg-brand/10 text-brand border border-brand/30 hover:bg-brand-hover/20"
+                    className="min-h-9 w-full justify-center bg-brand/10 text-brand-subtle-fg border border-brand/30 hover:bg-brand-hover/20"
                   >
                     <Pencil className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">{tx(t, "edit", "Edit")}</span>
@@ -546,7 +546,7 @@ export function ExamBuilderList() {
                         <Button
                           size="sm"
                           aria-label={`${tx(t, "edit", "Edit")} — ${e.title}`}
-                          className="bg-brand/10 text-brand border border-brand/30 hover:bg-brand-hover/20"
+                          className="bg-brand/10 text-brand-subtle-fg border border-brand/30 hover:bg-brand-hover/20"
                         >
                           <Pencil className="size-3.5" aria-hidden />
                           {tx(t, "edit", "Edit")}

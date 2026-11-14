@@ -223,7 +223,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setSelectedPractice([skill]); } }}
                       className={`group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-3.5 text-center transition-all ${
                         isSelected
-                          ? "border-brand bg-brand/10 text-brand shadow-xs ring-2 ring-brand/30"
+                          ? "border-brand bg-brand/10 text-brand-subtle-fg shadow-xs ring-2 ring-brand/30"
                           : "border-border bg-surface text-fg hover:border-brand/40 hover:bg-surface-hover"
                       }`}
                     >

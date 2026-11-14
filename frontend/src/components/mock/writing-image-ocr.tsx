@@ -426,7 +426,7 @@ export function WritingImageOcr({
           <div>
             <p className="text-xs font-bold text-fg flex items-center gap-1.5">
               <span>Qo&apos;lyozma Inshoni Yuklash & AI Vision OCR</span>
-              <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand border border-brand/30">
+              <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand-subtle-fg border border-brand/30">
                 DeepSeek Vision
               </span>
             </p>

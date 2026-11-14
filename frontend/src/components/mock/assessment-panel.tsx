@@ -82,14 +82,14 @@ export function TeacherAttemptOverrideCard({
     <Card className="overflow-hidden border border-brand/40 bg-surface shadow-xl">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 bg-brand-subtle/20 p-4">
         <div className="flex items-center gap-2.5">
-          <div className="grid size-9 place-items-center rounded-xl bg-brand/20 text-brand">
+          <div className="grid size-9 place-items-center rounded-xl bg-brand/20 text-brand-subtle-fg">
             <Award className="size-5" />
           </div>
           <div>
             <h3 className="flex items-center gap-2 font-bold text-fg text-sm sm:text-base">
               Ustoz Nazorati & Yakuniy Bahoni Tasdiqlash
               {isReviewed ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand">
+                <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand-subtle-fg">
                   <CheckCircle2 className="size-3" /> Tasdiqlangan
                 </span>
               ) : (
@@ -348,7 +348,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-fg">Fonetik va Ravonlik Tahlili:</span>
                       {submission.transcript.speechDiagnostics.fluency_score ? (
-                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand">
+                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-subtle-fg">
                           Ravonlik: {submission.transcript.speechDiagnostics.fluency_score}/9.0
                         </span>
                       ) : null}
@@ -387,7 +387,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
             {result?.improvedExamples.filter((example) => example.partId === part.id).map((example, index) => (
               <div key={index} className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-brand/5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold text-brand">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold text-brand-subtle-fg">
                     <Sparkles className="size-3" /> C1 Namuna Javob (Model Answer)
                   </span>
                   <span className="text-[11px] text-fg-muted">Band 8.0+ Namuna</span>
@@ -461,7 +461,7 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
                     {item.original}
                   </span>
                   <span className="text-fg-subtle text-xs">→</span>
-                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand">
+                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand-subtle-fg">
                     {item.corrected}
                   </span>
                 </div>
@@ -491,7 +491,7 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-fg-muted font-mono text-xs">{item.original}</span>
                   <span className="text-brand text-xs">→</span>
-                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand">
+                  <span className="rounded-md border border-brand/30 bg-brand/15 px-2 py-0.5 text-xs font-mono font-bold text-brand-subtle-fg">
                     {item.alternative}
                   </span>
                 </div>

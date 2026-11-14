@@ -168,13 +168,13 @@ export function BulkQuestionImporterModal({
         <DialogHeader className="p-5 pb-3 border-b border-brand/20 bg-surface/40">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
+              <div className="size-9 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand-subtle-fg">
                 <Zap className="size-5 fill-brand" />
               </div>
               <div>
                 <DialogTitle className="text-base font-bold text-fg flex items-center gap-2">
                   <span>Tezkor Matn Orqali Kiritish (Smart Bulk Paste)</span>
-                  <Badge variant="neutral" className="bg-brand/20 text-brand border-brand/30 text-[10px]">
+                  <Badge variant="neutral" className="bg-brand/20 text-brand-subtle-fg border-brand/30 text-[10px]">
                     Auto-Parser
                   </Badge>
                 </DialogTitle>
@@ -278,7 +278,7 @@ export function BulkQuestionImporterModal({
 
             {hasParsed && (
               <div className="flex items-center gap-2">
-                <Badge variant="success" className="bg-brand/20 text-brand border-brand/30">
+                <Badge variant="success" className="bg-brand/20 text-brand-subtle-fg border-brand/30">
                   {parsedList.length} ta savol tayyor
                 </Badge>
               </div>
@@ -337,7 +337,7 @@ export function BulkQuestionImporterModal({
                             onClick={() => handleOptionCorrectChange(q.id, letter)}
                             className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
                               isCorrect
-                                ? "bg-brand/20 border-brand text-brand font-semibold shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                                ? "bg-brand/20 border-brand text-brand-subtle-fg font-semibold shadow-[0_0_15px_rgba(16,185,129,0.2)]"
                                 : "bg-bg/60 border-border text-fg-muted hover:border-border-strong"
                             }`}
                           >

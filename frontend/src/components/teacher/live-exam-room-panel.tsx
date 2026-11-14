@@ -350,7 +350,7 @@ export function LiveExamRoomPanel({
                 className={cn(
                   "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all",
                   selectedRoomId === r.id
-                    ? "border-brand bg-brand/15 text-brand"
+                    ? "border-brand bg-brand/15 text-brand-subtle-fg"
                     : "border-border bg-surface text-fg-muted hover:text-fg",
                 )}
               >

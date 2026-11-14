@@ -171,7 +171,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
     >
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-subtle-fg">
             <Mic className="size-6" />
           </div>
           <div>

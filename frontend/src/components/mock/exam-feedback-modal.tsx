@@ -401,7 +401,7 @@ export function ExamFeedbackModal({
                             <XCircle className="size-3" /> {m.original}
                           </span>
                           <span className="text-fg-subtle font-bold">➔</span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-brand/20 px-2 py-0.5 font-mono text-brand font-bold">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-brand/20 px-2 py-0.5 font-mono text-brand-subtle-fg font-bold">
                             <CheckCircle2 className="size-3" /> {m.corrected}
                           </span>
                         </div>
@@ -434,7 +434,7 @@ export function ExamFeedbackModal({
                           <span className="text-fg-muted font-medium line-through">
                             {v.original}
                           </span>
-                          <span className="font-bold text-brand bg-brand/20 border border-brand/40 rounded-lg px-2 py-0.5">
+                          <span className="font-bold text-brand-subtle-fg bg-brand/20 border border-brand/40 rounded-lg px-2 py-0.5">
                             ★ {v.alternative}
                           </span>
                         </div>
@@ -460,7 +460,7 @@ export function ExamFeedbackModal({
                   <div className="rounded-2xl border border-brand/20 bg-surface p-4 space-y-2">
                     {feedback.action_plan.map((step, idx) => (
                       <div key={idx} className="flex items-start gap-2.5 text-xs text-fg-muted">
-                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand/20 font-mono text-[11px] font-black text-brand">
+                        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand/20 font-mono text-[11px] font-black text-brand-subtle-fg">
                           {idx + 1}
                         </span>
                         <span className="leading-relaxed">{step}</span>
@@ -487,7 +487,7 @@ export function ExamFeedbackModal({
                         <div>
                           <div className="flex items-center justify-between text-xs">
                             <span className="font-bold text-fg">{rec.topic}</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/20 text-brand font-mono font-bold">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/20 text-brand-subtle-fg font-mono font-bold">
                               {rec.order_index}-Dars
                             </span>
                           </div>

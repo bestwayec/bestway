@@ -146,7 +146,7 @@ export function DesktopAuthorize() {
   return (
     <Card className="elevated-lg border-border/70 bg-surface/95 p-6 backdrop-blur-sm sm:p-8">
       <div className="mb-6 text-center">
-        <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand">
+        <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-brand/10 text-brand-subtle-fg">
           <MonitorSmartphone className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-xl font-bold tracking-tight text-fg">{t("title")}</h1>

@@ -474,7 +474,7 @@ export function VocabularyQuizRunner({
       {/* Question Card */}
       <div className="rounded-xl border border-border/80 bg-surface-hover/30 p-6 text-center space-y-4">
         {currentQ.partOfSpeech && (
-          <span className="inline-block text-[11px] uppercase tracking-wider font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full border border-brand/20">
+          <span className="inline-block text-[11px] uppercase tracking-wider font-semibold text-brand-subtle-fg bg-brand/10 px-2 py-0.5 rounded-full border border-brand/20">
             {currentQ.partOfSpeech}
           </span>
         )}
