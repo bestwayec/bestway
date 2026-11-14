@@ -1,7 +1,8 @@
 "use client";
 
+import { clipboardDecision } from "@/lib/writing-rules";
 import * as React from "react";
-import { AlertOctagon, Maximize2, ShieldAlert } from "lucide-react";
+import { Maximize2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FULLSCREEN_GUARD_EVENT } from "@/lib/microphone";
@@ -10,7 +11,6 @@ export interface ExamLockerProps {
   active: boolean;
   attemptId: string;
   onAnomaly: (event: string) => void;
-  onForceSubmit: () => void;
   children: React.ReactNode;
 }
 
@@ -42,7 +42,6 @@ export function ExamLocker({
   active,
   attemptId,
   onAnomaly,
-  onForceSubmit,
   children,
 }: ExamLockerProps) {
   const t = useTranslations("mock.locker");
@@ -62,8 +61,12 @@ export function ExamLocker({
   const [isFullscreen, setIsFullscreen] = React.useState(true);
   const [warningsCount, setWarningsCount] = React.useState(0);
   const [warningModalOpen, setWarningModalOpen] = React.useState(false);
-  const [, setLastWarningEvent] = React.useState<string>("");
-  const forceSubmittedRef = React.useRef(false);
+  // iPhone Safari and some embedded browsers have no full-screen API: nothing to ask for there.
+  const [fullscreenSupported] = React.useState(() => {
+    if (typeof document === "undefined") return false;
+    const el = document.documentElement as FullscreenElement;
+    return Boolean(el.requestFullscreen || el.webkitRequestFullscreen);
+  });
   // Paused while the app itself leaves full screen for a moment (microphone permission prompt).
   const guardPausedRef = React.useRef(false);
   const lastViolationTimeRef = React.useRef(0);
@@ -74,10 +77,6 @@ export function ExamLocker({
     onAnomalyRef.current = onAnomaly;
   }, [onAnomaly]);
 
-  const onForceSubmitRef = React.useRef(onForceSubmit);
-  React.useEffect(() => {
-    onForceSubmitRef.current = onForceSubmit;
-  }, [onForceSubmit]);
 
   const requestFullscreenSafe = React.useCallback(async () => {
     try {
@@ -101,7 +100,7 @@ export function ExamLocker({
 
   const triggerViolation = React.useCallback(
     (eventType: string) => {
-      if (!active || forceSubmittedRef.current || guardPausedRef.current) return;
+      if (!active || guardPausedRef.current) return;
 
       onAnomalyRef.current(eventType);
 
@@ -114,46 +113,17 @@ export function ExamLocker({
 
       setWarningsCount((prev) => {
         const next = prev + 1;
-        setLastWarningEvent(eventType);
         setWarningModalOpen(true);
 
-        if (attemptId && typeof fetch === "function") {
-          fetch(`/api/backend/mock/attempts/${encodeURIComponent(attemptId)}/telemetry`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ event: "window_blur", blurCount: next }),
-          }).catch(() => undefined);
-        }
-
-        if (next >= 3) {
-          forceSubmittedRef.current = true;
-          setTimeout(() => {
-            onForceSubmitRef.current();
-          }, 1500);
-        }
+        // Recorded for the teacher; the exam is never stopped or handed in because of it.
         return next;
       });
     },
-    [active, attemptId]
+    [active]
   );
 
-  // 1. Initial fullscreen request on engage
-  React.useEffect(() => {
-    if (!active) return;
-    const enterFullscreen = async () => {
-      try {
-        const el = document.documentElement as FullscreenElement;
-        if (el.requestFullscreen) {
-          await el.requestFullscreen();
-        } else if (el.webkitRequestFullscreen) {
-          await el.webkitRequestFullscreen();
-        }
-      } catch {
-        // Direct user interaction may be required
-      }
-    };
-    void enterFullscreen();
-  }, [active]);
+  // 1. Full screen is requested only from the student's click on the start notice (browsers
+  //    refuse it without a user gesture), never automatically.
 
   // 2. Fullscreen tracking & enforcement
   React.useEffect(() => {
@@ -163,7 +133,7 @@ export function ExamLocker({
       if (guardPausedRef.current) return;
       const full = Boolean(getFullscreenElement());
       setIsFullscreen(full);
-      if (!full && !forceSubmittedRef.current) {
+      if (!full) {
         triggerViolation("exit_fullscreen");
       }
     };
@@ -252,9 +222,15 @@ export function ExamLocker({
       reportAnomalyThrottled(type);
     };
 
-    const onCopy = (e: Event) => blockEvent(e, "copy_blocked");
-    const onCut = (e: Event) => blockEvent(e, "cut_blocked");
-    const onPaste = (e: Event) => blockEvent(e, "paste_blocked");
+    // Inside a writing answer the student may move their own text; anything else is blocked
+    // and logged (exam content cannot be copied out, outside text cannot be pasted in).
+    const guard = (kind: "copy" | "cut" | "paste", type: string) => (e: Event) => {
+      if (clipboardDecision(kind, e as ClipboardEvent) === "allow") return;
+      blockEvent(e, type);
+    };
+    const onCopy = guard("copy", "copy_blocked");
+    const onCut = guard("cut", "cut_blocked");
+    const onPaste = guard("paste", "paste_blocked");
     const onContextMenu = (e: Event) => blockEvent(e, "contextmenu_blocked");
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -321,91 +297,30 @@ export function ExamLocker({
         </div>
       )}
 
-      {/* FULLSCREEN BLOCKING OVERLAY */}
-      {active && !isFullscreen && (
+      {/* Non-blocking notices: the exam always stays usable; every exit is only recorded. */}
+      {active && !noticeOpen && (warningModalOpen || (!isFullscreen && fullscreenSupported)) && (
         <div
-          className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-black/95 p-6 text-center text-fg backdrop-blur-md"
-          role="alertdialog"
-          aria-modal="true"
+          role="status"
+          aria-live="polite"
+          data-testid="exam-integrity-notice"
+          className="fixed inset-x-3 top-3 z-[9998] mx-auto flex max-w-xl flex-col gap-2 rounded-[12px] border border-warning-border bg-surface p-3 text-sm text-fg shadow-lg sm:flex-row sm:items-center"
         >
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-danger/20 text-danger mb-4">
-            <Maximize2 className="size-8" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Imtihon faqat to&apos;liq ekranda o&apos;tkaziladi
-          </h2>
-          <p className="mt-2 max-w-md text-sm text-fg-muted">
-            Tizimdan chiqish yoki oynani kichraytirish taqiqlanadi. Imtihonni davom ettirish uchun to&apos;liq ekranga qayting.
+          <ShieldAlert className="size-5 shrink-0 text-warning" aria-hidden />
+          <p className="flex-1">
+            {warningModalOpen ? t("recorded", { count: warningsCount }) : t("notFullscreen")}
           </p>
-          <div className="mt-6">
-            <Button
-              size="lg"
-              className="bg-brand hover:bg-brand/90 text-brand-fg font-semibold px-6 shadow-lg"
-              onClick={() => void requestFullscreenSafe()}
-            >
-              <Maximize2 className="mr-2 size-5" />
-              To&apos;liq ekranga qaytish
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* VIOLATION WARNING MODAL (Up to 3 strikes) */}
-      {active && warningModalOpen && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          role="alertdialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-2xl border border-danger/40 bg-surface p-6 shadow-2xl text-center">
-            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-danger/10 text-danger mb-4">
-              {warningsCount >= 3 ? (
-                <AlertOctagon className="size-8 animate-bounce" />
-              ) : (
-                <ShieldAlert className="size-8" />
-              )}
-            </div>
-
-            <h3 className="text-xl font-bold text-fg">
-              {warningsCount >= 3
-                ? "Imtihon to'xtatildi!"
-                : "Diqqat! Imtihon oynasidan chiqish taqiqlanadi! (Hodisa qayd etildi)"}
-            </h3>
-
-            <p className="mt-2 text-sm text-fg-muted">
-              {warningsCount >= 3 ? (
-                <span className="font-medium text-danger">
-                  Siz ruxsat etilgan 3 ta ogohlantirish chegarasidan o&apos;tdingiz. Imtihon javoblaringiz saqlanib, natija avtomatik topshirilmoqda.
-                </span>
-              ) : (
-                <>
-                  Imtihon vaqtida boshqa oyna, tab yoki ilovalarga o&apos;tish taqiqlanadi.
-                  <br />
-                  <span className="font-semibold text-warning mt-1 block">
-                    3-ogohlantirishdan so&apos;ng imtihon avtomatik yakunlanadi!
-                  </span>
-                </>
-              )}
-            </p>
-
-            <div className="mt-6 flex justify-center">
-              {warningsCount >= 3 ? (
-                <div className="text-sm font-semibold text-danger animate-pulse">
-                  Avtomatik topshirilmoqda...
-                </div>
-              ) : (
-                <Button
-                  className="w-full bg-brand text-brand-fg"
-                  onClick={() => {
-                    setWarningModalOpen(false);
-                    lastViolationTimeRef.current = Date.now();
-                    void requestFullscreenSafe();
-                  }}
-                >
-                  Tushundim, davom etaman
-                </Button>
-              )}
-            </div>
+          <div className="flex gap-2">
+            {!isFullscreen && fullscreenSupported && (
+              <Button size="sm" className="min-h-[44px]" onClick={() => { setWarningModalOpen(false); lastViolationTimeRef.current = Date.now(); void requestFullscreenSafe(); }}>
+                <Maximize2 className="size-4" aria-hidden />
+                {t("returnFullscreen")}
+              </Button>
+            )}
+            {warningModalOpen && (
+              <Button size="sm" variant="outline" className="min-h-[44px]" onClick={() => setWarningModalOpen(false)}>
+                {t("dismiss")}
+              </Button>
+            )}
           </div>
         </div>
       )}

@@ -74,3 +74,21 @@ def test_certificate_error_content_type():
     response=APIClient().get('/v1/tests/attempts/missing/certificate')
     assert response.status_code==401
     assert response['Content-Type']=='application/json; charset=utf-8'
+
+
+def test_public_demo_detail_never_carries_the_answer_key():
+    now = datetime(2026, 11, 13, tzinfo=UTC)
+    test = SimpleNamespace(id='demo-1', type='ielts', title='Demo', level=None, is_demo=True, is_active=True,
+                           duration_minutes=5, section_question_counts=None, created_at=now)
+    question = SimpleNamespace(id='q1', test_id='demo-1', section='reading', type='short_answer', prompt='Days in a week?',
+                               options=None, correct_answer='seven', max_score=1, audio_url=None, passage_text=None,
+                               instructions=None, created_at=now)
+    with patch.object(service.Test.objects, 'filter') as tests, patch.object(service.Question.objects, 'filter') as questions, \
+         patch.object(service, 'meta', return_value=dict(id='demo-1', title='Demo')):
+        tests.return_value.first.return_value = test
+        questions.return_value.order_by.return_value = [question]
+        response = APIClient().get('/v1/tests/demo/demo-1')
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert 'seven' not in body and 'correctAnswer' not in body and 'correct_answer' not in body
+    assert response.json()['data']['questions'][0]['prompt'] == 'Days in a week?'
