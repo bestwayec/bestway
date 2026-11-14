@@ -86,6 +86,7 @@ jobs:
           python scripts/verify_exam_window_postgres.py
           python scripts/verify_grading_consistency_postgres.py
           python scripts/verify_ai_rankings_postgres.py
+          python scripts/verify_points_integrity_postgres.py
       - name: Match PostgreSQL dump client to the database server
         run: |
           mkdir -p "$RUNNER_TEMP/pg-client"

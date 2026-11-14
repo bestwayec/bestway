@@ -3,6 +3,7 @@ import logging
 import random
 from typing import Any
 from uuid import uuid4
+from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 from apps.core.models import BattleStatus, VocabBattleSession, VocabularySet, VocabularyWord
@@ -162,6 +163,8 @@ def get_battle_state(pin: str, current_user=None) -> dict[str, Any]:
         "totalParticipants": len(participants_map),
         "leaderboard": leaderboard[:10],
         "myState": my_state,
+        # Only what was really recorded when the battle ended; [] until then.
+        "winners": list(session.winners or []) if session.status == BattleStatus.FINISHED else [],
     }
 
 
@@ -245,71 +248,83 @@ def submit_battle_answer(pin: str, user, question_index: int, selected_index: in
     }
 
 
+PODIUM_POINTS = {1: 10, 2: 7, 3: 5}
+
+
 def next_battle_step(pin: str, host_user) -> dict[str, Any]:
     """Advance the battle state (WAITING -> QUESTION -> LEADERBOARD -> ... -> FINISHED)."""
-    session = VocabBattleSession.objects.filter(pin=pin).first()
-    if not session:
-        raise ContractAPIException("BATTLE_NOT_FOUND", "Bellashuv topilmadi", 404)
+    with transaction.atomic():
+        session = VocabBattleSession.objects.select_for_update().filter(pin=pin).first()
+        if not session:
+            raise ContractAPIException("BATTLE_NOT_FOUND", "Bellashuv topilmadi", 404)
 
-    if str(session.host_id) != str(host_user.id):
-        raise ContractAPIException("NOT_HOST", "Faqat mezbon o'qituvchi boshqara oladi", 403)
+        if str(session.host_id) != str(host_user.id):
+            raise ContractAPIException("NOT_HOST", "Faqat mezbon o'qituvchi boshqara oladi", 403)
 
-    questions = session.questions or []
-    total_q = len(questions)
+        total_q = len(session.questions or [])
 
-    if session.status == BattleStatus.WAITING:
-        session.status = BattleStatus.QUESTION
-        session.current_question_index = 0
-    elif session.status == BattleStatus.QUESTION:
-        session.status = BattleStatus.LEADERBOARD
-    elif session.status == BattleStatus.LEADERBOARD:
-        if session.current_question_index + 1 < total_q:
-            session.current_question_index += 1
+        if session.status == BattleStatus.WAITING:
             session.status = BattleStatus.QUESTION
-        else:
-            session.status = BattleStatus.FINISHED
-            finish_battle_and_award_points(session)
-    elif session.status == BattleStatus.FINISHED:
-        return get_battle_state(pin, current_user=host_user)
-
-    session.save(update_fields=["status", "current_question_index", "updated_at"])
+            session.current_question_index = 0
+        elif session.status == BattleStatus.QUESTION:
+            session.status = BattleStatus.LEADERBOARD
+        elif session.status == BattleStatus.LEADERBOARD:
+            if session.current_question_index + 1 < total_q:
+                session.current_question_index += 1
+                session.status = BattleStatus.QUESTION
+            else:
+                _finish_locked(session)
+        if session.status != BattleStatus.FINISHED:
+            session.save(update_fields=["status", "current_question_index", "updated_at"])
     return get_battle_state(pin, current_user=host_user)
 
 
-def finish_battle_and_award_points(session: VocabBattleSession) -> list[dict[str, Any]]:
-    """Award +10, +7, +5 points to Top 3 podium winners and record PointsLog."""
-    participants = dict(session.participants or {}).values()
-    sorted_players = sorted(participants, key=lambda p: (p.get("score", 0), p.get("streak", 0)), reverse=True)
+def _finish_locked(session: VocabBattleSession) -> list[dict[str, Any]]:
+    """End a battle whose row is locked by the caller and record its podium.
 
-    podium_awards = [(1, 10), (2, 7), (3, 5)]
+    Runs at most once per battle: a finished battle returns what was recorded and gives
+    nothing again. A player with no game score takes no podium place, and only a student
+    account receives platform points (``pointsAwarded`` is 0 for anyone else).
+    """
+    if session.status == BattleStatus.FINISHED:
+        return list(session.winners or [])
+
+    players = [p for p in dict(session.participants or {}).values() if (p.get("score") or 0) > 0]
+    players.sort(key=lambda p: (p.get("score", 0), p.get("streak", 0)), reverse=True)
+
     winners = []
-
-    for rank, pts in podium_awards:
-        if len(sorted_players) >= rank:
-            player = sorted_players[rank - 1]
-            p_id = player["id"]
-            p_name = player.get("name", "O'quvchi")
-
-            # Award points to student profile
-            StudentProfile.objects.filter(user_id=p_id).update(
-                current_points=F("current_points") + pts
-            )
+    for rank, player in enumerate(players[:3], start=1):
+        player_id = str(player["id"])
+        awarded = 0
+        is_student = User.objects.filter(id=player_id, role="student").exists()
+        if is_student and StudentProfile.objects.filter(user_id=player_id).update(
+            current_points=F("current_points") + PODIUM_POINTS[rank]
+        ):
+            awarded = PODIUM_POINTS[rank]
             PointsLog.objects.create(
                 id=str(uuid4()),
-                student_id=p_id,
-                change=pts,
+                student_id=player_id,
+                change=awarded,
                 reason=f"Vocab Battle {rank}-o'rin ({session.set.title})",
                 by_user_id=session.host_id,
                 created_at=timezone.now(),
             )
-            winners.append({
-                "rank": rank,
-                "studentId": p_id,
-                "name": p_name,
-                "score": player.get("score", 0),
-                "pointsAwarded": pts,
-            })
+        winners.append({
+            "rank": rank,
+            "studentId": player_id,
+            "name": player.get("name", "O'quvchi"),
+            "score": player.get("score", 0),
+            "pointsAwarded": awarded,
+        })
 
     session.status = BattleStatus.FINISHED
-    session.save(update_fields=["status", "updated_at"])
+    session.winners = winners
+    session.save(update_fields=["status", "winners", "updated_at"])
     return winners
+
+
+def finish_battle_and_award_points(session: VocabBattleSession) -> list[dict[str, Any]]:
+    """End the battle (host action) and return the recorded podium. Safe to repeat."""
+    with transaction.atomic():
+        locked = VocabBattleSession.objects.select_for_update().select_related("set").get(pk=session.pk)
+        return _finish_locked(locked)

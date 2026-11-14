@@ -410,6 +410,7 @@
     "noAnswer": "No answer",
     "awaitingGrade": "Awaiting grade",
     "correct": "Correct",
+    "answerFor": "Answer {number}",
     "incorrect": "Incorrect",
     "tabSwitchWarning": "Note: switching windows during the test is logged.",
     "cheatFlags": "Suspicious activity",
@@ -1490,9 +1491,6 @@
     "demoRegister": "Create account",
     "demoLoginCta": "Save your progress",
     "demoLoginCtaHint": "Create an account to save results, track history and unlock full exams.",
-    "demoAudioscript": "Audioscript",
-    "demoInstructions": "Complete the form below. Write ONE WORD for each answer.",
-    "demoOneWordHint": "One word only",
     "demoScores": "Scores",
     "demoSubmit": "Submit",
     "demoSubmitConfirm": "Submit your answers? You can't change them afterwards.",
@@ -1500,8 +1498,8 @@
     "demoResultSubtitle": "This is a local preview — log in to save and try full exams.",
     "demoTotalScore": "Total score",
     "demoPerSection": "Per section",
-    "demoSaveLocal": "Saved locally",
-    "demoNeedLogin": "Log in to keep your results",
+    "demoSubmitFailed": "Could not check your answers. Your answers are kept; try again.",
+    "demoNotAutoChecked": "Checked by a teacher, not automatically",
     "desktopApp": "Desktop app",
     "desktopBadge": "For supervised exams",
     "desktopTitle": "A focused exam room on your computer",
@@ -2259,6 +2257,7 @@
     "listen": "Listen to the pronunciation",
     "streak": "{count} in a row",
     "gameScore": "{score} pts",
+    "pointsAwarded": "+{points} points added",
     "host": {
       "loadingTitle": "Preparing the Live Vocab Battle room…",
       "loadingBody": "Questions are prepared and a PIN is issued.",
@@ -2277,6 +2276,7 @@
       "nextQuestion": "Next question",
       "podiumTitle": "Winners' podium",
       "podiumNote": "Final scores of this game.",
+      "noPodium": "Nobody scored in this game, so there is no podium.",
       "place": "#{rank}",
       "finishClose": "Close the battle"
     },
@@ -2304,6 +2304,7 @@
       "waitNext": "Wait for your teacher to open the next question…",
       "finishedTitle": "The game is over!",
       "finalScore": "Your final score in this game:",
+      "yourPlace": "Your place: #{rank}",
       "exit": "Exit"
     },
     "prompt": "Which is the correct translation of “{word}”?"
@@ -2347,5 +2348,10 @@
     "found": "{count, plural, one {# word found} other {# words found}}",
     "foundPreview": "{count} words found; the first {shown} are shown",
     "addParsed": "Add {count, plural, one {# word} other {# words}} to the set"
+  },
+  "drill": {
+    "checkFailed": "Could not check the answer. Try again.",
+    "submitFailed": "Could not save the result. Your answers are kept; try again.",
+    "dailyCapReached": "Today's drill points limit is reached, so no more points are added today."
   }
 }
