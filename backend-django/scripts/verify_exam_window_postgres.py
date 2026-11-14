@@ -97,7 +97,7 @@ try:
     batch = save([{'questionId': q2, 'response': 'b-late', 'editedAt': ms(base - timedelta(seconds=1))},
                   {'questionId': q2, 'response': 'b-early', 'editedAt': ms(base - timedelta(seconds=5))}])
     check(batch['saved'] == 2 and stored(q2).response == 'b-late', 'inside one batch the latest edit of a question wins')
-    future = save([{'questionId': q2, 'response': 'clock ahead', 'editedAt': ms(timezone.now() + timedelta(hours=2))}])
+    save([{'questionId': q2, 'response': 'clock ahead', 'editedAt': ms(timezone.now() + timedelta(hours=2))}])
     check(stored(q2).response == 'clock ahead' and stored(q2).updated_at <= timezone.now(), 'an edit time in the future is clamped to now')
     plain = save([{'questionId': q1, 'response': 'desktop client'}])
     check('stale' not in plain and stored(q1).response == 'desktop client', 'a client without edit times keeps the old behaviour')

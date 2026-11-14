@@ -5,13 +5,19 @@ and target exam date, with automatic AI workload rebalancing.
 from __future__ import annotations
 
 import math
+import random
+import re
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
+
+from django.core.cache import cache
+from django.db import transaction
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from apps.legacy_schema.models import MockAnswer, MockAttempt, PointsLog, StudentProfile, User
-from uuid import uuid4
-from django.db.models import F
+from common.api.exceptions import ContractAPIException
 
 
 def get_student_study_plan(student_user: User, target_months: int = 3, target_exam_date: Optional[str] = None) -> Dict[str, Any]:
@@ -664,28 +670,86 @@ PRACTICE_QUESTION_BANKS: Dict[str, List[Dict[str, Any]]] = {
 }
 
 
+# ── Targeted practice: server-held answers, one award per drill, daily cap ──────
+# The browser never receives a correct answer before it has answered that question,
+# and the points are decided here: one drill session can be finished once.
+TARGETED_PRACTICE_POINTS = 50            # per finished drill (unchanged)
+TARGETED_PRACTICE_DAILY_POINTS_CAP = 300  # per student per local day, like the runner game
+TARGETED_PRACTICE_TTL = 2 * 60 * 60
+TARGETED_PRACTICE_LOG_PREFIX = "Zaif nuqtalar mini-mashqi"
+
+TARGETED_CATEGORY_NAMES = {
+    "tfng": "True / False / Not Given (Reading Task 4)",
+    "headings": "Headings Matching (Reading Task 3)",
+    "info_matching": "Information Matching (Listening Part 3 & 4)",
+    "summary_completion": "Summary & Note Completion (Reading)",
+    "grammar_cohesion": "Grammar & Cohesive Devices (Writing)",
+    "prepositions": "Prepositions & Academic Collocations",
+}
+_OPTION_LABEL = re.compile(r"^\s*[A-Za-z][).]\s+")
+
+
+def _practice_key(practice_id: str) -> str:
+    return f"targeted-practice:session:{practice_id}"
+
+
+def _practice_result_key(practice_id: str) -> str:
+    return f"targeted-practice:result:{practice_id}"
+
+
+def _option_text(value: Any) -> str:
+    return _OPTION_LABEL.sub("", str(value or "")).strip()
+
+
+def _same_answer(selected: Any, correct: str) -> bool:
+    return _option_text(selected).lower() == _option_text(correct).lower() and bool(_option_text(selected))
+
+
+def _issue_questions(bank: List[Dict[str, Any]]) -> tuple[list, dict]:
+    """Split what the browser gets from what stays on the server. Lettered options
+    ("A) ...") are shuffled and re-lettered, because the bank lists the key first;
+    fixed sets such as TRUE / FALSE / NOT GIVEN keep their order."""
+    public, private = [], {}
+    for question in bank:
+        options = list(question["options"])
+        correct = question["correctAnswer"]
+        if options and all(_OPTION_LABEL.match(str(option)) for option in options):
+            texts = [_option_text(option) for option in options]
+            random.shuffle(texts)
+            options = [f"{chr(65 + index)}) {text}" for index, text in enumerate(texts)]
+            correct = next(option for option in options if _option_text(option) == _option_text(correct))
+        public.append({key: value for key, value in question.items() if key not in ("correctAnswer", "explanation", "options")} | {"options": options})
+        private[question["id"]] = {"correctAnswer": correct, "explanation": question.get("explanation", "")}
+    return public, private
+
+
+def targeted_points_today(student_id: str) -> int:
+    start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+    return PointsLog.objects.filter(student_id=student_id, reason__startswith=TARGETED_PRACTICE_LOG_PREFIX,
+                                    created_at__gte=start).aggregate(total=Sum("change"))["total"] or 0
+
+
+def _practice_session(student_user: User, practice_id: Any) -> Dict[str, Any]:
+    session = cache.get(_practice_key(str(practice_id))) if practice_id else None
+    if not session or session.get("userId") != student_user.id:
+        raise ContractAPIException("PRACTICE_SESSION_INVALID",
+            "Mashq sessiyasi topilmadi yoki muddati tugagan. Mashqni qaytadan boshlang.", 400)
+    return session
+
+
 def generate_targeted_practice(student_user: User, category_id: str) -> Dict[str, Any]:
-    """Generate 10 targeted practice questions specifically tailored to the mistake category."""
-    category_names = {
-        "tfng": "True / False / Not Given (Reading Task 4)",
-        "headings": "Headings Matching (Reading Task 3)",
-        "info_matching": "Information Matching (Listening Part 3 & 4)",
-        "summary_completion": "Summary & Note Completion (Reading)",
-        "grammar_cohesion": "Grammar & Cohesive Devices (Writing)",
-        "prepositions": "Prepositions & Academic Collocations",
-    }
-
-    cat_title = category_names.get(category_id, "Maxsus Zaif Nuqtalar Mini-Mashqi")
-
-    # Fetch curated questions or generate standard structured set
-    questions = PRACTICE_QUESTION_BANKS.get(category_id)
-    if not questions:
-        questions = PRACTICE_QUESTION_BANKS.get("tfng", [])
-
+    """Start one drill: questions without answers, and a server session that holds them."""
+    if category_id not in PRACTICE_QUESTION_BANKS:
+        category_id = "tfng"
+    questions, private = _issue_questions(PRACTICE_QUESTION_BANKS[category_id])
+    practice_id = str(uuid4())
+    cache.set(_practice_key(practice_id), {
+        "userId": student_user.id, "categoryId": category_id, "questions": private, "given": {},
+    }, TARGETED_PRACTICE_TTL)
     return {
-        "practiceId": f"practice-{category_id}-{student_user.id[:8]}",
+        "practiceId": practice_id,
         "categoryId": category_id,
-        "categoryTitle": cat_title,
+        "categoryTitle": TARGETED_CATEGORY_NAMES.get(category_id, "Maxsus Zaif Nuqtalar Mini-Mashqi"),
         "studentId": student_user.id,
         "questionCount": len(questions),
         "estimatedMinutes": 12,
@@ -694,66 +758,82 @@ def generate_targeted_practice(student_user: User, category_id: str) -> Dict[str
     }
 
 
-def submit_targeted_practice(student_user: User, category_id: str, submitted_answers: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Verify submitted answers, compute accuracy, award +50 XP and log PointsLog."""
-    questions = PRACTICE_QUESTION_BANKS.get(category_id) or PRACTICE_QUESTION_BANKS.get("tfng", [])
-    q_map = {q["id"]: q for q in questions}
+def _record_answer(session: Dict[str, Any], question_id: Any, selected: Any) -> Optional[Dict[str, Any]]:
+    """The first answer to a question stands; a later one does not change it."""
+    question = session["questions"].get(str(question_id))
+    if question is None:
+        return None
+    given = session["given"]
+    if str(question_id) not in given:
+        given[str(question_id)] = {"selectedAnswer": str(selected or "").strip(),
+                                   "isCorrect": _same_answer(selected, question["correctAnswer"])}
+    return {"questionId": str(question_id), **given[str(question_id)],
+            "correctAnswer": question["correctAnswer"], "explanation": question["explanation"]}
 
-    correct_count = 0
-    results_breakdown = []
 
-    for item in submitted_answers:
-        qid = item.get("questionId")
-        user_ans = str(item.get("selectedAnswer", "")).strip()
-        q_obj = q_map.get(qid)
+def answer_targeted_practice(student_user: User, practice_id: Any, question_id: Any, selected: Any) -> Dict[str, Any]:
+    """Check one answer. The key and explanation are revealed only for that question."""
+    session = _practice_session(student_user, practice_id)
+    result = _record_answer(session, question_id, selected)
+    if result is None:
+        raise ContractAPIException("PRACTICE_QUESTION_INVALID", "Bu savol ushbu mashqqa tegishli emas", 400)
+    cache.set(_practice_key(str(practice_id)), session, TARGETED_PRACTICE_TTL)
+    return result
 
-        is_correct = False
-        correct_ans = ""
-        expl = ""
-        if q_obj:
-            correct_ans = q_obj["correctAnswer"]
-            expl = q_obj["explanation"]
-            is_correct = user_ans.lower() == correct_ans.lower() or (
-                user_ans.startswith(correct_ans[:2]) if len(correct_ans) > 2 else False
-            )
 
-        if is_correct:
-            correct_count += 1
+def submit_targeted_practice(student_user: User, practice_id: Any, submitted_answers: Any = None) -> Dict[str, Any]:
+    """Finish a drill once. A repeated submit returns the stored result and gives no
+    points again; points need every question answered, a student account and room
+    under the daily cap."""
+    practice_id = str(practice_id or "")
+    done = cache.get(_practice_result_key(practice_id)) if practice_id else None
+    if done is not None:
+        return dict(done, replayed=True)
+    session = _practice_session(student_user, practice_id)
+    if not cache.add(f"targeted-practice:claim:{practice_id}", 1, TARGETED_PRACTICE_TTL):
+        done = cache.get(_practice_result_key(practice_id))
+        if done is not None:
+            return dict(done, replayed=True)
+        raise ContractAPIException("PRACTICE_SUBMIT_IN_PROGRESS", "Natija allaqachon saqlanmoqda", 409)
 
-        results_breakdown.append({
-            "questionId": qid,
-            "selectedAnswer": user_ans,
-            "correctAnswer": correct_ans,
-            "isCorrect": is_correct,
-            "explanation": expl,
-        })
+    for item in submitted_answers if isinstance(submitted_answers, list) else []:
+        if isinstance(item, dict):
+            _record_answer(session, item.get("questionId"), item.get("selectedAnswer"))
+    results = [_record_answer(session, question_id, None) for question_id in session["questions"] if question_id in session["given"]]
+    total = len(session["questions"])
+    correct_count = sum(1 for row in results if row["isCorrect"])
+    complete = len(results) == total
 
-    total = len(questions) or 10
-    accuracy = round((correct_count / total) * 100)
-    xp_awarded = 50
+    awarded, capped = 0, False
+    if complete and getattr(student_user, "role", None) == "student":
+        with transaction.atomic():
+            profile = StudentProfile.objects.select_for_update().filter(user_id=student_user.id).first()
+            if profile is not None:
+                room = TARGETED_PRACTICE_DAILY_POINTS_CAP - targeted_points_today(student_user.id)
+                awarded = max(0, min(TARGETED_PRACTICE_POINTS, room))
+                capped = awarded < TARGETED_PRACTICE_POINTS
+                if awarded:
+                    StudentProfile.objects.filter(user_id=student_user.id).update(current_points=F("current_points") + awarded)
+                    PointsLog.objects.create(
+                        id=str(uuid4()), student_id=student_user.id, change=awarded, by_user_id=student_user.id,
+                        created_at=timezone.now(),
+                        reason=f"{TARGETED_PRACTICE_LOG_PREFIX} ({session['categoryId']}): +{awarded} XP",
+                    )
 
-    try:
-        StudentProfile.objects.filter(user_id=student_user.id).update(
-            current_points=F("current_points") + xp_awarded
-        )
-        PointsLog.objects.create(
-            id=str(uuid4()),
-            student_id=student_user.id,
-            change=xp_awarded,
-            reason=f"Zaif nuqtalar mini-mashqi ({category_id}): +{xp_awarded} XP",
-            by_user_id=student_user.id,
-            created_at=timezone.now(),
-        )
-    except Exception:
-        pass
-
-    return {
-        "practiceId": f"practice-{category_id}-{student_user.id[:8]}",
-        "categoryId": category_id,
+    result = {
+        "practiceId": practice_id,
+        "categoryId": session["categoryId"],
         "totalQuestions": total,
+        "answeredCount": len(results),
         "correctCount": correct_count,
-        "accuracyPercent": accuracy,
-        "pointsAwarded": xp_awarded,
-        "results": results_breakdown,
+        "accuracyPercent": round((correct_count / total) * 100) if total else 0,
+        "pointsAwarded": awarded,
+        "dailyCap": TARGETED_PRACTICE_DAILY_POINTS_CAP,
+        "dailyCapReached": capped,
+        "results": results,
         "completedAt": timezone.now().isoformat(),
+        "replayed": False,
     }
+    cache.set(_practice_result_key(practice_id), result, TARGETED_PRACTICE_TTL)
+    cache.delete(_practice_key(practice_id))
+    return result
