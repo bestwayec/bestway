@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import * as React from "react";
-import { Award, CheckCircle2, Download, Printer, ShieldCheck, X } from "lucide-react";
+import { Award, Download, Printer, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MockAttemptDetail } from "@/lib/types";
 
