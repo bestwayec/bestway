@@ -226,7 +226,7 @@ export function MicCheckModal({ open, onConfirm, onClose }: MicCheckModalProps) 
                   />
                   <Button variant="outline" size="sm" className="min-h-[44px] px-4 touch-manipulation" onClick={togglePlayback}>
                     {isPlaying ? <Pause className="mr-1.5 size-4" /> : <Play className="mr-1.5 size-4" />}
-                    {isPlaying ? "To'xtatish" : "Eshitib ko'rish"}
+                    {isPlaying ? tm("playbackStop") : tm("playbackPlay")}
                   </Button>
                 </div>
               )}

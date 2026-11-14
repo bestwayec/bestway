@@ -61,6 +61,7 @@ import { multilevelMissingWork } from '@/lib/multilevel-completeness';
 import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
+import { canSelectSpeakingPart, nextSpeakingTarget, requestSpeakingAutoStart } from '@/lib/speaking-sequence';
 import { ExamLocker } from "./exam-locker";
 import { ReadingSplitDivider, useReadingSplit } from "./reading-split-divider";
 import type { ListeningSchedule } from "@/lib/listening-schedule";
@@ -781,7 +782,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         {/* Yuqori panel */}
         <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
+            {/* On a phone the title takes its own row; otherwise the toolbar squeezes it to nothing
+                and the practice badge spills over the toolbar. */}
+            <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {isSingleSection && targetSkill ? (
                 <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
                   <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand-subtle-fg uppercase tracking-wider">
@@ -942,6 +945,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   sharedSingleAudioUrl={sharedSingleAudioUrl}
                   // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
                   listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
+                  mediaAlreadyStarted={strict && (attempt.mediaStarted ?? []).includes(g.id)}
                   startListening={strict && section.skill === "listening" && !versioned && g.hasAudio
                     ? () => api.post<ListeningSchedule>(`/mock/attempts/${attempt.id}/listening/${g.id}/start`)
                     : undefined}
@@ -981,7 +985,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         )}
 
         <MicCheckModal
-          open={section?.skill === "speaking" && micCheckLoaded && !micChecked}
+          // Nothing left to record (e.g. reopened only to hand in): no microphone test is needed.
+          open={section?.skill === "speaking" && micCheckLoaded && !micChecked
+            && section.groups.some((group) => group.questions.some((question) => question.type === "speaking_task" && !audioSet.has(question.id)))}
           onConfirm={() => setMicChecked(true)}
           onClose={!strict ? () => setMicChecked(true) : undefined}
         />
@@ -1120,6 +1126,24 @@ export function GuidedMultilevelGroups({
 }) {
   const safeGroups = groups || [];
   const group = safeGroups[activeTask] ?? safeGroups[0];
+  const sequence = skill === "speaking" && timed;
+  // Timed Speaking: an uploaded answer opens the next question (and its part) automatically.
+  const groupsRef = React.useRef(safeGroups);
+  React.useEffect(() => { groupsRef.current = safeGroups; });
+  React.useEffect(() => {
+    if (!sequence) return;
+    const onUploaded = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId: string; questionId: string }>).detail;
+      if (detail?.attemptId !== attemptId) return;
+      const next = nextSpeakingTarget(groupsRef.current, detail.questionId);
+      if (!next) return;
+      setActiveTask(next.groupIndex);
+      requestSpeakingAutoStart(attemptId, next.questionId);
+    };
+    window.addEventListener("multilevel:recording-uploaded", onUploaded);
+    return () => window.removeEventListener("multilevel:recording-uploaded", onUploaded);
+  }, [sequence, attemptId, setActiveTask]);
+  const selectTask = (index: number) => { if (canSelectSpeakingPart(sequence, activeTask, index)) setActiveTask(index); };
   if (!group) return null;
   const labels = safeGroups.map((candidate, index) => {
     const key = multilevelTaskLabels(candidate?.questions || [])[0] ?? String(index + 1);
@@ -1131,7 +1155,7 @@ export function GuidedMultilevelGroups({
     : undefined;
   const completed = safeGroups.flatMap((candidate, index) => (candidate?.questions || []).length > 0 && candidate.questions.every((question) => multilevelQuestionAnswered(question, answers, audioSet)) ? [index] : []);
   return <div className="space-y-4">
-    <MultilevelTaskProgress skill={skill} current={activeTask} total={safeGroups.length} labels={labels} onSelect={setActiveTask} practice={practice} completed={completed} rawMaximum={practice ? safeGroups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
+    <MultilevelTaskProgress skill={skill} current={activeTask} total={safeGroups.length} labels={labels} onSelect={selectTask} practice={practice} completed={completed} rawMaximum={practice ? safeGroups.reduce((sum, item) => sum + (item.questions[0]?.guidance?.rawMax ?? item.maxScore ?? 0), 0) : undefined} />
     <GroupBlock
       group={group}
       skill={skill}
@@ -1149,7 +1173,7 @@ export function GuidedMultilevelGroups({
       partIndex={activeTask}
     />
     <div className="flex items-center justify-between gap-3">
-      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0} onClick={() => setActiveTask(activeTask - 1)}>Previous</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0 || sequence} onClick={() => selectTask(activeTask - 1)}>Previous</Button>
       <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === safeGroups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
     </div>
   </div>;
@@ -1174,6 +1198,7 @@ function GroupBlock({
   audioTimestamps = [],
   sharedSingleAudioUrl,
   listeningSchedule = null,
+  mediaAlreadyStarted = false,
   startListening,
   serverOffsetMs = 0,
 }: {
@@ -1196,6 +1221,7 @@ function GroupBlock({
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
   listeningSchedule?: ListeningSchedule | null;
+  mediaAlreadyStarted?: boolean;
   startListening?: () => Promise<ListeningSchedule>;
   serverOffsetMs?: number;
 }) {
@@ -1234,6 +1260,7 @@ function GroupBlock({
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
             load={async () => { const res = await fetch(audioSrc); if (!res.ok) throw new Error('Audio loading failed'); return res.blob(); }}
+            alreadyStarted={mediaAlreadyStarted}
           /> : <ListeningAudio
             src={audioSrc}
             strict={strict}
@@ -1545,7 +1572,7 @@ export function EssayQuestionEditor({
         </div>
         {value.trim() && (
           <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
-            <CheckCircle2 className="size-3" /> Qoralama saqlanmoqda
+            <CheckCircle2 className="size-3" aria-hidden /> {tx("writingDraftKept")}
           </span>
         )}
       </div>

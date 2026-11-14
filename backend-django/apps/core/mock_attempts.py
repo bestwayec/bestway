@@ -685,7 +685,7 @@ def advance(actor, attempt_id):
 
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
     from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS
-    from .mock_speaking_policy import strict
+    from .mock_speaking_policy import strict, upload_window_closed
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         if not versioned(attempt):
@@ -735,7 +735,11 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
                 if needs_previous and (not previous or at < parse_datetime(previous['expiresAt']) or (kind == 'listening' and previous['plays'] < 2)):
                     fail('PART_LOCKED', 'Complete the previous listening part first' if kind == 'listening' else 'Complete the previous speaking response first', 403)
             if kind == 'speaking' and speaking_profile(attempt.speaking_profile_version) and index > 0:
-                if not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=ordered[index-1].id).exclude(audio_key=None).exclude(audio_key='').exists():
+                previous_id = ordered[index-1].id
+                # A previous response that can no longer be uploaded counts as not given (as in the
+                # official test, the exam moves on); only a still-recoverable one blocks the next.
+                if not MockAnswer.objects.filter(attempt_id=attempt_id, question_id=previous_id).exclude(audio_key=None).exclude(audio_key='').exists() \
+                        and not upload_window_closed(state.get(previous_id), at):
                     fail('PREVIOUS_UPLOAD_PENDING', 'Wait for the previous recording upload acknowledgement', 409)
             guidance = task_guidance(kind, gi, qi, attempt.speaking_profile_version, attempt.specification_version)
             prep = 20 if kind == 'listening' else (guidance or {}).get('prepSeconds', 0)
@@ -796,6 +800,10 @@ def summary(attempt, *, detail=False):
         if attempt.status == 'in_progress':
             from .ielts_listening import started_parts
             result['listeningSchedule'] = started_parts(attempt)
+            # Listening parts and Speaking questions whose server window was already opened, so a
+            # reloaded exam window can show their real state instead of an untouched part.
+            result['mediaStarted'] = [key for key, phase in (attempt.media_state or {}).items()
+                                      if isinstance(phase, dict) and 'prepEndsAt' in phase]
     if versioned(attempt):
         result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)

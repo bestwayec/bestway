@@ -253,6 +253,24 @@ class InternalGradeDeliveryTests(SimpleTestCase):
             result=mock_support.certificate_data(SimpleNamespace(role='student'),'attempt')
         self.assertEqual((result['overallScore'],result['cefrLevel']),(75,'C1'))
 
+    def _certificate(self, score, level):
+        row=self.attempt(False); row.overall_score=score; row.cefr_level=level
+        with patch.object(mock_support.MockAttempt,'objects') as attempts,patch.object(mock_support,'assert_view'), patch.object(mock_support.AssessmentJob.objects,'filter') as jobs:
+            attempts.select_related.return_value.filter.return_value.first.return_value=row
+            jobs.return_value.order_by.return_value=[]
+            return mock_support.certificate_data(SimpleNamespace(role='student'),'attempt')
+
+    def test_multilevel_below_b1_has_no_certificate(self):
+        for score,level in ((37,'BELOW_B1'),(20,None)):
+            with self.subTest(score=score), self.assertRaises(ContractAPIException) as error:
+                self._certificate(score,level)
+            self.assertEqual((error.exception.contract_code,error.exception.status_code),('MULTILEVEL_BELOW_B1_NO_CERTIFICATE',409))
+
+    def test_multilevel_b1_and_stored_older_levels_keep_their_certificate(self):
+        self.assertEqual(self._certificate(38,'B1')['cefrLevel'],'B1')
+        # An older attempt scored under the earlier thresholds keeps its stored level (owner decision).
+        self.assertEqual(self._certificate(36,'B1')['cefrLevel'],'B1')
+
     def test_student_parent_notifications_use_internal_grade_without_native_overall(self):
         row=self.attempt()
         with patch.object(mock_submission_snapshots.Notification,'objects') as notifications,\

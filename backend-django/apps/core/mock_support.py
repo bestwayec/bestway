@@ -205,6 +205,10 @@ def certificate_data(actor,attempt_id):
     overall_score = None if section_only else row.overall_score
     overall_band = None if section_only else row.overall_band
     cefr_level = None if section_only else row.cefr_level
+    # Agency criteria (blueprint level table): below B1 (under 38 of 75) there is no certificate.
+    # The level stored with the attempt decides, so older attempts keep the level they were given.
+    if row.exam.type == 'multilevel' and not section_only and overall_score is not None and cefr_level in (None, '', 'BELOW_B1'):
+        fail('MULTILEVEL_BELOW_B1_NO_CERTIFICATE', 'A Multilevel result below B1 (under 38 of 75) has no certificate', 409)
 
     return dict(
         studentName=row.student.user.name if row.student and row.student.user else "Student",

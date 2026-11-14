@@ -27,6 +27,7 @@ import { CefrResultInfographic } from "./cefr-result-infographic";
 import { CertificateModal } from "./certificate-modal";
 import { ExamFeedbackModal } from "./exam-feedback-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
+import { gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "@/lib/grade-draft";
 import { isEmptyAttempt } from "@/lib/empty-attempt";
 
 const media = (path: string) => `/api/backend${path}`;
@@ -135,7 +136,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
           {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
-              <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
+              <Award className="size-3.5" aria-hidden /> {t("resultView.teacherReviewed")}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
@@ -145,7 +146,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
         {Boolean(attempt.mediaState?.teacher_comment) && (
           <div className="mt-4 rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Ustozning rasmiy xulosasi:</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">{t("resultView.teacherComment")}</p>
             <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{String(attempt.mediaState?.teacher_comment)}&rdquo;</p>
           </div>
         )}
@@ -248,7 +249,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                 {!isSkipped && !pendingManual && accuracy !== null && (
                   <div className="mt-2.5 space-y-1">
                     <div className="flex items-center justify-between text-xs text-fg-muted">
-                      <span>Aniqlik (Accuracy):</span>
+                      <span>{t("accuracy")}</span>
                       <span className="font-semibold text-fg tabular-nums">{accuracy}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
@@ -544,7 +545,7 @@ function ReviewRow({  q,
           )}
 
           {/* Baholash formasi (xodim) */}
-          {canGrade && <GradeForm q={q} skill={skill} grade={grade} />}
+          {canGrade && <GradeForm q={q} skill={skill} grade={grade} attemptId={attemptId} />}
         </div>
       </div>
     </Card>
@@ -570,15 +571,35 @@ function GradeForm({
   q,
   skill,
   grade,
+  attemptId,
 }: {
   q: MockAttemptQuestion;
   skill: MockSkill;
   grade: ReturnType<typeof useGradeMock>;
+  attemptId: string;
 }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
-  const [score, setScore] = React.useState(q.isGraded && q.score != null ? String(q.score) : "");
-  const [feedback, setFeedback] = React.useState(q.feedback ?? "");
+  const savedScore = q.isGraded && q.score != null ? String(q.score) : "";
+  const savedFeedback = q.feedback ?? "";
+  const draftKey = gradeDraftKey(attemptId, q.id);
+  const storage = () => (typeof window === "undefined" ? null : window.localStorage);
+  const [score, setScore] = React.useState(() => readGradeDraft(storage(), draftKey)?.score ?? savedScore);
+  const [feedback, setFeedback] = React.useState(() => readGradeDraft(storage(), draftKey)?.feedback ?? savedFeedback);
+  const hasDraft = score !== savedScore || feedback !== savedFeedback;
+  // Unsent input stays in this browser until it is saved (reload, lost connection).
+  React.useEffect(() => {
+    writeGradeDraft(storage(), draftKey, { score, feedback }, { score: savedScore, feedback: savedFeedback });
+  }, [draftKey, score, feedback, savedScore, savedFeedback]);
+  // Alt+ArrowDown / Alt+ArrowUp move between the grade fields of this attempt.
+  const onScoreKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const fields = Array.from(document.querySelectorAll<HTMLInputElement>("input[data-grade-score]"));
+    const target = nextGradeIndex(fields.length, fields.indexOf(event.currentTarget), event.key, event.altKey);
+    if (target < 0) return;
+    event.preventDefault();
+    fields[target].focus();
+    fields[target].scrollIntoView({ block: "center" });
+  };
   const [rubrics, setRubrics] = React.useState<Record<string, string>>(
     () => Object.fromEntries(Object.entries(q.rubricScores ?? {}).map(([k, v]) => [k, String(v)])),
   );
@@ -627,7 +648,7 @@ function GradeForm({
         rubricScores: Object.keys(rubricScores).length ? rubricScores : undefined,
       },
       {
-        onSuccess: () => toast.success(tc("saved")),
+        onSuccess: () => { try { window.localStorage.removeItem(draftKey); } catch { /* ignore */ } toast.success(tc("saved")); },
         onError: () => toast.error(tc("unknownError")),
       },
     );
@@ -646,9 +667,15 @@ function GradeForm({
           step={0.5}
           value={score}
           onChange={(e) => setScore(e.target.value)}
+          onKeyDown={onScoreKeyDown}
+          data-grade-score=""
+          aria-label={`${t("score")} (0–${maximum})`}
+          aria-keyshortcuts="Alt+ArrowDown Alt+ArrowUp"
+          title={t("gradeKeyboardHint")}
           className="h-9 w-24"
         />
-        {q.isGraded && <Badge variant="success">✓</Badge>}
+        {q.isGraded && !hasDraft && <Badge variant="success">✓</Badge>}
+        {hasDraft && <span className="text-xs text-fg-muted" role="status">{t("gradeDraftKept")}</span>}
         {roundedAvg != null && (
           <span className="ml-auto inline-flex items-center gap-2 text-xs text-fg-muted tabular-nums">
             Rubrics avg: {roundedAvg}

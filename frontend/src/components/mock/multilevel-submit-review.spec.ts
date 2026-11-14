@@ -67,11 +67,23 @@ describe("Multilevel pre-submit review surface", () => {
     expect(html).not.toContain(DISABLED);
   });
 
-  it("shows the full-test sections that are not reached yet", () => {
-    const work = multilevelMissingWork(sections, { w1: "Dear friend," }, new Set(["s1"]), { flowMode: "full_test", currentSkill: "writing" }, NOW);
+  it("shows handed-in full-test sections as submitted and later ones as not reached", () => {
+    const work = multilevelMissingWork(sections, { l1: "library", r1: "TRUE", w1: "Dear friend," }, new Set(), { flowMode: "full_test", currentSkill: "writing" }, NOW);
     const html = render(work);
+    expect(html).toContain("Submitted · 1 / 2");
+    expect((html.match(/Submitted · /g) || []).length).toBe(2);
     expect(html).toContain("Not reached yet");
+    expect((html.match(/Go to section/g) || []).length).toBe(1);
     expect(html).toContain("Every required section is complete.");
+  });
+
+  it("at the last full-test section, every earlier section is submitted, none is 'not reached'", () => {
+    const work = multilevelMissingWork(sections, completeAnswers, new Set(["s1"]), { flowMode: "full_test", currentSkill: "speaking", sectionDeadlines: { listening: "2026-10-07T09:00:00Z" } }, NOW);
+    const html = render(work);
+    expect(html).not.toContain("Not reached yet");
+    expect(html).not.toContain("Time ended");
+    expect(html).not.toContain("Go to section");
+    expect(html).toContain("Complete · 1 / 1");
   });
 
   it("tells the student that a timed exam submits itself when the timer ends", () => {

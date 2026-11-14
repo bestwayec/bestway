@@ -8,6 +8,7 @@ import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api-client';
+import { SPEAKING_AUTOSTART_EVENT, takeSpeakingAutoStart } from '@/lib/speaking-sequence';
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
@@ -26,8 +27,10 @@ function recorderStatus(status: string, recorded: boolean, translate: (key: stri
  * (and caps the number of plays), so the student can only start a granted play
  * and change the volume: there is no pause, seek or rewind control.
  */
-export function MultilevelListening({ prepare, play, load }: {
+export function MultilevelListening({ prepare, play, load, alreadyStarted = false }: {
   prepare: () => Promise<MediaPhase>; play: () => Promise<MediaPhase>; load: () => Promise<Blob>;
+  /** The server already opened this part (timed exam, page reloaded): show its real state at once. */
+  alreadyStarted?: boolean;
 }) {
   const t = useTranslations('mock.runnerUx');
   const [phase, setPhase] = useState<MediaPhase | null>(null);
@@ -98,6 +101,15 @@ export function MultilevelListening({ prepare, play, load }: {
     } catch (failure) { console.error('Listening audio resume failed', failure); setError(t('listeningPlayError')); }
     finally { setBusy(false); }
   }
+  // After a reload the part is not "untouched": ask the server for the phase it already holds
+  // (the call is idempotent in a timed exam and never spends a play).
+  const restored = useRef(false);
+  useEffect(() => {
+    if (!alreadyStarted || restored.current) return;
+    restored.current = true;
+    void start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, [alreadyStarted]);
   const previewing = !!phase && !playing && left > 0;
   const exhausted = !!phase && !playing && !previewing && phase.plays >= phase.playLimit && !grantValid;
   const status = !phase ? null
@@ -229,7 +241,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       closeMicrophone();
       assertMicrophoneAvailable();
       input = await requestMicrophoneStream({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
-      if (!aliveRef.current || captureGeneration.current !== current) { input.getTracks().forEach((track) => track.stop()); return; }
+      if (!aliveRef.current || captureGeneration.current !== current) { input.getTracks().forEach((track) => track.stop()); if (aliveRef.current) stage('idle'); return; }
       stream.current = input;
       // Verify capture support before the server starts a timed response.
       recorder.current = createAudioRecorder(stream.current, { audioBitsPerSecond: 28000 });
@@ -317,6 +329,27 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       else beginRecording();
     } catch { if (aliveRef.current && captureGeneration.current === current) { closeMicrophone(); stage('idle'); setError('Speaking response could not be started. Please try again.'); } }
   }
+  // Timed exam: the previous answer was uploaded, so this question opens and starts by itself.
+  // The microphone was already checked in this session; if it cannot be opened the student
+  // sees the usual microphone message and can start by hand.
+  const autoRef = useRef<() => void>(() => undefined);
+  useEffect(() => { autoRef.current = () => {
+    if (!timed || recorded || pending || busy.current) return;
+    // Consumed only here, when this mounted recorder really starts (a remount must not lose it).
+    if (!takeSpeakingAutoStart(attemptId, questionId)) return;
+    void (async () => { await preflight(); if (aliveRef.current && stream.current) await start(); })();
+  }; });
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => { if (timer === null) timer = setTimeout(() => { timer = null; autoRef.current(); }, 0); };
+    const onRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{ attemptId: string; questionId: string }>).detail;
+      if (detail?.attemptId === attemptId && detail.questionId === questionId) schedule();
+    };
+    window.addEventListener(SPEAKING_AUTOSTART_EVENT, onRequest);
+    schedule(); // the request may have been made before this question was on screen
+    return () => { window.removeEventListener(SPEAKING_AUTOSTART_EVENT, onRequest); if (timer !== null) clearTimeout(timer); };
+  }, [attemptId, questionId]);
   const uploaded = recorded && ['idle', 'saved'].includes(status);
   const activeStep = uploaded ? 3 : ['finalizing', 'uploading', 'retry'].includes(status) ? 2 : ['ready', 'starting', 'preparing', 'recording'].includes(status) ? 1 : 0;
   const hint = uploaded ? 'uploadedHint' : status === 'preparing' ? 'preparationHint' : status === 'recording' ? 'recordingHint' : ['finalizing', 'uploading', 'retry'].includes(status) ? 'uploadHint' : 'microphoneHint';

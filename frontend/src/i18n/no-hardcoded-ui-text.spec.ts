@@ -33,6 +33,8 @@ const FILES = [
   "src/components/mock/exam-locker.tsx",
   "src/components/mock/exam-log-panel.tsx",
   "src/components/mock/multilevel-student-ui.tsx",
+  "src/components/mock/multilevel-media.tsx",
+  "src/components/mock/assessment-panel.tsx",
   "src/components/teacher/live-exam-room-panel.tsx",
   "src/components/teacher/group-live-monitoring.tsx",
   "src/components/mock/reading-split-divider.tsx",
@@ -43,7 +45,7 @@ const FILES = [
   "src/components/demo/demo-runner.tsx",
   "src/app/[locale]/(marketing)/demo/[id]/page.tsx",
 ];
-const UZBEK_UI = /\b(Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
+const UZBEK_UI = /\b(Aniqlik|Tasdiqla\w*|Ustoz\w*|Eshitib|To'xtatish|Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 
