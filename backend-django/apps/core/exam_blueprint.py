@@ -38,6 +38,10 @@ SOURCES = {
         "title": "IELTS scoring in detail",
         "url": "https://ielts.org/take-a-test/your-results/ielts-scoring-in-detail",
     },
+    "idp-computer-delivered": {
+        "title": "IDP: How computer-delivered IELTS works (Hide, Settings, clock warnings, 2 minutes to check Listening answers)",
+        "url": "https://ielts.idp.com/canada/prepare/article-how-computer-delivered-ielts-works",
+    },
     "uzbmb-format": {
         "title": "Test sinovlari formati — Multilevel (ko'p darajali) test formati",
         "url": "https://uzbmb.uz/page/test_sinovlari_formati",
@@ -84,7 +88,8 @@ def _ielts(exam_type: str) -> dict:
         "sections": [
             {
                 "skill": "listening", "durationSeconds": 30 * 60, "durationApproximate": True,
-                "questionCount": 40, "audioPlays": 1, "sources": ["ielts-format"],
+                "questionCount": 40, "audioPlays": 1, "reviewSeconds": 120, "previewSeconds": 30,
+                "sources": ["ielts-format", "idp-computer-delivered"],
                 "parts": [{"key": str(n), "questionCount": 10, "allowedTypes": IELTS_LISTENING_TYPES} for n in (1, 2, 3, 4)],
             },
             {
@@ -123,8 +128,9 @@ def _ielts(exam_type: str) -> dict:
             "sources": ["ielts-scoring"],
         },
         "unverified": [
-            {"field": "listening.reviewSeconds",
-             "note": "Two minutes to check answers at the end of Listening on computer: not stated on the ielts.org pages checked."},
+            {"field": "listening.previewSeconds",
+             "note": "BestWay's reading time before each part (30 s). Official recordings include the pauses for reading the "
+                     "questions; their length is not published, so this value is BestWay's choice."},
             {"field": "scale.rawToBand",
              "note": "ielts.org publishes only average marks for bands 5-8 (4-7 for General Training Reading) and says the "
                      "marks needed vary between test versions; the other rows of BestWay's tables are approximate."},

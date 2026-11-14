@@ -62,6 +62,7 @@ import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
+import type { ListeningSchedule } from "@/lib/listening-schedule";
 import { ExamSessionGate, useExamSession } from "./exam-session-gate";
 import { MicCheckModal } from "./mic-check-modal";
 import { CbtSectionStepper } from "./cbt-section-stepper";
@@ -938,6 +939,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   partIndex={partIdx}
                   audioTimestamps={examAudioTimestamps}
                   sharedSingleAudioUrl={sharedSingleAudioUrl}
+                  // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
+                  listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
+                  startListening={strict && section.skill === "listening" && !versioned && g.hasAudio
+                    ? () => api.post<ListeningSchedule>(`/mock/attempts/${attempt.id}/listening/${g.id}/start`)
+                    : undefined}
+                  serverOffsetMs={openingOffset}
                 />
               )}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
@@ -1166,6 +1173,9 @@ function GroupBlock({
   reviewAtEnd = true,
   audioTimestamps = [],
   sharedSingleAudioUrl,
+  listeningSchedule = null,
+  startListening,
+  serverOffsetMs = 0,
 }: {
   group: MockSection["groups"][number];
   skill: MockSkill;
@@ -1185,6 +1195,9 @@ function GroupBlock({
   reviewAtEnd?: boolean;
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
+  listeningSchedule?: ListeningSchedule | null;
+  startListening?: () => Promise<ListeningSchedule>;
+  serverOffsetMs?: number;
 }) {
   const tg = useTranslations("mock.runnerUx");
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
@@ -1227,6 +1240,9 @@ function GroupBlock({
             endSec={endSec}
             partLabel={group.title || `Part ${partIndex + 1}`}
             timestamps={audioTimestamps}
+            schedule={listeningSchedule}
+            startSchedule={group.hasAudio ? startListening : undefined}
+            serverOffsetMs={serverOffsetMs}
           />}
         </div>
       ) : (
@@ -1683,7 +1699,14 @@ function QuestionInput({
           </button>
         </div>
       )}
-      <ObjectiveQuestionInput question={q} value={value} onChange={onChange} unavailableOptions={unavailableOptions} />
+      <ObjectiveQuestionInput
+        question={q}
+        value={value}
+        onChange={onChange}
+        unavailableOptions={unavailableOptions}
+        // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
+        renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}
+      />
     </div>
   );
 }

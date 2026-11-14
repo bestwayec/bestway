@@ -227,6 +227,14 @@ def record_audio_access(actor, attempt_id, group_id):
             if not phase.get('plays') or now > parse_datetime(phase['expiresAt']):
                 raise ContractAPIException('AUDIO_REPLAY_BLOCKED', 'Start the scheduled playback first', 403)
             return
+        from .ielts_listening import access_window_open
+        window = access_window_open(attempt, group)
+        if window is not None:
+            # Started with the server schedule: reachable again (reload, lost connection) while
+            # the part is playing on the server clock, never after.
+            if not window:
+                raise ContractAPIException('AUDIO_REPLAY_BLOCKED', 'Audio bir marta eshitiladi (exam rejimi)', 403)
+            return
         plays = attempt.audio_plays or {}
         count = plays.get(group_id, 0) + 1
         if count > group.audio_play_limit:
