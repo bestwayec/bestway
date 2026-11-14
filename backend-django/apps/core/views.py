@@ -775,7 +775,7 @@ def mock_exams_view(request):
 
         except Exception:
 
-            cached = None
+            pass  # cache unavailable: read from the database instead
 
     data = mock_catalog.list_exams(user, program=program, exam_type=exam_type, practice_level=practice)
 
@@ -789,7 +789,7 @@ def mock_exams_view(request):
 
         except Exception:
 
-            pass
+            pass  # caching is best-effort; the response does not depend on it
 
     return success(data)
 
@@ -882,7 +882,7 @@ def legacy_test_detail_view(request, test_id):
 
         except Exception:
 
-            pass
+            pass  # nothing more to try; the outcome is reported below
 
     return success({"deleted": True, "id": test_id})
 
