@@ -1125,7 +1125,7 @@ export function GuidedMultilevelGroups({
   const sequence = skill === "speaking" && timed;
   // Timed Speaking: an uploaded answer opens the next question (and its part) automatically.
   const groupsRef = React.useRef(safeGroups);
-  groupsRef.current = safeGroups;
+  React.useEffect(() => { groupsRef.current = safeGroups; });
   React.useEffect(() => {
     if (!sequence) return;
     const onUploaded = (event: Event) => {

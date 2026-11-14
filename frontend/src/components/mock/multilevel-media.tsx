@@ -333,12 +333,12 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   // The microphone was already checked in this session; if it cannot be opened the student
   // sees the usual microphone message and can start by hand.
   const autoRef = useRef<() => void>(() => undefined);
-  autoRef.current = () => {
+  useEffect(() => { autoRef.current = () => {
     if (!timed || recorded || pending || busy.current) return;
     // Consumed only here, when this mounted recorder really starts (a remount must not lose it).
     if (!takeSpeakingAutoStart(attemptId, questionId)) return;
     void (async () => { await preflight(); if (aliveRef.current && stream.current) await start(); })();
-  };
+  }; });
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const schedule = () => { if (timer === null) timer = setTimeout(() => { timer = null; autoRef.current(); }, 0); };
