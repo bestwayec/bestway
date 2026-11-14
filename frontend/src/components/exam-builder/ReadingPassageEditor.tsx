@@ -43,7 +43,7 @@ import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
-import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
+import { TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 const READING_TYPES = TYPES_BY_SKILL["reading"];
 
@@ -280,7 +280,7 @@ export function ReadingPassageEditor({
   const [visualQuestions, setVisualQuestions] = React.useState<BuilderQuestion[]>(part?.questions ?? []);
   const baseNumber = visualQuestions.length
     ? Math.min(...visualQuestions.map((q) => q.number)) - 1
-    : nextQuestionNumber(detail.sections) - 1;
+    : nextQuestionNumber(detail.sections, { skill: "reading" }) - 1;
   React.useEffect(
     () => () => {
       if (localImageUrl) URL.revokeObjectURL(localImageUrl);
@@ -387,7 +387,7 @@ export function ReadingPassageEditor({
   const passageName = `Passage ${passageNo}`;
   const displayTitle = part.title.trim() || passageName;
   const numbers = part.questions.map((q) => q.number);
-  const nextNumber = Math.max(nextQuestionNumber(detail.sections) - 1, numbers.reduce((m, n) => Math.max(m, n), 0)) + 1;
+  const nextNumber = Math.max(nextQuestionNumber(detail.sections, { skill: "reading" }) - 1, numbers.reduce((m, n) => Math.max(m, n), 0)) + 1;
   const words = wordCount(part.passageText);
 
   const passageEmpty = part.passageText.trim() === "";
@@ -784,7 +784,7 @@ export function ReadingPassageEditor({
               skill="reading"
               onDone={handleImportDone}
               groupLabel={`Reading → ${passageName}`}
-              existingNumbers={detail.sections.flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => q.number)))}
+              existingNumbers={sectionNumbers(detail.sections, { skill: "reading" })}
             />
           )}
 

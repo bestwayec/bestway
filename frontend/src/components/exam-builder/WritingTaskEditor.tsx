@@ -137,7 +137,7 @@ export function WritingTaskEditor({
         : [
             {
               clientKey: `new-${kind}`,
-              number: nextQuestionNumber(detail.sections),
+              number: nextQuestionNumber(detail.sections, { skill: "writing" }),
               prompt: "",
             },
           ];
