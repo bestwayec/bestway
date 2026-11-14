@@ -1167,7 +1167,6 @@ function GroupBlock({
   onAnswer,
   onReviewComplete,
   sharedWritingStimulus,
-  simulatorMode = "cdi",
   flaggedQuestions,
   onToggleFlag,
   partIndex = 0,

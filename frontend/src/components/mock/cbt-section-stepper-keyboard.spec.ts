@@ -7,7 +7,9 @@ import en from "../../../messages/en.json";
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string, values?: Record<string, unknown>) => {
-    const template: string = namespace.split(".").reduce((node: any, part) => node?.[part], en as any)?.[key] ?? key;
+    type Tree = { [key: string]: Tree | string | undefined };
+    const node = namespace.split(".").reduce<Tree | undefined>((tree, part) => tree?.[part] as Tree | undefined, en as unknown as Tree);
+    const template = typeof node?.[key] === "string" ? (node[key] as string) : key;
     return template.replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? ""));
   },
 }));

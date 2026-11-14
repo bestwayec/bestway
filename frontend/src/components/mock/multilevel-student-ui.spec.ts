@@ -64,7 +64,7 @@ describe("Multilevel student UX", () => {
     expect(multilevelTaskName(guidance, "fallback")).toBe("Task 1.1 — Informal Letter");
     expect(html).toContain("1.1");
     expect(html).toContain("1.2");
-    expect(html).toContain("~50 words");
+    expect(html).toContain("taskWordsAbout 50");
     expect(html).toContain("/5");
     expect(html).not.toContain("Email");
   });
@@ -92,8 +92,9 @@ describe("Multilevel student UX", () => {
     expect(html).toContain("1.2");
     expect(html).toContain(">2<");
     expect(html).toContain(">3<");
-    expect(taskDuration({ taskKey: "1.1", responseSeconds: 30 })).toBe("30 sec each · no official prep");
-    expect(taskDuration({ taskKey: "1.2", prepSeconds: 15, responseSeconds: 45 })).toBe("15 sec prep · 45 sec response");
+    const t = (key: string, values?: Record<string, string | number>) => `${key}:${JSON.stringify(values)}`;
+    expect(taskDuration({ taskKey: "1.1", responseSeconds: 30 }, t)).toBe('taskTimingNoPrep:{"response":30}');
+    expect(taskDuration({ taskKey: "1.2", prepSeconds: 15, responseSeconds: 45 }, t)).toBe('taskTimingPrep:{"prep":15,"response":45}');
   });
 
   it("marks Writing progress from entered responses and Speaking progress only from uploaded audio", () => {
