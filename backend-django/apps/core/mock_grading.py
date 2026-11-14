@@ -32,6 +32,26 @@ def annotate_practice_grades(attempt,result):
         raw=result['rawScores'].get(job.skill)
         if grade is not None and raw is not None and grade['rawScore']==raw['score'] and grade['rawMax']==raw['max']:
             raw['practiceGrade']=grade
+    return internal_overall(result)
+
+
+def internal_overall(result):
+    """Owner decision (2026-11-14): once Writing/Speaking carry the internal practice grade
+    (policy BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1), the overall score and level use those same
+    grades, so the page, the overall and the internal certificate show one consistent number.
+    The native estimates stay in standardScores; nothing is recalculated for untouched attempts."""
+    standards=result.get('standardScores') or {}
+    if result.get('overallScore') is None or not standards:return result
+    raw=result.get('rawScores') or {}
+    graded=[skill for skill in ('writing','speaking') if isinstance((raw.get(skill) or {}).get('practiceGrade'),dict)]
+    if not graded:return result
+    scores=[]
+    for skill,item in standards.items():
+        grade=(raw.get(skill) or {}).get('practiceGrade')
+        value=grade['score'] if isinstance(grade,dict) else item.get('estimatedStandardScore')
+        if value is not None:scores.append(value)
+    result['overallScore']=scoring.multilevel_overall_score(scores)
+    result['cefrLevel']=scoring.multilevel_level(result['overallScore'])
     return result
 
 def save_projection(attempt,result):

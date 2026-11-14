@@ -237,13 +237,53 @@ class InternalGradeDeliveryTests(SimpleTestCase):
             raw_scores=dict(writing=raw),section_bands={},standard_scores={},overall_band=None,overall_score=75,
             cefr_level='C1',finished_at=datetime(2026,1,1,tzinfo=UTC),student=SimpleNamespace(user=SimpleNamespace(name='Student')))
 
-    def test_new_internal_full_attempt_cannot_issue_overall_cefr_certificate(self):
-        row=self.attempt()
-        with patch.object(mock_support.MockAttempt,'objects') as attempts,patch.object(mock_support,'assert_view'):
+    def _internal(self,row,jobs_list):
+        with patch.object(mock_support.MockAttempt,'objects') as attempts,patch.object(mock_support,'assert_view'),patch.object(mock_support.AssessmentJob.objects,'filter') as jobs:
             attempts.select_related.return_value.filter.return_value.first.return_value=row
-            with self.assertRaises(ContractAPIException) as error:mock_support.certificate_data(SimpleNamespace(role='student'),'attempt')
+            jobs.return_value.order_by.return_value=jobs_list
+            return mock_support.certificate_data(SimpleNamespace(role='student'),'attempt')
+
+    def job(self,source):
+        return SimpleNamespace(skill='writing',status='SUCCEEDED',final_score=45,final_score_source=source)
+
+    def test_internal_full_attempt_needs_the_teacher_grade_before_any_certificate(self):
+        for jobs_list in ([],[self.job('AI')]):
+            with self.subTest(jobs=len(jobs_list)),self.assertRaises(ContractAPIException) as error:self._internal(self.attempt(),jobs_list)
+            self.assertEqual((error.exception.contract_code,error.exception.status_code),('INTERNAL_CERTIFICATE_NEEDS_TEACHER_REVIEW',409))
+
+    def test_teacher_graded_internal_attempt_gets_the_separate_internal_certificate(self):
+        row=self.attempt();row.overall_score=61.1;row.cefr_level='B2'
+        data=self._internal(row,[self.job('TEACHER')])
+        self.assertEqual((data['certificateType'],data['isOfficial'],data['overallScore'],data['cefrLevel']),('BESTWAY_INTERNAL_MOCK',False,61.1,'B2'))
+        self.assertRegex(data['verificationCode'],r'^BW-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$')
+        self.assertEqual(next(s for s in data['sections'] if s['skill']=='writing')['standardScore'],45)
+        from apps.core.mock_certificate import generate
+        pdf=generate(data)
+        self.assertTrue(pdf.startswith(b'%PDF'))
+        # The official certificate type is unchanged for attempts without internal grades.
+        standard=self.attempt(False);standard.overall_score=61.1;standard.cefr_level='B2'
+        self.assertEqual(self._internal(standard,[])['certificateType'],'STANDARD')
+
+    def test_internal_certificate_below_b1_is_refused(self):
+        row=self.attempt();row.overall_score=37.5;row.cefr_level='BELOW_B1'
+        with self.assertRaises(ContractAPIException) as error:self._internal(row,[self.job('TEACHER')])
+        self.assertEqual(error.exception.contract_code,'MULTILEVEL_BELOW_B1_NO_CERTIFICATE')
+
+    def test_internal_certificate_ielts_policy_unchanged(self):
+        row=self.attempt();row.exam.type='ielts_academic'
+        with self.assertRaises(ContractAPIException) as error:self._internal(row,[self.job('TEACHER')])
         self.assertEqual(error.exception.contract_code,'MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE')
-        self.assertEqual((row.overall_score,row.cefr_level),(75,'C1'))
+
+    def test_printed_code_verifies_without_the_full_name(self):
+        row=self.attempt();row.overall_score=61.1;row.cefr_level='B2';row.student=SimpleNamespace(user=SimpleNamespace(name='Ali Karimov'))
+        code=mock_support.verification_code('attempt')
+        with patch.object(mock_support.MockAttempt,'objects') as attempts:
+            attempts.select_related.return_value.filter.return_value.first.return_value=row
+            ok=mock_support.verify_certificate('attempt',code.lower())
+            bad=mock_support.verify_certificate('attempt','BW-0000-0000-0000')
+        self.assertEqual((ok['valid'],ok['studentInitials'],ok['level'],ok['isOfficial']),(True,'A.K.','B2',False))
+        self.assertNotIn('Karimov',json.dumps(ok,default=str))
+        self.assertEqual(bad,dict(valid=False))
 
     def test_historical_full_certificate_retains_saved_native_result(self):
         row=self.attempt(False)

@@ -60,6 +60,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const role = me?.user.role;
   const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
   const grade = useGradeMock(attempt.id);
+  // Teacher-graded internal Multilevel result: a separate BestWay internal certificate, not an official one.
+  const internalGrades = Object.values((attempt.rawScores ?? {}) as Record<string, { practiceGrade?: unknown } | null>).some((raw) => !!raw?.practiceGrade);
   const [certModalOpen, setCertModalOpen] = React.useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
 
@@ -287,7 +289,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
-              {partialPractice ? t("resultView.practiceReport") : `${t("certificate")} (PDF)`}
+              {partialPractice ? t("resultView.practiceReport") : internalGrades ? t("resultView.internalCertificate") : `${t("certificate")} (PDF)`}
             </a>
             <button
               type="button"

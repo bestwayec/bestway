@@ -1376,7 +1376,8 @@
       "practiceReport": "Practice report (PDF)",
       "print": "Print",
       "teacherReviewed": "Reviewed by the teacher",
-      "teacherComment": "Teacher's comment:"
+      "teacherComment": "Teacher's comment:",
+      "internalCertificate": "BestWay internal result (PDF)"
     },
     "submitDialog": {
       "title": "Finish the exam",
