@@ -1110,6 +1110,9 @@
       "questionOptions": "Question {number} options",
       "answerFor": "Answer for question {number}",
       "sharedSituation": "Shared situation",
+      "splitDivider": "Resize passage and questions",
+      "splitValue": "Passage {passage}%, questions {questions}%",
+      "questionsRegion": "Questions",
       "listeningResume": "Continue listening",
       "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now."
     },

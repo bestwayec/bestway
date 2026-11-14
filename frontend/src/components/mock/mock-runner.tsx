@@ -62,6 +62,7 @@ import { isPartialPractice, practiceExam } from '@/lib/mock-practice';
 import { ResponseProgress, WritingResponseGuide } from './exam-response-progress';
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { ExamLocker } from "./exam-locker";
+import { ReadingSplitDivider, useReadingSplit } from "./reading-split-divider";
 import type { ListeningSchedule } from "@/lib/listening-schedule";
 import { ExamSessionGate, useExamSession } from "./exam-session-gate";
 import { MicCheckModal } from "./mic-check-modal";
@@ -1219,7 +1220,10 @@ function GroupBlock({
       : media(sharedSingleAudioUrl)
     : "";
 
-  const isDtmSplit = simulatorMode === "dtm" && hasPassage && !hasGappedContent;
+  // Wide screens: passage | divider | questions, each column scrolling on its own.
+  const isPassageSplit = hasPassage && !hasGappedContent;
+  const [readingSplit, setReadingSplit] = useReadingSplit();
+  const splitRef = React.useRef<HTMLDivElement>(null);
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
 
   return (
@@ -1321,13 +1325,14 @@ function GroupBlock({
       )}
 
       <div
+        ref={splitRef}
         className={cn(
           "mt-3",
-          (hasPassage || isMapSplit) &&
-            !hasGappedContent &&
-            "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start",
-          isDtmSplit && "lg:divide-x lg:divide-border"
+          isPassageSplit
+            ? "lg:grid lg:grid-cols-[minmax(0,var(--reading-passage))_auto_minmax(0,var(--reading-questions))] lg:gap-3 lg:items-start"
+            : isMapSplit && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start",
         )}
+        style={isPassageSplit ? ({ "--reading-passage": `${readingSplit}fr`, "--reading-questions": `${100 - readingSplit}fr` } as React.CSSProperties) : undefined}
       >
         {isMapSplit && (
           // Sticky only beside the questions on wide screens; on phones a sticky
@@ -1342,8 +1347,8 @@ function GroupBlock({
         {hasPassage && !hasGappedContent && (
           <div
             className={cn(
-              "whitespace-pre-line rounded-[12px] border border-border bg-surface p-5 text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch]",
-              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto",
+              "whitespace-pre-line rounded-[12px] border border-border bg-surface p-5 text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] lg:max-w-none",
+              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:overscroll-contain",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
             // The passage scrolls on its own: keyboard users can focus and scroll it.
@@ -1367,6 +1372,7 @@ function GroupBlock({
             </div>
           </div>
         )}
+        {isPassageSplit && <ReadingSplitDivider value={readingSplit} onChange={setReadingSplit} containerRef={splitRef} />}
         {hasGappedContent ? (
           <div className="overflow-x-auto rounded-[8px] border border-border bg-surface p-3 sm:p-4">
             <GappedContent
@@ -1398,7 +1404,7 @@ function GroupBlock({
             className={cn(
               "space-y-4",
               "lg:block",
-              isDtmSplit && "lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:pl-4 lg:pr-1",
+              isPassageSplit && "lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
               isMapSplit && "lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pl-2 lg:pr-1",
               hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
             )}

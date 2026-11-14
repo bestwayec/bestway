@@ -1110,6 +1110,9 @@
       "questionOptions": "Savol {number} variantlari",
       "answerFor": "Savol {number} javobi",
       "sharedSituation": "Umumiy vaziyat",
+      "splitDivider": "Matn va savollar kengligini o‘zgartirish",
+      "splitValue": "Matn {passage}%, savollar {questions}%",
+      "questionsRegion": "Savollar",
       "listeningResume": "Tinglashni davom ettirish",
       "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi."
     },
