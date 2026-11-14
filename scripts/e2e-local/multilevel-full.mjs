@@ -11,7 +11,7 @@
 //   teacher  : grades Writing and Speaking per part; final 75-point score and level
 //   also     : a student of another group is denied; phone-size run (390x844)
 //
-//   BW_WEB=http://localhost:3300 BW_CHROMIUM=... BW_PYTHON=... node multilevel-full.mjs [phase...]
+//   BW_WEB=http://localhost:3300 BW_CHROMIUM=... node multilevel-full.mjs [phase...]
 //   Phases: build student finish grade access mobile (default: all). State is kept in
 //   ../../.local/e2e/multilevel-full.json so a phase can be re-run on its own.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -29,7 +29,6 @@ const WEB = process.env.BW_WEB || "http://localhost:3300";
 const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic, local only (seed_local_dev)
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
 const STUDENT = process.env.BW_STUDENT || "+998900000010";
-const PYTHON = process.env.BW_PYTHON || "python";
 if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error("Refusing non-loopback host"); process.exit(2); }
 
 const phases = process.argv.slice(2).length ? process.argv.slice(2) : ["build", "student", "finish", "grade", "access", "mobile"];
