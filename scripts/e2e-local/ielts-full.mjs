@@ -13,7 +13,6 @@
 //   BW_WEB=http://localhost:3300 BW_CHROMIUM=... node ielts-full.mjs [phase...]
 //   Phases: build student grade (default: all). State: ../../.local/e2e/ielts-full.json
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { deflateSync } from "node:zlib";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -26,7 +25,6 @@ const STATE_FILE = join(OUT, "ielts-full.json");
 const WEB = process.env.BW_WEB || "http://localhost:3300";
 const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic, local only (seed_local_dev)
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
-const STUDENT = process.env.BW_STUDENT || "+998900000010";
 const STUDENT_IELTS = process.env.BW_STUDENT_IELTS || "+998900000011";
 if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error("Refusing non-loopback host"); process.exit(2); }
 
@@ -43,17 +41,6 @@ function wavFile(name, seconds) {
   buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34); buf.write("data", 36); buf.writeUInt32LE(n * 2, 40);
   for (let i = 0; i < n; i++) buf.writeInt16LE(Math.round(6000 * Math.sin((2 * Math.PI * 330 * i) / rate)), 44 + i * 2);
   const path = join(OUT, name); writeFileSync(path, buf); return path;
-}
-function pngFile(name, w = 320, h = 200) {
-  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
-  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcTable[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const body = Buffer.concat([Buffer.from(type), data]); const sum = Buffer.alloc(4); sum.writeUInt32BE(crc(body)); return Buffer.concat([len, body, sum]); };
-  const raw = Buffer.alloc(h * (1 + w * 3));
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = y * (1 + w * 3) + 1 + x * 3; raw[o] = (x * 255) / w; raw[o + 1] = (y * 255) / h; raw[o + 2] = 120; }
-  const head = Buffer.alloc(13); head.writeUInt32BE(w, 0); head.writeUInt32BE(h, 4); head[8] = 8; head[9] = 2;
-  const path = join(OUT, name);
-  writeFileSync(path, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", head), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]));
-  return path;
 }
 const LISTENING_SECONDS = 6;
 const AUDIO = wavFile("ielts-listening.wav", LISTENING_SECONDS);
@@ -115,10 +102,7 @@ async function api(page, method, path, body, { multipart, allow } = {}) {
 const letters = "ABCDEFGHIJ";
 const mc = (n, skill, count) => ({ number: n, type: "multiple_choice", prompt: `Synthetic ${skill} item ${n}: choose option A.`, options: Array.from({ length: count }, (_, i) => `Choice ${letters[i]} for item ${n}`), correctAnswers: [`Choice A for item ${n}`], points: 1 });
 const gap = (n, skill) => ({ number: n, type: "short_answer", prompt: `Synthetic ${skill} item ${n}: write the word "alpha".`, options: [], correctAnswers: ["alpha"], points: 1, wordLimit: 1, answerRule: "ONE_WORD" });
-// Matching options are used once each, so every item has its own answer (item k → option k).
-const match = (n, skill, pool, type = "matching", k = 0) => ({ number: n, type, prompt: `Synthetic ${skill} item ${n}: choose entry ${letters[k]}.`, options: pool, correctAnswers: [pool[k]], points: 1 });
 const tfng = (n) => ({ number: n, type: "true_false_notgiven", prompt: `Synthetic reading item ${n}: the statement is true.`, options: ["TRUE", "FALSE", "NOT GIVEN"], correctAnswers: ["TRUE"], points: 1 });
-const pool = (label, count) => Array.from({ length: count }, (_, i) => `${label} ${letters[i]}`);
 const range = (from, count) => Array.from({ length: count }, (_, i) => from + i);
 
 async function tree(page, examId) { return (await api(page, "GET", `/mock/exams/${examId}`)).data; }
@@ -147,14 +131,6 @@ async function answerObjective(page, q) {
     await radio.check();
   }
 }
-async function openPart(page, n) {
-  await page.locator(`[aria-label^="Part ${n}:"], [aria-label^="Part ${n} "]`).first().click();
-  await page.waitForTimeout(600);
-}
-async function answeredCount(page) {
-  const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 81 answered/) || [])[1] ?? -1);
-}
 async function finishSection(page) {
   await page.getByRole("button", { name: "Next section" }).locator("visible=true").first().click();
   // Multilevel asks "Move on anyway"; the IELTS window asks "Yes, next section".
@@ -165,11 +141,6 @@ async function finishSection(page) {
 }
 
 
-async function expectEnabled(locator, timeout) {
-  const end = Date.now() + timeout;
-  while (Date.now() < end) { if (await locator.count() && !(await locator.isDisabled())) return; await new Promise((r) => setTimeout(r, 500)); }
-  throw new Error("button stayed disabled");
-}
 
 /* ── synthetic IELTS content (counts from the blueprint: 40 / 40 / 2 tasks / 3 parts) ─────────── */
 const IELTS_LISTENING = [range(1, 10), range(11, 10), range(21, 10), range(31, 10)]
