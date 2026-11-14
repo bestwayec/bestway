@@ -131,7 +131,7 @@ try:
     intruder = APIClient(); intruder.force_authenticate(other)
     stolen = intruder.post(f'/v1/mock/attempts/{attempt_id}/session', {'sessionId': 'intruder-' + run_id, 'takeover': True}, format='json')
     check(stolen.status_code == 404 and claim(tab_b).data['data']['active'] is True, 'another student cannot claim the attempt')
-    legacy = save([{'questionId': q2, 'response': 'desktop without session'}])
+    save([{'questionId': q2, 'response': 'desktop without session'}])
     check(stored(q2).response == 'desktop without session', 'a client without a session id is not checked (desktop)')
     released = client.post(f'/v1/mock/attempts/{attempt_id}/session/release', {'sessionId': tab_b}, format='json')
     check(released.status_code == 200 and claim(tab_a).data['data']['active'] is True, 'a released attempt can be claimed by another tab')
