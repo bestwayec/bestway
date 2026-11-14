@@ -345,6 +345,8 @@ async function grade() {
     await fields.first().waitFor();
     const n = await fields.count();
     expect(n === 6, `grade fields: ${n}`);
+    const liveNotes = await teacher.getByText(/^No recording — live speaking\./).count();
+    expect(liveNotes === 1, `live speaking notes: ${liveNotes}`);
     // Writing: TA/CC/LR/GRA; Speaking: FC/LR/GRA/P (the live Part 3 too, from the interview).
     const criteria = [[6, 6, 6, 6], [7, 7, 7, 7], [7, 7, 7, 7], [7, 7, 7, 7], [7, 7, 7, 7], [7, 7, 7, 7]];
     for (const [i, values] of criteria.entries()) {
@@ -358,7 +360,7 @@ async function grade() {
       expect(res.status() === 201, `grade ${i} HTTP ${res.status()} ${(await res.text()).slice(0, 200)}`);
     }
     const labels = await teacher.locator("input[aria-label]").evaluateAll((els) => [...new Set(els.map((e) => e.getAttribute("aria-label")))].filter((l) => /Task|Coherence|Lexical|Grammatical|Fluency|Pronunciation/i.test(l)));
-    return `6 forms graded by criteria (${labels.join(", ").slice(0, 160)})`;
+    return `6 forms graded by criteria, 1 live part marked (${labels.join(", ").slice(0, 160)})`;
   });
   await step(teacher, "09-band-from-official-conversion", async () => {
     const attempt = (await api(teacher, "GET", `/mock/attempts/${state.attemptId}`)).data;

@@ -1539,7 +1539,8 @@
     "levelBelowB1": "B1 dan quyi",
     "accuracy": "Aniqlik:",
     "gradeDraftKept": "Saqlanmagan — shu qurilmada turibdi",
-    "gradeKeyboardHint": "Alt+↓ / Alt+↑: keyingi / oldingi baho"
+    "gradeKeyboardHint": "Alt+↓ / Alt+↑: keyingi / oldingi baho",
+    "liveSpeakingNote": "Yozuv yo‘q — jonli speaking. Suhbat bo‘yicha Fluency & Coherence, Lexical Resource, Grammar va Pronunciation mezonlarini kiriting; ball mezonlardan hisoblanadi."
   },
   "wizard": {
     "title": "Imtihon yaratish",
