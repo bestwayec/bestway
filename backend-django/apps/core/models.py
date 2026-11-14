@@ -194,6 +194,9 @@ class VocabBattleSession(models.Model):
     current_question_index = models.IntegerField(default=0)
     questions = models.JSONField(default=list, blank=True)
     participants = models.JSONField(default=dict, blank=True)
+    # Podium recorded once when the battle ends: [{rank, studentId, name, score, pointsAwarded}].
+    # None = not awarded (a battle finished by an older build never recorded one).
+    winners = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

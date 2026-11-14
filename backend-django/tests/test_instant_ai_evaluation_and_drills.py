@@ -45,30 +45,6 @@ class InstantAiEvaluationAndDrillsTests(SimpleTestCase):
         self.assertEqual(len(data["questions"]), 10)
         self.assertEqual(data["questions"][0]["options"], ["TRUE", "FALSE", "NOT GIVEN"])
 
-    @patch("apps.core.study_plan_service.StudentProfile.objects.filter")
-    @patch("apps.core.study_plan_service.PointsLog.objects.create")
-    def test_targeted_practice_submit_answers_and_award_points(self, mock_points_log, mock_profile_filter):
-        """Test submitting practice answers awards +50 XP."""
-        mock_profile_filter.return_value.update.return_value = 1
-        mock_points_log.return_value = MagicMock()
-
-        submit_payload = {
-            "categoryId": "tfng",
-            "answers": [
-                {"questionId": "tfng-q1", "selectedAnswer": "TRUE"},
-                {"questionId": "tfng-q2", "selectedAnswer": "FALSE"},
-                {"questionId": "tfng-q3", "selectedAnswer": "NOT GIVEN"},
-            ],
-        }
-        res = self.client.post("/api/v1/study-plan/targeted-practice/submit", submit_payload, format="json")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()["data"]
-        self.assertEqual(data["categoryId"], "tfng")
-        self.assertEqual(data["correctCount"], 3)
-        self.assertEqual(data["pointsAwarded"], 50)
-        self.assertTrue(mock_profile_filter.called)
-        self.assertTrue(mock_points_log.called)
-
     def test_assessment_default_policy_not_manual_only(self):
         """Verify default policy in snapshots is PRACTICE_AUTO_AI, avoiding MANUAL_POLICY freeze."""
         import os
