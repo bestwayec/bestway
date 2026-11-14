@@ -1376,7 +1376,8 @@
       "practiceReport": "Mashq hisoboti (PDF)",
       "print": "Chop etish",
       "teacherReviewed": "Ustoz tomonidan tasdiqlangan",
-      "teacherComment": "Ustozning izohi:"
+      "teacherComment": "Ustozning izohi:",
+      "internalCertificate": "BestWay ichki natija (PDF)"
     },
     "submitDialog": {
       "title": "Imtihonni topshirish",

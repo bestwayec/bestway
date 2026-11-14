@@ -54,7 +54,10 @@ def generate(data):
     # Header branding
     center(os.environ.get('CENTER_NAME', "BESTWAY EDUCATION"), 95, 26, True, dark_accent)
     center('EXAM PREPARATION & ASSESSMENT CENTER', 120, 9, False, '#64748b')
-    if data.get('isPartial'):
+    internal = data.get('certificateType') == 'BESTWAY_INTERNAL_MOCK'
+    if internal:
+        cert_heading = 'BESTWAY INTERNAL MOCK RESULT'
+    elif data.get('isPartial'):
         cert_heading = 'IELTS SKILL PRACTICE REPORT' if data.get('isIelts') else 'MULTILEVEL SKILL PRACTICE REPORT'
     elif not data.get('specificationVersion'):
         cert_heading = 'OFFICIAL MOCK TEST REPORT'
@@ -111,9 +114,28 @@ def generate(data):
             center('ESTIMATED SCORE: ' + js_string(sc_val) + ' / 75', y, 11, True, '#64748b')
             center(cefr, y + 44, 42, True, accent)
 
+    if internal:
+        # Owner decision B: the internal certificate states plainly what it is not (uz + en).
+        center('BestWay ichki mock natijasi — rasmiy CEFR/UZBMB sertifikati emas.', y + 110, 10, True, '#b45309')
+        center('BestWay internal mock result — not an official CEFR/UZBMB certificate.', y + 126, 10, True, '#b45309')
+        center('Level from the BestWay Multilevel blueprint table (B1 38–50, B2 51–64, C1 65–75).', y + 144, 8, False, '#64748b')
+
     # Footer verification metadata
     base_url = (os.environ.get('FRONTEND_URL') or 'https://bestwayec.uz').rstrip('/')
     verify_url = f"{base_url}/tests/attempt/{data['attemptId']}"
+    if internal and data.get('verificationCode'):
+        api_url = (os.environ.get('PUBLIC_URL') or 'https://api.bestwayec.uz').rstrip('/')
+        verify_url = f"{api_url}/v1/certificates/{data['attemptId']}/verify?code={data['verificationCode']}"
+        from reportlab.graphics import renderPDF
+        from reportlab.graphics.barcode.qr import QrCodeWidget
+        from reportlab.graphics.shapes import Drawing
+        widget = QrCodeWidget(verify_url)
+        x0, y0, x1, y1 = widget.getBounds()
+        size = 78
+        drawing = Drawing(size, size, transform=[size / (x1 - x0), 0, 0, size / (y1 - y0), 0, 0])
+        drawing.add(widget)
+        renderPDF.draw(drawing, doc, width - 50 - size, 40)
+        text('Verification code: ' + data['verificationCode'], 50, height - 104, 9, 'Helvetica-Bold', '#0f172a')
     finished_str = aware(data['finishedAt']).strftime('%Y-%m-%d') if data.get('finishedAt') else 'N/A'
 
     text('Issue Date: ' + finished_str, 50, height - 90, 9, color='#475569')

@@ -139,3 +139,10 @@ def certificate_view(request,attempt_id):
     response=HttpResponse(generate(value),content_type='application/pdf')
     response['Content-Disposition']=f'attachment; filename="mock-{attempt_id}.pdf"'
     return response
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def certificate_verify_view(request,attempt_id):
+    """Public check of the code printed on a BestWay internal mock certificate (no login, no full name)."""
+    return success(wire(service.verify_certificate(attempt_id,request.GET.get('code'))))
