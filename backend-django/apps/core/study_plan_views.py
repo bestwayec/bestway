@@ -42,45 +42,35 @@ def mistake_vault_view(request):
     return success(data)
 
 
+def _category(request, payload=None) -> str:
+    payload = payload or {}
+    return (payload.get("categoryId") or payload.get("category") or request.query_params.get("category")
+            or request.query_params.get("categoryId") or request.query_params.get("category_id") or "tfng")
+
+
 @api_view(["GET", "POST"])
 @permission_classes([Authenticated])
 def targeted_practice_view(request):
-    """1-Click launch of targeted 10-question practice set for specific mistake category."""
-    if request.method == "GET":
-        category_id = (
-            request.query_params.get("category")
-            or request.query_params.get("categoryId")
-            or "tfng"
-        )
-        data = study_plan_service.generate_targeted_practice(request.user, category_id=category_id)
-        return success(data)
+    """Start a targeted practice drill (questions only; the answers stay on the server).
+    A POST that carries a practiceId finishes that drill."""
+    payload = request.data if request.method == "POST" and isinstance(request.data, dict) else {}
+    if payload.get("practiceId"):
+        return success(study_plan_service.submit_targeted_practice(request.user, payload.get("practiceId"), payload.get("answers")))
+    return success(study_plan_service.generate_targeted_practice(request.user, category_id=_category(request, payload)))
 
-    payload = request.data or {}
-    category_id = (
-        payload.get("categoryId")
-        or payload.get("category")
-        or request.query_params.get("category")
-        or "tfng"
-    )
-    answers = payload.get("answers")
-    if isinstance(answers, list) and answers:
-        data = study_plan_service.submit_targeted_practice(
-            request.user, category_id=category_id, submitted_answers=answers
-        )
-        return success(data)
 
-    data = study_plan_service.generate_targeted_practice(request.user, category_id=category_id)
-    return success(data)
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def answer_targeted_practice_view(request):
+    """Check one answer of a drill; reveals the key and explanation of that question only."""
+    payload = request.data if isinstance(request.data, dict) else {}
+    return success(study_plan_service.answer_targeted_practice(
+        request.user, payload.get("practiceId"), payload.get("questionId"), payload.get("selectedAnswer")))
 
 
 @api_view(["POST"])
 @permission_classes([Authenticated])
 def submit_targeted_practice_view(request):
-    """Submit targeted practice answers, compute score and award +50 XP."""
-    payload = request.data or {}
-    category_id = payload.get("categoryId") or payload.get("category") or "tfng"
-    answers = payload.get("answers") or []
-    data = study_plan_service.submit_targeted_practice(
-        request.user, category_id=category_id, submitted_answers=answers
-    )
-    return success(data)
+    """Finish a drill once: the server's own record is scored; a repeat gives no points."""
+    payload = request.data if isinstance(request.data, dict) else {}
+    return success(study_plan_service.submit_targeted_practice(request.user, payload.get("practiceId"), payload.get("answers")))
