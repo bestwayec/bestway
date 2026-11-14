@@ -90,7 +90,7 @@ class BlueprintFactsTests(SimpleTestCase):
             self.assertIs(spec["isOfficial"], False)
             for item in [*spec["sections"], spec["scale"]]:
                 self.assertTrue(item["sources"])
-                self.assertTrue(set(item["sources"]) <= set(data["sources"]))
+                self.assertLessEqual(set(item["sources"]), set(data["sources"]))
             self.assertTrue(all(row["field"] and row["note"] for row in spec["unverified"]))
 
     def test_unconfirmed_facts_are_listed_not_stated(self):
