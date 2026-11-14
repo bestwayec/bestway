@@ -486,7 +486,7 @@ async function grade() {
   });
   await step(teacher, "13-final-result-75-scale-and-level", async () => {
     const blueprint = (await api(teacher, "GET", "/exam-blueprints/multilevel")).data;
-    const levels = blueprint.scale?.levels ?? blueprint.levels ?? blueprint.exams?.multilevel?.scale?.levels;
+    const levels = blueprint.exam?.scale?.levels;
     const attempt = (await api(teacher, "GET", `/mock/attempts/${state.attemptId}`)).data;
     expect(attempt.overallScore != null, `no overall score; status ${attempt.status}`);
     const score = Number(attempt.overallScore);
@@ -518,11 +518,13 @@ async function access() {
     await api(admin, "POST", "/users", { name: `E2E Outsider ${stamp}`, phone: outsiderPhone, password: PASSWORD, role: "student", groupId: group.data.id }, { allow: [409] });
     const outsider = await session(outsiderPhone);
     const read = await api(outsider, "GET", `/mock/attempts/${state.attemptId}`, undefined, { allow: [403, 404] });
-    const write = await api(outsider, "POST", `/mock/attempts/${state.attemptId}/answers`, { answers: [] }, { allow: [400, 403, 404] });
+    const questionId = (await tree(admin, state.examId)).sections[1].groups[0].questions[0].id;
+    const write = await api(outsider, "POST", `/mock/attempts/${state.attemptId}/answers`, { answers: [{ questionId, response: "alpha" }] }, { allow: [400, 403, 404, 409] });
     await outsider.context().close();
     const otherTeacher = await session(otherTeacherPhone);
     const tRead = await api(otherTeacher, "GET", `/mock/attempts/${state.attemptId}`, undefined, { allow: [403, 404] });
-    const tGrade = await api(otherTeacher, "POST", `/mock/attempts/${state.attemptId}/grade`, { questionId: "x", score: 1 }, { allow: [400, 403, 404] });
+    const writingId = (await tree(admin, state.examId)).sections[2].groups[0].questions[0].id;
+    const tGrade = await api(otherTeacher, "POST", `/mock/attempts/${state.attemptId}/grade`, { questionId: writingId, score: 1 }, { allow: [400, 403, 404] });
     await otherTeacher.context().close();
     expect([403, 404].includes(read.status) && [403, 404].includes(write.status), `student of another group: read ${read.status}, write ${write.status}`);
     expect([403, 404].includes(tRead.status) && [403, 404].includes(tGrade.status), `teacher of another group: read ${tRead.status}, grade ${tGrade.status}`);
@@ -534,8 +536,14 @@ async function access() {
 /* ── phase: mobile ───────────────────────────────────────────────────────────────────────────── */
 async function mobile() {
   const page = await session(process.env.BW_STUDENT_TWO || "+998900000011", { width: 390, height: 844 });
+  // A re-run starts clean: hand in this exam's attempts an earlier run left open.
+  const mine = (await api(page, "GET", "/mock/attempts/mine")).data;
+  for (const open of (Array.isArray(mine) ? mine : mine?.items ?? []).filter((a) => a.examId === state.examId && a.status === "in_progress"))
+    await api(page, "POST", `/mock/attempts/${open.id}/submit`, { confirm: true, confirmed: true, force: true }, { allow: [400, 403, 404, 409] });
   await step(page, "15-phone-390x844", async () => {
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
+    const toMultilevel = page.getByRole("button", { name: /Switch to Multi-Level/ });
+    if (await toMultilevel.count()) { await toMultilevel.click(); await page.waitForTimeout(2500); }
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
     await card.waitFor();
     await card.getByRole("button", { name: /^(start|resume)$/i }).click();
@@ -547,10 +555,19 @@ async function mobile() {
     expect(overflow <= 1, `horizontal overflow ${overflow}px`);
     const exam = (await api(page, "GET", `/mock/exams/${state.examId}`)).data;
     const first = exam.sections.find((s) => s.skill === "reading").groups[0].questions[0];
+    await page.getByRole("button", { name: /^Questions \(\d+\)/ }).locator("visible=true").first().click();
     await page.getByLabel(`Answer for question ${first.number}`, { exact: true }).fill("alpha");
     await page.waitForTimeout(2500);
     await page.reload({ waitUntil: "networkidle" }); await dismissExamNotices(page);
+    await page.getByRole("button", { name: /^Questions \(\d+\)/ }).locator("visible=true").first().click();
     expect((await page.getByLabel(`Answer for question ${first.number}`, { exact: true }).inputValue()) === "alpha", "answer lost after reload on the phone");
+    // The exam header must not stack its badge on top of the toolbar on a phone.
+    const overlap = await page.evaluate(() => {
+      const header = document.querySelector("header") || document.body;
+      const boxes = [...header.querySelectorAll("button, [class*='badge'], span")].filter((e) => e.offsetParent && e.getBoundingClientRect().top < 120).map((e) => e.getBoundingClientRect());
+      return boxes.some((a, i) => boxes.some((b, j) => j > i && a.width && b.width && a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2 && !(a.left >= b.left && a.right <= b.right && a.top >= b.top && a.bottom <= b.bottom) && !(b.left >= a.left && b.right <= a.right && b.top >= a.top && b.bottom <= a.bottom)));
+    });
+    expect(!overlap, "header items overlap on the phone");
     await shot(page, "15-phone-reading");
     return "catalogue → launcher → Reading on 390×844, no horizontal scroll, answer kept after reload";
   });

@@ -782,7 +782,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         {/* Yuqori panel */}
         <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
+            {/* On a phone the title takes its own row; otherwise the toolbar squeezes it to nothing
+                and the practice badge spills over the toolbar. */}
+            <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {isSingleSection && targetSkill ? (
                 <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
                   <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand-subtle-fg uppercase tracking-wider">
