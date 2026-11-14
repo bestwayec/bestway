@@ -178,6 +178,13 @@ def set_group_media(actor, group_id, files):
                 saved.append(key)
                 setattr(group, field, key)
                 changed.append(field)
+                if kind == 'audio':
+                    # The play window of a Listening part is the measured length of this file.
+                    # A file that cannot be measured clears the old value instead of keeping
+                    # the length of the replaced recording.
+                    from .mock_audio_probe import measure_seconds
+                    group.audio_duration_sec = measure_seconds(resolve_key(key))
+                    changed.append('audio_duration_sec')
             group.save(update_fields=changed)
             bump(exam)
             for key in old:
@@ -187,7 +194,7 @@ def set_group_media(actor, group_id, files):
             delete_created(key)
         raise
     audit_event(actor, 'mock.group.media', 'mockQuestionGroup', group.id)
-    return dict(id=group.id, hasAudio=bool(group.audio_key),
+    return dict(id=group.id, hasAudio=bool(group.audio_key), audioDurationSec=group.audio_duration_sec,
         audioUrl=media_url(group.id, 'audio') if group.audio_key else None,
         imageUrl=media_url(group.id, 'image') if group.image_key else None, version=exam.content_version)
 
