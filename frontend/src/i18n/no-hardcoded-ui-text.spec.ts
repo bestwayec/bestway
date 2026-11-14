@@ -28,6 +28,8 @@ const FILES = [
   "src/components/mock/attempt-score-summary.tsx",
   "src/components/mock/exam-notes-panel.tsx",
   "src/components/mock/cbt-annotated-text.tsx",
+  "src/components/mock/exam-toolbar.tsx",
+  "src/components/mock/listening-engine.tsx",
   "src/components/vocabulary/VocabBattleHost.tsx",
   "src/components/vocabulary/VocabBattlePlayer.tsx",
   "src/components/teacher/VocabularyBuilder.tsx",

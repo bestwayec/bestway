@@ -74,6 +74,8 @@ import {
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
+import { ExamToolbar } from "./exam-toolbar";
+import { COLOUR_CLASS, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSettings, saveExamSettings, TEXT_ZOOM, timerAlert, timerTone, type ExamSettings } from "@/lib/exam-settings";
 import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
 import { ExamNotesPanel } from "./exam-notes-panel";
 import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
@@ -88,7 +90,6 @@ const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
 const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
 
-export type CdiContrastTheme = "standard" | "yellow_on_black" | "grey";
 
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
@@ -109,6 +110,14 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
     }
   }
   return n;
+}
+
+// Sections list their groups as `groups` (newer exams) or `parts` (older ones).
+type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ type?: unknown }> };
+function sectionGroupsOf(section: unknown): SectionGroupShape[] {
+  const value = section as { groups?: unknown; parts?: unknown } | null | undefined;
+  if (value?.groups) return value.groups as SectionGroupShape[];
+  return (value?.parts as SectionGroupShape[] | undefined) || [];
 }
 
 export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
@@ -132,7 +141,17 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   // Simulator Mode ('cdi' | 'dtm') + CDI Contrast Theme + Notes Drawer + Fullscreen
   const [simulatorMode, setSimulatorMode] = React.useState<ExamSimulatorMode>("cdi");
-  const [contrastTheme, setContrastTheme] = React.useState<CdiContrastTheme>("standard");
+  // Text size, colours and volume chosen in Settings (this device only).
+  const [examSettings, setExamSettings] = React.useState<ExamSettings>(() => (typeof window === "undefined" ? DEFAULT_EXAM_SETTINGS : loadExamSettings()));
+  const updateExamSettings = React.useCallback((next: ExamSettings) => { setExamSettings(next); saveExamSettings(next); }, []);
+  React.useEffect(() => {
+    const onVolume = (event: Event) => {
+      const volume = Number((event as CustomEvent<number>).detail);
+      if (Number.isFinite(volume)) setExamSettings((current) => { const next = { ...current, volume }; saveExamSettings(next); return next; });
+    };
+    window.addEventListener(EXAM_VOLUME_EVENT, onVolume);
+    return () => window.removeEventListener(EXAM_VOLUME_EVENT, onVolume);
+  }, []);
   const [notesDrawerOpen, setNotesDrawerOpen] = React.useState(false);
   const [attemptNotes, setAttemptNotes] = React.useState<CbtStickyNote[]>([]);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
@@ -700,12 +719,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const showQuestionPosition = Boolean(section) && !guidedMultilevel;
   const activeTask = section?.skill === "writing" || section?.skill === "speaking" ? activeTaskBySkill[section.skill] ?? 0 : 0;
 
-  const contrastClasses =
-    simulatorMode === "cdi" && contrastTheme === "yellow_on_black"
-      ? "bg-[#09090b] text-[#fde047] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#18181b] [&_.bg-bg]:bg-[#09090b] [&_.bg-bg-subtle]:bg-[#18181b] [&_.text-fg]:text-[#fde047] [&_.text-fg-muted]:text-[#fef08a]/80 [&_.border-border]:border-warning/30"
-      : simulatorMode === "cdi" && contrastTheme === "grey"
-      ? "bg-[#374151] text-[#f3f4f6] rounded-2xl p-2 sm:p-4 [&_.bg-surface]:bg-[#1f2937] [&_.bg-bg]:bg-[#374151] [&_.bg-bg-subtle]:bg-[#1f2937] [&_.text-fg]:text-[#f3f4f6] [&_.text-fg-muted]:text-fg-muted [&_.border-border]:border-border-strong"
-      : "";
+  const contrastClasses = COLOUR_CLASS[examSettings.colours];
+  // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
+  const listeningGroups = section?.skill === "listening" ? sectionGroupsOf(section) : [];
+  const sharedListeningAudio = Boolean(audioTimestampsQ.data?.audioUrl);
+  const lastListeningAudioPart = sharedListeningAudio
+    ? listeningGroups.length - 1
+    : listeningGroups.reduce((last, g, index) => (g?.hasAudio ? index : last), -1);
+  const sectionQuestionTypes = [...new Set(sectionGroupsOf(section).flatMap((g) => (g?.questions || []).map((q) => String(q.type))))];
 
   const examAudioTimestamps: AudioTimestampItem[] =
     audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
@@ -731,6 +752,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           simulatorMode === "dtm" ? "max-w-7xl" : "max-w-5xl",
           contrastClasses
         )}
+        style={examSettings.textSize === "regular" ? undefined : { zoom: TEXT_ZOOM[examSettings.textSize] }}
+        data-exam-text-size={examSettings.textSize}
         onCopy={blockClipboard}
         onCut={blockClipboard}
         onPaste={blockClipboard}
@@ -753,9 +776,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               )}
             </div>
 
-            {/* Distraction-Free Controls */}
-            <div className="flex shrink-0 items-center gap-3">
-              {remaining != null && <Timer ms={remaining} label={t("timeLeft")} />}
+            {/* Distraction-Free Controls: wrap on narrow screens and at large text sizes */}
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+              <ExamToolbar
+                settings={examSettings}
+                onChange={updateExamSettings}
+                questionTypes={sectionQuestionTypes}
+                timeLeft={remaining != null ? formatClock(remaining) : null}
+              />
+              {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn={section?.skill === "reading" || section?.skill === "writing"} />}
               {isFullTest && activeSection < exam.sections.length - 1 ? (
                 <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
                   {tr("nextSection")}
@@ -884,7 +913,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   audioSet={audioSet}
                   audioDurations={audioDurations}
                   onAnswer={setAnswer}
-                  onReviewComplete={section.skill === "listening" ? reviewComplete ?? onListeningReviewComplete : undefined}
+                  // The 2-minute check runs once, after the last part's recording, never after earlier parts.
+                  onReviewComplete={section.skill === "listening" && partIdx === lastListeningAudioPart ? reviewComplete ?? onListeningReviewComplete : undefined}
+                  reviewAtEnd={section.skill !== "listening" || partIdx === lastListeningAudioPart}
                   simulatorMode={simulatorMode}
                   flaggedQuestions={flaggedQuestions}
                   onToggleFlag={toggleQuestionFlag}
@@ -997,26 +1028,36 @@ export function SaveStatusChip({ state, label }: { state: "idle" | "saving" | "s
   );
 }
 
-function Timer({ ms, label }: { ms: number; label: string }) {
-  const safe = Math.max(0, ms);
-  const total = Math.floor(safe / 1000);
+function formatClock(ms: number) {
+  const total = Math.floor(Math.max(0, ms) / 1000);
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const danger = safe < 5 * 60_000;
   const pad = (n: number) => String(n).padStart(2, "0");
+  return `${h > 0 ? `${pad(h)}:` : ""}${pad(m)}:${pad(total % 60)}`;
+}
+
+/** Always visible. Flashes after 10:00 and 5:00 in Reading/Writing; danger colour in the last minute. */
+function Timer({ ms, label, warn }: { ms: number; label: string; warn: boolean }) {
+  const t = useTranslations("mock.examTools");
+  const alert = timerAlert(ms, warn);
+  const danger = timerTone(ms) === "danger";
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums",
-        danger ? "bg-danger-bg text-danger" : "bg-bg-subtle text-fg",
-      )}
-      aria-label={label}
-    >
-      <Clock className="size-4" aria-hidden />
-      {h > 0 ? `${pad(h)}:` : ""}
-      {pad(m)}:{pad(s)}
-    </span>
+    <>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums",
+          danger ? "bg-danger-bg text-danger" : alert !== "none" ? "bg-warning-bg text-warning ring-2 ring-warning motion-safe:animate-pulse" : "bg-bg-subtle text-fg",
+        )}
+        role="timer"
+        aria-label={`${label}: ${formatClock(ms)}`}
+        data-timer-alert={alert}
+        data-timer-tone={danger ? "danger" : "normal"}
+      >
+        <Clock className="size-4" aria-hidden />
+        {formatClock(ms)}
+      </span>
+      <span className="sr-only" aria-live="assertive">{alert === "ten" ? t("timeWarning", { minutes: 10 }) : alert === "five" ? t("timeWarning", { minutes: 5 }) : ""}</span>
+    </>
   );
 }
 
@@ -1106,6 +1147,7 @@ function GroupBlock({
   flaggedQuestions,
   onToggleFlag,
   partIndex = 0,
+  reviewAtEnd = true,
   audioTimestamps = [],
   sharedSingleAudioUrl,
 }: {
@@ -1124,6 +1166,7 @@ function GroupBlock({
   flaggedQuestions?: Set<string>;
   onToggleFlag?: (qid: string) => void;
   partIndex?: number;
+  reviewAtEnd?: boolean;
   audioTimestamps?: AudioTimestampItem[];
   sharedSingleAudioUrl?: string | null;
 }) {
@@ -1163,6 +1206,7 @@ function GroupBlock({
             src={audioSrc}
             strict={strict}
             onReviewComplete={strict ? onReviewComplete : undefined}
+            reviewAtEnd={reviewAtEnd}
             startSec={startSec}
             endSec={endSec}
             partLabel={group.title || `Part ${partIndex + 1}`}
@@ -1331,7 +1375,7 @@ function GroupBlock({
                   onClick={() => setReadingMobileTab("passage")}
                   className="text-xs font-semibold text-brand underline underline-offset-4 touch-manipulation"
                 >
-                  ← Matnni o&apos;qish
+                  ← {tg("backToPassage")}
                 </button>
               </div>
             )}
