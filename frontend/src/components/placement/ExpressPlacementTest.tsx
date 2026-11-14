@@ -549,7 +549,7 @@ export function ExpressPlacementTest({
         <div className="relative text-center space-y-4 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand-subtle/60 px-4 py-1 text-xs font-bold text-brand">
             <Award className="size-4 text-brand" />
-            <span>Rasmiy CEFR & IELTS Express Diagnostika</span>
+            <span>{tu("placement.resultBadge")}</span>
           </div>
 
           <div className="flex flex-col items-center justify-center">

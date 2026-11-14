@@ -2692,7 +2692,8 @@
       "completed": "“{exam}” imtihonini topshirgani uchun.",
       "overallResult": "Umumiy natija (CEFR)",
       "issued": "Berilgan sana:",
-      "practiceResult": "Amaliyot natijasi (CEFR)"
+      "practiceResult": "Amaliyot natijasi (CEFR)",
+      "title": "Mock natija hisoboti"
     },
     "practice": {
       "done": "Mashq yakunlandi",
@@ -2760,7 +2761,8 @@
       "lessonN": "{number}-darsni ko'rish",
       "retry": "Qaytadan urinish",
       "mistakes": "{count} ta xato",
-      "retake": "Testni qayta topshirish"
+      "retake": "Testni qayta topshirish",
+      "resultBadge": "Tezkor daraja testi natijasi (taxminiy)"
     }
   }
 }

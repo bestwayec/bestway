@@ -2692,7 +2692,8 @@
       "completed": "for completing “{exam}”.",
       "overallResult": "Overall result (CEFR)",
       "issued": "Issued:",
-      "practiceResult": "Practice result (CEFR)"
+      "practiceResult": "Practice result (CEFR)",
+      "title": "Mock result report"
     },
     "practice": {
       "done": "Practice finished",
@@ -2760,7 +2761,8 @@
       "lessonN": "Open lesson {number}",
       "retry": "Try again",
       "mistakes": "{count, plural, one {# mistake} other {# mistakes}}",
-      "retake": "Take the test again"
+      "retake": "Take the test again",
+      "resultBadge": "Express placement result (estimate)"
     }
   }
 }
