@@ -105,7 +105,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
               {report?.title || "Guruh Lug'at Tahlili"}
             </h2>
             {report && (
-              <Badge className="bg-brand/10 text-brand border border-brand/20">
+              <Badge className="bg-brand/10 text-brand-subtle-fg border border-brand/20">
                 {report.level}
               </Badge>
             )}
@@ -300,7 +300,7 @@ export function VocabularyGroupReport({ setId, onClose }: VocabularyGroupReportP
                                 className={
                                   row.pointsAwarded === 5
                                     ? "bg-warning/10 text-warning border border-warning/30 font-bold"
-                                    : "bg-brand/10 text-brand border border-brand/30"
+                                    : "bg-brand/10 text-brand-subtle-fg border border-brand/30"
                                 }
                               >
                                 +{row.pointsAwarded} ball

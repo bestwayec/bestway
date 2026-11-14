@@ -64,7 +64,7 @@ export default function VocabularyDetailPage() {
       {/* Mode Selection Header */}
       <div className="rounded-2xl border border-border bg-surface p-6 md:p-8 shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-full bg-brand/10 border border-brand/20 text-brand mb-2">
+          <div className="inline-flex p-3 rounded-full bg-brand/10 border border-brand/20 text-brand-subtle-fg mb-2">
             <Sparkles className="h-8 w-8" />
           </div>
           {setQ.data && (

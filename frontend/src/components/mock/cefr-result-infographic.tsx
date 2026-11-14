@@ -148,7 +148,7 @@ export function CefrResultInfographic({
               {!isIelts && <span className="text-sm font-normal text-fg-muted"> /75</span>}
             </p>
           </div>
-          <div className="flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand-subtle-fg">
             <Sparkles className="size-6" />
           </div>
         </div>

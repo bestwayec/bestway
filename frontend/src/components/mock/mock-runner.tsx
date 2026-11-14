@@ -784,7 +784,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             <div className="min-w-0 flex-1">
               {isSingleSection && targetSkill ? (
                 <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
-                  <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                  <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand-subtle-fg uppercase tracking-wider">
                     {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
                   </span>
                   <p className="w-full min-w-0 truncate font-semibold text-fg sm:w-auto">{exam.title}</p>
@@ -808,7 +808,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                   {tr("nextSection")}
                 </Button>
               ) : null}
-              <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand/90 text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+              <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand-hover text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
                 <Send className="mr-1.5 size-4" />
                 {t("submit")}
               </Button>

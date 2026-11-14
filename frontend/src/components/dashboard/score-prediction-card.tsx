@@ -218,7 +218,7 @@ export function ScorePredictionCard({
           Bilimingizni sinab ko'rish va taxminiy darajangizni aniqlash uchun mock imtihon topshiring.
         </p>
         <div className="mt-6">
-          <Button asChild className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base">
+          <Button asChild className="min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base">
             <Link href="/mock">
               Birinchi testni boshlash
             </Link>
@@ -233,7 +233,7 @@ export function ScorePredictionCard({
       <CardHeader className="border-b border-border/80 bg-surface/60 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand/15 text-brand border border-brand/30">
+            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand/15 text-brand-subtle-fg border border-brand/30">
               <Compass className="size-4" />
             </span>
             <div>
@@ -495,7 +495,7 @@ export function ScorePredictionCard({
                         className={cn(
                           "rounded-md border px-1.5 py-1 transition-all",
                           isActiveLevel
-                            ? "border-brand bg-brand/20 text-brand font-bold "
+                            ? "border-brand bg-brand/20 text-brand-subtle-fg font-bold "
                             : "border-border bg-surface text-fg-muted",
                         )}
                       >
@@ -622,7 +622,7 @@ export function ScorePredictionCard({
                           type="button"
                           size="sm"
                           onClick={() => setActiveDrill({ module: wm.module, categoryId: resolveCategory(wm.module) })}
-                          className="w-full mt-2 h-8 rounded-lg bg-brand/15 hover:bg-brand-hover/25 text-brand border border-brand/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all "
+                          className="w-full mt-2 h-8 rounded-lg bg-brand/15 hover:bg-brand-hover/25 text-brand-subtle-fg border border-brand/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all "
                         >
                           <Zap className="size-3.5 fill-brand text-brand" />
                           <span>{ti("workOnMistakes")}</span>

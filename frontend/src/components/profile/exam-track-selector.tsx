@@ -54,7 +54,7 @@ export function ExamTrackSelector({ studentId }: { studentId?: string }) {
             {t(accessPolicy === "SELF_SELECT" ? "subtitleSelfSelect" : "subtitleStaffAssigned")}
           </p>
         </div>
-        <Badge variant="neutral" className="border border-brand/30 text-brand bg-brand/10 text-xs">
+        <Badge variant="neutral" className="border border-brand/30 text-brand-subtle-fg bg-brand/10 text-xs">
           {t("activeBadge", { program: current.activeProgram ? t(current.activeProgram === "IELTS" ? "ieltsName" : "multilevelName") : "—" })}
         </Badge>
       </div>

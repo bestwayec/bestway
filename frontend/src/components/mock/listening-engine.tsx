@@ -216,7 +216,7 @@ function ScheduledListeningAudio({
           </Button>
         )}
         {startSec != null && startSec >= 0 && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand tabular-nums">
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand-subtle-fg tabular-nums">
             <Clock className="size-3" />
             {partLabel ? `${partLabel} · ` : ""}
             {fmt(startSec)}
@@ -375,7 +375,7 @@ function PlainListeningAudio({
         {(startSec != null || (timestamps && timestamps.length > 0)) && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
             {startSec != null && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 font-medium text-brand">
+              <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 font-medium text-brand-subtle-fg">
                 <Clock className="size-3" />
                 {partLabel ? `${partLabel}: ` : ""}
                 {fmt(startSec)}
@@ -443,7 +443,7 @@ function PlainListeningAudio({
           {started ? (ended ? t("listeningPlayed") : t("listeningPlaying")) : t("listeningPlayOnce")}
         </Button>
         {startSec != null && startSec >= 0 && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand tabular-nums">
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand-subtle-fg tabular-nums">
             <Clock className="size-3" />
             {partLabel ? `${partLabel} · ` : ""}
             {fmt(startSec)}

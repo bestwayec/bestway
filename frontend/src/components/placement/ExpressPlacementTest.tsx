@@ -482,7 +482,7 @@ export function ExpressPlacementTest({
                   isCurrent
                     ? "border-2 border-brand bg-brand/20 text-fg shadow"
                     : isAnswered
-                      ? "bg-brand/30 text-brand border border-brand/40"
+                      ? "bg-brand/30 text-brand-subtle-fg border border-brand/40"
                       : "bg-surface text-fg-subtle border border-border hover:text-fg-muted",
                 )}
               >

@@ -203,7 +203,7 @@ export function StudentDashboard() {
             <Button
               asChild
               size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base"
+              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
             >
               <Link href={`/mock/attempt/${unfinishedAttempt.id}`}>
                 <Play className="mr-2 size-4 fill-current" />
@@ -229,7 +229,7 @@ export function StudentDashboard() {
             <Button
               asChild
               size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base"
+              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
             >
               <Link href={`/mock/${recommendedExam.id}`}>
                 <Play className="mr-2 size-4 fill-current" />
@@ -253,7 +253,7 @@ export function StudentDashboard() {
             <Button
               asChild
               size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand/90 text-brand-fg font-medium px-6 text-base"
+              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
             >
               <Link href="/mock">
                 <ArrowRight className="mr-2 size-4" />

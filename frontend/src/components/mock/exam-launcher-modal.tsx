@@ -155,7 +155,7 @@ export function ExamLauncherModal({
               type="button"
               loading={isStarting}
               onClick={() => triggerStart("timed", undefined)}
-              className="w-full min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-semibold text-base"
+              className="w-full min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-semibold text-base"
             >
               <Play className="mr-2 size-4 fill-current" />
               {tl("startFull")}
@@ -172,7 +172,7 @@ export function ExamLauncherModal({
                 type="button"
                 loading={isStarting}
                 onClick={() => triggerStart("practice", availableSkills as MockPracticeSkill[])}
-                className="w-full min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-semibold text-base"
+                className="w-full min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-semibold text-base"
               >
                 <Play className="mr-2 size-4 fill-current" />
                 {tl("startAll")}

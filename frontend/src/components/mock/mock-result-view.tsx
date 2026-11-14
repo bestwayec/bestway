@@ -134,7 +134,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
           {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
               <Award className="size-3.5" /> Ustoz tomonidan tasdiqlangan
             </span>
           ) : (
@@ -273,7 +273,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             <button
               type="button"
               onClick={() => setFeedbackModalOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-5 text-sm font-semibold text-brand shadow-sm transition-all hover:bg-brand-hover/20 hover:scale-[1.02]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-5 text-sm font-semibold text-brand-subtle-fg shadow-sm transition-all hover:bg-brand-hover/20 hover:scale-[1.02]"
             >
               <Sparkles className="size-4" />
               Batafsil AI Tahlil &amp; Zaif Nuqtalar

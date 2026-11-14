@@ -375,7 +375,7 @@ export function ImportPanel({
             size="sm"
             variant="outline"
             onClick={() => setSmartOpen(true)}
-            className="border-brand/50 bg-brand/10 text-brand hover:bg-brand/20"
+            className="border-brand/50 bg-brand/10 text-brand-subtle-fg hover:bg-brand/20"
           >
             <Sparkles className="size-4 mr-1.5" />
             Tezkor Kiritish (Smart Text / Excel / Audio Timestamps)

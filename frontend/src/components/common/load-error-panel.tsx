@@ -44,7 +44,7 @@ export function LoadErrorPanel({
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <Button
             type="button"
-            className="min-h-[44px] bg-brand hover:bg-brand/90 text-brand-fg font-medium px-5"
+            className="min-h-[44px] bg-brand hover:bg-brand-hover text-brand-fg font-medium px-5"
             onClick={onRetry ?? (() => window.location.reload())}
           >
             <RotateCcw className="mr-1.5 size-4" aria-hidden />
