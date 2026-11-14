@@ -143,10 +143,9 @@ def get_assessment_overview(user) -> dict:
         .order_by("-started_at")[:10]
     )
     for la in legacy_attempts:
+        # A legacy test stores a total with no known maximum or scale: it is listed with
+        # its stored total only, never with a band, standard score or level made from it.
         t_score = float(la.total_score or la.auto_score or 0.0)
-        ml_val = round(min(75.0, max(0.0, t_score if t_score <= 75 else (t_score / 100.0) * 75.0)), 1)
-        band_val = prediction_service.multilevel_to_ielts_band(ml_val)
-        cefr_val = prediction_service.multilevel_cefr_from_score(ml_val)
         status = "evaluated" if la.status == "completed" else la.status
 
         exam_title = la.test.title if getattr(la, "test", None) else "Practice Test"
@@ -160,16 +159,11 @@ def get_assessment_overview(user) -> dict:
             "status": status,
             "startedAt": _format_iso(la.started_at),
             "finishedAt": _format_iso(la.finished_at),
-            "overallBand": float(band_val),
-            "multilevelScore": float(ml_val),
-            "cefrLevel": cefr_val,
+            "overallBand": 0.0,
+            "multilevelScore": 0.0,
+            "cefrLevel": None,
             "overallScore": float(t_score),
-            "skills": {
-                "listening": float(band_val),
-                "reading": float(band_val),
-                "writing": 0.0,
-                "speaking": 0.0,
-            },
+            "skills": {},
             "_sortKey": la.started_at,
         })
 
@@ -336,23 +330,14 @@ def get_assessment_overview(user) -> dict:
             diff = (att.finished_at - att.started_at).total_seconds()
             if 0 < diff < 86400:
                 practice_seconds += diff
-        elif att.status == "completed":
-            practice_seconds += 7200.0
 
     all_leg_rows = list(TestAttempt.objects.filter(student_id=user_id))
     for la in all_leg_rows:
-        t_score = float(la.total_score or la.auto_score or 0.0)
-        if t_score > 0:
-            ml_val = round(min(75.0, max(0.0, t_score if t_score <= 75 else (t_score / 100.0) * 75.0)), 1)
-            band_val = prediction_service.multilevel_to_ielts_band(ml_val)
-            all_ml.append(ml_val)
-            all_bands.append(band_val)
+        # Time comes from real timestamps only; no band is made from a legacy total.
         if la.finished_at and la.started_at:
             diff = (la.finished_at - la.started_at).total_seconds()
             if 0 < diff < 86400:
                 practice_seconds += diff
-        elif la.status == "completed":
-            practice_seconds += 3600.0
 
     statistics = {
         "totalAttempts": total_attempts,
