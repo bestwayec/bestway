@@ -218,7 +218,7 @@ def _exam_tree(exam: MockExam) -> dict:
     group_map = {group.id: {"id": group.id, "sort_order": group.sort_order, "part_number": group.part_number, "audio_key": group.audio_key, "audio_duration_sec": group.audio_duration_sec, "image_key": group.image_key, "max_score": group.max_score, "stimulus_ref": group.stimulus_ref, "questions": []} for group in groups}
     for question in questions:
         group_map[question.group_id]["questions"].append({"id": question.id, "sort_order": question.sort_order, "type": question.type, "points": question.points, "options": question.options, "word_limit": question.word_limit})
-    return {"specification_version": exam.specification_version, "profile": exam.profile, "sections": [{"id": section.id, "skill": section.skill, "title": section.title, "instructions": section.instructions, "sort_order": section.sort_order, "groups": [group_map[group.id] for group in groups if group.section_id == section.id]} for section in sections]}
+    return {"specification_version": exam.specification_version, "profile": exam.profile, "sections": [{"id": section.id, "skill": section.skill, "title": section.title, "instructions": section.instructions, "sort_order": section.sort_order, "duration_minutes": section.duration_minutes, "groups": [group_map[group.id] for group in groups if group.section_id == section.id]} for section in sections]}
 
 
 def exam_payload(exam: MockExam) -> dict:
