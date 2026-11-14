@@ -14,7 +14,6 @@
 //   BW_WEB=http://localhost:3300 BW_CHROMIUM=... BW_PYTHON=... node multilevel-full.mjs [phase...]
 //   Phases: build student finish grade access mobile (default: all). State is kept in
 //   ../../.local/e2e/multilevel-full.json so a phase can be re-run on its own.
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
 import { join, dirname } from "node:path";
@@ -30,9 +29,7 @@ const WEB = process.env.BW_WEB || "http://localhost:3300";
 const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic, local only (seed_local_dev)
 const TEACHER = process.env.BW_TEACHER || "+998900000003";
 const STUDENT = process.env.BW_STUDENT || "+998900000010";
-const OUTSIDER = process.env.BW_OUTSIDER || "+998900000031"; // created by this script (another group)
 const PYTHON = process.env.BW_PYTHON || "python";
-const BACKEND = join(here, "..", "..", "backend-django");
 if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error("Refusing non-loopback host"); process.exit(2); }
 
 const phases = process.argv.slice(2).length ? process.argv.slice(2) : ["build", "student", "finish", "grade", "access", "mobile"];
@@ -115,10 +112,6 @@ async function api(page, method, path, body, { multipart, allow } = {}) {
   const json = await res.json().catch(() => ({}));
   if (!res.ok() && !(allow || []).includes(res.status())) throw new Error(`${method} ${path} HTTP ${res.status()} ${JSON.stringify(json).slice(0, 300)}`);
   return { status: res.status(), data: json.data, error: json.error };
-}
-
-function manage(...args) {
-  return execFileSync(PYTHON, ["manage.py", ...args], { cwd: BACKEND, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
 /* ── synthetic content that follows the blueprint part by part ────────────────────────────────── */
