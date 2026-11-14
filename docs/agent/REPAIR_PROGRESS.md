@@ -1,6 +1,6 @@
 # BestWay platform repair — progress
 
-Program branch: `claude/affectionate-bell-uid86z` (PR #113). Since the owner asked for separate PRs, new work
+Program branch: `claude/affectionate-bell-uid86z` (PR #113). Exam program: docs/agent/EXAM_PROGRAM.md. Since the owner asked for separate PRs, new work
 is on topic branches `claude/<topic>`, each starting from #113's head e328f58. This file is kept current on
 `claude/repair-progress` (#113 + this file only). Owner rules: no force-push (plain pushes only), commits and PR
 text authored by rozievkomiljon with no Claude attribution, reports in Uzbek.
@@ -114,19 +114,18 @@ smoke: `BW_PYTHON=... BW_CHROMIUM=... node scripts/e2e-local/smoke.mjs`.
 - Reading Q7 and Q15: authoritative PDF required — unchanged.
 - Six Record Mock WAV files (8 s) are unverified — never treat as authentic audio.
 
-## PRs / CI (state 2026-11-12, main 445f2b4)
+## PRs / CI (state 2026-11-13, main 7603d7f)
 
-#113–#122 and #124 MERGED. Nothing else merged since (verified 2026-11-12 via the PR list).
-OPEN, merge order: #127 (U0 tests/smoke, independent) · #125 W6b 2/3 runner → #126 W6b 3/3 builder/vocabulary/teacher → #128 U1/U2 foundation → #129 short-practice raw scores → #130 U3/U4 student → #131 U8 exam entry/result/quiz → #132 U8 vocabulary pages + Finish/Resume dialogs → #133 U4 catalogue chips/filter → #134 U4 device check → #135 U4 results progress charts → #136 U5 Live Vocab Battle → #137 U5 builder + mode-page set title (each stacked on the previous; plain merges, no force-push). #123 = this file.
-CI (GitHub; django, frontend, CodeQL js/python): success on #123, #125–#136 (checked 2026-11-12, second session; #125–#134 heads unchanged since the first check). #137: see the session report.
-Merge check: `git merge-tree` of #127 with the stack head is clean and the merged smoke.mjs keeps the English labels ("Start Reading", "Yes, finish"). #127's own smoke.mjs still clicks "Reading Boshlash" — only correct after the merge with #131.
+#113–#137 MERGED (#123 included; verified 2026-11-13 via the PR list: only dependabot PRs open before this session).
+OPEN, exam program phase 1 (docs/agent/EXAM_PROGRAM.md), merge order: #138 blueprint → #139 scoring module → #140 prediction #129 → #141 vocab battle winners → #142 targeted practice (contains #141's commit) → #143 demo test keys → docs PR (EXAM_PROGRAM.md + this file). Merging all six onto main locally is conflict-free; on that integration: pytest 1061 pass / 4 skip, all CI PostgreSQL scripts (incl. new verify_points_integrity_postgres 48/48), vitest 604, tsc, lint 0 errors, next build, smoke 17/17, full-journey 13/13, vocab-battle 20/20, drill 24/24, demo 15/15.
 
 ## Open questions (owner)
 
 - Decided: BW-16 closed, no server grace window (client retry from #119 stays). Short/partial practice: no band/CEFR, raw "N/M correct · %" (#129).
-- P2 noted, not changed: vocabulary mode page lacks the set title; /media public policy.
+- Decided 2026-11-13 and implemented: prediction follows #129 (#140); drill one award per drill + daily cap 300 (#142); battle winners in the state + idempotent /finish + no podium for 0 score (#141).
+- NEW: Multilevel level thresholds in code (60/46/34) differ from the agency criteria (65/51/38) — see EXAM_PROGRAM.md, finding 1. Not changed.
 - Finish 502: production logs needed. Record Mock: authentic audio needed. Reading Q7/Q15: official PDF needed. Desktop: Android keystore secret needed.
-- Backend (needs owner OK, not changed): (1) prediction_service derives per-skill IELTS bands from short practice sets (1/1 → 9.0) and an overall band for full mocks still `grading`, and invents bands for legacy tests (rawMax 40) — conflicts with #129; (2) study-plan/targeted-practice/submit gives +50 points on every submit (no cap, no idempotency); (3) vocab battle: podium points are awarded inside /next but not reported in the state; /finish does not check FINISHED and would award again; awards also go to players with 0 score; proposal: add `winners` to the FINISHED state and make /finish idempotent.
+- P2 noted, not changed: /media public policy.
 
 ## NEXT LEVEL PROGRAM (owner brief 2026-11-11: premium UI/UX, website first, then desktop)
 
@@ -148,6 +147,11 @@ Merge check: `git merge-tree` of #127 with the stack head is clean and the merge
 
 Local notes: dev stack = postgres + redis + `runserver 127.0.0.1:8100` + `next dev -p 3300` WITHOUT `-H 127.0.0.1` (with it the default-locale rewrite becomes cross-origin and Uzbek pages loop with 307 — local artifact, not production) and open it as http://localhost:3300 (Next blocks dev resources for other origins; set BW_WEB=http://localhost:3300 for the e2e scripts); `. /root/local.env` sets CORS_ALLOWED_ORIGINS, so run `unset CORS_ALLOWED_ORIGINS` before the full pytest. CI PostgreSQL scripts need CI's env: `/root/ci-like.env` (DB education_center, ALLOWED_HOSTS=testserver,localhost,127.0.0.1, CORS http://localhost:3000, no DJANGO_SETTINGS_MODULE) — with local.env they fail with 403/400 on unchanged main too. Screenshots are kept out of the repo (owner rule); only a compressed baseline (<= 3 MB) in U10.
 
+## Session 2026-11-13 (exam program phase 1)
+
+VERIFIED (local stack, synthetic accounts; details in EXAM_PROGRAM.md and the PR texts #138–#143): official format checked on ielts.org and the agency's documents; blueprint conformity of all 5 seeded exams (0 differences); scoring boundary tests incl. all 33 rows of the 2025 Multilevel Writing table; points integrity on the real schema (48 checks); browser runs of battle podium, drill and public demo in en/uz, light/dark, 390×844/1440×900, student and staff; key-leak sweep of student exam endpoints.
+UNVERIFIED: GitHub CI on #138–#143 at the time of writing (see the session report); Multilevel Speaking total length and 21→75 table (no official source found); IELTS 2-minute Listening review on computer (not on the ielts.org pages checked).
+
 ## Session 2026-11-12, second session (VERIFIED / UNVERIFIED)
 
 VERIFIED (local stack, synthetic accounts): per PR (#135, #136, #137) vitest (589 tests on #137), tsc, lint 0 errors, next build, key parity; smoke.mjs (#127 version, labels adapted) 16/16 and full-journey.mjs 13/13 on each head (smoke once failed step 07 on a cold dev compile, then 16/16 twice); browser light + dark, 390×844 + 1440×900, en + uz: Results page (IELTS: all grading → empty state; Multilevel: 3 real Reading practice bars 13/35 · 37%, tooltip, "12 Noy" dates), teacher /profile without the card; two full Live Vocab Battles (teacher desktop + student phone, themes swapped); builder + Smart Paste; mode page set title.
@@ -162,7 +166,7 @@ Local note: the branch's own smoke.mjs (without #127) fails steps 06–10 after 
 
 ## NEXT STEP
 
-1. Owner merges in order: #127 · #125 → … → #134 → #135 → #136 → #137 (then #123). After the merge, check that main's smoke.mjs uses "Start Reading" / "Yes, finish" (merge-tree says it will).
-2. Owner decisions on the three backend items under Open questions; then small backend PRs (prediction bands per #129, drill points cap/idempotency, battle winners in state + idempotent /finish).
-3. U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, score-prediction card and drill texts, teacher/builder screens.
-Checks per PR: tsc + next build + vitest + lint + parity + smoke (#127 version; run it before full-journey, which switches the student to IELTS) + full-journey (BW_WEB=http://localhost:3300, BW_AUDIO synthetic WAV); browser with NEXT_LOCALE cookie for Uzbek; no Claude footer in PR bodies.
+The exam program (docs/agent/EXAM_PROGRAM.md) is the active track; its NEXT STEP is phase 2 (CD IELTS exam window), starting with the item-bank metadata left from phase 1.
+1. Owner merges #138 → #139 → #140 → #141 → #142 → #143 → docs PR; decides the Multilevel level thresholds.
+2. Website program items still open: U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, drill modal, teacher/builder screens.
+Checks per PR: as in EXAM_PROGRAM.md (UMUMIY QOIDALAR). Local E2E: smoke.mjs (before full-journey, which switches the student to IELTS), full-journey.mjs, vocab-battle.mjs, drill.mjs, demo.mjs (BW_WEB=http://localhost:3300, BW_PYTHON, BW_CHROMIUM).

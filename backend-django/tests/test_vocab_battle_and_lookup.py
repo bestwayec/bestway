@@ -115,33 +115,6 @@ class VocabBattleTests(SimpleTestCase):
         self.assertEqual(ans["totalScore"], 220)
         self.assertEqual(ans["streak"], 1)
 
-    @patch("apps.core.vocab_battle.PointsLog.objects.create")
-    @patch("apps.core.vocab_battle.StudentProfile.objects.filter")
-    def test_finish_battle_and_award_points(self, mock_profile_filter, mock_log_create):
-        session = MagicMock()
-        session.set.title = "Unit 1"
-        session.host_id = "teacher-1"
-        session.participants = {
-            "p1": {"id": "st-1", "name": "Ali", "score": 500, "streak": 3},
-            "p2": {"id": "st-2", "name": "Vali", "score": 300, "streak": 1},
-            "p3": {"id": "st-3", "name": "Sami", "score": 200, "streak": 0},
-            "p4": {"id": "st-4", "name": "Gani", "score": 100, "streak": 0},
-        }
-
-        winners = vocab_battle.finish_battle_and_award_points(session)
-        self.assertEqual(len(winners), 3)
-        self.assertEqual(winners[0]["rank"], 1)
-        self.assertEqual(winners[0]["studentId"], "st-1")
-        self.assertEqual(winners[0]["pointsAwarded"], 10)
-
-        self.assertEqual(winners[1]["rank"], 2)
-        self.assertEqual(winners[1]["studentId"], "st-2")
-        self.assertEqual(winners[1]["pointsAwarded"], 7)
-
-        self.assertEqual(winners[2]["rank"], 3)
-        self.assertEqual(winners[2]["studentId"], "st-3")
-        self.assertEqual(winners[2]["pointsAwarded"], 5)
-
 
 class GroupReportKpiTests(SimpleTestCase):
     @patch("apps.core.vocabulary_service.VocabularyAttempt.objects.filter")

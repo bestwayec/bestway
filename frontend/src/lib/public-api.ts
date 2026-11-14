@@ -89,6 +89,29 @@ export async function getDemoTest(id: string): Promise<TestDetail | null> {
   });
 }
 
+/** A public demo test as GET tests/demo/:id returns it: questions without answers. */
+export type PublicDemoTest = {
+  id: string;
+  title: string;
+  durationMinutes?: number | null;
+  questions: {
+    id: string;
+    section: string;
+    type: string;
+    prompt: string;
+    options?: string[] | null;
+    maxScore?: number;
+    passageText?: string | null;
+    instructions?: string | null;
+    audioUrl?: string | null;
+  }[];
+};
+
+/** Bitta ochiq demo test (savollar bilan, javob kalitlarisiz). */
+export async function getDemoTestDetail(id: string): Promise<PublicDemoTest | null> {
+  return publicGet<PublicDemoTest>(`/tests/demo/${encodeURIComponent(id)}`, { revalidate: 60, tags: [TESTS_TAG] });
+}
+
 /**
  * Demo mock imtihonlar (Exam Builder'da "Visible as a public demo").
  * Backend mehmonlarga allaqachon faqat demo qaytaradi, lekin xavfsizlik
