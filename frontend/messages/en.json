@@ -1537,7 +1537,9 @@
       "continueHere": "Continue here"
     },
     "levelBelowB1": "Below B1",
-    "accuracy": "Accuracy:"
+    "accuracy": "Accuracy:",
+    "gradeDraftKept": "Unsaved — kept on this device",
+    "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade"
   },
   "wizard": {
     "title": "Create exam",

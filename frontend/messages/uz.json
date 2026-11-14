@@ -1537,7 +1537,9 @@
       "continueHere": "Shu yerda davom ettirish"
     },
     "levelBelowB1": "B1 dan quyi",
-    "accuracy": "Aniqlik:"
+    "accuracy": "Aniqlik:",
+    "gradeDraftKept": "Saqlanmagan — shu qurilmada turibdi",
+    "gradeKeyboardHint": "Alt+↓ / Alt+↑: keyingi / oldingi baho"
   },
   "wizard": {
     "title": "Imtihon yaratish",
