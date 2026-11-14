@@ -79,12 +79,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const isEn = locale === "en";
-  const title = isEn
-    ? "BestWay — Official IELTS and Multi-Level CEFR Mock Exam Platform | Do your best, forget the rest!"
-    : "BestWay — IELTS va Multi-Level (CEFR) Mock Imtihon Platformasi | Do your best, forget the rest!";
-  const description = isEn
-    ? "BestWay Education Center — Advanced Computer-Based Testing (CBT) for IELTS and CEFR with real-time AI Speaking/Writing assessment, score prediction, and Subway Vocab Runner."
-    : "BestWay o'quv markazi — IELTS va Milliy Sertifikat (Multi-Level CEFR) kompyuterlashtirilgan (CBT) mock imtihonlari, AI Speaking va Writing baholash, va Subway Vocab Runner gamifikatsiyasi.";
+  const tm = await getTranslations({ locale, namespace: "marketing" });
+  const title = tm("metaTitle");
+  const description = tm("metaDescription");
 
   return {
     title,
@@ -165,7 +162,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand-subtle-fg mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
             <span className="size-2 rounded-full bg-brand animate-pulse" />
-            <span>BestWay LMS — Rasmiy imtihon simulyatori</span>
+            <span>{t("lmsBadge")}</span>
           </div>
 
           <h1 className="text-3xl font-black tracking-tight text-fg sm:text-5xl lg:text-6xl max-w-4xl mx-auto leading-[1.12] uppercase">
@@ -252,9 +249,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
                       <Play className="size-6 fill-current" />
                     </span>
-                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
-                      v1.0.6
-                    </span>
                   </div>
                   <h3 className="text-xl font-bold text-fg">{t("ecosystem.f1Title")}</h3>
                   <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
@@ -266,7 +260,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     href="/videos"
                     className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
-                    <span>Darslar katalogiga o'tish</span>
+                    <span>{t("toLessons")}</span>
                     <ArrowRight className="size-4" />
                   </Link>
                 </div>
@@ -299,7 +293,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     href="/mock"
                     className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
-                    <span>Imtihon topshirish</span>
+                    <span>{t("takeExam")}</span>
                     <ArrowRight className="size-4" />
                   </Link>
                 </div>
@@ -332,7 +326,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     href="/login"
                     className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
                   >
-                    <span>Kabinetga kirish</span>
+                    <span>{t("toDashboard")}</span>
                     <ArrowRight className="size-4" />
                   </Link>
                 </div>
@@ -390,6 +384,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       </section>
 
       {/* ── O'qituvchilar (TeacherProfileCard carousel) ─────────────────────── */}
+      {/* Shown only when real teacher profiles exist (no "coming soon" placeholder). */}
+      {teachers.length > 0 && (
       <section id="teachers" className="marketing-section scroll-mt-16 overflow-x-clip">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <Reveal>
@@ -402,6 +398,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </Reveal>
         </div>
       </section>
+      )}
 
       {/* ── Nega biz ─────────────────────────────────────────────────────── */}
       <section id="why" className="marketing-section border-t border-border bg-bg-subtle scroll-mt-16">

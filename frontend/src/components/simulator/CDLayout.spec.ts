@@ -41,11 +41,11 @@ describe("CDLayout Data Pipeline & Normalization", () => {
     expect(option).not.toBeNull();
     React.act(() => option!.click());
     expect(JSON.parse(localStorage.getItem("bw_sim_draft_demo-test")!).answers.q).toBe("A");
-    expect(container.textContent).toContain("Faqat shu brauzerda saqlandi");
+    expect(container.textContent).toContain("cd.savedLocal");
     expect(fetchSpy).not.toHaveBeenCalled();
     const failed = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
     React.act(() => option!.click());
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("saqlanmadi");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("cd.saveFailed");
     expect(fetchSpy).not.toHaveBeenCalled();
     failed.mockRestore();
     fetchSpy.mockRestore();

@@ -30,12 +30,9 @@ describe("ExpressPlacementTest Component", () => {
       })
     );
 
-    expect(html).toContain("10 Daqiqalik Bepul");
-    expect(html).toContain("CEFR &amp; IELTS");
-    expect(html).toContain("20 ta savol");
-    expect(html).toContain("10 daqiqa");
-    expect(html).toContain("0 so&#x27;m");
-    expect(html).toContain("⚡️ Bepul Darajangizni Aniqlang (10 daqiqa)");
+    for (const key of ["placement.title", "placement.questions", "placement.minutes", "placement.price", "placement.start"]) expect(html).toContain(key);
+    // No "AI is analysing" claim: the placement result is a rule-based score.
+    expect(html).not.toMatch(/AI Diagnostika|Sun.iy intellekt/);
   });
 
   it("exports the standard localStorage key for guest-to-user state migration", () => {

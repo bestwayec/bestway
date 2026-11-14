@@ -68,6 +68,7 @@ export function WeakPointsTargetDrillModal({
   categoryId,
   onCompleted,
 }: WeakPointsTargetDrillModalProps) {
+  const tu = useTranslations("uiText");
   const [loading, setLoading] = React.useState(false);
   const [data, setData] = React.useState<TargetedPracticeData | null>(null);
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -106,7 +107,7 @@ export function WeakPointsTargetDrillModal({
       .catch((err) => {
         if (!isMounted) return;
         console.error("Failed to load targeted practice:", err);
-        toast.error("Mashq savollarini yuklashda xatolik yuz berdi");
+        toast.error(tu("drill.loadFailed"));
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -136,9 +137,9 @@ export function WeakPointsTargetDrillModal({
       });
       setCheck({ isCorrect: !!res.isCorrect, correctAnswer: res.correctAnswer, explanation: res.explanation });
       if (res.isCorrect) {
-        toast.success("To'g'ri javob! Barakalla!", { duration: 1500 });
+        toast.success(tu("drill.correct"), { duration: 1500 });
       } else {
-        toast.error("Noto'g'ri. Tushuntirishga e'tibor bering.", { duration: 2000 });
+        toast.error(tu("drill.wrong"), { duration: 2000 });
       }
     } catch (err) {
       console.error("Failed to check drill answer:", err);
@@ -168,7 +169,7 @@ export function WeakPointsTargetDrillModal({
       });
       const awarded = typeof res?.pointsAwarded === "number" ? res.pointsAwarded : 0;
       setResult({ correctCount: res.correctCount, totalQuestions: res.totalQuestions, pointsAwarded: awarded, dailyCapReached: !!res.dailyCapReached });
-      if (awarded > 0) toast.success(`⚡️ +${awarded} XP hisobingizga qo'shildi!`);
+      if (awarded > 0) toast.success(tu("drill.points", { points: awarded }));
       onCompleted?.({ correctCount: res.correctCount, pointsAwarded: awarded });
     } catch (err) {
       console.error("Failed to submit drill:", err);
@@ -198,7 +199,7 @@ export function WeakPointsTargetDrillModal({
                 <p className="text-xs text-fg-muted flex items-center gap-1.5 mt-0.5">
                   <span className="font-semibold text-brand">Target Drill</span>
                   <span>·</span>
-                  {questions.length > 0 && <span>{questions.length} ta chuqurlashtirilgan mashq topshirig&apos;i</span>}
+                  {questions.length > 0 && <span>{tu("drill.count", { count: questions.length })}</span>}
                 </p>
               </div>
             </div>
@@ -216,7 +217,7 @@ export function WeakPointsTargetDrillModal({
             <div className="mt-4 space-y-1.5">
               <div className="flex items-center justify-between text-xs text-fg-muted">
                 <span className="font-medium">
-                  Savol: <strong className="text-brand">{currentIndex + 1}</strong> / {totalQuestions}
+                  {tu("drill.progress", { number: currentIndex + 1, total: totalQuestions })}
                 </span>
                 <span className="text-brand font-mono font-bold">{progressPercent}%</span>
               </div>
@@ -251,21 +252,21 @@ export function WeakPointsTargetDrillModal({
 
               <div className="space-y-1.5">
                 <h3 className="text-xl font-black text-fg">
-                  Mashq Muvaffaqiyatli Yakunlandi!
+                  {tu("drill.finishedTitle")}
                 </h3>
                 <p className="text-sm text-fg-muted max-w-md mx-auto">
-                  Siz ushbu zaif mavzu bo&apos;yicha 10 ta diagnostik savolni tahlil qilib chiqdingiz va mustahkamlab oldingiz.
+                  {tu("drill.finishedText", { count: totalQuestions })}
                 </p>
               </div>
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-2">
                 <div className="rounded-xl border border-border bg-surface/60 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-fg-muted">To&apos;g&apos;ri</p>
+                  <p className="text-[11px] font-semibold uppercase text-fg-muted">{tu("drill.correctLabel")}</p>
                   <p className="mt-1 text-2xl font-black text-brand">{result ? result.correctCount : "—"}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-surface/60 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-fg-muted">Aniqlik</p>
+                  <p className="text-[11px] font-semibold uppercase text-fg-muted">{tu("drill.accuracy")}</p>
                   <p className="mt-1 text-2xl font-black text-brand">
                     {result && result.totalQuestions > 0 ? `${Math.round((result.correctCount / result.totalQuestions) * 100)}%` : "—"}
                   </p>
@@ -386,7 +387,7 @@ export function WeakPointsTargetDrillModal({
                     onClick={handleNext}
                     className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover flex items-center gap-1.5"
                   >
-                    <span>{currentIndex < totalQuestions - 1 ? "Keyingi Savol" : "Natijani Ko'rish"}</span>
+                    <span>{currentIndex < totalQuestions - 1 ? tu("drill.next") : tu("drill.seeResult")}</span>
                     <ChevronRight className="size-4" />
                   </Button>
                 )}

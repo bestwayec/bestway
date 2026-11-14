@@ -1,7 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import * as React from "react";
-import { Award, CheckCircle2, Download, Printer, QrCode, ShieldCheck, X } from "lucide-react";
+import { Award, CheckCircle2, Download, Printer, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MockAttemptDetail } from "@/lib/types";
 
@@ -12,6 +13,7 @@ interface CertificateModalProps {
 }
 
 export function CertificateModal({ attempt, open, onClose }: CertificateModalProps) {
+  const tu = useTranslations("uiText");
   if (!open) return null;
 
   const isIelts = attempt.examType !== "multilevel";
@@ -59,7 +61,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
               className="border-emerald-600/40 text-emerald-400 hover:bg-emerald-950/40"
             >
               <Printer className="size-4 mr-1.5" />
-              Chop Etish / PDF
+              {tu("certificateModal.print")}
             </Button>
             <Button
               asChild
@@ -68,7 +70,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
             >
               <a href={`/api/backend/mock/attempts/${attempt.id}/certificate`} target="_blank" rel="noopener noreferrer">
                 <Download className="size-4 mr-1.5" />
-                PDF Yuklab Olish
+                {tu("certificateModal.download")}
               </a>
             </Button>
           </div>
@@ -88,7 +90,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
               <ShieldCheck className="size-3.5" /> BestWay Education Assessment Center
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white uppercase mt-2">
-              {isPartial ? (isIelts ? "IELTS Practice Performance Report" : "Multi-Level Skill Practice Report") : "Official Mock Examination Report"}
+              {isPartial ? (isIelts ? "IELTS Practice Performance Report" : "Multi-Level Skill Practice Report") : "Mock Examination Report"}
             </h1>
             <p className="text-xs text-slate-400">
               {isIelts ? "IELTS Academic Simulation · Diagnostic Assessment" : "Multi-Level (CEFR) National Framework Assessment"}
@@ -97,19 +99,19 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
 
           {/* Recipient Details */}
           <div className="text-center space-y-2 mb-6">
-            <p className="text-xs uppercase tracking-wider text-slate-400">Ushbu sertifikat tasdiqlaydiki,</p>
+            <p className="text-xs uppercase tracking-wider text-slate-400">{tu("certificateModal.intro")}</p>
             <h2 className="text-2xl font-bold text-emerald-300">
-              {attempt.studentName || "Platform O'quvchisi"}
+              {attempt.studentName || tu("certificateModal.student")}
             </h2>
             <p className="text-sm text-slate-300">
-              <span className="font-medium text-white">{attempt.examTitle}</span> imtihonini muvaffaqiyatli topshirdi.
+              {tu("certificateModal.completed", { exam: attempt.examTitle ?? "" })}
             </p>
           </div>
 
           {/* Overall Score Highlight */}
           <div className="my-6 mx-auto max-w-xs rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              {isIelts ? (isPartial ? "Practice Band Score" : "Overall Band Score") : (isPartial ? "Amaliyot Natijasi (CEFR)" : "Umumiy Natija (CEFR)")}
+              {isIelts ? (isPartial ? "Practice Band Score" : "Overall Band Score") : (isPartial ? tu("certificateModal.practiceResult") : tu("certificateModal.overallResult"))}
             </p>
             <div className="mt-1 text-4xl font-extrabold text-white tracking-tight">
               {isIelts ? (
@@ -147,16 +149,9 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
           {/* Verification Footer & QR */}
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-800/80 pt-4 gap-4 text-xs text-slate-400">
             <div className="space-y-1 text-center sm:text-left">
-              <p><span className="text-slate-300 font-medium">Berilgan sana:</span> {finishedDate}</p>
+              <p><span className="text-slate-300 font-medium">{tu("certificateModal.issued")}</span> {finishedDate}</p>
               <p className="font-mono text-[11px] text-slate-500">ID: {attempt.id}</p>
               <p className="text-emerald-500/80 font-mono text-[10px] break-all">{verifyUrl}</p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-slate-900/50 p-2">
-              <QrCode className="size-10 text-emerald-400" />
-              <div className="text-[10px] text-slate-400 leading-tight">
-                <span className="block font-semibold text-slate-200">Tekshirish QR</span>
-                Haqiqiylikni onlayn<br />tasdiqlash uchun
-              </div>
             </div>
           </div>
         </div>
