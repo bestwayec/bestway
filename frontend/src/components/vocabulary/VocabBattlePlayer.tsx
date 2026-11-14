@@ -37,6 +37,8 @@ export interface PlayerBattleState {
     streak: number;
     answers?: Record<string, { selectedIndex: number; isCorrect: boolean; pointsGained: number }>;
   } | null;
+  /** Recorded by the server when the battle ends. Absent on an older API. */
+  winners?: Array<{ rank: number; studentId: string; name: string; score: number; pointsAwarded: number }>;
 }
 
 interface AnswerResult {
@@ -185,6 +187,8 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
   }
 
   const score = state?.myState?.score ?? 0;
+  // My podium place, only if the server recorded one for this account.
+  const myPlace = state?.myState ? state.winners?.find((w) => w.studentId === state.myState?.id) : undefined;
 
   return (
     <div className="rounded-3xl border border-border bg-surface p-6 text-fg shadow-2xl max-w-lg mx-auto min-h-[500px] flex flex-col justify-between">
@@ -293,6 +297,10 @@ export function VocabBattlePlayer({ initialPin = "", onClose }: VocabBattlePlaye
           <div className="bg-bg-subtle border border-border rounded-2xl p-6 max-w-sm mx-auto space-y-2">
             <span className="text-sm text-fg-muted">{t("player.finalScore")}</span>
             <div className="text-4xl font-black text-warning font-mono tabular-nums">{t("gameScore", { score })}</div>
+            {myPlace && <p className="text-sm font-semibold text-fg">{t("player.yourPlace", { rank: myPlace.rank })}</p>}
+            {myPlace && myPlace.pointsAwarded > 0 && (
+              <p className="text-sm font-semibold text-success">{t("pointsAwarded", { points: myPlace.pointsAwarded })}</p>
+            )}
           </div>
           <Button type="button" onClick={onClose} className="font-bold px-8">{t("player.exit")}</Button>
         </div>
