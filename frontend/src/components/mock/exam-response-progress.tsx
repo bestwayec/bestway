@@ -1,5 +1,6 @@
 "use client";
 
+import { countWords } from "@/lib/writing-rules";
 import { CheckCircle2, PenLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,7 @@ export function ResponseProgress({ answered, total }: { answered: number; total:
 
 export function WritingResponseGuide({ value, minimum = 0, maximum }: { value: string; minimum?: number; maximum?: number }) {
   const t = useTranslations("mock.runnerUx");
-  const words = value.trim() ? value.trim().split(/\s+/u).length : 0;
+  const words = countWords(value);
   const hasTarget = minimum > 0;
   // An approximate single-value target is guidance, not a hard upper limit.
   const overTarget = maximum != null && maximum > minimum && words > maximum;
