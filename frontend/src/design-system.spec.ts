@@ -48,6 +48,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/mock/ClickToVocabWrapper.tsx": {},
   "src/components/simulator/CDLayout.tsx": {},
   "src/components/mock/cbt-annotated-text.tsx": { neutralOnly: true },
+  "src/components/mock/exam-notes-panel.tsx": {},
   // Exam Builder, vocabulary, teacher workspace
   "src/components/exam-builder/BulkQuestionImporterModal.tsx": {},
   "src/components/exam-builder/ExamBuilderList.tsx": {},
