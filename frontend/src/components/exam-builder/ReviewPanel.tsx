@@ -52,6 +52,7 @@ import {
 } from "./reading-passage-clusters";
 import { reviewBlockerCount } from "./review-blockers";
 import { tx, type Selection } from "./types";
+import { BLUEPRINT_ISSUE_KEYS, splitBlueprintIssues, type BlueprintIssue } from "@/lib/readiness-issues";
 import { MultilevelRepairDialog } from "./MultilevelRepairDialog";
 
 const SKILLS: MockSkill[] = ["listening", "reading", "writing", "speaking"];
@@ -154,6 +155,16 @@ function firstGroupWith(
       if (g.questions.some((q) => pred(q, s.skill, g))) return { kind: "group", groupId: g.id };
     }
   return null;
+}
+
+const SKILL_TITLE: Record<BlueprintIssue["skill"] & string, string> = { listening: "Listening", reading: "Reading", writing: "Writing", speaking: "Speaking" };
+
+/** Fix target for one blueprint issue: the part it names, else its section, else the overview. */
+function blueprintIssueTarget(issue: BlueprintIssue, detail: MockExamDetail): Selection {
+  const section = issue.skill ? detail.sections.find((x) => x.skill === issue.skill) : undefined;
+  if (!section) return { kind: "overview" };
+  const group = issue.partIndex != null ? section.groups[issue.partIndex] : undefined;
+  return group ? { kind: "group", groupId: group.id } : { kind: "section", sectionId: section.id };
 }
 
 /** Precise Fix target for a server readiness item (exact part/passage/group). */
@@ -774,6 +785,7 @@ function ReviewChecks({
   const importIssuesItem = serverItem("import_issues", serverItems);
   const openImportIssues = (provenance?.issues ?? []).filter((issue) => issue.status !== "resolved");
   const exactServerErrors = serverItems.filter((item) => !item.ok && item.key !== "import_issues");
+  const shownIssues = new Set<string>();
   // Full Mock only: required-but-absent sections (practice never emits these).
   const missingSectionItems = serverItems.filter(
     (i) => !i.ok && /^(listening|reading|writing|speaking)_section$/.test(i.key),
@@ -915,16 +927,33 @@ function ReviewChecks({
             />
           ))}
 
-          {exactServerErrors.map((item) => (
-            <Row
-              key={`exact-server-${item.key}`}
-              tone="error"
-              icon={<XCircle className="size-4 text-danger" />}
-              title={serverProblemTitle(item.key)}
-              detail={item.detail || undefined}
-              fix={() => onFix(readinessFixTarget(item.key, detail))}
-            />
-          ))}
+          {exactServerErrors.flatMap((item) => {
+            const parsed = BLUEPRINT_ISSUE_KEYS.has(item.key) ? splitBlueprintIssues(item.detail) : [];
+            // The start check and the full-mock blueprint check can name the same issue: show it once.
+            const issues = parsed.filter((issue) => { const id = `${issue.skill}|${issue.part}|${issue.message}`; if (shownIssues.has(id)) return false; shownIssues.add(id); return true; });
+            if (parsed.length && !issues.length) return [];
+            if (!issues.length) return [(
+              <Row
+                key={`exact-server-${item.key}`}
+                tone="error"
+                icon={<XCircle className="size-4 text-danger" />}
+                title={serverProblemTitle(item.key)}
+                detail={item.detail || undefined}
+                fix={() => onFix(readinessFixTarget(item.key, detail))}
+              />
+            )];
+            // One row per blueprint issue, each with Fix jumping to the part it names.
+            return issues.map((issue, index) => (
+              <Row
+                key={`exact-server-${item.key}-${index}`}
+                tone="error"
+                icon={<XCircle className="size-4 text-danger" />}
+                title={[issue.skill && SKILL_TITLE[issue.skill], issue.part].filter(Boolean).join(" · ") || serverProblemTitle(item.key)}
+                detail={issue.message}
+                fix={() => onFix(blueprintIssueTarget(issue, detail))}
+              />
+            ));
+          })}
 
           {provenanceLoading && importIssuesItem && !importIssuesItem.ok && (
             <div className="flex items-center gap-2 rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-fg-muted">

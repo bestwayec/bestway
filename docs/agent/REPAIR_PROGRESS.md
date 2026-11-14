@@ -191,12 +191,15 @@ Owner decisions recorded: (1) brand green #15803d approved (light theme, #160); 
 |---|---|---|
 | P0 restore state | DONE | 21 open program PRs (#138–#158), all base main, CI green; deploy gate passed; baseline main 7603d7f pytest 906 passed / 4 skipped |
 | P1 land PRs | DONE (#138–#160) | Merge SHAs below. Each branch was updated by plain merges (main + earlier PR heads), CI green on the exact head, code-quality bot threads fixed at the source (#138, #145, #152) |
-| P2 Multilevel full E2E | TODO | e2e script to be committed as scripts/e2e-local/multilevel-full.mjs |
-| P3 Multilevel Speaking + per-part grading | TODO | |
-| P4 Builder templates + pre-publish panel | TODO | |
+| P2 Multilevel full E2E | DONE (#165, merge 635e1c1) | `scripts/e2e-local/multilevel-full.mjs`, clean full run 15/15: Builder (blueprint starter, audio in the Builder, 35/35/3/8) → publish → device check → Listening 2 server plays/part, 3rd play 403, reload keeps plays → Reading → Writing offline + reload → Speaking 8/8 uploads, retry after network drop, auto-advance → Finish double click = 1 submit → pending → teacher grades 11 parts → 68.5/75 C1 → other group 403/404 → 390×844. 10 defects fixed with tests (see #165) |
+| P3 Multilevel Speaking + per-part grading | DONE (#165) | Timed Speaking sequence (next question starts after upload, earlier parts closed), missed response no longer blocks later ones, mic test skipped when nothing left to record; grading: per-part fields with blueprint maxima, audio players, Alt+arrow navigation, unsent grade kept on the device, audit `mock.answer.grade` (server). Not done: dedicated grading queue page |
+| P4 Builder templates + pre-publish panel | PR #166 | Starter structure from the blueprint already existed (verified, no invented content); review panel now lists each Multilevel blueprint issue with Fix to the exact part. Not done: background autosave (explicit per-block save + Saved/Unsaved indicator + leave guard exist) |
 | P5 IELTS E2E + Speaking modes | TODO | |
 | P6 Desktop (bw-tauri) D1–D3 | TODO | leads: v1.0.12, run 42982782068, PR #30 |
 | P7 AI grading plan (docs only) | TODO | docs/agent/AI_GRADING_PLAN.md |
+
+Phase 4 code PRs: #165 merged 635e1c1 (P2–P3), #166 open (P4). Main CI green at f6b9c41 (last checked).
+Owner items from P2–P3: (1) teacher-graded internal Multilevel mocks get no certificate (policy BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1, `MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE`) — decide if a BestWay certificate should be issued; (2) results stay `ESTIMATED`, `isOfficial: false`.
 
 Merge SHAs on main (2026-11-14): #138 c01fb9c · #139 1d20b3d · #140 73bae22 · #141 ce2cfe2 · #142 98a161f · #143 bc5ce68 · #144 6e91f96 · #145 a8d7a2f · #146 4564f8a · #147 e7f1519 · #148 993acf2 · #149 24d9086 · #150 a13d2a2 · #151 c2fbcd6 · #152 30353e7 · #153 ce59b08 · #154 42d3724 · #155 6643b46 · #156 90854e3 · #157 fe6298a · #158 5ac6c57 · #159 9fea88a · #160 f6b9c41 (brand green; vitest 722, tsc, lint, build; contrast white on brand 3.3 → 5.0:1).
 
