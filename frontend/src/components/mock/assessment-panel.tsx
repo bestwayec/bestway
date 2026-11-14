@@ -26,6 +26,7 @@ export function TeacherAttemptOverrideCard({
   attemptId: string;
   data?: AttemptAssessments;
 }) {
+  const t = useTranslations("assessment.override");
   const mutation = useTeacherGradeAttempt(attemptId);
   const writingJob = data?.assessments.find((a) => a.skill === "writing");
   const speakingJob = data?.assessments.find((a) => a.skill === "speaking");
@@ -46,6 +47,7 @@ export function TeacherAttemptOverrideCard({
     }
   }, [data?.teacherComment, comment]);
 
+  const hasAiProposal = Boolean(data?.assessments.some((a) => a.finalScore != null && a.finalScoreSource !== "TEACHER"));
   const isReviewed = Boolean(data?.isTeacherReviewed || data?.assessments.some((a) => a.finalScoreSource === "TEACHER"));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,7 +57,7 @@ export function TeacherAttemptOverrideCard({
     const o = overallScore.trim() ? parseFloat(overallScore) : undefined;
 
     if (w == null && s == null && o == null && !comment.trim()) {
-      toast.error("Kamida bitta modul ballini yoki ustoz izohini kiriting!");
+      toast.error(t("needSomething"));
       return;
     }
 
@@ -68,11 +70,11 @@ export function TeacherAttemptOverrideCard({
       },
       {
         onSuccess: () => {
-          toast.success("✅ Ustoz bahosi va izohi muvaffaqiyatli tasdiqlandi!");
+          toast.success(t("saved"));
           setIsOpen(false);
         },
         onError: (err) => {
-          toast.error(err instanceof Error ? err.message : "Bahoni saqlashda xatolik yuz berdi");
+          toast.error(err instanceof Error ? err.message : t("saveFailed"));
         },
       }
     );
@@ -87,19 +89,23 @@ export function TeacherAttemptOverrideCard({
           </div>
           <div>
             <h3 className="flex items-center gap-2 font-bold text-fg text-sm sm:text-base">
-              Ustoz Nazorati & Yakuniy Bahoni Tasdiqlash
+              {t("title")}
               {isReviewed ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand-subtle-fg">
-                  <CheckCircle2 className="size-3" /> Tasdiqlangan
+                  <CheckCircle2 className="size-3" /> {t("reviewed")}
+                </span>
+              ) : hasAiProposal ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/20 px-2.5 py-0.5 text-[11px] font-semibold text-warning">
+                  <Sparkles className="size-3" /> {t("aiProposal")}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/20 px-2.5 py-0.5 text-[11px] font-semibold text-warning">
-                  <Sparkles className="size-3" /> AI Tavsiyasi
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[11px] font-semibold text-fg-muted">
+                  {t("awaitingReview")}
                 </span>
               )}
             </h3>
             <p className="text-xs text-fg-muted">
-              AI qo&apos;ygan ballarni tahrirlash, qo&apos;lda yakuniy baho belgilash va o&apos;quvchiga shaxsiy xulosa qoldirish
+              {t("description")}
             </p>
           </div>
         </div>
@@ -110,13 +116,13 @@ export function TeacherAttemptOverrideCard({
           onClick={() => setIsOpen(!isOpen)}
           className="border-brand/30 text-xs text-brand hover:bg-brand-hover/10"
         >
-          {isOpen ? "Yopish" : "Tahrirlash / Baholash"}
+          {isOpen ? t("close") : t("open")}
         </Button>
       </div>
 
       {data?.teacherComment && !isOpen && (
         <div className="border-b border-border/30 bg-brand-subtle/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand">Ustozning rasmiy izohi:</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand">{t("teacherComment")}</p>
           <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{data.teacherComment}&rdquo;</p>
           {(data.teacherReviewedBy || data.teacher_reviewed_by) && (
             <p className="mt-1 text-[11px] text-fg-subtle">— {(data.teacherReviewedBy || data.teacher_reviewed_by)}</p>
@@ -129,73 +135,73 @@ export function TeacherAttemptOverrideCard({
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-semibold text-fg-muted">
-                Writing Yakuniy Ball
+                {t("writingFinal")}
               </label>
               <Input
                 type="number"
                 step="0.5"
                 min="0"
                 max="75"
-                placeholder="Masalan: 6.5 yoki 55"
+                placeholder={t("scorePlaceholder")}
                 value={writingScore}
                 onChange={(e) => setWritingScore(e.target.value)}
                 className="bg-surface font-mono"
               />
               {writingJob?.finalScore != null && (
                 <span className="mt-1 block text-[11px] text-fg-subtle">
-                  AI taklifi: {writingJob.finalScore}
+                  {t("aiValue", { value: writingJob.finalScore })}
                 </span>
               )}
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-fg-muted">
-                Speaking Yakuniy Ball
+                {t("speakingFinal")}
               </label>
               <Input
                 type="number"
                 step="0.5"
                 min="0"
                 max="75"
-                placeholder="Masalan: 7.0 yoki 60"
+                placeholder={t("scorePlaceholder")}
                 value={speakingScore}
                 onChange={(e) => setSpeakingScore(e.target.value)}
                 className="bg-surface font-mono"
               />
               {speakingJob?.finalScore != null && (
                 <span className="mt-1 block text-[11px] text-fg-subtle">
-                  AI taklifi: {speakingJob.finalScore}
+                  {t("aiValue", { value: speakingJob.finalScore })}
                 </span>
               )}
             </div>
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-fg-muted">
-                Umumiy (Overall) Ball
+                {t("overall")}
               </label>
               <Input
                 type="number"
                 step="0.5"
                 min="0"
                 max="75"
-                placeholder="Ixtiyoriy overall"
+                placeholder={t("overallPlaceholder")}
                 value={overallScore}
                 onChange={(e) => setOverallScore(e.target.value)}
                 className="bg-surface font-mono"
               />
               <span className="mt-1 block text-[11px] text-fg-subtle">
-                Bo&apos;sh qoldirilsa, avtomatik hisoblanadi
+                {t("overallHint")}
               </span>
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-semibold text-fg-muted">
-              Ustoz Pedagogik Izohi va Tavsiyalari
+              {t("commentLabel")}
             </label>
             <Textarea
               rows={3}
-              placeholder="O'quvchiga kuchli va zaif tomonlari, imtihonda e'tibor qaratishi kerak bo'lgan tavsiyalarni yozing..."
+              placeholder={t("commentPlaceholder")}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className="bg-surface text-sm leading-relaxed"
@@ -209,7 +215,7 @@ export function TeacherAttemptOverrideCard({
               size="sm"
               onClick={() => setIsOpen(false)}
             >
-              Bekor qilish
+              {t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -217,7 +223,7 @@ export function TeacherAttemptOverrideCard({
               loading={mutation.isPending}
               className="bg-brand font-semibold text-brand-fg hover:bg-brand-hover"
             >
-              <CheckCircle2 className="size-4" /> Yakuniy Bahoni Tasdiqlash
+              <CheckCircle2 className="size-4" /> {t("submit")}
             </Button>
           </div>
         </form>
@@ -307,27 +313,27 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 <div className="space-y-2 rounded-xl border border-brand/30 bg-brand-subtle/15 p-3">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand">
-                      <ImageIcon className="size-3.5" /> Qo&apos;lyozma rasmlar ({submission.imageUrls.length} ta sahifa)
+                      <ImageIcon className="size-3.5" /> {t("panel.handwritingPages", { count: submission.imageUrls.length })}
                     </span>
-                    <span className="text-[11px] text-fg-subtle">Kattalashtirish uchun ustiga bosing</span>
+                    <span className="text-[11px] text-fg-subtle">{t("panel.zoomHint")}</span>
                   </div>
                   <div className="flex flex-wrap gap-2.5 pt-1">
                     {submission.imageUrls.map((url, idx) => (
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => setSelectedZoomImage({ url, title: `Qo'lyozma ${part.task} · Sahifa #${idx + 1}` })}
+                        onClick={() => setSelectedZoomImage({ url, title: t("panel.handwritingPage", { task: part.task, page: idx + 1 }) })}
                         className="group relative size-20 overflow-hidden rounded-lg border border-border-strong bg-black/40 transition hover:border-brand hover:ring-2 hover:ring-brand/40"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Qo'lyozma sahifa ${idx + 1}`} className="size-full object-cover transition-transform duration-200 group-hover:scale-110" />
+                        <img src={url} alt={t("panel.handwritingPageAlt", { page: idx + 1 })} className="size-full object-cover transition-transform duration-200 group-hover:scale-110" />
                         <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[9px] font-bold text-fg">#{idx + 1}</span>
                       </button>
                     ))}
                   </div>
                   {submission.ocrText && (
                     <div className="mt-2 rounded-lg border border-border/50 bg-bg-subtle p-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">AI o&apos;qigan matn (OCR):</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{t("panel.ocrText")}</p>
                       <p className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed text-fg">{submission.ocrText}</p>
                     </div>
                   )}
@@ -346,16 +352,16 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 {submission.transcript?.speechDiagnostics && (
                   <div className="mt-2.5 space-y-2 rounded-md border border-border/60 bg-bg/50 p-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-fg">Fonetik va Ravonlik Tahlili:</span>
+                      <span className="font-semibold text-fg">{t("panel.speechAnalysis")}</span>
                       {submission.transcript.speechDiagnostics.fluency_score ? (
                         <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-subtle-fg">
-                          Ravonlik: {submission.transcript.speechDiagnostics.fluency_score}/9.0
+                          {t("panel.fluency", { score: submission.transcript.speechDiagnostics.fluency_score })}
                         </span>
                       ) : null}
                     </div>
                     {!!submission.transcript.speechDiagnostics.mispronounced_words?.length && (
                       <div className="space-y-1">
-                        <p className="text-[11px] font-medium text-warning">Noaniq talaffuz qilingan so&apos;zlar:</p>
+                        <p className="text-[11px] font-medium text-warning">{t("panel.unclearWords")}</p>
                         <ul className="space-y-1 pl-2 text-[11px] text-fg-muted">
                           {submission.transcript.speechDiagnostics.mispronounced_words.map((m, mIdx) => (
                             <li key={mIdx}>
@@ -367,7 +373,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                     )}
                     {!!submission.transcript.speechDiagnostics.pauses_and_hesitations?.length && (
                       <p className="text-[11px] text-fg-subtle">
-                        Pauza va to&apos;xtalishlar: {submission.transcript.speechDiagnostics.pauses_and_hesitations.length} ta ({submission.transcript.speechDiagnostics.pauses_and_hesitations.map((p) => p.text).slice(0, 4).join(", ")})
+                        {t("panel.pauses", { count: submission.transcript.speechDiagnostics.pauses_and_hesitations.length })} ({submission.transcript.speechDiagnostics.pauses_and_hesitations.map((p) => p.text).slice(0, 4).join(", ")})
                       </p>
                     )}
                   </div>
@@ -388,9 +394,8 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               <div key={index} className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-brand/5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold text-brand-subtle-fg">
-                    <Sparkles className="size-3" /> C1 Namuna Javob (Model Answer)
+                    <Sparkles className="size-3" /> {t("panel.exampleAnswer")}
                   </span>
-                  <span className="text-[11px] text-fg-muted">Band 8.0+ Namuna</span>
                 </div>
                 <p className="text-xs text-fg-muted">{t("exampleNotice")}</p>
                 <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-border bg-bg-subtle/80 p-3.5 text-xs sm:text-sm font-serif leading-relaxed text-fg">
@@ -448,7 +453,7 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
         <div className="space-y-2.5">
           <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-danger" />
-            {t("corrections")} ({result.grammarCorrections.length} ta)
+            {t("corrections")} ({result.grammarCorrections.length})
           </h5>
           <ul className="space-y-2.5">
             {result.grammarCorrections.map((item, index) => (

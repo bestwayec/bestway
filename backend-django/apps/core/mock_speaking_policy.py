@@ -28,6 +28,20 @@ def expected(attempt, question):
     return seconds
 
 
+UPLOAD_RECOVERY = timedelta(minutes=5)
+
+
+def upload_window_closed(phase, at):
+    """True once a started response can no longer be uploaded (its window plus the recovery time).
+    Such a response counts as not given; it must not stop the student from answering the next one."""
+    from .mock_attempts import aware
+    try:
+        end = aware(parse_datetime(phase['expiresAt']))
+    except (KeyError, TypeError, ValueError):
+        return False
+    return end is not None and at > end + UPLOAD_RECOVERY
+
+
 def phase_window(attempt, question_id, seconds, *, at=None):
     from .mock_attempts import aware, fail
     at = at or timezone.now()
@@ -43,7 +57,7 @@ def phase_window(attempt, question_id, seconds, *, at=None):
         fail('SPEAKING_PREPARATION_ACTIVE', 'Wait for the speaking preparation to finish')
     if at < end:
         fail('SPEAKING_RESPONSE_ACTIVE', 'Finish the complete speaking response window before uploading')
-    if at > end + timedelta(minutes=5):
+    if at > end + UPLOAD_RECOVERY:
         fail('UPLOAD_WINDOW_EXPIRED', 'The recording upload recovery window has expired')
     return dict(phase)
 

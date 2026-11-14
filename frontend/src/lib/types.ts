@@ -888,6 +888,8 @@ export interface MockAttemptSummary {
   serverTime?: string;
   isTeacherReviewed?: boolean;
   mediaState?: Record<string, any>;
+  /** Ids of Listening parts / Speaking questions whose server window is already open (in-progress attempt). */
+  mediaStarted?: string[];
   /** Timed IELTS Listening: when each part was started on the server (resume after a reload). */
   listeningSchedule?: Record<string, import("./listening-schedule").ListeningSchedule>;
   antiCheatCount: number;
