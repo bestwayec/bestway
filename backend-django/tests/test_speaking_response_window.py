@@ -84,6 +84,29 @@ class SpeakingWindowTests(SimpleTestCase):
         with self.assertRaises(ContractAPIException) as caught:grant(damaged,AT)
         self.assertEqual(caught.exception.contract_code,'RECORDING_NOT_STARTED')
 
+    def test_a_response_that_can_no_longer_be_uploaded_does_not_block_the_next_question(self):
+        def grant_second(previous_expired_ago, uploaded=False):
+            item=attempt();item.mode='timed'
+            end=AT-previous_expired_ago
+            item.media_state={'q1':dict(startedAt=mock_attempts.iso(end-timedelta(seconds=30)),prepEndsAt=mock_attempts.iso(end-timedelta(seconds=30)),expiresAt=mock_attempts.iso(end),plays=0)}
+            with patch.object(mock_attempts.transaction,'atomic'),patch.object(mock_attempts,'own',return_value=item),\
+                    patch.object(mock_attempts,'assert_program'),patch.object(mock_attempts.MockQuestionGroup,'objects') as groups,\
+                    patch.object(mock_attempts.MockQuestion,'objects') as questions,patch.object(mock_attempts,'questions',return_value=[SimpleNamespace(id='q2')]),\
+                    patch.object(mock_attempts.MockAnswer,'objects') as answers,patch.object(mock_attempts.timezone,'now',return_value=AT):
+                groups.filter.return_value.order_by.return_value=[SimpleNamespace(id='g')]
+                questions.filter.return_value.order_by.return_value=[SimpleNamespace(id='q1'),SimpleNamespace(id='q2')]
+                answers.filter.return_value.exclude.return_value.exclude.return_value.exists.return_value=uploaded
+                return mock_attempts.media_phase(SimpleNamespace(id='s'),'a','q2','speaking')
+        # Still recoverable: the student must first finish uploading the previous response.
+        with self.assertRaises(ContractAPIException) as caught:grant_second(timedelta(minutes=1))
+        self.assertEqual(caught.exception.contract_code,'PREVIOUS_UPLOAD_PENDING')
+        # Uploaded, or no longer uploadable (window + 5 min recovery passed): the next question opens.
+        self.assertEqual(grant_second(timedelta(minutes=1),uploaded=True)['responseSeconds'],30)
+        self.assertEqual(grant_second(timedelta(minutes=6))['responseSeconds'],30)
+        self.assertTrue(policy.upload_window_closed({'expiresAt':mock_attempts.iso(AT)},AT+timedelta(minutes=5,seconds=1)))
+        self.assertFalse(policy.upload_window_closed({'expiresAt':mock_attempts.iso(AT)},AT+timedelta(minutes=5)))
+        self.assertFalse(policy.upload_window_closed(None,AT))
+
     def test_verified_submission_receipt_requires_actual_file_hash(self):
         with TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory):
             path=Path(directory)/'recording.wav';path.write_bytes(wav(30));item=attempt()
