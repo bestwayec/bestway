@@ -927,7 +927,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               simulatorMode={simulatorMode}
               flaggedQuestions={flaggedQuestions}
               onToggleFlag={toggleQuestionFlag}
-              onActiveQuestionChange={(number) => setActiveQuestion({ section: section?.id ?? null, number })}
+              onActiveQuestionChange={(number) => {
+                const sectionId = section?.id ?? null;
+                // Keep the same object when nothing changed: a new one would re-render the runner, which hands the
+                // stepper a new callback, which reports the question again — an endless render loop.
+                setActiveQuestion((current) => (current.section === sectionId && current.number === number ? current : { section: sectionId, number }));
+              }}
               renderGroupBlock={(g, reviewComplete, partIdx) => (
                 <GroupBlock
                   key={g.id}
