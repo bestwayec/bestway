@@ -774,6 +774,8 @@ model MockQuestion {
   wordLimit        Int? // "NO MORE THAN X WORDS" cheklovi (ixtiyoriy)
   answerRule       String? // ONE_WORD | ONE_WORD_AND_OR_NUMBER; null keeps legacy IELTS normalization
   acceptedVariants Json? // British/American imlo variantlari: string[] (masalan ["colour","color"])
+  cefrLevel        String? // item bank: A1..C2; null = unknown
+  skillTags        Json? // item bank: string[] of skill tags (e.g. ["inference","detail"]); null = none
   createdAt        DateTime         @default(now())
 
   group   MockQuestionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
