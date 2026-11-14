@@ -190,7 +190,7 @@ Owner decisions recorded: (1) brand green #15803d approved (light theme, #160); 
 | Step | Status | Evidence |
 |---|---|---|
 | P0 restore state | DONE | 21 open program PRs (#138–#158), all base main, CI green; deploy gate passed; baseline main 7603d7f pytest 906 passed / 4 skipped |
-| P1 land PRs | DONE except #160 (CI running at the time of writing) | Merge SHAs below. Each branch was updated by plain merges (main + earlier PR heads), CI green on the exact head, code-quality bot threads fixed at the source (#138, #145, #152) |
+| P1 land PRs | DONE (#138–#160) | Merge SHAs below. Each branch was updated by plain merges (main + earlier PR heads), CI green on the exact head, code-quality bot threads fixed at the source (#138, #145, #152) |
 | P2 Multilevel full E2E | TODO | e2e script to be committed as scripts/e2e-local/multilevel-full.mjs |
 | P3 Multilevel Speaking + per-part grading | TODO | |
 | P4 Builder templates + pre-publish panel | TODO | |
@@ -198,7 +198,7 @@ Owner decisions recorded: (1) brand green #15803d approved (light theme, #160); 
 | P6 Desktop (bw-tauri) D1–D3 | TODO | leads: v1.0.12, run 42982782068, PR #30 |
 | P7 AI grading plan (docs only) | TODO | docs/agent/AI_GRADING_PLAN.md |
 
-Merge SHAs on main (2026-11-14): #138 c01fb9c · #139 1d20b3d · #140 73bae22 · #141 ce2cfe2 · #142 98a161f · #143 bc5ce68 · #144 6e91f96 · #145 a8d7a2f · #146 4564f8a · #147 e7f1519 · #148 993acf2 · #149 24d9086 · #150 a13d2a2 · #151 c2fbcd6 · #152 30353e7 · #153 ce59b08 · #154 42d3724 · #155 6643b46 · #156 90854e3 · #157 fe6298a · #158 5ac6c57 · #159 9fea88a.
+Merge SHAs on main (2026-11-14): #138 c01fb9c · #139 1d20b3d · #140 73bae22 · #141 ce2cfe2 · #142 98a161f · #143 bc5ce68 · #144 6e91f96 · #145 a8d7a2f · #146 4564f8a · #147 e7f1519 · #148 993acf2 · #149 24d9086 · #150 a13d2a2 · #151 c2fbcd6 · #152 30353e7 · #153 ce59b08 · #154 42d3724 · #155 6643b46 · #156 90854e3 · #157 fe6298a · #158 5ac6c57 · #159 9fea88a · #160 f6b9c41 (brand green; vitest 722, tsc, lint, build; contrast white on brand 3.3 → 5.0:1).
 
 Post-stage checks on fresh main (local, CI-like env, PostgreSQL 16; smoke/full-journey on the local stack with synthetic accounts):
 
@@ -222,6 +222,6 @@ Notes:
 ## NEXT STEP
 
 The exam program (docs/agent/EXAM_PROGRAM.md) is the active track; phase 3 is closed (main part), its NEXT STEP is phase 4: first the phase 3 leftovers (Builder templates + publish conformity UI, full Builder → student → teacher → result E2E for Multilevel and IELTS, Multilevel Speaking flow and teacher per-part grading, IELTS Speaking modes), then AI assessment.
-1. PHASE 4 (see the section above): phases 1–3 are merged (#138–#159). Next: merge #160 (brand green) when CI is green → P2 Multilevel full E2E → P3 → P4 → P5 → P6 desktop → P7 AI grading plan.
+1. PHASE 4 (see the section above): phases 1–3 are merged (#138–#159). Next: P2 Multilevel full E2E → P3 → P4 → P5 → P6 desktop → P7 AI grading plan.
 2. Website program items still open: U6 teacher/admin/builder (audit #19, #22) → U7 → U9 → U10 → WEBSITE GATE → desktop (D1–D3). Remaining i18n: CDLayout, drill modal, teacher/builder screens.
 Checks per PR: as in EXAM_PROGRAM.md (UMUMIY QOIDALAR). Local E2E (production build: `next build` + `next start -p 3300`): smoke.mjs (before full-journey), full-journey.mjs, vocab-battle.mjs, drill.mjs, demo.mjs, exam-window.mjs, exam-workspace.mjs, exam-tools.mjs (BW_AUDIO = short WAV; sets the seeded Listening parts to 3 s and restores them), exam-writing.mjs, exam-mode.mjs, exam-session.mjs, exam-listening.mjs (BW_LONG_AUDIO = 60 s WAV), exam-a11y.mjs (axe-core from frontend/node_modules), exam-reading-split.mjs, teacher-live.mjs (BW_WEB=http://localhost:3300, BW_PYTHON, BW_CHROMIUM). Restart the local Django server after switching branches.
