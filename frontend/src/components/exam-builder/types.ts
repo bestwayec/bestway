@@ -132,11 +132,26 @@ export function defaultUnitTitle(skill: MockSkill, index: number): string {
 }
 
 /** Next free global question number across the whole exam (IELTS 1–40). */
+/**
+ * Next free question number. Numbers run within one section (IELTS papers and Multilevel both
+ * restart at 1 in every section), so pass the section's `skill` or `id` as `scope`.
+ */
 export function nextQuestionNumber(
-  sections: Array<{ groups: Array<{ questions: Array<{ number: number }> }> }>,
+  sections: Array<{ id?: string; skill?: string; groups: Array<{ questions: Array<{ number: number }> }> }>,
+  scope?: { skill?: string; id?: string },
 ): number {
   let max = 0;
-  for (const s of sections)
+  for (const s of sections) {
+    if (scope && s.skill !== scope.skill && s.id !== scope.id) continue;
     for (const g of s.groups) for (const q of g.questions) max = Math.max(max, q.number);
+  }
   return max + 1;
+}
+
+/** Question numbers already used in one section (import duplicate check). */
+export function sectionNumbers(
+  sections: Array<{ id?: string; skill?: string; groups: Array<{ questions: Array<{ number: number }> }> }>,
+  scope: { skill?: string; id?: string },
+): number[] {
+  return sections.filter((s) => s.skill === scope.skill || s.id === scope.id).flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => q.number)));
 }

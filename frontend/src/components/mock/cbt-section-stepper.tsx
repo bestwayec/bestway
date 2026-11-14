@@ -63,7 +63,7 @@ export function CbtSectionStepper({
     return safeGroups.flatMap((group, groupIdx) =>
       (group?.questions || []).map((q) => ({
         ...q,
-        label: typeof q.number === "number" && q.number > 0 ? q.number : globalNum,
+        label: typeof q.displayNumber === "number" && q.displayNumber > 0 ? q.displayNumber : typeof q.number === "number" && q.number > 0 ? q.number : globalNum,
         globalIndex: globalNum++,
         groupIndex: groupIdx,
         groupTitle:

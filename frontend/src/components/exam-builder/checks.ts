@@ -70,7 +70,7 @@ export function examClientChecks(sections: MockSection[], profile = "practice", 
   }
   const numbers = new Map<number, string>();
   for (const s of sections) {
-    if (type === "multilevel") numbers.clear();
+    numbers.clear(); // every section starts at 1 (IELTS papers and Multilevel)
     if (!s.groups || s.groups.length === 0) {
       checks.push({
         level: "error",
@@ -127,7 +127,7 @@ export function examClientChecks(sections: MockSection[], profile = "practice", 
           checks.push({
             level: "error",
             label: `Duplicate question number ${q.number}`,
-            detail: `Also used in ${numbers.get(q.number)}. IELTS numbers run 1–40 without repeats.`,
+            detail: `Also used in ${numbers.get(q.number)}. Numbers run 1–40 within a section without repeats.`,
             target: { kind: "group", groupId: g.id },
           });
         } else {
@@ -179,8 +179,10 @@ export function duplicateNumberErrors(
   groupId: string,
   numbers: number[],
 ): string[] {
+  // Numbers repeat only across sections, never within one.
   const usedElsewhere = new Set<number>();
-  for (const s of sections)
+  const own = sections.find((s) => s.groups.some((g) => g.id === groupId));
+  for (const s of own ? [own] : sections)
     for (const g of s.groups) {
       if (g.id === groupId) continue;
       for (const q of g.questions) usedElsewhere.add(q.number);

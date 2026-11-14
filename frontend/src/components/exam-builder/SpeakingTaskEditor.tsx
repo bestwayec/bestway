@@ -85,7 +85,7 @@ export function SpeakingTaskEditor({
             number: q.number,
             prompt: q.prompt ?? "",
           }))
-        : Array.from({ length: requiredResponses }, (_, index) => ({ clientKey: `new-speaking-${index}`, number: nextQuestionNumber(detail.sections) + index, prompt: "" }));
+        : Array.from({ length: requiredResponses }, (_, index) => ({ clientKey: `new-speaking-${index}`, number: nextQuestionNumber(detail.sections, { skill: "speaking" }) + index, prompt: "" }));
     return {
       title: group.title ?? "",
       instructions: group.instructions ?? "",
@@ -251,7 +251,7 @@ export function SpeakingTaskEditor({
             </Field>
           ))}
           {multilevel && questions.length < requiredResponses && (
-            <Button size="sm" variant="outline" onClick={() => setQuestions((prev) => [...prev, { clientKey: `new-speaking-${prev.length}`, number: nextQuestionNumber(detail.sections) + prev.length, prompt: "" }])}>
+            <Button size="sm" variant="outline" onClick={() => setQuestions((prev) => [...prev, { clientKey: `new-speaking-${prev.length}`, number: nextQuestionNumber(detail.sections, { skill: "speaking" }) + prev.length, prompt: "" }])}>
               <Plus className="size-4" aria-hidden /> Add response
             </Button>
           )}

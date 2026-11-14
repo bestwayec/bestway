@@ -29,7 +29,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   return (
     <div className={cn("space-y-2 rounded-[10px] border p-3 transition-colors", hasResponse ? "border-brand/30 bg-brand-subtle/20" : "border-border bg-surface")}>
       <div className="flex items-start gap-2.5">
-        <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.number}</span>
+        <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.displayNumber ?? q.number}</span>
         {q.prompt && q.prompt.trim() ? (
           renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line text-sm leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
             : <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
@@ -38,9 +38,9 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
       <div className={cn(q.prompt && q.prompt.trim() ? "pl-[34px]" : "pt-1")}>
         {isObjectiveChoice(q) ? (
           <fieldset>
-            <legend className="sr-only">{t("questionNumber", { number: q.number })}</legend>
+            <legend className="sr-only">{t("questionNumber", { number: q.displayNumber ?? q.number })}</legend>
             {isShortOptions ? (
-              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={t("questionOptions", { number: q.number })}>
+              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={t("questionOptions", { number: q.displayNumber ?? q.number })}>
                 {options.map((option) => {
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
@@ -84,7 +84,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
             )}
           </fieldset>
         ) : (
-          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: q.number })} autoComplete="off" spellCheck={false} className="min-h-10" />
+          <Input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} aria-label={t("answerFor", { number: q.displayNumber ?? q.number })} autoComplete="off" spellCheck={false} className="min-h-10" />
         )}
         {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
         {hasResponse && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">

@@ -884,6 +884,9 @@ def detail(actor, attempt_id):
                 shaped_group['questions'].append(item)
             shaped['groups'].append(shaped_group)
         sections.append(shaped)
+    # Numbers as shown on the paper, computed on the whole exam before a practice scope narrows it.
+    from .question_numbering import apply_display_numbers
+    apply_display_numbers(attempt.exam.type, sections)
     result = summary(attempt, detail=True)
     if staff:
         result['examTitle'] = attempt.exam.title

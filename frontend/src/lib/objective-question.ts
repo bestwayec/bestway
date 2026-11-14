@@ -2,6 +2,8 @@ import type { MockQuestionType, ObjectiveAnswerRule } from "./types";
 
 /** A student presentation contract deliberately has no answer-key fields. */
 export interface ObjectiveQuestion {
+  /** Number shown to the student (IELTS: from 1 in every section). */
+  displayNumber?: number;
   id: string;
   number: number;
   type: MockQuestionType | string;

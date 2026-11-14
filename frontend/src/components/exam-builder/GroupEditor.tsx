@@ -29,7 +29,7 @@ import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { multilevelPartSummary } from "./multilevel-part-guidance";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
-import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
+import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 function toBuilder(group: MockExamDetail["sections"][number]["groups"][number]): BuilderPart {
   return {
@@ -138,7 +138,7 @@ export function GroupEditor({
   const [visualQuestions, setVisualQuestions] = React.useState<BuilderQuestion[]>(part?.questions ?? []);
   const baseNumber = visualQuestions.length
     ? Math.min(...visualQuestions.map((q) => q.number)) - 1
-    : nextQuestionNumber(detail.sections) - 1;
+    : nextQuestionNumber(detail.sections, { id: sectionId }) - 1;
   React.useEffect(
     () => () => {
       if (localAudioUrl) URL.revokeObjectURL(localAudioUrl);
@@ -284,7 +284,7 @@ export function GroupEditor({
     const p = part;
     if (!p) return;
     const maxLocal = p.questions.reduce((m, q) => Math.max(m, q.number), 0);
-    const maxExam = nextQuestionNumber(detail.type === 'multilevel' ? detail.sections.filter((s) => s.id === sectionId) : detail.sections) - 1;
+    const maxExam = nextQuestionNumber(detail.sections, { id: sectionId }) - 1;
     const number = Math.max(maxLocal, maxExam) + 1;
     const specPart = detail.profile === 'full_mock' ? detail.specification?.[skill].parts[detail.sections.find((s) => s.id === sectionId)?.groups.findIndex((g) => g.id === groupId) ?? 0] : undefined;
     const preset = formatPreset && (!specPart || specPart.types.includes(formatPreset.type)) ? formatPreset : undefined;
@@ -691,7 +691,7 @@ export function GroupEditor({
             update((prev) => ({ ...prev, questions: [...prev.questions, ...merged] }));
           }}
           groupLabel={`${skill.charAt(0).toUpperCase() + skill.slice(1)} → ${part.title.trim() || meta.unit}`}
-          existingNumbers={detail.sections.flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => q.number)))}
+          existingNumbers={sectionNumbers(detail.sections, { id: sectionId })}
         />
       )}
 

@@ -485,7 +485,8 @@ def _assert_numbers(exam: MockExam, skill: str, rows: list[dict], *, excluding_g
     if len(set(numbers)) != len(numbers):
         raise ContractAPIException("VALIDATION_ERROR", "Blok ichida savol raqamlari takrorlanmasligi kerak", 400)
     qs = MockQuestion.objects.filter(group__section__exam_id=exam.id)
-    if exam.type == "multilevel": qs = qs.filter(group__section__skill=skill)
+    # Numbers are unique within a section (IELTS papers restart at 1 in every section, like Multilevel).
+    qs = qs.filter(group__section__skill=skill)
     if excluding_group: qs = qs.exclude(group_id=excluding_group)
     used = set(qs.values_list("number", flat=True))
     collisions = sorted(set(numbers) & used)
@@ -709,7 +710,7 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
                     missing_keys += 1
                 if ielts and not auto and question.points != 9:
                     manual_bad += 1
-                number = question.number if ielts else (section['skill'], question.number)
+                number = (section['skill'], question.number)  # unique within a section (IELTS restarts at 1)
                 count = seen.get(number, 0)
                 if count == 1:
                     duplicates += 1
