@@ -17,6 +17,7 @@ import {
   Square,
   Users,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ export function LiveExamRoomPanel({
   /** Qiymat o'zgarganda yaratish formasi ochiladi (tezkor harakatlar uchun) */
   openCreateSignal?: number;
 }) {
+  const t = useTranslations("liveRoom");
   const roomsQ = useLiveExamRooms(defaultGroupId);
   const examsQ = useMockExams();
   const groupsQ = useGroups();
@@ -98,7 +100,7 @@ export function LiveExamRoomPanel({
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedExamId) {
-      toast.error("Avval Mock imtihonni tanlang");
+      toast.error(t("pickExamFirst"));
       return;
     }
     try {
@@ -111,9 +113,9 @@ export function LiveExamRoomPanel({
       });
       setSelectedRoomId(created.id);
       setShowCreateForm(false);
-      toast.success(`Jonli imtihon xonasi ochildi! PIN: ${created.pin}`);
+      toast.success(t("roomOpened", { pin: created.pin }));
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Xona yaratishda xatolik yuz berdi");
+      toast.error(err instanceof ApiError ? err.message : t("createError"));
     }
   }
 
@@ -121,10 +123,10 @@ export function LiveExamRoomPanel({
     try {
       await navigator.clipboard.writeText(pin);
       setCopiedPin(true);
-      toast.success("PIN-kod nusxalandi");
+      toast.success(t("pinCopied"));
       setTimeout(() => setCopiedPin(false), 2000);
     } catch {
-      toast.error("Nusxalashda xatolik");
+      toast.error(t("copyError"));
     }
   }
 
@@ -134,10 +136,10 @@ export function LiveExamRoomPanel({
       const url = `${origin}/mock?pin=${pin}`;
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);
-      toast.success("Imtihon havolasi nusxalandi");
+      toast.success(t("linkCopied"));
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {
-      toast.error("Nusxalashda xatolik");
+      toast.error(t("copyError"));
     }
   }
 
@@ -155,9 +157,9 @@ export function LiveExamRoomPanel({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Imtihon natijalari Excel (.xlsx) formatda yuklab olindi!");
+      toast.success(t("excelDownloaded"));
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Excel yuklab olishda xatolik");
+      toast.error(err instanceof ApiError ? err.message : t("excelError"));
     } finally {
       setDownloadingExcel(false);
     }
@@ -166,9 +168,9 @@ export function LiveExamRoomPanel({
   async function handleCloseRoom(roomId: string) {
     try {
       await closeRoom.mutateAsync(roomId);
-      toast.success("Imtihon xonasi yopildi");
+      toast.success(t("roomClosed"));
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Xonani yopishda xatolik");
+      toast.error(err instanceof ApiError ? err.message : t("closeError"));
     }
   }
 
@@ -183,17 +185,15 @@ export function LiveExamRoomPanel({
                 <span className="relative inline-flex size-3 rounded-full bg-brand" />
               </span>
               <CardTitle className="text-base font-bold text-fg">
-                {compact ? "Live Exam (PIN)" : "Live Exam Room & O'qituvchi Jonli Kuzatuv Paneli (PIN Mode)"}
+                {compact ? t("titleCompact") : t("title")}
               </CardTitle>
               <Badge variant={activeRooms.length > 0 ? "success" : "neutral"}>
-                {activeRooms.length > 0
-                  ? `${activeRooms.length} ta faol xona`
-                  : "Faol xona yo'q"}
+                {activeRooms.length > 0 ? t("activeRooms", { count: activeRooms.length }) : t("noActiveRooms")}
               </Badge>
             </div>
             {!compact && (
               <CardDescription className="text-xs text-fg-muted">
-                6 xonali PIN-kod orqali guruhga sinxron imtihon (IELTS CDI yoki Multi-Level DTM) boshlang va har bir o&apos;quvchining nechanchi savolda ekanini real vaqtda kuzating.
+                {t("description")}
               </CardDescription>
             )}
           </div>
@@ -205,7 +205,8 @@ export function LiveExamRoomPanel({
                 variant="outline"
                 size="icon-sm"
                 onClick={() => void monitorQ.refetch()}
-                title="Yangilash"
+                title={t("refresh")}
+                aria-label={t("refresh")}
               >
                 <RefreshCw
                   className={cn("size-3.5", monitorQ.isFetching && "animate-spin")}
@@ -219,7 +220,7 @@ export function LiveExamRoomPanel({
               className="bg-brand font-bold text-brand-fg hover:bg-brand-hover"
             >
               <Plus className="size-4 mr-1" />
-              {showCreateForm ? "Yopish" : compact ? "Yangi PIN imtihon" : "Yangi Live Imtihon (PIN) Ochish"}
+              {showCreateForm ? t("close") : compact ? t("newRoomCompact") : t("newRoom")}
             </Button>
           </div>
         </div>
@@ -236,15 +237,15 @@ export function LiveExamRoomPanel({
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-fg flex items-center gap-2">
                 <KeyRound className="size-4 text-brand" />
-                Yangi Jonli Imtihon Xonasini Sozlash
+                {t("formTitle")}
               </h4>
-              <Badge variant="brand">6 xonali PIN avto-yaratiladi</Badge>
+              <Badge variant="brand">{t("pinAuto")}</Badge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="block text-xs font-semibold text-fg-muted mb-1">
-                  Mock Imtihonni tanlang:
+                  {t("examLabel")}
                 </label>
                 <select
                   value={selectedExamId}
@@ -257,7 +258,7 @@ export function LiveExamRoomPanel({
                   }}
                   className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg"
                 >
-                  <option value="">— Imtihonni tanlang —</option>
+                  <option value="">{t("examPlaceholder")}</option>
                   {(examsQ.data ?? []).map((ex) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.title} ({ex.type === "multilevel" ? "Multi-Level" : "IELTS"})
@@ -268,14 +269,14 @@ export function LiveExamRoomPanel({
 
               <div>
                 <label className="block text-xs font-semibold text-fg-muted mb-1">
-                  Guruh (ixtiyoriy):
+                  {t("groupLabel")}
                 </label>
                 <select
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
                   className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg"
                 >
-                  <option value="">Barcha o&apos;quvchilar uchun ochiq</option>
+                  <option value="">{t("groupAll")}</option>
                   {(groupsQ.data ?? []).map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
@@ -286,21 +287,21 @@ export function LiveExamRoomPanel({
 
               <div>
                 <label className="block text-xs font-semibold text-fg-muted mb-1">
-                  Rasmiy Simulyator Rejimi:
+                  {t("simulatorLabel")}
                 </label>
                 <select
                   value={simulatorMode}
                   onChange={(e) => setSimulatorMode(e.target.value as ExamSimulatorMode)}
                   className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-xs font-bold text-fg"
                 >
-                  <option value="cdi">IELTS Computer-Delivered (CDI)</option>
-                  <option value="dtm">Multi-Level (DTM Split-Screen)</option>
+                  <option value="cdi">{t("simulatorCdi")}</option>
+                  <option value="dtm">{t("simulatorDtm")}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-fg-muted mb-1">
-                  Vaqt chegarasi (daqiqa):
+                  {t("durationLabel")}
                 </label>
                 <Input
                   type="number"
@@ -317,7 +318,7 @@ export function LiveExamRoomPanel({
               <Input
                 value={roomTitle}
                 onChange={(e) => setRoomTitle(e.target.value)}
-                placeholder="Xona sarlavhasi (masalan: Shanba kungi Mock sinovi)"
+                placeholder={t("titlePlaceholder")}
                 className="h-9 text-xs max-w-md"
               />
               <div className="flex items-center gap-2">
@@ -327,11 +328,11 @@ export function LiveExamRoomPanel({
                   variant="ghost"
                   onClick={() => setShowCreateForm(false)}
                 >
-                  Bekor qilish
+                  {t("cancel")}
                 </Button>
                 <Button type="submit" size="sm" loading={createRoom.isPending}>
                   <Radio className="size-4 mr-1.5" />
-                  Xonani yaratish va PIN olish
+                  {t("create")}
                 </Button>
               </div>
             </div>
@@ -357,7 +358,7 @@ export function LiveExamRoomPanel({
                 <span>·</span>
                 <span className="truncate max-w-36">{r.title || r.examTitle || "Mock"}</span>
                 <Badge variant={r.status === "active" ? "success" : "neutral"} className="text-[10px]">
-                  {r.status === "active" ? "Faol" : "Yopilgan"}
+                  {r.status === "active" ? t("statusActive") : t("statusClosed")}
                 </Badge>
               </button>
             ))}
@@ -371,22 +372,20 @@ export function LiveExamRoomPanel({
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={currentRoom.status === "active" ? "success" : "neutral"}>
-                    {currentRoom.status === "active" ? "🟢 JONLI XONA FAOL" : "YOPILGAN"}
+                    {currentRoom.status === "active" ? t("roomLive") : t("statusClosed")}
                   </Badge>
                   <Badge variant="info">
-                    {currentRoom.simulatorMode === "dtm"
-                      ? "Multi-Level DTM Simulyator"
-                      : "IELTS CDI Simulyator"}
+                    {currentRoom.simulatorMode === "dtm" ? t("simulatorDtm") : t("simulatorCdi")}
                   </Badge>
                   {currentRoom.groupName && (
                     <Badge variant="neutral">{currentRoom.groupName}</Badge>
                   )}
                 </div>
                 <h4 className="text-base font-bold text-fg">
-                  {currentRoom.title || currentRoom.examTitle || "Jonli Mock Imtihon"}
+                  {currentRoom.title || currentRoom.examTitle || t("untitled")}
                 </h4>
                 <p className="text-xs text-fg-muted">
-                  O&apos;quvchilar Dashboard yoki Mock sahifasida quyidagi 6 xonali PIN-kodni terib darhol ulanadi:
+                  {t("joinHint")}
                 </p>
               </div>
 
@@ -394,7 +393,7 @@ export function LiveExamRoomPanel({
               <div className="flex flex-wrap items-center gap-2.5">
                 <div className="rounded-xl border-2 border-brand bg-bg px-4 py-2 text-center shadow-inner">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-fg-muted">
-                    IMTIHON PIN-KODI
+                    {t("pinLabel")}
                   </p>
                   <p className="font-mono text-2xl sm:text-3xl font-black tracking-[0.28em] text-brand tabular-nums">
                     {currentRoom.pin}
@@ -410,7 +409,7 @@ export function LiveExamRoomPanel({
                     className="h-8 text-xs justify-start"
                   >
                     {copiedPin ? <Check className="size-3.5 mr-1.5 text-brand" /> : <Copy className="size-3.5 mr-1.5" />}
-                    PIN nusxalash
+                    {t("copyPin")}
                   </Button>
                   <Button
                     type="button"
@@ -420,7 +419,7 @@ export function LiveExamRoomPanel({
                     className="h-8 text-xs justify-start"
                   >
                     {copiedLink ? <Check className="size-3.5 mr-1.5 text-brand" /> : <Monitor className="size-3.5 mr-1.5" />}
-                    Havolani nusxalash
+                    {t("copyLink")}
                   </Button>
                 </div>
               </div>
@@ -431,17 +430,17 @@ export function LiveExamRoomPanel({
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="neutral" className="gap-1 py-1 px-2.5">
                   <Users className="size-3.5 text-brand" />
-                  Ulangan: <strong>{summary?.totalParticipants ?? participants.length}</strong>
+                  {t("joined")} <strong>{summary?.totalParticipants ?? participants.length}</strong>
                 </Badge>
                 <Badge variant="info" className="gap-1 py-1 px-2.5">
-                  Jarayonda: <strong>{summary?.inProgressCount ?? participants.filter((p) => p.status === "in_progress").length}</strong>
+                  {t("inProgress")} <strong>{summary?.inProgressCount ?? participants.filter((p) => p.status === "in_progress").length}</strong>
                 </Badge>
                 <Badge variant="success" className="gap-1 py-1 px-2.5">
-                  Yakunlagan: <strong>{summary?.completedCount ?? participants.filter((p) => p.status === "completed").length}</strong>
+                  {t("finished")} <strong>{summary?.completedCount ?? participants.filter((p) => p.status === "completed").length}</strong>
                 </Badge>
                 {summary?.averageBand != null && (
                   <Badge variant="brand" className="gap-1 py-1 px-2.5">
-                    O&apos;rtacha Band: <strong>{Number(summary.averageBand).toFixed(1)}</strong>
+                    {t("averageBand")} <strong>{Number(summary.averageBand).toFixed(1)}</strong>
                   </Badge>
                 )}
               </div>
@@ -455,7 +454,7 @@ export function LiveExamRoomPanel({
                   className="bg-brand text-brand-fg hover:bg-brand-hover"
                 >
                   <Download className="size-4 mr-1.5" />
-                  Excel (.xlsx) Natijalarni Yuklab olish
+                  {t("downloadExcel")}
                 </Button>
 
                 {currentRoom.status === "active" && (
@@ -467,7 +466,7 @@ export function LiveExamRoomPanel({
                     onClick={() => void handleCloseRoom(currentRoom.id)}
                   >
                     <Square className="size-3.5 mr-1.5" />
-                    Xonani yopish
+                    {t("closeRoom")}
                   </Button>
                 )}
               </div>
@@ -482,10 +481,10 @@ export function LiveExamRoomPanel({
             ) : participants.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border bg-bg-subtle/30 py-8 text-center">
                 <p className="text-sm font-semibold text-fg">
-                  Hozircha o&apos;quvchilar PIN-kod orqali ulanmadi
+                  {t("noParticipantsTitle")}
                 </p>
                 <p className="mt-1 text-xs text-fg-muted">
-                  O&apos;quvchi <strong>{currentRoom.pin}</strong> kodini kiritishi bilan shu yerda uning ismi va yechayotgan savoli jonli ko&apos;rinadi.
+                  {t("noParticipantsBody", { pin: currentRoom.pin })}
                 </p>
               </div>
             ) : (
@@ -493,17 +492,18 @@ export function LiveExamRoomPanel({
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-border bg-bg-subtle text-[11px] font-bold uppercase text-fg-muted">
                     <tr>
-                      <th className="px-3.5 py-2.5">O&apos;quvchi</th>
-                      <th className="px-3.5 py-2.5">Joriy Bo&apos;lim va Savol</th>
-                      <th className="px-3.5 py-2.5">Jarayon (Ishlangan / Belgilangan)</th>
-                      <th className="px-3.5 py-2.5">Anti-Cheat</th>
-                      <th className="px-3.5 py-2.5 text-right">Holat / Natija</th>
+                      <th className="px-3.5 py-2.5">{t("colStudent")}</th>
+                      <th className="px-3.5 py-2.5">{t("colSection")}</th>
+                      <th className="px-3.5 py-2.5">{t("colProgress")}</th>
+                      <th className="px-3.5 py-2.5">{t("colLog")}</th>
+                      <th className="px-3.5 py-2.5 text-right">{t("colResult")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {participants.map((p) => {
-                      const totalQ = Math.max(1, p.totalQuestions || 40);
-                      const pct = Math.min(100, Math.round(((p.answeredCount || 0) / totalQ) * 100));
+                      // Only what the server reports: no assumed 40 questions, section or question number.
+                      const totalQ = p.totalQuestions && p.totalQuestions > 0 ? p.totalQuestions : null;
+                      const pct = totalQ ? Math.min(100, Math.round(((p.answeredCount || 0) / totalQ) * 100)) : null;
                       const isDone = p.status === "completed" || p.status === "grading";
 
                       return (
@@ -520,19 +520,21 @@ export function LiveExamRoomPanel({
 
                           <td className="px-3.5 py-3">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <Badge variant="info" className="uppercase">
-                                {p.currentSkill || "reading"}
-                              </Badge>
-                              <span className="font-mono font-bold text-fg">
-                                Savol #{p.currentQuestionNumber || 1}/{totalQ}
-                              </span>
+                              {p.currentSkill ? (
+                                <Badge variant="info" className="uppercase">{p.currentSkill}</Badge>
+                              ) : null}
+                              {p.currentQuestionNumber ? (
+                                <span className="font-mono font-bold text-fg">
+                                  {totalQ ? t("questionOf", { number: p.currentQuestionNumber, total: totalQ }) : t("questionNumber", { number: p.currentQuestionNumber })}
+                                </span>
+                              ) : !p.currentSkill ? <span className="text-fg-muted">—</span> : null}
                             </div>
                           </td>
 
                           <td className="px-3.5 py-3 min-w-[180px]">
                             <div className="flex items-center justify-between text-[11px] mb-1">
                               <span className="font-semibold text-brand">
-                                {p.answeredCount || 0} / {totalQ} ishlangan ({pct}%)
+                                {totalQ ? t("answeredOf", { answered: p.answeredCount || 0, total: totalQ, percent: pct ?? 0 }) : t("answered", { answered: p.answeredCount || 0 })}
                               </span>
                               {(p.flaggedCount ?? 0) > 0 && (
                                 <span className="inline-flex items-center gap-0.5 font-semibold text-warning">
@@ -544,21 +546,21 @@ export function LiveExamRoomPanel({
                             <div className="h-2 w-full overflow-hidden rounded-full bg-bg-subtle">
                               <div
                                 className="h-full rounded-full bg-brand transition-all duration-300"
-                                style={{ width: `${pct}%` }}
+                                style={{ width: `${pct ?? 0}%` }}
                               />
                             </div>
                           </td>
 
                           <td className="px-3.5 py-3">
                             {(p.antiCheatCount ?? 0) > 0 ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-bold text-danger">
-                                <ShieldAlert className="size-3.5" />
-                                {p.antiCheatCount} ogohlantirish
+                              <span className="inline-flex items-center gap-1 rounded-full border border-warning-border bg-warning-bg px-2.5 py-1 text-[11px] font-semibold text-warning">
+                                <ShieldAlert className="size-3.5" aria-hidden />
+                                {t("recorded", { count: p.antiCheatCount ?? 0 })}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand">
-                                <ShieldCheck className="size-3.5" />
-                                Toza
+                                <ShieldCheck className="size-3.5" aria-hidden />
+                                {t("nothingRecorded")}
                               </span>
                             )}
                           </td>
@@ -568,19 +570,19 @@ export function LiveExamRoomPanel({
                               <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                                 <Badge variant="success" className="gap-1">
                                   <CheckCircle2 className="size-3" />
-                                  Yakunladi
+                                  {p.status === "grading" ? t("statusGrading") : t("statusDone")}
                                 </Badge>
                                 {p.bandScore != null && (
                                   <Badge variant="brand">Band {Number(p.bandScore).toFixed(1)}</Badge>
                                 )}
                                 {p.multilevelScore != null && (
                                   <Badge variant="warning">
-                                    {Math.round(p.multilevelScore)}/75 ({p.cefrLevel || "B2"})
+                                    {Math.round(p.multilevelScore)}/75{p.cefrLevel ? ` (${p.cefrLevel === "BELOW_B1" ? t("belowB1") : p.cefrLevel})` : ""}
                                   </Badge>
                                 )}
                               </div>
                             ) : (
-                              <Badge variant="info">Ishlamoqda…</Badge>
+                              <Badge variant="info">{t("working")}</Badge>
                             )}
                           </td>
                         </tr>
@@ -595,10 +597,10 @@ export function LiveExamRoomPanel({
           !showCreateForm && !compact && (
             <div className="rounded-xl border border-dashed border-border bg-bg-subtle/30 py-6 text-center">
               <p className="text-sm font-semibold text-fg">
-                Hozirda ochilgan Live Exam xonasi yo&apos;q
+                {t("emptyTitle")}
               </p>
               <p className="mt-1 text-xs text-fg-muted">
-                Yuqoridagi &ldquo;Yangi Live Imtihon (PIN) Ochish&rdquo; tugmasini bosib 6 xonali PIN-kod yarating.
+                {t("emptyBody")}
               </p>
             </div>
           )

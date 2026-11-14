@@ -32,6 +32,8 @@ const FILES = [
   "src/components/mock/listening-engine.tsx",
   "src/components/mock/exam-locker.tsx",
   "src/components/mock/exam-log-panel.tsx",
+  "src/components/teacher/live-exam-room-panel.tsx",
+  "src/components/teacher/group-live-monitoring.tsx",
   "src/components/mock/reading-split-divider.tsx",
   "src/components/mock/exam-session-gate.tsx",
   "src/components/vocabulary/VocabBattleHost.tsx",
