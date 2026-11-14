@@ -38,7 +38,7 @@ async function tick(ms: number) {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
 async function answer(value: string) {
-  const input = host.querySelector<HTMLInputElement>('input[aria-label="Answer for question 1"]')!;
+  const input = host.querySelector<HTMLInputElement>('input[aria-label^="answerFor"]')!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -63,7 +63,7 @@ async function mount(versioned = false, initialResponse = '') {
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-08T10:00:00Z'));
   hooks.save.mockReset().mockResolvedValue({ saved: 1 }); hooks.mutate.mockClear(); hooks.other.mockClear();
-  hooks.activeRecording = false; hooks.pendingRecording = false;
+  hooks.activeRecording = false; hooks.pendingRecording = false; localStorage.clear();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
 });
@@ -91,7 +91,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     await mount(versioned); await answer('station');
     await tick(1000); expect(hooks.save).not.toHaveBeenCalled();
     await tick(499); expect(hooks.save).not.toHaveBeenCalled();
-    await tick(1); expect(hooks.save).toHaveBeenCalledExactlyOnceWith([{ questionId: 'question', response: 'station' }]);
+    await tick(1); expect(hooks.save).toHaveBeenCalledExactlyOnceWith([expect.objectContaining({ questionId: 'question', response: 'station', editedAt: expect.any(Number) })]);
     for (let i = 0; i < 12; i++) await tick(1000);
     expect(hooks.save).toHaveBeenCalledTimes(1);
   });
@@ -99,7 +99,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
   it('debounces edits to the latest answer rather than saving a stale closure', async () => {
     await mount(true); await answer('old'); await tick(1000); await answer('new');
     await tick(1000); expect(hooks.save).not.toHaveBeenCalled();
-    await tick(500); expect(hooks.save).toHaveBeenCalledExactlyOnceWith([{ questionId: 'question', response: 'new' }]);
+    await tick(500); expect(hooks.save).toHaveBeenCalledExactlyOnceWith([expect.objectContaining({ questionId: 'question', response: 'new', editedAt: expect.any(Number) })]);
   });
 
   it.each([false, true])('serializes an edit made during an in-flight save (versioned=%s)', async (versioned) => {
@@ -120,7 +120,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     expect(hooks.save).toHaveBeenCalledTimes(1);
     await act(async () => window.dispatchEvent(new Event('online')));
     expect(hooks.save).toHaveBeenCalledTimes(2);
-    expect(hooks.save.mock.calls[1][0]).toEqual([{ questionId: 'question', response: 'recover' }]);
+    expect(hooks.save.mock.calls[1][0]).toEqual([expect.objectContaining({ questionId: 'question', response: 'recover', editedAt: expect.any(Number) })]);
   });
 
   it('shows a failed legacy save until a retry is acknowledged', async () => {
@@ -171,7 +171,7 @@ describe('timed runner autosave with unstable mutation wrappers', () => {
     await mount(false, 'old answer'); await answer('');
     const finish = [...host.querySelectorAll('button')].find((button) => button.textContent === 'submit')!;
     await act(async () => finish.click());
-    expect(hooks.save).toHaveBeenCalledWith([{ questionId: 'question', response: '' }]);
+    expect(hooks.save).toHaveBeenCalledWith([expect.objectContaining({ questionId: 'question', response: '', editedAt: expect.any(Number) })]);
     expect(hooks.other).toHaveBeenCalledTimes(1);
   });
 

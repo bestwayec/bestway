@@ -33,6 +33,19 @@ const fixture = vi.hoisted(() => ({
   refetch: vi.fn(),
 }));
 
+// Real messages: the page must read the same in both languages (Uzbek checked below).
+const locale = vi.hoisted(() => ({ current: "uz" as "en" | "uz" }));
+vi.mock("next-intl", async () => {
+  type Tree = { [key: string]: Tree | string | undefined };
+  const messages = { en: (await import("../../../messages/en.json")).default, uz: (await import("../../../messages/uz.json")).default } as unknown as Record<string, Tree>;
+  return {
+    useTranslations: (ns: string) => (key: string, values?: Record<string, unknown>) => {
+      const found = `${ns}.${key}`.split(".").reduce<Tree | string | undefined>((node, part) => (typeof node === "object" ? node[part] : undefined), messages[locale.current]);
+      return typeof found === "string" ? found.replace(/\{(\w+)\}/g, (_: string, n: string) => String(values?.[n] ?? "")) : key;
+    },
+  };
+});
+
 vi.mock("@/hooks/use-group-monitoring", () => ({
   useGroupLiveMonitoring: () => ({
     data: fixture.data,
@@ -66,11 +79,19 @@ describe("GroupLiveMonitoring", () => {
       root.render(React.createElement(GroupLiveMonitoring, { groupId: "group-1" }));
     });
 
-    expect(container.textContent).toContain("Jonli Imtihon Monitoringi");
-    expect(container.textContent).toContain("Jonli efirda kuzatish");
+    expect(container.textContent).toContain("Jonli imtihon kuzatuvi");
+    expect(container.textContent).toContain("Jonli");
     expect(container.textContent).toContain("Ali Valiyev");
     expect(container.textContent).toContain("Speaking");
-    expect(container.textContent).toContain("Qoidabuzarlik: 2 marta!");
+    expect(container.textContent).toContain("10 daqiqa 0 soniya ishlamoqda");
+    // Recorded, never an accusation (phase 2 rule).
+    expect(container.textContent).toContain("Qayd etildi: 2");
+    expect(container.textContent).not.toMatch(/Qoidabuzarlik|🔴/);
+    const open = [...container.querySelectorAll("button")].find((b) => b.textContent?.includes("Qayd etildi"))!;
+    await React.act(async () => open.click());
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain("Imtihon jurnali");
+    expect(dialog.textContent).toMatch(/to.liq ekrandan chiqdi/i);   // the exam log wording
   });
 
   it("shows safe status when anti-cheat count is 0", async () => {
@@ -97,9 +118,9 @@ describe("GroupLiveMonitoring", () => {
       root.render(React.createElement(GroupLiveMonitoring, { groupId: "group-1" }));
     });
 
-    expect(container.textContent).toContain("Xavfsiz rejimda");
+    expect(container.textContent).toContain("Hech narsa qayd etilmagan");
     expect(container.textContent).toContain("Writing");
-    expect(container.textContent).not.toContain("Qoidabuzarlik");
+    expect(container.textContent).not.toContain("Qayd etildi");
   });
 
   it("shows empty state when no students are active", async () => {
@@ -114,6 +135,18 @@ describe("GroupLiveMonitoring", () => {
       root.render(React.createElement(GroupLiveMonitoring, { groupId: "group-1" }));
     });
 
-    expect(container.textContent).toContain("Hozirda faol imtihon yo'q");
+    expect(container.textContent).toContain("Faol imtihon yo‘q");
+  });
+
+  it("reads in English on the English page", async () => {
+    locale.current = "en";
+    fixture.data = { groupId: "group-1", groupName: "IELTS Intensive", activeCount: 0, students: [] };
+    await React.act(async () => {
+      root.render(React.createElement(GroupLiveMonitoring, { groupId: "group-1" }));
+    });
+    expect(container.textContent).toContain("Live exam monitoring");
+    expect(container.textContent).toContain("No exam in progress");
+    expect(container.textContent).not.toMatch(/Jonli|yo‘q/);
+    locale.current = "uz";
   });
 });

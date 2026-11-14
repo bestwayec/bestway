@@ -399,3 +399,85 @@
 .is-mobile-app .mobile-app-only {
   display: block !important;
 }
+
+/*
+ * Exam window colour settings (IELTS on computer offers a background colour setting).
+ * Only the exam area changes; the site's light/dark theme stays the student's choice
+ * elsewhere. Each palette redefines the same tokens locally, so components need no change.
+ * Contrast (WCAG 2.x, computed): yellow-on-black fg/bg 15.0:1, muted 17.0:1, subtle on surface 12.3:1;
+ * black-on-cream fg/bg 16.2:1, muted 9.5:1, subtle 7.1:1, brand text on bg 4.6:1, brand-fg on brand 5.0:1.
+ * Status text on its own background: yellow-on-black success 8.6, warning 11.0, danger 6.6, info 8.3;
+ * black-on-cream success 6.5, warning 6.2, danger 5.3, info 6.5.
+ */
+/*
+ * "Standard" colours in the exam window follow the site theme, except that in the light theme
+ * the brand and success greens are one step darker so every text on them meets WCAG AA
+ * (computed): white on brand 7.1:1, brand text on brand/10 6.1:1, white on brand/90 (hover) 5.7:1,
+ * success text on success-bg 6.8:1. The site's own #16a34a gives 3.3:1 with white text.
+ */
+html:not(.dark) .exam-theme-standard {
+  --brand: #166534;
+  --brand-hover: #14532d;
+  --brand-subtle-fg: #166534;
+  --success: #166534;
+}
+.exam-theme-yellow-on-black {
+  --bg: #0a0a0a;
+  --bg-subtle: #171717;
+  --surface: #111111;
+  --surface-hover: #262626;
+  --fg: #fde047;
+  --fg-muted: #fef08a;
+  --fg-subtle: #facc15;
+  --border: #525252;
+  --border-strong: #a3a3a3;
+  --brand: #fde047;
+  --brand-hover: #facc15;
+  --brand-fg: #0a0a0a;
+  --brand-subtle: #262626;
+  --brand-subtle-fg: #fde047;
+  --highlight: #2563eb;
+  --success: #4ade80;
+  --success-bg: #052e16;
+  --success-border: #166534;
+  --warning: #fbbf24;
+  --warning-bg: #1c1306;
+  --warning-border: #92400e;
+  --danger: #f87171;
+  --danger-bg: #2a0a0a;
+  --danger-border: #991b1b;
+  --info: #7dd3fc;
+  --info-bg: #082f49;
+  --info-border: #075985;
+  background: var(--bg);
+  color: var(--fg);
+}
+.exam-theme-black-on-cream {
+  --bg: #fdf6e3;
+  --bg-subtle: #f5ecd3;
+  --surface: #fffaf0;
+  --surface-hover: #f3e9cc;
+  --fg: #1c1917;
+  --fg-muted: #44403c;
+  --fg-subtle: #57534e;
+  --border: #d6c9a6;
+  --border-strong: #a8a29e;
+  --brand: #15803d;
+  --brand-hover: #166534;
+  --brand-fg: #ffffff;
+  --brand-subtle-fg: #166534;
+  --success: #166534;
+  --success-bg: #ecf7e8;
+  --success-border: #86c99a;
+  --warning: #92400e;
+  --warning-bg: #fbefd2;
+  --warning-border: #e0b45c;
+  --danger: #b91c1c;
+  --danger-bg: #fbe4dc;
+  --danger-border: #e8a99a;
+  --info: #075985;
+  --info-bg: #e3f0f4;
+  --info-border: #93c5d8;
+  background: var(--bg);
+  color: var(--fg);
+}

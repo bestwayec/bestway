@@ -1,4 +1,6 @@
 """HTTP boundary for the migrated student attempt mutations."""
+import json
+import math
 from datetime import datetime
 
 from rest_framework.decorators import api_view, permission_classes
@@ -6,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from . import attempt_signature
+from . import exam_session
 from . import mock_attempts as engine
 from .views import body, require_authenticated, require_role
 from .views import success as envelope
@@ -32,10 +35,14 @@ def student(request):
     require_role(request, 'student', 'super_admin', 'admin')
 
 
+ANNOTATIONS_MAX_ITEMS = 1000
+ANNOTATIONS_MAX_BYTES = 256 * 1024
+
+
 def validate_answer(data):
     if not isinstance(data, dict):
         engine.fail('VALIDATION_ERROR', 'nested property answers must be either object or array')
-    extra = next((k for k in data if k not in {'questionId', 'response'}), None)
+    extra = next((k for k in data if k not in {'questionId', 'response', 'editedAt'}), None)
     if extra:
         engine.fail('VALIDATION_ERROR', f'property {extra} should not exist')
     if not isinstance(data.get('questionId'), str) or not data['questionId']:
@@ -44,6 +51,9 @@ def validate_answer(data):
         engine.fail('VALIDATION_ERROR', 'response must be a string')
     if len(data['response']) > 10000:
         engine.fail('VALIDATION_ERROR', 'response must be shorter than or equal to 10000 characters')
+    edited = data.get('editedAt')
+    if edited is not None and (isinstance(edited, bool) or not isinstance(edited, (int, float)) or not math.isfinite(edited) or edited <= 0):
+        engine.fail('VALIDATION_ERROR', 'editedAt must be a positive number of milliseconds')
 
 
 @api_view(['POST'])
@@ -100,6 +110,7 @@ def start_view(request, exam_id=None):
 def answer_view(request, attempt_id):
     student(request)
     attempt_signature.verify_request(request, attempt_id)
+    exam_session.guard(request, attempt_id)
     if isinstance(request.data, dict) and ('answers' in request.data or isinstance(request.data.get('data'), list)):
         items = request.data.get('answers') or request.data.get('data') or []
         for item in items:
@@ -121,6 +132,7 @@ def answer_view(request, attempt_id):
 def answers_view(request, attempt_id):
     student(request)
     attempt_signature.verify_request(request, attempt_id)
+    exam_session.guard(request, attempt_id)
     data = body(request, {'answers'})
     items = data.get('answers')
     if not isinstance(items, list):
@@ -138,6 +150,7 @@ def submit_view(request, attempt_id):
     from .mock_submissions import submit
     student(request)
     attempt_signature.verify_request(request, attempt_id)
+    exam_session.guard(request, attempt_id)
     data = body(request, {'skills', 'skill', 'section', 'section_filter', 'confirm', 'confirmed', 'force', 'reason', 'autoSubmit', 'timeUp', 'timeout', 'answers'})
     skills = data.get('skills')
     sec = (
@@ -173,6 +186,7 @@ def submit_view(request, attempt_id):
 @permission_classes([AllowAny])
 def switch_section_view(request, attempt_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     data = request.data or {}
     skill = data.get('skill') or request.query_params.get('skill')
     if not skill:
@@ -185,6 +199,7 @@ def switch_section_view(request, attempt_id):
 @permission_classes([AllowAny])
 def advance_view(request, attempt_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     return success(engine.advance(request.user, attempt_id), 201)
 
 
@@ -200,6 +215,16 @@ def prepare_view(request, attempt_id, group_id):
 def play_view(request, attempt_id, group_id):
     student(request)
     return success(engine.media_phase(request.user, attempt_id, group_id, 'listening', True), 201)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def listening_start_view(request, attempt_id, group_id):
+    """IELTS timed Listening: record when this part starts (reading time, then the recording)."""
+    from . import ielts_listening
+    student(request)
+    exam_session.guard(request, attempt_id)
+    return success(ielts_listening.start(request.user, attempt_id, group_id), 201)
 
 
 @api_view(['POST'])
@@ -249,10 +274,40 @@ def telemetry_view(request, attempt_id):
 @permission_classes([AllowAny])
 def annotations_view(request, attempt_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     data = body(request, {'annotations'})
     if data.get('annotations') is not None and not isinstance(data['annotations'], list):
         engine.fail('VALIDATION_ERROR', 'annotations must be an array')
+    # Highlights, notes and review flags of one attempt: bounded so one client cannot
+    # store an unlimited document on the attempt row.
+    values = data.get('annotations') or []
+    if len(values) > ANNOTATIONS_MAX_ITEMS:
+        engine.fail('VALIDATION_ERROR', f'annotations must contain no more than {ANNOTATIONS_MAX_ITEMS} elements')
+    if len(json.dumps(values, ensure_ascii=False, default=str).encode()) > ANNOTATIONS_MAX_BYTES:
+        engine.fail('VALIDATION_ERROR', 'annotations are too large')
     return success(engine.annotations(request.user, attempt_id, data.get('annotations')))
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def session_view(request, attempt_id):
+    """Claim (or with ``takeover`` move) the attempt for this tab; also the 30 s heartbeat."""
+    student(request)
+    data = body(request, {'sessionId', 'takeover'})
+    state = exam_session.claim(request.user, attempt_id, data.get('sessionId'), bool(data.get('takeover')))
+    if not state['active']:
+        from common.api.exceptions import ContractAPIException
+        raise ContractAPIException('EXAM_SESSION_ELSEWHERE', 'This exam is open in another tab or on another device.', 409,
+                                   details={'claimedAt': state['claimedAt']})
+    return success(state)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def session_release_view(request, attempt_id):
+    student(request)
+    data = body(request, {'sessionId'})
+    return success(exam_session.release(request.user, attempt_id, data.get('sessionId')))
 
 
 @api_view(['GET'])
@@ -296,6 +351,7 @@ def detail_view(request, attempt_id):
 @permission_classes([AllowAny])
 def speaking_upload_view(request, attempt_id, question_id):
     student(request)
+    exam_session.guard(request, attempt_id)
     audio_file = (
         request.FILES.get('audio')
         or request.FILES.get('file')

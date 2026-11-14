@@ -190,3 +190,24 @@ class AttemptBoundaryTests(SimpleTestCase):
         self.assertEqual(res, {'saved': True})
         mock_cheat_events.create.assert_not_called()
 
+
+
+class AnnotationLimitTests(SimpleTestCase):
+    def put(self, annotations):
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(SimpleNamespace(id='s', role='student', is_authenticated=True))
+        with patch.object(engine, 'annotations', return_value={'saved': True}) as saved:
+            response = client.put('/v1/mock/attempts/a/annotations', {'annotations': annotations}, format='json')
+        return response, saved
+
+    def test_a_normal_workspace_is_saved(self):
+        response, saved = self.put([{'kind': 'flag', 'questionId': 'q1'}, {'kind': 'marks', 'key': 'a.g.passage', 'highlights': ['blue'], 'notes': []}])
+        self.assertEqual(response.status_code, 200)
+        saved.assert_called_once()
+
+    def test_too_many_items_or_too_large_is_refused(self):
+        for value in ([{'kind': 'flag', 'questionId': str(n)} for n in range(1001)], [{'kind': 'marks', 'notes': ['x' * 300_000]}]):
+            response, saved = self.put(value)
+            self.assertEqual(response.status_code, 400)
+            saved.assert_not_called()

@@ -7,6 +7,8 @@ import math
 import re
 import unicodedata
 
+from .exam_blueprint import MULTILEVEL_LEVELS
+
 # ECMAScript whitespace is not Python's \s/strip set (BOM is whitespace;
 # U+0085 and U+001C are not). Keep this direct port separate from authoring.
 JS_SPACE = '\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff'
@@ -192,9 +194,31 @@ def convert_expert(skill, raw):
     return table[int(raw*2)]
 
 
+# Lowest standard score of each Multilevel level, highest first, read from the blueprint's
+# one level table (agency criteria 38 / 51 / 65); everything else calls multilevel_level().
+MULTILEVEL_BELOW_B1 = 'BELOW_B1'
+MULTILEVEL_LEVEL_FLOORS = [(item['min'], item['level']) for item in MULTILEVEL_LEVELS if item['level'] != MULTILEVEL_BELOW_B1]
+
+
 def multilevel_level(score):
     if not math.isfinite(score) or not 0<=score<=75: raise ValueError('Invalid standard score')
-    return 'C1' if score>=60 else 'B2' if score>=46 else 'B1' if score>=34 else 'BELOW_B1'
+    return next((level for floor, level in MULTILEVEL_LEVEL_FLOORS if score >= floor), MULTILEVEL_BELOW_B1)
+
+
+def ielts_writing_band(task1, task2):
+    """Task 2 counts twice as much as Task 1 (official weighting)."""
+    return round_half((task1 + 2*task2) / 3)
+
+
+def ielts_overall_band(bands, full_test=False):
+    """Mean of the section bands to the nearest half band; .25 and .75 round up.
+    A full test always divides by the four sections."""
+    return round_half(sum(bands) / (4 if full_test else len(bands)))
+
+
+def multilevel_overall_score(scores):
+    """Mean of the section standard scores (0-75), one decimal."""
+    return round(sum(scores) / len(scores), 1)
 
 
 def cefr_band(band):
@@ -257,14 +281,13 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
                 tasks = a['tasks']; t1 = next((s for t,s in tasks if t=='essay_task1'),None); t2 = next((s for t,s in tasks if t=='essay_task2'),None)
                 if skill == 'writing':
                     # A Writing band needs both tasks (official weighting); one task alone is practice.
-                    bands[skill] = round_half((t1+2*t2)/3) if t1 is not None and t2 is not None else None
+                    bands[skill] = ielts_writing_band(t1, t2) if t1 is not None and t2 is not None else None
                 else:
                     bands[skill] = round_half(sum(s for _,s in tasks)/len(tasks)) if tasks else 0
         valid_bands = [b for b in bands.values() if b is not None]
         short = any(a['skill'] in ('listening','reading') and a['answered'] and not is_full_objective_section('ielts', a['count']) for a in aggregates)
         if not pending and valid_bands and not short:
-            divisor = 4 if full_test else len(valid_bands)
-            overall = round_half(sum(valid_bands)/divisor); cefr = cefr_band(overall)
+            overall = ielts_overall_band(valid_bands, full_test); cefr = cefr_band(overall)
     elif versioned:
         standards = {}
         for a in aggregates:
@@ -285,7 +308,7 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
         if not pending and not short:
             completed_scores = [standards[s]['estimatedStandardScore'] for s in standards if standards[s].get('estimatedStandardScore') is not None]
             if completed_scores:
-                overall_score = round(sum(completed_scores) / len(completed_scores), 1)
+                overall_score = multilevel_overall_score(completed_scores)
                 cefr = multilevel_level(overall_score)
     elif not pending:
         total = sum(a['max'] for a in aggregates)

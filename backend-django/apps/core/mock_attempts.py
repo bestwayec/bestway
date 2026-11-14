@@ -369,10 +369,21 @@ def _fail_foreign(question_ids):
                                {'questionIds': question_ids[:20], 'count': len(question_ids)})
 
 
-def upsert_answer(attempt_id, question_id, response):
+def upsert_answer(attempt_id, question_id, response, edited_at=None):
+    stamp = edited_at or timezone.now()
     MockAnswer.objects.update_or_create(attempt_id=attempt_id, question_id=question_id,
-        defaults=dict(response=response, updated_at=timezone.now()),
-        create_defaults=dict(id=new_id(), response=response, updated_at=timezone.now(), is_graded=False))
+        defaults=dict(response=response, updated_at=stamp),
+        create_defaults=dict(id=new_id(), response=response, updated_at=stamp, is_graded=False))
+
+
+def edit_time(item, now):
+    """When the student made this edit, on the server clock (the client adds its
+    server offset). Never in the future; None for clients that do not send it."""
+    value = item.get('editedAt')
+    if value is None:
+        return None
+    from datetime import datetime, timezone as dt_timezone
+    return min(datetime.fromtimestamp(float(value) / 1000, tz=dt_timezone.utc), now)
 
 
 def save_answers(actor, attempt_id, items, *, bulk=False):
@@ -395,10 +406,41 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
             # Reject the whole batch: silently dropping ids made the client show
             # "Save failed" with no reason while some answers were never stored.
             _fail_foreign(foreign)
-        selected = items
-        for item in selected:
-            upsert_answer(attempt.id, item['questionId'], item['response'])
-        return {'saved': len(selected) if bulk else True}
+        # Last edit wins, by edit time on the server clock: an edit queued offline (or
+        # made in an older tab) does not overwrite a newer saved answer. The newer
+        # value is returned so the client can show it.
+        if not any(item.get('editedAt') is not None for item in items):
+            # Clients that send no edit time (desktop, older web builds): unchanged behaviour.
+            for item in items:
+                upsert_answer(attempt.id, item['questionId'], item['response'])
+            return {'saved': len(items)} if bulk else True
+        now = timezone.now()
+        stored = {row.question_id: row for row in MockAnswer.objects.filter(attempt_id=attempt.id, question_id__in=[a['questionId'] for a in items])}
+        latest = {}
+        for item in items:
+            edited = edit_time(item, now)
+            previous = latest.get(item['questionId'])
+            if previous is not None and edited is not None and previous[1] is not None and edited < previous[1]:
+                continue
+            latest[item['questionId']] = (item, edited)
+        stale = {}
+        for question_id, (item, edited) in latest.items():
+            row = stored.get(question_id)
+            saved_at = row.updated_at if row is not None else None
+            if saved_at is not None and saved_at.tzinfo is None:
+                # Prisma columns are "timestamp without time zone" holding UTC.
+                from datetime import timezone as dt_timezone
+                saved_at = saved_at.replace(tzinfo=dt_timezone.utc)
+            if edited is not None and saved_at is not None and saved_at > edited:
+                stale[question_id] = row.response
+                continue
+            upsert_answer(attempt.id, question_id, item['response'], edited)
+        if not bulk:
+            return True
+        result = {'saved': len(items)}
+        if stale:
+            result['stale'] = stale
+        return result
 
 
 def notify_teacher_proctoring_alert(attempt, actor, event):
@@ -751,6 +793,9 @@ def summary(attempt, *, detail=False):
         startedAt=attempt.started_at, submittedAt=attempt.submitted_at, finishedAt=attempt.finished_at)
     if detail:
         result['studentName'] = attempt.student.user.name
+        if attempt.status == 'in_progress':
+            from .ielts_listening import started_parts
+            result['listeningSchedule'] = started_parts(attempt)
     if versioned(attempt):
         result.update(specificationVersion=attempt.specification_version, standardScores=attempt.standard_scores,
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
