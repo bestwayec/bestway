@@ -32,3 +32,15 @@ export function nextGradeIndex(count: number, current: number, key: string, altK
   if (key === "ArrowUp") return current > 0 ? current - 1 : -1;
   return -1;
 }
+
+/**
+ * IELTS criteria → task score: the mean of the complete criteria, to the nearest half band.
+ * Used to fill the score field while the teacher has not typed a score of their own, so entering
+ * only the four criteria never leaves a stale score (for example the 0 a missing answer got at hand-in).
+ */
+export function criteriaScore(values: (string | undefined)[], count: number): number | null {
+  if (count === 0 || values.length !== count) return null;
+  const numbers = values.map((v) => (v === undefined || v.trim() === "" ? NaN : Number(v)));
+  if (numbers.some((n) => !Number.isFinite(n) || n < 0 || n > 9)) return null;
+  return Math.round((numbers.reduce((a, b) => a + b, 0) / count) * 2) / 2;
+}

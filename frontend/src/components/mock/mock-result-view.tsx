@@ -27,7 +27,7 @@ import { CefrResultInfographic } from "./cefr-result-infographic";
 import { CertificateModal } from "./certificate-modal";
 import { ExamFeedbackModal } from "./exam-feedback-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
-import { gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "@/lib/grade-draft";
+import { criteriaScore, gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "@/lib/grade-draft";
 import { isEmptyAttempt } from "@/lib/empty-attempt";
 
 const media = (path: string) => `/api/backend${path}`;
@@ -509,6 +509,13 @@ function ReviewRow({  q,
             </audio>
           )}
 
+          {/* IELTS live speaking: nothing was recorded; the teacher scores the interview with the criteria. */}
+          {canGrade && skill === "speaking" && !q.hasAudio && !q.guidance && (
+            <p className="mt-2 rounded-[8px] border border-border bg-bg-subtle px-3 py-2 text-xs text-fg-muted" role="note">
+              {t("liveSpeakingNote")}
+            </p>
+          )}
+
           {/* Javob */}
           {q.response && !q.hasAudio && (
             <p className="mt-1.5 text-sm">
@@ -589,6 +596,7 @@ function GradeForm({
   const [score, setScore] = React.useState(() => readGradeDraft(storage(), draftKey)?.score ?? savedScore);
   const [feedback, setFeedback] = React.useState(() => readGradeDraft(storage(), draftKey)?.feedback ?? savedFeedback);
   const hasDraft = score !== savedScore || feedback !== savedFeedback;
+  const scoreTouched = React.useRef(false);
   // Unsent input stays in this browser until it is saved (reload, lost connection).
   React.useEffect(() => {
     writeGradeDraft(storage(), draftKey, { score, feedback }, { score: savedScore, feedback: savedFeedback });
@@ -668,7 +676,7 @@ function GradeForm({
           max={maximum}
           step={0.5}
           value={score}
-          onChange={(e) => setScore(e.target.value)}
+          onChange={(e) => { scoreTouched.current = true; setScore(e.target.value); }}
           onKeyDown={onScoreKeyDown}
           data-grade-score=""
           aria-label={`${t("score")} (0–${maximum})`}
@@ -698,7 +706,13 @@ function GradeForm({
                 max={9}
                 step={0.5}
                 value={rubrics[r.key] ?? ""}
-                onChange={(e) => setRubrics((m) => ({ ...m, [r.key]: e.target.value }))}
+                onChange={(e) => {
+                  const next = { ...rubrics, [r.key]: e.target.value };
+                  setRubrics(next);
+                  // Criteria drive the score until the teacher types a score of their own.
+                  const derived = criteriaScore(rubricDefs.map((d) => next[d.key]), rubricDefs.length);
+                  if (derived != null && !scoreTouched.current) setScore(String(derived));
+                }}
                 className="h-8 w-20"
                 aria-label={r.label}
               />

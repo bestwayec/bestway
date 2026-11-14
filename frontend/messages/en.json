@@ -1540,7 +1540,8 @@
     "levelBelowB1": "Below B1",
     "accuracy": "Accuracy:",
     "gradeDraftKept": "Unsaved — kept on this device",
-    "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade"
+    "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade",
+    "liveSpeakingNote": "No recording — live speaking. Enter Fluency & Coherence, Lexical Resource, Grammar and Pronunciation from the interview; the score follows the criteria."
   },
   "wizard": {
     "title": "Create exam",

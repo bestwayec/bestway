@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "./grade-draft";
+import { criteriaScore, gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "./grade-draft";
 
 function memory() {
   const map = new Map<string, string>();
@@ -32,5 +32,15 @@ describe("teacher grade draft", () => {
     expect(nextGradeIndex(3, 0, "ArrowUp", true)).toBe(-1);
     expect(nextGradeIndex(3, 0, "ArrowDown", false)).toBe(-1);
     expect(nextGradeIndex(3, 0, "Tab", true)).toBe(-1);
+  });
+  it("turns four complete criteria into the task score, half-band rounded", () => {
+    expect(criteriaScore(["7", "7", "7", "7"], 4)).toBe(7);
+    expect(criteriaScore(["6", "7", "7", "7"], 4)).toBe(7);
+    expect(criteriaScore(["6", "6", "7", "6"], 4)).toBe(6.5); // 6.25 → 6.5, as the server rounds bands
+    expect(criteriaScore(["6", "6", "6", "6.5"], 4)).toBe(6); // 6.125 → 6.0
+    expect(criteriaScore(["6", "6", "6.5", "6.5"], 4)).toBe(6.5);
+    expect(criteriaScore(["7", "", "7", "7"], 4)).toBeNull();
+    expect(criteriaScore(["7", "10", "7", "7"], 4)).toBeNull();
+    expect(criteriaScore([], 0)).toBeNull();
   });
 });
