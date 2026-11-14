@@ -14,6 +14,18 @@ from __future__ import annotations
 
 from . import multilevel
 
+
+# Multilevel CEFR levels on the 0-75 scale, from the mean of the four sections, highest first.
+# Agency criteria (uzbmb.uz Multilevel-bm.pdf, Ilmiy-metodik kengash 2023-03-16, in force from
+# March 2023; re-published on gov.uz 2026-01-26). The one table every level in BestWay is read
+# from: mock_scoring.multilevel_level, prediction_service, and the web mirror (parity-tested).
+MULTILEVEL_LEVELS = (
+    {"level": "C1", "min": 65, "max": 75, "approxCorrect": [28, 35]},
+    {"level": "B2", "min": 51, "max": 64, "approxCorrect": [18, 27]},
+    {"level": "B1", "min": 38, "max": 50, "approxCorrect": [10, 17]},
+    {"level": "BELOW_B1", "min": 0, "max": 37, "approxCorrect": [0, 9], "certificate": False},
+)
+
 BLUEPRINT_VERSION = "BESTWAY_EXAM_BLUEPRINT_2026_11_V1"
 CHECKED_ON = "2026-11-12"
 
@@ -157,12 +169,7 @@ def _multilevel() -> dict:
             "objectiveMethod": "OFFICIAL_RASCH_BESTWAY_ESTIMATE",
             "writingRawMax": 16, "speakingRawMax": 21,
             "overall": "MEAN_OF_FOUR_SECTIONS",
-            "levels": [
-                {"level": "C1", "min": 65, "max": 75, "approxCorrect": [28, 35]},
-                {"level": "B2", "min": 51, "max": 64, "approxCorrect": [18, 27]},
-                {"level": "B1", "min": 38, "max": 50, "approxCorrect": [10, 17]},
-                {"level": "BELOW_B1", "min": 0, "max": 37, "approxCorrect": [0, 9], "certificate": False},
-            ],
+            "levels": [dict(level) for level in MULTILEVEL_LEVELS],
             "sources": ["uzbmb-criteria-2023", "uzbmb-writing-2025", "uzbmb-speaking-criteria"],
         },
         "unverified": [

@@ -32,7 +32,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { MockAttemptSummary, ScorePredictionResponse } from "@/lib/types";
-import { MULTILEVEL_CEFR_BANDS, multilevelBandFor } from "@/lib/multilevel-scale";
+import { MULTILEVEL_CEFR_BANDS, multilevelBandFor, multilevelLevelText } from "@/lib/multilevel-scale";
 
 const DEFAULT_MULTILEVEL_BANDS = MULTILEVEL_CEFR_BANDS.map(({ level, min, max }) => ({ level, min, max }));
 
@@ -77,6 +77,7 @@ export function ScorePredictionCard({
   const [activeDrill, setActiveDrill] = React.useState<{ module: string; categoryId: string } | null>(null);
 
   const ti = useTranslations("insights");
+  const tm = useTranslations("mock");
   const data = predQ.data;
 
   const effectiveAttempts = propAttempts ?? (!studentId ? myAttemptsQ.data : undefined);
@@ -464,7 +465,7 @@ export function ScorePredictionCard({
                     <span className="text-xs font-bold text-fg-muted">/ 75</span>
                     {hasEvidence && multilevel.cefrLevel ? (
                       <Badge variant="brand" className="ml-1 font-black">
-                        {multilevel.cefrLevel}
+                        {multilevelLevelText(multilevel.cefrLevel, tm("levelBelowB1"))}
                       </Badge>
                     ) : null}
                   </div>
@@ -544,7 +545,7 @@ export function ScorePredictionCard({
               </span>
             </div>
 
-            <PredictionSvgChart history={historyPoints} mode={scaleTab === "multilevel" ? "multilevel" : "ielts"} />
+            <PredictionSvgChart history={historyPoints} mode={scaleTab === "multilevel" ? "multilevel" : "ielts"} belowB1={tm("levelBelowB1")} />
           </div>
         )}
 
@@ -654,9 +655,11 @@ export function ScorePredictionCard({
 function PredictionSvgChart({
   history,
   mode,
+  belowB1,
 }: {
   history: ScorePredictionResponse["history"];
   mode: "ielts" | "multilevel";
+  belowB1: string;
 }) {
   const recent = history.slice(-6);
   const width = 560;
@@ -747,7 +750,7 @@ function PredictionSvgChart({
               className="fill-fg text-[10px] font-bold"
             >
               {mode === "multilevel"
-                ? `${Math.round(p.val)} (${p.item.cefrLevel})`
+                ? `${Math.round(p.val)} (${multilevelLevelText(p.item.cefrLevel, belowB1)})`
                 : p.val.toFixed(1)}
             </text>
             <text
