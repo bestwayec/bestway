@@ -1180,7 +1180,8 @@
       "recPersistFailed": "Could not persist the take locally. Keep this page open and retry upload.",
       "recStartFailed": "Speaking response could not be started. Please try again.",
       "recRetrySaved": "Retry upload of saved recording",
-      "recSupervisorRetry": "Contact your supervisor for a timed retry."
+      "recSupervisorRetry": "Contact your supervisor for a timed retry.",
+      "practiceShowAnswers": "Show answers (practice)"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1606,7 +1607,8 @@
       "state_unanswered": "Not answered",
       "state_pending": "Not marked yet",
       "where": "Where is the answer?",
-      "whereFor": "Where is the answer to question {number}?"
+      "whereFor": "Where is the answer to question {number}?",
+      "revealed": "answer shown"
     },
     "reviewExplain": {
       "passageLabel": "Passage with the answer highlighted",
@@ -1622,6 +1624,43 @@
       "trendLabel": "Trend over your last results: {points}",
       "attempts": "{count, plural, one {# result} other {# results}}",
       "error": "Accuracy could not be loaded."
+    },
+    "sectionStart": {
+      "title": "Start {skill}",
+      "subtitle": "Take it as in the exam, or practise with help and your own pace.",
+      "modeLabel": "How",
+      "modePractice": "Practice",
+      "modePracticeHint": "Choose a part and a timer; you can change the audio speed, skip ±10 s, read the audioscript and show answers. The result is your correct answers, not a band.",
+      "modePracticeHintManual": "Choose a part and a timer. The result is your score, not a band.",
+      "modeExam": "Exam rules",
+      "modeExamHint": "The whole section, its official time, one play of the recording, no help.",
+      "partLabel": "What",
+      "allParts": "All parts",
+      "partN": "Part {n}",
+      "passageN": "Passage {n}",
+      "questions": "{count, plural, one {# question} other {# questions}}",
+      "timerLabel": "Timer",
+      "timerNone": "No timer",
+      "timerSection": "Section time ({minutes} min)",
+      "timerPart": "Time for this part ({minutes} min)",
+      "timerPartHint": "Its share of the section time, by questions.",
+      "cancel": "Cancel",
+      "startPractice": "Start practice",
+      "startExam": "Start the exam"
+    },
+    "practiceTools": {
+      "audioTools": "Practice audio controls",
+      "back10": "−10 s",
+      "forward10": "+10 s",
+      "speed": "Speed",
+      "showScript": "Show the audioscript",
+      "hideScript": "Hide the audioscript",
+      "scriptTitle": "Audioscript",
+      "showAnswer": "Show answer",
+      "showAgain": "Show answer again",
+      "answerLabel": "Answer",
+      "whereLabel": "In the text",
+      "revealError": "The answer could not be shown."
     }
   },
   "wizard": {

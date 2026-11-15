@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EXAM_VOLUME_EVENT, broadcastVolume, loadExamSettings } from "@/lib/exam-settings";
 import type { AudioTimestampItem } from "@/lib/types";
+import { PracticeAudioControls } from "./practice-tools";
 import { listeningPosition, reviewSecondsLeft, type ListeningPosition, type ListeningSchedule } from "@/lib/listening-schedule";
 
 const REVIEW_SEC = 120;
@@ -354,6 +355,7 @@ function PlainListeningAudio({
   }
 
   if (!strict) {
+    // Practice (never a timed exam): free playback with speed and ±10 s.
     return (
       <div className="mt-3 space-y-2">
         <audio
@@ -372,6 +374,7 @@ function PlainListeningAudio({
         >
           <track kind="captions" />
         </audio>
+        <PracticeAudioControls audio={audioRef} />
         {(startSec != null || (timestamps && timestamps.length > 0)) && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
             {startSec != null && (

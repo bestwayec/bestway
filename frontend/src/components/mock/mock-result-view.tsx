@@ -204,7 +204,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             const pendingManual = MANUAL_SKILLS.has(s.skill) && !practiceGrade && !hasCompleteManualGrade(s);
             const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
             const questionCount = (s.groups ?? []).reduce((sum, g) => sum + (g.questions?.length ?? 0), 0);
-            const fullSection = mayShowSectionBand(attempt.examType, s.skill, questionCount);
+            // Practice (S4) is raw only: correct / asked, never a band, whatever its length.
+            const fullSection = attempt.mode !== "practice" && mayShowSectionBand(attempt.examType, s.skill, questionCount);
             return (
               <div
                 key={s.id}
