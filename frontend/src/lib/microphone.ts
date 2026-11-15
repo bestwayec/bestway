@@ -79,13 +79,14 @@ export function recordedAudioBlob(recorder: Pick<MediaRecorder, 'mimeType'>, chu
   return blob;
 }
 
-export type MicrophoneProblem = 'denied' | 'notFound' | 'busy' | 'unsupported' | 'insecure' | 'other';
+export type MicrophoneProblem = 'denied' | 'notFound' | 'busy' | 'unsupported' | 'insecure' | 'other' | 'empty';
 
 /** Classify a getUserMedia/recorder failure so screens can give the right instructions. */
 export function microphoneProblem(error: unknown): MicrophoneProblem {
   const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : '';
   const message = (error instanceof Error ? error.message : typeof error === 'string' ? error : '').toLowerCase();
   if (message.includes('secure https')) return 'insecure';
+  if (message.includes('empty recording')) return 'empty';
   if (message.includes('unavailable in this browser')) return 'unsupported';
   if (['NotAllowedError', 'SecurityError', 'PermissionDeniedError', 'PermissionDismissedError'].includes(name) || message.includes('permission denied') || message.includes('permission dismissed')) return 'denied';
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'notFound';

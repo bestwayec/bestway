@@ -363,7 +363,7 @@ function TestFormFields({
               <span
                 className={cn(
                   "mt-0.5 grid size-5 place-items-center rounded-[6px] border shrink-0",
-                  isActive ? "bg-success border-success text-white" : "border-warning bg-warning text-white",
+                  isActive ? "bg-success border-success text-white" : "border-warning bg-warning text-warning-fg",
                 )}
                 aria-hidden
               >
@@ -372,7 +372,7 @@ function TestFormFields({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium flex items-center gap-1.5">
                   {tFallback(t, "isActive", "Active")}
-                  <span className={cn("ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold", isActive ? "bg-success text-white" : "bg-warning text-white")}>
+                  <span className={cn("ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold", isActive ? "bg-success text-white" : "bg-warning text-warning-fg")}>
                     {isActive ? tFallback(t, "activeOn", "Active") : tFallback(t, "activeOff", "Hidden")}
                   </span>
                 </p>

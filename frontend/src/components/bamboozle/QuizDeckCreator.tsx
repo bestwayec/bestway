@@ -447,7 +447,7 @@ export function QuizDeckCreator({
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
           <div className="flex items-center gap-2">
             <h4 className="font-bold text-white text-sm">Kartalar Ro&apos;yxati ({cards.length} ta)</h4>
-            <Badge variant="neutral" className="bg-emerald-500/20 text-emerald-400 text-xs">
+            <Badge variant="neutral" className="bg-success-bg text-success text-xs">
               Tavsiya: 16 ta karta
             </Badge>
           </div>

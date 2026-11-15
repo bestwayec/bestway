@@ -845,11 +845,11 @@ export function VocabRunnerGame() {
   return (
     <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center select-none">
       {/* Top HUD Header (Responsive & Compact) */}
-      <div className="mb-2 sm:mb-3 flex w-full items-center justify-between rounded-xl sm:rounded-2xl border border-white/10 bg-bg-subtle/90 px-3 sm:px-5 py-2 sm:py-3 shadow-xl backdrop-blur-md">
+      <div className="mb-2 sm:mb-3 flex w-full items-center justify-between rounded-xl sm:rounded-2xl border border-border bg-bg-subtle/90 px-3 sm:px-5 py-2 sm:py-3 shadow-xl backdrop-blur-md">
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/vocabulary"
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white transition"
+            className="flex items-center gap-1.5 text-xs font-semibold text-fg-muted hover:text-fg transition"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Lug&apos;atga qaytish</span>
@@ -871,7 +871,7 @@ export function VocabRunnerGame() {
 
           {/* Combo Multiplier Badge */}
           {combo > 1 && (
-            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-emerald-400 animate-pulse">
+            <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-success animate-pulse">
               <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current" />
               <span>{combo}x</span>
             </div>
@@ -881,18 +881,18 @@ export function VocabRunnerGame() {
         {/* Live Score & Distance */}
         <div className="flex items-center gap-3 sm:gap-6">
           <div className="text-right">
-            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-gray-400">Masofa</span>
-            <p className="font-mono text-xs sm:text-sm font-bold text-teal-400">{distance}m</p>
+            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-fg-muted">Masofa</span>
+            <p className="font-mono text-xs sm:text-sm font-bold text-brand">{distance}m</p>
           </div>
           <div className="text-right">
-            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-gray-400">Ball</span>
-            <p className="font-mono text-base sm:text-xl font-black text-emerald-400">{score}</p>
+            <span className="hidden sm:block text-[10px] uppercase font-bold tracking-widest text-fg-muted">Ball</span>
+            <p className="font-mono text-base sm:text-xl font-black text-success">{score}</p>
           </div>
 
           <button
             type="button"
             onClick={() => setSoundEnabled((v) => !v)}
-            className="rounded-lg sm:rounded-xl border border-white/10 p-1.5 sm:p-2 text-gray-400 hover:bg-white/10 hover:text-white transition"
+            className="rounded-lg sm:rounded-xl border border-border p-1.5 sm:p-2 text-fg-muted hover:bg-surface-hover hover:text-fg transition"
             title="Ovozni yoqish / o'chirish"
           >
             {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
@@ -904,14 +904,14 @@ export function VocabRunnerGame() {
       {isPlaying && !isGameOver && currentQuestion && (
         <div className="mb-2 sm:mb-3 w-full rounded-xl sm:rounded-2xl border border-emerald-500/30 bg-surface/95 px-3 py-2 sm:p-4 text-center shadow-xl backdrop-blur-md animate-fadeIn">
           <div className="flex items-center justify-center gap-2 mb-0.5">
-            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+            <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-success">
               {currentQuestion.category}
             </span>
-            <span className="text-[10px] sm:text-xs text-gray-400 font-mono">
+            <span className="text-[10px] sm:text-xs text-fg-muted font-mono">
               {currentQIndex + 1}/{questions.length}
             </span>
           </div>
-          <h2 className="text-base sm:text-xl font-black text-white tracking-wide truncate max-w-xl mx-auto">
+          <h2 className="text-base sm:text-xl font-black text-fg tracking-wide truncate max-w-xl mx-auto">
             {currentQuestion.prompt}
           </h2>
         </div>
@@ -998,15 +998,15 @@ export function VocabRunnerGame() {
         {/* Game Over Screen */}
         {isGameOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6 text-center overflow-y-auto">
-            <div className="w-full max-w-lg rounded-3xl border border-red-500/40 bg-bg-subtle p-6 shadow-2xl text-center text-white relative">
+            <div className="w-full max-w-lg rounded-3xl border border-red-500/40 bg-bg-subtle p-6 shadow-2xl text-center text-fg relative">
               <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 shadow-lg">
-                <Trophy className="h-8 w-8 text-amber-400" />
+                <Trophy className="h-8 w-8 text-warning" />
               </div>
 
-              <h2 className="text-2xl font-black text-white mb-1">RUNNER YAKUNLANDI!</h2>
+              <h2 className="text-2xl font-black text-fg mb-1">RUNNER YAKUNLANDI!</h2>
 
               {isNewHighScore && (
-                <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-0.5 text-xs font-black text-amber-400 mb-4 animate-bounce">
+                <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-3 py-0.5 text-xs font-black text-warning mb-4 animate-bounce">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span>YANGI REKORD!</span>
                 </div>
@@ -1014,30 +1014,30 @@ export function VocabRunnerGame() {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-3 my-4">
-                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
-                  <span className="text-[10px] uppercase font-bold text-gray-400">Yakuniy Ball</span>
-                  <p className="font-mono text-xl font-black text-emerald-400">{score}</p>
+                <div className="rounded-2xl bg-surface border border-border p-3 text-center">
+                  <span className="text-[10px] uppercase font-bold text-fg-muted">Yakuniy Ball</span>
+                  <p className="font-mono text-xl font-black text-success">{score}</p>
                 </div>
-                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
-                  <span className="text-[10px] uppercase font-bold text-gray-400">Masofa</span>
-                  <p className="font-mono text-xl font-black text-teal-400">{distance}m</p>
+                <div className="rounded-2xl bg-surface border border-border p-3 text-center">
+                  <span className="text-[10px] uppercase font-bold text-fg-muted">Masofa</span>
+                  <p className="font-mono text-xl font-black text-brand">{distance}m</p>
                 </div>
-                <div className="rounded-2xl bg-surface border border-white/5 p-3 text-center">
-                  <span className="text-[10px] uppercase font-bold text-gray-400">To&apos;g&apos;ri so&apos;zlar</span>
-                  <p className="font-mono text-xl font-black text-white">{correctCount}</p>
+                <div className="rounded-2xl bg-surface border border-border p-3 text-center">
+                  <span className="text-[10px] uppercase font-bold text-fg-muted">To&apos;g&apos;ri so&apos;zlar</span>
+                  <p className="font-mono text-xl font-black text-fg">{correctCount}</p>
                 </div>
               </div>
 
               {/* XP Awarded Banner */}
               <div className="mb-5 flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-emerald-400 fill-current" />
+                  <Zap className="h-5 w-5 text-success fill-current" />
                   <span className="text-xs font-bold text-emerald-300">
                     {isSaving ? "XP hisoblanmoqda..." : saveMessage ?? `+${xpEarned} XP`}
                   </span>
                 </div>
                 {totalXp !== null && (
-                  <span className="text-xs font-mono font-bold text-white">
+                  <span className="text-xs font-mono font-bold text-fg">
                     Jami: {totalXp} XP
                   </span>
                 )}
@@ -1045,20 +1045,20 @@ export function VocabRunnerGame() {
 
               {/* Mistakes Review (if any) */}
               {mistakes.length > 0 && (
-                <div className="mb-5 max-h-36 overflow-y-auto rounded-2xl bg-surface border border-white/5 p-3 text-left">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 block mb-2">
+                <div className="mb-5 max-h-36 overflow-y-auto rounded-2xl bg-surface border border-border p-3 text-left">
+                  <span className="text-[10px] uppercase font-bold text-fg-muted block mb-2">
                     Xatolar tahlili ({mistakes.length} ta xato):
                   </span>
                   <div className="space-y-2">
                     {mistakes.map((m, idx) => (
-                      <div key={idx} className="flex items-start justify-between border-b border-white/5 pb-1 text-xs">
+                      <div key={idx} className="flex items-start justify-between border-b border-border pb-1 text-xs">
                         <div>
-                          <p className="font-bold text-white">{m.prompt}</p>
+                          <p className="font-bold text-fg">{m.prompt}</p>
                           <p className="text-[11px] text-red-400">Siz: {m.chosen}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-400">To&apos;g&apos;ri: {m.correct}</p>
-                          {m.explanation && <p className="text-[10px] text-gray-400">{m.explanation}</p>}
+                          <p className="font-bold text-success">To&apos;g&apos;ri: {m.correct}</p>
+                          {m.explanation && <p className="text-[10px] text-fg-muted">{m.explanation}</p>}
                         </div>
                       </div>
                     ))}

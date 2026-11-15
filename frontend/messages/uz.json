@@ -1169,7 +1169,18 @@
       "clearBody": "Bu bo'limdagi {count, plural, one {# ta javob} other {# ta javob}} o'chiriladi. Yozuvlar va boshqa bo'limlar o'zgarmaydi. Buni qaytarib bo'lmaydi.",
       "clearCancel": "Javoblarim qolsin",
       "clearConfirm": "Javoblarni tozalash",
-      "clearDone": "{count, plural, one {# ta javob} other {# ta javob}} tozalandi"
+      "clearDone": "{count, plural, one {# ta javob} other {# ta javob}} tozalandi",
+      "recTooShort": "Bu yozuv talab qilingan javob vaqtini qamramaydi. Yangi javob yozing.",
+      "recClearFailed": "Yaroqsiz yozuvni qurilmadan o'chirib bo'lmadi. Sahifani yopmang va qayta urinib ko'ring.",
+      "recUploadFailed": "Audio yuklanmadi. Yozuvingiz saqlab qolindi.",
+      "recUploadFailedRetry": "Audio yuklanmadi. Yozuvingiz saqlab qolindi. Yuklashni qayta urinib ko'ring.",
+      "recRecoveryUnavailable": "Saqlangan yozuvni tiklab bo'lmadi. Sahifani yopmang va yuklashni qayta urinib ko'ring.",
+      "recFailed": "Yozib bo'lmadi. Mikrofoningizni tekshiring.",
+      "recInterrupted": "Yozuv javob vaqti tugashidan oldin to'xtab qoldi. Yangi javob yozing.",
+      "recPersistFailed": "Yozuvni qurilmada saqlab bo'lmadi. Sahifani yopmang va yuklashni qayta urinib ko'ring.",
+      "recStartFailed": "Speaking javobini boshlab bo'lmadi. Qayta urinib ko'ring.",
+      "recRetrySaved": "Saqlangan yozuvni qayta yuklash",
+      "recSupervisorRetry": "Vaqtli qayta urinish uchun nazoratchiga murojaat qiling."
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1369,7 +1380,8 @@
         "insecure": "Mikrofon faqat xavfsiz (https) ulanishda ishlaydi. Saytni https orqali oching.",
         "unsupported": "Bu brauzer ovoz yozishni qo‘llamaydi. Chrome yoki Safari’ning yangi versiyasidan foydalaning.",
         "default": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.",
-        "other": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring."
+        "other": "Mikrofon bilan bog‘lanishda xatolik yuz berdi. Qayta urinib ko‘ring.",
+        "empty": "Mikrofon bo'sh yozuv berdi. Qurilmani tekshirib, qayta urinib ko'ring."
       },
       "playbackStop": "To'xtatish",
       "playbackPlay": "Eshitib ko'rish"
@@ -2814,6 +2826,13 @@
       "mistakes": "{count} ta xato",
       "retake": "Testni qayta topshirish",
       "resultBadge": "Tezkor daraja testi natijasi (taxminiy)"
+    },
+    "gradesTable": {
+      "sortLabel": "Saralash:",
+      "sortName": "Alifbo bo'yicha",
+      "sortHigh": "Ball: eng yuqoridan",
+      "sortLow": "Ball: eng pastdan",
+      "studentCount": "{count} ta o'quvchi"
     }
   }
 }

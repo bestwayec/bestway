@@ -33,11 +33,17 @@ function findChromium() {
   return undefined;
 }
 
-// The exam shows a one-time Uzbek/English full-screen notice; accept it whenever it appears.
+// The exam shows a one-time full-screen notice and, on a second device, the "open elsewhere" gate; accept both.
 async function acceptFullscreenNotice(page) {
-  await page.addLocatorHandler(page.getByTestId("fullscreen-notice"), async (notice) => {
-    await notice.getByRole("button").click();
-  });
+  // One handler for both, answering the top one first: the gate sits above the notice.
+  const either = page.getByTestId("exam-session-elsewhere").or(page.getByTestId("fullscreen-notice")).first();
+  await page.addLocatorHandler(either, async () => {
+    for (const id of ["exam-session-elsewhere", "fullscreen-notice"]) {
+      const dialog = page.getByTestId(id);
+      // the page may close while a dialog is answered
+      if (await dialog.count().catch(() => 0)) { await dialog.getByRole("button").first().click({ timeout: 5000 }).catch(() => {}); return; }
+    }
+  }, { noWaitAfter: true });
 }
 
 const results = [];
@@ -378,8 +384,8 @@ await step("10-microphone-check-refused-then-allowed", async () => {
   await help.waitFor({ timeout: 30000 });
   const helpText = await help.innerText();
   if (!/Ruxsat berish|Allow/.test(helpText)) throw new Error(`no instructions: ${helpText}`);
-  if (/permission denied/i.test(await page.innerText("body"))) throw new Error("English permission error shown");
-  await page.getByRole("button", { name: /Qayta urinish/ }).waitFor();
+  if (/permission denied/i.test(await page.innerText("body"))) throw new Error("a raw browser permission error is shown");
+  await page.getByRole("button", { name: /^(Try again|Qayta urinish)$/ }).waitFor();
   await page.screenshot({ path: join(OUT, "10a-mic-refused-390.png") });
   await page.getByTestId("mic-continue-without").click();
   await page.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).waitFor({ state: "detached", timeout: 10000 });
@@ -403,12 +409,12 @@ await step("10-microphone-check-refused-then-allowed", async () => {
     await p2.waitForURL(/dashboard/);
     await p2.goto(url, { waitUntil: "domcontentloaded" });
     await p2.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).click();
-    await p2.getByText(/Yozuv tayyor/).waitFor({ timeout: 20000 });
+    await p2.getByText(/Recording ready|Yozuv tayyor/).waitFor({ timeout: 20000 });
     await p2.screenshot({ path: join(OUT, "10b-mic-allowed-390.png") });
-    await p2.getByRole("button", { name: /Speakingni boshlash/ }).click();
-    await p2.getByRole("button", { name: /Speakingni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
+    await p2.getByRole("button", { name: /start Speaking|Speakingni boshlash/ }).click();
+    await p2.getByRole("button", { name: /start Speaking|Speakingni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
   } finally { await ctx2.close(); }
-  return "refused: Uzbek help + Retry + continue without (buttons free); allowed (fake mic): 5 s test passes";
+  return "refused: help in the page language + Try again + continue without (buttons free); allowed (fake mic): 5 s test passes";
 });
 
 await browser.close();

@@ -178,10 +178,10 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               size="sm"
               variant="outline"
               asChild
-              className="gap-1.5 border-rose-500/40 text-rose-300 hover:bg-rose-500/10 text-xs"
+              className="gap-1.5 border-danger-border text-danger hover:bg-danger-bg text-xs"
             >
               <a href={`/api/backend/v1/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
-                <FileText className="size-4 text-rose-400" />
+                <FileText className="size-4 text-danger" />
                 <span>📄 Oylik Hisobot (PDF)</span>
               </a>
             </Button>
@@ -189,7 +189,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               size="sm"
               onClick={handleDownloadExcel}
               loading={excelBusy}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-xs"
+              className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover text-xs"
             >
               <Download className="size-4" />
               <span>📊 Excel (.xlsx)</span>

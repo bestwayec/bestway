@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { AudioWaveform } from './audio-waveform';
 import { useUploadMockSpeaking } from '@/hooks/use-mock';
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
 import { markActiveRecording, recordingKey, recoverRecording, releaseRecording, retainRecording } from '@/lib/durable-recordings';
 
 export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
@@ -15,6 +15,8 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
 }) {
   const t = useTranslations('mock');
   const tx = useTranslations('mock.runnerUx');
+  const tm = useTranslations('mock.mic');
+  const micMessage = (error: unknown) => tm(`help.${microphoneProblem(error)}`);
   const tc = useTranslations('common');
   const upload = useUploadMockSpeaking(attemptId);
   const key = recordingKey(attemptId, questionId);
@@ -58,7 +60,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
       if (alive.current) { setPending(null); setHasAudio(true); setAudioVersion((version) => version + 1); toast.success(tc('saved')); }
       window.dispatchEvent(new CustomEvent('multilevel:recording-uploaded', { detail: { attemptId, questionId } }));
     } catch {
-      if (alive.current) setError('Audio upload failed. Your recording has been preserved. Retry the upload.');
+      if (alive.current) setError(tx('recUploadFailedRetry'));
     } finally {
       uploading.current = false; busy.current = false; markActiveRecording(key, false);
       if (alive.current) setSending(false);
@@ -84,7 +86,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
     const current = generation.current;
     void recoverRecording(key).then((blob) => {
       if (alive.current && generation.current === current && blob) { retained.current = blob; setPending(blob); }
-    }).catch(() => { if (alive.current && generation.current === current) setError('Saved recording recovery is unavailable. Keep this page open and retry upload.'); });
+    }).catch(() => { if (alive.current && generation.current === current) setError(tx('recRecoveryUnavailable')); });
     const retry = () => { if (retained.current) void sendRef.current(retained.current); };
     window.addEventListener('mock-stop-recordings', halt);
     window.addEventListener('online', retry);
@@ -113,7 +115,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
       const chunks: Blob[] = [];
       mr.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       mr.onerror = () => {
-        if (alive.current) setError('Recording failed. Check your microphone.');
+        if (alive.current) setError(tx('recFailed'));
         try {
           if (mr.state !== 'inactive') mr.stop();
           else { closeMicrophone(); busy.current = false; markActiveRecording(key, false); if (alive.current) setRecording(false); }
@@ -128,19 +130,19 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
         try { blob = recordedAudioBlob(mr, chunks); }
         catch (failure) {
           busy.current = false; markActiveRecording(key, false);
-          if (alive.current) setError(microphoneErrorMessage(failure));
+          if (alive.current) setError(micMessage(failure));
           return;
         }
         retained.current = blob; if (alive.current) setPending(blob);
         void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => {
           busy.current = false; markActiveRecording(key, false);
-          if (alive.current) setError('Could not persist the take locally. Keep this page open and retry upload.');
+          if (alive.current) setError(tx('recPersistFailed'));
         });
       };
       mr.start(1000); setRecording(true);
     } catch (failure) {
       closeMicrophone(); busy.current = false; markActiveRecording(key, false);
-      if (alive.current) { const message = microphoneErrorMessage(failure); setError(message); toast.error(message); }
+      if (alive.current) { const message = micMessage(failure); setError(message); toast.error(message); }
     } finally {
       if (alive.current && generation.current === current) setStarting(false);
     }
@@ -149,7 +151,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   return <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
     <p className="w-full text-xs text-fg-muted">{tx(recording ? 'recordingHint' : sending || pending ? 'uploadHint' : hasAudio ? 'uploadedHint' : 'microphoneHint')}</p>
     {recording ? <Button size="sm" variant="danger" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
-      : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>Retry upload of saved recording</Button>
+      : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>{tx('recRetrySaved')}</Button>
       : <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}
     {hasAudio && !recording && <audio key={audioVersion} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio`} className="h-11 min-h-[44px]" preload="none"><track kind="captions" /></audio>}
     {recording && <AudioWaveform stream={liveStream} active={recording} />}

@@ -8,7 +8,7 @@ const services = vi.hoisted(() => ({
   upload: vi.fn(), recover: vi.fn(), retain: vi.fn(), release: vi.fn(), active: vi.fn(),
   toastError: vi.fn(), toastSuccess: vi.fn(),
 }));
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => ({ testMicrophone: 'Test microphone', startResponse: 'Start response', stopResponse: 'Stop recording', retryUpload: 'Retry upload of saved recording', meterUnavailable: 'you can still record', uploadedStatus: 'Uploaded', recordingStatus: 'Recording', uploadingStatus: 'Uploading' } as Record<string, string>)[key] ?? key }));
+vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => ({ testMicrophone: 'Test microphone', startResponse: 'Start response', stopResponse: 'Stop recording', retryUpload: 'Retry upload of saved recording', meterUnavailable: 'you can still record', uploadedStatus: 'Uploaded', recordingStatus: 'Recording', uploadingStatus: 'Uploading', recRetrySaved: 'Retry upload of saved recording', recUploadFailed: 'Audio upload failed. Your recording has been preserved.', recUploadFailedRetry: 'Audio upload failed. Your recording has been preserved. Retry the upload.', 'help.empty': 'The microphone produced an empty recording.', 'help.denied': 'Microphone permission denied. Allow the microphone.', recTooShort: 'This recording does not cover the required response time. Start a new response.' } as Record<string, string>)[key] ?? key }));
 vi.mock('sonner', () => ({ toast: { error: services.toastError, success: services.toastSuccess } }));
 vi.mock('@/hooks/use-mock', () => ({ useUploadMockSpeaking: () => ({ isPending: false, mutateAsync: services.upload }) }));
 vi.mock('@/lib/durable-recordings', () => ({

@@ -232,7 +232,7 @@ export function QuestionPalette({
               className={cn(
                 "size-8 rounded-lg text-xs font-bold transition-all touch-manipulation",
                 isFlag
-                  ? "bg-warning text-slate-950 ring-2 ring-warning/50"
+                  ? "bg-warning text-warning-fg ring-2 ring-warning/50"
                   : isAns
                   ? "bg-brand text-brand-fg"
                   : "bg-surface border border-border text-fg-muted hover:border-brand hover:text-fg"
@@ -772,7 +772,7 @@ export function CDLayout({
                           size="sm"
                           variant="subtle"
                           onClick={applyHighlight}
-                          className="h-7 px-2 text-xs bg-warning text-slate-950 hover:bg-warning font-bold"
+                          className="h-7 px-2 text-xs bg-warning text-warning-fg hover:bg-warning font-bold"
                         >
                           <Highlighter className="size-3 mr-1" />
                           {tu("cd.highlight")}

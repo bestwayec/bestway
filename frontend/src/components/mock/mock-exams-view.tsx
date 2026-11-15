@@ -237,10 +237,10 @@ export function MockExamsView() {
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
           <TabsList>
-            <TabsTrigger value="exams">{t("title")}</TabsTrigger>
-            <TabsTrigger value="live">{tCat("liveTab")}</TabsTrigger>
-            <TabsTrigger value="grading">{t("grading")}</TabsTrigger>
-            {isOffice && <TabsTrigger value="purchases">{t("purchases")}</TabsTrigger>}
+            <TabsTrigger panel={false} value="exams">{t("title")}</TabsTrigger>
+            <TabsTrigger panel={false} value="live">{tCat("liveTab")}</TabsTrigger>
+            <TabsTrigger panel={false} value="grading">{t("grading")}</TabsTrigger>
+            {isOffice && <TabsTrigger panel={false} value="purchases">{t("purchases")}</TabsTrigger>}
           </TabsList>
         </Tabs>
       )}

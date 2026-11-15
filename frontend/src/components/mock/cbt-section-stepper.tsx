@@ -229,7 +229,7 @@ export function CbtSectionStepper({
           isCurrent && "ring-2 ring-brand ring-offset-1 ring-offset-surface font-black",
           isDtm
             ? isFlag
-              ? "bg-warning text-slate-950 border border-warning shadow-xs"
+              ? "bg-warning text-warning-fg border border-warning shadow-xs"
               : isAns
               ? "bg-brand text-brand-fg border border-brand shadow-xs"
               : "bg-surface-hover text-fg-muted border border-border-strong"

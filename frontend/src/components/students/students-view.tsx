@@ -103,7 +103,7 @@ export function StudentsView() {
             <Card key={s.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
               <Link
                 href={`/students/${s.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80"
+                className="-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-[8px] p-1 hover:bg-surface-hover"
               >
                 <Avatar name={s.name} />
                 <div className="min-w-0">
@@ -118,7 +118,7 @@ export function StudentsView() {
                     {s.student.groupName}
                   </span>
                 )}
-                <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-950/20 px-2 py-0.5 text-xs font-bold text-amber-400 tabular-nums shadow-sm shadow-amber-950/20">
+                <span className="flex items-center gap-1 rounded-full border border-warning-border bg-warning-bg px-2 py-0.5 text-xs font-bold text-warning tabular-nums">
                   <Star className="size-3 fill-amber-400 text-amber-400" />
                   {s.student?.currentPoints ?? 0}
                 </span>

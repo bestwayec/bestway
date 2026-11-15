@@ -435,31 +435,31 @@ export function BamboozleLobby() {
             return (
               <div
                 key={deck.id}
-                className="p-5 rounded-2xl bg-bg-subtle border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col justify-between group shadow-lg"
+                className="p-5 rounded-2xl bg-bg-subtle border border-border hover:border-emerald-500/40 transition-all flex flex-col justify-between group shadow-lg"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant="neutral" className="bg-emerald-500/10 text-emerald-400 text-xs">
+                    <Badge variant="neutral" className="bg-success-bg text-success text-xs">
                       {deck.category}
                     </Badge>
-                    <span className="text-xs font-mono text-slate-400">
+                    <span className="text-xs font-mono text-fg-muted">
                       {deck.card_count || 16} ta karta
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors">
+                  <h3 className="text-base font-bold text-fg mb-2 group-hover:text-brand transition-colors">
                     {deck.title}
                   </h3>
 
                   {deck.is_lesson_tied && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-3">
-                      {isLocked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Sparkles className="w-3.5 h-3.5 text-emerald-400" />}
+                    <div className="flex items-center gap-1.5 text-xs text-fg-muted mb-3">
+                      {isLocked ? <Lock className="w-3.5 h-3.5 text-warning" /> : <Sparkles className="w-3.5 h-3.5 text-success" />}
                       <span className="truncate">{deck.lesson_title || "Darsga biriktirilgan"}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-slate-800/80">
+                <div className="pt-4 border-t border-border/80">
                   <Button
                     type="button"
                     disabled={isLocked}

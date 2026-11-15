@@ -66,9 +66,9 @@ export function StaffView() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as StaffRole)} className="mb-4">
         <TabsList>
-          <TabsTrigger value="teacher">{t("tabs.teacher")}</TabsTrigger>
-          <TabsTrigger value="admin">{t("tabs.admin")}</TabsTrigger>
-          <TabsTrigger value="parent">{t("tabs.parent")}</TabsTrigger>
+          <TabsTrigger panel={false} value="teacher">{t("tabs.teacher")}</TabsTrigger>
+          <TabsTrigger panel={false} value="admin">{t("tabs.admin")}</TabsTrigger>
+          <TabsTrigger panel={false} value="parent">{t("tabs.parent")}</TabsTrigger>
         </TabsList>
       </Tabs>
 

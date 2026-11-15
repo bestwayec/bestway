@@ -209,7 +209,7 @@ export function PaymentsPanel() {
             {canExport && <ExportButton path={`/stats/export/payments?year=${year}`} />}
             {groupsQ.data && groupsQ.data.length > 0 && (
               <Select value={activeGroupId} onValueChange={setGroupId}>
-                <SelectTrigger className="w-full min-w-[9rem] max-w-full sm:w-44">
+                <SelectTrigger className="w-full min-w-[9rem] max-w-full sm:w-44" aria-label={tc("group")}>
                   <SelectValue placeholder={tc("group")} />
                 </SelectTrigger>
                 <SelectContent>
