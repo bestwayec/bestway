@@ -60,7 +60,7 @@ def validate_answer(data):
 @permission_classes([AllowAny])
 def start_view(request, exam_id=None):
     student(request)
-    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force'})
+    data = body(request, {'mode', 'flow', 'skills', 'skill', 'section', 'section_filter', 'examId', 'exam_id', 'retake', 'allow_retake', 'allowRetake', 'force', 'groupIds', 'timer'})
     target_exam_id = exam_id or data.get('examId') or data.get('exam_id') or request.query_params.get('examId') or request.query_params.get('exam_id')
     if not target_exam_id:
         engine.fail('VALIDATION_ERROR', 'examId should not be empty')
@@ -334,6 +334,16 @@ def mine_view(request):
         engine.fail('VALIDATION_ERROR', 'program must be one of the following values: IELTS, MULTILEVEL')
     data, meta = engine.my_attempts(request.user, query)
     return Response(dict(success=True, data=wire(data), meta=meta))
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reveal_view(request, attempt_id):
+    """Practice only: show one Listening/Reading answer (recorded on the attempt)."""
+    student(request)
+    data = body(request, {'questionId'})
+    from .practice_mode import reveal
+    return success(reveal(request.user, attempt_id, data.get('questionId')))
 
 
 @api_view(['GET'])

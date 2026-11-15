@@ -115,7 +115,7 @@ try:
     check(staff_q['evidenceText'] == 'built in 1890', 'The Builder reads the evidence back from the exam tree')
 
     # ── the exam before release ──
-    attempt = MockAttempt.objects.create(id=str(uuid4()), exam_id=exam_id, student_id=student.id, status='in_progress', mode='practice',
+    attempt = MockAttempt.objects.create(id=str(uuid4()), exam_id=exam_id, student_id=student.id, status='in_progress', mode='timed',
                                          flow_mode='full_test', started_at=now - timedelta(minutes=30), anti_cheat_count=0)
     client.force_authenticate(student)
     student_tree = data(client.get(f'/v1/mock/exams/{exam_id}'))

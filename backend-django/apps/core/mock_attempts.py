@@ -204,6 +204,8 @@ def start_response(attempt, exam, resumed, full_duration=None):
             if not is_partial(attempt) or a.question_id in scope(attempt)['questionIds']} if resumed else {})
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
+        from .practice_mode import options as practice_options
+        result['practiceOptions'] = practice_options(attempt)
         skills = (result['practiceScope'] or {}).get('skills') or []
         if len(skills) == 1:
             result['singleSection'] = skills[0]
@@ -242,6 +244,7 @@ def start(actor, exam_id, data):
     if not exam:
         fail('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404)
     partial = 'skills' in data
+    explicit_scope = partial  # the client named the sections (legacy resumes do not)
     if partial:
         if exam.type not in ('multilevel', 'ielts_academic', 'ielts_general'):
             fail('VALIDATION_ERROR', 'Selected task practice is only available for Multilevel and IELTS exams')
@@ -252,6 +255,8 @@ def start(actor, exam_id, data):
             fail('VALIDATION_ERROR', 'skills must be a non-empty list of unique valid skills')
         if data.get('mode') is not None and data['mode'] not in ('practice', 'timed'):
             fail('VALIDATION_ERROR', 'mode must be one of the following values: practice, timed')
+    from . import practice_mode
+    practice_options = practice_mode.parse_options(data, partial)
     if not exam.is_published and not exam.is_demo:
         fail('MOCK_EXAM_NOT_PUBLISHED', 'Bu imtihon hali ochilmagan')
     with connection.cursor() as cursor:
@@ -311,6 +316,14 @@ def start(actor, exam_id, data):
             exp = existing.overall_deadline_at or existing.deadline_at
             is_retake = bool(data.get('retake') or data.get('allow_retake') or data.get('allowRetake') or data.get('force'))
             scope_mismatch = (partial and (not is_partial(existing) or set((scope(existing) or {}).get('skills', [])) != set(data['skills']))) or (not partial and is_partial(existing))
+            # A named section in a different mode (practice vs timed exam) is a different attempt: never
+            # resume one as the other. A legacy resume without skills keeps the owned attempt.
+            if explicit_scope and data.get('mode') in ('practice', 'timed') and existing.mode != data['mode']:
+                scope_mismatch = True
+            # A different part, timer or mode is a different practice: start it fresh.
+            if partial and practice_options:
+                scope_mismatch = scope_mismatch or existing.mode != 'practice' or practice_mode.options(existing) != {
+                    'groupIds': practice_options['groupIds'] or None, 'timer': practice_options['timer']}
             if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
                 try:
@@ -326,6 +339,9 @@ def start(actor, exam_id, data):
         if practice is not None and len(data['skills']) == 1:
             practice['single_section'] = data['skills'][0]
             practice['section_filter'] = data['skills'][0]
+        if practice is not None and practice_options:
+            practice = practice_mode.narrow(exam.id, data['skills'][0], practice, practice_options['groupIds'])
+            practice['timer'] = practice_options['timer']
         if exam.type == 'multilevel' and not partial:
             sections_skills = {s.skill for s in MockSection.objects.filter(exam_id=exam.id)}
             is_ws_only = exam.profile == 'writing_speaking' or (sections_skills and sections_skills.issubset({'writing', 'speaking'}))
@@ -348,6 +364,15 @@ def start(actor, exam_id, data):
         mode = 'timed' if flow in ('full_test', 'single_skill') and data.get('mode') != 'practice' else data.get('mode') or 'timed'
         at = attempt_signature.truncate_to_millis(timezone.now())  # equals the stored TIMESTAMP(3)
         deadlines, overall, last = timing(exam.type, shaped['sections'], mode, flow, at, selected_skills=data.get('skills') if partial else None)
+        if mode == 'practice' and practice_options.get('timer') in ('section', 'part'):
+            # Practice with a clock: the server keeps the deadline, like the exam (section or part share).
+            skill = data['skills'][0]
+            section = next((x for x in shaped['sections'] if x['skill'] == skill), None)
+            section_questions = sum(len(g['questions']) for g in (section or {}).get('groups', []))
+            seconds = practice_mode.timer_seconds(practice_options['timer'], partial_skill_seconds(skill, section, exam.type),
+                                                  len(practice['questionIds']), section_questions)
+            last = at + timedelta(seconds=seconds)
+            deadlines, overall = {skill: iso(last)}, last
         first_skill = shaped.get('sections', [{}])[0].get('skill', 'listening') if shaped.get('sections') else 'listening'
         if any(s.get('skill') == 'listening' for s in shaped.get('sections', [])):
             first_skill = 'listening'
@@ -809,6 +834,8 @@ def summary(attempt, *, detail=False):
             overallScore=attempt.overall_score, scoreMethod=attempt.score_method, scoreVersion=attempt.score_version, isOfficial=False)
     if is_partial(attempt):
         result['practiceScope'] = scope(attempt)
+        from .practice_mode import options as practice_options
+        result['practiceOptions'] = practice_options(attempt)
         skills = (result['practiceScope'] or {}).get('skills') or []
         if len(skills) == 1:
             result['singleSection'] = skills[0]
@@ -860,6 +887,8 @@ def detail(actor, attempt_id):
     for question in MockQuestion.objects.filter(group_id__in=[g.id for gs in groups_by_section.values() for g in gs]).order_by('sort_order'):
         questions_by_group.setdefault(question.group_id, []).append(question)
     from . import review_evidence
+    from .practice_mode import revealed as practice_revealed
+    shown_in_practice = set(practice_revealed(attempt))
     sections = []
     for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
@@ -875,11 +904,13 @@ def detail(actor, attempt_id):
             # Review only (released result): the Listening audioscript and its recording, so a wrong
             # answer can be read and heard where it is said. Never during the exam.
             review_source = review_evidence.source_text(group, section.skill) if show else ''
-            if show and section.skill == 'listening':
+            practice_help = attempt.mode == 'practice' and attempt.status == 'in_progress'
+            if (show or practice_help) and section.skill == 'listening':
+                # Practice only (never a timed exam): the audioscript is a study aid while practising.
                 script = review_evidence.plain_text(group.audio_script)
                 if script:
                     shaped_group['audioScript'] = script
-                if group.audio_key:
+                if group.audio_key and show:
                     shaped_group['reviewAudioUrl'] = review_audio_url(attempt_id, group.id)
             for qi, q in enumerate(questions_by_group.get(group.id, [])):
                 a = answers.get(q.id)
@@ -900,6 +931,8 @@ def detail(actor, attempt_id):
                 if show:
                     item['correctAnswers'] = q.correct_answers
                     item.update(review_evidence.review_fields(q, review_source))
+                if q.id in shown_in_practice:
+                    item['revealed'] = True
                 shaped_group['questions'].append(item)
             shaped['groups'].append(shaped_group)
         sections.append(shaped)
