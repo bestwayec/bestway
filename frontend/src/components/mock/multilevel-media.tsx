@@ -145,6 +145,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
 }) {
   const t = useTranslations('mock.runnerUx');
   const tm = useTranslations('mock.mic');
+  const tc = useTranslations('common');
   // The same translated help as the microphone check (denied, not found, busy, …).
   const micMessage = (error: unknown) => tm(`help.${microphoneProblem(error)}`);
   const key = recordingKey(attemptId, questionId);
@@ -364,7 +365,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     </ol>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p role="status" className="font-semibold text-fg">{recorderStatus(status, recorded, t)}</p>
-      {phase && ['preparing', 'recording'].includes(status) && <div className="text-right"><p className="text-xs text-fg-muted">{t(status === 'preparing' ? 'preparationTime' : 'responseTime')}</p><p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={`${left} seconds remaining`}>{left}s</p></div>}
+      {phase && ['preparing', 'recording'].includes(status) && <div className="text-right"><p className="text-xs text-fg-muted">{t(status === 'preparing' ? 'preparationTime' : 'responseTime')}</p><p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={tc("secondsLeft", { count: left })}>{left}s</p></div>}
     </div>
     <p className="text-sm text-fg-muted">{t(hint)}</p>
     {status === 'recording' && (

@@ -12,8 +12,8 @@ export async function generateMetadata({
     ? "Download BestWay App (Windows, macOS, Linux, Android APK) | BestWay"
     : "BestWay Ilovasini Yuklab Olish (Windows, macOS, Linux, Android APK) | BestWay";
   const description = isEn
-    ? "Download the official BestWay examination and learning app for Windows 10/11, macOS, Linux, and Android APK. Kiosk mode, offline auto-save, and Subway Vocab Runner."
-    : "BestWay rasmiy imtihon va o'quv ilovasini Windows, macOS, Linux va Android smartfoningizga bepul yuklab oling. Kiosk rejim, avtosaqlash va Subway Vocab Runner o'yini.";
+    ? "Download the BestWay exam and learning app for Windows 10/11, macOS, Linux, and Android APK. Kiosk mode, offline auto-save, and Subway Vocab Runner."
+    : "BestWay imtihon va o'quv ilovasini Windows, macOS, Linux va Android smartfoningizga bepul yuklab oling. Kiosk rejim, avtosaqlash va Subway Vocab Runner o'yini.";
 
   return {
     title,

@@ -237,7 +237,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </Reveal>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Feature 1: 29+ Video Lessons */}
+            {/* Feature 1: video lessons */}
             <Reveal delay={0} className="h-full">
               <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
                 <span

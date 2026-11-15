@@ -38,7 +38,10 @@ function subscribeScrollPosition(onChange: () => void) {
   return () => window.removeEventListener("scroll", onScroll);
 }
 
-export function SiteHeader() {
+/** `hidden`: landing sections with nothing to show (no teacher profiles, no news) — no menu link to them. */
+export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
+  const hiddenKey = hidden.join(",");
+  const sections = React.useMemo(() => SECTIONS.filter((s) => !hiddenKey.split(",").includes(s.hash)), [hiddenKey]);
   const t = useTranslations("marketing");
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useMe();
@@ -62,7 +65,7 @@ export function SiteHeader() {
   React.useEffect(() => {
     const fromHash = () => {
       const hash = window.location.hash.replace(/^#/, "");
-      const idx = SECTIONS.findIndex((s) => s.hash === hash);
+      const idx = sections.findIndex((s) => s.hash === hash);
       if (idx >= 0) setActiveIdx(idx);
     };
     fromHash();
@@ -71,7 +74,7 @@ export function SiteHeader() {
     let ticking = false;
     const update = () => {
       ticking = false;
-      const existing = SECTIONS.filter((s) => document.getElementById(s.hash));
+      const existing = sections.filter((s) => document.getElementById(s.hash));
       if (existing.length === 0) {
         setActiveIdx(-1);
         return;
@@ -81,7 +84,7 @@ export function SiteHeader() {
       existing.forEach((s) => {
         const el = document.getElementById(s.hash);
         if (el && el.getBoundingClientRect().top + window.scrollY <= line) {
-          idx = SECTIONS.indexOf(s);
+          idx = sections.indexOf(s);
         }
       });
       setActiveIdx(idx);
@@ -100,7 +103,7 @@ export function SiteHeader() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, []);
+  }, [sections]);
 
   return (
     <header
@@ -141,11 +144,11 @@ export function SiteHeader() {
         <div className="hidden min-w-0 flex-1 justify-center overflow-hidden xl:flex">
           <div className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <JellyNav
-              items={SECTIONS.map((section) => ({
+              items={sections.map((section) => ({
                 value: section.hash,
                 label: t(section.key),
               }))}
-              value={SECTIONS[activeIdx]?.hash ?? ""}
+              value={sections[activeIdx]?.hash ?? ""}
               onChange={(hash, index) => {
                 setActiveIdx(index);
                 router.push(`/#${hash}`);
@@ -238,7 +241,7 @@ export function SiteHeader() {
               <MonitorDown className="size-4 shrink-0 text-brand" aria-hidden />
               {t("desktopApp")}
             </Link>
-            {SECTIONS.map((s) => (
+            {sections.map((s) => (
               <Link
                 key={s.hash}
                 href={`/#${s.hash}`}

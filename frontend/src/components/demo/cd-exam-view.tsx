@@ -187,8 +187,8 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
     return (
       <div className="flex min-h-[500px] w-full items-center justify-center bg-bg p-8 text-center">
         <div className="max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-fg">Imtihon topshiriqlari tayyorlanmoqda...</h2>
-          <p className="mt-2 text-xs text-fg-muted">Agar bir necha soniyada ochilmasa, iltimos sahifani yangilang.</p>
+          <h2 className="text-lg font-bold text-fg">{t("demoExam.preparing")}</h2>
+          <p className="mt-2 text-xs text-fg-muted">{t("demoExam.preparingHint")}</p>
         </div>
       </div>
     );
@@ -205,8 +205,8 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
         <div className="flex w-full items-center justify-between gap-2 px-3 py-2 sm:px-5">
           <Link
             href="/demo"
-            aria-label="Back to demo tests"
-            title="Back to demo tests"
+            aria-label={t("demoExam.back")}
+            title={t("demoExam.back")}
             className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
           >
             <ArrowLeft className="size-4" aria-hidden />
@@ -231,7 +231,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
             </p>
           )}
           <div className="flex shrink-0 items-center gap-1">
-            <div className="hidden items-center rounded-full border border-border p-0.5 sm:flex" role="group" aria-label="Text size">
+            <div className="hidden items-center rounded-full border border-border p-0.5 sm:flex" role="group" aria-label={t("demoExam.textSize")}>
               {(["s", "m", "l"] as FontSize[]).map((s) => (
                 <button
                   key={s}
@@ -247,10 +247,10 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
                 </button>
               ))}
             </div>
-            <Button size="sm" variant="ghost" onClick={() => setHelpOpen(true)} aria-label="Help">
+            <Button size="sm" variant="ghost" onClick={() => setHelpOpen(true)} aria-label={t("demoExam.help")}>
               <Info className="size-4" />
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setHidden(true)} aria-label="Hide screen">
+            <Button size="sm" variant="ghost" onClick={() => setHidden(true)} aria-label={t("demoExam.hide")}>
               <EyeOff className="size-4" />
             </Button>
           </div>
@@ -263,7 +263,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
       </div>
 
       {/* ── Split panes ── */}
-      <ErrorBoundary fallbackTitle={`Part ${partIdx + 1} ni yuklashda xatolik yuz berdi`}>
+      <ErrorBoundary fallbackTitle={t("demoExam.partLoadError", { n: partIdx + 1 })}>
         <div className="grid w-full gap-0 px-3 sm:px-5 lg:grid-cols-2 lg:gap-5">
         {/* Left: context */}
         <div ref={leftRef} className="min-w-0 py-4 lg:h-[calc(100dvh-150px)] lg:overflow-y-auto lg:py-5 lg:pr-2">
@@ -278,8 +278,8 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
               <button
                 type="button"
                 onClick={highlightSelection}
-                title="Highlight selected text"
-                aria-label="Highlight selected text"
+                title={t("demoExam.highlight")}
+                aria-label={t("demoExam.highlight")}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-muted transition-colors hover:border-accent/60 hover:text-accent"
               >
                 <Highlighter className="size-3.5" aria-hidden />
@@ -287,8 +287,8 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
               <button
                 type="button"
                 onClick={clearHighlights}
-                title="Clear highlights"
-                aria-label="Clear highlights"
+                title={t("demoExam.clearHighlights")}
+                aria-label={t("demoExam.clearHighlights")}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
               >
                 <RotateCcw className="size-3.5" aria-hidden />
@@ -393,12 +393,12 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
             variant="outline"
             disabled={partIdx <= 0}
             onClick={() => goPart(partIdx - 1)}
-            aria-label="Previous part"
+            aria-label={t("demoExam.prevPart")}
             className="shrink-0"
           >
             <ArrowLeft className="size-4" />
           </Button>
-          <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-0.5" role="navigation" aria-label="Parts">
+          <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-0.5" role="navigation" aria-label={t("demoExam.parts")}>
             {parts.map((p, i) => {
               const qs = p?.group?.questions || [];
               const answered = qs.filter((q) => (answers[q.id] ?? "").trim() !== "").length;
@@ -434,7 +434,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
             variant="outline"
             disabled={partIdx >= parts.length - 1}
             onClick={() => goPart(partIdx + 1)}
-            aria-label="Next part"
+            aria-label={t("demoExam.nextPart")}
             className="shrink-0"
           >
             <ArrowRight className="size-4" />
@@ -447,18 +447,15 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
       <Dialog open={helpOpen} onOpenChange={(o) => !o && setHelpOpen(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>How this demo works</DialogTitle>
-            <DialogDescription>
-              Read or listen on the left, answer on the right. Switch parts below — your
-              answers and highlights per part are kept while you browse.
-            </DialogDescription>
+            <DialogTitle>{t("demoExam.helpTitle")}</DialogTitle>
+            <DialogDescription>{t("demoExam.helpText")}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             <ul className="list-disc space-y-1.5 pl-5 text-sm text-fg-muted">
-              <li>Parts show x/y answered; flagged questions get a yellow marker.</li>
-              <li>Select passage text, then press the highlighter to mark it.</li>
-              <li>Writing tasks count words live as you type.</li>
-              <li>Nothing is scored here — register for real scoring and history.</li>
+              <li>{t("demoExam.help1")}</li>
+              <li>{t("demoExam.help2")}</li>
+              <li>{t("demoExam.help3")}</li>
+              <li>{t("demoExam.help4")}</li>
             </ul>
           </DialogBody>
         </DialogContent>
@@ -466,12 +463,12 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
 
       {/* ── Hide-screen overlay ── */}
       {hidden && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-bg" role="alertdialog" aria-label="Screen hidden">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-bg" role="alertdialog" aria-label={t("demoExam.hiddenLabel")}>
           <Pause className="size-10 text-fg-subtle" aria-hidden />
-          <p className="text-lg font-semibold text-fg">Screen hidden — take your break</p>
+          <p className="text-lg font-semibold text-fg">{t("demoExam.hiddenText")}</p>
           <Button onClick={() => setHidden(false)}>
             <Play className="size-4" />
-            Resume test
+            {t("demoExam.resume")}
           </Button>
         </div>
       )}
@@ -488,6 +485,8 @@ function CdAnswerInput({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("marketing");
   if ((q.type as string) === "essay" || q.type === "essay_task1" || q.type === "essay_task2" || (q as any).questionType === "essay") {
     const n = wordCount(value);
     const min = q.type === "essay_task1" ? 150 : 250;
@@ -497,11 +496,11 @@ function CdAnswerInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={6}
-          placeholder="Write your answer here…"
+          placeholder={tc("writeAnswer")}
           className="w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
         />
         <p className={cn("mt-1 text-xs tabular-nums", n >= min ? "text-brand" : "text-fg-subtle")}>
-          {n} words{min ? ` (minimum ${min})` : ""}
+          {min ? tc("wordCountMin", { count: n, min }) : tc("wordCount", { count: n })}
         </p>
       </div>
     );
@@ -509,8 +508,8 @@ function CdAnswerInput({
   if ((q.type as string) === "speaking" || q.type === "speaking_task" || (q as any).questionType === "speaking_prompt") {
     return (
       <div className="mt-3 rounded-xl border border-border bg-surface p-4 text-center">
-        <p className="text-xs font-semibold text-fg-muted mb-1">🎤 Speaking Topshirig'i</p>
-        <p className="text-xs text-fg-muted">Haqiqiy imtihon rejimida mikrofon orqali audio yozib olinadi.</p>
+        <p className="mb-1 text-xs font-semibold text-fg-muted">🎤 {t("demoExam.speakingTitle")}</p>
+        <p className="text-xs text-fg-muted">{t("demoExam.speakingText")}</p>
       </div>
     );
   }
@@ -578,7 +577,7 @@ function CdAnswerInput({
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Type your answer…"
+      placeholder={tc("typeAnswer")}
       aria-label={promptText}
       className="mt-2 w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
     />

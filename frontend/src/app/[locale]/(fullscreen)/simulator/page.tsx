@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Multi-Level (CEFR) Mock Test 1 — Computer-Delivered Simulator",
-  description: "Official Computer-Delivered Multi-Level CEFR Exam Simulator. Split-screen layout, independent scrolling, timed sections, and live question palette.",
+  description: "Computer-delivered Multi-Level (CEFR) practice exam. Split-screen layout, independent scrolling, timed sections, and live question palette.",
 };
 
 export default async function SimulatorPage({

@@ -79,7 +79,7 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-xs text-fg-subtle sm:flex-row">
           <p>
-            © {year} {CENTER.name}. Barcha huquqlar himoyalangan.
+            © {year} {CENTER.name}. {t("footerRights")}
           </p>
           <div className="flex items-center gap-4">
             <Link href="/desktop" className="hover:text-fg">
