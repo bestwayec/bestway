@@ -57,8 +57,14 @@ def band_tables():
 
 @transaction.atomic
 def submit(actor, attempt_id, skills=None, *, force=False):
-    """Lock shared with response/media writers; a timeout uses this same route."""
-    from .mock_submission_snapshots import enqueue, notify
+    """Lock shared with response/media writers; a timeout uses this same route.
+
+    Only the deterministic result is computed while the attempt row is locked. The
+    assessment snapshots, AI/teacher jobs and notifications are recorded as one
+    `SubmissionHandoff` row and run after the response (mock_submission_handoff).
+    A repeated Finish returns the stored state at once and never makes a second job.
+    """
+    from . import mock_submission_handoff as handoff
     if force:
         from .mock_support import locked
         attempt = locked(actor, attempt_id)
@@ -66,10 +72,10 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         attempt = attempts.own(actor, attempt_id, lock=True)
     versioned = attempts.versioned(attempt)
     if attempt.status != 'in_progress':
-        try:
-            enqueue(attempt, skills)
-        except Exception:
-            pass
+        if handoff.pending(attempt.id):
+            # The first request's background run never finished (process restarted):
+            # the retry is a cue to try again. SKIP LOCKED keeps it to one runner.
+            transaction.on_commit(lambda: handoff.schedule(attempt.id))
         return saved_result(attempt)
     attempts.assert_in_progress(attempt)
     if versioned and not force:
@@ -90,6 +96,7 @@ def submit(actor, attempt_id, skills=None, *, force=False):
         hasImages=bool(isinstance(a.rubric_scores, dict) and (a.rubric_scores.get('imageKeys') or a.rubric_scores.get('imageUrls')))) for a in rows}
     now = timezone.now()
     existing_q_ids = {a.question_id for a in rows}
+    missing, blank = [], []
     for section in sections:
         auto = section.get('skill') in ('listening', 'reading')
         for group in section.get('groups', []):
@@ -99,7 +106,7 @@ def submit(actor, attempt_id, skills=None, *, force=False):
                     # A Writing/Speaking task nobody answered is a final 0, like an unanswered
                     # question: nothing to send to the AI or a teacher, so it must not leave the
                     # attempt waiting for a grade that can never come.
-                    ans_obj = MockAnswer.objects.create(
+                    missing.append(MockAnswer(
                         id=str(uuid4()),
                         attempt_id=attempt.id,
                         question_id=qid,
@@ -108,14 +115,19 @@ def submit(actor, attempt_id, skills=None, *, force=False):
                         score=0.0,
                         is_graded=True,
                         updated_at=now,
-                    )
-                    rows.append(ans_obj)
+                    ))
+                    existing_q_ids.add(qid)
                     answers[qid] = dict(response='', audioKey=None, isGraded=True, score=0.0, hasImages=False)
                 elif not auto and not answers[qid].get('isGraded') and not answers[qid].get('hasImages')                         and not has_evidence(answers[qid].get('response'), answers[qid].get('audioKey')):
                     # An answer row exists but is blank (typed then deleted, autosaved empty).
-                    MockAnswer.objects.filter(attempt_id=attempt.id, question_id=qid).update(
-                        score=0.0, is_graded=True, updated_at=now)
+                    blank.append(qid)
                     answers[qid] = dict(answers[qid], isGraded=True, score=0.0)
+    if missing:
+        MockAnswer.objects.bulk_create(missing)
+        rows.extend(missing)
+    if blank:
+        MockAnswer.objects.filter(attempt_id=attempt.id, question_id__in=blank).update(
+            score=0.0, is_graded=True, updated_at=now)
     if versioned and not force:
         assert_complete(attempt, sections, answers, now)
     if skills:
@@ -129,11 +141,16 @@ def submit(actor, attempt_id, skills=None, *, force=False):
     scoped_ids = {q['id'] for section in sections for group in section.get('groups', []) for q in group.get('questions', [])}
     if not any(has_evidence(a.response, a.audio_key, a.rubric_scores) for a in rows if a.question_id in scoped_ids):
         result = without_level(result)
+    projected = []
     for answer in rows:
         if answer.question_id in projections:
             projection = projections[answer.question_id]
-            MockAnswer.objects.filter(id=answer.id).update(is_correct=projection['isCorrect'],
-                score=projection['score'], is_graded=True, updated_at=now)
+            answer.is_correct, answer.score, answer.is_graded, answer.updated_at = (
+                projection['isCorrect'], projection['score'], True, now)
+            projected.append(answer)
+    if projected:
+        # One statement instead of one UPDATE per answer (a full mock has ~80).
+        MockAnswer.objects.bulk_update(projected, ['is_correct', 'score', 'is_graded', 'updated_at'], batch_size=500)
     fields = dict(status='status', raw_scores='rawScores', section_bands='sectionBands',
         overall_band='overallBand', cefr_level='cefrLevel')
     if versioned:
@@ -151,16 +168,5 @@ def submit(actor, attempt_id, skills=None, *, force=False):
             audit_event(actor,'mock.attempt.force_submit','mockAttempt',attempt.id,new=dict(status=result['status']))
         except Exception:
             pass
-    try:
-        enqueue(attempt, skills)
-        from common.background import start_thread
-
-        from . import assessment_worker
-        start_thread(assessment_worker.tick, name='bestway-assessment-tick')
-    except Exception:
-        pass
-    try:
-        notify(attempt)
-    except Exception:
-        pass
+    handoff.record(attempt.id, skills)
     return result

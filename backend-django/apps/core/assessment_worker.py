@@ -1,6 +1,7 @@
 """20-second durable PostgreSQL worker; never implicitly started by Django."""
 import copy
 import hashlib
+import logging
 import os
 from datetime import timedelta
 from threading import Lock
@@ -26,6 +27,8 @@ from .content_media import storage_path
 from .mock_import_validate import canonical_checksum
 
 _tick_lock=Lock()
+logger = logging.getLogger(__name__)
+
 def failure(error):return error if isinstance(error,results.ProviderError) else results.ProviderError('ASSESSMENT_INTERNAL_FAILURE',False,True)
 def refresh(job):
     count=AssessmentJob.objects.filter(id=job.id,status='PROCESSING',lease_token=job.lease_token).update(lease_expires_at=timezone.now()+timedelta(minutes=10),updated_at=timezone.now())
@@ -323,12 +326,21 @@ def tick():
         close_old_connections()
         _tick_lock.release()
 
+def recover_handoffs():
+    """Finish hand-offs whose web thread never ran them (process restarted after answering)."""
+    try:
+        from .mock_submission_handoff import process_pending
+        process_pending()
+    except Exception:
+        logger.exception('Finish hand-off recovery failed')
+
 def run(stop,once=False):
     try:
-        if once:tick();return
+        if once:recover_handoffs();tick();return
         poll_interval=float(os.environ.get('ASSESSMENT_WORKER_POLL_INTERVAL','2'))
         while not stop.wait(poll_interval):
             close_old_connections()
+            recover_handoffs()
             tick()
             close_old_connections()
     finally:close_old_connections()

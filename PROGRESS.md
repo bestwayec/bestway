@@ -7,6 +7,12 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 22-BLOK: Finish (imtihonni yakunlash) 502 — branch `fix/finish-502` (2026-11-15)
+- **Sabab (dalil bilan)**: prod nginx loglarida (13-okt – 15-noy) submit hech qachon 502 bermagan; nginx 600 s, gunicorn 120 s, Next proksi esa 8 s timeout — 502 faqat proksidan keladi. Submit qator qulfi ostida har javobga alohida UPDATE (97 so'rovdan 71 tasi), har speaking yozuvini SHA-256 bilan o'qish, job/bildirishnoma, yakunlangan urinishda sinxron Telegram post (40 s timeout) va web jarayon ichida AI tick'ni bajarardi; takroriy bosish hammasini qaytadan qilardi.
+- **Tuzatish**: submit faqat deterministik natijani saqlaydi (69 ms / 18 so'rov); og'ir ish `SubmissionHandoff` outbox orqali javobdan keyin, aynan bir marta; takroriy Finish saqlangan holatni darhol qaytaradi; qolib ketgan hand-off'ni assessment-worker oladi; proksi Finish uchun 30 s.
+- **Yuklama testi**: `verify_finish_load_postgres.py` — 30 parallel Finish 201, 30 takroriy 201, 60 job (dublikat yo'q). 4 slotda: oldin max 3.8 s, keyin 2.1 s.
+- **Holat**: lokal testlar va E2E (exam-window 12/12, ielts-full 10/10) o'tdi; deploy qilinmagan (deployda `manage.py migrate` core.0010 ni qo'llaydi).
+
 ### 21-BLOK: Android video audit (10-noyabr) — P1–P6, branch'lar `fix/p1…p5`, `fix/extras…`
 Video qo'lda ko'rilmadi; kuzatuvlar gipoteza sifatida kod va lokal muhitda qayta tekshirildi. Deploy qilinmagan.
 

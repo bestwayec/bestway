@@ -28,6 +28,7 @@ from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core import mock_submission_handoff
 from apps.core.multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC
 from apps.legacy_schema.models import (
     AssessmentJob,
@@ -222,6 +223,7 @@ try:
     check(submitted['status'] == 'grading' and set(submitted['rawScores']) == {'writing', 'speaking'}
           and submitted['overallScore'] is None and submitted['cefrLevel'] is None,
           'Submission awaits teacher scoring and invents no overall or CEFR score')
+    check(mock_submission_handoff.wait(attempt_id), 'The assessment hand-off finishes after the response')
     jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))
     check(len(jobs) == 2 and all(j.status == 'NEEDS_REVIEW' and j.policy_mode == 'MANUAL_ONLY' for j in jobs),
           'Both scoped skills enter the durable manual review ledger')
@@ -252,6 +254,8 @@ try:
           'Student and teacher see the same persisted scores')
     print(f'SUMMARY {len(checks)}/{len(checks)} passed')
 finally:
+    from apps.core.models import SubmissionHandoff
+    SubmissionHandoff.objects.filter(attempt_id__in=list(MockAttempt.objects.filter(exam_id=exam_id).values_list('id', flat=True))).delete()
     MockExam.objects.filter(id=exam_id).delete()
     Notification.objects.filter(user_id__in=[student.id, admin.id]).delete()
     AuditLog.objects.filter(user_id__in=[student.id, admin.id]).delete()

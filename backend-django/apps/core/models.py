@@ -667,3 +667,24 @@ class AnswerKey(models.Model):
 
 
 CDAnswerKey = AnswerKey
+
+
+class SubmissionHandoff(models.Model):
+    """Outbox row written in the same transaction as a mock hand-in.
+
+    Finish answers as soon as the deterministic score is stored. Building the
+    assessment snapshots (which reads every speaking recording to hash it), creating
+    the AI/teacher jobs and the notifications run afterwards from this row, once:
+    `done_at` is set in the same transaction as that work. A row left pending (the
+    web process died after the response) is picked up by the assessment worker.
+    """
+
+    attempt_id = models.CharField(primary_key=True, max_length=255)
+    skills = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField()
+    done_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    tries = models.IntegerField(default=0)
+    last_error = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = "SubmissionHandoff"

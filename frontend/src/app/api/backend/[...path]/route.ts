@@ -119,7 +119,12 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   const isExamImport =
     req.nextUrl.pathname.includes("/mock/exam-imports") &&
     req.method !== "GET";
-  const timeoutMs = isUpload || isStream ? 600_000 : isExamImport ? 60_000 : 8_000;
+  // Finish (and the answer flush right before it) must not be cut off at 8 s while
+  // the backend is still committing the hand-in: a 502 there tells the student nothing.
+  const isHandIn =
+    req.method === "POST" &&
+    /\/(mock\/)?attempts\/[^/]+\/(submit|answers|advance)\/?$/.test(req.nextUrl.pathname);
+  const timeoutMs = isUpload || isStream ? 600_000 : isExamImport ? 60_000 : isHandIn ? 30_000 : 8_000;
 
   const send = (token?: string) =>
     fetch(target, {
