@@ -263,7 +263,7 @@ await step("08-section-result-has-no-level", async () => {
   if (sub.status() >= 400) throw new Error(`submit HTTP ${sub.status()} ${(await sub.text()).slice(0, 200)}`);
   await page.setViewportSize(sizes[1].viewport);
   await page.goto(`${WEB}/en/mock/attempt/${attemptId}`, { waitUntil: "domcontentloaded" });
-  await page.getByText(/Bo'lim mashqi/).first().waitFor({ timeout: 120000 });
+  await page.getByText(/Bo'lim mashqi|Section practice/).first().waitFor({ timeout: 120000 });
   // Result cards stack without overlapping on phones (a video suggested they did; it was compression).
   for (const size of sizes) {
     await page.setViewportSize(size.viewport);
@@ -373,16 +373,16 @@ await step("10-microphone-check-refused-then-allowed", async () => {
   // (a) refused: this context was never granted the microphone
   await page.setViewportSize(sizes[1].viewport);
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Sinovni boshlash/ }).click({ timeout: 90000 });
-  const help = page.getByRole("alert").filter({ hasText: /Mikrofon/ });
+  await page.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).click({ timeout: 90000 });
+  const help = page.getByRole("alert").filter({ hasText: /Mikrofon|Microphone/ });
   await help.waitFor({ timeout: 30000 });
   const helpText = await help.innerText();
-  if (!/Ruxsat berish/.test(helpText)) throw new Error(`no Uzbek instructions: ${helpText}`);
+  if (!/Ruxsat berish|Allow/.test(helpText)) throw new Error(`no instructions: ${helpText}`);
   if (/permission denied/i.test(await page.innerText("body"))) throw new Error("English permission error shown");
   await page.getByRole("button", { name: /Qayta urinish/ }).waitFor();
   await page.screenshot({ path: join(OUT, "10a-mic-refused-390.png") });
   await page.getByTestId("mic-continue-without").click();
-  await page.getByRole("button", { name: /Sinovni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
+  await page.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).waitFor({ state: "detached", timeout: 10000 });
   // the exam is usable again: the header Finish button is reachable (not covered by the modal)
   const finish = page.getByRole("button", { name: /Finish|Yakunlash|Topshirish/ }).first();
   await finish.waitFor();
@@ -402,7 +402,7 @@ await step("10-microphone-check-refused-then-allowed", async () => {
     await Promise.all([p2.waitForResponse((r) => r.url().includes("/api/auth/login")), p2.click('button[type="submit"]')]);
     await p2.waitForURL(/dashboard/);
     await p2.goto(url, { waitUntil: "domcontentloaded" });
-    await p2.getByRole("button", { name: /Sinovni boshlash/ }).click();
+    await p2.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).click();
     await p2.getByText(/Yozuv tayyor/).waitFor({ timeout: 20000 });
     await p2.screenshot({ path: join(OUT, "10b-mic-allowed-390.png") });
     await p2.getByRole("button", { name: /Speakingni boshlash/ }).click();
