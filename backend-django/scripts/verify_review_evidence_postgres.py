@@ -6,7 +6,6 @@ queries whatever the number of parts), the review recording (own released attemp
 never during an attempt of the same exam) and accuracy per question type.
 No external providers, production data or browser involved. Everything created is removed.
 """
-import io
 import os
 import sys
 import wave
