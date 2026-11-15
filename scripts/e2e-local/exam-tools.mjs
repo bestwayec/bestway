@@ -123,8 +123,9 @@ async function listening(name, opts) {
   ok(!(await page.locator("body").innerText()).includes(T.listeningReview.split(":")[0]), `${name}: no 2-minute check after part 1`);
   await page.waitForTimeout(3000);
   ok((await api(`/mock/attempts/${id}`)).body?.data?.status === "in_progress", `${name}: the section stays open after part 1`);
-  const next = page.getByRole("button", { name: new RegExp(`^${M[opts.locale].stepper?.nextPart ?? "Next part"}`) });
-  for (let i = 0; i < 6; i++) { if (await next.isVisible().catch(() => false)) await next.click(); else break; await page.waitForTimeout(500); }
+  // The last part's tab (the bar lists every part).
+  await page.getByRole("tab").last().click();
+  await page.waitForTimeout(500);
   await page.getByRole("button", { name: T.listeningPlayOnce }).first().click();
   await page.getByText(T.listeningReview.replace("{time}", "02:00")).or(page.getByText(T.listeningReview.replace("{time}", "01:59"))).waitFor({ timeout: 60000 });
   ok(true, `${name}: the last part starts the 2:00 check`);

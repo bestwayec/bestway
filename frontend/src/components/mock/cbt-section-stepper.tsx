@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Flag, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Flag, ArrowLeft, ArrowRight, CheckCircle2, LayoutGrid, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import type { ExamSimulatorMode, MockSection, MockSkill } from "@/lib/types";
@@ -29,6 +28,8 @@ export interface CbtSectionStepperProps {
   onSubmitSection?: () => void;
   isLastSection?: boolean;
   isFullTest?: boolean;
+  /** Focus mode: the bar keeps only the question controls. */
+  focus?: boolean;
 }
 
 export function CbtSectionStepper({
@@ -46,6 +47,7 @@ export function CbtSectionStepper({
   onSubmitSection,
   isLastSection = false,
   isFullTest = false,
+  focus = false,
 }: CbtSectionStepperProps) {
   const t = useTranslations("mock.stepper");
   const safeGroups = groups || [];
@@ -163,101 +165,117 @@ export function CbtSectionStepper({
     : false;
   const isDtm = simulatorMode === "dtm";
 
-  // The palette wraps into rows (a sideways-scrolling row hid everything after question 9 on phones).
-  // When it holds more rows than fit, say so and keep the current question in view.
-  const [paletteExpanded, setPaletteExpanded] = React.useState(false);
-  const paletteRef = React.useRef<HTMLDivElement>(null);
-  const [paletteHasMore, setPaletteHasMore] = React.useState(false);
-  // Roving tab stop: the palette is one Tab stop; arrows, Home and End move inside it.
+  // Roving tab stop: each palette is one Tab stop; arrows, Home and End move inside it.
   const currentIndex = Math.max(0, flattenedQuestions.findIndex((q) => q.id === activeQuestionId));
-  const [rovingIndex, setRovingIndex] = React.useState<number | null>(null);
-  const tabStop = Math.min(rovingIndex ?? currentIndex, Math.max(0, flattenedQuestions.length - 1));
+  const activeQuestion = flattenedQuestions[currentIndex];
+  const [rovingId, setRovingId] = React.useState<string | null>(null);
   const onPaletteKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const last = flattenedQuestions.length - 1;
-    const next = { ArrowRight: tabStop + 1, ArrowDown: tabStop + 1, ArrowLeft: tabStop - 1, ArrowUp: tabStop - 1, Home: 0, End: last }[event.key];
+    const list = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-qid]")];
+    const at = Math.max(0, list.indexOf(document.activeElement as HTMLButtonElement));
+    const last = list.length - 1;
+    const next = { ArrowRight: at + 1, ArrowDown: at + 1, ArrowLeft: at - 1, ArrowUp: at - 1, Home: 0, End: last }[event.key];
     if (next === undefined || last < 0) return;
     event.preventDefault();
-    const index = Math.max(0, Math.min(last, next));
-    setRovingIndex(index);
-    paletteRef.current?.querySelectorAll<HTMLButtonElement>("button")[index]?.focus();
+    const target = list[Math.max(0, Math.min(last, next))];
+    setRovingId(target.dataset.qid ?? null);
+    target.focus();
   };
-  const activeQuestion = flattenedQuestions[currentIndex];
-  const refreshPaletteHint = React.useCallback(() => {
-    const el = paletteRef.current;
-    if (el) setPaletteHasMore(el.scrollHeight - el.clientHeight - el.scrollTop > 4);
-  }, []);
+  const tabStopIn = (ids: string[]) => (rovingId && ids.includes(rovingId) ? rovingId : activeQuestionId && ids.includes(activeQuestionId) ? activeQuestionId : ids[0]);
+
+  // Every question of the section: a sheet on demand (phones always use it; the bar shows the open part's questions).
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const sheetClose = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    const el = paletteRef.current;
-    const current = el?.querySelector<HTMLElement>('[aria-current="true"]');
-    if (el && current) {
-      if (current.offsetTop < el.scrollTop) el.scrollTop = Math.max(0, current.offsetTop - 4);
-      else if (current.offsetTop + current.offsetHeight > el.scrollTop + el.clientHeight) el.scrollTop = current.offsetTop + current.offsetHeight - el.clientHeight + 4;
-    }
-    refreshPaletteHint();
-  }, [activeQuestionId, flattenedQuestions.length, refreshPaletteHint]);
+    if (!sheetOpen) return;
+    sheetClose.current?.focus();
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setSheetOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheetOpen]);
+
+  const answeredTotal = flattenedQuestions.filter((q) => multilevelQuestionAnswered(q, answers, audioSet)).length;
+  const goTo = (index: number) => {
+    const q = flattenedQuestions[index];
+    if (q) jumpToQuestion(q);
+  };
+
+  const paletteButton = (q: (typeof flattenedQuestions)[number], tabStop: string | undefined, onOpen?: () => void) => {
+    const isAns = multilevelQuestionAnswered(q, answers, audioSet);
+    const isFlag = flaggedQuestions.has(q.id);
+    const isCurrent = q.id === activeQuestionId;
+    const isCurrentPart = q.groupIndex === activePartIndex;
+    return (
+      <button
+        key={q.id}
+        type="button"
+        data-qid={q.id}
+        onClick={() => { jumpToQuestion(q); onOpen?.(); }}
+        onFocus={() => setRovingId(q.id)}
+        tabIndex={q.id === tabStop ? 0 : -1}
+        aria-current={isCurrent ? "true" : undefined}
+        aria-label={`${t("questionLabel", { label: q.label, part: q.groupTitle })}, ${
+          isAns ? t("stateAnswered") : t("stateNotAnswered")
+        }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
+        title={`${t("questionLabel", { label: q.label, part: q.groupTitle })}${
+          isAns ? ` - ${t("stateAnswered")}` : ""
+        }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
+        className={cn(
+          "relative flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold tabular-nums transition-colors touch-manipulation md:size-8",
+          isCurrent && "ring-2 ring-brand ring-offset-1 ring-offset-surface font-black",
+          isDtm
+            ? isFlag
+              ? "bg-warning text-slate-950 border border-warning shadow-xs"
+              : isAns
+              ? "bg-brand text-brand-fg border border-brand shadow-xs"
+              : "bg-surface-hover text-fg-muted border border-border-strong"
+            : isFlag
+            ? "bg-warning/25 text-warning ring-1 ring-warning"
+            : isAns
+            ? "bg-brand text-brand-fg shadow-sm"
+            : isCurrentPart
+            ? "bg-bg-subtle text-fg border border-border/80 hover:bg-surface-hover"
+            : "bg-surface text-fg-muted border border-border/40 hover:text-fg"
+        )}
+      >
+        {q.label}
+        {isFlag && <span className="absolute -top-1 -right-1 text-[9px] leading-none text-warning" aria-hidden>⚑</span>}
+      </button>
+    );
+  };
+
+  const partQuestions = flattenedQuestions.filter((q) => q.groupIndex === activePartIndex);
+  const partTabStop = tabStopIn(partQuestions.map((q) => q.id));
+  const sheetTabStop = tabStopIn(flattenedQuestions.map((q) => q.id));
+  const onLastQuestion = currentIndex >= flattenedQuestions.length - 1;
+  const onLastPart = activePartIndex >= safeGroups.length - 1;
+  const legend = (
+    <div className="flex flex-wrap items-center gap-3 text-[11px] text-fg-muted">
+      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-brand" />{t("legendAnswered")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-warning" />{t("legendFlagged")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-border bg-border-strong" />{t("legendUnanswered")}</span>
+    </div>
+  );
+  const iconButton = "min-h-[40px] min-w-[40px] px-2 touch-manipulation";
 
   return (
-    <div className="space-y-4">
-      {/* 1. Part-by-Part Tabs Stepper */}
-      {safeGroups.length > 1 && (
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-surface/70 p-1.5 backdrop-blur-md sm:flex-wrap" role="tablist" aria-label={t("partsLabel")}>
-          {partStats.map((part, idx) => {
-            const isActive = idx === activePartIndex;
-            return (
-              <button
-                key={idx}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-label={`${part.label}: ${part.answeredCount}/${part.totalCount}`}
-                onClick={() => {
-                  setActivePartIndex(idx);
-                }}
-                className={cn(
-                  "relative flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all touch-manipulation",
-                  isActive
-                    ? "bg-brand text-brand-fg shadow-md scale-[1.02]"
-                    : "text-fg-muted hover:bg-surface-hover hover:text-fg"
-                )}
-              >
-                <span className="sm:hidden">{part.shortLabel}</span>
-                <span className="hidden sm:inline">{part.label}</span>
-                <span
-                  className={cn(
-                    "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
-                    isActive
-                      ? "bg-black/20 text-brand-fg dark:bg-fg/25"
-                      : "bg-bg-subtle text-fg-muted"
-                  )}
-                >
-                  {part.isComplete ? (
-                    <CheckCircle2 className="size-3 text-brand" />
-                  ) : null}
-                  {part.answeredCount}/{part.totalCount}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 2. Active Part Group Content */}
+    // At least one screen tall, so the bar sits at the bottom even under a short part.
+    <div className="flex min-h-[calc(100dvh-4.5rem)] flex-col gap-3">
+      {/* The open part */}
       {activeGroup && (
-        <div className="transition-opacity duration-200">
+        <div className="flex-1 transition-opacity duration-200">
           {renderGroupBlock(activeGroup, onReviewComplete, activePartIndex)}
         </div>
       )}
 
-      {/* 3. CBT / DTM Question Palette & Stepper Controls */}
-      <Card
+      {/* One slim bar: parts, the open part's questions and the stepper controls (two rows on phones). */}
+      <div
+        data-runner-bottom
         className={cn(
-          "sticky bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-30 border p-2 sm:p-4 backdrop-blur-xl",
-          isDtm
-            ? "border-border-strong bg-surface"
-            : "border-border/80 bg-surface/95"
+          "sticky bottom-0 z-30 -mx-4 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:mx-0 sm:rounded-t-[12px] sm:border-x sm:px-3",
+          isDtm ? "border-border-strong bg-surface" : "border-border/80 bg-surface/95",
         )}
       >
-        <nav className="space-y-2 sm:space-y-3" aria-label={t("navigatorLabel")}>
+        <nav className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-3" aria-label={t("navigatorLabel")}>
           {/* Screen readers hear which question is open and its state. */}
           {activeQuestion && (
             <p className="sr-only" aria-live="polite" aria-atomic="true">
@@ -269,199 +287,141 @@ export function CbtSectionStepper({
               {flaggedQuestions.has(activeQuestion.id) ? `, ${t("stateFlagged")}` : ""}
             </p>
           )}
-          {/* Question Palette Row */}
-          {flattenedQuestions.length > 0 && (
-            <div>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-fg-muted">
-                <span className="font-semibold uppercase tracking-wider text-[11px] text-fg">
-                  {t("palette")} (
-                  {
-                    flattenedQuestions.filter((q) =>
-                      multilevelQuestionAnswered(q, answers, audioSet)
-                    ).length
-                  }
-                  /{flattenedQuestions.length})
-                </span>
-                <button
-                  type="button"
-                  className="min-h-[36px] rounded-md px-2 text-[12px] font-semibold text-brand sm:hidden"
-                  aria-expanded={paletteExpanded}
-                  aria-controls="question-palette-grid"
-                  onClick={() => setPaletteExpanded((value) => !value)}
-                >
-                  {paletteExpanded ? t("paletteShowLess") : t("paletteShowAll")}
-                </button>
-                <div className="hidden sm:flex flex-wrap items-center gap-3 text-[11px]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-brand " />
-                    {t("legendAnswered")}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-warning " />
-                    {t("legendFlagged")}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-full bg-border-strong border border-border" />
-                    {t("legendUnanswered")}
-                  </span>
-                </div>
-              </div>
 
-              {/* Palette: one swipeable row on phones, wrapping grid on larger screens */}
-              <div
-                ref={paletteRef}
-                onScroll={refreshPaletteHint}
-                data-testid="question-palette"
-                id="question-palette-grid"
-                className={cn(
-                  "relative flex flex-wrap gap-1.5 overflow-y-auto overscroll-contain px-0.5 py-1 pr-1 sm:max-h-24",
-                  // Phones: one row by default so the palette never covers the question; expand on demand.
-                  paletteExpanded ? "max-h-[7.25rem]" : "max-h-[2.85rem]",
-                )}
-                role="toolbar"
-                aria-label={t("palette")}
-                onKeyDown={onPaletteKeyDown}
-                onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setRovingIndex(null); }}
-              >
-                {flattenedQuestions.map((q, index) => {
-                  const isAns = multilevelQuestionAnswered(q, answers, audioSet);
-                  const isFlag = flaggedQuestions.has(q.id);
-                  const isCurrent = q.id === activeQuestionId;
-                  const isCurrentPart = q.groupIndex === activePartIndex;
-
-                  return (
-                    <button
-                      key={q.id}
-                      type="button"
-                      onClick={() => jumpToQuestion(q)}
-                      tabIndex={index === tabStop ? 0 : -1}
-                      aria-current={isCurrent ? "true" : undefined}
-                      aria-label={`${t("questionLabel", { label: q.label, part: q.groupTitle })}, ${
-                        isAns ? t("stateAnswered") : t("stateNotAnswered")
-                      }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
-                      title={`${t("questionLabel", { label: q.label, part: q.groupTitle })}${
-                        isAns ? ` - ${t("stateAnswered")}` : ""
-                      }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
+          {safeGroups.length > 1 && !focus && (
+            <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto md:max-w-[50%]" role="tablist" aria-label={t("partsLabel")}>
+              {partStats.map((part, idx) => {
+                const isActive = idx === activePartIndex;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-label={`${part.label}: ${part.answeredCount}/${part.totalCount}`}
+                    title={part.label}
+                    onClick={() => setActivePartIndex(idx)}
+                    className={cn(
+                      "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors touch-manipulation",
+                      isActive ? "bg-brand text-brand-fg" : "text-fg-muted hover:bg-surface-hover hover:text-fg",
+                    )}
+                  >
+                    <span>{part.shortLabel}</span>
+                    <span
                       className={cn(
-                        "relative flex size-9 sm:size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all tabular-nums touch-manipulation",
-                        isCurrent &&
-                          "ring-2 ring-brand ring-offset-2 ring-offset-bg font-black scale-105",
-                        isDtm
-                          ? isFlag
-                            ? "bg-warning text-slate-950 border border-warning shadow-xs"
-                            : isAns
-                            ? "bg-brand text-brand-fg border border-brand shadow-xs"
-                            : "bg-surface-hover text-fg-muted border border-border-strong"
-                          : isFlag
-                          ? "bg-warning/25 text-warning ring-1 ring-warning"
-                          : isAns
-                          ? "bg-brand text-brand-fg shadow-sm"
-                          : isCurrentPart
-                          ? "bg-bg-subtle text-fg border border-border/80 hover:bg-surface-hover"
-                          : "bg-surface text-fg-muted border border-border/40 hover:text-fg"
+                        "flex items-center gap-0.5 rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+                        isActive ? "bg-black/20 text-brand-fg dark:bg-fg/25" : "bg-bg-subtle text-fg-muted",
                       )}
                     >
-                      {q.label}
-                      {isFlag && (
-                        <span
-                          className={cn(
-                            "absolute -top-1 -right-1 text-[9px] leading-none",
-                            isDtm ? "text-warning" : "text-warning"
-                          )}
-                        >
-                          ⚑
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {paletteHasMore && (
-                <p aria-hidden data-testid="palette-more" className="pt-0.5 text-center text-[11px] text-fg-muted">⌄ {t("scrollHint")}</p>
-              )}
+                      {part.isComplete ? <CheckCircle2 className="size-3" aria-hidden /> : null}
+                      {part.answeredCount}/{part.totalCount}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          {/* Previous / Flag / Next Stepper Controls */}
-          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2 sm:pt-2.5">
-            <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            {/* The open part's questions (wide screens); every question is in the sheet. */}
+            {partQuestions.length > 0 && !focus && (
+              <div
+                data-testid="part-palette"
+                className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto px-0.5 py-1 md:flex"
+                role="toolbar"
+                aria-label={t("partQuestions", { part: partStats[activePartIndex]?.label ?? "" })}
+                onKeyDown={onPaletteKeyDown}
+                onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setRovingId(null); }}
+              >
+                {partQuestions.map((q) => paletteButton(q, partTabStop))}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-haspopup="dialog"
+              aria-expanded={sheetOpen}
+              onClick={() => setSheetOpen(true)}
+              className="min-h-[40px] flex-1 justify-start gap-1.5 px-2.5 text-xs font-semibold md:flex-none"
+              title={t("allQuestions")}
+            >
+              <LayoutGrid className="size-4" aria-hidden />
+              <span className="md:sr-only">{t("allQuestions")}</span>
+              <span className="tabular-nums text-fg-muted">{answeredTotal}/{flattenedQuestions.length}</span>
+            </Button>
+            {activeQuestionId && (
               <Button
                 type="button"
-                variant="outline"
+                variant={currentFlagged ? "subtle" : "ghost"}
                 size="sm"
-                disabled={activePartIndex === 0}
-                onClick={() => {
-                  if (activePartIndex > 0)
-                    setActivePartIndex(activePartIndex - 1);
-                }}
-                className="min-h-[40px] px-3.5 text-xs font-medium touch-manipulation"
+                aria-pressed={currentFlagged}
+                aria-label={currentFlagged ? t("flagged") : t("flag")}
+                title={currentFlagged ? t("flagged") : t("flag")}
+                onClick={() => toggleFlag(activeQuestionId)}
+                className={cn(iconButton, currentFlagged ? "border border-warning/50 bg-warning/25 text-warning" : "text-fg-muted")}
               >
-                <ArrowLeft className="size-4 sm:mr-1.5" />
-                <span className="sr-only sm:not-sr-only">{t("previousPart")}</span>
+                <Flag className={cn("size-4", currentFlagged && "fill-warning text-warning")} aria-hidden />
               </Button>
-
-              {activeQuestionId && (
-                <Button
-                  type="button"
-                  variant={currentFlagged ? "subtle" : "ghost"}
-                  size="sm"
-                  onClick={() => toggleFlag(activeQuestionId)}
-                  className={cn(
-                    "min-h-[40px] px-3 text-xs font-medium transition-colors touch-manipulation",
-                    currentFlagged
-                      ? "bg-warning/25 text-warning border border-warning/50"
-                      : "text-fg-muted"
-                  )}
-                >
-                  <Flag
-                    className={cn(
-                      "size-3.5 sm:mr-1.5",
-                      currentFlagged && "fill-warning text-warning"
-                    )}
-                  />
-                  <span className="sr-only sm:not-sr-only">{currentFlagged ? t("flagged") : t("flag")}</span>
-                </Button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {activePartIndex < safeGroups.length - 1 ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setActivePartIndex(activePartIndex + 1)}
-                  className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
-                >
-                  {t("nextPart")}
-                  <ArrowRight className="ml-1.5 size-4" />
-                </Button>
-              ) : (
-                <>
-                  {isFullTest && !isLastSection && onNextSection ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={onNextSection}
-                      className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
-                    >
-                      {t("nextSection")} →
-                    </Button>
-                  ) : onSubmitSection ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={onSubmitSection}
-                      className="min-h-[40px] bg-brand text-brand-fg px-4 text-xs font-semibold shadow hover:bg-brand-hover touch-manipulation"
-                    >
-                      {t("submitSection")}
-                    </Button>
-                  ) : null}
-                </>
-              )}
-            </div>
+            )}
+            <Button type="button" variant="outline" size="sm" className={iconButton} disabled={currentIndex <= 0} onClick={() => goTo(currentIndex - 1)} aria-label={t("previousQuestion")} title={t("previousQuestion")}>
+              <ArrowLeft className="size-4" aria-hidden />
+            </Button>
+            <Button type="button" variant="outline" size="sm" className={iconButton} disabled={onLastQuestion} onClick={() => goTo(currentIndex + 1)} aria-label={t("nextQuestion")} title={t("nextQuestion")}>
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+            {onLastPart && (isFullTest && !isLastSection && onNextSection ? (
+              <Button type="button" size="sm" onClick={onNextSection} className="min-h-[40px] bg-brand px-3 text-xs font-semibold text-brand-fg shadow hover:bg-brand-hover touch-manipulation">
+                {t("nextSection")} →
+              </Button>
+            ) : onSubmitSection ? (
+              <Button type="button" size="sm" onClick={onSubmitSection} className="min-h-[40px] bg-brand px-3 text-xs font-semibold text-brand-fg shadow hover:bg-brand-hover touch-manipulation">
+                {t("submitSection")}
+              </Button>
+            ) : null)}
           </div>
         </nav>
-      </Card>
+      </div>
+
+      {sheetOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setSheetOpen(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="question-sheet-title"
+            className="max-h-[75dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-2xl sm:max-w-2xl sm:rounded-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 id="question-sheet-title" className="text-sm font-semibold text-fg">
+                {t("palette")} ({answeredTotal}/{flattenedQuestions.length})
+              </h2>
+              <Button ref={sheetClose} type="button" variant="ghost" size="sm" className={iconButton} onClick={() => setSheetOpen(false)} aria-label={t("closePalette")}>
+                <X className="size-4" aria-hidden />
+              </Button>
+            </div>
+            {legend}
+            <div
+              data-testid="question-palette"
+              id="question-palette-grid"
+              className="mt-3 space-y-3"
+              role="toolbar"
+              aria-label={t("palette")}
+              onKeyDown={onPaletteKeyDown}
+              onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setRovingId(null); }}
+            >
+              {partStats.map((part, idx) => (
+                <section key={idx} aria-label={part.label}>
+                  <p className="mb-1.5 text-xs font-semibold text-fg-muted">{part.label} · {part.answeredCount}/{part.totalCount}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {flattenedQuestions.filter((q) => q.groupIndex === idx).map((q) => paletteButton(q, sheetTabStop, () => setSheetOpen(false)))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

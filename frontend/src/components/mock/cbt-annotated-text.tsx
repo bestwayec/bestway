@@ -29,6 +29,17 @@ interface CbtAnnotatedTextProps {
 }
 
 export const CBT_ANNOTATIONS_UPDATED_EVENT = "cbt-annotations-updated";
+/** Sent by the exam toolbar's Highlight button: the text that holds the current selection highlights it. */
+export const CBT_HIGHLIGHT_SELECTION_EVENT = "cbt-highlight-selection";
+export type CbtHighlightRequest = { handled: boolean };
+
+/** Asks the annotated text that holds the selection to highlight it; true when one did. */
+export function highlightCurrentSelection(): boolean {
+  if (typeof window === "undefined") return false;
+  const request: CbtHighlightRequest = { handled: false };
+  window.dispatchEvent(new CustomEvent<CbtHighlightRequest>(CBT_HIGHLIGHT_SELECTION_EVENT, { detail: request }));
+  return request.handled;
+}
 
 function loadAnnotations(key: string): CbtAnnotations {
   if (typeof window === "undefined") {
@@ -243,6 +254,24 @@ export function CbtAnnotatedText({
     },
     [storageKey]
   );
+
+  // The toolbar's Highlight button: highlight the selection when it lies in this text.
+  React.useEffect(() => {
+    const onHighlight = (event: Event) => {
+      const request = (event as CustomEvent<CbtHighlightRequest>).detail;
+      const selection = window.getSelection();
+      const container = containerRef.current;
+      if (!request || request.handled || !selection || selection.isCollapsed || !container || !container.contains(selection.anchorNode)) return;
+      const selected = selection.toString().trim();
+      if (selected.length < 2) return;
+      request.handled = true;
+      updateAnnotations((prev) => (prev.highlights.includes(selected) ? prev : { ...prev, highlights: [...prev.highlights, selected] }));
+      selection.removeAllRanges();
+      setMenu(null);
+    };
+    window.addEventListener(CBT_HIGHLIGHT_SELECTION_EVENT, onHighlight);
+    return () => window.removeEventListener(CBT_HIGHLIGHT_SELECTION_EVENT, onHighlight);
+  }, [updateAnnotations]);
 
   const handleSelection = React.useCallback(() => {
     if (typeof window === "undefined") return;

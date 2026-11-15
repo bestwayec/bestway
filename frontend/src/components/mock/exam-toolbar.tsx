@@ -48,28 +48,28 @@ function Choice<T extends string>({ name, value, options, label, onChange }: { n
  * Settings, Help and Hide for the exam window (as in IELTS on computer). Hide covers the
  * questions but never stops the clock; the remaining time stays visible.
  */
-export function ExamToolbar({
-  settings,
-  onChange,
-  questionTypes,
-  timeLeft,
-}: {
+export type ExamToolbarHandle = { open: (panel: "settings" | "help") => void; hide: () => void };
+
+export const ExamToolbar = React.forwardRef<ExamToolbarHandle, {
   settings: ExamSettings;
   onChange: (next: ExamSettings) => void;
   questionTypes: string[];
   timeLeft: string | null;
-}) {
+  /** Classes for the icon buttons' group (e.g. hidden on phones, where a menu opens the same panels). */
+  iconsClassName?: string;
+}>(function ExamToolbar({ settings, onChange, questionTypes, timeLeft, iconsClassName }, ref) {
   const t = useTranslations("mock.examTools");
   const [open, setOpen] = React.useState<null | "settings" | "help">(null);
   const [hidden, setHidden] = React.useState(false);
+  React.useImperativeHandle(ref, () => ({ open: (panel) => setOpen(panel), hide: () => setHidden(true) }), []);
   const resume = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => { if (hidden) resume.current?.focus(); }, [hidden]);
   const helpTypes = HELP_TYPES.filter((type) => questionTypes.some((q) => helpTypeOf(q) === type));
 
-  const iconButton = "min-h-[44px] min-w-[44px] px-2.5";
+  const iconButton = "min-h-[40px] min-w-[40px] px-2";
   return (
     <>
-      <div className="flex items-center gap-1" role="group" aria-label={t("toolsLabel")}>
+      <div className={cn("flex items-center gap-1", iconsClassName)} role="group" aria-label={t("toolsLabel")}>
         <Button size="sm" variant="ghost" className={iconButton} onClick={() => setOpen("settings")} aria-label={t("settings")} title={t("settings")}>
           <Settings2 className="size-4" aria-hidden />
         </Button>
@@ -141,4 +141,4 @@ export function ExamToolbar({
       )}
     </>
   );
-}
+});

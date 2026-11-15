@@ -33,7 +33,10 @@ let host: HTMLDivElement;
 let root: Root;
 const tick = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
 const buttons = () => [...host.querySelectorAll('button')];
-const flagButton = () => buttons().find((b) => /^(flag|flagged)$/.test((b.textContent ?? '').trim()))!;
+const flagButton = () => buttons().find((b) => /^(flag|flagged)$/.test(b.getAttribute('aria-label') ?? ''))!;
+const notesButton = () => buttons().find((b) => (b.getAttribute('aria-label') ?? '').startsWith('notesButton'))!;
+// Flags and the save state's details sit in the Info panel.
+const openInfo = async () => { await act(async () => { buttons().find((b) => b.getAttribute('aria-label') === 'infoTitle')!.click(); }); };
 async function mount(annotations: unknown[] = []) {
   hooks.exam = {
     id: 'exam', title: 'Workspace', type: 'ielts_academic', questionCount: 2,
@@ -73,8 +76,9 @@ type Doc = { annotations: Array<Record<string, unknown>> };
 describe('exam workspace kept with the attempt', () => {
   it('restores flags, highlights and notes from the server when the exam opens', async () => {
     await mount(serverDoc);
+    await openInfo();
     expect(host.textContent).toContain('flaggedCount:{"count":1}');
-    expect(host.textContent).toContain('notesButton:{"count":1}');
+    expect(notesButton().getAttribute('aria-label')).toBe('notesButton:{"count":1}');
     expect(JSON.parse(localStorage.getItem('bestway.cbt_annotations.att.g1.passage')!).highlights).toEqual(['blue']);
     expect(hooks.put).not.toHaveBeenCalled();
   });
@@ -95,7 +99,7 @@ describe('exam workspace kept with the attempt', () => {
 
   it('a note is deleted only after confirming, and the deletion is sent to the server', async () => {
     await mount(serverDoc);
-    await act(async () => { buttons().find((b) => b.textContent?.startsWith('notesButton'))!.click(); });
+    await act(async () => { notesButton().click(); });
     const panel = () => host.querySelector('[data-testid="exam-notes-panel"]')!;
     const click = async (label: string) => { await act(async () => { [...panel().querySelectorAll('button')].find((b) => b.textContent === label)!.click(); }); };
     expect(panel().textContent).toContain('weather words');
@@ -123,6 +127,7 @@ describe('exam workspace kept with the attempt', () => {
     localStorage.setItem('bw_workspace_flags_att', JSON.stringify(['q1']));
     localStorage.setItem('bw_workspace_edited_att', String(Date.parse('2026-11-13T09:59:30Z')));
     await mount(serverDoc);
+    await openInfo();
     expect(host.textContent).toContain('flaggedCount:{"count":1}');
     await tick(0);
     const body = hooks.put.mock.calls[0][1] as Doc;

@@ -1155,7 +1155,21 @@
       "splitValue": "Matn {passage}%, savollar {questions}%",
       "questionsRegion": "Savollar",
       "listeningResume": "Tinglashni davom ettirish",
-      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi."
+      "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi.",
+      "sectionsLabel": "Bo'limlar",
+      "infoTitle": "Imtihon ma'lumoti",
+      "toolsLabel": "Imtihon asboblari",
+      "toolsHint": "So'zlarni belgilab, ularni ajratib qo'ying yoki izoh qo'shing. Belgilar va izohlar urinish bilan saqlanadi.",
+      "highlight": "Ajratib ko'rsatish",
+      "highlightHint": "Avval matn yoki savoldagi so'zlarni belgilang, so'ng «Ajratib ko'rsatish»ni bosing.",
+      "vocab": "So'z lug'ati",
+      "focus": "Diqqat rejimi",
+      "clearAnswers": "Javoblarni tozalash",
+      "clearTitle": "{section} javoblari tozalansinmi?",
+      "clearBody": "Bu bo'limdagi {count, plural, one {# ta javob} other {# ta javob}} o'chiriladi. Yozuvlar va boshqa bo'limlar o'zgarmaydi. Buni qaytarib bo'lmaydi.",
+      "clearCancel": "Javoblarim qolsin",
+      "clearConfirm": "Javoblarni tozalash",
+      "clearDone": "{count, plural, one {# ta javob} other {# ta javob}} tozalandi"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1275,7 +1289,12 @@
       "paletteShowAll": "Hammasini ko‘rsatish",
       "paletteShowLess": "Kamroq ko‘rsatish",
       "navigatorLabel": "Savollar bo‘yicha harakat",
-      "announceQuestion": "{label}-savol, jami {total} ta, {state}"
+      "announceQuestion": "{label}-savol, jami {total} ta, {state}",
+      "previousQuestion": "Oldingi savol",
+      "nextQuestion": "Keyingi savol",
+      "allQuestions": "Barcha savollar",
+      "partQuestions": "{part} savollari",
+      "closePalette": "Yopish"
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1542,7 +1561,17 @@
     "gradeDraftKept": "Saqlanmagan — shu qurilmada turibdi",
     "gradeKeyboardHint": "Alt+↓ / Alt+↑: keyingi / oldingi baho",
     "liveSpeakingNote": "Yozuv yo‘q — jonli speaking. Suhbat bo‘yicha Fluency & Coherence, Lexical Resource, Grammar va Pronunciation mezonlarini kiriting; ball mezonlardan hisoblanadi.",
-    "feedbackButton": "Batafsil tahlil"
+    "feedbackButton": "Batafsil tahlil",
+    "vocab": {
+      "title": "So'z: {word}",
+      "close": "Yopish",
+      "loading": "Qidirilmoqda…",
+      "error": "Lug'atga ulanib bo'lmadi. Qayta urinib ko'ring.",
+      "unknown": "Bu so'z hali maktab lug'atida yo'q.",
+      "save": "So'zlarimga qo'shish",
+      "saved": "So'zlarimga qo'shildi",
+      "saveError": "So'zni qo'shib bo'lmadi. Qayta urinib ko'ring."
+    }
   },
   "wizard": {
     "title": "Imtihon yaratish",
