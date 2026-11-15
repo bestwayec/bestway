@@ -224,7 +224,30 @@ Notes:
 - `backend-django/apps/core/views.py` had `\r\r\n` line endings on main; #138 normalised them (large diff, no logic change).
 - Local container notes: e2e needs `BW_CHROMIUM=/opt/pw-browsers/chromium`, `BW_WEB=http://localhost:3300`; Next (Turbopack) rejects a symlinked `node_modules` in a git worktree — use a real copy (`cp -al`). smoke step 07 can time out once on a cold dev compile.
 
+## IELTS + UI PROGRAM (owner brief 2026-11-14: IELTS next level + UI + desktop UI)
+
+Owner decisions: (1) IELTS numbering restarts at 1 in every section, display only (stored ids/numbers, answer mapping, scoring, existing attempts unchanged; Multilevel unchanged); (2) IELTS window shows the server countdown of the current section (per part for the practice part timer — S4); (3) #169 AI grading NOT decided — not implemented; (4) bw-tauri #30 closed as superseded by #32.
+
+| Step | Status | PRs / merge SHA | Evidence |
+|---|---|---|---|
+| S0 landing honesty + mixed language | DONE | #170 → c533951 | No version badge, no fake QR, no "official"/AI claims (certificate dialog, placement); Uzbek on English pages moved to keys; guard spec extended |
+| S2 IELTS numbering + timer | DONE | #171 → e2ae0b4, #174 → af405f9 | `displayNumber` per section; builder checks per section (Reading editor fixed in #174, found by full-journey); section deadline in the IELTS window, timeout advances to the next section; render-loop fix (CI had hung) |
+| S1 runner + catalogue + result | DONE | #173 → 04d8a48, #172 → fccdc94 | Content share 1366×768: Reading 48%→85%, Listening 13%→85%; 1440×900 87%; 390×844 81%; 360×640 75% (`runner-layout.mjs`, light+dark). Catalogue segmented track switch, ≤2 badges, per-section start; result table All/Wrong/Unanswered (`ui-screens.mjs`, 4 viewports × 2 themes, no overflow) |
+| S3 review explains mistakes | NOT STARTED | — | |
+| S4 practice mode | NOT STARTED | — | |
+| S5 next-level touches | NOT STARTED | — | only after S1–S4 |
+| S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
+
+Screenshots (synthetic accounts and exams, 1366×768 / 1440×900 / 390×844 / 360×640, light and dark): `docs/agent/screens/ielts-ui-s1/` (runner Reading, catalogue, result).
+Checks on main fccdc94 (2026-11-15): pytest 1185 passed / 4 skipped; vitest 754/754; tsc 0; lint 0 errors; next build ok. Local E2E on the merged code: ielts-full 9/9, multilevel-full 16/16, smoke 16/16, full-journey 13/13, exam-workspace 20/20 (BW_IELTS_EXAM = the ielts-full exam; the seeded `ielts-academic-mock-01` is not in this local DB), mobile-listening 14/16.
+UNVERIFIED: mobile-listening 02 (Record Mock not in the student's current-track catalogue in this local DB) and 10 (microphone dialog step; not changed in this program); all-roles crawl and axe not re-run this session.
+No migrations in S0–S2/S1. Deploy-safe SHA: fccdc94 once its main CI run is green.
+
 ## NEXT STEP
+
+IELTS + UI PROGRAM: S3 (review that explains mistakes: Listening audioscript highlight + play-from-here in review only, Reading evidence highlight, per-type accuracy and trend, builder fields for evidence/timestamps, no N+1) → S4 practice mode (Uzbek report after S4) → S5 → S6 (bw-tauri PR only).
+
+Earlier:
 
 The exam program (docs/agent/EXAM_PROGRAM.md) is the active track; phase 3 is closed (main part), its NEXT STEP is phase 4: first the phase 3 leftovers (Builder templates + publish conformity UI, full Builder → student → teacher → result E2E for Multilevel and IELTS, Multilevel Speaking flow and teacher per-part grading, IELTS Speaking modes), then AI assessment.
 1. PHASE 4 (see the section above): phases 1–3 are merged (#138–#159). Next: merge #167 → P5 (IELTS E2E + Speaking modes) → P6 desktop → P7 AI grading plan; earlier text: P2 Multilevel full E2E → P3 → P4 → P5 → P6 desktop → P7 AI grading plan.
