@@ -1423,7 +1423,10 @@
       "gradingProgram": "Program:",
       "gradingProgramAll": "All programs",
       "gradingProgramLabel": "Filter submissions by exam program",
-      "gradingLoadFailed": "Submissions could not be loaded."
+      "gradingLoadFailed": "Submissions could not be loaded.",
+      "startSectionGroup": "Start one section",
+      "startSection": "Start {skill} only",
+      "sectionNotReady": "This section is not ready yet"
     },
     "deviceCheck": {
       "intro": "Optional: check your connection, sound and microphone on this device before you start.",
@@ -1542,7 +1545,26 @@
     "gradeDraftKept": "Unsaved — kept on this device",
     "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade",
     "liveSpeakingNote": "No recording — live speaking. Enter Fluency & Coherence, Lexical Resource, Grammar and Pronunciation from the interview; the score follows the criteria.",
-    "feedbackButton": "Detailed feedback"
+    "feedbackButton": "Detailed feedback",
+    "resultTable": {
+      "correctOf": "{correct} of {total} correct",
+      "filterLabel": "Show questions",
+      "filter_all": "All ({count})",
+      "filter_wrong": "Wrong ({count})",
+      "filter_unanswered": "Unanswered ({count})",
+      "empty_all": "No questions in this section.",
+      "empty_wrong": "No wrong answers here.",
+      "empty_unanswered": "Every question has an answer.",
+      "question": "Question",
+      "yourAnswer": "Your answer",
+      "key": "Correct answer",
+      "mark": "Mark",
+      "noAnswer": "No answer",
+      "state_correct": "Correct",
+      "state_wrong": "Wrong",
+      "state_unanswered": "Not answered",
+      "state_pending": "Not marked yet"
+    }
   },
   "wizard": {
     "title": "Create exam",
