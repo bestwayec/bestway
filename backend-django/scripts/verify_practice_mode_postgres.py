@@ -8,7 +8,6 @@ recorded on the attempt. Everything created is removed.
 import os
 import sys
 import wave
-from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlparse
