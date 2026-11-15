@@ -44,6 +44,7 @@ from .mock_attempt_views import (
     cheat_view,
     detail_view,
     mine_view,
+    type_accuracy_view,
     play_view,
     prepare_view,
     speaking_audio_view,
@@ -63,7 +64,7 @@ from .mock_import_views import (
     stage_import_media_view,
     validate_import_view,
 )
-from .mock_media import group_audio_view, group_image_view, group_media_view
+from .mock_media import group_audio_view, group_image_view, group_media_view, review_audio_view
 from .views import (
     desktop_authorize_view,
     desktop_exchange_view,
@@ -215,6 +216,7 @@ urlpatterns = [
     path('mock/exams/<str:exam_id>/start', start_view),
     path('mock/attempts/start', start_view),
     path('mock/attempts/start/', start_view),
+    path('mock/attempts/mine/type-accuracy', type_accuracy_view),
     path('mock/attempts/mine', mine_view),
     path('mock/item-bank', item_bank_view),
     path('mock/attempts/<str:attempt_id>', detail_view),
@@ -229,6 +231,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/writing/<str:question_id>/ocr', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing/<str:question_id>/ocr/', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/answers/<str:question_id>/audio', speaking_audio_view),
+    path('mock/attempts/<str:attempt_id>/review/audio/<str:group_id>', review_audio_view),
     path('mock/attempts/<str:attempt_id>/answer', answer_view),
     path('mock/attempts/<str:attempt_id>/answer/', answer_view),
     path('mock/attempts/<str:attempt_id>/save-answer', answer_view),

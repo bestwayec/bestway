@@ -288,6 +288,11 @@ def stream_media(request, group_id, kind):
             raise ContractAPIException('MOCK_PURCHASE_PENDING', 'Xaridingiz tasdiqlanishini kuting', 402)
         if access != 'granted':
             raise ContractAPIException('MOCK_PAYMENT_REQUIRED', "Bu imtihon uchun to'lov talab qilinadi", 402)
+    return _stream_key(request, key, kind)
+
+
+def _stream_key(request, key, kind):
+    """Streams a stored media file with HTTP range support."""
     path = resolve_key(key)
     size = path.stat().st_size
     content_type = {'.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.mp4': 'audio/mp4', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.aac': 'audio/aac'}.get(path.suffix.lower(), 'audio/mpeg') if kind == 'audio' else 'image/*'
@@ -338,3 +343,32 @@ def group_audio_view(request, group_id):
 @authentication_classes([OptionalMockJWTAuthentication])
 def group_image_view(request, group_id):
     return stream_media(request, group_id, 'image')
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def review_audio_view(request, attempt_id, group_id):
+    """The Listening recording for reviewing a released result ("play from here").
+
+    Only the attempt's own viewers (assert_view), only once the result is released, only a
+    part of that attempt's exam, and never while the student has an attempt of the same
+    exam in progress (review must not replay the audio of a running exam)."""
+    from .mock_attempts import assert_view
+    from .mock_catalog import is_staff
+    actor = request.user
+    attempt = MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
+    if attempt is None:
+        raise ContractAPIException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
+    assert_view(actor, attempt.student_id)
+    group = _group_or_throw(group_id)
+    if group.section.exam_id != attempt.exam_id or group.section.skill != 'listening':
+        raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
+    if not is_staff(actor):
+        if attempt.status != 'completed':
+            raise ContractAPIException('REVIEW_NOT_AVAILABLE', 'The review opens when the result is released', 403)
+        if MockAttempt.objects.filter(student_id=attempt.student_id, exam_id=attempt.exam_id, status='in_progress').exists():
+            raise ContractAPIException('REVIEW_BLOCKED_DURING_ATTEMPT', 'Finish the attempt in progress before reviewing this recording', 403)
+    if not group.audio_key or not resolve_key(group.audio_key).is_file():
+        raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)
+    return _stream_key(request, group.audio_key, 'audio')
+

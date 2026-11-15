@@ -336,6 +336,28 @@ def mine_view(request):
     return Response(dict(success=True, data=wire(data), meta=meta))
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def type_accuracy_view(request):
+    """The student's accuracy per question type over their latest released results."""
+    student(request)
+    query = dict(request.query_params.items())
+    extra = next((k for k in query if k not in {'program', 'limit'}), None)
+    if extra:
+        engine.fail('VALIDATION_ERROR', f'property {extra} should not exist')
+    program = query.get('program')
+    if program is not None and program not in ('IELTS', 'MULTILEVEL'):
+        engine.fail('VALIDATION_ERROR', 'program must be one of the following values: IELTS, MULTILEVEL')
+    try:
+        limit = int(query.get('limit', 10))
+        if not 1 <= limit <= 30:
+            raise ValueError
+    except ValueError:
+        engine.fail('VALIDATION_ERROR', 'limit must be an integer from 1 to 30')
+    from .type_accuracy import type_accuracy
+    return success(wire(type_accuracy(request.user.id, program, limit)))
+
+
 @api_view(['GET','DELETE'])
 @permission_classes([AllowAny])
 def detail_view(request, attempt_id):

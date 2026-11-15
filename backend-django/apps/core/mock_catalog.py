@@ -108,6 +108,8 @@ def shape_question(question, answers: bool):
         value['options'] = ['NOT GIVEN' if canonical_decision(o) == 'NOT_GIVEN' else canonical_decision(o) for o in value['options']]
     if answers:
         value.update({"correctAnswers": question.correct_answers if isinstance(question.correct_answers, list) else None, "acceptedVariants": question.accepted_variants if isinstance(question.accepted_variants, list) else None})
+        from .review_evidence import authoring_fields
+        value.update(authoring_fields(question))
     return value
 
 
