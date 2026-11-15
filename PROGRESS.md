@@ -11,7 +11,11 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 - **Sabab (dalil bilan)**: prod nginx loglarida (13-okt – 15-noy) submit hech qachon 502 bermagan; nginx 600 s, gunicorn 120 s, Next proksi esa 8 s timeout — 502 faqat proksidan keladi. Submit qator qulfi ostida har javobga alohida UPDATE (97 so'rovdan 71 tasi), har speaking yozuvini SHA-256 bilan o'qish, job/bildirishnoma, yakunlangan urinishda sinxron Telegram post (40 s timeout) va web jarayon ichida AI tick'ni bajarardi; takroriy bosish hammasini qaytadan qilardi.
 - **Tuzatish**: submit faqat deterministik natijani saqlaydi (69 ms / 18 so'rov); og'ir ish `SubmissionHandoff` outbox orqali javobdan keyin, aynan bir marta; takroriy Finish saqlangan holatni darhol qaytaradi; qolib ketgan hand-off'ni assessment-worker oladi; proksi Finish uchun 30 s.
 - **Yuklama testi**: `verify_finish_load_postgres.py` — 30 parallel Finish 201, 30 takroriy 201, 60 job (dublikat yo'q). 4 slotda: oldin max 3.8 s, keyin 2.1 s.
-- **Holat**: lokal testlar va E2E (exam-window 12/12, ielts-full 10/10) o'tdi; deploy qilinmagan (deployda `manage.py migrate` core.0010 ni qo'llaydi).
+- **Holat**: PR #184 merge qilindi (91ffbec), CI yashil. 2026-11-15 prod'ga deploy qilindi: `buildCommit` 91ffbec, bestwayec.uz va api 200, core.0010 migratsiyasi qo'llandi, deploydan keyin 5xx yo'q. Deploy 0b6073a dan keyingi barcha PR'larni (#103–#184) chiqardi.
+
+## Keyingi qadamlar
+- Record Mock: prod'da faqat 8 s placeholder WAV bor — haqiqiy Listening audio `media/exams/record_mock_1/` ga qo'yilmaguncha imtihon nashr qilinmaydi.
+- Birinchi haqiqiy guruh imtihonidan keyin `SubmissionHandoff` jadvalida `done_at IS NULL` qatorlar qolmaganini tekshirish.
 
 ### 21-BLOK: Android video audit (10-noyabr) — P1–P6, branch'lar `fix/p1…p5`, `fix/extras…`
 Video qo'lda ko'rilmadi; kuzatuvlar gipoteza sifatida kod va lokal muhitda qayta tekshirildi. Deploy qilinmagan.
