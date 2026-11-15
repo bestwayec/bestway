@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duplicateNumberErrors, examClientChecks } from "./checks";
+import { duplicateNumberErrors, examClientChecks, isDuplicateNumber } from "./checks";
 import type { MockSection } from "@/lib/types";
 
 const q = (id: string, number: number) => ({ id, number, sortOrder: number, type: "multiple_choice", prompt: `Q${number}`, options: ["a", "b"], correctAnswers: ["a"], points: 1 });
@@ -17,5 +17,11 @@ describe("IELTS numbering restarts in every section (owner decision)", () => {
     const sections = [section("listening", "L", [[1, 2]]), section("reading", "R", [[1, 2], [3]])];
     expect(duplicateNumberErrors(sections, "R-g1", [3, 4])).toEqual([]);
     expect(duplicateNumberErrors(sections, "R-g1", [2])).toHaveLength(1);
+  });
+  it("marks a question as a duplicate only within its own section (Reading 1 next to Listening 1)", () => {
+    const sections = [section("listening", "L", [[1, 2]]), section("reading", "R", [[1], [5]])];
+    expect(isDuplicateNumber(sections, "R-g0", [1], 1)).toBe(false);
+    expect(isDuplicateNumber(sections, "R-g1", [1], 1)).toBe(true);
+    expect(isDuplicateNumber(sections, "R-g0", [1, 1], 1)).toBe(true);
   });
 });

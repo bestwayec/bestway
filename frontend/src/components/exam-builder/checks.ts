@@ -207,7 +207,9 @@ export function isDuplicateNumber(
   numbers: number[],
   n: number,
 ): boolean {
-  for (const s of sections)
+  // Like duplicateNumberErrors: only the block's own section counts (every section starts at 1).
+  const own = sections.find((s) => s.groups.some((g) => g.id === groupId));
+  for (const s of own ? [own] : sections)
     for (const g of s.groups) {
       if (g.id === groupId) continue;
       if (g.questions.some((x) => x.number === n)) return true;
