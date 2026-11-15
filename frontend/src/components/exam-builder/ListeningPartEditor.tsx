@@ -52,6 +52,7 @@ function toBuilderPart(group: MockGroup): BuilderPart {
     title: group.title ?? "",
     instructions: group.instructions ?? "",
     passageText: group.passageText ?? "",
+    audioScript: group.audioScript ?? "",
     contentHtml: group.contentHtml ?? "",
     contentLayout: (group.contentLayout ?? undefined) as BuilderPart["contentLayout"],
     optionsReusable: group.optionsReusable ?? null,
@@ -73,6 +74,8 @@ function toBuilderPart(group: MockGroup): BuilderPart {
       points: q.points,
       wordLimit: q.wordLimit ?? undefined,
         answerRule: q.answerRule ?? null,
+      evidenceText: q.evidenceText ?? null,
+      audioStartSec: q.audioStartSec ?? null,
       savedQuestionId: q.id,
     })),
   };
@@ -118,6 +121,7 @@ export function ListeningPartEditor({
   onDirty: (d: boolean) => void;
 }) {
   const t = useTranslations("examBuilder");
+  const tr = useTranslations("reviewEvidence");
   const tc = useTranslations("common");
   const section = detail.sections.find((s) => s.id === sectionId);
   const group = section?.groups.find((g) => g.id === groupId);
@@ -234,12 +238,14 @@ export function ListeningPartEditor({
           contentLayout: p.contentLayout,
           optionsReusable: p.optionsReusable,
           partNumber: p.partNumber,
+          audioScript: (p.audioScript ?? "").trim(),
           audioDurationSec: p.audioDurationSec,
           audioPlayLimit: p.audioPlayLimit,
         },
         questions: p.questions.map((q) => ({ id: q.savedQuestionId, number: q.number, type: q.type, prompt: q.prompt,
           options: q.options, correctAnswers: q.correctAnswers, acceptedVariants: q.acceptedVariants,
-          points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule })),
+          points: q.points, wordLimit: q.wordLimit, answerRule: q.answerRule,
+          evidenceText: q.evidenceText, audioStartSec: q.audioStartSec })),
         deletedQuestionIds: persistedQuestionIds.current.filter((id) => !p.questions.some((local) => local.savedQuestionId === id)),
       });
       persistedQuestionIds.current = saved.questions.map((q) => q.id);
@@ -506,6 +512,17 @@ export function ListeningPartEditor({
               className="min-h-20"
               placeholder={tx(t, "instrHint", "e.g. Complete the notes below. Write ONE WORD AND/OR A NUMBER.")}
             />
+          </Field>
+          <Field label={tr("audioScriptLabel")} htmlFor="lp-script">
+            <Textarea
+              id="lp-script"
+              value={part.audioScript ?? ""}
+              onChange={(e) => update((p) => ({ ...p, audioScript: e.target.value }))}
+              className="min-h-24"
+              placeholder={tr("audioScriptPlaceholder")}
+              aria-describedby="lp-script-hint"
+            />
+            <p id="lp-script-hint" className="mt-1 text-xs text-fg-muted">{tr("audioScriptHint")}</p>
           </Field>
 
           <ListeningAudioCard
@@ -810,6 +827,8 @@ export function ListeningPartEditor({
                         question={q}
                         skill="listening"
                         allowedTypes={LISTENING_TYPES}
+                        reviewSource={part.audioScript ?? ""}
+                        audioDurationSec={group.audioDurationSec}
                         onChange={(next) =>
                           update((p) => ({
                             ...p,

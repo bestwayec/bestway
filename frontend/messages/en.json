@@ -1604,7 +1604,24 @@
       "state_correct": "Correct",
       "state_wrong": "Wrong",
       "state_unanswered": "Not answered",
-      "state_pending": "Not marked yet"
+      "state_pending": "Not marked yet",
+      "where": "Where is the answer?",
+      "whereFor": "Where is the answer to question {number}?"
+    },
+    "reviewExplain": {
+      "passageLabel": "Passage with the answer highlighted",
+      "scriptLabel": "Audioscript with the answer highlighted",
+      "recordingLabel": "Recording of this part",
+      "playFrom": "Play from {time}",
+      "noEvidence": "This question has no marked answer in the text."
+    },
+    "typeAccuracy": {
+      "title": "Accuracy by question type",
+      "subtitle": "Your latest results (Listening and Reading). Weakest first.",
+      "empty": "No released Listening or Reading result yet.",
+      "trendLabel": "Trend over your last results: {points}",
+      "attempts": "{count, plural, one {# result} other {# results}}",
+      "error": "Accuracy could not be loaded."
     }
   },
   "wizard": {
@@ -2834,5 +2851,24 @@
       "sortLow": "Score: lowest first",
       "studentCount": "{count, plural, one {# student} other {# students}}"
     }
+  },
+  "reviewEvidence": {
+    "legend": "Review: where is the answer?",
+    "hintReading": "Optional. Copy the words of the passage that give the answer. Students see them highlighted only after their result is released.",
+    "hintListening": "Optional. Copy the words of the audioscript that give the answer and the moment they are heard. Students see them only after their result is released.",
+    "evidenceLabel": "Words that give the answer",
+    "evidencePlaceholderReading": "e.g. the bridge was built in 1890",
+    "evidencePlaceholderListening": "e.g. it opens at nine on weekdays",
+    "evidenceEmpty": "Not set: the review shows no highlight for this question.",
+    "evidenceFound": "Found in the text.",
+    "evidenceMissing": "Not found in the text: copy the words exactly (spacing may differ).",
+    "noPassage": "Add the passage first.",
+    "noScript": "Add the audioscript of this part first.",
+    "heardAtLabel": "Heard at (m:ss)",
+    "heardAtHint": "Optional. The review offers “Play from here”.",
+    "heardAtInvalid": "Use m:ss within the recording ({length}).",
+    "audioScriptLabel": "Audioscript (review only)",
+    "audioScriptPlaceholder": "The words of the recording. Students never see it during the exam.",
+    "audioScriptHint": "Shown to students only after their result is released, with the answer highlighted where you marked it."
   }
 }

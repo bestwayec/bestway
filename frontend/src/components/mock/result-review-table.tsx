@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Check, Minus, X } from "lucide-react";
+import { Check, ChevronDown, Minus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import type { MockAttemptQuestion } from "@/lib/types";
+import type { MockAttemptGroup, MockAttemptQuestion, MockSkill } from "@/lib/types";
+import { ReviewExplain } from "./review-explain";
 
 export type ReviewFilter = "all" | "wrong" | "unanswered";
 
@@ -21,9 +22,14 @@ export function filterReviewRows(questions: MockAttemptQuestion[], filter: Revie
  * Auto-marked questions (Listening, Reading) as one compact table: number, question, the student's
  * answer, the key (only when the server sends it) and the mark. Filters: all, wrong, unanswered.
  */
-export function ResultReviewTable({ title, questions }: { title: string; questions: MockAttemptQuestion[] }) {
+export function ResultReviewTable({ title, skill, groups }: { title: string; skill: MockSkill; groups: MockAttemptGroup[] }) {
   const t = useTranslations("mock.resultTable");
   const [filter, setFilter] = React.useState<ReviewFilter>("all");
+  const questions = React.useMemo(() => groups.flatMap((g) => g.questions), [groups]);
+  const groupOf = React.useMemo(() => new Map(groups.flatMap((g) => g.questions.map((q) => [q.id, g] as const))), [groups]);
+  // The open "where is the answer" panel; a wrong answer with review material opens on click.
+  const [open, setOpen] = React.useState<string | null>(null);
+  const explainable = (q: MockAttemptQuestion) => Boolean(q.evidence) || q.audioStartSec != null;
   const counts: Record<ReviewFilter, number> = {
     all: questions.length,
     wrong: filterReviewRows(questions, "wrong").length,
@@ -69,14 +75,24 @@ export function ResultReviewTable({ title, questions }: { title: string; questio
                 <th scope="col" className="px-3 py-1.5 font-medium">{t("yourAnswer")}</th>
                 <th scope="col" className="px-3 py-1.5 font-medium">{t("key")}</th>
                 <th scope="col" className="w-12 px-3 py-1.5 font-medium"><span className="sr-only">{t("mark")}</span></th>
+                <th scope="col" className="w-10 px-2 py-1.5 font-medium"><span className="sr-only">{t("where")}</span></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((q) => {
                 const answered = answeredOf(q);
                 const state = q.isCorrect === true ? "correct" : !answered ? "unanswered" : q.isCorrect === false ? "wrong" : "pending";
+                const canExplain = explainable(q);
+                const isOpen = open === q.id;
+                const group = groupOf.get(q.id);
                 return (
-                  <tr key={q.id} id={`review-${q.id}`} data-review-state={state} className="border-b border-border/60 last:border-0 align-top">
+                  <React.Fragment key={q.id}>
+                  <tr
+                    id={`review-${q.id}`}
+                    data-review-state={state}
+                    className={cn("border-b border-border/60 last:border-0 align-top", canExplain && state !== "correct" && "cursor-pointer hover:bg-surface-hover")}
+                    onClick={canExplain && state !== "correct" ? () => setOpen(isOpen ? null : q.id) : undefined}
+                  >
                     <td className="px-3 py-1.5 font-semibold tabular-nums text-fg">{q.displayNumber ?? q.number}</td>
                     <td className="hidden max-w-[28rem] px-3 py-1.5 text-fg-muted sm:table-cell">
                       <span className="line-clamp-2" title={q.prompt}>{q.prompt}</span>
@@ -99,7 +115,30 @@ export function ResultReviewTable({ title, questions }: { title: string; questio
                         {state === "correct" ? <Check className="size-3.5" aria-hidden /> : state === "wrong" ? <X className="size-3.5" aria-hidden /> : <Minus className="size-3.5" aria-hidden />}
                       </span>
                     </td>
+                    <td className="px-2 py-1.5">
+                      {canExplain && (
+                        <button
+                          type="button"
+                          className="grid size-8 place-items-center rounded-md text-fg-muted hover:bg-surface-hover hover:text-fg"
+                          aria-expanded={isOpen}
+                          aria-controls={`review-explain-${q.id}`}
+                          aria-label={t("whereFor", { number: q.displayNumber ?? q.number })}
+                          title={t("where")}
+                          onClick={(event) => { event.stopPropagation(); setOpen(isOpen ? null : q.id); }}
+                        >
+                          <ChevronDown className={cn("size-4 transition-transform", isOpen && "rotate-180")} aria-hidden />
+                        </button>
+                      )}
+                    </td>
                   </tr>
+                  {isOpen && group && (
+                    <tr id={`review-explain-${q.id}`} className="border-b border-border/60">
+                      <td colSpan={6} className="px-3 pb-3">
+                        <ReviewExplain skill={skill} group={group} question={q} />
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </tbody>

@@ -734,6 +734,10 @@ export interface MockQuestion {
   payload?: Record<string, any>;
   correctAnswers?: string[] | null;
   acceptedVariants?: string[] | null;
+  /** Staff authoring only: review material (where the answer is). */
+  evidenceText?: string | null;
+  evidenceOffset?: number | null;
+  audioStartSec?: number | null;
 }
 
 export interface MockGroup {
@@ -922,6 +926,10 @@ export interface MockAttemptQuestion {
   feedback: string | null;
   rubricScores?: Record<string, number> | null;
   correctAnswers?: string[] | null;
+  /** Released review only: the words of the passage / audioscript that hold the answer. */
+  evidence?: { text: string; offset: number };
+  /** Released review only, Listening: where the answer is heard. */
+  audioStartSec?: number;
 }
 
 export interface MockAttemptGroup {
@@ -933,6 +941,9 @@ export interface MockAttemptGroup {
   contentLayout?: string | null;
   hasAudio: boolean;
   questions: MockAttemptQuestion[];
+  /** Released review only, Listening: the audioscript (plain text) and the review recording. */
+  audioScript?: string;
+  reviewAudioUrl?: string;
 }
 
 export interface MockAttemptSection {

@@ -57,6 +57,9 @@ const FILES = [
   "src/components/mock/vocab-lookup.tsx",
   "src/components/mock/result-review-table.tsx",
   "src/components/exam-track/exam-track-switch.tsx",
+  "src/components/mock/review-explain.tsx",
+  "src/components/mock/type-accuracy-card.tsx",
+  "src/components/mock/exam-builder/review-evidence-fields.tsx",
 ];
 
 /** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */

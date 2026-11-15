@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewEvidenceFields } from "./review-evidence-fields";
 import * as React from "react";
 import type { JSX } from "react";
 import { ArrowDown, ArrowUp, Mic, Plus, Trash2 } from "lucide-react";
@@ -1269,6 +1270,9 @@ export function QuestionEditor(props: {
   allowedTypes: MockQuestionType[];
   onChange: (q: BuilderQuestion) => void;
   onRemove: () => void;
+  /** Reading passage / Listening audioscript: enables the review fields (where the answer is). */
+  reviewSource?: string;
+  audioDurationSec?: number | null;
 }): JSX.Element {
   const { question, skill, allowedTypes, onChange, onRemove } = props;
   const t = useTranslations("wizard");
@@ -1410,6 +1414,10 @@ export function QuestionEditor(props: {
         allowedTypes={allowedTypes}
         onChange={onChange}
       />
+
+      {props.reviewSource !== undefined && (skill === "reading" || skill === "listening") && (
+        <ReviewEvidenceFields question={question} skill={skill} source={props.reviewSource} audioDurationSec={props.audioDurationSec} onChange={onChange} />
+      )}
 
       {/* Preview (always the student control, never the key) */}
       <div className="space-y-1.5">

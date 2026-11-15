@@ -14,11 +14,14 @@ vi.mock("next-intl", () => ({
   },
 }));
 import { filterReviewRows, ResultReviewTable } from "./result-review-table";
-import type { MockAttemptQuestion } from "@/lib/types";
+import type { MockAttemptGroup, MockAttemptQuestion } from "@/lib/types";
 
 const q = (n: number, response: string, isCorrect: boolean | null, key?: string[]) =>
   ({ id: `q${n}`, number: 40 + n, displayNumber: n, type: "short_answer", prompt: `Prompt ${n}`, response, isCorrect, correctAnswers: key }) as unknown as MockAttemptQuestion;
 const QUESTIONS = [q(1, "alpha", true, ["alpha"]), q(2, "beta", false, ["gamma"]), q(3, "", false, ["delta"]), q(4, "  ", false)];
+const PASSAGE = "Alpha was first. The answer to two is gamma, said the text. Delta came last.";
+(QUESTIONS[1] as { evidence?: unknown }).evidence = { text: "The answer to two is gamma", offset: PASSAGE.indexOf("The answer") };
+const GROUP = { id: "g1", title: "Passage 1", instructions: null, passageText: PASSAGE, hasAudio: false, questions: QUESTIONS } as unknown as MockAttemptGroup;
 
 describe("filterReviewRows", () => {
   it("keeps marked-wrong answers under Wrong and empty answers under Unanswered", () => {
@@ -34,7 +37,7 @@ describe("ResultReviewTable", () => {
   beforeEach(async () => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-    await act(async () => root.render(React.createElement(ResultReviewTable, { title: "Reading", questions: QUESTIONS })));
+    await act(async () => root.render(React.createElement(ResultReviewTable, { title: "Reading", skill: "reading", groups: [GROUP] })));
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
   const rows = () => [...host.querySelectorAll("tbody tr")];
@@ -56,5 +59,17 @@ describe("ResultReviewTable", () => {
     expect(rows()[1].textContent).toContain("No answer");
     expect(rows()[1].textContent).toContain("—");
     expect(button(/^Unanswered/).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("clicking a wrong answer shows where the answer is, highlighted in the passage", async () => {
+    expect(host.querySelector('[data-testid="review-explain"]')).toBeNull();
+    expect(rows()[0].querySelector("button[aria-expanded]")).toBeNull();          // nothing marked: no button
+    await act(async () => (rows()[1] as HTMLTableRowElement).click());
+    const mark = host.querySelector('[data-testid="review-evidence"]');
+    expect(mark?.textContent).toBe("The answer to two is gamma");
+    expect(host.querySelector('[role="region"]')?.textContent).toBe(PASSAGE);
+    expect(rows()[1].querySelector("button")?.getAttribute("aria-expanded")).toBe("true");
+    await act(async () => (rows()[1] as HTMLTableRowElement).click());
+    expect(host.querySelector('[data-testid="review-explain"]')).toBeNull();
   });
 });

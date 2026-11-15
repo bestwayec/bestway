@@ -22,6 +22,7 @@ import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSk
 import { cn } from "@/lib/utils";
 import { mayShowSectionBand } from "@/lib/score-display";
 import { ResultReviewTable } from "./result-review-table";
+import { TypeAccuracyCard } from "./type-accuracy-card";
 import { AssessmentPanel } from "./assessment-panel";
 import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
 import { CefrResultInfographic } from "./cefr-result-infographic";
@@ -325,13 +326,18 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
       )}
 
+      {/* Accuracy per question type over the student's own released results (real data only). */}
+      {!isStaff && attempt.status === "completed" && (
+        <div className="mt-6"><TypeAccuracyCard program={isIelts ? "IELTS" : "MULTILEVEL"} /></div>
+      )}
+
       {/* Savollar tahlili */}
       <div className="mt-6 space-y-4">
         {attempt.sections.map((s) => {
           const canGrade = isStaff && MANUAL_SKILLS.has(s.skill);
           // Auto-marked sections read as one compact table; Writing and Speaking keep their cards (audio, grading).
           if (!MANUAL_SKILLS.has(s.skill)) {
-            return <ResultReviewTable key={s.id} title={t(`skills.${s.skill}`)} questions={s.groups.flatMap((g) => g.questions)} />;
+            return <ResultReviewTable key={s.id} title={t(`skills.${s.skill}`)} skill={s.skill} groups={s.groups} />;
           }
           return (
             <div key={s.id}>
