@@ -1169,7 +1169,18 @@
       "clearBody": "{count, plural, one {# answer} other {# answers}} in this section will be removed. Recordings and other sections are not changed. This cannot be undone.",
       "clearCancel": "Keep my answers",
       "clearConfirm": "Clear answers",
-      "clearDone": "{count, plural, one {# answer} other {# answers}} cleared"
+      "clearDone": "{count, plural, one {# answer} other {# answers}} cleared",
+      "recTooShort": "This recording does not cover the required response time. Start a new response.",
+      "recClearFailed": "The invalid take could not be cleared locally. Keep this page open and retry.",
+      "recUploadFailed": "Audio upload failed. Your recording has been preserved.",
+      "recUploadFailedRetry": "Audio upload failed. Your recording has been preserved. Retry the upload.",
+      "recRecoveryUnavailable": "Saved recording recovery is unavailable. Keep this page open and retry the upload.",
+      "recFailed": "Recording failed. Check your microphone.",
+      "recInterrupted": "Recording was interrupted before its full response window completed. Start a new response.",
+      "recPersistFailed": "Could not persist the take locally. Keep this page open and retry upload.",
+      "recStartFailed": "Speaking response could not be started. Please try again.",
+      "recRetrySaved": "Retry upload of saved recording",
+      "recSupervisorRetry": "Contact your supervisor for a timed retry."
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1369,7 +1380,8 @@
         "insecure": "The microphone only works over a secure (https) connection. Open the site over https.",
         "unsupported": "This browser cannot record audio. Use a recent version of Chrome or Safari.",
         "default": "Something went wrong with the microphone. Try again.",
-        "other": "Something went wrong with the microphone. Try again."
+        "other": "Something went wrong with the microphone. Try again.",
+        "empty": "The microphone produced an empty recording. Check the device and try again."
       },
       "playbackStop": "Stop",
       "playbackPlay": "Play it back"
@@ -2814,6 +2826,13 @@
       "mistakes": "{count, plural, one {# mistake} other {# mistakes}}",
       "retake": "Take the test again",
       "resultBadge": "Express placement result (estimate)"
+    },
+    "gradesTable": {
+      "sortLabel": "Sort:",
+      "sortName": "Alphabetical",
+      "sortHigh": "Score: highest first",
+      "sortLow": "Score: lowest first",
+      "studentCount": "{count, plural, one {# student} other {# students}}"
     }
   }
 }

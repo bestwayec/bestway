@@ -4,18 +4,21 @@ Refuses to run unless DEBUG is on and DATABASE_URL points at a loopback host
 and a database whose name ends in ``_local``. Never use real student data.
 
 Accounts (all passwords are LOCAL_DEV_PASSWORD below) are idempotent: running
-the command twice does not create duplicates.
+the command twice does not create duplicates. A re-run also resets both student
+accounts to the E2E baseline (IELTS + Multi-Level available, Multi-Level active)
+and imports the Record Mock (MOCK-RECORD-01) when it is missing.
 """
 from __future__ import annotations
 
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from django.utils import timezone
 
-from apps.legacy_schema.models import Group, StudentProfile, User
+from apps.legacy_schema.models import Group, MockExam, StudentProfile, User
 from common.auth.passwords import hash_password
 
 LOCAL_DEV_PASSWORD = "LocalDev-2026!"
@@ -74,5 +77,17 @@ class Command(BaseCommand):
                         [student.id, group.id, f"LOC{phone[-2:]}"],
                     )
                 else:
-                    StudentProfile.objects.filter(user_id=student.id).update(group_id=group.id, is_approved=True)
+                    # A re-run restores the baseline the E2E scripts start from: both tracks available,
+                    # Multi-Level active (scripts such as ielts-full switch the track through the UI).
+                    cursor.execute(
+                        'UPDATE "StudentProfile" SET "groupId"=%s, "isApproved"=true, '
+                        '"availablePrograms"=ARRAY[\'IELTS\',\'MULTILEVEL\']::"ExamProgram"[], '
+                        '"activeProgram"=\'MULTILEVEL\'::"ExamProgram" WHERE "userId"=%s',
+                        [group.id, student.id],
+                    )
+
+        # The Record Mock (MOCK-RECORD-01) is the Multi-Level exam the phone and smoke checks use.
+        if not MockExam.objects.filter(id="MOCK-RECORD-01").exists():
+            self.stdout.write("importing the Record Mock with the short local audio fixtures")
+            call_command("import_cd_record_mock_1", allow_placeholder_audio=True)
         self.stdout.write(self.style.SUCCESS("Synthetic local data ready."))

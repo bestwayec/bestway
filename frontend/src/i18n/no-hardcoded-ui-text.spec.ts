@@ -51,7 +51,23 @@ const FILES = [
   "src/components/teacher/VocabularyBuilder.tsx",
   "src/components/demo/demo-runner.tsx",
   "src/app/[locale]/(marketing)/demo/[id]/page.tsx",
+  "src/components/mock/speaking-recorder.tsx",
+  "src/components/mock/cbt-section-stepper.tsx",
+  "src/components/mock/runner-tools.tsx",
+  "src/components/mock/vocab-lookup.tsx",
+  "src/components/mock/result-review-table.tsx",
+  "src/components/exam-track/exam-track-switch.tsx",
 ];
+
+/** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */
+const MEDIA_FILES = [
+  "src/components/mock/mic-check-modal.tsx",
+  "src/components/mock/device-check.tsx",
+  "src/components/mock/speaking-recorder.tsx",
+  "src/components/mock/multilevel-media.tsx",
+];
+// A quoted literal with words in it; a template that only interpolates translated text is fine.
+const LITERAL_MESSAGE = /\b(setError|toast\.(?:error|success|info|warning))\(\s*["'`][^"'`$]*[A-Za-z]{3}/;
 const UZBEK_UI = /\b(Rasmiy|Palitras\w*|Ishlangan|Belgilangan|Javobsiz|Tozalash|Oldingi qism|Keyingi qism|Guruhga|Kodni|Bajarish|Chop [Ee]tish|Yuklab [Oo]lish|Diagnostik|Sun.iy intellekt|Keyingisi|Oldingisi|Kabinet\w*|Darslar katalog\w*|Bekor qilish|Aniqlik|Tasdiqla\w*|Ustoz\w*|Eshitib|To'xtatish|Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
@@ -62,6 +78,16 @@ describe("no hard-coded Uzbek UI text in migrated files", () => {
       const code = stripComments(fs.readFileSync(path.resolve(__dirname, "../..", file), "utf8"));
       const hits = code.split("\n").map((line, i) => [i + 1, line] as const).filter(([, line]) => UZBEK_UI.test(line));
       expect(hits.map(([n, line]) => `${n}: ${line.trim()}`)).toEqual([]);
+    });
+  }
+});
+
+describe("no literal messages on the microphone and recording screens", () => {
+  for (const file of MEDIA_FILES) {
+    it(file, () => {
+      const code = stripComments(fs.readFileSync(path.resolve(__dirname, "../..", file), "utf8"));
+      const hits = code.split("\n").map((line, i) => [i + 1, line] as const).filter(([, line]) => LITERAL_MESSAGE.test(line));
+      expect(hits.map(([n, line]) => `${n}: ${line.trim().slice(0, 120)}`)).toEqual([]);
     });
   }
 });

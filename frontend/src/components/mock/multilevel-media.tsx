@@ -3,7 +3,7 @@ import { EXAM_VOLUME_EVENT, broadcastVolume, loadExamSettings } from '@/lib/exam
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { recordingKey, recoverRecording, retainRecording, releaseRecording, markActiveRecording } from '@/lib/durable-recordings';
-import { assertMicrophoneAvailable, createAudioRecorder, microphoneErrorMessage, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, requestMicrophoneStream } from '@/lib/microphone';
+import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, requestMicrophoneStream } from '@/lib/microphone';
 import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -144,6 +144,9 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   startPhase: () => Promise<MediaPhase>; upload: (blob: Blob) => Promise<unknown>; onUploaded?: () => void;
 }) {
   const t = useTranslations('mock.runnerUx');
+  const tm = useTranslations('mock.mic');
+  // The same translated help as the microphone check (denied, not found, busy, …).
+  const micMessage = (error: unknown) => tm(`help.${microphoneProblem(error)}`);
   const key = recordingKey(attemptId, questionId);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState<string | null>(null);
@@ -205,9 +208,9 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try { const saved = await uploadRef.current(blob); await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); const audioDurationMs = saved && typeof saved === 'object' && 'audioDurationMs' in saved && typeof saved.audioDurationMs === 'number' && saved.audioDurationMs > 0 ? saved.audioDurationMs : undefined; if (audioDurationMs != null) setRecordedSeconds(Math.round(audioDurationMs / 100) / 10); setAudioVersion((version) => version + 1); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId, ...(audioDurationMs != null ? { audioDurationMs } : {}) } })); }
     catch (failure) {
       if (failure instanceof ApiError && failure.code === 'SPEAKING_AUDIO_DURATION_INVALID') {
-        try { await releaseRecording(key); retainedRef.current = null; setPending(null); stage('idle'); setError('This recording does not cover the required response time. Start a new response.'); }
-        catch { stage('retry'); setError('The invalid take could not be cleared locally. Keep this page open and retry.'); }
-      } else { stage('retry'); setError('Audio upload failed. Your recording has been preserved.'); }
+        try { await releaseRecording(key); retainedRef.current = null; setPending(null); stage('idle'); setError(t('recTooShort')); }
+        catch { stage('retry'); setError(t('recClearFailed')); }
+      } else { stage('retry'); setError(t('recUploadFailed')); }
     }
     finally { uploading.current = false; }
   }
@@ -216,7 +219,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   useEffect(() => {
     let alive = true;
     aliveRef.current = true;
-    void recoverRecording(key).then((blob) => { if (alive && blob) { retainedRef.current = blob; setPending(blob); setStatus('retry'); } }).catch(() => { if (alive) setError('Saved recording recovery is unavailable. Keep this page open and retry the upload.'); });
+    void recoverRecording(key).then((blob) => { if (alive && blob) { retainedRef.current = blob; setPending(blob); setStatus('retry'); } }).catch(() => { if (alive) setError(t('recRecoveryUnavailable')); });
     const retry = () => { if (retainedRef.current) void sendRef.current(retainedRef.current); };
     window.addEventListener('online', retry);
     return () => { alive = false; aliveRef.current = false; invalidateCapture(); clearCaptureTimers(); window.removeEventListener('online', retry); if (recorder.current?.state === 'recording') { if (captureWindow.current) captureWindow.current.interrupted = true; recorder.current.stop(); } markActiveRecording(key, false); closeMicrophone(); };
@@ -249,7 +252,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     } catch (e) {
       if (!aliveRef.current || captureGeneration.current !== current) return;
       closeMicrophone(); stage('idle');
-      setError(microphoneErrorMessage(e));
+      setError(micMessage(e));
       return;
     }
     // The input meter is optional; Web Audio failure must not discard an open mic.
@@ -288,21 +291,21 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     const chunks: Blob[] = [];
     setRecorderHandlers(mr, {
       data: (e) => { if (e.data.size) chunks.push(e.data); },
-      error: () => { if (captureWindow.current) captureWindow.current.interrupted = true; stage('finalizing'); setError('Recording failed. Check your microphone.'); if (mr.state === 'recording') mr.stop(); },
+      error: () => { if (captureWindow.current) captureWindow.current.interrupted = true; stage('finalizing'); setError(t('recFailed')); if (mr.state === 'recording') mr.stop(); },
       stop: () => {
       clearCaptureTimers(); stage('finalizing'); closeMicrophone();
       const captured = captureWindow.current;
       const elapsed = captured?.stopped != null ? captured.stopped - captured.started : 0;
       if (!captured?.complete || captured.interrupted || elapsed < captured.seconds * 1000 || elapsed > captured.seconds * 1000 + 250) {
         stage('idle');
-        if (aliveRef.current) setError('Recording was interrupted before its full response window completed. Start a new response.');
+        if (aliveRef.current) setError(t('recInterrupted'));
         return;
       }
       let blob: Blob;
       try { blob = recordedAudioBlob(mr, chunks); }
-      catch (e) { stage('idle'); setError(`${microphoneErrorMessage(e)}${timed ? ' Contact your supervisor for a timed retry.' : ''}`); return; }
+      catch (e) { stage('idle'); setError(`${micMessage(e)}${timed ? ` ${t('recSupervisorRetry')}` : ''}`); return; }
       retainedRef.current = blob; setPending(blob); setRecordedSeconds(captured.seconds);
-      void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => { stage('retry'); setError('Could not persist the take locally. Keep this page open and retry upload.'); });
+      void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => { stage('retry'); setError(t('recPersistFailed')); });
       },
     });
     mr.start(1000);
@@ -313,7 +316,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       if (!capture || mr.state !== 'recording') return;
       capture.complete = true; capture.stopped = performance.now(); stage('finalizing'); mr.stop();
     }, duration * 1000);
-    } catch (e) { closeMicrophone(); stage('idle'); setError(microphoneErrorMessage(e)); }
+    } catch (e) { closeMicrophone(); stage('idle'); setError(micMessage(e)); }
   }
   async function start() {
     if (busy.current) return;
@@ -327,7 +330,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       setLeft(Math.ceil(preparation / 1000));
       if (preparation > 0) { stage('preparing'); preparationTimer.current = setTimeout(() => { if (aliveRef.current && captureGeneration.current === current) beginRecording(); }, preparation); }
       else beginRecording();
-    } catch { if (aliveRef.current && captureGeneration.current === current) { closeMicrophone(); stage('idle'); setError('Speaking response could not be started. Please try again.'); } }
+    } catch { if (aliveRef.current && captureGeneration.current === current) { closeMicrophone(); stage('idle'); setError(t('recStartFailed')); } }
   }
   // Timed exam: the previous answer was uploaded, so this question opens and starts by itself.
   // The microphone was already checked in this session; if it cannot be opened the student
