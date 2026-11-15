@@ -1111,6 +1111,7 @@
       "saveOffline": "Offline — changes not yet saved to server",
       "saveRetry": "Retry",
       "practiceBadge": "{skill} practice",
+      "examBadge": "{skill} · exam rules",
       "questionPosition": "Question {number}",
       "flaggedCount": "{count} flagged",
       "flagAction": "Flag",

@@ -1111,6 +1111,7 @@
       "saveOffline": "Internet yo‘q — javoblar serverga hali saqlanmadi",
       "saveRetry": "Qayta urinish",
       "practiceBadge": "{skill} mashqi",
+      "examBadge": "{skill} · imtihon qoidasi",
       "questionPosition": "{number}-savol",
       "flaggedCount": "{count} ta belgilangan",
       "flagAction": "Belgilash",

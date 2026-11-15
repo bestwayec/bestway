@@ -831,7 +831,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             {isSingleSection && targetSkill && (
               <span className="hidden shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-brand-subtle-fg md:inline">
-                {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
+                {tr(attempt.mode === "practice" ? "practiceBadge" : "examBadge", { skill: t(`skills.${targetSkill}`) })}
               </span>
             )}
             <p className="min-w-0 truncate text-sm font-semibold text-fg sm:text-base" title={exam.title}>{exam.title}</p>
