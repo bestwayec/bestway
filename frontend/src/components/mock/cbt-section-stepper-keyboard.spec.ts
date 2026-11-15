@@ -92,4 +92,14 @@ describe("question navigator with the keyboard", () => {
     await act(async () => partButtons()[1].click());
     expect(live()).toBe("Question 2 of 5, answered");
   });
+
+  it("falls back to the first part when the groups shrink under the open part", async () => {
+    await act(async () => host.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1].click());
+    expect(buttonsIn("Questions in Passage 2")).toHaveLength(2);
+    await act(async () => root.render(React.createElement(CbtSectionStepper, {
+      skill: "reading", groups: [groups[0]], answers: {}, audioSet: new Set<string>(),
+      renderGroupBlock: () => null,
+    })));
+    expect(partButtons()).toHaveLength(3);
+  });
 });

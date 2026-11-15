@@ -75,6 +75,11 @@ export function CbtSectionStepper({
     );
   }, [safeGroups, skill]);
 
+  // A shorter section (or a resumed one) never keeps a part number it does not have.
+  React.useEffect(() => {
+    if (activePartIndex > 0 && activePartIndex >= safeGroups.length) setActivePartIndex(0);
+  }, [activePartIndex, safeGroups.length]);
+
   // Set initial active question
   React.useEffect(() => {
     if (!activeQuestionId && flattenedQuestions.length > 0) {
