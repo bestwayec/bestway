@@ -36,7 +36,7 @@ import {
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
 import type { MockExamDetail, MockGroup, MockQuestionType } from "@/lib/types";
-import { questionIssues } from "./checks";
+import { duplicateNumberErrors, isDuplicateNumber, questionIssues } from "./checks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ImportPanel, type ImportedServerQuestion } from "./ImportPanel";
 import { StudentPreview } from "./StudentPreview";
@@ -132,31 +132,13 @@ function wordLimitLabel(n: number): string {
  * ListeningPartEditor) so the compiler can prove the save memoization pure.
  * Messages stay identical to the shared checks for consistent Review output.
  */
+/** Duplicate-number errors for the local (possibly unsaved) set, within the passage's own section. */
 function duplicateErrors(
   detail: MockExamDetail,
   groupId: string,
   questions: BuilderQuestion[],
 ): string[] {
-  const seen = new Map<number, number>();
-  for (const s of detail.sections)
-    for (const g of s.groups) {
-      if (g.id === groupId) continue;
-      for (const q of g.questions) {
-        if (!seen.has(q.number)) seen.set(q.number, 1);
-      }
-    }
-  const errs: string[] = [];
-  const local = new Map<number, number>();
-  for (const q of questions) {
-    local.set(q.number, (local.get(q.number) ?? 0) + 1);
-    if (seen.has(q.number)) {
-      errs.push(`Question ${q.number}: this number is already used in another part — numbers must not repeat.`);
-    }
-  }
-  for (const [n, c] of local) {
-    if (c > 1) errs.push(`Question ${n}: used ${c} times in this part — each number must be unique.`);
-  }
-  return errs;
+  return duplicateNumberErrors(detail.sections, groupId, questions.map((q) => q.number));
 }
 
 function isDuplicate(
@@ -165,12 +147,7 @@ function isDuplicate(
   questions: BuilderQuestion[],
   q: BuilderQuestion,
 ): boolean {
-  for (const s of detail.sections)
-    for (const g of s.groups) {
-      if (g.id === groupId) continue;
-      if (g.questions.some((x) => x.number === q.number)) return true;
-    }
-  return questions.filter((x) => x.number === q.number).length > 1;
+  return isDuplicateNumber(detail.sections, groupId, questions.map((x) => x.number), q.number);
 }
 
 interface Run {
