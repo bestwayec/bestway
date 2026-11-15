@@ -238,6 +238,7 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 | S5 next-level touches | NOT STARTED | — | only after S1–S4 |
 | S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
 
+Screenshots (synthetic accounts and exams, 1366×768 / 1440×900 / 390×844 / 360×640, light and dark): `docs/agent/screens/ielts-ui-s1/` (runner Reading, catalogue, result).
 Checks on main fccdc94 (2026-11-15): pytest 1185 passed / 4 skipped; vitest 754/754; tsc 0; lint 0 errors; next build ok. Local E2E on the merged code: ielts-full 9/9, multilevel-full 16/16, smoke 16/16, full-journey 13/13, exam-workspace 20/20 (BW_IELTS_EXAM = the ielts-full exam; the seeded `ielts-academic-mock-01` is not in this local DB), mobile-listening 14/16.
 UNVERIFIED: mobile-listening 02 (Record Mock not in the student's current-track catalogue in this local DB) and 10 (microphone dialog step; not changed in this program); all-roles crawl and axe not re-run this session.
 No migrations in S0–S2/S1. Deploy-safe SHA: fccdc94 once its main CI run is green.
