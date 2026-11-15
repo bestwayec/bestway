@@ -1155,7 +1155,21 @@
       "splitValue": "Passage {passage}%, questions {questions}%",
       "questionsRegion": "Questions",
       "listeningResume": "Continue listening",
-      "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now."
+      "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now.",
+      "sectionsLabel": "Sections",
+      "infoTitle": "Exam info",
+      "toolsLabel": "Exam tools",
+      "toolsHint": "Select words to highlight them or add a note. Flags and notes are kept with your attempt.",
+      "highlight": "Highlight",
+      "highlightHint": "Select words in the passage or a question first, then press Highlight.",
+      "vocab": "Word lookup",
+      "focus": "Focus mode",
+      "clearAnswers": "Clear answers",
+      "clearTitle": "Clear the answers in {section}?",
+      "clearBody": "{count, plural, one {# answer} other {# answers}} in this section will be removed. Recordings and other sections are not changed. This cannot be undone.",
+      "clearCancel": "Keep my answers",
+      "clearConfirm": "Clear answers",
+      "clearDone": "{count, plural, one {# answer} other {# answers}} cleared"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1275,7 +1289,12 @@
       "paletteShowAll": "Show all",
       "paletteShowLess": "Show less",
       "navigatorLabel": "Question navigation",
-      "announceQuestion": "Question {label} of {total}, {state}"
+      "announceQuestion": "Question {label} of {total}, {state}",
+      "previousQuestion": "Previous question",
+      "nextQuestion": "Next question",
+      "allQuestions": "All questions",
+      "partQuestions": "Questions in {part}",
+      "closePalette": "Close"
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -1546,6 +1565,16 @@
     "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade",
     "liveSpeakingNote": "No recording — live speaking. Enter Fluency & Coherence, Lexical Resource, Grammar and Pronunciation from the interview; the score follows the criteria.",
     "feedbackButton": "Detailed feedback",
+    "vocab": {
+      "title": "Word: {word}",
+      "close": "Close",
+      "loading": "Looking up…",
+      "error": "The dictionary could not be reached. Try again.",
+      "unknown": "This word is not in the school dictionary yet.",
+      "save": "Add to my words",
+      "saved": "Added to my words",
+      "saveError": "The word could not be added. Try again."
+    },
     "resultTable": {
       "correctOf": "{correct} of {total} correct",
       "filterLabel": "Show questions",

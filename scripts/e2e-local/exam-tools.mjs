@@ -60,9 +60,15 @@ async function session({ locale, dark, width, height }) {
 async function tools(name, opts) {
   const { ctx, page, errors, api, json, fresh, open } = await session(opts);
   const T = M[opts.locale].examTools;
+  // Settings, Help and Hide are header icons on very wide screens and named buttons under Info otherwise.
+  const tool = async (name) => {
+    const button = page.getByRole("button", { name, exact: true }).first();
+    if (!(await button.isVisible().catch(() => false))) await page.getByRole("button", { name: M[opts.locale].runnerUx.infoTitle, exact: true }).first().click();
+    await button.click();
+  };
   const id = await fresh("reading");
   await open(id, "reading");
-  await page.getByRole("button", { name: T.settings }).click();
+  await tool(T.settings);
   await page.getByRole("radio", { name: T.textSize_xlarge }).click();
   await page.getByRole("radio", { name: T.colours_yellow_on_black }).click();
   await page.keyboard.press("Escape");
@@ -74,7 +80,7 @@ async function tools(name, opts) {
   await page.screenshot({ path: join(OUT, `settings-${name}-${opts.locale}-${opts.dark ? "dark" : "light"}-${opts.width}.png`) });
   await page.reload({ waitUntil: "domcontentloaded" }); await page.getByRole("timer").waitFor({ timeout: 30000 });
   ok(await page.locator("[data-exam-text-size]").getAttribute("data-exam-text-size") === "xlarge", `${name}: settings are remembered on this device`);
-  await page.getByRole("button", { name: T.help }).click();
+  await tool(T.help);
   const help = await page.getByRole("dialog").innerText();
   const types = new Set(((await api(`/mock/attempts/${id}`)).body?.data?.sections ?? []).flatMap((s) => s.groups ?? []).flatMap((g) => g.questions ?? []).map((q) => q.type));
   const expectTfng = types.has("true_false_notgiven");
@@ -83,7 +89,7 @@ async function tools(name, opts) {
   ok(!help.includes(T.helpTitle_essay), `${name}: Help does not list types the section does not have`);
   await page.keyboard.press("Escape");
   const before = await page.getByRole("timer").innerText();
-  await page.getByRole("button", { name: T.hide }).click();
+  await tool(T.hide);
   const hidden = page.getByTestId("exam-hidden");
   ok(await hidden.isVisible(), `${name}: Hide covers the questions`);
   await page.waitForTimeout(2500);
@@ -123,8 +129,9 @@ async function listening(name, opts) {
   ok(!(await page.locator("body").innerText()).includes(T.listeningReview.split(":")[0]), `${name}: no 2-minute check after part 1`);
   await page.waitForTimeout(3000);
   ok((await api(`/mock/attempts/${id}`)).body?.data?.status === "in_progress", `${name}: the section stays open after part 1`);
-  const next = page.getByRole("button", { name: new RegExp(`^${M[opts.locale].stepper?.nextPart ?? "Next part"}`) });
-  for (let i = 0; i < 6; i++) { if (await next.isVisible().catch(() => false)) await next.click(); else break; await page.waitForTimeout(500); }
+  // The last part's tab (the bar lists every part).
+  await page.getByRole("tab").last().click();
+  await page.waitForTimeout(500);
   await page.getByRole("button", { name: T.listeningPlayOnce }).first().click();
   await page.getByText(T.listeningReview.replace("{time}", "02:00")).or(page.getByText(T.listeningReview.replace("{time}", "01:59"))).waitFor({ timeout: 60000 });
   ok(true, `${name}: the last part starts the 2:00 check`);

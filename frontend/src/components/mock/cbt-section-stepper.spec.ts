@@ -41,21 +41,31 @@ describe("CbtSectionStepper palette", () => {
   it("labels palette buttons with the authored question numbers", () => {
     const html = render();
     expect(html).toContain('aria-label="Question 9, Part 2 — School Trip, not answered"');
-    expect(html).toContain('aria-label="Question 20, Part 4 — Map, not answered"');
+    expect(html).toContain('aria-label="Question 11, Part 2 — School Trip, not answered"');
     expect(html).not.toContain('aria-label="Question 1,');
-    expect(html).toMatch(/>20<!-- -->|>20</);
+    expect(html).toMatch(/>9<!-- -->|>9</);
   });
 
   it("marks the answered question by id, not by position", () => {
-    const html = render({ "q-20": "C" });
-    expect(html).toContain('aria-label="Question 20, Part 4 — Map, answered"');
+    const html = render({ "q-10": "C", "q-20": "C" });
+    expect(html).toContain('aria-label="Question 10, Part 2 — School Trip, answered"');
     expect(html).toContain('aria-label="Question 9, Part 2 — School Trip, not answered"');
+    expect(html).toContain("2/5");                          // the sheet button counts every part
   });
 
-  it("uses short part labels on phones and exposes tabs to assistive tech", () => {
+  it("uses short part labels and exposes tabs to assistive tech", () => {
     const html = render();
     expect(html).toContain('role="tablist"');
     expect(html).toContain(">Part 4<");
+    expect(html).toContain('aria-label="Part 4 — Map: 0/2"');
+  });
+
+  it("shows the open part's questions in the bar; every question waits in the sheet", () => {
+    const html = render();
+    expect(html).toContain('aria-label="Questions in Part 2 — School Trip"');
+    expect(html).not.toContain('aria-label="Question 20, Part 4 — Map, not answered"');
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).toContain(">All questions<");
   });
 });
 
@@ -67,7 +77,7 @@ describe("CbtSectionStepper copy", () => {
         React.createElement(CbtSectionStepper, { skill: "listening", groups, answers: {}, audioSet: new Set<string>(), simulatorMode: "dtm", renderGroupBlock: () => null }),
       );
       expect(html).not.toMatch(/DTM/i);
-      expect(html).toContain(language === "uz" ? "Savollar palitrasi" : "Question palette");
+      expect(html).toContain(language === "uz" ? "Barcha savollar" : "All questions");
     }
     locale.current = "en";
   });
@@ -78,7 +88,7 @@ describe("CbtSectionStepper copy", () => {
       React.createElement(CbtSectionStepper, { skill: "listening", groups, answers: { "q-9": "x" }, audioSet: new Set<string>(), simulatorMode: "dtm", renderGroupBlock: () => null }),
     );
     for (const english of ["Next Part", "Previous Part", "Flag Question", "Question palette", "Review", "Answered"]) expect(html).not.toContain(english);
-    expect(html).toContain("Keyingi qism");
+    expect(html).toContain("Keyingi savol");
     expect(html).toContain("9-savol");
     locale.current = "en";
   });

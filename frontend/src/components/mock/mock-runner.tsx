@@ -10,10 +10,6 @@ import {
   Contrast,
   Flag,
   Loader2,
-  Maximize2,
-  Minimize2,
-  Monitor,
-  RefreshCw,
   Send,
   StickyNote,
   Trash2,
@@ -79,10 +75,12 @@ import {
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
 import { clipboardDecision, countWords, WRITING_AREA_ATTRIBUTE } from "@/lib/writing-rules";
-import { ExamToolbar } from "./exam-toolbar";
+import { ExamToolbar, type ExamToolbarHandle } from "./exam-toolbar";
 import { COLOUR_CLASS, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSettings, saveExamSettings, TEXT_ZOOM, timerAlert, timerTone, type ExamSettings } from "@/lib/exam-settings";
 import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
 import { ExamNotesPanel } from "./exam-notes-panel";
+import { VocabLookup, VOCAB_TEXT_ATTRIBUTE } from "./vocab-lookup";
+import { RunnerTools, PhoneToolsRow, ClearAnswersDialog } from "./runner-tools";
 import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
 import { ApiError } from "@/lib/api-client";
@@ -119,7 +117,7 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
 }
 
 // Sections list their groups as `groups` (newer exams) or `parts` (older ones).
-type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ type?: unknown }> };
+type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ id: string; type?: unknown }> };
 function sectionGroupsOf(section: unknown): SectionGroupShape[] {
   const value = section as { groups?: unknown; parts?: unknown } | null | undefined;
   if (value?.groups) return value.groups as SectionGroupShape[];
@@ -159,6 +157,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     return () => window.removeEventListener(EXAM_VOLUME_EVENT, onVolume);
   }, []);
   const [notesDrawerOpen, setNotesDrawerOpen] = React.useState(false);
+  // Header panels and tools: Info (status and instructions), focus mode, word lookup (practice only), clear answers.
+  const [infoOpen, setInfoOpen] = React.useState(false);
+  const [focusMode, setFocusMode] = React.useState(false);
+  const [vocabOn, setVocabOn] = React.useState(false);
+  const [clearOpen, setClearOpen] = React.useState(false);
+  const toolbarRef = React.useRef<ExamToolbarHandle>(null);
   const [attemptNotes, setAttemptNotes] = React.useState<CbtStickyNote[]>([]);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   // Flags, highlights and notes are kept with the attempt on the server; the newer of the
@@ -755,6 +759,35 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
   const sharedSingleAudioUrl = audioTimestampsQ.data?.audioUrl ?? null;
 
+  // Clear answers: only the open section, only while it can still be changed (a full test has moved past
+  // every earlier section, and the server refuses changes to them); recordings are never touched.
+  const sectionEditable = Boolean(section) && attempt.status === "in_progress" && (!isFullTest || !attempt.currentSkill || section?.skill === attempt.currentSkill);
+  const clearableIds = sectionEditable
+    ? sectionGroupsOf(section).flatMap((g) => (g?.questions || []).map((q) => q.id)).filter((id) => (answers[id] ?? "") !== "")
+    : [];
+  const canClearSection = clearableIds.length > 0 && !submit.isPending;
+
+  const sectionSwitcher = (kind: "compact" | "full") => exam.sections.map((s, i) => (
+    <button
+      key={s.id}
+      type="button"
+      onClick={() => {
+        flush();
+        setActiveSection(i);
+      }}
+      aria-current={i === activeSection}
+      className={cn(
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors touch-manipulation cursor-pointer",
+        kind === "compact" ? "min-h-[32px] px-2.5 text-xs" : "min-h-[40px] rounded-full px-4 text-sm",
+        i === activeSection
+          ? "bg-brand text-brand-fg"
+          : kind === "compact" ? "text-fg-muted hover:bg-surface-hover hover:text-fg" : "bg-bg-subtle text-fg-muted hover:bg-surface-hover hover:text-fg",
+      )}
+    >
+      {t(`skills.${s.skill}`)}
+    </button>
+  ));
+
   return (
     <StrictErrorBoundary fallbackTitle="Mock Runner Render Crash">
       <ExamLocker
@@ -773,8 +806,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       />
       <div
         className={cn(
-          "mx-auto pb-24 transition-colors",
-          simulatorMode === "dtm" ? "max-w-7xl" : "max-w-5xl",
+          "mx-auto max-w-7xl transition-colors",
           contrastClasses
         )}
         style={examSettings.textSize === "regular" ? undefined : { zoom: TEXT_ZOOM[examSettings.textSize] }}
@@ -785,72 +817,101 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         onContextMenu={blockClipboard}
         onDragStart={blockClipboard}
       >
-        {/* Yuqori panel */}
-        <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-b-[12px] sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* On a phone the title takes its own row; otherwise the toolbar squeezes it to nothing
-                and the practice badge spills over the toolbar. */}
-            <div className="min-w-0 flex-1 basis-full sm:basis-0">
-              {isSingleSection && targetSkill ? (
-                <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
-                  <span className="shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand-subtle-fg uppercase tracking-wider">
-                    {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
-                  </span>
-                  <p className="w-full min-w-0 truncate font-semibold text-fg sm:w-auto">{exam.title}</p>
-                </div>
-              ) : (
-                <p className="truncate font-semibold text-fg">{exam.title}</p>
-              )}
-            </div>
-
-            {/* Distraction-Free Controls: wrap on narrow screens and at large text sizes */}
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              <ExamToolbar
-                settings={examSettings}
-                onChange={updateExamSettings}
-                questionTypes={sectionQuestionTypes}
-                timeLeft={remaining != null ? formatClock(remaining) : null}
-              />
-              {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn={section?.skill === "reading" || section?.skill === "writing"} />}
-              {isFullTest && activeSection < exam.sections.length - 1 ? (
-                <Button size="sm" variant="outline" className="min-h-[44px] px-4 touch-manipulation" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
-                  {tr("nextSection")}
-                </Button>
-              ) : null}
-              <Button size="sm" className="min-h-[44px] px-4 font-semibold touch-manipulation bg-brand hover:bg-brand-hover text-brand-fg" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
-                <Send className="mr-1.5 size-4" />
-                {t("submit")}
-              </Button>
-            </div>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {showQuestionPosition && (
-              <StatusChip>{tr("questionPosition", { number: activeQuestionNumber })}</StatusChip>
+        {/* Header: one 56px row. Everything else is one click away under Info. */}
+        <header
+          data-runner-header
+          className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-bg/95 px-3 backdrop-blur sm:mx-0 sm:gap-2 sm:rounded-b-[12px] sm:px-4"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {isSingleSection && targetSkill && (
+              <span className="hidden shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-brand-subtle-fg md:inline">
+                {tr("practiceBadge", { skill: t(`skills.${targetSkill}`) })}
+              </span>
             )}
+            <p className="min-w-0 truncate text-sm font-semibold text-fg sm:text-base" title={exam.title}>{exam.title}</p>
+            {/* Sections of a multi-section attempt: compact on wide screens, under Info on smaller ones. */}
+            {!isSingleSection && exam.sections.length > 1 && (
+              <div className="hidden shrink-0 items-center gap-0.5 rounded-lg bg-bg-subtle p-0.5 xl:flex" role="group" aria-label={tr("sectionsLabel")}>
+                {sectionSwitcher("compact")}
+              </div>
+            )}
+          </div>
+          <span className="hidden lg:inline-flex">
             <StatusChip>
               {answered} / {total} {t("answered")}
               {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             </StatusChip>
-            <button
-              type="button"
-              onClick={() => setNotesDrawerOpen((open) => !open)}
-              aria-expanded={notesDrawerOpen}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-hover"
-            >
-              <StickyNote className="size-3.5 text-warning" aria-hidden />
-              {tr("notesButton", { count: attemptNotes.length })}
-            </button>
-            {flaggedQuestions.size > 0 && (
-              <StatusChip tone="warning">
-                <Flag className="size-3.5" aria-hidden />
-                {tr("flaggedCount", { count: flaggedQuestions.size })}
-              </StatusChip>
+          </span>
+          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline" }[saveState])} />
+          {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={flush}>{tr("saveRetry")}</button>}
+          <RunnerTools
+            infoOpen={infoOpen}
+            onInfo={() => setInfoOpen((open) => !open)}
+            notesCount={attemptNotes.length}
+            notesOpen={notesDrawerOpen}
+            onNotes={() => setNotesDrawerOpen((open) => !open)}
+            vocab={strict ? null : vocabOn}
+            onVocab={() => setVocabOn((on) => !on)}
+            focus={focusMode}
+            onFocus={() => setFocusMode((on) => !on)}
+          >
+            <ExamToolbar
+              ref={toolbarRef}
+              iconsClassName="hidden 2xl:flex"
+              settings={examSettings}
+              onChange={updateExamSettings}
+              questionTypes={sectionQuestionTypes}
+              timeLeft={remaining != null ? formatClock(remaining) : null}
+            />
+          </RunnerTools>
+          {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn={section?.skill === "reading" || section?.skill === "writing"} />}
+          {isFullTest && activeSection < exam.sections.length - 1 ? (
+            <Button size="sm" variant="outline" className="hidden min-h-[40px] px-3 touch-manipulation md:inline-flex" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
+              {tr("nextSection")}
+            </Button>
+          ) : null}
+          <Button size="sm" aria-label={t("submit")} className="min-h-[40px] px-2.5 font-semibold touch-manipulation bg-brand hover:bg-brand-hover text-brand-fg sm:px-4" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+            <Send className="size-4 sm:mr-1.5" aria-hidden />
+            <span className="hidden sm:inline">{t("submit")}</span>
+          </Button>
+        </header>
+
+        {infoOpen && (
+          <section id="runner-info" aria-label={tr("infoTitle")} className="mb-3 space-y-3 rounded-[12px] border border-border bg-surface p-3 text-sm sm:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {showQuestionPosition && <StatusChip>{tr("questionPosition", { number: activeQuestionNumber })}</StatusChip>}
+              <span className="lg:hidden"><StatusChip>{answered} / {total} {t("answered")}</StatusChip></span>
+              {flaggedQuestions.size > 0 && (
+                <StatusChip tone="warning">
+                  <Flag className="size-3.5" aria-hidden />
+                  {tr("flaggedCount", { count: flaggedQuestions.size })}
+                </StatusChip>
+              )}
+              {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={flush}>{tr("saveRetry")}</button>}
+            </div>
+            {!isSingleSection && exam.sections.length > 1 && (
+              <div className="flex flex-wrap gap-1.5 xl:hidden" role="group" aria-label={tr("sectionsLabel")}>{sectionSwitcher("full")}</div>
             )}
-            <SaveStatusChip state={saveState} label={tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline" }[saveState])} />
-            {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[44px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline" onClick={flush}>{tr("saveRetry")}</button>}
-          </div>
-          <ResponseProgress answered={answered} total={total} />
-        </div>
+            <PhoneToolsRow
+              toolbar={toolbarRef}
+              notesCount={attemptNotes.length}
+              notesOpen={notesDrawerOpen}
+              onNotes={() => setNotesDrawerOpen((open) => !open)}
+              vocab={strict ? null : vocabOn}
+              onVocab={() => setVocabOn((on) => !on)}
+              focus={focusMode}
+              onFocus={() => setFocusMode((on) => !on)}
+            />
+            <ResponseProgress answered={answered} total={total} />
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+              <p className="text-xs text-fg-muted">{tr("toolsHint")}</p>
+              <Button type="button" size="sm" variant="outline" className="min-h-[40px] text-danger" disabled={!canClearSection} onClick={() => setClearOpen(true)}>
+                <Trash2 className="mr-1.5 size-4" aria-hidden />
+                {tr("clearAnswers")}
+              </Button>
+            </div>
+          </section>
+        )}
 
         {notesDrawerOpen && (
           <ExamNotesPanel
@@ -860,35 +921,18 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           />
         )}
 
-        {/* Bo'lim tablari (faqat to'liq imtihonda yoki bittadan ortiq bo'lim bo'lsa) */}
-        {!isSingleSection && exam.sections.length > 1 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {exam.sections.map((s, i) => {
-              const locked = isFullTest && attempt.currentSkill
-                ? s.skill !== attempt.currentSkill
-                : false;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    flush();
-                    setActiveSection(i);
-                  }}
-                  aria-current={i === activeSection}
-                  className={cn(
-                    "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors touch-manipulation cursor-pointer",
-                    i === activeSection
-                      ? "bg-brand text-brand-fg"
-                      : "bg-surface text-fg-muted hover:bg-surface-hover hover:text-fg",
-                  )}
-                >
-                  {t(`skills.${s.skill}`)}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <ClearAnswersDialog
+          open={clearOpen}
+          sectionName={section ? section.title || t(`skills.${section.skill}`) : ""}
+          count={clearableIds.length}
+          onCancel={() => setClearOpen(false)}
+          onConfirm={() => {
+            setClearOpen(false);
+            for (const id of clearableIds) setAnswer(id, "");
+            toast.success(tr("clearDone", { count: clearableIds.length }));
+          }}
+        />
+        <VocabLookup enabled={!strict && vocabOn} />
 
         {partialPractice && !isSingleSection && (section?.skill === "writing" || section?.skill === "speaking") && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
         {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {
@@ -898,7 +942,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
         {section && (
           <ErrorBoundary fallbackTitle={tr("sectionLoadError", { section: section.title || t(`skills.${section.skill}`) })}>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {section.instructions && (
               <p className="text-sm text-fg-muted">{section.instructions}</p>
             )}
@@ -919,6 +963,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               flaggedQuestions={flaggedQuestions}
               onToggleFlag={toggleQuestionFlag}
             /> : <CbtSectionStepper
+              // A new section starts on its first part (its own part and question state).
+              key={section.id}
               skill={section.skill}
               groups={section.groups || (section as any).parts || []}
               answers={answers}
@@ -973,6 +1019,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               }}
               isLastSection={activeSection >= exam.sections.length - 1}
               isFullTest={isFullTest}
+              focus={focusMode}
             />}
           </div>
           </ErrorBoundary>
@@ -1051,10 +1098,10 @@ export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | 
 }
 
 /** Save state as an icon + text chip; the only live region in the runner header. */
-export function SaveStatusChip({ state, label }: { state: "idle" | "saving" | "saved" | "error" | "offline"; label: string }) {
+export function SaveStatusChip({ state, label, compact = false }: { state: "idle" | "saving" | "saved" | "error" | "offline"; label: string; compact?: boolean }) {
   const failed = state === "error" || state === "offline";
   return (
-    <span role="status" aria-live="polite">
+    <span role="status" aria-live="polite" title={label}>
       <StatusChip tone={failed ? "danger" : state === "saving" ? "neutral" : "success"}>
         {state === "saving" ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -1063,7 +1110,8 @@ export function SaveStatusChip({ state, label }: { state: "idle" | "saving" | "s
         ) : (
           <CheckCircle2 className="size-3.5" aria-hidden />
         )}
-        {label}
+        {/* Compact (header): the icon shows the state and the label is read out; a failure is always written out. */}
+        <span className={compact && !failed ? "sr-only" : undefined}>{label}</span>
       </StatusChip>
     </span>
   );
@@ -1263,10 +1311,11 @@ function GroupBlock({
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
 
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="p-3 sm:p-4">
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
-        <div className="z-20 -mx-4 -mt-4 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 p-3 backdrop-blur-xl shadow-md sm:-mx-5 sm:-mt-5 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-0">
+        // The recording is content (not chrome): it stays in view under the header while the questions scroll.
+        <div data-layout-content className="z-10 -mx-3 -mt-3 mb-3 rounded-t-[12px] border-b border-border/80 bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:-mt-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14">
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
@@ -1374,7 +1423,7 @@ function GroupBlock({
         {isMapSplit && (
           // Sticky only beside the questions on wide screens; on phones a sticky
           // map would cover the questions it belongs to.
-          <div className="mb-3 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center lg:mb-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+          <div className="mb-3 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center lg:mb-0 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
             <p className="text-xs font-semibold text-fg-muted mb-2 uppercase tracking-wider">
               {group.title || "Map"}
             </p>
@@ -1385,11 +1434,12 @@ function GroupBlock({
           <div
             className={cn(
               "whitespace-pre-line rounded-[12px] border border-border bg-surface p-5 text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] lg:max-w-none",
-              "lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:overscroll-contain",
+              "lg:block lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
             // The passage scrolls on its own: keyboard users can focus and scroll it.
             tabIndex={0}
+            {...{ [VOCAB_TEXT_ATTRIBUTE]: "" }}
             role="region"
             aria-label={tg("passageRegion")}
           >
@@ -1441,8 +1491,8 @@ function GroupBlock({
             className={cn(
               "space-y-4",
               "lg:block",
-              isPassageSplit && "lg:sticky lg:top-24 lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
-              isMapSplit && "lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pl-2 lg:pr-1",
+              isPassageSplit && "lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
+              isMapSplit && "lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:pl-2 lg:pr-1",
               hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
             )}
           >

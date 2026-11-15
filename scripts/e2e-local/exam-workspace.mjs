@@ -67,6 +67,12 @@ async function run(name, { locale, dark, width, height }) {
     }, word);
     await page.getByRole("toolbar").waitFor({ timeout: 5000 });
   }
+  // Wide screens show Notes in the header; on phones it is under Info.
+  const notesButton = async () => {
+    const button = page.getByRole("button", { name: T.notes }).first();
+    if (!(await button.isVisible().catch(() => false))) await page.getByRole("button", { name: /^(Exam info|Imtihon ma'lumoti)$/ }).first().click();
+    return button;
+  };
   const T = locale === "en" ? { hl: "Highlight in yellow (Alt+H)", note: "Add a note", save: "Save", notes: /^Notes \(/, del: "Delete", yes: "Yes, delete", ph: "Write your note…" }
                             : { hl: "Sariq bo'yash (Alt+H)", note: "Eslatma qo'shish", save: "Saqlash", notes: /^Eslatmalar \(/, del: "O'chirish", yes: "Ha, o'chirish", ph: "Eslatma matnini yozing…" };
   await selectWord();
@@ -87,19 +93,19 @@ async function run(name, { locale, dark, width, height }) {
   await open();
   const marked = () => passage.evaluate((el, w) => [...el.querySelectorAll("mark, span")].some((m) => m.textContent === w && getComputedStyle(m).backgroundColor !== "rgba(0, 0, 0, 0)"), word);
   ok(await marked(), `${name}: after a reload the highlight is shown again`);
-  ok(await page.getByRole("button", { name: T.notes }).innerText().then((t) => /\(1\)/.test(t)), `${name}: after a reload the note count is 1`);
+  ok(await (await notesButton()).evaluate((b) => b.getAttribute("aria-label") ?? b.textContent ?? "").then((t) => /\(1\)/.test(t)), `${name}: after a reload the note count is 1`);
 
   await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith("bestway.cbt_annotations.") || k.startsWith("bw_workspace_")) localStorage.removeItem(k); });
   await open();
   ok(await marked(), `${name}: on a cleared device the highlight comes back from the server`);
-  await page.getByRole("button", { name: T.notes }).click();
+  await (await notesButton()).click();
   const panel = page.getByTestId("exam-notes-panel");
   ok((await panel.innerText()).includes(`note ${name}`), `${name}: on a cleared device the note comes back from the server`);
   await panel.getByRole("button", { name: T.del }).click();
   await panel.getByRole("button", { name: T.yes }).click();
   await page.waitForTimeout(2500);
   await open();
-  await page.getByRole("button", { name: T.notes }).click();
+  await (await notesButton()).click();
   ok(!(await page.getByTestId("exam-notes-panel").innerText()).includes(`note ${name}`), `${name}: a deleted note stays deleted after a reload`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok(overflow <= 1, `${name}: ${width}px no horizontal overflow`);

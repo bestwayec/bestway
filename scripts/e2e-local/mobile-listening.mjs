@@ -53,7 +53,7 @@ async function step(name, fn) {
   }
 }
 
-const browser = await chromium.launch({ executablePath: findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
+const browser = await chromium.launch({ executablePath: process.env.BW_CHROMIUM || findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
 const sizes = [
   { name: "360x640", viewport: { width: 360, height: 640 } },
   { name: "390x844", viewport: { width: 390, height: 844 } },
@@ -102,11 +102,16 @@ await step("03-start-listening-practice", async () => {
   return `attempt with ${numbers.length} questions, ${listening.groups.length} parts, numbers ${numbers[0]}–${numbers.at(-1)}`;
 });
 
+// Phones list every question in the "All questions" sheet; the bar keeps the parts and the arrows.
+const openSheet = async () => { await page.locator('nav[aria-label="Question navigation"] button[aria-haspopup="dialog"]').click(); await page.getByTestId("question-palette").waitFor(); };
+const closeSheet = async () => { await page.keyboard.press("Escape"); await page.getByTestId("question-palette").waitFor({ state: "detached" }); };
+
 await step("04-runner-palette-matches-question-numbers", async () => {
   await page.goto(`${WEB}/en/mock/attempt/${attemptId}?skill=listening`, { waitUntil: "domcontentloaded" });
-  const palette = page.locator('[aria-label="Question palette"] button');
-  await palette.first().waitFor();
-  const labels = await palette.allInnerTexts();
+  await page.locator('nav[aria-label="Question navigation"]').waitFor();
+  await openSheet();
+  const labels = await page.locator('[aria-label="Question palette"] button').allInnerTexts();
+  await closeSheet();
   const nums = labels.map((x) => Number(x.replace(/[^\d]/g, "")));
   if (nums.length !== 35 || nums[0] !== 1 || nums.at(-1) !== 35) throw new Error(`palette ${nums.slice(0, 5)}…${nums.at(-1)} (${nums.length})`);
   const noticeSeen = await page.evaluate((id) => sessionStorage.getItem(`bw_fullscreen_notice_${id}`), attemptId);
@@ -123,9 +128,11 @@ await step("05-part4-map-loads-and-palette-maps-to-q20", async () => {
   const natural = await img.evaluate((el) => `${el.naturalWidth}x${el.naturalHeight}`);
   const src = await img.getAttribute("src");
   if (!src.startsWith("/api/backend/")) throw new Error(`image not proxied: ${src}`);
-  const q20 = page.locator('[aria-label^="Question 20,"]');
-  await q20.click();
+  await openSheet();
+  await page.locator('[aria-label="Question palette"] [aria-label^="Question 20,"]').click();
+  await openSheet();
   const current = await page.locator('[aria-label="Question palette"] [aria-current="true"]').innerText();
+  await closeSheet();
   if (current.trim() !== "20") throw new Error(`palette current ${current}`);
   await page.screenshot({ path: join(OUT, "05-part4-map-390.png"), fullPage: false });
   return `map ${natural} via ${src}; palette 20 is current`;
@@ -193,8 +200,10 @@ await step("05c-listening-player-plays-part-1", async () => {
 // `next dev` on this machine, so the browser check runs on /en.)
 await step("05d-exam-chrome-has-no-dtm-label", async () => {
   await page.getByRole("tab", { name: /Part 1/ }).click();
+  await openSheet();
   await page.getByText(/Question palette/).first().waitFor({ timeout: 30000 });
   const text = await page.innerText("body");
+  await closeSheet();
   if (/DTM/i.test(text)) throw new Error("the page still says DTM");
   for (const raw of ["mock.stepper.", "mock.runnerUx."]) if (text.includes(raw)) throw new Error(`missing translation key ${raw}`);
   return "palette titled 'Question palette'; no DTM label, no raw translation keys";
@@ -209,7 +218,10 @@ await step("06-answer-persists-and-palette-marks-it", async () => {
   const resp = await save;
   if (resp.status() >= 400) throw new Error(`save HTTP ${resp.status()}`);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator('[aria-label^="Question 1, "][aria-label*=", answered"]').waitFor({ timeout: 60000 });
+  await page.locator('nav[aria-label="Question navigation"]').waitFor({ timeout: 60000 });
+  await openSheet();
+  await page.locator('[aria-label="Question palette"] [aria-label^="Question 1, "][aria-label*=", answered"]').waitFor({ timeout: 60000 });
+  await closeSheet();
   return "question 1 answered, saved, still answered after reload";
 });
 
@@ -228,15 +240,16 @@ for (const size of sizes) {
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return !(top === el || el.contains(top));
     });
-    // The palette wraps into rows (no sideways scrolling) and says when more rows are hidden.
-    const pal = await page.getByTestId("question-palette").evaluate((el) => ({ sideways: el.scrollWidth - el.clientWidth, more: el.scrollHeight > el.clientHeight + 4, hint: !!document.querySelector('[data-testid="palette-more"]') }));
-    if (pal.sideways > 1) throw new Error(`palette scrolls sideways by ${pal.sideways}px`);
-    if (pal.more && !pal.hint) throw new Error("palette hides rows without a scroll hint");
-    const paletteHeight = await page.locator('[aria-label="Question palette"]').evaluate((el) => el.closest(".sticky")?.getBoundingClientRect().height ?? 0);
+    // The sheet wraps every question into rows (no sideways scrolling).
+    await openSheet();
+    const sideways = await page.getByTestId("question-palette").evaluate((el) => el.scrollWidth - el.clientWidth);
+    await closeSheet();
+    if (sideways > 1) throw new Error(`palette scrolls sideways by ${sideways}px`);
+    const paletteHeight = await page.locator("[data-runner-bottom]").evaluate((el) => el.getBoundingClientRect().height);
     await page.screenshot({ path: join(OUT, `07-part2-${size.name}.png`) });
     if (covered) throw new Error("last answer field is covered by fixed controls");
     if (paletteHeight > size.viewport.height * 0.4) throw new Error(`palette takes ${Math.round(paletteHeight)}px of ${size.viewport.height}`);
-    return `no overflow, last field reachable, palette ${Math.round(paletteHeight)}px, wraps${pal.more ? " + scroll hint" : ""}`;
+    return `no overflow, last field reachable, question bar ${Math.round(paletteHeight)}px, sheet wraps`;
   });
 }
 
@@ -250,7 +263,7 @@ await step("08-section-result-has-no-level", async () => {
   if (sub.status() >= 400) throw new Error(`submit HTTP ${sub.status()} ${(await sub.text()).slice(0, 200)}`);
   await page.setViewportSize(sizes[1].viewport);
   await page.goto(`${WEB}/en/mock/attempt/${attemptId}`, { waitUntil: "domcontentloaded" });
-  await page.getByText(/Bo'lim mashqi/).first().waitFor({ timeout: 120000 });
+  await page.getByText(/Bo'lim mashqi|Section practice/).first().waitFor({ timeout: 120000 });
   // Result cards stack without overlapping on phones (a video suggested they did; it was compression).
   for (const size of sizes) {
     await page.setViewportSize(size.viewport);
@@ -360,16 +373,16 @@ await step("10-microphone-check-refused-then-allowed", async () => {
   // (a) refused: this context was never granted the microphone
   await page.setViewportSize(sizes[1].viewport);
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Sinovni boshlash/ }).click({ timeout: 90000 });
-  const help = page.getByRole("alert").filter({ hasText: /Mikrofon/ });
+  await page.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).click({ timeout: 90000 });
+  const help = page.getByRole("alert").filter({ hasText: /Mikrofon|Microphone/ });
   await help.waitFor({ timeout: 30000 });
   const helpText = await help.innerText();
-  if (!/Ruxsat berish/.test(helpText)) throw new Error(`no Uzbek instructions: ${helpText}`);
+  if (!/Ruxsat berish|Allow/.test(helpText)) throw new Error(`no instructions: ${helpText}`);
   if (/permission denied/i.test(await page.innerText("body"))) throw new Error("English permission error shown");
   await page.getByRole("button", { name: /Qayta urinish/ }).waitFor();
   await page.screenshot({ path: join(OUT, "10a-mic-refused-390.png") });
   await page.getByTestId("mic-continue-without").click();
-  await page.getByRole("button", { name: /Sinovni boshlash/ }).waitFor({ state: "detached", timeout: 10000 });
+  await page.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).waitFor({ state: "detached", timeout: 10000 });
   // the exam is usable again: the header Finish button is reachable (not covered by the modal)
   const finish = page.getByRole("button", { name: /Finish|Yakunlash|Topshirish/ }).first();
   await finish.waitFor();
@@ -389,7 +402,7 @@ await step("10-microphone-check-refused-then-allowed", async () => {
     await Promise.all([p2.waitForResponse((r) => r.url().includes("/api/auth/login")), p2.click('button[type="submit"]')]);
     await p2.waitForURL(/dashboard/);
     await p2.goto(url, { waitUntil: "domcontentloaded" });
-    await p2.getByRole("button", { name: /Sinovni boshlash/ }).click();
+    await p2.getByRole("button", { name: /Sinovni boshlash|Start the test/ }).click();
     await p2.getByText(/Yozuv tayyor/).waitFor({ timeout: 20000 });
     await p2.screenshot({ path: join(OUT, "10b-mic-allowed-390.png") });
     await p2.getByRole("button", { name: /Speakingni boshlash/ }).click();
