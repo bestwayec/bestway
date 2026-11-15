@@ -42,7 +42,7 @@ function findChromium() {
 // The exam shows a one-time full-screen notice; accept it whenever it appears.
 async function acceptFullscreenNotice(page) {
   await page.addLocatorHandler(page.getByTestId("fullscreen-notice"), async (notice) => {
-    await notice.getByRole("button").click();
+    await notice.getByRole("button").click().catch(() => {}); // the notice may close or the page change while it is answered
   });
 }
 

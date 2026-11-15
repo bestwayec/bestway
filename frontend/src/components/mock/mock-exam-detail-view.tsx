@@ -215,12 +215,9 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                   const qCount = sec ? sec.groups.reduce((g, grp) => g + grp.questions.length, 0) : null;
                   const emoji = skill === "listening" ? "🎧" : skill === "reading" ? "📖" : skill === "writing" ? "✍️" : "🎤";
                   return (
-                    <div
+                    // The whole card is the checkbox's label: one control, named by the skill and its count.
+                    <label
                       key={skill}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedPractice([skill])}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setSelectedPractice([skill]); } }}
                       className={`group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border p-3.5 text-center transition-all ${
                         isSelected
                           ? "border-brand bg-brand/10 text-brand-subtle-fg shadow-xs ring-2 ring-brand/30"
@@ -228,8 +225,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                       }`}
                     >
                       <div className="flex w-full items-center justify-between">
-                        <span className="text-lg">{emoji}</span>
-                        <label className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-lg" aria-hidden>{emoji}</span>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -242,7 +238,6 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                             }}
                             className="size-4 rounded accent-brand"
                           />
-                        </label>
                       </div>
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold capitalize">{t(`skills.${skill}`)}</span>
@@ -250,7 +245,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
                           <span className="text-xs text-fg-muted">{qCount} {t("questions")}</span>
                         )}
                       </div>
-                    </div>
+                    </label>
                   );
                 })}
               </div>
