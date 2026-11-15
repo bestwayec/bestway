@@ -50,7 +50,8 @@ import { ExamResumeModal } from "./exam-resume-modal";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from "@/hooks/use-exam-programs";
-import { ExamTrackSelector } from "@/components/profile/exam-track-selector";
+import { ExamTrackSwitch } from "@/components/exam-track/exam-track-switch";
+import { primeMicrophonePermission } from "@/lib/microphone";
 import { ExamTrackRequired } from "@/components/exam-track/exam-track-required";
 import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
 import { cn, formatMoney, formatPhone } from "@/lib/utils";
@@ -170,7 +171,7 @@ export function MockExamsView() {
   const showLevels = levelFilter !== "all" || (examsQ.data ?? []).some((e) => e.level || e.practiceLevel);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-5">
       <PageHeader
         title={t("title")}
         description={t("subtitle")}
@@ -186,7 +187,7 @@ export function MockExamsView() {
         }
       />
 
-      {isStudent && <ExamTrackSelector />}
+      {isStudent && <ExamTrackSwitch />}
 
       {/* Daraja filtri (A1–C1) */}
       {showLevels && (
@@ -351,37 +352,55 @@ export function MockExamCard({
   }
 
   const levelTag = exam.level || (exam.profile === "practice" ? exam.practiceLevel : null);
+  // Per-section start (same as the launcher's "Single section": a timed section on its own).
+  const practiceSkills = availablePracticeSkills(exam);
+  const sectionStart = !isStaff && !inProgress && exam.access === "granted" && Boolean(onStart) && practiceSkills.length > 0;
+  const [startingSkill, setStartingSkill] = React.useState<MockSkill | null>(null);
+  async function startSection(skill: MockPracticeSkill) {
+    if (!onStart) return;
+    setStartingSkill(skill);
+    // Ask for the microphone before the exam goes full screen (Android shows no prompt over it).
+    if (skill === "speaking" && (await primeMicrophonePermission()) === "denied") toast.warning(t("launcher.micDenied"));
+    try {
+      sessionStorage.setItem("bw_simulator_mode", "cdi");
+    } catch {
+      // storage unavailable: the runner uses its default
+    }
+    onStart("timed", [skill]);
+  }
 
   return (
     <Card
-      className="flex h-full flex-col justify-between rounded-[12px] border border-border bg-surface p-5"
+      className="flex h-full flex-col justify-between rounded-[12px] border border-border bg-surface p-4"
       data-testid={`mock-card-${exam.id}`}
     >
       <div className="space-y-3">
-        {/* Yuqori teglari */}
+        {/* At most two badges: what it is (level, or the exam family when staff see both) and its state. */}
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="text-sm">
-            {multilevel ? "Multi-Level" : "IELTS"}
-          </Badge>
-          {levelTag && (
-            <Badge variant="brand" className="text-sm">
-              {levelTag}
+          {(levelTag || isStaff) && (
+            <Badge variant={levelTag ? "brand" : "outline"} className="text-sm">
+              {levelTag ?? (multilevel ? "Multi-Level" : "IELTS")}
             </Badge>
           )}
-          {exam.isDemo && <Badge variant="neutral">{t("demo")}</Badge>}
-          {progress === "in_progress" && <Badge variant="info">{tCat("chipInProgress")}</Badge>}
-          {progress === "checking" && <Badge variant="warning">{tCat("chipChecking")}</Badge>}
-          {progress === "completed" && <Badge variant="success">{tCat("chipCompleted")}</Badge>}
-          {multilevel && <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />}
-          {isStaff && (
+          {isStaff ? (
             <Badge variant={exam.isPublished ? "success" : "warning"}>
               {exam.isPublished ? t("published") : t("draft")}
             </Badge>
-          )}
+          ) : progress === "in_progress" ? (
+            <Badge variant="info">{tCat("chipInProgress")}</Badge>
+          ) : progress === "checking" ? (
+            <Badge variant="warning">{tCat("chipChecking")}</Badge>
+          ) : progress === "completed" ? (
+            <Badge variant="success">{tCat("chipCompleted")}</Badge>
+          ) : exam.isDemo ? (
+            <Badge variant="neutral">{t("demo")}</Badge>
+          ) : multilevel && exam.ready === false ? (
+            <MultilevelReadiness ready={exam.ready} practiceReady={exam.practiceReady} />
+          ) : null}
         </div>
 
         {/* 1. Nomi */}
-        <h3 className="text-xl font-semibold tracking-tight text-fg line-clamp-2">
+        <h3 className="text-lg font-semibold tracking-tight text-fg line-clamp-2">
           {exam.title}
         </h3>
 
@@ -404,25 +423,50 @@ export function MockExamCard({
           )}
         </div>
 
-        {/* 3. Bo'limlari */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
-          {exam.skills.map((s) => {
-            const Icon = SKILL_ICON[s];
-            return (
-              <span
-                key={s}
-                className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
-              >
-                <Icon className="size-3.5" />
-                {t(`skills.${s}`)}
-              </span>
-            );
-          })}
+        {/* 3. Sections: each one starts on its own when the exam can be started; otherwise they are labels. */}
+        <div className="border-t border-border/60 pt-3">
+          {sectionStart ? (
+            <div role="group" aria-label={tCat("startSectionGroup")} className="flex flex-wrap gap-1.5">
+              {exam.skills.map((s) => {
+                const Icon = SKILL_ICON[s];
+                const startable = practiceSkills.includes(s as MockPracticeSkill);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={!startable || startingSkill !== null}
+                    onClick={() => void startSection(s as MockPracticeSkill)}
+                    aria-label={tCat("startSection", { skill: t(`skills.${s}`) })}
+                    title={startable ? tCat("startSection", { skill: t(`skills.${s}`) }) : tCat("sectionNotReady")}
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-fg"
+                  >
+                    {startingSkill === s ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : <Icon className="size-3.5" aria-hidden />}
+                    {t(`skills.${s}`)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {exam.skills.map((s) => {
+                const Icon = SKILL_ICON[s];
+                return (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
+                  >
+                    <Icon className="size-3.5" />
+                    {t(`skills.${s}`)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
       {/* 4. Bitta asosiy tugma */}
-      <div className="mt-5 pt-3">
+      <div className="mt-4">
         {isStaff ? (
           <div className="flex items-center gap-2">
             <Link

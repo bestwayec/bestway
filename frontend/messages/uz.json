@@ -1442,7 +1442,10 @@
       "gradingProgram": "Dastur:",
       "gradingProgramAll": "Barcha dasturlar",
       "gradingProgramLabel": "Topshiriqlarni dastur bo'yicha saralash",
-      "gradingLoadFailed": "Tekshiruvlarni yuklab bo'lmadi."
+      "gradingLoadFailed": "Tekshiruvlarni yuklab bo'lmadi.",
+      "startSectionGroup": "Bitta bo'limni boshlash",
+      "startSection": "Faqat {skill} boshlash",
+      "sectionNotReady": "Bu bo'lim hali tayyor emas"
     },
     "deviceCheck": {
       "intro": "Ixtiyoriy: boshlashdan oldin shu qurilmada internet, ovoz va mikrofonni tekshiring.",
@@ -1571,6 +1574,25 @@
       "save": "So'zlarimga qo'shish",
       "saved": "So'zlarimga qo'shildi",
       "saveError": "So'zni qo'shib bo'lmadi. Qayta urinib ko'ring."
+    },
+    "resultTable": {
+      "correctOf": "{total} tadan {correct} tasi to'g'ri",
+      "filterLabel": "Savollarni ko'rsatish",
+      "filter_all": "Hammasi ({count})",
+      "filter_wrong": "Noto'g'ri ({count})",
+      "filter_unanswered": "Javobsiz ({count})",
+      "empty_all": "Bu bo'limda savol yo'q.",
+      "empty_wrong": "Bu yerda noto'g'ri javob yo'q.",
+      "empty_unanswered": "Hamma savolga javob berilgan.",
+      "question": "Savol",
+      "yourAnswer": "Sizning javobingiz",
+      "key": "To'g'ri javob",
+      "mark": "Baho",
+      "noAnswer": "Javob yo'q",
+      "state_correct": "To'g'ri",
+      "state_wrong": "Noto'g'ri",
+      "state_unanswered": "Javob berilmagan",
+      "state_pending": "Hali tekshirilmagan"
     }
   },
   "wizard": {
