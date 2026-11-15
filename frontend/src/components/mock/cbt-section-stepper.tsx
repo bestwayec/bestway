@@ -316,10 +316,12 @@ export function CbtSectionStepper({
                       className={cn(
                         "flex items-center gap-0.5 rounded-full px-1.5 text-[11px] font-bold tabular-nums",
                         isActive ? "bg-black/20 text-brand-fg dark:bg-fg/25" : "bg-bg-subtle text-fg-muted",
+                        // Phones: the count on the open part only, so every part tab fits on one row.
+                        !isActive && !part.isComplete && "max-sm:hidden",
                       )}
                     >
                       {part.isComplete ? <CheckCircle2 className="size-3" aria-hidden /> : null}
-                      {part.answeredCount}/{part.totalCount}
+                      <span className={cn(!isActive && "max-sm:hidden")}>{part.answeredCount}/{part.totalCount}</span>
                     </span>
                   </button>
                 );

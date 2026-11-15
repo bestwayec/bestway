@@ -4,8 +4,9 @@
 //
 //   BW_WEB=http://localhost:3300 BW_CHROMIUM=... node runner-layout.mjs [--shots DIR] [--theme light|dark|both]
 //
-// Prints one line per viewport/section: content share of the viewport height. Exit 1 when the
-// 1366x768 Reading share is below BW_MIN_SHARE (default 0, i.e. report only).
+// Prints one line per viewport/section: content share of the viewport height and whether the part
+// tabs fit on one row. Exit 1 when a part tab row overflows, or when the 1366x768 Reading share is
+// below BW_MIN_SHARE (default 0, i.e. report only).
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -114,13 +115,28 @@ for (const theme of themes) for (const viewport of VIEWPORTS) for (const skill o
   await page.locator('nav[aria-label="Question navigation"]').waitFor();
   await page.waitForTimeout(1200);
   const m = await measure(page);
+  // The part tabs must fit on one row (no hidden tab to scroll to).
+  const tabs = page.locator('nav[aria-label="Question navigation"] [role="tablist"]').first();
+  m.tabsOverflow = (await tabs.count()) ? await tabs.evaluate((el) => el.scrollWidth - el.clientWidth) : 0;
   rows.push({ theme, viewport: viewport.name, skill, ...m });
-  console.log(`${theme.padEnd(5)} ${viewport.name.padEnd(9)} ${skill.padEnd(9)} content ${(m.share * 100).toFixed(0)}% (top chrome ${m.top}px, bottom chrome ${m.vh - m.bottom}px)`);
+  console.log(`${theme.padEnd(5)} ${viewport.name.padEnd(9)} ${skill.padEnd(9)} content ${(m.share * 100).toFixed(0)}% (top chrome ${m.top}px, bottom chrome ${m.vh - m.bottom}px), part tabs ${m.tabsOverflow > 1 ? `overflow ${m.tabsOverflow}px` : "on one row"}`);
   if (shotsDir) await page.screenshot({ path: join(shotsDir, `runner-${skill}-${viewport.name}-${theme}.png`) });
+  // Phones: the full palette is a sheet that slides up from the bottom.
+  if (shotsDir && viewport.mobile && skill === "reading") {
+    const all = page.getByRole("button", { name: /All questions/ }).first();
+    if (await all.count()) {
+      await all.click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: join(shotsDir, `runner-palette-${viewport.name}-${theme}.png`) });
+      await page.keyboard.press("Escape");
+    }
+  }
   await api(page, "POST", `/mock/attempts/${attemptId}/submit`, { confirm: true, confirmed: true, force: true });
   await page.context().close();
 }
 await browser.close();
 const key = rows.find((r) => r.viewport === "1366x768" && r.skill === "reading");
+const hidden = rows.filter((r) => r.tabsOverflow > 1);
+if (hidden.length) { console.log(`FAIL  part tabs do not fit on one row: ${hidden.map((r) => `${r.theme} ${r.viewport} ${r.skill}`).join(", ")}`); process.exit(1); }
 if (key && key.share < MIN_SHARE) { console.log(`FAIL  1366x768 reading share ${(key.share * 100).toFixed(0)}% < ${MIN_SHARE * 100}%`); process.exit(1); }
 if (existsSync(OUT)) console.log("done");
