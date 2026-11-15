@@ -237,6 +237,7 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 | S3 review explains mistakes | DONE | #177 → 1ec8a5f (backend), #178 → ba66862 (UI) | Evidence words + Listening moment per question (validated against passage/audioscript), shown only after release; review recording endpoint (own released attempt, never during an attempt of the same exam); attempt detail 3 queries (no N+1, constant with 1 or 4 parts); accuracy per type + trend; Builder audioscript + evidence fields; verify_review_evidence_postgres.py 22/22; ielts-full 10/10 |
 | S4 practice mode | DONE | #180 → 9e3aa2a | Catalogue section button → Exam rules or Practice; practice: all parts or one, timer none / section / part share (server deadline, max(60 s, ceil(share/60)·60)). Practice only: speed 0.75–1.5×, ±10 s, audioscript, Show answer (POST reveal, recorded on the attempt; exam attempts 403 PRACTICE_ONLY). Exam rules unchanged (single play, server time, no tools). Practice result raw x/y (z%), never a band; shown answers marked. verify_practice_mode_postgres.py 16/16; practice-mode.mjs 5/5 |
 | Result page: key on every question (owner step 3) | DONE | #181 → f9d516a | Table + All/Wrong/Unanswered filters were in #173; mock result cards and the test attempt review showed the key only on wrong answers, now on every question the server sends a key for (server rule unchanged: staff, or the student's own completed attempt) |
+| UI state check + before/after (owner step 2) | DONE | branch claude/ui-before-after | All step-2 points hold (header 56 px, part tabs one row, palette bar + phone sheet, 1366×768 content 85%, catalogue switch / ≤2 badges / per-section start). Fixed: on phones the 4th Listening part tab was off screen (count now on the open tab only; runner-layout.mjs fails on tab overflow); the single-section header said "practice" under exam rules. Before/after set: docs/agent/screens/ielts-ui-step2/ (52 PNG, 1.3 MB, README with the measurements) |
 | S5 next-level touches | NOT STARTED | — | only after S1–S4 |
 | S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
 
@@ -251,7 +252,7 @@ Migrations: S4 none (the reveal list is kept in the attempt's existing mediaStat
 
 ## NEXT STEP
 
-IELTS + UI PROGRAM: owner step 2 — UI state check and before/after screenshots (1366×768, 390×844, 360×640, light/dark; before = main 317868b, after = current main) → S5 → S6 (bw-tauri PR only).
+IELTS + UI PROGRAM: S5 next-level touches → S6 bw-tauri desktop UI (PR only, owner merges).
 
 Earlier:
 
