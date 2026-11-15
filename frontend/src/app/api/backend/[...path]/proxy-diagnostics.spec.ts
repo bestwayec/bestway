@@ -20,7 +20,7 @@ it('labels a backend timeout and logs it without secrets or query strings', asyn
   expect((await response.json()).error.code).toBe('BACKEND_UNREACHABLE');
   const line = JSON.parse(log.mock.calls[0][0] as string);
   expect(line).toMatchObject({ event: 'backend_proxy_error', reason: 'timeout', method: 'POST',
-    path: '/api/backend/mock/attempts/a1/submit', timeoutMs: 8000 });
+    path: '/api/backend/mock/attempts/a1/submit', timeoutMs: 30000 });
   const raw = String(log.mock.calls[0][0]);
   for (const secret of ['access-token-value', 'refresh-token-value', 'secret=x', 'confirm']) expect(raw).not.toContain(secret);
 });
@@ -35,4 +35,24 @@ it('distinguishes a network failure from a failed token refresh', async () => {
   const refresh = await GET(new NextRequest('http://localhost/api/backend/x', { headers: { cookie: 'bw_at=a; bw_rt=r' } }), params(['x']));
   expect(refresh.status).toBe(502);
   expect(refresh.headers.get('x-bw-proxy-error')).toBe('refresh_unavailable');
+});
+
+it('gives Finish and the answer flush before it 30 s; every other request keeps 8 s', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const timeout = () => Object.assign(new Error('aborted'), { name: 'TimeoutError' });
+  const cases: Array<[string, string[], 'GET' | 'POST', number]> = [
+    ['mock/attempts/a1/submit', ['mock', 'attempts', 'a1', 'submit'], 'POST', 30000],
+    ['mock/attempts/a1/answers', ['mock', 'attempts', 'a1', 'answers'], 'POST', 30000],
+    ['mock/attempts/a1/advance', ['mock', 'attempts', 'a1', 'advance'], 'POST', 30000],
+    ['mock/attempts/a1', ['mock', 'attempts', 'a1'], 'GET', 8000],
+    ['mock/attempts/a1/flag-cheat', ['mock', 'attempts', 'a1', 'flag-cheat'], 'POST', 8000],
+  ];
+  for (const [path, parts, method, expected] of cases) {
+    log.mockClear();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(timeout()));
+    const request = new NextRequest(`http://localhost/api/backend/${path}`, method === 'POST' ? { method, body: '{}' } : undefined);
+    const response = await (method === 'POST' ? POST : GET)(request, params(parts));
+    expect(response.status).toBe(502);
+    expect(JSON.parse(log.mock.calls[0][0] as string).timeoutMs).toBe(expected);
+  }
 });
