@@ -101,6 +101,15 @@ def question_rows(skill: str, part_index: int, start_number: int) -> list[dict]:
     return rows
 
 
+def synthetic_wav(seconds: int) -> bytes:
+    import io, wave
+    stream = io.BytesIO()
+    with wave.open(stream, 'wb') as out:
+        out.setnchannels(1); out.setsampwidth(2); out.setframerate(8000)
+        out.writeframes(b'\x01\x00' * 8000 * seconds)
+    return stream.getvalue()
+
+
 def author_full_multilevel(exam_id: str) -> None:
     counters = {skill: 1 for skill in ("listening", "reading", "writing", "speaking")}
     sections = MockSection.objects.filter(exam_id=exam_id).order_by("sort_order", "id")
@@ -110,10 +119,10 @@ def author_full_multilevel(exam_id: str) -> None:
             changed = []
             files = {}
             if section.skill == "listening":
-                files['audio'] = SimpleUploadedFile('fixture.mp3', b'ID3-disposable-local-fixture', content_type='audio/mpeg')
-                group.audio_duration_sec = 30 + part_index
+                # A real (synthetic) WAV: the server measures its length on upload (#165).
+                files['audio'] = SimpleUploadedFile('fixture.wav', synthetic_wav(2 + part_index), content_type='audio/wav')
                 group.passage_text = f"SECRET LISTENING TRANSCRIPT {part_index + 1}"
-                changed.extend(["audio_duration_sec", "passage_text"])
+                changed.extend(["passage_text"])
             if section.skill == "speaking" and part_index == 1:
                 files['image'] = SimpleUploadedFile('fixture.png', b'\x89PNG\r\n\x1a\n-disposable-fixture', content_type='image/png')
             if section.skill == "reading":

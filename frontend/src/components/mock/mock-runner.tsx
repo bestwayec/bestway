@@ -99,6 +99,7 @@ const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
 
+import { nextSectionOnTimeout } from "@/lib/section-timeout";
 import { GroupImage } from "./group-image";
 export { GroupImage };
 
@@ -164,7 +165,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // server copy and this device's cache is shown when the exam opens.
   const [workspaceAtOpen] = React.useState(() => resolveOnOpen(attempt.id, attempt.annotations));
   const [flaggedQuestions, setFlaggedQuestions] = React.useState<Set<string>>(() => new Set(workspaceAtOpen.workspace.flags));
-  const [activeQuestionNumber, setActiveQuestionNumber] = React.useState<number>(1);
+  // The question the student is on, remembered with its section so another section never shows it.
+  const [activeQuestion, setActiveQuestion] = React.useState<{ section: string | null; number: number }>({ section: null, number: 1 });
   const [liveRoomId, setLiveRoomId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -463,8 +465,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // Timer (faqat vaqtli rejim; full-test da umumiy deadline)
   const deadlineTs = isSingleSection && targetSkill && attempt.sectionDeadlines?.[targetSkill]
     ? attempt.sectionDeadlines[targetSkill]
-    : versioned && isFullTest && attempt.currentSkill
-    ? attempt.sectionDeadlines?.[attempt.currentSkill]
+    // Full test (Multilevel and IELTS): the server's deadline of the current section.
+    : isFullTest && attempt.currentSkill && attempt.sectionDeadlines?.[attempt.currentSkill]
+    ? attempt.sectionDeadlines[attempt.currentSkill]
     : attempt.overallDeadlineAt ?? attempt.deadlineAt;
   const deadline = deadlineTs ? new Date(deadlineTs).getTime() : null;
   const [serverOffset] = React.useState(() => attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
@@ -634,16 +637,17 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       const r = deadline - Date.now() - serverOffset;
       setRemaining(r);
       if (r <= 0 && !sessionElsewhereRef.current) {
-        if (!versioned) { clearInterval(id); void doSubmit(true); return; }
         if (Date.now() < nextRetry || submittingRef.current) return;
         nextRetry = Date.now() + 10000;
-        if (isFullTest && attempt.currentSkill !== 'speaking') {
+        // Full test (Multilevel and IELTS): a section's time ends → the next section; only the
+        // last timed section (or a single-section attempt) hands in the exam.
+        if (nextSectionOnTimeout(isFullTest, attempt.currentSkill, exam?.sections.map((section) => section.skill) ?? [])) {
           void goNextSection(true);
         } else void doSubmit(true);
       }
     }, 1000);
     return () => { clearInterval(id); clearInterval(clock); };
-  }, [deadline, doSubmit, serverOffset, versioned, isFullTest, attempt.currentSkill, goNextSection]);
+  }, [deadline, doSubmit, serverOffset, isFullTest, attempt.currentSkill, goNextSection, exam]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -664,6 +668,8 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
+  const firstShownNumber = section?.groups?.[0]?.questions?.[0]?.displayNumber ?? section?.groups?.[0]?.questions?.[0]?.number ?? 1;
+  const activeQuestionNumber = activeQuestion.section === (section?.id ?? null) ? activeQuestion.number : firstShownNumber;
 
   // Live Exam Room telemetry heartbeat
   React.useEffect(() => {
@@ -921,7 +927,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               simulatorMode={simulatorMode}
               flaggedQuestions={flaggedQuestions}
               onToggleFlag={toggleQuestionFlag}
-              onActiveQuestionChange={setActiveQuestionNumber}
+              onActiveQuestionChange={(number) => {
+                const sectionId = section?.id ?? null;
+                // Keep the same object when nothing changed: a new one would re-render the runner, which hands the
+                // stepper a new callback, which reports the question again — an endless render loop.
+                setActiveQuestion((current) => (current.section === sectionId && current.number === number ? current : { section: sectionId, number }));
+              }}
               renderGroupBlock={(g, reviewComplete, partIdx) => (
                 <GroupBlock
                   key={g.id}
@@ -1408,12 +1419,12 @@ function GroupBlock({
                 question ? (
                   <span className="mx-1 inline-flex max-w-full items-center gap-1 align-middle">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
-                      {number}
+                      {(question as { displayNumber?: number }).displayNumber ?? number}
                     </span>
                     <Input
                       value={answers[question.id] ?? ""}
                       onChange={(event) => onAnswer(question.id, event.target.value)}
-                      aria-label={tg("answerFor", { number })}
+                      aria-label={tg("answerFor", { number: (question as { displayNumber?: number }).displayNumber ?? number })}
                       className="inline-flex h-8 min-w-24 w-32 sm:w-40"
                     />
                   </span>
@@ -1616,7 +1627,7 @@ export function EssayQuestionEditor({
             value={value}
             onChange={(e) => handleWritingChange(e.target.value)}
             className="min-h-72 resize-y font-sans text-base leading-relaxed touch-manipulation focus-visible:border-brand"
-            aria-label={tx("writingResponseLabel", { number: q.number })}
+            aria-label={tx("writingResponseLabel", { number: q.displayNumber ?? q.number })}
             placeholder={tx("writingPlaceholder")}
             spellCheck={false}
             autoCorrect="off"
@@ -1666,7 +1677,7 @@ function QuestionInput({
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-start gap-2">
         <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
-          {q.number}
+          {q.displayNumber ?? q.number}
         </span>
         <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
       </div>

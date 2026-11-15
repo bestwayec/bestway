@@ -123,7 +123,7 @@ async function startSectionIfAsked(page) {
 }
 const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
-  if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.number}`, { exact: true }).fill(correct(q));
+  if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.displayNumber ?? q.number}`, { exact: true }).fill(correct(q));
   else {
     const radio = page.locator(`input[name="objective-answer-${q.id}"][value="${correct(q).replace(/"/g, '\\"')}"]`);
     // Like a student: scroll the option to the middle of the screen (the question palette sits at the bottom), then click it.
@@ -145,8 +145,8 @@ async function finishSection(page) {
 /* ── synthetic IELTS content (counts from the blueprint: 40 / 40 / 2 tasks / 3 parts) ─────────── */
 const IELTS_LISTENING = [range(1, 10), range(11, 10), range(21, 10), range(31, 10)]
   .map((part, i) => part.map((n) => (i % 2 ? gap(n, "listening") : mc(n, "listening", 3))));
-// Product rule: question numbers run across the whole IELTS exam (Reading continues at 41).
-const IELTS_READING = [range(41, 13), range(54, 13), range(67, 14)]
+// Owner decision: every IELTS section starts at 1, like the paper (Reading 1–40).
+const IELTS_READING = [range(1, 13), range(14, 13), range(27, 14)]
   .map((part) => part.map((n) => (n % 2 ? tfng(n) : mc(n, "reading", 4))));
 const IELTS_WRITING = [
   { type: "essay_task1", prompt: "The chart shows synthetic visitor numbers at three museums. Summarise the information (at least 150 words)." },
@@ -186,8 +186,8 @@ async function build() {
       await putContent(teacher, group, IELTS_LISTENING[i], { instructions: `Synthetic listening part ${i + 1}.` });
     }
     for (const [i, group] of by.reading.groups.entries()) await putContent(teacher, group, IELTS_READING[i], { passageText: `Synthetic passage ${i + 1}. The answer word is alpha and every statement is true.` });
-    for (const [i, group] of by.writing.groups.entries()) await putContent(teacher, group, [{ number: 81 + i, type: IELTS_WRITING[i].type, prompt: IELTS_WRITING[i].prompt, options: [], points: 9 }]);
-    let number = 83;
+    for (const [i, group] of by.writing.groups.entries()) await putContent(teacher, group, [{ number: 1 + i, type: IELTS_WRITING[i].type, prompt: IELTS_WRITING[i].prompt, options: [], points: 9 }]);
+    let number = 1;
     for (const [i, group] of by.speaking.groups.entries()) await putContent(teacher, group, IELTS_SPEAKING[i].map((prompt) => ({ number: number++, type: "speaking_task", prompt, options: [], points: 9 })));
     const ready = (await api(teacher, "GET", `/mock/exams/${state.examId}/readiness`)).data;
     const failing = ready.items.filter((item) => !item.ok).map((item) => `${item.key}: ${item.detail}`);
@@ -253,17 +253,24 @@ async function student() {
     await page.waitForTimeout(2500);
     expect((await answered(page)) === 40, `after Listening: ${await answered(page)}`);
     await finishSection(page);
+    // Owner decision: IELTS Reading is numbered from 1 like the paper (stored numbers 41–80 are unchanged).
+    expect(by.reading.groups[0].questions[0].displayNumber === 1, "reading display numbering");
+    await page.getByRole("button", { name: /^Question 1, / }).first().waitFor();
+    expect(/Question 1\b/.test(await page.locator("body").innerText()), "the header still shows a Listening question number");
+    // Owner decision: the IELTS window shows the server countdown of the current section.
+    const clock = await page.locator('[aria-label*="Time left"], [aria-label*="time left"], [role="timer"]').first().innerText().catch(() => "");
+    expect(/\d{1,2}:\d{2}/.test(clock), `no section timer in the IELTS window (${clock})`);
     for (const [i, group] of by.reading.groups.entries()) { await openBlock(page, i + 1); for (const q of group.questions) await answerObjective(page, q); }
     await page.waitForTimeout(2500);
     expect((await answered(page)) === 80, `after Reading: ${await answered(page)}`);
     await finishSection(page);
-    return "40 + 40 answered in the browser";
+    return "40 + 40 answered; Reading numbered 1–40; section timer shown";
   });
   await step(page, "05-writing", async () => {
     const essay = (words) => Array.from({ length: words }, (_, i) => ["museums", "visitors", "students", "history", "culture"][i % 5]).join(" ") + ".";
     for (const [i, group] of by.writing.groups.entries()) {
       await openBlock(page, i + 1);
-      await page.getByLabel(`Written response to question ${group.questions[0].number}`).fill(essay(i ? 260 : 160));
+      await page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`).fill(essay(i ? 260 : 160));
     }
     await page.waitForTimeout(2500);
     expect((await answered(page)) === 82, `after Writing: ${await answered(page)}`);

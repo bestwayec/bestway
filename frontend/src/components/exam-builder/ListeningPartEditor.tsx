@@ -42,7 +42,7 @@ import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas, visualScratchKey } from "./visual-editor/VisualQuestionCanvas";
-import { TYPES_BY_SKILL, nextQuestionNumber, tx, type Selection } from "./types";
+import { TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 const LISTENING_TYPES = TYPES_BY_SKILL["listening"];
 
@@ -157,7 +157,7 @@ export function ListeningPartEditor({
   const [visualQuestions, setVisualQuestions] = React.useState<BuilderQuestion[]>(part?.questions ?? []);
   const baseNumber = visualQuestions.length
     ? Math.min(...visualQuestions.map((q) => q.number)) - 1
-    : nextQuestionNumber(detail.sections) - 1;
+    : nextQuestionNumber(detail.sections, { skill: "listening" }) - 1;
   React.useEffect(
     () => () => {
       if (localAudioUrl) URL.revokeObjectURL(localAudioUrl);
@@ -307,7 +307,7 @@ export function ListeningPartEditor({
   const numbers = part.questions.map((q) => q.number);
   const range = partRangeLabel(numbers);
   const summary = partTypeSummary(part.questions.map((q) => q.type));
-  const nextNumber = Math.max(nextQuestionNumber(detail.sections) - 1, numbers.reduce((m, n) => Math.max(m, n), 0)) + 1;
+  const nextNumber = Math.max(nextQuestionNumber(detail.sections, { skill: "listening" }) - 1, numbers.reduce((m, n) => Math.max(m, n), 0)) + 1;
 
   // Live checklist from the existing validation helpers (client) — the
   // server readiness endpoint stays authoritative at publish time.
@@ -659,7 +659,7 @@ export function ListeningPartEditor({
               skill="listening"
               onDone={handleImportDone}
               groupLabel={`Listening → ${partName}`}
-              existingNumbers={detail.sections.flatMap((s) => s.groups.flatMap((g) => g.questions.map((q) => q.number)))}
+              existingNumbers={sectionNumbers(detail.sections, { skill: "listening" })}
             />
           </div>
         )}

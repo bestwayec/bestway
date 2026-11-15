@@ -172,6 +172,8 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
         shaped["questionCount"] = sum(len(g.get("questions", [])) for g in shaped["groups"])
         result["sections"].append(shaped)
     result["totalQuestions"] = result["questionCount"]
+    from .question_numbering import apply_display_numbers
+    apply_display_numbers(exam.type, result["sections"])
     return result
 
 

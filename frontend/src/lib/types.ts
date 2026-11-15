@@ -716,6 +716,8 @@ export interface MockExamListItem {
 export interface MockQuestion {
   id: string;
   number: number;
+  /** Number shown to the student (IELTS: from 1 in every section). `number` stays the stored key. */
+  displayNumber?: number;
   sortOrder: number;
   type: MockQuestionType;
   prompt: string;
@@ -901,6 +903,8 @@ export interface MockAttemptSummary {
 export interface MockAttemptQuestion {
   id: string;
   number: number;
+  /** Number shown to the student (IELTS: from 1 in every section). `number` stays the stored key. */
+  displayNumber?: number;
   type: MockQuestionType;
   prompt: string;
   options: string[] | null;

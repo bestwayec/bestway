@@ -491,7 +491,7 @@ function ReviewRow({  q,
           ) : q.isCorrect === false ? (
             <X className="size-3.5" />
           ) : (
-            q.number
+            q.displayNumber ?? q.number
           )}
         </span>
         <div className="min-w-0 flex-1">

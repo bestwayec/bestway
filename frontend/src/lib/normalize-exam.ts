@@ -93,6 +93,7 @@ export function normalizeExamPayload(raw: any): MockExamDetail | null {
           return {
             id: String(q.id || `q-${sIdx}-${gIdx}-${qIdx}`),
             number: typeof q.number === "number" ? q.number : q.order ?? (qIdx + 1),
+            ...(typeof q.displayNumber === "number" ? { displayNumber: q.displayNumber } : {}),
             sortOrder: q.sortOrder ?? q.order ?? qIdx,
             prompt,
             text,
