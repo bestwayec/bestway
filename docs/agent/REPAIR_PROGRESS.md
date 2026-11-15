@@ -235,7 +235,8 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 | S1 runner + catalogue + result | DONE | #173 → 04d8a48, #172 → fccdc94 | Content share 1366×768: Reading 48%→85%, Listening 13%→85%; 1440×900 87%; 390×844 81%; 360×640 75% (`runner-layout.mjs`, light+dark). Catalogue segmented track switch, ≤2 badges, per-section start; result table All/Wrong/Unanswered (`ui-screens.mjs`, 4 viewports × 2 themes, no overflow) |
 | Pre-S3 check (owner 2026-11-15) | DONE | #176 → 6ec1e8f | Microphone/recording messages translated (guard refuses literals); seed_local_dev restores the E2E track baseline and the Record Mock; mobile-listening 16/16; roles-crawl.mjs (student/teacher/admin/parent × light/dark) 27/140 → 140/140 clean, 0 serious/critical; exam-a11y 12/12 |
 | S3 review explains mistakes | DONE | #177 → 1ec8a5f (backend), #178 → ba66862 (UI) | Evidence words + Listening moment per question (validated against passage/audioscript), shown only after release; review recording endpoint (own released attempt, never during an attempt of the same exam); attempt detail 3 queries (no N+1, constant with 1 or 4 parts); accuracy per type + trend; Builder audioscript + evidence fields; verify_review_evidence_postgres.py 22/22; ielts-full 10/10 |
-| S4 practice mode | NOT STARTED | — | |
+| S4 practice mode | DONE | #180 → 9e3aa2a | Catalogue section button → Exam rules or Practice; practice: all parts or one, timer none / section / part share (server deadline, max(60 s, ceil(share/60)·60)). Practice only: speed 0.75–1.5×, ±10 s, audioscript, Show answer (POST reveal, recorded on the attempt; exam attempts 403 PRACTICE_ONLY). Exam rules unchanged (single play, server time, no tools). Practice result raw x/y (z%), never a band; shown answers marked. verify_practice_mode_postgres.py 16/16; practice-mode.mjs 5/5 |
+| Result page: key on every question (owner step 3) | DONE | #181 → f9d516a | Table + All/Wrong/Unanswered filters were in #173; mock result cards and the test attempt review showed the key only on wrong answers, now on every question the server sends a key for (server rule unchanged: staff, or the student's own completed attempt) |
 | S5 next-level touches | NOT STARTED | — | only after S1–S4 |
 | S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
 
@@ -245,9 +246,12 @@ UNVERIFIED: mobile-listening 02 (Record Mock not in the student's current-track 
 Migrations: S3 adds Prisma `20261115000000_question_review_evidence` (three nullable MockQuestion columns: evidenceText, evidenceOffset, audioStartSec; listed in config/prisma_migrations.json). Rollback: old code ignores them; `ALTER TABLE "MockQuestion" DROP COLUMN "evidenceText", DROP COLUMN "evidenceOffset", DROP COLUMN "audioStartSec"` and delete its `_prisma_migrations` row. Deploy-safe SHA: the latest main whose CI is green (ba66862 or later).
 Checks after S3 (main ba66862 code): pytest 1194 / 4 skipped; vitest 774; tsc 0; lint 0 errors; build ok; E2E ielts-full 10/10, multilevel-full 16/16, smoke 16/16, full-journey 13/13, mobile-listening 16/16 (after seed_local_dev), exam-workspace 20/20, roles-crawl 140/142 (the two failing pages, the practice skill cards, were fixed in #178 and re-checked with axe in both themes; the full crawl was not re-run after that fix), exam-a11y 12/12.
 
+Checks after S4 + step 3 (main f9d516a code): pytest 1197 / 4 skipped; vitest 782; tsc 0; lint 0 errors; next build ok. Local E2E on the S4 head: ielts-full 10/10, practice-mode 5/5, multilevel-full 16/16, full-journey 13/13, exam-workspace 20/20, exam-a11y 12/12, mobile-listening 16/16 (after seed_local_dev), smoke 16/16 (re-run after seed_local_dev on main 9e3aa2a; in the chained run step 14 failed because the Record Mock seed ran before seed_local_dev restored it), roles-crawl 4 roles × light/dark 140/140 clean, 0 serious/critical axe.
+Migrations: S4 none (the reveal list is kept in the attempt's existing mediaState).
+
 ## NEXT STEP
 
-IELTS + UI PROGRAM: S4 practice mode (section or part, section or part timer; practice only: speed, ±10 s, audioscript toggle, answer reveal; exam mode unchanged; raw x/y (z%), never a band) → Uzbek report after S4 → S5 → S6 (bw-tauri PR only).
+IELTS + UI PROGRAM: owner step 2 — UI state check and before/after screenshots (1366×768, 390×844, 360×640, light/dark; before = main 317868b, after = current main) → S5 → S6 (bw-tauri PR only).
 
 Earlier:
 
