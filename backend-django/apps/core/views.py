@@ -1204,7 +1204,7 @@ def mock_question_view(request, question_id):
 
         return success(mock_authoring.delete_question(request.user, question_id))
 
-    data = body(request, {"number", "sortOrder", "type", "prompt", "options", "correctAnswers", "acceptedVariants", "points", "wordLimit", "answerRule", "cefrLevel", "skillTags"})
+    data = body(request, {"number", "sortOrder", "type", "prompt", "options", "correctAnswers", "acceptedVariants", "points", "wordLimit", "answerRule", "cefrLevel", "skillTags", "evidenceText", "audioStartSec"})
 
     return success(mock_authoring.question_payload(mock_authoring.update_question(request.user, question_id, data)))
 

@@ -776,6 +776,9 @@ model MockQuestion {
   acceptedVariants Json? // British/American imlo variantlari: string[] (masalan ["colour","color"])
   cefrLevel        String? // item bank: A1..C2; null = unknown
   skillTags        Json? // item bank: string[] of skill tags (e.g. ["inference","detail"]); null = none
+  evidenceText     String? // review only: the passage/audioscript words that hold the answer
+  evidenceOffset   Int? // review only: where evidenceText starts in that text (computed by the server)
+  audioStartSec    Float? // review only: Listening moment where the answer is heard ("play from here")
   createdAt        DateTime         @default(now())
 
   group   MockQuestionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)

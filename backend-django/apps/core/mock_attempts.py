@@ -851,19 +851,37 @@ def detail(actor, attempt_id):
     staff = mock_catalog.is_staff(actor)
     show = staff or attempt.status == 'completed'
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
+    # One query per level instead of one per section and one per group (N+1).
+    section_rows = list(MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order'))
+    groups_by_section = {}
+    for group in MockQuestionGroup.objects.filter(section_id__in=[x.id for x in section_rows]).order_by('sort_order'):
+        groups_by_section.setdefault(group.section_id, []).append(group)
+    questions_by_group = {}
+    for question in MockQuestion.objects.filter(group_id__in=[g.id for gs in groups_by_section.values() for g in gs]).order_by('sort_order'):
+        questions_by_group.setdefault(question.group_id, []).append(question)
+    from . import review_evidence
     sections = []
-    for section in MockSection.objects.filter(exam_id=attempt.exam_id).order_by('sort_order'):
+    for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
         shaped = dict(id=section.id, skill=section.skill, title=section.title,
             durationMinutes=section.duration_minutes, instructions=section.instructions,
             score=raw.get('score'), max=raw.get('max'), band=(attempt.section_bands or {}).get(section.skill),
             standardScore=(attempt.standard_scores or {}).get(section.skill, {}).get('estimatedStandardScore'), groups=[])
-        for gi, group in enumerate(MockQuestionGroup.objects.filter(section_id=section.id).order_by('sort_order')):
+        for gi, group in enumerate(groups_by_section.get(section.id, [])):
             shaped_group = dict(id=group.id, title=group.title, instructions=group.instructions,
                 passageText=None if versioned(attempt) and section.skill == 'listening' and not show else group.passage_text,
                 contentHtml=group.content_html, contentLayout=group.content_layout,
                 optionsReusable=group.options_reusable, hasAudio=bool(group.audio_key), questions=[])
-            for qi, q in enumerate(MockQuestion.objects.filter(group_id=group.id).order_by('sort_order')):
+            # Review only (released result): the Listening audioscript and its recording, so a wrong
+            # answer can be read and heard where it is said. Never during the exam.
+            review_source = review_evidence.source_text(group, section.skill) if show else ''
+            if show and section.skill == 'listening':
+                script = review_evidence.plain_text(group.audio_script)
+                if script:
+                    shaped_group['audioScript'] = script
+                if group.audio_key:
+                    shaped_group['reviewAudioUrl'] = review_audio_url(attempt_id, group.id)
+            for qi, q in enumerate(questions_by_group.get(group.id, [])):
                 a = answers.get(q.id)
                 item = dict(id=q.id, number=q.number, type=q.type, prompt=q.prompt, options=q.options,
                     points=q.points, wordLimit=q.word_limit, answerRule=q.answer_rule,
@@ -881,6 +899,7 @@ def detail(actor, attempt_id):
                         item['guidance'] = guidance
                 if show:
                     item['correctAnswers'] = q.correct_answers
+                    item.update(review_evidence.review_fields(q, review_source))
                 shaped_group['questions'].append(item)
             shaped['groups'].append(shaped_group)
         sections.append(shaped)
@@ -925,6 +944,11 @@ def detail(actor, attempt_id):
     except Exception:
         pass
     return result
+
+
+def review_audio_url(attempt_id, group_id):
+    from .mock_media import media_url
+    return media_url('', 'audio').split('/mock/groups/')[0] + f'/mock/attempts/{attempt_id}/review/audio/{group_id}'
 
 
 def answer_audio_url(attempt_id, question_id):

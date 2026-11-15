@@ -22,7 +22,7 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
-from . import item_metadata
+from . import item_metadata, review_evidence
 from .auth_service import audit
 from .mock_rules import (
     QUESTION_TYPES,
@@ -187,7 +187,7 @@ def _group_payload(data: dict) -> dict:
     return values
 
 
-def _question_payload(data: dict, exam: MockExam, skill: str, *, complete: bool = True) -> dict:
+def _question_payload(data: dict, exam: MockExam, skill: str, *, complete: bool = True, group=None) -> dict:
     is_auto = skill in AUTO_SKILLS
     _assert_question(data, is_auto, complete=complete)
     payload = {"number": data["number"], "type": data["type"], "prompt": data.get("prompt", "").strip(), "options": data.get("options"), "correct_answers": data.get("correctAnswers"), "accepted_variants": data.get("acceptedVariants"), "word_limit": data.get("wordLimit"), "answer_rule": data.get("answerRule"), "points": _resolve_points(exam.type, is_auto, data.get("points"))}
@@ -195,6 +195,8 @@ def _question_payload(data: dict, exam: MockExam, skill: str, *, complete: bool 
     # Item bank metadata (optional; unknown when not given).
     if "cefrLevel" in data: payload["cefr_level"] = item_metadata.clean_cefr(data["cefrLevel"])
     if "skillTags" in data: payload["skill_tags"] = item_metadata.clean_tags(data["skillTags"])
+    # Review material (optional): where the answer is in the passage / audioscript / recording.
+    if group is not None: review_evidence.apply(payload, data, group, skill)
     return payload
 
 
@@ -275,6 +277,7 @@ def question_payload(question: MockQuestion) -> dict:
         "acceptedVariants": question.accepted_variants, "points": question.points,
         "wordLimit": question.word_limit, "answerRule": question.answer_rule,
         "cefrLevel": question.cefr_level or item_metadata.UNKNOWN, "skillTags": list(question.skill_tags or []),
+        **review_evidence.authoring_fields(question),
         "createdAt": question.created_at,
     }
 
@@ -505,7 +508,7 @@ def add_questions(actor, group_id: str, data: dict):
         base = MockQuestion.objects.filter(group_id=group.id).count()
         created = []
         for index, row in enumerate(rows):
-            payload = _question_payload(row, exam, group.section.skill)
+            payload = _question_payload(row, exam, group.section.skill, group=group)
             created.append(MockQuestion.objects.create(id=new_id(), group_id=group.id, sort_order=payload.pop("sort_order", base + index), created_at=now(), **payload))
         return created
     questions = _locked_mutation(actor, group.section.exam_id, write)
@@ -561,12 +564,13 @@ def update_question(actor, question_id: str, data: dict):
     except MockQuestion.DoesNotExist: raise ContractAPIException("MOCK_QUESTION_NOT_FOUND", "Savol topilmadi", 404)
     group, exam, skill = question.group, question.group.section.exam, question.group.section.skill
     merged = {"number": data.get("number", question.number), "sortOrder": data.get("sortOrder", question.sort_order), "type": data.get("type", question.type), "prompt": data.get("prompt", question.prompt), "options": data.get("options", question.options), "correctAnswers": data.get("correctAnswers", question.correct_answers), "acceptedVariants": data.get("acceptedVariants", question.accepted_variants), "wordLimit": data.get("wordLimit", question.word_limit), "answerRule": data.get("answerRule", question.answer_rule), "points": data.get("points", question.points), "cefrLevel": data.get("cefrLevel", question.cefr_level), "skillTags": data.get("skillTags", question.skill_tags)}
+    merged.update({key: data[key] for key in ("evidenceText", "audioStartSec") if key in data})
     def write(locked):
         _assert_numbers(locked, skill, [merged], excluding_group=group.id)
         same_group = MockQuestion.objects.filter(group_id=group.id, number=merged["number"]).exclude(id=question.id).exists()
         if same_group:
             raise ContractAPIException("VALIDATION_ERROR", f"Already used in this exam: {merged['number']}", 400)
-        payload = _question_payload(merged, locked, skill)
+        payload = _question_payload(merged, locked, skill, group=group)
         for key, value in payload.items(): setattr(question, key, value)
         question.save(update_fields=list(payload))
         return question
@@ -608,7 +612,7 @@ def save_group_content(actor, group_id: str, data: dict):
         for question_id in deleted: current[question_id].delete()
         saved = []
         for index, row in enumerate(incoming):
-            payload = _question_payload(row, exam, group.section.skill, complete=False)
+            payload = _question_payload(row, exam, group.section.skill, complete=False, group=group)
             payload.update(options=row.get('options') or [], correct_answers=row.get('correctAnswers') or [], accepted_variants=row.get('acceptedVariants') or [])
             payload["sort_order"] = index
             if row.get("id"):
@@ -776,7 +780,7 @@ def _copy_exam(actor, source: MockExam) -> MockExam:
         for group in MockQuestionGroup.objects.filter(section_id=section.id).order_by("sort_order", "id"):
             copied_group = MockQuestionGroup.objects.create(id=new_id(), section_id=copied_section.id, sort_order=group.sort_order, title=group.title, instructions=group.instructions, passage_text=group.passage_text, content_html=group.content_html, audio_script=group.audio_script, content_layout=group.content_layout, options_reusable=group.options_reusable, audio_key=group.audio_key, image_key=group.image_key, max_score=group.max_score, stimulus_ref=group.stimulus_ref, part_number=group.part_number, audio_play_limit=group.audio_play_limit, audio_duration_sec=group.audio_duration_sec, created_at=stamp)
             for question in MockQuestion.objects.filter(group_id=group.id).order_by("sort_order", "number", "id"):
-                MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, cefr_level=question.cefr_level, skill_tags=question.skill_tags, created_at=stamp)
+                MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, cefr_level=question.cefr_level, skill_tags=question.skill_tags, evidence_text=question.evidence_text, evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, created_at=stamp)
     return clone
 
 
