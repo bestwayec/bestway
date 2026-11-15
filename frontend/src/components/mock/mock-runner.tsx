@@ -831,7 +831,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             <p className="min-w-0 truncate text-sm font-semibold text-fg sm:text-base" title={exam.title}>{exam.title}</p>
             {/* Sections of a multi-section attempt: compact on wide screens, under Info on smaller ones. */}
             {!isSingleSection && exam.sections.length > 1 && (
-              <div className="hidden shrink-0 items-center gap-0.5 rounded-lg bg-bg-subtle p-0.5 2xl:flex" role="group" aria-label={tr("sectionsLabel")}>
+              <div className="hidden shrink-0 items-center gap-0.5 rounded-lg bg-bg-subtle p-0.5 xl:flex" role="group" aria-label={tr("sectionsLabel")}>
                 {sectionSwitcher("compact")}
               </div>
             )}
@@ -857,7 +857,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           >
             <ExamToolbar
               ref={toolbarRef}
-              iconsClassName="hidden md:flex"
+              iconsClassName="hidden 2xl:flex"
               settings={examSettings}
               onChange={updateExamSettings}
               questionTypes={sectionQuestionTypes}
@@ -890,7 +890,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={flush}>{tr("saveRetry")}</button>}
             </div>
             {!isSingleSection && exam.sections.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 2xl:hidden" role="group" aria-label={tr("sectionsLabel")}>{sectionSwitcher("full")}</div>
+              <div className="flex flex-wrap gap-1.5 xl:hidden" role="group" aria-label={tr("sectionsLabel")}>{sectionSwitcher("full")}</div>
             )}
             <PhoneToolsRow
               toolbar={toolbarRef}
@@ -1110,8 +1110,8 @@ export function SaveStatusChip({ state, label, compact = false }: { state: "idle
         ) : (
           <CheckCircle2 className="size-3.5" aria-hidden />
         )}
-        {/* Compact (header): the label is read out but shown only on wide screens, or always when saving failed. */}
-        <span className={compact && !failed ? "sr-only xl:not-sr-only" : undefined}>{label}</span>
+        {/* Compact (header): the icon shows the state and the label is read out; a failure is always written out. */}
+        <span className={compact && !failed ? "sr-only" : undefined}>{label}</span>
       </StatusChip>
     </span>
   );

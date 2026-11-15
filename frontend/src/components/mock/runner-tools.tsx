@@ -32,8 +32,8 @@ function useHighlight() {
 }
 
 /**
- * Header tools. Wide screens: Info, Highlight, Notes, Word lookup (practice), Focus, then the exam
- * toolbar (Settings, Help, Hide). Phones: Info only; the other tools are in the Info panel.
+ * Header tools. From md: Info, Highlight, Notes, Word lookup (practice), Focus; from 2xl also the exam
+ * toolbar (Settings, Help, Hide). Below that they are in the Info panel; phones show Info only.
  */
 export function RunnerTools({ infoOpen, onInfo, children, ...tools }: ToolState & { infoOpen: boolean; onInfo: () => void; children?: React.ReactNode }) {
   const t = useTranslations("mock.runnerUx");
@@ -65,18 +65,18 @@ export function RunnerTools({ infoOpen, onInfo, children, ...tools }: ToolState 
   );
 }
 
-/** The same tools with their names, for the Info panel on phones. */
+/** The same tools with their names, in the Info panel: all of them on phones; Settings, Help and Hide below 2xl. */
 export function PhoneToolsRow({ toolbar, ...tools }: ToolState & { toolbar: React.RefObject<ExamToolbarHandle | null> }) {
   const t = useTranslations("mock.runnerUx");
   const te = useTranslations("mock.examTools");
   const highlight = useHighlight();
   const item = "min-h-[40px] justify-start gap-2 px-3 text-sm";
   return (
-    <div className="grid grid-cols-2 gap-1.5 md:hidden" role="group" aria-label={t("toolsLabel")}>
-      <Button size="sm" variant="outline" className={item} onMouseDown={(event) => event.preventDefault()} onClick={highlight}><Highlighter className="size-4" aria-hidden />{t("highlight")}</Button>
-      <Button size="sm" variant={tools.notesOpen ? "subtle" : "outline"} className={item} aria-expanded={tools.notesOpen} onClick={tools.onNotes}><StickyNote className="size-4 text-warning" aria-hidden />{t("notesButton", { count: tools.notesCount })}</Button>
-      {tools.vocab !== null && <Button size="sm" variant={tools.vocab ? "subtle" : "outline"} className={item} aria-pressed={tools.vocab} onClick={tools.onVocab}><BookOpenText className="size-4" aria-hidden />{t("vocab")}</Button>}
-      <Button size="sm" variant={tools.focus ? "subtle" : "outline"} className={item} aria-pressed={tools.focus} onClick={tools.onFocus}><Focus className="size-4" aria-hidden />{t("focus")}</Button>
+    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 2xl:hidden" role="group" aria-label={t("toolsLabel")}>
+      <Button size="sm" variant="outline" className={cn(item, "md:hidden")} onMouseDown={(event) => event.preventDefault()} onClick={highlight}><Highlighter className="size-4" aria-hidden />{t("highlight")}</Button>
+      <Button size="sm" variant={tools.notesOpen ? "subtle" : "outline"} className={cn(item, "md:hidden")} aria-expanded={tools.notesOpen} onClick={tools.onNotes}><StickyNote className="size-4 text-warning" aria-hidden />{t("notesButton", { count: tools.notesCount })}</Button>
+      {tools.vocab !== null && <Button size="sm" variant={tools.vocab ? "subtle" : "outline"} className={cn(item, "md:hidden")} aria-pressed={tools.vocab} onClick={tools.onVocab}><BookOpenText className="size-4" aria-hidden />{t("vocab")}</Button>}
+      <Button size="sm" variant={tools.focus ? "subtle" : "outline"} className={cn(item, "md:hidden")} aria-pressed={tools.focus} onClick={tools.onFocus}><Focus className="size-4" aria-hidden />{t("focus")}</Button>
       <Button size="sm" variant="outline" className={item} onClick={() => toolbar.current?.open("settings")}><Settings2 className="size-4" aria-hidden />{te("settings")}</Button>
       <Button size="sm" variant="outline" className={item} onClick={() => toolbar.current?.open("help")}><HelpCircle className="size-4" aria-hidden />{te("help")}</Button>
       <Button size="sm" variant="outline" className={item} onClick={() => toolbar.current?.hide()}><EyeOff className="size-4" aria-hidden />{te("hide")}</Button>
