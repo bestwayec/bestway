@@ -233,7 +233,8 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 | S0 landing honesty + mixed language | DONE | #170 → c533951 | No version badge, no fake QR, no "official"/AI claims (certificate dialog, placement); Uzbek on English pages moved to keys; guard spec extended |
 | S2 IELTS numbering + timer | DONE | #171 → e2ae0b4, #174 → af405f9 | `displayNumber` per section; builder checks per section (Reading editor fixed in #174, found by full-journey); section deadline in the IELTS window, timeout advances to the next section; render-loop fix (CI had hung) |
 | S1 runner + catalogue + result | DONE | #173 → 04d8a48, #172 → fccdc94 | Content share 1366×768: Reading 48%→85%, Listening 13%→85%; 1440×900 87%; 390×844 81%; 360×640 75% (`runner-layout.mjs`, light+dark). Catalogue segmented track switch, ≤2 badges, per-section start; result table All/Wrong/Unanswered (`ui-screens.mjs`, 4 viewports × 2 themes, no overflow) |
-| S3 review explains mistakes | NOT STARTED | — | |
+| Pre-S3 check (owner 2026-11-15) | DONE | #176 → 6ec1e8f | Microphone/recording messages translated (guard refuses literals); seed_local_dev restores the E2E track baseline and the Record Mock; mobile-listening 16/16; roles-crawl.mjs (student/teacher/admin/parent × light/dark) 27/140 → 140/140 clean, 0 serious/critical; exam-a11y 12/12 |
+| S3 review explains mistakes | DONE | #177 → 1ec8a5f (backend), #178 → ba66862 (UI) | Evidence words + Listening moment per question (validated against passage/audioscript), shown only after release; review recording endpoint (own released attempt, never during an attempt of the same exam); attempt detail 3 queries (no N+1, constant with 1 or 4 parts); accuracy per type + trend; Builder audioscript + evidence fields; verify_review_evidence_postgres.py 22/22; ielts-full 10/10 |
 | S4 practice mode | NOT STARTED | — | |
 | S5 next-level touches | NOT STARTED | — | only after S1–S4 |
 | S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
@@ -241,11 +242,12 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 Screenshots (synthetic accounts and exams, 1366×768 / 1440×900 / 390×844 / 360×640, light and dark): `docs/agent/screens/ielts-ui-s1/` (runner Reading, catalogue, result).
 Checks on main fccdc94 (2026-11-15): pytest 1185 passed / 4 skipped; vitest 754/754; tsc 0; lint 0 errors; next build ok. Local E2E on the merged code: ielts-full 9/9, multilevel-full 16/16, smoke 16/16, full-journey 13/13, exam-workspace 20/20 (BW_IELTS_EXAM = the ielts-full exam; the seeded `ielts-academic-mock-01` is not in this local DB), mobile-listening 14/16.
 UNVERIFIED: mobile-listening 02 (Record Mock not in the student's current-track catalogue in this local DB) and 10 (microphone dialog step; not changed in this program); all-roles crawl and axe not re-run this session.
-No migrations in S0–S2/S1. Deploy-safe SHA: fccdc94 once its main CI run is green.
+Migrations: S3 adds Prisma `20261115000000_question_review_evidence` (three nullable MockQuestion columns: evidenceText, evidenceOffset, audioStartSec; listed in config/prisma_migrations.json). Rollback: old code ignores them; `ALTER TABLE "MockQuestion" DROP COLUMN "evidenceText", DROP COLUMN "evidenceOffset", DROP COLUMN "audioStartSec"` and delete its `_prisma_migrations` row. Deploy-safe SHA: the latest main whose CI is green (ba66862 or later).
+Checks after S3 (main ba66862 code): pytest 1194 / 4 skipped; vitest 774; tsc 0; lint 0 errors; build ok; E2E ielts-full 10/10, multilevel-full 16/16, smoke 16/16, full-journey 13/13, mobile-listening 16/16 (after seed_local_dev), exam-workspace 20/20, roles-crawl 140/142 (the two failing pages, the practice skill cards, were fixed in #178 and re-checked with axe in both themes; the full crawl was not re-run after that fix), exam-a11y 12/12.
 
 ## NEXT STEP
 
-IELTS + UI PROGRAM: S3 (review that explains mistakes: Listening audioscript highlight + play-from-here in review only, Reading evidence highlight, per-type accuracy and trend, builder fields for evidence/timestamps, no N+1) → S4 practice mode (Uzbek report after S4) → S5 → S6 (bw-tauri PR only).
+IELTS + UI PROGRAM: S4 practice mode (section or part, section or part timer; practice only: speed, ±10 s, audioscript toggle, answer reveal; exam mode unchanged; raw x/y (z%), never a band) → Uzbek report after S4 → S5 → S6 (bw-tauri PR only).
 
 Earlier:
 
