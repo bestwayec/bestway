@@ -60,6 +60,8 @@ const FILES = [
   "src/components/mock/review-explain.tsx",
   "src/components/mock/type-accuracy-card.tsx",
   "src/components/mock/exam-builder/review-evidence-fields.tsx",
+  "src/components/mock/practice-tools.tsx",
+  "src/components/mock/section-start-dialog.tsx",
 ];
 
 /** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */

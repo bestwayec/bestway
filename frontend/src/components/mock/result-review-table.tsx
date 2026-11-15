@@ -99,6 +99,9 @@ export function ResultReviewTable({ title, skill, groups }: { title: string; ski
                     </td>
                     <td className={cn("px-3 py-2 font-medium break-words", state === "wrong" ? "text-danger" : "text-fg")}>
                       {answered ? q.response : <span className="font-normal italic text-fg-muted">{t("noAnswer")}</span>}
+                      {(q as { revealed?: boolean }).revealed && (
+                        <span className="ml-1.5 inline-block rounded-full border border-warning-border bg-warning-bg px-1.5 text-[11px] font-medium text-warning">{t("revealed")}</span>
+                      )}
                     </td>
                     <td className="px-3 py-1.5 break-words text-success">
                       {q.correctAnswers && q.correctAnswers.length > 0 ? q.correctAnswers.join(" / ") : <span className="text-fg-muted">—</span>}

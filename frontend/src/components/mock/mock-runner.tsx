@@ -80,6 +80,7 @@ import { COLOUR_CLASS, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSetting
 import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
 import { ExamNotesPanel } from "./exam-notes-panel";
 import { VocabLookup, VOCAB_TEXT_ATTRIBUTE } from "./vocab-lookup";
+import { AudioScriptToggle, RevealAnswer } from "./practice-tools";
 import { RunnerTools, PhoneToolsRow, ClearAnswersDialog } from "./runner-tools";
 import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
@@ -759,6 +760,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     audioTimestampsQ.data?.timestamps ?? exam.audioTimestamps ?? [];
   const sharedSingleAudioUrl = audioTimestampsQ.data?.audioUrl ?? null;
 
+  // Practice help (never in a timed exam): the Listening audioscript and answer reveal.
+  const practiceHelp = attempt.mode === "practice" && attempt.status === "in_progress";
+  const practiceScripts = new Map((attempt.sections ?? []).flatMap((s) => (s.groups ?? []).map((g) => [g.id, (g as { audioScript?: string }).audioScript] as const)));
+  const practiceRevealed = new Set((attempt.sections ?? []).flatMap((s) => (s.groups ?? []).flatMap((g) => g.questions.filter((q) => (q as { revealed?: boolean }).revealed).map((q) => q.id))));
+
   // Clear answers: only the open section, only while it can still be changed (a full test has moved past
   // every earlier section, and the server refuses changes to them); recordings are never touched.
   const sectionEditable = Boolean(section) && attempt.status === "in_progress" && (!isFullTest || !attempt.currentSkill || section?.skill === attempt.currentSkill);
@@ -1007,6 +1013,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
                     ? () => api.post<ListeningSchedule>(`/mock/attempts/${attempt.id}/listening/${g.id}/start`)
                     : undefined}
                   serverOffsetMs={openingOffset}
+                  practice={practiceHelp ? { script: practiceScripts.get(g.id), revealed: practiceRevealed } : null}
                 />
               )}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
@@ -1260,6 +1267,7 @@ function GroupBlock({
   mediaAlreadyStarted = false,
   startListening,
   serverOffsetMs = 0,
+  practice = null,
 }: {
   group: MockSection["groups"][number];
   skill: MockSkill;
@@ -1283,6 +1291,8 @@ function GroupBlock({
   mediaAlreadyStarted?: boolean;
   startListening?: () => Promise<ListeningSchedule>;
   serverOffsetMs?: number;
+  /** Practice only: the audioscript of this Listening part and the revealed answers. */
+  practice?: { script?: string | null; revealed: Set<string> } | null;
 }) {
   const tg = useTranslations("mock.runnerUx");
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
@@ -1347,6 +1357,7 @@ function GroupBlock({
           </audio>
         )
       )}
+      {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
       {group.imageUrl && !isMapSplit && (
         <div className="mt-3">
           <GroupImage groupId={group.id} alt={group.title ? `${group.title} — picture` : "Picture for this part"} />
@@ -1462,6 +1473,19 @@ function GroupBlock({
         {isPassageSplit && <ReadingSplitDivider value={readingSplit} onChange={setReadingSplit} containerRef={splitRef} />}
         {hasGappedContent ? (
           <div className="overflow-x-auto rounded-[8px] border border-border bg-surface p-3 sm:p-4">
+            {practice && (skill === "listening" || skill === "reading") && (
+              <details className="mb-3 text-sm">
+                <summary className="cursor-pointer text-xs font-medium text-fg-muted">{tg("practiceShowAnswers")}</summary>
+                <ul className="mt-2 space-y-1">
+                  {group.questions.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-baseline gap-2">
+                      <span className="font-semibold tabular-nums text-fg">{(q as { displayNumber?: number }).displayNumber ?? q.number}</span>
+                      <RevealAnswer attemptId={attemptId} questionId={q.id} initiallyRevealed={practice.revealed.has(q.id)} />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
             <GappedContent
               contentHtml={group.contentHtml!}
               questions={group.questions}
@@ -1525,6 +1549,9 @@ function GroupBlock({
                   isFlagged={flaggedQuestions?.has(q.id)}
                   onToggleFlag={onToggleFlag ? () => onToggleFlag(q.id) : undefined}
                 />
+                {practice && (skill === "listening" || skill === "reading") && (
+                  <RevealAnswer attemptId={attemptId} questionId={q.id} initiallyRevealed={practice.revealed.has(q.id)} />
+                )}
               </div>
             ))}
           </div>

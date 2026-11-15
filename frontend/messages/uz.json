@@ -1180,7 +1180,8 @@
       "recPersistFailed": "Yozuvni qurilmada saqlab bo'lmadi. Sahifani yopmang va yuklashni qayta urinib ko'ring.",
       "recStartFailed": "Speaking javobini boshlab bo'lmadi. Qayta urinib ko'ring.",
       "recRetrySaved": "Saqlangan yozuvni qayta yuklash",
-      "recSupervisorRetry": "Vaqtli qayta urinish uchun nazoratchiga murojaat qiling."
+      "recSupervisorRetry": "Vaqtli qayta urinish uchun nazoratchiga murojaat qiling.",
+      "practiceShowAnswers": "Javoblarni ko'rsatish (mashq)"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1606,7 +1607,8 @@
       "state_unanswered": "Javob berilmagan",
       "state_pending": "Hali tekshirilmagan",
       "where": "Javob qayerda?",
-      "whereFor": "{number}-savol javobi qayerda?"
+      "whereFor": "{number}-savol javobi qayerda?",
+      "revealed": "javob ko'rsatilgan"
     },
     "reviewExplain": {
       "passageLabel": "Javobi ajratilgan matn",
@@ -1622,6 +1624,43 @@
       "trendLabel": "So'nggi natijalardagi o'zgarish: {points}",
       "attempts": "{count} ta natija",
       "error": "Aniqlikni yuklab bo'lmadi."
+    },
+    "sectionStart": {
+      "title": "{skill}ni boshlash",
+      "subtitle": "Imtihondagidek topshiring yoki yordam bilan o'z sur'atingizda mashq qiling.",
+      "modeLabel": "Qanday",
+      "modePractice": "Mashq",
+      "modePracticeHint": "Qism va taymerni tanlang; audio tezligini o'zgartirish, ±10 s o'tkazish, audioskriptni o'qish va javoblarni ko'rish mumkin. Natija — to'g'ri javoblaringiz soni, band emas.",
+      "modePracticeHintManual": "Qism va taymerni tanlang. Natija — ballingiz, band emas.",
+      "modeExam": "Imtihon qoidalari",
+      "modeExamHint": "Butun bo'lim, rasmiy vaqti, yozuv bir marta, yordamsiz.",
+      "partLabel": "Nima",
+      "allParts": "Barcha qismlar",
+      "partN": "{n}-qism",
+      "passageN": "{n}-matn",
+      "questions": "{count} ta savol",
+      "timerLabel": "Taymer",
+      "timerNone": "Taymersiz",
+      "timerSection": "Bo'lim vaqti ({minutes} daq)",
+      "timerPart": "Shu qism vaqti ({minutes} daq)",
+      "timerPartHint": "Bo'lim vaqtining savollar bo'yicha ulushi.",
+      "cancel": "Bekor qilish",
+      "startPractice": "Mashqni boshlash",
+      "startExam": "Imtihonni boshlash"
+    },
+    "practiceTools": {
+      "audioTools": "Mashq audio boshqaruvi",
+      "back10": "−10 s",
+      "forward10": "+10 s",
+      "speed": "Tezlik",
+      "showScript": "Audioskriptni ko'rsatish",
+      "hideScript": "Audioskriptni yashirish",
+      "scriptTitle": "Audioskript",
+      "showAnswer": "Javobni ko'rsatish",
+      "showAgain": "Javobni yana ko'rsatish",
+      "answerLabel": "Javob",
+      "whereLabel": "Matnda",
+      "revealError": "Javobni ko'rsatib bo'lmadi."
     }
   },
   "wizard": {

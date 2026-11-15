@@ -51,6 +51,7 @@ import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import { useStudentProgramScope } from "@/hooks/use-exam-programs";
 import { ExamTrackSwitch } from "@/components/exam-track/exam-track-switch";
+import { SectionStartDialog, type PracticeChoice } from "./section-start-dialog";
 import { primeMicrophonePermission } from "@/lib/microphone";
 import { ExamTrackRequired } from "@/components/exam-track/exam-track-required";
 import type { MockAttemptSummary, MockExamListItem, MockSkill } from "@/lib/types";
@@ -108,13 +109,15 @@ export function MockExamsView() {
     examId: string,
     mode: MockAttemptMode,
     skills?: MockPracticeSkill[],
-    simulatorMode?: ExamSimulatorMode
+    simulatorMode?: ExamSimulatorMode,
+    practice?: PracticeChoice,
   ) {
     start.mutate(
       {
         examId,
         mode,
         ...(skills && skills.length > 0 ? { skills } : { flow: "full_test" }),
+        ...(practice ?? {}),
       },
       {
         onSuccess: (res) =>
@@ -282,7 +285,7 @@ export function MockExamsView() {
               progress={progressById.get(e.id)}
               buying={purchase.isPending && purchase.variables === e.id}
               onBuy={() => onBuy(e.id)}
-              onStart={(mode, skills, simulatorMode) => onStart(e.id, mode, skills, simulatorMode)}
+              onStart={(mode, skills, simulatorMode, practice) => onStart(e.id, mode, skills, simulatorMode, practice)}
               onDelete={async () => {
                 await deleteExam.mutateAsync(e.id);
               }}
@@ -313,7 +316,7 @@ export function MockExamCard({
   progress?: ExamProgress;
   buying: boolean;
   onBuy: () => void;
-  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode) => void;
+  onStart?: (mode: MockAttemptMode, skills?: MockPracticeSkill[], simulatorMode?: ExamSimulatorMode, practice?: PracticeChoice) => void;
   onDelete?: () => Promise<unknown> | void;
 }) {
   const t = useTranslations("mock");
@@ -356,17 +359,19 @@ export function MockExamCard({
   const practiceSkills = availablePracticeSkills(exam);
   const sectionStart = !isStaff && !inProgress && exam.access === "granted" && Boolean(onStart) && practiceSkills.length > 0;
   const [startingSkill, setStartingSkill] = React.useState<MockSkill | null>(null);
-  async function startSection(skill: MockPracticeSkill) {
+  // A section button opens the start choice: the exam (official rules) or practice (a part, a timer).
+  const [setupSkill, setSetupSkill] = React.useState<MockPracticeSkill | null>(null);
+  async function startSection(mode: MockAttemptMode, skills: MockPracticeSkill[], practice?: PracticeChoice) {
     if (!onStart) return;
-    setStartingSkill(skill);
+    setStartingSkill(skills[0]);
     // Ask for the microphone before the exam goes full screen (Android shows no prompt over it).
-    if (skill === "speaking" && (await primeMicrophonePermission()) === "denied") toast.warning(t("launcher.micDenied"));
+    if (skills.includes("speaking") && (await primeMicrophonePermission()) === "denied") toast.warning(t("launcher.micDenied"));
     try {
       sessionStorage.setItem("bw_simulator_mode", "cdi");
     } catch {
       // storage unavailable: the runner uses its default
     }
-    onStart("timed", [skill]);
+    onStart(mode, skills, undefined, practice);
   }
 
   return (
@@ -435,7 +440,7 @@ export function MockExamCard({
                     key={s}
                     type="button"
                     disabled={!startable || startingSkill !== null}
-                    onClick={() => void startSection(s as MockPracticeSkill)}
+                    onClick={() => setSetupSkill(s as MockPracticeSkill)}
                     aria-label={tCat("startSection", { skill: t(`skills.${s}`) })}
                     title={startable ? tCat("startSection", { skill: t(`skills.${s}`) }) : tCat("sectionNotReady")}
                     className="inline-flex min-h-[36px] items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-fg"
@@ -445,6 +450,15 @@ export function MockExamCard({
                   </button>
                 );
               })}
+              {setupSkill && (
+                <SectionStartDialog
+                  open
+                  onOpenChange={(value) => { if (!value) setSetupSkill(null); }}
+                  examId={exam.id}
+                  skill={setupSkill}
+                  onStart={(mode, skills, practice) => void startSection(mode, skills, practice)}
+                />
+              )}
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">

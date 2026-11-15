@@ -208,4 +208,18 @@ describe("attempt with no answers", () => {
     expect(html).toContain("5/6 correct · 83%");
     expect(html).not.toMatch(/Band \d/);
   });
+
+  it("a full-length practice section is raw too: practice never shows a band (S4)", () => {
+    const value = attempt(false);
+    value.examType = "ielts_academic";
+    value.flowMode = "single_skill";
+    value.mode = "practice";
+    value.overallBand = null;
+    const questions = Array.from({ length: 40 }, (_, i) => ({ id: `q${i}`, number: i + 1, type: "short_answer", prompt: "p", options: null, points: 1, wordLimit: null,
+      response: "x", hasAudio: false, audioUrl: null, score: 1, isCorrect: true, isGraded: true, feedback: null }));
+    value.sections = [{ ...value.sections[0], id: "reading", skill: "reading", score: 32, max: 40, standardScore: null, band: 7, groups: [{ id: "g", title: null, instructions: null, passageText: null, hasAudio: false, questions }] }] as typeof value.sections;
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain("32/40 correct · 80%");
+    expect(html).not.toMatch(/Band \d/);
+  });
 });

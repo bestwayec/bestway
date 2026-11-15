@@ -130,6 +130,9 @@ export function useStartMock() {
       skills?: import("@/lib/types").MockPracticeSkill[];
       retake?: boolean;
       force?: boolean;
+      /** Practice only: parts of the one section, and the clock (none, section time, the parts' share). */
+      groupIds?: string[];
+      timer?: "none" | "section" | "part";
     }) =>
       api.post<StartMockResult>(`/mock/exams/${v.examId}/start`, {
         mode: v.mode ?? "practice",
@@ -137,6 +140,8 @@ export function useStartMock() {
         ...(v.skills ? { skills: v.skills } : {}),
         ...(v.retake ? { retake: true } : {}),
         ...(v.force ? { force: true } : {}),
+        ...(v.groupIds?.length ? { groupIds: v.groupIds } : {}),
+        ...(v.timer ? { timer: v.timer } : {}),
       }),
   });
 }
