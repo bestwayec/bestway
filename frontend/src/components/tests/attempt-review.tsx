@@ -338,13 +338,8 @@ function QuestionReview({
         </span>
       </div>
 
-      {isStaff && q.correctAnswer && (
-        <p className="mt-1.5 text-xs">
-          <span className="font-medium text-success">{tFallback(t, "correctAnswer", "Correct answer")}:</span>{" "}
-          <span className="text-success">{q.correctAnswer}</span>
-        </p>
-      )}
-      {!isStaff && q.correctAnswer && autoCorrect === false && (
+      {/* The key on every question whenever the server sends it (staff, or the student's completed attempt). */}
+      {q.correctAnswer && (
         <p className="mt-1.5 text-xs">
           <span className="font-medium text-success">{tFallback(t, "correctAnswer", "Correct answer")}:</span>{" "}
           <span className="font-medium text-success">{q.correctAnswer}</span>
