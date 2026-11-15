@@ -80,7 +80,7 @@ export function SubmitConfirmModal({
               <p>{t("allAnswered")}</p>
             </div>
           ) : (
-            <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+            <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-bg p-3 text-xs text-warning">
               <AlertTriangle className="size-4 shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-warning">

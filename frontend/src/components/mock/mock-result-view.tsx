@@ -143,7 +143,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               <Award className="size-3.5" aria-hidden /> {t("resultView.teacherReviewed")}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning-border bg-warning-bg px-3 py-1 text-xs font-semibold text-warning">
               <Sparkles className="size-3.5" aria-hidden /> {t("resultView.aiPending")}
             </span>
           )}

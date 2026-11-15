@@ -1387,7 +1387,7 @@ export function QuestionEditor(props: {
           role="alertdialog"
           aria-labelledby={`qe-${question.clientId}-switch-title`}
           aria-describedby={`qe-${question.clientId}-switch-desc`}
-          className="space-y-2 rounded-[8px] border border-warning/40 bg-warning/5 p-3"
+          className="space-y-2 rounded-[8px] border border-warning-border bg-warning-bg p-3"
         >
           <p id={`qe-${question.clientId}-switch-title`} className="text-sm font-semibold text-fg">
             Change question type to {QTYPE_LABEL[pendingType]}?

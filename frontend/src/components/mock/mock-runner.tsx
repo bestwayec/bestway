@@ -1739,7 +1739,7 @@ function QuestionInput({
           className={cn(
             "inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
             isFlagged
-              ? "border-warning/60 bg-warning/20 text-warning"
+              ? "border-warning-border bg-warning-bg text-warning"
               : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
           )}
         >
@@ -1787,7 +1787,7 @@ function QuestionInput({
             className={cn(
               "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
               isFlagged
-                ? "border-warning/60 bg-warning/20 text-warning"
+                ? "border-warning-border bg-warning-bg text-warning"
                 : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
             )}
           >
