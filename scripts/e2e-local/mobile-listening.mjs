@@ -53,7 +53,7 @@ async function step(name, fn) {
   }
 }
 
-const browser = await chromium.launch({ executablePath: findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
+const browser = await chromium.launch({ executablePath: process.env.BW_CHROMIUM || findChromium(), headless: true, args: ["--disable-gpu", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
 const sizes = [
   { name: "360x640", viewport: { width: 360, height: 640 } },
   { name: "390x844", viewport: { width: 390, height: 844 } },
