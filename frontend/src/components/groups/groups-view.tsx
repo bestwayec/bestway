@@ -100,7 +100,7 @@ export function GroupAnalyticsPanel({
               size="sm"
               onClick={handleExcelDownload}
               disabled={!selectedGroupId || excelLoading}
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+              className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover"
             >
               {excelLoading ? (
                 <Loader2 className="size-4 animate-spin" />

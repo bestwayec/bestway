@@ -125,7 +125,7 @@ export function GroupAiRankingTable({
                     size="sm"
                     variant="ghost"
                     onClick={() => onEvaluate?.(row.attemptId!, row.name, row.aiScore, row.finalScore)}
-                    className="h-7 px-2.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 gap-1 font-medium inline-flex items-center"
+                    className="h-7 px-2.5 text-xs text-brand hover:text-brand-hover hover:bg-brand-subtle gap-1 font-medium inline-flex items-center"
                   >
                     <PenTool className="size-3" />
                     <span>Baholash</span>
@@ -158,6 +158,7 @@ export function GroupAllGradesTable({
   ) => void;
 }) {
   const [search, setSearch] = React.useState("");
+  const tu = useTranslations("uiText");
   const [sortBy, setSortBy] = React.useState<"name" | "score-desc" | "score-asc">("name");
 
   const getStudentScore = (item: GroupGradeSummary): number => {
@@ -239,18 +240,19 @@ export function GroupAllGradesTable({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs text-fg-muted">
             <ArrowUpDown className="size-3 text-fg-subtle" />
-            <span>Saralash:</span>
+            <label htmlFor="grades-sort">{tu("gradesTable.sortLabel")}</label>
           </div>
           <select
+            id="grades-sort"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "name" | "score-desc" | "score-asc")}
             className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs text-fg focus:border-brand focus:outline-none"
           >
-            <option value="name">Alifbo bo&apos;yicha</option>
-            <option value="score-desc">Ball: eng yuqoridan</option>
-            <option value="score-asc">Ball: eng pastdan</option>
+            <option value="name">{tu("gradesTable.sortName")}</option>
+            <option value="score-desc">{tu("gradesTable.sortHigh")}</option>
+            <option value="score-asc">{tu("gradesTable.sortLow")}</option>
           </select>
-          <span className="text-[11px] text-fg-subtle">({processedRows.length} ta o&apos;quvchi)</span>
+          <span className="text-[11px] text-fg-subtle">({tu("gradesTable.studentCount", { count: processedRows.length })})</span>
         </div>
       </div>
 
@@ -306,7 +308,7 @@ export function GroupAllGradesTable({
                           size="sm"
                           variant="ghost"
                           onClick={() => onEvaluate?.(targetAttemptId, row.name, wScore, sScore)}
-                          className="h-7 px-2.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 gap-1 font-medium inline-flex items-center"
+                          className="h-7 px-2.5 text-xs text-brand hover:text-brand-hover hover:bg-brand-subtle gap-1 font-medium inline-flex items-center"
                         >
                           <PenTool className="size-3" />
                           <span>Baholash</span>
@@ -435,7 +437,7 @@ export function GroupAiRanking({ groupId }: { groupId: string }) {
                         type="button"
                         size="sm"
                         asChild
-                        className="inline-flex items-center gap-1.5 font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                        className="inline-flex items-center gap-1.5 font-medium bg-brand hover:bg-brand-hover text-brand-fg shadow-sm"
                       >
                         <a
                           href={`/api/backend/v1/groups/${groupId}/exams/${selectedExamId}/export/excel`}
@@ -451,7 +453,7 @@ export function GroupAiRanking({ groupId }: { groupId: string }) {
                         size="sm"
                         variant="outline"
                         asChild
-                        className="inline-flex items-center gap-1.5 font-medium border-rose-500/40 text-rose-500 hover:bg-rose-500/10 dark:text-rose-400"
+                        className="inline-flex items-center gap-1.5 font-medium border-danger-border text-danger hover:bg-danger-bg"
                       >
                         <a
                           href={`/api/backend/v1/groups/${groupId}/exams/${selectedExamId}/export/pdf`}

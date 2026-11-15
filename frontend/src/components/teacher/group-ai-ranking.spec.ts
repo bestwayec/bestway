@@ -5,6 +5,8 @@ import { rankingScoreLabel, rankingStatusKey } from "@/lib/ai-ranking-types";
 import type { GroupAiRankingCohort, GroupAiRankingRow } from "@/lib/ai-ranking-types";
 
 vi.mock("@/hooks/use-ai-ranking", () => ({ useGroupAiRanking: () => ({ data: null }) }));
+// The grades table names its sort control through next-intl; keys are enough here.
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 import { GroupAiRankingTable, GroupAllGradesTable, RankBadge } from "./group-ai-ranking";
 
 const row: GroupAiRankingRow = { studentId: "s", name: "Komiljon", attemptId: "a", jobId: "j",

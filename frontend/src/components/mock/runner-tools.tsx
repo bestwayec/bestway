@@ -49,7 +49,7 @@ export function RunnerTools({ infoOpen, onInfo, children, ...tools }: ToolState 
         </Button>
         <Button size="sm" variant={tools.notesOpen ? "subtle" : "ghost"} className={cn(icon, "relative")} aria-expanded={tools.notesOpen} onClick={tools.onNotes} aria-label={t("notesButton", { count: tools.notesCount })} title={t("notesButton", { count: tools.notesCount })}>
           <StickyNote className="size-4 text-warning" aria-hidden />
-          {tools.notesCount > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-warning px-1 text-[10px] font-bold leading-4 text-slate-950" aria-hidden>{tools.notesCount}</span>}
+          {tools.notesCount > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-warning px-1 text-[10px] font-bold leading-4 text-warning-fg" aria-hidden>{tools.notesCount}</span>}
         </Button>
         {tools.vocab !== null && (
           <Button size="sm" variant={tools.vocab ? "subtle" : "ghost"} className={icon} aria-pressed={tools.vocab} onClick={tools.onVocab} aria-label={t("vocab")} title={t("vocab")}>

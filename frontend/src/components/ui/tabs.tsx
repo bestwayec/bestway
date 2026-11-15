@@ -21,11 +21,15 @@ export const TabsList = React.forwardRef<
 
 export const TabsTrigger = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(function TabsTrigger({ className, ...props }, ref) {
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
+    /** false when the tabs switch the page below without a TabsContent panel: no aria-controls to a missing id. */
+    panel?: boolean;
+  }
+>(function TabsTrigger({ className, panel = true, ...props }, ref) {
   return (
     <TabsPrimitive.Trigger
       ref={ref}
+
       className={cn(
         "relative -mb-px shrink-0 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-fg-muted transition-colors",
         "hover:text-fg",
@@ -33,6 +37,7 @@ export const TabsTrigger = React.forwardRef<
         className,
       )}
       {...props}
+      {...(panel ? {} : { "aria-controls": undefined })}
     />
   );
 });

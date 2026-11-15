@@ -201,8 +201,8 @@ export function VideosView() {
       {isOffice && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as "videos" | "purchases")} className="mb-4">
           <TabsList>
-            <TabsTrigger value="videos">{t("title")}</TabsTrigger>
-            <TabsTrigger value="purchases">{t("purchases")}</TabsTrigger>
+            <TabsTrigger panel={false} value="videos">{t("title")}</TabsTrigger>
+            <TabsTrigger panel={false} value="purchases">{t("purchases")}</TabsTrigger>
           </TabsList>
         </Tabs>
       )}

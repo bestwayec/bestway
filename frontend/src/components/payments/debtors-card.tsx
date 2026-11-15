@@ -53,7 +53,7 @@ export function DebtorsCard({ year, month }: { year: number; month: number }) {
             {tc("empty")}
           </div>
         ) : (
-          <ul className="scrollbar-thin max-h-72 divide-y divide-border overflow-y-auto">
+          <ul className="scrollbar-thin max-h-72 divide-y divide-border overflow-y-auto" tabIndex={0}>
             {debtors.map((d) => (
               <li key={d.studentId} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">

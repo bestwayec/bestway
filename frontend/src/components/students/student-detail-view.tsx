@@ -137,7 +137,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-950/20 px-3 py-1 text-2xl font-bold text-amber-400 tabular-nums shadow-sm shadow-amber-950/30">
+            <span className="flex items-center gap-1.5 rounded-full border border-warning-border bg-warning-bg px-3 py-1 text-2xl font-bold text-warning tabular-nums">
               <Star className="size-5 fill-amber-400 text-amber-400" />
               {user.student?.currentPoints ?? 0}
             </span>

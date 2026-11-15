@@ -225,13 +225,13 @@ export function ExamBuilderList() {
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Tabs value={tab} onValueChange={(v) => setTab(v as StatusTab)} className="w-full sm:w-auto">
           <TabsList className="grid w-full grid-cols-3 sm:flex sm:w-auto">
-            <TabsTrigger value="all" className="min-h-9 truncate px-2 text-xs sm:text-sm">
+            <TabsTrigger panel={false} value="all" className="min-h-9 truncate px-2 text-xs sm:text-sm">
               {tx(t, "tabAll", "All")} ({counts.all})
             </TabsTrigger>
-            <TabsTrigger value="drafts" className="min-h-9 truncate px-2 text-xs sm:text-sm">
+            <TabsTrigger panel={false} value="drafts" className="min-h-9 truncate px-2 text-xs sm:text-sm">
               {tx(t, "tabDrafts", "Drafts")} ({counts.drafts})
             </TabsTrigger>
-            <TabsTrigger value="published" className="min-h-9 truncate px-2 text-xs sm:text-sm">
+            <TabsTrigger panel={false} value="published" className="min-h-9 truncate px-2 text-xs sm:text-sm">
               {tx(t, "tabPublished", "Published")} ({counts.published})
             </TabsTrigger>
           </TabsList>
