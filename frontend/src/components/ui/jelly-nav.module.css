@@ -1,5 +1,6 @@
 .root {
-  --jn-chip: #242718;
+  /* Theme tokens: the old fixed #242718 made dark grey text on near-black in the light theme. */
+  --jn-chip: var(--bg-subtle);
   --jn-active: #89f336;
   --jn-text: var(--fg-muted);
   --jn-active-text: #101704;
