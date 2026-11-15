@@ -15,6 +15,10 @@ export interface BuilderQuestion {
   points: number;
   wordLimit?: number;
   answerRule?: ObjectiveAnswerRule | null;
+  /** Review only (after the result is released): the words that hold the answer. */
+  evidenceText?: string | null;
+  /** Review only, Listening: seconds into the recording where the answer is heard. */
+  audioStartSec?: number | null;
   savedQuestionId?: string;
 }
 
@@ -23,6 +27,8 @@ export interface BuilderPart {
   title: string;
   instructions: string;
   passageText: string;
+  /** Listening: the transcript shown only in the released review. */
+  audioScript?: string;
   contentHtml?: string;
   contentLayout?: MockContentLayout;
   optionsReusable?: boolean | null;

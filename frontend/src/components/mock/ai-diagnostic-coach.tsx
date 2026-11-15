@@ -219,7 +219,7 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
             <div className="space-y-2 rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm">
               {action_plan.map((step, sIdx) => (
                 <div key={sIdx} className="flex items-start gap-2.5 text-fg">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-warning/20 text-xs font-bold text-warning">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-warning-bg text-xs font-bold text-warning">
                     {sIdx + 1}
                   </span>
                   <p className="leading-relaxed text-sm text-fg">{step}</p>

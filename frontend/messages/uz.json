@@ -1604,7 +1604,24 @@
       "state_correct": "To'g'ri",
       "state_wrong": "Noto'g'ri",
       "state_unanswered": "Javob berilmagan",
-      "state_pending": "Hali tekshirilmagan"
+      "state_pending": "Hali tekshirilmagan",
+      "where": "Javob qayerda?",
+      "whereFor": "{number}-savol javobi qayerda?"
+    },
+    "reviewExplain": {
+      "passageLabel": "Javobi ajratilgan matn",
+      "scriptLabel": "Javobi ajratilgan audioskript",
+      "recordingLabel": "Shu qism yozuvi",
+      "playFrom": "{time} dan tinglash",
+      "noEvidence": "Bu savol uchun matnda javob joyi belgilanmagan."
+    },
+    "typeAccuracy": {
+      "title": "Savol turi bo'yicha aniqlik",
+      "subtitle": "So'nggi natijalaringiz (Listening va Reading). Eng zaifi birinchi.",
+      "empty": "Hali e'lon qilingan Listening yoki Reading natijasi yo'q.",
+      "trendLabel": "So'nggi natijalardagi o'zgarish: {points}",
+      "attempts": "{count} ta natija",
+      "error": "Aniqlikni yuklab bo'lmadi."
     }
   },
   "wizard": {
@@ -2834,5 +2851,24 @@
       "sortLow": "Ball: eng pastdan",
       "studentCount": "{count} ta o'quvchi"
     }
+  },
+  "reviewEvidence": {
+    "legend": "Tahlil: javob qayerda?",
+    "hintReading": "Ixtiyoriy. Matndagi javobni beradigan so'zlarni nusxalang. O'quvchi ularni faqat natijasi e'lon qilingandan keyin ajratilgan holda ko'radi.",
+    "hintListening": "Ixtiyoriy. Audioskriptdagi javobni beradigan so'zlarni va ular eshitiladigan vaqtni kiriting. O'quvchi ularni faqat natijasi e'lon qilingandan keyin ko'radi.",
+    "evidenceLabel": "Javobni beradigan so'zlar",
+    "evidencePlaceholderReading": "masalan: the bridge was built in 1890",
+    "evidencePlaceholderListening": "masalan: it opens at nine on weekdays",
+    "evidenceEmpty": "Kiritilmagan: tahlilda bu savol uchun belgi ko'rinmaydi.",
+    "evidenceFound": "Matnda topildi.",
+    "evidenceMissing": "Matnda topilmadi: so'zlarni aynan nusxalang (bo'shliqlar farq qilishi mumkin).",
+    "noPassage": "Avval matnni kiriting.",
+    "noScript": "Avval shu qismning audioskriptini kiriting.",
+    "heardAtLabel": "Eshitiladigan vaqt (m:ss)",
+    "heardAtHint": "Ixtiyoriy. Tahlilda «Shu yerdan tinglash» tugmasi chiqadi.",
+    "heardAtInvalid": "Yozuv ichidagi m:ss vaqtni kiriting ({length}).",
+    "audioScriptLabel": "Audioskript (faqat tahlil uchun)",
+    "audioScriptPlaceholder": "Yozuvdagi so'zlar. O'quvchi imtihon paytida buni hech qachon ko'rmaydi.",
+    "audioScriptHint": "O'quvchiga faqat natijasi e'lon qilingandan keyin, siz belgilagan javob joyi ajratilgan holda ko'rsatiladi."
   }
 }

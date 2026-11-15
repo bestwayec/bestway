@@ -95,7 +95,7 @@ export function TeacherAttemptOverrideCard({
                   <CheckCircle2 className="size-3" /> {t("reviewed")}
                 </span>
               ) : hasAiProposal ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/20 px-2.5 py-0.5 text-[11px] font-semibold text-warning">
+                <span className="inline-flex items-center gap-1 rounded-full border border-warning-border bg-warning-bg px-2.5 py-0.5 text-[11px] font-semibold text-warning">
                   <Sparkles className="size-3" /> {t("aiProposal")}
                 </span>
               ) : (

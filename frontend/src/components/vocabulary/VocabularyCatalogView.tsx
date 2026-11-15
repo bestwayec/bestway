@@ -133,7 +133,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             type="button"
             variant="outline"
             onClick={() => setIsPlayerBattleOpen(true)}
-            className="border-warning/30 text-warning hover:bg-warning/10"
+            className="border-warning-border text-warning hover:bg-warning/10"
           >
             <Gamepad2 className="mr-2 h-4 w-4" />
             {tc("joinWithPin")}
@@ -211,7 +211,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {srsStats && srsStats.totalWeakWords > 0 && (
         <div className="rounded-2xl border border-warning/30 bg-gradient-to-r from-warning/10 via-surface to-brand/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning/20 text-warning shrink-0">
+            <div className="p-3 rounded-xl bg-warning-bg text-warning shrink-0">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
@@ -362,7 +362,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               type="button"
                               variant="outline"
                               onClick={() => setBattleSetId(s.id)}
-                              className="border-warning/30 text-warning hover:bg-warning/10"
+                              className="border-warning-border text-warning hover:bg-warning/10"
                               title={tc("battleForSet")}
                               aria-label={tc("battleForSet")}
                             >

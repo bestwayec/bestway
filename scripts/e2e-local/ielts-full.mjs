@@ -183,9 +183,18 @@ async function build() {
     const by = Object.fromEntries(exam.sections.map((s) => [s.skill, s]));
     for (const [i, group] of by.listening.groups.entries()) {
       await api(teacher, "POST", `/mock/groups/${group.id}/media`, undefined, { multipart: { audio: { name: `part-${i + 1}.wav`, mimeType: "audio/wav", buffer: readFileSync(AUDIO) } } });
-      await putContent(teacher, group, IELTS_LISTENING[i], { instructions: `Synthetic listening part ${i + 1}.` });
+      // S3 review material on the first part: an audioscript, the words of the answer and the moment it is heard.
+      const rows = i === 0 ? IELTS_LISTENING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "The answer is choice A", audioStartSec: 2 } : q)) : IELTS_LISTENING[i];
+      await putContent(teacher, group, rows, { instructions: `Synthetic listening part ${i + 1}.`, ...(i === 0 ? { audioScript: "Synthetic recording one. The answer is choice A. Then the tone ends." } : {}) });
     }
-    for (const [i, group] of by.reading.groups.entries()) await putContent(teacher, group, IELTS_READING[i], { passageText: `Synthetic passage ${i + 1}. The answer word is alpha and every statement is true.` });
+    for (const [i, group] of by.reading.groups.entries()) {
+      const rows = i === 0 ? IELTS_READING[i].map((q, k) => (k === 0 ? { ...q, evidenceText: "every   statement is true" } : q)) : IELTS_READING[i];
+      await putContent(teacher, group, rows, { passageText: `Synthetic passage ${i + 1}. The answer word is alpha and every statement is true.` });
+    }
+    const authored = (await tree(teacher, state.examId)).sections;
+    const firstReading = authored.find((s) => s.skill === "reading").groups[0].questions[0];
+    const firstListening = authored.find((s) => s.skill === "listening").groups[0].questions[0];
+    expect(firstReading.evidenceText === "every statement is true" && firstListening.audioStartSec === 2, "review material was not saved");
     for (const [i, group] of by.writing.groups.entries()) await putContent(teacher, group, [{ number: 1 + i, type: IELTS_WRITING[i].type, prompt: IELTS_WRITING[i].prompt, options: [], points: 9 }]);
     let number = 1;
     for (const [i, group] of by.speaking.groups.entries()) await putContent(teacher, group, IELTS_SPEAKING[i].map((prompt) => ({ number: number++, type: "speaking_task", prompt, options: [], points: 9 })));
@@ -355,6 +364,23 @@ async function grade() {
     return `L 9 · R 9 · W ${bands.writing} (Task 2 counts twice) · S ${bands.speaking} → overall ${attempt.overallBand}; status ${attempt.status}`;
   });
   await teacher.context().close();
+  const page = await session(STUDENT_IELTS);
+  await step(page, "10-review-shows-where-the-answer-is", async () => {
+    await page.goto(`${WEB}/en/mock/attempt/${state.attemptId}`, { waitUntil: "networkidle" });
+    const reading = page.locator('section[aria-label="Reading"]');
+    await reading.getByRole("button", { name: "Where is the answer to question 1?" }).click();
+    const mark = reading.getByTestId("review-evidence");
+    expect((await mark.innerText()) === "every statement is true", "Reading evidence not highlighted");
+    const listening = page.locator('section[aria-label="Listening"]');
+    await listening.getByRole("button", { name: "Where is the answer to question 1?" }).click();
+    expect((await listening.getByTestId("review-evidence").innerText()) === "The answer is choice A", "Listening evidence not highlighted");
+    await listening.getByRole("button", { name: "Play from 0:02" }).click();
+    await page.waitForFunction(() => { const a = document.querySelector('[data-testid="review-explain"] audio'); return a && a.currentTime >= 2; }, null, { timeout: 15000 });
+    await page.getByTestId("type-accuracy").getByText("Accuracy by question type").waitFor();
+    await shot(page, "10-review");
+    return "Reading and Listening answers highlighted in the text; Play from 0:02 plays the review recording; accuracy by type shown";
+  });
+  await page.context().close();
 }
 
 /* ── run ──────────────────────────────────────────────────────────────────────────────────────── */

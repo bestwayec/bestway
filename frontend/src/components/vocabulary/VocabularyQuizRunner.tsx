@@ -504,7 +504,7 @@ export function VocabularyQuizRunner({
         )}
 
         {currentQ.type === "spelling" && currentQ.firstLetter && (
-          <div className="inline-flex items-center gap-1.5 text-xs text-warning bg-warning/10 px-3 py-1 rounded-lg border border-warning/20">
+          <div className="inline-flex items-center gap-1.5 text-xs text-warning bg-warning-bg px-3 py-1 rounded-lg border border-warning/20">
             <HelpCircle className="h-3.5 w-3.5" />
             <span>{t("firstLetter")} <strong>{currentQ.firstLetter}...</strong></span>
           </div>

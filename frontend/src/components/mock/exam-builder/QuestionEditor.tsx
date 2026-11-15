@@ -1,5 +1,6 @@
 "use client";
 
+import { ReviewEvidenceFields } from "./review-evidence-fields";
 import * as React from "react";
 import type { JSX } from "react";
 import { ArrowDown, ArrowUp, Mic, Plus, Trash2 } from "lucide-react";
@@ -1269,6 +1270,9 @@ export function QuestionEditor(props: {
   allowedTypes: MockQuestionType[];
   onChange: (q: BuilderQuestion) => void;
   onRemove: () => void;
+  /** Reading passage / Listening audioscript: enables the review fields (where the answer is). */
+  reviewSource?: string;
+  audioDurationSec?: number | null;
 }): JSX.Element {
   const { question, skill, allowedTypes, onChange, onRemove } = props;
   const t = useTranslations("wizard");
@@ -1383,7 +1387,7 @@ export function QuestionEditor(props: {
           role="alertdialog"
           aria-labelledby={`qe-${question.clientId}-switch-title`}
           aria-describedby={`qe-${question.clientId}-switch-desc`}
-          className="space-y-2 rounded-[8px] border border-warning/40 bg-warning/5 p-3"
+          className="space-y-2 rounded-[8px] border border-warning-border bg-warning-bg p-3"
         >
           <p id={`qe-${question.clientId}-switch-title`} className="text-sm font-semibold text-fg">
             Change question type to {QTYPE_LABEL[pendingType]}?
@@ -1410,6 +1414,10 @@ export function QuestionEditor(props: {
         allowedTypes={allowedTypes}
         onChange={onChange}
       />
+
+      {props.reviewSource !== undefined && (skill === "reading" || skill === "listening") && (
+        <ReviewEvidenceFields question={question} skill={skill} source={props.reviewSource} audioDurationSec={props.audioDurationSec} onChange={onChange} />
+      )}
 
       {/* Preview (always the student control, never the key) */}
       <div className="space-y-1.5">
