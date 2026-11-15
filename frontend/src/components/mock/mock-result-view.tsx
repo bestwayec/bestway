@@ -538,8 +538,8 @@ function ReviewRow({  q,
             </p>
           )}
 
-          {/* To'g'ri javob (auto, noto'g'ri bo'lsa) */}
-          {q.correctAnswers && q.correctAnswers.length > 0 && q.isCorrect === false && (
+          {/* The key, on every question, whenever the server sends it (review allowed). */}
+          {q.correctAnswers && q.correctAnswers.length > 0 && (
             <p className="mt-0.5 text-sm">
               <span className="text-fg-subtle">{t("correctAnswer")}: </span>
               <span className="font-medium text-success">{q.correctAnswers.join(" / ")}</span>

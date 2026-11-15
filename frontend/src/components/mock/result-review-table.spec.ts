@@ -50,6 +50,11 @@ describe("ResultReviewTable", () => {
     expect(button(/^Unanswered/).textContent).toBe("Unanswered (2)");
   });
 
+  it("shows the key on every question the server sent one for, not only on wrong answers", () => {
+    const keyCell = (i: number) => rows()[i].querySelectorAll("td")[3].textContent;
+    expect([0, 1, 2, 3].map(keyCell)).toEqual(["alpha", "gamma", "delta", "—"]);
+  });
+
   it("filters to wrong and unanswered rows, and shows a dash when no key was sent", async () => {
     await act(async () => button(/^Wrong/).click());
     expect(rows().map((r) => r.getAttribute("data-review-state"))).toEqual(["wrong"]);
