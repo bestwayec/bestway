@@ -7,6 +7,15 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 28-BLOK: Redizayn, 1-bosqich — dizayn tizimi — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **Tokenlar** (`globals.css`): yorug' temada iliq "qog'oz" neytrallar, qorong'ida chuqurroq va kamroq ko'k fon; `input-border` (3:1), `danger-fg`, `surface-elevated` (ilgari aniqlanmagan edi — `EmptyState` belgisi rangsiz edi); radius `chip/field/control/card/dialog`; soya `shadow-e1..e3` (Tailwind `shadow-sm…2xl` ularga bog'langan, rangli glow yo'q); motion `duration-fast/base/slow`, `ease-out/in`; `text-display`, `text-overline`.
+- **Codemod** `frontend/scripts/tokenize-shape.mjs`: `rounded-[Npx]` → tokenlar, rangli soyalar olib tashlandi (146 fayl).
+- **Komponentlar**: Button (`link`, bosilish, fokus), Input/Select 44 px, Card, Dialog (yopish yorlig'i katalogdan), Badge o'lchamlari, segmentli Tabs, yangi `Table`, `StatTile` (`StatCard` uni ishlatadi), `ProgressRing`; `ErrorState` "Qayta urinish" qattiq yozuvi o'rniga `common.retry`.
+- **`/dev/ui`** — komponentlar galereyasi (faqat dev; production'da 404), `devUi` kalitlari en/uz.
+- **Testlar**: `design-system.spec.ts` — shakl guard'i (har `src` fayli) va har ikki temada matn tokenlarining WCAG kontrasti (≥ 4.5:1, input chegarasi ≥ 3:1). vitest 823 → yashil, tsc, lint (0 xato).
+- **Skrinshotlar**: `docs/agent/screens/redesign-1/after/` (before — `redesign-0/before/`).
+- **Keyingi**: 2-bosqich — imtihon oynasi.
+
 ### 27-BLOK: Redizayn, 0-bosqich — audit va dizayn yo'nalishi — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Skrinshotlar**: `docs/agent/screens/redesign-0/before/` — landing, login, talaba dashboard, katalog, imtihon oynasi (L/R/W/S, practice), natija, o'qituvchi dashboard, workspace, baholash, guruhlar, builder, admin; 1366×768 va 390×844, yorug'/qorong'i. Skript: `scripts/e2e-local/redesign-screens.mjs OUT [sahifa...]`.
 - **`docs/design/DIRECTION.md`**: har ekranning 3 ta asosiy UX muammosi, yo'nalish (akademik, sokin, premium; shablon ko'rinishsiz), tipografiya/rang/spacing/radius/soya/motion tokenlari, ekranlar ustuvorligi.
