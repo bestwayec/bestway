@@ -1046,7 +1046,7 @@
       "responseProgress": "Your response progress",
       "responseProgressHint": "Written answers count as drafts. Speaking counts after the recording uploads.",
       "wordCount": "{count, plural, one {# word} other {# words}}",
-      "wordTarget": "Target: {target, plural, one {# word} other {# words}}",
+      "wordTarget": "Target: {target} words",
       "wordTargetProgress": "Writing word target progress",
       "aboveTarget": "You are above the suggested range. Re-read your response and keep it focused.",
       "targetReached": "Word target reached. Now check that you answered every part of the prompt.",
