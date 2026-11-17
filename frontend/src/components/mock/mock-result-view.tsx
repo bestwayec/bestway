@@ -80,6 +80,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
     (section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade)?.policyId === "BESTWAY_INTERNAL_PRACTICE_35_50_V1");
   // IELTS: Overall Band faqat 4 bo'lim baholangach chiqadi — aks holda Pending.
   const gradedCount = attempt.sections.filter((s) => s.band != null).length;
+  // An AI-scored Writing/Speaking result is an estimate until a teacher confirms it.
+  const provisionalSkills = new Set(attempt.provisionalSkills ?? []);
+  const teacherConfirmed = attempt.provisionalSkills
+    ? provisionalSkills.size === 0
+    : Boolean(attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed);
 
   return (
     <div className="mx-auto max-w-3xl print:max-w-none print:m-0">
@@ -138,7 +143,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
-          {!hasManualSkill ? null : (attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed) ? (
+          {!hasManualSkill ? null : teacherConfirmed ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
               <Award className="size-3.5" aria-hidden /> {t("resultView.teacherReviewed")}
             </span>
@@ -216,6 +221,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                     {t(`skills.${s.skill}`)}
                     {practiceGrade && (
                       <span className="text-[10px] font-normal text-fg-subtle">({t("internalPracticeScore")})</span>
+                    )}
+                    {MANUAL_SKILLS.has(s.skill) && !pendingManual && !isSkipped && provisionalSkills.has(s.skill) && (
+                      <Badge variant="warning" className="text-[10px] font-medium normal-case" title={t("resultView.aiPending")}>
+                        {t("resultView.provisional")}
+                      </Badge>
                     )}
                   </span>
                   {isSkipped ? (

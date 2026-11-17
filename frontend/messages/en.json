@@ -1402,7 +1402,8 @@
     "resultView": {
       "checkingTitle": "Checking results",
       "checkingBody": "Writing and Speaking answers are being graded. This page refreshes automatically every 3 seconds.",
-      "aiPending": "AI estimate (awaiting teacher review)",
+      "aiPending": "Provisional — AI estimate, awaiting teacher confirmation",
+      "provisional": "Provisional",
       "sectionPractice": "Section practice",
       "partialNote": "This is the result of the selected sections only. The overall score and CEFR level appear after a full exam (all 4 sections).",
       "skipped": "Skipped",

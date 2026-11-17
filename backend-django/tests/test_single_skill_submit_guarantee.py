@@ -67,7 +67,7 @@ class SingleSkillAndDesktopVersionTests(SimpleTestCase):
         feedback = format_diagnostic_feedback(raw_result)
         self.assertIsNotNone(feedback)
         self.assertEqual(len(feedback['criteria_scores']), 4)
-        self.assertEqual(feedback['criteria_scores'][0]['criterion'], 'Task Achievement / Response')
+        self.assertEqual(feedback['criteria_scores'][0]['criterion'], 'Task Achievement (TA)')
         self.assertEqual(feedback['criteria_scores'][0]['score'], 7.0)
         self.assertEqual(len(feedback['mistakes_and_fixes']), 1)
         self.assertEqual(feedback['mistakes_and_fixes'][0]['original'], 'People is going.')

@@ -1402,7 +1402,8 @@
     "resultView": {
       "checkingTitle": "Natijalar tekshirilmoqda",
       "checkingBody": "Writing va Speaking javoblari baholanmoqda. Sahifa har 3 soniyada avtomatik yangilanadi.",
-      "aiPending": "AI bahosi (ustoz ko‘rib chiqishi kutilmoqda)",
+      "aiPending": "Taxminiy natija — AI bahosi, ustoz tasdiqlashi kutilmoqda",
+      "provisional": "Taxminiy",
       "sectionPractice": "Bo‘lim mashqi",
       "partialNote": "Bu faqat tanlangan bo‘lim natijasi. Umumiy ball va CEFR darajasi to‘liq imtihon (4 bo‘lim) topshirilganda chiqariladi.",
       "skipped": "O‘tkazib yuborilgan",

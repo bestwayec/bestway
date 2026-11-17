@@ -78,10 +78,16 @@ export function AiDiagnosticCoach({ skill, feedback, className }: AiDiagnosticCo
               </p>
             </div>
           </div>
-          <Badge variant="success" className="gap-1.5 px-2.5 py-1 text-xs font-semibold">
-            <span className="size-1.5 rounded-full bg-current animate-pulse" />
-            Diagnostic Analysis
-          </Badge>
+          {feedback.provisional ? (
+            <Badge variant="warning" className="px-2.5 py-1 text-xs font-semibold" title="AI bahosi: ustoz tasdiqlaguncha yakuniy emas">
+              Taxminiy — ustoz tasdiqlashi kutilmoqda
+            </Badge>
+          ) : (
+            <Badge variant="success" className="gap-1.5 px-2.5 py-1 text-xs font-semibold">
+              <span className="size-1.5 rounded-full bg-current animate-pulse" />
+              Diagnostic Analysis
+            </Badge>
+          )}
         </div>
       </div>
 
