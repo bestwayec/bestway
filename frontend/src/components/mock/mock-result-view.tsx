@@ -100,9 +100,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       </Link>
 
       {isStaff && !completed && <div className="print:hidden"><AttemptActions attemptId={attempt.id} status={attempt.status} isAdmin={role === "admin" || role === "super_admin"} /></div>}
-      {/* Staff: what the exam window recorded, also when no answer was given. */}
-      {isStaff && Array.isArray(attempt.cheatEvents) && <ExamLogPanel events={attempt.cheatEvents.filter((item) => !item.event.startsWith("telemetry:"))} />}
 
+      {empty && isStaff && Array.isArray(attempt.cheatEvents) && <ExamLogPanel events={attempt.cheatEvents.filter((item) => !item.event.startsWith("telemetry:"))} />}
       {empty && (
         <Card className="p-6 text-center" data-testid="empty-attempt">
           <p className="text-sm text-fg-muted">
@@ -332,6 +331,9 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
 
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
+
+      {/* Staff: what the exam window recorded, after the work to grade (also when no answer was given). */}
+      {isStaff && Array.isArray(attempt.cheatEvents) && <div className="mt-6"><ExamLogPanel events={attempt.cheatEvents.filter((item) => !item.event.startsWith("telemetry:"))} /></div>}
 
       {attempt.status !== "in_progress" && attempt.diagnosticFeedback && Object.keys(attempt.diagnosticFeedback).length > 0 && (
         <div className="mt-6 space-y-4">

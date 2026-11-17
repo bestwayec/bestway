@@ -7,6 +7,15 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 32-BLOK: Redizayn, 5-bosqich — o'qituvchi va admin — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **O'qituvchi kabineti** (`/teacher`, 4 fayl): butunlay qattiq yozilgan o'zbekcha → `teacherWorkspace` (en/uz); PageHeader + StatTile; guruh kartalari klaviatura bilan tanlanadi; formalar `Field` (label, xato); progress jadvali `Table` (sticky ustun, so'zli holatlar, emoji yo'q); baho katagi Enter/Esc. API va payload'lar o'zgarmadi. Fayllar `no-hardcoded-ui-text` guard'iga qo'shildi.
+- **O'qituvchi dashboard**: "New PIN exam" dublikati olib tashlandi; "📲 Ota-onalarga Digest" → en/uz "Ota-onalarga haftalik hisobot"; **baholash navbati** yon ustunda birinchi, 5 ta urinish to'g'ridan-to'g'ri havola bilan; KPI → StatTile.
+- **Baholash formasi** (`AssessmentReviewForm`): amal tanlovi segmentli radiogroup, mezonlar 4 ustunli panjara, **Ctrl/⌘+Enter** saqlaydi; xodim sahifasida imtihon jurnali baholashdan keyin. Baholash mantiqi o'zgarmadi.
+- **Admin**: faoliyat bo'lmasa 300 px bo'sh grafik o'rniga qisqa bo'sh holat.
+- **Tekshiruv**: tsc, lint (0 xato), vitest 832. Skrinshotlar: `docs/agent/screens/redesign-5/`.
+- **Ochiq**: admin sidebar'ida 14 band guruhsiz (`lib/nav.ts`ga bo'lim tushunchasi kerak); Exam builder bosqichma-bosqich oqimi va preview avvalgidek (PreviewDialog/StudentPreview mavjud) — bu bosqichda o'zgartirilmadi.
+- **Keyingi**: 6-bosqich — landing va auth, so'ng yakuniy roles-crawl va E2E.
+
 ### 31-BLOK: Redizayn, 4-bosqich — talaba dashboard va katalog — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Dashboard**: "Bugungi reja" birinchi (davom ettirish qatori ajratilgan + "Davom etish"), keyin 3 ta raqam, keyin tavsiya etilgan test. **Soxta "kunlik streak" olib tashlandi** (urinishlar sonidan 7 gacha o'ylab topilgan, localStorage'da) — o'rniga "Oxirgi natija" (faqat to'liq natija, unga havola). `ielts_academic` → "IELTS Academic".
 - **`StatTile`** `href` endi i18n `Link` (locale prefiksi to'g'ri).

@@ -171,13 +171,12 @@ export function ExamActivityCard() {
               </div>
             </div>
 
-            {empty && (
-              <p className="mt-2 rounded-field border border-dashed border-border px-3 py-2 text-center text-xs text-fg-muted">
+            {/* No activity: a short empty state instead of 300 px of empty axes. */}
+            {empty ? (
+              <p className="mt-3 rounded-control border border-dashed border-border-strong px-4 py-6 text-center text-sm text-fg-muted">
                 {t("noActivity")}
               </p>
-            )}
-
-            {/* Combo chart */}
+            ) : (
             <div className="mt-2 h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
@@ -266,11 +265,12 @@ export function ExamActivityCard() {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            )}
 
             {/* Bottom summary tiles — real period totals */}
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
+                <p className="text-sm font-medium text-fg-muted">
                   {t("totalCompleted")}
                 </p>
                 <p className="mt-1 text-2xl font-bold tabular-nums text-fg">
@@ -278,7 +278,7 @@ export function ExamActivityCard() {
                 </p>
               </div>
               <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
+                <p className="text-sm font-medium text-fg-muted">
                   {t("avgScore")}
                 </p>
                 <p className="mt-1 text-2xl font-bold tabular-nums text-fg">
@@ -286,7 +286,7 @@ export function ExamActivityCard() {
                 </p>
               </div>
               <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
+                <p className="text-sm font-medium text-fg-muted">
                   {t("completionRate")}
                 </p>
                 <p className="mt-1 text-2xl font-bold tabular-nums text-fg">

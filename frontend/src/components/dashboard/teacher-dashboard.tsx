@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   FileSpreadsheet,
-  Plus,
   Printer,
   Trophy,
   Users,
@@ -30,32 +29,27 @@ import { useMockAttempts } from "@/hooks/use-mock";
 import { useDebtors, usePayments } from "@/hooks/use-payments";
 import { api, ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { StatTile } from "@/components/ui/stat-tile";
 import type { GroupAttendanceSummaryResponse, TeacherGroupSummary, TeacherSelfProfile } from "@/lib/types";
 
 /** Obsidian + zumrad shisha (glass) kartasi */
-const GLASS =
-  "relative overflow-hidden rounded-2xl border border-border/70 bg-surface/60 backdrop-blur-md " +
-  "";
+const GLASS = "relative overflow-hidden rounded-card border border-border bg-surface";
 
 function GlowCorner({ className }: { className?: string }) {
   return (
     <span
       aria-hidden
-      className={cn(
-        "pointer-events-none absolute -left-10 -top-12 size-32 rounded-full bg-brand/15 blur-3xl",
-        className,
-      )}
+      className={cn("hidden", className)}
     />
   );
 }
 
 function KpiCard({
-  icon: Icon,
+  icon,
   label,
   value,
   hint,
   loading,
-  tone = "brand",
 }: {
   icon: LucideIcon;
   label: string;
@@ -64,31 +58,7 @@ function KpiCard({
   loading?: boolean;
   tone?: "brand" | "info" | "warning" | "success";
 }) {
-  const toneClass = {
-    brand: "bg-brand-subtle text-brand-subtle-fg",
-    info: "bg-info-bg text-info",
-    warning: "bg-warning-bg text-warning",
-    success: "bg-success-bg text-success",
-  }[tone];
-  return (
-    <div className={cn(GLASS, "p-4")}>
-      <GlowCorner />
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-fg-muted">{label}</p>
-          {loading ? (
-            <Skeleton className="mt-2 h-8 w-16" />
-          ) : (
-            <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-fg">{value}</p>
-          )}
-          {hint && <p className="mt-0.5 truncate text-xs text-fg-subtle">{hint}</p>}
-        </div>
-        <span className={cn("inline-flex size-10 shrink-0 items-center justify-center rounded-xl", toneClass)}>
-          <Icon className="size-5" />
-        </span>
-      </div>
-    </div>
-  );
+  return <StatTile label={label} value={value} hint={hint} loading={loading} icon={icon} />;
 }
 
 function GroupPerformanceCard({ group }: { group: TeacherGroupSummary }) {
@@ -271,7 +241,6 @@ export function TeacherDashboard() {
   const ta = useTranslations("attendance");
   const tc = useTranslations("common");
   const { data: me, isLoading, refetch } = useMe();
-  const [pinSignal, setPinSignal] = React.useState(0);
   const [isSendingDigest, setIsSendingDigest] = React.useState(false);
   const pinRef = React.useRef<HTMLDivElement>(null);
 
@@ -279,9 +248,9 @@ export function TeacherDashboard() {
     setIsSendingDigest(true);
     try {
       const res = await api.post<{ message: string; sentCount: number }>("/v1/parents/send-weekly-digest", {});
-      toast.success(res.message || "Haftalik hisobot ota-onalarga jo'natildi!");
-    } catch (err: any) {
-      toast.error(err?.message || "Hisobot jo'natishda xatolik yuz berdi");
+      toast.success(res.message || td("digestSent"));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error && err.message ? err.message : td("digestFailed"));
     } finally {
       setIsSendingDigest(false);
     }
@@ -314,11 +283,6 @@ export function TeacherDashboard() {
   }, 0);
   const attendanceFailed = attendanceQs.some((q) => q.isError);
   const attendancePct = !attendanceFailed && marked > 0 ? Math.round((attended / marked) * 100) : null;
-
-  function openPin() {
-    setPinSignal((n) => n + 1);
-    pinRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 
   if (!isLoading && !profile) {
     return (
@@ -357,11 +321,7 @@ export function TeacherDashboard() {
 
       {/* Quick actions */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-xs font-medium text-fg-muted">{td("quickActions")}</span>
-        <Button type="button" size="sm" onClick={openPin}>
-          <Plus />
-          {td("newPin")}
-        </Button>
+        <span className="mr-1 text-sm font-medium text-fg-muted">{td("quickActions")}</span>
         <Link href="/attendance" className={buttonVariants({ variant: "outline", size: "sm" })}>
           <CalendarCheck />
           {td("takeAttendance")}
@@ -370,22 +330,15 @@ export function TeacherDashboard() {
           <Users />
           {td("manageGroups")}
         </Link>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={handleSendParentDigest}
-          disabled={isSendingDigest}
-          className="border-brand/30 text-brand hover:bg-brand-hover/10"
-        >
-          <Send className="mr-1.5 size-3.5" />
-          {isSendingDigest ? "Jo'natilmoqda..." : "📲 Ota-onalarga Digest"}
+        <Button type="button" size="sm" variant="outline" onClick={handleSendParentDigest} loading={isSendingDigest}>
+          {!isSendingDigest && <Send aria-hidden />}
+          {td("parentDigest")}
         </Button>
       </div>
 
       {/* Compact live exam */}
       <div ref={pinRef} className="mt-4 scroll-mt-20">
-        <LiveExamRoomPanel compact openCreateSignal={pinSignal} />
+        <LiveExamRoomPanel compact />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -407,27 +360,39 @@ export function TeacherDashboard() {
 
         {/* Right column */}
         <aside className="space-y-4">
+          <section className={cn(GLASS, "p-4")} aria-labelledby="review-queue-title">
+            <h2 id="review-queue-title" className="flex items-center justify-between gap-2 text-base font-semibold text-fg">
+              <span className="flex items-center gap-2"><ClipboardCheck className="size-4 text-fg-subtle" aria-hidden />{td("reviewQueue")}</span>
+              {pending > 0 && <span className="rounded-full bg-warning-bg px-2 text-sm font-semibold tabular-nums text-warning">{pending}</span>}
+            </h2>
+            {gradingQ.isLoading ? (
+              <div className="mt-3 space-y-2"><Skeleton className="h-12" /><Skeleton className="h-12" /></div>
+            ) : gradingQ.isError ? (
+              <p className="mt-3 text-sm text-danger" role="alert">{tc("unknownError")}</p>
+            ) : pending === 0 ? (
+              <p className="mt-3 text-sm text-fg-muted">{td("reviewEmpty")}</p>
+            ) : (
+              <ul className="mt-3 space-y-1">
+                {(gradingQ.data ?? []).slice(0, 5).map((a) => (
+                  <li key={a.id}>
+                    <Link href={`/mock/attempt/${a.id}`} className="flex min-h-12 items-center gap-2 rounded-control px-2 py-1.5 transition-colors hover:bg-surface-hover">
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-fg">{a.studentName ?? "—"}</span>
+                        <span className="block truncate text-sm text-fg-muted">{a.examTitle}</span>
+                      </span>
+                      <ChevronRight className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link href="/mock" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-3 w-full justify-between")}>
+              {td("reviewCta")}
+              <ChevronRight aria-hidden />
+            </Link>
+          </section>
           <PaymentsWidget />
 
-          <div className={cn(GLASS, "p-4")}>
-            <GlowCorner />
-            <div className="relative">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-fg">
-                <ClipboardCheck className="size-4 text-warning" />
-                {td("reviewQueue")}
-              </h2>
-              <p className="mt-3 text-sm text-fg-muted">
-                {gradingQ.isLoading ? tc("loading") : gradingQ.isError ? tc("unknownError") : pending > 0 ? `${pending} · ${td("kpiReviewHint")}` : td("reviewEmpty")}
-              </p>
-              <Link
-                href="/mock"
-                className={cn(buttonVariants({ variant: "subtle", size: "sm" }), "mt-3 w-full justify-between")}
-              >
-                {td("reviewCta")}
-                <ChevronRight />
-              </Link>
-            </div>
-          </div>
         </aside>
       </div>
     </div>
