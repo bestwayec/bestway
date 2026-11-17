@@ -1200,7 +1200,8 @@
       "speakingSteps": "Speaking javob bosqichlari",
       "paragraphCount": "{count} ta abzats",
       "timeOnTask": "Bu topshiriqqa {minutes} daqiqa",
-      "timeOnTaskOf": "Bu topshiriqqa {minutes} daqiqa · tavsiya {suggested} daqiqa"
+      "timeOnTaskOf": "Bu topshiriqqa {minutes} daqiqa · tavsiya {suggested} daqiqa",
+      "shortcutsButton": "Klaviatura yorliqlari (?)"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1325,7 +1326,9 @@
       "nextQuestion": "Keyingi savol",
       "allQuestions": "Barcha savollar",
       "partQuestions": "{part} savollari",
-      "closePalette": "Yopish"
+      "closePalette": "Yopish",
+      "passageN": "{n}-matn",
+      "partN": "{n}-qism"
     },
     "advanceConfirm": {
       "title": "Keyingi bo‘limga o‘tasizmi?",
@@ -1682,6 +1685,16 @@
       "answerLabel": "Javob",
       "whereLabel": "Matnda",
       "revealError": "Javobni ko'rsatib bo'lmadi."
+    },
+    "shortcuts": {
+      "title": "Klaviatura yorliqlari",
+      "intro": "Bitta tugmalar javob maydonida yozmayotganingizda ishlaydi.",
+      "next": "Keyingi savol",
+      "previous": "Oldingi savol",
+      "flag": "Savolni belgilash yoki belgini olish",
+      "highlight": "Tanlangan matnni bo'yash",
+      "help": "Shu ro'yxatni ko'rsatish",
+      "close": "Oyna yoki panelni yopish"
     }
   },
   "wizard": {
@@ -2538,7 +2551,7 @@
     "mock": "Imtihon"
   },
   "today": {
-    "title": "Bugun",
+    "title": "Bugungi reja",
     "resumeTitle": "Imtihonni davom ettiring",
     "homeworkTitle": "{count} ta uy vazifasi bajarilishi kerak",
     "homeworkOverdue": "{count} tasi muddati o‘tgan",

@@ -67,6 +67,7 @@ const FILES = [
   "src/components/marketing/site-header.tsx",
   "src/components/demo/cd-exam-view.tsx",
   "src/components/mock/speaking-visuals.tsx",
+  "src/components/mock/runner-shortcuts.tsx",
 ];
 
 /** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */

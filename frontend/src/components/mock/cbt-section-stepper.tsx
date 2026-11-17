@@ -5,6 +5,7 @@ import { Flag, ArrowLeft, ArrowRight, CheckCircle2, LayoutGrid, X } from "lucide
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useRunnerShortcuts } from "./runner-shortcuts";
 import type { ExamSimulatorMode, MockSection, MockSkill } from "@/lib/types";
 import { multilevelQuestionAnswered } from "@/lib/multilevel-completeness";
 
@@ -153,17 +154,17 @@ export function CbtSectionStepper({
       const isComplete = qs.length > 0 && answeredCount === qs.length;
       const label =
         group?.title ||
-        (skill === "reading" ? `Passage ${idx + 1}` : `Part ${idx + 1}`);
+        t(skill === "reading" ? "passageN" : "partN", { n: idx + 1 });
       const partNo = typeof group?.partNumber === "number" ? group.partNumber : idx + 1;
       return {
         label,
-        shortLabel: `${skill === "reading" ? "Passage" : "Part"} ${partNo}`,
+        shortLabel: t(skill === "reading" ? "passageN" : "partN", { n: partNo }),
         answeredCount,
         totalCount: qs.length,
         isComplete,
       };
     });
-  }, [safeGroups, skill, answers, audioSet]);
+  }, [safeGroups, skill, answers, audioSet, t]);
 
   const currentFlagged = activeQuestionId
     ? flaggedQuestions.has(activeQuestionId)
@@ -252,6 +253,12 @@ export function CbtSectionStepper({
   const partTabStop = tabStopIn(partQuestions.map((q) => q.id));
   const sheetTabStop = tabStopIn(flattenedQuestions.map((q) => q.id));
   const onLastQuestion = currentIndex >= flattenedQuestions.length - 1;
+  // Keyboard: N / P move like the arrows below, F flags the open question (never while typing).
+  useRunnerShortcuts({
+    next: () => { if (!onLastQuestion) goTo(currentIndex + 1); },
+    previous: () => { if (currentIndex > 0) goTo(currentIndex - 1); },
+    flag: () => { if (activeQuestionId) toggleFlag(activeQuestionId); },
+  });
   const onLastPart = activePartIndex >= safeGroups.length - 1;
   const legend = (
     <div className="flex flex-wrap items-center gap-3 text-[11px] text-fg-muted">
