@@ -74,7 +74,7 @@ import {
 } from "./cbt-annotated-text";
 import { SubmitConfirmModal } from "./submit-confirm-modal";
 import { AdvanceConfirmModal } from "./advance-confirm-modal";
-import { clipboardDecision, countWords, WRITING_AREA_ATTRIBUTE } from "@/lib/writing-rules";
+import { clipboardDecision, countWords, suggestedWritingMinutes, WRITING_AREA_ATTRIBUTE } from "@/lib/writing-rules";
 import { ExamToolbar, type ExamToolbarHandle } from "./exam-toolbar";
 import { COLOUR_CLASS, DEFAULT_EXAM_SETTINGS, EXAM_VOLUME_EVENT, loadExamSettings, saveExamSettings, TEXT_ZOOM, timerAlert, timerTone, type ExamSettings } from "@/lib/exam-settings";
 import { readLocal, resolveOnOpen, toDocument, touchLocal } from "@/lib/exam-workspace";
@@ -1725,7 +1725,7 @@ export function EssayQuestionEditor({
             {...{ [WRITING_AREA_ATTRIBUTE]: "" }}
           />
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-            <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} />
+            <WritingResponseGuide value={value} minimum={minWords} maximum={q.guidance?.wordMax} taskKey={`${attemptId}:${q.id}`} suggestedMinutes={suggestedWritingMinutes(q.type)} />
           </div>
         </>
       )}

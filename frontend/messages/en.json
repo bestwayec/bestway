@@ -1197,7 +1197,10 @@
       "readPromptStop": "Stop reading",
       "readPromptNote": "Read by your browser's voice; it stops when recording starts.",
       "inputLevel": "Microphone input level",
-      "speakingSteps": "Speaking response steps"
+      "speakingSteps": "Speaking response steps",
+      "paragraphCount": "{count, plural, one {# paragraph} other {# paragraphs}}",
+      "timeOnTask": "{minutes} min on this task",
+      "timeOnTaskOf": "{minutes} min on this task · suggested {suggested} min"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",

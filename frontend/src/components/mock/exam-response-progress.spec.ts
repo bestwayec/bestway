@@ -88,4 +88,29 @@ describe('objective answer interaction', () => {
     expect(host!.querySelector<HTMLInputElement>('input[value="B"]')!.disabled).toBe(true);
     expect(host!.querySelector<HTMLInputElement>('input[value="A"]')!.disabled).toBe(false);
   });
+
+  it('counts paragraphs, and shows time on the task only when a task key is given', () => {
+    const plain = renderToStaticMarkup(React.createElement(WritingResponseGuide, { value: 'Intro line.\n\nBody line.\nEnd line.', minimum: 5 }));
+    expect(plain).toContain('paragraphCount count=3'); expect(plain).not.toContain('timeOnTask');
+    sessionStorage.setItem('bw_task_time:a1:q1', '1290');
+    const timed = renderToStaticMarkup(React.createElement(WritingResponseGuide, { value: 'x', minimum: 150, taskKey: 'a1:q1', suggestedMinutes: 20 }));
+    expect(timed).toContain('timeOnTaskOf minutes=21 suggested=20'); expect(timed).toContain('text-warning');
+    sessionStorage.setItem('bw_task_time:a1:q2', '600');
+    const own = renderToStaticMarkup(React.createElement(WritingResponseGuide, { value: 'x', taskKey: 'a1:q2' }));
+    expect(own).toContain('timeOnTask minutes=10'); expect(own).not.toContain('suggested');
+  });
+
+  it('time on the task counts only while the page is visible', async () => {
+    vi.useFakeTimers();
+    host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host);
+    await act(async () => root!.render(React.createElement(WritingResponseGuide, { value: 'x', taskKey: 'a2:q1' })));
+    await act(async () => { vi.advanceTimersByTime(61_000); });
+    expect(host.textContent).toContain('timeOnTask minutes=1');
+    expect(sessionStorage.getItem('bw_task_time:a2:q1')).toBe('61');
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    await act(async () => { vi.advanceTimersByTime(120_000); });
+    expect(sessionStorage.getItem('bw_task_time:a2:q1')).toBe('61');
+    visibility.mockRestore();
+    vi.useRealTimers();
+  });
 });

@@ -11,6 +11,16 @@ export function countWords(text: string): number {
   return text.split(/\s+/u).filter((token) => HAS_WORD_CHARACTER.test(token)).length;
 }
 
+/** Paragraphs: blocks of text separated by a line break; empty lines and lines with no word do not count. */
+export function countParagraphs(text: string): number {
+  return text.split(/\r?\n+/u).filter((line) => HAS_WORD_CHARACTER.test(line)).length;
+}
+
+/** IELTS Writing guidance: about 20 minutes on Task 1 and 40 on Task 2 (the test's own advice). */
+export function suggestedWritingMinutes(questionType: string | undefined): number | null {
+  return questionType === "essay_task1" ? 20 : questionType === "essay_task2" ? 40 : null;
+}
+
 /**
  * Clipboard policy in the timed exam: text cannot be pasted in from outside the exam, and
  * exam content cannot be copied out; inside a writing answer the student may cut, copy and

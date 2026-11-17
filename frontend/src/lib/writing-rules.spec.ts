@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { clipboardDecision, countWords, resetInternalClipboard, WRITING_AREA_ATTRIBUTE } from "./writing-rules";
+import { clipboardDecision, countParagraphs, countWords, resetInternalClipboard, suggestedWritingMinutes, WRITING_AREA_ATTRIBUTE } from "./writing-rules";
 
 describe("countWords", () => {
   it.each([
@@ -15,6 +15,28 @@ describe("countWords", () => {
     ["Ўзбек тилида ҳам ишлайди", 4],
   ])("%j -> %i", (text, words) => {
     expect(countWords(text)).toBe(words);
+  });
+});
+
+describe("countParagraphs", () => {
+  it.each([
+    ["", 0],
+    ["\n\n", 0],
+    ["One paragraph only.", 1],
+    ["Intro.\nBody one.\nBody two.\nConclusion.", 4],
+    ["Intro.\n\n\nBody.\r\n\r\nEnd.", 3],
+    ["Text.\n - \n...\nMore text.", 2],
+  ])("%j -> %i", (text, paragraphs) => {
+    expect(countParagraphs(text)).toBe(paragraphs);
+  });
+});
+
+describe("suggestedWritingMinutes", () => {
+  it("IELTS Task 1 and Task 2 only; no invented advice for other tasks", () => {
+    expect(suggestedWritingMinutes("essay_task1")).toBe(20);
+    expect(suggestedWritingMinutes("essay_task2")).toBe(40);
+    expect(suggestedWritingMinutes("essay")).toBeNull();
+    expect(suggestedWritingMinutes(undefined)).toBeNull();
   });
 });
 
