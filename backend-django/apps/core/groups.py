@@ -18,7 +18,7 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
-from .mock_scoring import skipped_skills
+from .mock_scoring import overall_without_skipped, skipped_skills
 from .system_settings import audit
 
 
@@ -85,6 +85,7 @@ def _compute_student_and_group_analytics(student_ids):
             'writingScore': None,
             'speakingScore': None,
             'overallBand': None,
+            'overallBandIncomplete': False,
             'skippedSections': 0,
             'lastAttemptAt': None,
         }
@@ -96,6 +97,7 @@ def _compute_student_and_group_analytics(student_ids):
             'totalCompletedAttempts': 0,
             'activeStudentsCount': 0,
             'skippedSections': _skipped_totals(),
+            'incompleteOverallCount': 0,
         }
 
     try:
@@ -124,6 +126,7 @@ def _compute_student_and_group_analytics(student_ids):
         legacy_by_student.setdefault(att.student_id, []).append(att)
 
     all_overall_bands = []
+    incomplete_overalls = 0
     skipped_total = _skipped_totals()
     total_completed = 0
     active_students = 0
@@ -139,6 +142,7 @@ def _compute_student_and_group_analytics(student_ids):
             active_students += 1
 
         l_scores, r_scores, w_scores, sp_scores, ov_scores = [], [], [], [], []
+        ov_incomplete = []
         student_skipped = 0
         last_dt = None
 
@@ -189,7 +193,11 @@ def _compute_student_and_group_analytics(student_ids):
             if ov is None:
                 ov = getattr(a, 'overall_score', None)
             if isinstance(ov, (int, float)) and math.isfinite(ov):
-                ov_scores.append(float(ov))
+                # For the group: the overall of the answered sections only, flagged incomplete when some were skipped.
+                ov, incomplete = overall_without_skipped(getattr(getattr(a, 'exam', None), 'type', None), float(ov), bands, skipped)
+                if ov is not None:
+                    ov_scores.append(float(ov))
+                    ov_incomplete.append(incomplete)
 
         for la in completed_legacies:
             dt = getattr(la, 'finished_at', None) or getattr(la, 'started_at', None)
@@ -198,10 +206,12 @@ def _compute_student_and_group_analytics(student_ids):
             ts = getattr(la, 'total_score', None)
             if isinstance(ts, (int, float)) and math.isfinite(ts):
                 ov_scores.append(float(ts))
+                ov_incomplete.append(False)
 
         overall_val = _round1(ov_scores[0]) if ov_scores else None
         if overall_val is not None:
             all_overall_bands.append(overall_val)
+            incomplete_overalls += bool(ov_incomplete[0])
 
         per_student[sid] = {
             'completedExamsCount': comp_count,
@@ -210,6 +220,7 @@ def _compute_student_and_group_analytics(student_ids):
             'writingScore': _round1(w_scores[0]) if w_scores else None,
             'speakingScore': _round1(sp_scores[0]) if sp_scores else None,
             'overallBand': overall_val,
+            'overallBandIncomplete': bool(overall_val is not None and ov_incomplete[0]),
             'skippedSections': student_skipped,
             'lastAttemptAt': last_dt,
         }
@@ -220,6 +231,8 @@ def _compute_student_and_group_analytics(student_ids):
         'totalCompletedAttempts': total_completed,
         'activeStudentsCount': active_students,
         'skippedSections': skipped_total,
+        # Students whose overall in the average was taken without their skipped sections ("to'liq emas").
+        'incompleteOverallCount': incomplete_overalls,
     }
 
 
@@ -253,6 +266,7 @@ def detail(actor, group_id):
             writingScore=stats.get('writingScore'),
             speakingScore=stats.get('speakingScore'),
             overallBand=stats.get('overallBand'),
+            overallBandIncomplete=stats.get('overallBandIncomplete', False),
             skippedSections=stats.get('skippedSections', 0),
             lastAttemptAt=stats.get('lastAttemptAt'),
         )
@@ -440,6 +454,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
         "CEFR Level",
         "Submitted Date",
         "Teacher Feedback Summary",
+        "Overall Note",
     ]
     ws.append(headers)
 
@@ -481,6 +496,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
                 "-",
                 "-",
                 "No exam submissions yet",
+                "",
             ])
             continue
 
@@ -500,7 +516,12 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
             raw_ov = getattr(att, 'overall_band', None)
             if raw_ov is None:
                 raw_ov = getattr(att, 'overall_score', None)
-            ov_v = _num(raw_ov, ov_vals)
+            # The group average counts only the answered sections; the student's own overall stays in the note.
+            group_ov, incomplete = overall_without_skipped(getattr(getattr(att, 'exam', None), 'type', None),
+                float(raw_ov) if isinstance(raw_ov, (int, float)) else None, bands, skipped)
+            ov_v = _num(group_ov, ov_vals)
+            overall_note = (f"Incomplete: skipped sections left out (student's own overall: {round(float(raw_ov), 1)})"
+                if incomplete and isinstance(raw_ov, (int, float)) else "")
             cefr = getattr(att, 'cefr_level', None) or "-"
             dt = getattr(att, 'finished_at', None) or getattr(att, 'submitted_at', None) or getattr(att, 'started_at', None)
             dt_str = dt.strftime("%Y-%m-%d %H:%M") if hasattr(dt, 'strftime') else (str(dt)[:16] if dt else "-")
@@ -520,6 +541,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
                 cefr,
                 dt_str,
                 fb_summary,
+                overall_note,
             ])
 
     # Group Average Footer Row
@@ -539,6 +561,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
         "-",
         timezone.now().strftime("%Y-%m-%d"),
         "Group Summary",
+        "Overall counts answered sections only",
     ]
     ws.append(footer_row)
     # Sections left unanswered are not in the averages above; their count is a separate row.
@@ -555,6 +578,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
         "-",
         timezone.now().strftime("%Y-%m-%d"),
         "Group Summary",
+        "",
     ])
     footer_fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
     footer_font = Font(bold=True, color="065F46")

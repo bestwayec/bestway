@@ -152,6 +152,23 @@ def verification_code(attempt_id):
     return f'BW-{digest[:4]}-{digest[4:8]}-{digest[8:12]}'
 
 
+def as_issued(row):
+    """What a certificate stated before `rescore_cefr_levels` re-derived the stored level and overall: the
+    command keeps the old values here, so a certificate that was already printed never changes."""
+    state = getattr(row, 'media_state', None)
+    snapshot = state.get('certificateAsIssued') if isinstance(state, dict) else None
+    return snapshot if isinstance(snapshot, dict) else {}
+
+
+def issued_section_score(issued, skill, raw):
+    """The section score an internal certificate printed for Writing/Speaking: the one in the snapshot, or the
+    removed internal practice grade an old attempt still carries; None when the real standard score applies."""
+    value = (issued.get('standardScores') or {}).get(skill)
+    if value is None and isinstance(raw, dict) and isinstance(raw.get('practiceGrade'), dict):
+        value = raw['practiceGrade'].get('score')
+    return value
+
+
 def verify_certificate(attempt_id, code):
     """Public check of a printed internal certificate. Returns no personal data beyond initials."""
     import hmac
@@ -159,13 +176,15 @@ def verify_certificate(attempt_id, code):
     if row is None or not code or not hmac.compare_digest(str(code).upper(), verification_code(attempt_id)):
         return dict(valid=False)
     from .assessment_quality import manual_result_skills
-    level = row.cefr_level
-    if row.exam.type != 'multilevel' or not manual_result_skills(row) or row.overall_score is None or level in (None, '', 'BELOW_B1'):
+    issued = as_issued(row)
+    level = issued.get('cefrLevel', row.cefr_level) if 'cefrLevel' in issued else row.cefr_level
+    overall = issued['overallScore'] if 'overallScore' in issued else row.overall_score
+    if row.exam.type != 'multilevel' or not manual_result_skills(row) or overall is None or level in (None, '', 'BELOW_B1'):
         return dict(valid=False)
     name = (row.student.user.name if row.student and row.student.user else '') or ''
     initials = ''.join(part[0].upper() + '.' for part in name.split() if part)
     return dict(valid=True, certificateType='BESTWAY_INTERNAL_MOCK', isOfficial=False, studentInitials=initials,
-        examTitle=student_title(row.exam.title), overallScore=row.overall_score, level=level,
+        examTitle=student_title(row.exam.title), overallScore=overall, level=level,
         issuedAt=row.finished_at, notice='BestWay internal mock result — not an official CEFR/UZBMB certificate')
 
 
@@ -196,6 +215,7 @@ def certificate_data(actor,attempt_id):
     if internal and any(skill not in seen for skill in internal):
         fail('INTERNAL_CERTIFICATE_NEEDS_TEACHER_REVIEW', 'An internal mock result certificate is issued only after the teacher has graded Writing and Speaking', 409)
 
+    issued = as_issued(row)
     raw_map = row.raw_scores or {}
     sec_bands = row.section_bands or {}
     std_scores = row.standard_scores or {}
@@ -215,6 +235,9 @@ def certificate_data(actor,attempt_id):
         band = sec_bands.get(skill)
         std_val = std_scores.get(skill)
         standard_score = std_val.get('estimatedStandardScore') if isinstance(std_val, dict) else std_val
+        printed = issued_section_score(issued, skill, raw)
+        if printed is not None:
+            standard_score = printed
         if score is None:
             score = standard_score if standard_score is not None else band
         if max_score is None:
@@ -233,11 +256,12 @@ def certificate_data(actor,attempt_id):
     # attempt) is a practice report: it never states an overall score or a CEFR
     # level, and a missing overall result is never derived from one section.
     section_only = is_part or row.flow_mode == 'single_skill'
-    overall_score = None if section_only else row.overall_score
-    overall_band = None if section_only else row.overall_band
-    cefr_level = None if section_only else row.cefr_level
+    overall_score = None if section_only else issued['overallScore'] if 'overallScore' in issued else row.overall_score
+    overall_band = None if section_only else issued['overallBand'] if 'overallBand' in issued else row.overall_band
+    cefr_level = None if section_only else issued['cefrLevel'] if 'cefrLevel' in issued else row.cefr_level
     # Agency criteria (blueprint level table): below B1 (under 38 of 75) there is no certificate.
-    # The level stored with the attempt decides, so older attempts keep the level they were given.
+    # The level stored with the attempt decides (owner decision 2026-11-17: stored levels may be re-derived with
+    # rescore_cefr_levels, which keeps what an already printed certificate said in `certificateAsIssued`).
     if row.exam.type == 'multilevel' and not section_only and overall_score is not None and cefr_level in (None, '', 'BELOW_B1'):
         fail('MULTILEVEL_BELOW_B1_NO_CERTIFICATE', 'A Multilevel result below B1 (under 38 of 75) has no certificate', 409)
 

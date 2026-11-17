@@ -165,6 +165,11 @@ export function GroupAnalyticsPanel({
                 <p className="mt-1.5 text-2xl font-bold tabular-nums text-fg">
                   {analytics.averageBandScore !== null ? analytics.averageBandScore.toFixed(1) : "—"}
                 </p>
+                {analytics.averageBandScore !== null && analytics.incompleteOverallCount > 0 && (
+                  <p className="mt-1 text-[11px] text-warning">
+                    to&apos;liq emas: {analytics.incompleteOverallCount} ta natija o&apos;tkazib yuborilgan bo&apos;limlarsiz hisoblandi
+                  </p>
+                )}
               </div>
 
               <div className="rounded-xl border border-border bg-surface-subtle/60 p-4">
@@ -238,6 +243,11 @@ export function GroupAnalyticsPanel({
                         </td>
                         <td className="px-3.5 py-2.5 text-center font-bold text-brand tabular-nums">
                           {st.overallBand !== null ? st.overallBand.toFixed(1) : "—"}
+                          {st.overallBand !== null && st.overallBandIncomplete && (
+                            <span className="ml-1 text-[10px] font-medium text-warning" title="O'tkazib yuborilgan bo'limlarsiz hisoblandi">
+                              to&apos;liq emas
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))

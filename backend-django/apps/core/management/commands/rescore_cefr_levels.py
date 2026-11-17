@@ -4,8 +4,8 @@
     python manage.py rescore_cefr_levels --dry-run --json
     python manage.py rescore_cefr_levels --apply            # write the changes (one transaction per batch)
 
-Results are stored when they are scored, so attempts finished before the current scales keep the level they
-were given. This brings them in line with the scales now in force:
+Owner decision 2026-11-17: the earlier level maps were wrong, so the old rule "an attempt keeps the level it was
+stored with" no longer holds for the stored result. This brings finished attempts in line with the scales in force:
 
 * IELTS: `cefrLevel` from the stored `overallBand` (ielts.org: C2 8.5, C1 7.0, B2 5.5, B1 4.0, below 4.0 BELOW_B1).
 * Multilevel: every section's level from its stored standard score, the overall score as the mean of the stored
@@ -13,19 +13,26 @@ were given. This brings them in line with the scales now in force:
   internal `practiceGrade` (removed; it replaced the Writing/Speaking scores in the overall) is dropped from
   `rawScores`, so the overall is again the mean of the real section scores.
 
-Not touched: section bands, IELTS overall bands, raw scores, answers, certificates already issued, attempts that
-are not finished, and section practice (it has no overall or level). Run the dry-run first and read the summary.
+Certificates already issued do not change. They are drawn from the attempt row each time (and the printed code is
+checked against it), so before a row is rewritten the values its certificate stated - overall score, overall band,
+level and the printed Writing/Speaking scores - are copied to `mediaState.certificateAsIssued`, which the
+certificate and its public check read first. The result page and the student's result use the new values.
+
+Not touched: section bands, IELTS overall bands, raw scores (apart from the dropped practice grade), answers,
+attempts that are not finished, and section practice (it has no overall or level). Run the dry-run first and read
+the summary; run `--apply` only deliberately (it writes to the database).
 """
 import json
 from collections import Counter
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.core.mock_scoring import cefr_band, multilevel_level, multilevel_overall_score
 from apps.legacy_schema.models import MockAttempt
 
-FIELDS = ('overall_score', 'cefr_level', 'standard_scores', 'raw_scores')
+FIELDS = ('overall_score', 'cefr_level', 'standard_scores', 'raw_scores', 'media_state')
 PARTIAL_FLOWS = ('partial_practice', 'single_skill')
 
 
@@ -74,7 +81,16 @@ def rescored_multilevel(attempt):
     return changes
 
 
-def plan(attempt):
+def issued_snapshot(attempt, now):
+    """What this attempt's certificate states today, kept so an already printed certificate does not change."""
+    raw = attempt.raw_scores if isinstance(attempt.raw_scores, dict) else {}
+    printed = {skill: item['practiceGrade']['score'] for skill, item in raw.items()
+        if isinstance(item, dict) and isinstance(item.get('practiceGrade'), dict) and numeric(item['practiceGrade'].get('score'))}
+    return {'overallScore': attempt.overall_score, 'overallBand': attempt.overall_band, 'cefrLevel': attempt.cefr_level,
+        'standardScores': printed, 'rescoredAt': now.isoformat()}
+
+
+def plan(attempt, now=None):
     """{field: new value} for one attempt, empty when nothing changes."""
     if attempt.status != 'completed' or attempt.flow_mode in PARTIAL_FLOWS or attempt.score_method == 'PRACTICE_PARTIAL':
         return {}
@@ -85,7 +101,11 @@ def plan(attempt):
         changes = rescored_ielts(attempt)
     else:
         return {}
-    return {field: value for field, value in changes.items() if field in FIELDS and not (field == 'cefr_level' and value == attempt.cefr_level)}
+    changes = {field: value for field, value in changes.items() if field in FIELDS and not (field == 'cefr_level' and value == attempt.cefr_level)}
+    state = attempt.media_state if isinstance(getattr(attempt, 'media_state', None), dict) else {}
+    if {'cefr_level', 'overall_score', 'raw_scores'} & set(changes) and 'certificateAsIssued' not in state:
+        changes['media_state'] = dict(state, certificateAsIssued=issued_snapshot(attempt, now or timezone.now()))
+    return changes
 
 
 def describe(attempt, changes):
@@ -98,6 +118,8 @@ def describe(attempt, changes):
         row['sectionLevels'] = {skill: {'from': (attempt.standard_scores.get(skill) or {}).get('level'), 'to': item.get('level')}
             for skill, item in changes['standard_scores'].items()
             if isinstance(item, dict) and (attempt.standard_scores.get(skill) or {}).get('level') != item.get('level')}
+    if 'media_state' in changes:
+        row['certificateKept'] = True      # the old values are saved for the certificate and its public check
     if 'raw_scores' in changes:
         row['droppedPracticeGrades'] = sorted(skill for skill, item in (attempt.raw_scores or {}).items()
             if isinstance(item, dict) and 'practiceGrade' in item)
@@ -119,6 +141,8 @@ def build_report(attempts):
             transitions[f"{attempt.exam.type}: overall score changes"] += 1
         if 'raw_scores' in changes:
             transitions[f"{attempt.exam.type}: internal practice grade dropped"] += 1
+        if 'media_state' in changes:
+            transitions[f"{attempt.exam.type}: certificate values kept as issued"] += 1
     return scanned, rows, transitions
 
 

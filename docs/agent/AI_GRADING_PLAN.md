@@ -16,7 +16,7 @@ AI produces a **draft score and draft feedback for the teacher** on Writing and 
 
 - Assessment jobs per attempt and skill (`AssessmentJob`, worker `run_assessment_worker`), provider calls with a fallback (`ASSESSMENT_PROVIDER=openrouter`, `ASSESSMENT_FALLBACK_PROVIDER=xkiro`), speech-to-text (`OPENROUTER_STT_MODEL`, local `faster-whisper` option).
 - Safeguards already tested (CI script `verify_grading_consistency_postgres.py`, 76 checks): low-confidence AI stays a proposal; unmeasured STT confidence never auto-approves; silent/missing audio goes to review with no score; teacher override wins and is kept separate from the AI proposal; a late AI regrade never replaces a teacher grade; partial practice never queues external AI.
-- Internal grading policy `BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1` (35 + 15 × raw/max on the 75 scale for current Multilevel attempts).
+- ~~Internal grading policy `BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1` (35 + 15 × raw/max, 35–50 on the 75 scale).~~ **Removed (#190, owner decision 2026-11-17):** the score is the AI's or the teacher's own (standard score from the raw mark), still shown as provisional until a teacher confirms it; no 55 cap in the prompt or the ranking.
 
 So the plan is mostly **policy, evaluation and rollout**, not new plumbing.
 
