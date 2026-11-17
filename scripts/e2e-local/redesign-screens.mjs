@@ -5,7 +5,7 @@
 //   BW_WEB=http://localhost:3300 BW_CHROMIUM=... node redesign-screens.mjs OUT_DIR [page ...]
 // Pages: landing login dashboard catalogue listening reading writing speaking result teacher workspace grading
 //        groups admin builder (default: all). Sizes 1366×768 and 390×844 (BW_SIZES=1366x768,390x844,360x640),
-// light and dark. Prints per shot: horizontal overflow and the exam header height.
+// light and dark; BW_MODE=timed starts timed attempts (default practice). Prints per shot: horizontal overflow and the exam header height.
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +24,7 @@ const PASSWORD = process.env.BW_PASSWORD || "LocalDev-2026!"; // synthetic local
 const ACCOUNTS = { student: "+998900000011", teacher: "+998900000003", admin: "+998900000002" };
 const SIZES = (process.env.BW_SIZES || "1366x768,390x844").split(",").map((s) => s.split("x").map(Number));
 const THEMES = (process.env.BW_THEMES || "light,dark").split(",");
+const MODE = process.env.BW_MODE || "practice"; // "timed" shows the server clock
 
 const browser = await chromium.launch({
   ...(process.env.BW_CHROMIUM ? { executablePath: process.env.BW_CHROMIUM } : {}),
@@ -66,7 +67,7 @@ async function closeOpenAttempts(api) {
 
 async function runner(page, api, skill) {
   await closeOpenAttempts(api);
-  const started = await api("POST", `/mock/exams/${state.examId}/start`, { mode: "practice", flow: "single_skill", skills: [skill] });
+  const started = await api("POST", `/mock/exams/${state.examId}/start`, { mode: MODE, flow: "single_skill", skills: [skill] });
   await page.goto(`${WEB}/en/mock/attempt/${started.attemptId}`, { waitUntil: "networkidle" });
   for (const id of ["exam-session-elsewhere", "fullscreen-notice"]) {
     const dialog = page.getByTestId(id);

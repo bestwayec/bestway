@@ -7,6 +7,17 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 29-BLOK: Redizayn, 2-bosqich — imtihon oynasi — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **Maydon**: imtihon oynasi butun kenglikda (max 1680 px, `bg-subtle` fon), 1366×768 da matn+savollar balandlikning ~84% i; Reading matni kengda "karta ichida karta" emas, 17 px / 1.75; split o'lchami o'zgaradi (avvalgidek).
+- **Flag** savol raqami yonida (`aria-pressed`, telefonda 44 px). **Navigator**: javob berilgan — yashil fon, belgilangan — sariq chegara + burchak, joriy — halqa; telefonda pastdan chiqadigan varaq, 44 px katakchalar.
+- **Taymer** (`lib/exam-settings.ts`): 5 daqiqadan kam — warning rangi, oxirgi daqiqa — danger; 5:00 va 1:00 da 10 soniyalik sokin xabar (hamma bo'limda), miltillash yo'q. Vaqt serverdan — o'zgarmadi.
+- **Writing**: neytral segmentli "Yozish / Rasm" tanlagich, muharrir ekran balandligini to'ldiradi. **Listening**: qism sarlavhasi sticky pleyer ostida yashirinmaydi.
+- **i18n**: runner'dagi "Previous/Next", "Shared situation", "Map", "Response timing", rasm alt matnlari → en/uz. `bg-surface-subtle` (aniqlanmagan token) → `bg-bg-subtle`, guard testi.
+- **Imtihon qoidalari o'zgarmadi**: audio bir marta, server vaqti, autosave, finish oqimi.
+- **Tekshiruv**: tsc, lint, vitest (828), E2E: `exam-a11y.mjs` 12/12 (axe serious/critical 0), `exam-workspace.mjs` 20/20, `shortcuts-screens.mjs` (360/390/1366, ikki tema).
+- **Skrinshotlar**: `docs/agent/screens/redesign-2/{before,after}/` (timed rejim).
+- **Keyingi**: 3-bosqich — natija va tahlil.
+
 ### 28-BLOK: Redizayn, 1-bosqich — dizayn tizimi — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Tokenlar** (`globals.css`): yorug' temada iliq "qog'oz" neytrallar, qorong'ida chuqurroq va kamroq ko'k fon; `input-border` (3:1), `danger-fg`, `surface-elevated` (ilgari aniqlanmagan edi — `EmptyState` belgisi rangsiz edi); radius `chip/field/control/card/dialog`; soya `shadow-e1..e3` (Tailwind `shadow-sm…2xl` ularga bog'langan, rangli glow yo'q); motion `duration-fast/base/slow`, `ease-out/in`; `text-display`, `text-overline`.
 - **Codemod** `frontend/scripts/tokenize-shape.mjs`: `rounded-[Npx]` → tokenlar, rangli soyalar olib tashlandi (146 fayl).

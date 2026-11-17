@@ -2,7 +2,7 @@
 
 Timed attempts (`BW_MODE=timed`) on the synthetic IELTS exam, 1366×768 and 390×844, light and dark.
 
-- **before**: stage 1 (`64d58a7`'s parent, main after #196).
+- **before**: main `64d58a7` (stage 1 merged).
 - **after**: this branch.
 
 ```bash
