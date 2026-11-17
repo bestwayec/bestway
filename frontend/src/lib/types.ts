@@ -961,7 +961,10 @@ export interface MockAttemptSection {
 }
 
 export interface DiagnosticFeedback {
-  criteria_scores: { criterion: string; score: number; comment?: string }[];
+  /** IELTS: TA/TR, CC, LR, GRA (Writing, per task) or FC, LR, GRA, P (Speaking); `part` names the task. */
+  criteria_scores: { criterion: string; score: number; comment?: string; code?: string | null; part?: string }[];
+  /** True while the score is the AI's estimate and no teacher has confirmed it. */
+  provisional?: boolean;
   mistakes_and_fixes: { original: string; corrected: string; explanation?: string }[];
   vocabulary_upgrades: { original: string; alternative: string; explanation?: string }[];
   action_plan: string[];
@@ -974,6 +977,8 @@ export interface MockAttemptDetail extends MockAttemptSummary {
   sections: MockAttemptSection[];
   cheatEvents?: { event: string; date: string }[];
   diagnosticFeedback?: Record<string, DiagnosticFeedback>;
+  /** Writing/Speaking skills whose score is still an AI estimate (not yet confirmed by a teacher). */
+  provisionalSkills?: string[];
 }
 
 export interface MockPurchaseItem {

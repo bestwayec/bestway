@@ -82,37 +82,101 @@ def validate(value,input):
     return quality.attach_grade(input,result)
 
 
+# Official IELTS criterion names and short codes. Writing Task 1 is assessed on Task Achievement,
+# Task 2 on Task Response; Speaking's first criterion is Fluency and Coherence.
+IELTS_CRITERIA = {
+    'ta': ('TA/TR', 'Task Achievement / Task Response'),
+    'cc': ('CC', 'Coherence and Cohesion'),
+    'lr': ('LR', 'Lexical Resource'),
+    'gra': ('GRA', 'Grammatical Range and Accuracy'),
+    'fluency': ('FC', 'Fluency and Coherence'),
+    'lexical': ('LR', 'Lexical Resource'),
+    'grammar': ('GRA', 'Grammatical Range and Accuracy'),
+    'pronunciation': ('P', 'Pronunciation'),
+}
+MULTILEVEL_CRITERIA = {
+    'taskCoverage': 'Task Coverage & Content',
+    'grammar': 'Grammatical Accuracy & Range',
+    'vocabulary': 'Lexical Resource & Vocabulary',
+    'cohesion': 'Coherence & Organization',
+    'ideaDevelopment': 'Idea Development & Relevance',
+}
+
+
+def part_label(part_id):
+    """'task1:<question>' -> 'Task 1'; other ids are shown as they are."""
+    identifier = str(part_id or '')
+    if identifier.startswith('task1'): return 'Task 1'
+    if identifier.startswith('task2'): return 'Task 2'
+    if identifier == 'speaking': return 'Speaking'
+    return identifier
+
+
+def criterion_name(key, part_id, multilevel):
+    """Display name and short code of one rubric criterion of one part."""
+    if multilevel or key not in IELTS_CRITERIA:
+        return MULTILEVEL_CRITERIA.get(key, key.replace('_', ' ').title()), None
+    code, name = IELTS_CRITERIA[key]
+    if key == 'ta':
+        label = part_label(part_id)
+        if label == 'Task 1': code, name = 'TA', 'Task Achievement'
+        elif label == 'Task 2': code, name = 'TR', 'Task Response'
+    return f'{name} ({code})', code
+
+
+def criteria_by_part(result, input=None):
+    """Every part's criteria with its score and the assessor's explanation, in rubric order.
+    Writing Task 1 and Task 2 are listed separately (Task 2 carries twice the weight)."""
+    multilevel = bool(input) and input.get('program') == 'MULTILEVEL'
+    rows = []
+    for p in (result or {}).get('parts') or []:
+        crit = p.get('criteria') or {}
+        evid = p.get('evidence') or {}
+        if not multilevel and input is None and any(k in MULTILEVEL_CRITERIA and k != 'grammar' for k in crit):
+            multilevel = True
+        criteria = []
+        for key, value in crit.items():
+            name, code = criterion_name(key, p.get('id'), multilevel)
+            criteria.append(dict(key=key, code=code, criterion=name, score=value, comment=evid.get(key, '')))
+        weight = 2 if str(p.get('id') or '').startswith('task2') else 1
+        rows.append(dict(partId=p.get('id'), part=part_label(p.get('id')), weight=weight, criteria=criteria))
+    return rows
+
+
+def assessment_reviewed_job_ids(job_ids):
+    """Jobs a teacher accepted or overrode (the audit trail of the review actions)."""
+    from apps.legacy_schema.models import AuditLog
+    ids = list(job_ids)
+    if not ids: return set()
+    return set(AuditLog.objects.filter(entity='AssessmentJob', entity_id__in=ids,
+        action__in=('assessment.accept', 'assessment.override')).values_list('entity_id', flat=True))
+
+
+def provisional_skills(latest_jobs, reviewed_ids):
+    """Writing/Speaking skills whose current score is still the AI's estimate (same rule as the
+    attempt's teacherConfirmed): final only once a teacher scored it, or accepted/overrode the AI result."""
+    return sorted({job.skill for job in latest_jobs
+        if not (job.status == 'SUCCEEDED' and (job.final_score_source == 'TEACHER' or job.id in reviewed_ids))})
+
+
 def format_diagnostic_feedback(result, input=None):
     if not isinstance(result, dict):
         return None
-    CRIT_NAMES = {
-        'ta': 'Task Achievement / Response',
-        'cc': 'Coherence & Cohesion',
-        'lr': 'Lexical Resource',
-        'gra': 'Grammatical Range & Accuracy',
-        'taskCoverage': 'Task Coverage & Content',
-        'grammar': 'Grammatical Accuracy & Range',
-        'vocabulary': 'Lexical Resource & Vocabulary',
-        'cohesion': 'Coherence & Organization',
-        'ideaDevelopment': 'Idea Development & Relevance',
-        'fluency': 'Fluency & Spontaneous Speech',
-        'lexical': 'Lexical Variety & Phrasing',
-        'pronunciation': 'Pronunciation & Intonation'
-    }
     criteria_scores = []
     parts = result.get('parts') or []
-    seen_crit = set()
-    for p in parts:
-        crit = p.get('criteria') or {}
-        evid = p.get('evidence') or {}
-        for k, score in crit.items():
-            if score is not None and k not in seen_crit:
-                seen_crit.add(k)
-                criteria_scores.append({
-                    'criterion': CRIT_NAMES.get(k, k.replace('_', ' ').title()),
-                    'score': score,
-                    'comment': evid.get(k, '')
-                })
+    by_part = criteria_by_part(result, input)
+    several = len(by_part) > 1
+    for row in by_part:
+        for c in row['criteria']:
+            if c['score'] is None:
+                continue
+            criteria_scores.append({
+                'criterion': f"{row['part']} · {c['criterion']}" if several else c['criterion'],
+                'code': c['code'],
+                'part': row['part'],
+                'score': c['score'],
+                'comment': c['comment'],
+            })
     if not criteria_scores and parts:
         p = parts[0]
         if p.get('rawScore') is not None:
@@ -153,6 +217,7 @@ def format_diagnostic_feedback(result, input=None):
 
     return {
         'criteria_scores': criteria_scores,
+        'criteria_by_part': by_part,
         'mistakes_and_fixes': mistakes_and_fixes,
         'vocabulary_upgrades': vocabulary_upgrades,
         'action_plan': action_plan,

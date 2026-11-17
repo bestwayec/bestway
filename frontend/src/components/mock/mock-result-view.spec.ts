@@ -222,4 +222,17 @@ describe("attempt with no answers", () => {
     expect(html).toContain("32/40 correct · 80%");
     expect(html).not.toMatch(/Band \d/);
   });
+
+  it("marks an AI-scored Writing/Speaking section as provisional until a teacher confirms it", () => {
+    viewer.role = "student";
+    const value = attempt(false);
+    value.provisionalSkills = ["speaking"];
+    const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(html).toContain(">Provisional<");
+    expect(html).toContain(en.mock.resultView.aiPending);
+    value.provisionalSkills = [];
+    const confirmed = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    expect(confirmed).not.toContain(">Provisional<");
+    expect(confirmed).toContain(en.mock.resultView.teacherReviewed);
+  });
 });

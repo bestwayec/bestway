@@ -7,6 +7,25 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 23-BLOK: Baholash to'g'riligi auditi — branch `claude/elegant-cerf-9zge8g` (2026-11-17)
+- **Listening / Reading (Academic, General)**: `mock_scoring` jadvallari ielts.org indikativ jadvallariga rasmiy chop etilgan oraliqlarda (L ≥11, AR ≥10, GT ≥15) to'liq mos — o'zgartirilmadi. Undan pastki qatorlar rasmiy emas (savol egasiga).
+- **Overall**: `round_half` (.25 → .5, .75 → yuqori butun, .125 → pastga) to'g'ri; to'liq imtihon 4 ga bo'linadi.
+- **Writing**: Task 2 og'irligi 2× ikkala joyda ham to'g'ri (`ielts_writing_band`, `assessment_results.score`). Xato: natija sahifasidagi mezonlar ro'yxati kalit bo'yicha takrorlanishni olib tashlardi — **Task 2 ning 4 mezoni va izohlari umuman ko'rinmasdi**. Endi har task alohida: Task 1 — TA, CC, LR, GRA; Task 2 — TR, CC, LR, GRA (`criteria_by_part`, `criteria_scores` da `code`/`part`). Speaking: FC, LR, GRA, P.
+- **Taxminiy belgisi**: attempt detail `provisionalSkills` va har `diagnosticFeedback[skill].provisional`; bo'lim kartasida "Taxminiy", AI tahlil kartasida "Taxminiy — ustoz tasdiqlashi kutilmoqda". Qoida `teacherConfirmed` bilan bir xil (TEACHER manbasi yoki accept/override audit yozuvi).
+- **Kalibrovka**: `python manage.py calibrate_ai_scores --teacher t.csv [--ai a.csv] [--json]` — har mezon bo'yicha MAE, bias, ±0.5 ulushi (`apps/core/calibration.py`); AI ballari bazadan tanlangan AI evaluation'dan olinadi, faqat o'qiydi.
+- **Testlar**: `tests/test_ielts_rubric_and_calibration.py` — har rasmiy xom ball (0–40) uchun band, 29/30/31, 38/39/40 va har chegaraning ±1, overall chorak yaxlitlash, Writing og'irligi, mezonlar, taxminiy, MAE.
+- **O'zgartirilmadi, egasining qarori kerak**: IELTS→CEFR xaritasi (`cefr_band`: C1 ≥8, B2 ≥6.5, B1 ≥5, A2 ≥4; ielts.org: C2 8.5, C1 7.0, B2 5.5, B1 4.0); guruh eksportidagi `compute_cefr_level` (Multilevel 70/55/40/30, blueprint 65/51/38; 0–9 oralig'idagi ball IELTS deb olinadi); Multilevel AI promptidagi yashirin 55/75 chegarasi; ishlatilmaydigan `instant_evaluator._round_to_half` (Python `round`, 6.25 → 6.0) va C2 ≥8.0.
+
+### 22-BLOK: Finish (imtihonni yakunlash) 502 — branch `fix/finish-502` (2026-11-15)
+- **Sabab (dalil bilan)**: prod nginx loglarida (13-okt – 15-noy) submit hech qachon 502 bermagan; nginx 600 s, gunicorn 120 s, Next proksi esa 8 s timeout — 502 faqat proksidan keladi. Submit qator qulfi ostida har javobga alohida UPDATE (97 so'rovdan 71 tasi), har speaking yozuvini SHA-256 bilan o'qish, job/bildirishnoma, yakunlangan urinishda sinxron Telegram post (40 s timeout) va web jarayon ichida AI tick'ni bajarardi; takroriy bosish hammasini qaytadan qilardi.
+- **Tuzatish**: submit faqat deterministik natijani saqlaydi (69 ms / 18 so'rov); og'ir ish `SubmissionHandoff` outbox orqali javobdan keyin, aynan bir marta; takroriy Finish saqlangan holatni darhol qaytaradi; qolib ketgan hand-off'ni assessment-worker oladi; proksi Finish uchun 30 s.
+- **Yuklama testi**: `verify_finish_load_postgres.py` — 30 parallel Finish 201, 30 takroriy 201, 60 job (dublikat yo'q). 4 slotda: oldin max 3.8 s, keyin 2.1 s.
+- **Holat**: PR #184 merge qilindi (91ffbec), CI yashil. 2026-11-15 prod'ga deploy qilindi: `buildCommit` 91ffbec, bestwayec.uz va api 200, core.0010 migratsiyasi qo'llandi, deploydan keyin 5xx yo'q. Deploy 0b6073a dan keyingi barcha PR'larni (#103–#184) chiqardi.
+
+## Keyingi qadamlar
+- Record Mock: prod'da faqat 8 s placeholder WAV bor — haqiqiy Listening audio `media/exams/record_mock_1/` ga qo'yilmaguncha imtihon nashr qilinmaydi.
+- Birinchi haqiqiy guruh imtihonidan keyin `SubmissionHandoff` jadvalida `done_at IS NULL` qatorlar qolmaganini tekshirish.
+
 ### 21-BLOK: Android video audit (10-noyabr) — P1–P6, branch'lar `fix/p1…p5`, `fix/extras…`
 Video qo'lda ko'rilmadi; kuzatuvlar gipoteza sifatida kod va lokal muhitda qayta tekshirildi. Deploy qilinmagan.
 

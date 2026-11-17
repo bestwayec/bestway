@@ -153,7 +153,8 @@ def enqueue(attempt, wanted=None):
                 version=1,attempt_count=0,created_at=now,updated_at=now))
 
 
-def notify(attempt):
+def notify(attempt, channel=True):
+    """Notification rows for a hand-in; `channel=False` leaves the Telegram channel post to the caller."""
     from .mock_attempts import versioned
     def create(user_id, text):
         Notification.objects.create(id=new_id(),user_id=user_id,type='test_result',text=text,read=False,created_at=timezone.now())
@@ -173,7 +174,7 @@ def notify(attempt):
             create(attempt.student_id,f'"{title}" bo\'yicha {skills_label} natijangiz tayyor! Natijani ko\'rish uchun bosing.')
             for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
                 create(parent,f'Farzandingizning "{title}" bo\'yicha {skills_label} natijasi tayyor!')
-            if attempt.status == 'completed':
+            if channel and attempt.status == 'completed':
                 announce_channel_mock_result(attempt)
             return
         else:
@@ -184,7 +185,7 @@ def notify(attempt):
     create(attempt.student_id,f'Mock imtihon natijangiz tayyor: "{title}" — {headline}.')
     for parent in set(ParentStudent.objects.filter(student_id=attempt.student_id).values_list('parent_user_id',flat=True)):
         create(parent,f'Farzandingizning "{title}" mock natijasi: {headline}.')
-    if attempt.status == 'completed':
+    if channel and attempt.status == 'completed':
         announce_channel_mock_result(attempt)
 
 
