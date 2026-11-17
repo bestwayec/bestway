@@ -1878,7 +1878,6 @@
       "androidAbi": "Universal (64-bit / 32-bit)",
       "androidTitle": "BestWay Android ilovasi",
       "androidText": "Telefon va planshetlar uchun BestWay ilovasi: lug'at mashqlari, Subway Vocab Runner va kompyuter formatidagi testlar qurilmangizda.",
-      "androidDownload": "APK'ni yuklab olish",
       "androidDownloadSize": "APK'ni yuklab olish ({size})",
       "androidStep1Title": "Faylni yuklab oling",
       "androidStep1Text": "Tugmani bosing va <file>bestway-app.apk</file> faylini qurilmangizga saqlang.",
@@ -1896,7 +1895,8 @@
       "iosStep3Title": "Qo'shish",
       "iosStep3Text": "Yuqori o'ng burchakdagi \"Qo'shish\" tugmasini bosing. BestWay belgisi bosh ekranda paydo bo'ladi.",
       "allPlatforms": "Barcha platformalar uchun o'rnatgichlar ({version})",
-      "thisDevice": "Shu qurilma"
+      "thisDevice": "Shu qurilma",
+      "androidNone": "So'nggi relizda hali Android APK yo'q."
     },
     "demoExam": {
       "preparing": "Imtihon topshiriqlari tayyorlanmoqda…",

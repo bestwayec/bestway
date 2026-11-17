@@ -1878,7 +1878,6 @@
       "androidAbi": "Universal (64-bit / 32-bit)",
       "androidTitle": "BestWay for Android",
       "androidText": "The BestWay app for phones and tablets: vocabulary practice, Subway Vocab Runner and computer-format tests on your device.",
-      "androidDownload": "Download the APK",
       "androidDownloadSize": "Download the APK ({size})",
       "androidStep1Title": "Download the file",
       "androidStep1Text": "Tap the button and save <file>bestway-app.apk</file> on your device.",
@@ -1896,7 +1895,8 @@
       "iosStep3Title": "Add",
       "iosStep3Text": "Tap \"Add\" in the top-right corner. The BestWay icon appears on your home screen.",
       "allPlatforms": "Installers for every platform ({version})",
-      "thisDevice": "This device"
+      "thisDevice": "This device",
+      "androidNone": "The latest release has no Android APK yet."
     },
     "demoExam": {
       "preparing": "Preparing the exam tasks…",

@@ -28,8 +28,6 @@ const REPO = "bestwayec/bw-tauri";
 // Always the latest published release: no version is written into the page, so it never goes stale.
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
-// The APK keeps one file name across releases, so GitHub's "latest" download link always works.
-const LATEST_ANDROID_APK_URL = `${RELEASES_URL}/download/bestway-app.apk`;
 
 type Os = "windows" | "macos" | "linux" | "android" | "ios" | "unknown";
 
@@ -233,7 +231,7 @@ export function DesktopDownload() {
                 </span>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="success">Android APK{release?.version ? ` · ${release.version}` : ""}</Badge>
+                    <Badge variant="success">Android APK{apk && release?.version ? ` · ${release.version}` : ""}</Badge>
                     <span className="text-xs font-semibold text-fg-muted">{td("androidAbi")}</span>
                   </div>
                   <h2 className="mt-1 text-2xl font-black text-fg">{td("androidTitle")}</h2>
@@ -241,12 +239,27 @@ export function DesktopDownload() {
                 </div>
               </div>
               <div className="w-full shrink-0 sm:w-auto">
-                <Button size="lg" asChild className="w-full rounded-xl px-6 font-black sm:w-auto">
-                  <a href={apk?.url || LATEST_ANDROID_APK_URL} download>
-                    <Download className="mr-2 size-5" aria-hidden />
-                    <span>{apk?.sizeMB ? td("androidDownloadSize", { size: apk.sizeMB }) : td("androidDownload")}</span>
-                  </a>
-                </Button>
+                {apk ? (
+                  <Button size="lg" asChild className="w-full rounded-xl px-6 font-black sm:w-auto">
+                    <a href={apk.url} download>
+                      <Download className="mr-2 size-5" aria-hidden />
+                      <span>{td("androidDownloadSize", { size: apk.sizeMB })}</span>
+                    </a>
+                  </Button>
+                ) : loading ? (
+                  <p className="inline-flex items-center gap-2 text-sm text-fg-muted" role="status">
+                    <Loader2 className="size-4 animate-spin text-brand" aria-hidden />
+                    {t("desktopDetecting")}
+                  </p>
+                ) : (
+                  /* No APK in the latest release (or GitHub did not answer): say so, link to the releases. */
+                  <div className="space-y-2 text-sm">
+                    <p className="text-fg-muted">{release ? td("androidNone") : t("desktopLoadFailed")}</p>
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">{t("desktopAllDownloads")}</a>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
             {steps([
