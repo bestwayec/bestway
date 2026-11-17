@@ -82,6 +82,8 @@ import { ExamNotesPanel } from "./exam-notes-panel";
 import { VocabLookup, VOCAB_TEXT_ATTRIBUTE } from "./vocab-lookup";
 import { AudioScriptToggle, RevealAnswer } from "./practice-tools";
 import { RunnerTools, PhoneToolsRow, ClearAnswersDialog } from "./runner-tools";
+import { ShortcutsDialog, useRunnerShortcuts } from "./runner-shortcuts";
+import { highlightCurrentSelection } from "./cbt-annotated-text";
 import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
 import { ApiError } from "@/lib/api-client";
@@ -162,6 +164,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   // Header panels and tools: Info (status and instructions), focus mode, word lookup (practice only), clear answers.
   const [infoOpen, setInfoOpen] = React.useState(false);
   const [focusMode, setFocusMode] = React.useState(false);
+  // "?" lists the keyboard shortcuts; H highlights the selected text (N / P / F live in the stepper).
+  const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
+  useRunnerShortcuts({
+    help: () => setShortcutsOpen(true),
+    highlight: () => { if (!highlightCurrentSelection()) toast.info(tr("highlightHint")); },
+  });
   const [vocabOn, setVocabOn] = React.useState(false);
   const [clearOpen, setClearOpen] = React.useState(false);
   const toolbarRef = React.useRef<ExamToolbarHandle>(null);
@@ -921,6 +929,10 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
             <ResponseProgress answered={answered} total={total} />
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
               <p className="text-xs text-fg-muted">{tr("toolsHint")}</p>
+              <Button type="button" size="sm" variant="ghost" className="min-h-[40px]" onClick={() => setShortcutsOpen(true)}>
+                <Keyboard className="mr-1.5 size-4" aria-hidden />
+                {tr("shortcutsButton")}
+              </Button>
               <Button type="button" size="sm" variant="outline" className="min-h-[40px] text-danger" disabled={!canClearSection} onClick={() => setClearOpen(true)}>
                 <Trash2 className="mr-1.5 size-4" aria-hidden />
                 {tr("clearAnswers")}
@@ -951,6 +963,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           }}
         />
         <VocabLookup enabled={!strict && vocabOn} />
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
         {partialPractice && !isSingleSection && (section?.skill === "writing" || section?.skill === "speaking") && <p className="mb-4 text-sm text-fg-muted">{t("practiceRunnerNotice")}</p>}
         {versioned && exam.type === "multilevel" && section && !isSingleSection && <div className="mb-4"><MultilevelSectionProgress current={section.skill} skills={partialPractice ? exam.sections.map((item) => item.skill) : undefined} complete={exam.sections.filter((item) => {

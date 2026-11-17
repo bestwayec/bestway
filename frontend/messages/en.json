@@ -1200,7 +1200,8 @@
       "speakingSteps": "Speaking response steps",
       "paragraphCount": "{count, plural, one {# paragraph} other {# paragraphs}}",
       "timeOnTask": "{minutes} min on this task",
-      "timeOnTaskOf": "{minutes} min on this task · suggested {suggested} min"
+      "timeOnTaskOf": "{minutes} min on this task · suggested {suggested} min",
+      "shortcutsButton": "Keyboard shortcuts (?)"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1325,7 +1326,9 @@
       "nextQuestion": "Next question",
       "allQuestions": "All questions",
       "partQuestions": "Questions in {part}",
-      "closePalette": "Close"
+      "closePalette": "Close",
+      "passageN": "Passage {n}",
+      "partN": "Part {n}"
     },
     "advanceConfirm": {
       "title": "Move to the next section?",
@@ -1682,6 +1685,16 @@
       "answerLabel": "Answer",
       "whereLabel": "In the text",
       "revealError": "The answer could not be shown."
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "intro": "Single keys work when you are not typing in an answer box.",
+      "next": "Next question",
+      "previous": "Previous question",
+      "flag": "Flag or unflag the question",
+      "highlight": "Highlight the selected text",
+      "help": "Show this list",
+      "close": "Close a dialog or panel"
     }
   },
   "wizard": {
@@ -2538,7 +2551,7 @@
     "mock": "Exams"
   },
   "today": {
-    "title": "Today",
+    "title": "Today's plan",
     "resumeTitle": "Continue your exam",
     "homeworkTitle": "{count, plural, one {# homework to do} other {# homework tasks to do}}",
     "homeworkOverdue": "{count} overdue",
