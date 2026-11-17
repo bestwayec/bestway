@@ -61,8 +61,13 @@ for (const theme of ["light", "dark"]) for (const [width, height] of VIEWPORTS) 
   await page.screenshot({ path: join(OUT, `speaking-preparation-${width}x${height}-${theme}.png`) });
   // Recording starts when the server's preparation window ends.
   await page.getByText("Recording", { exact: true }).first().waitFor({ timeout: 90000 }).catch(() => {});
-  await page.waitForTimeout(1500);
+  // The fake microphone beeps about once a second: wait (up to 4 s) for a beep so the bars show input.
   const bars = page.getByTestId("input-level-bars");
+  for (let i = 0; i < 40; i++) {
+    const middle = await bars.locator("span").nth(2).evaluate((el) => parseInt(el.style.height, 10)).catch(() => 0);
+    if (middle > 12) break;
+    await page.waitForTimeout(100);
+  }
   const barHeights = (await bars.count()) ? await bars.locator("span").evaluateAll((spans) => spans.map((s) => s.style.height)) : [];
   await page.screenshot({ path: join(OUT, `speaking-recording-${width}x${height}-${theme}.png`) });
   const recRing = await page.getByTestId("countdown-ring").count();

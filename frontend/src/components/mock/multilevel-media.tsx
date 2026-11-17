@@ -363,7 +363,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   return <div className="my-3 space-y-3 rounded-[12px] border border-brand/25 bg-bg-subtle p-4">
     {prompt && <ReadPromptButton text={prompt} silence={['recording', 'finalizing', 'uploading'].includes(status)} />}
     <ol aria-label={t('speakingSteps')} className="grid grid-cols-3 gap-2">
-      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex items-center gap-1.5 rounded-[8px] px-2 py-2 text-xs font-medium', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
+      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex min-w-0 flex-col items-center gap-1 rounded-[8px] px-1.5 py-2 text-center text-xs font-medium sm:flex-row sm:gap-1.5 sm:px-2 sm:text-left', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
         {index < activeStep ? <CheckCircle2 aria-hidden className="size-3.5 shrink-0" /> : <Circle aria-hidden className="size-3.5 shrink-0" />}<span>{t(label)}</span>
       </li>)}
     </ol>
