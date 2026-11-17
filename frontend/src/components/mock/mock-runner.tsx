@@ -1793,10 +1793,10 @@ function QuestionInput({
     return (
       <div className="space-y-2">
         {header}
-        {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio} initialAudioDurationMs={audioDurationMs} responseSeconds={q.guidance.responseSeconds}
+        {q.guidance ? <MultilevelRecorder attemptId={attemptId} questionId={q.id} timed={timed} initialHasAudio={hasAudio} initialAudioDurationMs={audioDurationMs} responseSeconds={q.guidance.responseSeconds} prompt={q.prompt}
           startPhase={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/speaking/${q.id}/start`)}
           upload={async (blob) => { const form = new FormData(); form.append('audio', blob, recordingFileName(blob)); return api.post(`/mock/attempts/${attemptId}/speaking/${q.id}`, form); }}
-        /> : <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} />}
+        /> : <SpeakingRecorder attemptId={attemptId} questionId={q.id} initialHasAudio={hasAudio} prompt={q.prompt} />}
       </div>
     );
   }

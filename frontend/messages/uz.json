@@ -1192,7 +1192,12 @@
       "clearScopeLabel": "Nimani tozalash",
       "clearScopePart": "Faqat {part} ({count, plural, one {# ta javob} other {# ta javob}})",
       "clearScopeSection": "Butun {section} ({count} ta javob)",
-      "clearBodyPart": "Bu qismdagi {count} ta javob o'chiriladi. Yozuvlar, boshqa qismlar va bo'limlar o'zgarmaydi. Buni qaytarib bo'lmaydi."
+      "clearBodyPart": "Bu qismdagi {count} ta javob o'chiriladi. Yozuvlar, boshqa qismlar va bo'limlar o'zgarmaydi. Buni qaytarib bo'lmaydi.",
+      "readPrompt": "Savolni tinglash",
+      "readPromptStop": "O'qishni to'xtatish",
+      "readPromptNote": "Brauzeringiz ovozi o'qiydi; yozuv boshlanganda to'xtaydi.",
+      "inputLevel": "Mikrofon ovoz darajasi",
+      "speakingSteps": "Speaking javob bosqichlari"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",

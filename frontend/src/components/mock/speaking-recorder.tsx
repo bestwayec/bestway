@@ -8,10 +8,13 @@ import { Button } from '@/components/ui/button';
 import { AudioWaveform } from './audio-waveform';
 import { useUploadMockSpeaking } from '@/hooks/use-mock';
 import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
+import { ReadPromptButton } from './speaking-visuals';
 import { markActiveRecording, recordingKey, recoverRecording, releaseRecording, retainRecording } from '@/lib/durable-recordings';
 
-export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
+export function SpeakingRecorder({ attemptId, questionId, initialHasAudio, prompt }: {
   attemptId: string; questionId: string; initialHasAudio: boolean;
+  /** The question text, read aloud on request with the browser's voice (never while recording). */
+  prompt?: string;
 }) {
   const t = useTranslations('mock');
   const tx = useTranslations('mock.runnerUx');
@@ -149,6 +152,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio }: {
   }
 
   return <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
+    {prompt && <div className="w-full"><ReadPromptButton text={prompt} silence={recording} /></div>}
     <p className="w-full text-xs text-fg-muted">{tx(recording ? 'recordingHint' : sending || pending ? 'uploadHint' : hasAudio ? 'uploadedHint' : 'microphoneHint')}</p>
     {recording ? <Button size="sm" variant="danger" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
       : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>{tx('recRetrySaved')}</Button>

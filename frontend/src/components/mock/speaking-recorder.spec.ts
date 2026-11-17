@@ -168,7 +168,9 @@ describe('Multilevel microphone preflight and server timing', () => {
   it.each([30, 45, 120])('captures the full %ss practice response and offers no early stop/upload shortcut', async (duration) => {
     startPhase.mockResolvedValue({ ...await startPhase(), responseSeconds: duration, timingPolicy: 'FULL_RESPONSE_WINDOW_V1', expiresAt: new Date(Date.now() + duration * 1000).toISOString() });
     await render('multilevel'); await click('Test microphone'); await click('Start response');
-    expect(host.textContent).toContain(`${duration}s`);
+    // The response ring starts full: the whole server window is left.
+    const ring = host.querySelector('[data-testid="countdown-ring"]');
+    expect(ring?.getAttribute('data-left')).toBe(String(duration)); expect(ring?.getAttribute('data-total')).toBe(String(duration));
     expect([...host.querySelectorAll('button')].some((button) => button.textContent?.includes('Stop recording'))).toBe(false);
     await finishResponse(3000);
     expect(services.upload).not.toHaveBeenCalled(); expect(services.retain).not.toHaveBeenCalled();

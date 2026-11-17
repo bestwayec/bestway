@@ -1192,7 +1192,12 @@
       "clearScopeLabel": "What to clear",
       "clearScopePart": "Only {part} ({count, plural, one {# answer} other {# answers}})",
       "clearScopeSection": "The whole {section} ({count, plural, one {# answer} other {# answers}})",
-      "clearBodyPart": "{count, plural, one {# answer} other {# answers}} in this part will be removed. Recordings, other parts and other sections are not changed. This cannot be undone."
+      "clearBodyPart": "{count, plural, one {# answer} other {# answers}} in this part will be removed. Recordings, other parts and other sections are not changed. This cannot be undone.",
+      "readPrompt": "Listen to the question",
+      "readPromptStop": "Stop reading",
+      "readPromptNote": "Read by your browser's voice; it stops when recording starts.",
+      "inputLevel": "Microphone input level",
+      "speakingSteps": "Speaking response steps"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",

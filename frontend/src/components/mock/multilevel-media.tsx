@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api-client';
 import { SPEAKING_AUTOSTART_EVENT, takeSpeakingAutoStart } from '@/lib/speaking-sequence';
+import { CountdownRing, InputLevelBars, ReadPromptButton } from './speaking-visuals';
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
@@ -137,15 +138,16 @@ export function MultilevelListening({ prepare, play, load, alreadyStarted = fals
 }
 
 /** Microphone preflight, server timing, durable takes and upload acknowledgement. */
-export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAudio, initialAudioDurationMs, responseSeconds, startPhase, upload, onUploaded }: {
+export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAudio, initialAudioDurationMs, responseSeconds, prompt, startPhase, upload, onUploaded }: {
   attemptId: string; questionId: string; timed: boolean; initialHasAudio: boolean;
+  /** The question text, read aloud on request with the browser's voice (never while recording). */
+  prompt?: string;
   initialAudioDurationMs?: number;
   responseSeconds?: number;
   startPhase: () => Promise<MediaPhase>; upload: (blob: Blob) => Promise<unknown>; onUploaded?: () => void;
 }) {
   const t = useTranslations('mock.runnerUx');
   const tm = useTranslations('mock.mic');
-  const tc = useTranslations('common');
   // The same translated help as the microphone check (denied, not found, busy, …).
   const micMessage = (error: unknown) => tm(`help.${microphoneProblem(error)}`);
   const key = recordingKey(attemptId, questionId);
@@ -157,6 +159,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   const [recordedSeconds, setRecordedSeconds] = useState<number | null>(() => initialAudioDurationMs != null && initialAudioDurationMs > 0 ? Math.round(initialAudioDurationMs / 100) / 10 : null);
   const [phase, setPhase] = useState<MediaPhase | null>(null);
   const [left, setLeft] = useState(0);
+  const [responseTotal, setResponseTotal] = useState(0);
   const [level, setLevel] = useState(0);
   const [meterAvailable, setMeterAvailable] = useState(false);
   const stream = useRef<MediaStream | null>(null);
@@ -311,7 +314,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     });
     mr.start(1000);
     captureWindow.current = { started: performance.now(), stopped: null, seconds: duration, complete: false, interrupted: false };
-    setLeft(duration); stage('recording');
+    setLeft(duration); setResponseTotal(duration); stage('recording');
     responseTimer.current = setTimeout(() => {
       const capture = captureWindow.current;
       if (!capture || mr.state !== 'recording') return;
@@ -358,32 +361,35 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   const activeStep = uploaded ? 3 : ['finalizing', 'uploading', 'retry'].includes(status) ? 2 : ['ready', 'starting', 'preparing', 'recording'].includes(status) ? 1 : 0;
   const hint = uploaded ? 'uploadedHint' : status === 'preparing' ? 'preparationHint' : status === 'recording' ? 'recordingHint' : ['finalizing', 'uploading', 'retry'].includes(status) ? 'uploadHint' : 'microphoneHint';
   return <div className="my-3 space-y-3 rounded-[12px] border border-brand/25 bg-bg-subtle p-4">
-    <ol aria-label="Speaking response steps" className="grid grid-cols-3 gap-2">
-      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex items-center gap-1.5 rounded-[8px] px-2 py-2 text-xs font-medium', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
+    {prompt && <ReadPromptButton text={prompt} silence={['recording', 'finalizing', 'uploading'].includes(status)} />}
+    <ol aria-label={t('speakingSteps')} className="grid grid-cols-3 gap-2">
+      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex min-w-0 flex-col items-center gap-1 rounded-[8px] px-1.5 py-2 text-center text-xs font-medium sm:flex-row sm:gap-1.5 sm:px-2 sm:text-left', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
         {index < activeStep ? <CheckCircle2 aria-hidden className="size-3.5 shrink-0" /> : <Circle aria-hidden className="size-3.5 shrink-0" />}<span>{t(label)}</span>
       </li>)}
     </ol>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p role="status" className="font-semibold text-fg">{recorderStatus(status, recorded, t)}</p>
-      {phase && ['preparing', 'recording'].includes(status) && <div className="text-right"><p className="text-xs text-fg-muted">{t(status === 'preparing' ? 'preparationTime' : 'responseTime')}</p><p className="rounded-[8px] bg-surface px-3 py-1.5 text-2xl font-bold tabular-nums text-fg" aria-label={tc("secondsLeft", { count: left })}>{left}s</p></div>}
+      {phase && ['preparing', 'recording'].includes(status) && (
+        <CountdownRing
+          left={left}
+          total={status === 'preparing' ? Math.max(1, Math.round((Date.parse(phase.prepEndsAt) - Date.parse(phase.startedAt)) / 1000)) : responseTotal}
+          label={t(status === 'preparing' ? 'preparationTime' : 'responseTime')}
+          tone={status === 'recording' ? 'danger' : 'brand'}
+        />
+      )}
     </div>
     <p className="text-sm text-fg-muted">{t(hint)}</p>
     {status === 'recording' && (
       <div className="flex items-center gap-3 rounded-xl border border-danger/30 bg-danger/10 p-3">
         <span className="size-3 animate-ping rounded-full bg-danger" />
-        <div className="flex items-end gap-1 h-5">
-          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:0ms] h-2.5" />
-          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:150ms] h-5" />
-          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:300ms] h-3.5" />
-          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:450ms] h-4.5" />
-          <span className="w-1 bg-danger rounded-full animate-bounce [animation-delay:200ms] h-2" />
-        </div>
+        {/* The real microphone level; the old bars bounced on a timer whatever the student said. */}
+        {meterAvailable && <InputLevelBars level={level} label={t('inputLevel')} />}
         <span className="text-sm font-semibold text-danger">{t('recordingStatus')}</span>
       </div>
     )}
     {!pending && !(timed && recorded) && <>
       <Button size="sm" variant="outline" type="button" className="min-h-[48px] px-4 font-medium touch-manipulation" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
-      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label="Microphone input level" min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[50px] min-w-[140px] px-6 text-sm font-bold bg-brand text-bg hover:bg-brand-hover shadow-md active:scale-95 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
+      {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label={t('inputLevel')} min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[50px] min-w-[140px] px-6 text-sm font-bold bg-brand text-bg hover:bg-brand-hover shadow-md active:scale-95 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
     </>}
     {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
     {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}
