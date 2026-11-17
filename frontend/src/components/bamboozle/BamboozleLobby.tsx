@@ -364,7 +364,7 @@ export function BamboozleLobby() {
             <Button
               type="button"
               onClick={() => setIsCreatorOpen(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] shrink-0"
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Yangi Deck Yaratish</span>
@@ -467,7 +467,7 @@ export function BamboozleLobby() {
                     className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${
                       isLocked
                         ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                        : "bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                        : "bg-emerald-500 hover:bg-emerald-600 text-slate-950"
                     }`}
                   >
                     {isLocked ? (
@@ -578,7 +578,7 @@ export function BamboozleLobby() {
                 });
                 setChallengeModal(null);
               }}
-              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"
             >
               <Swords className="w-4 h-4" />
               <span>⚔️ Arenaga Kirish</span>

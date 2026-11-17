@@ -60,7 +60,7 @@ export function ReadingPassagePanel({
           alt=""
           loading="lazy"
           decoding="async"
-          className="mt-4 max-h-96 w-full rounded-[6px] border border-border object-contain"
+          className="mt-4 max-h-96 w-full rounded-chip border border-border object-contain"
         />
       )}
       {hasPassageText ? (

@@ -100,7 +100,7 @@ export function RegisterForm() {
       {serverError && (
         <div
           role="alert"
-          className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger"
+          className="rounded-field border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger"
         >
           {serverError}
         </div>
@@ -118,7 +118,7 @@ export function RegisterForm() {
                 onClick={() => setValue("role", value, { shouldValidate: true })}
                 aria-pressed={active}
                 className={cn(
-                  "flex items-center justify-center gap-2 rounded-[8px] border px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center justify-center gap-2 rounded-field border px-3 py-2.5 text-sm font-medium transition-colors",
                   active
                     ? "border-brand bg-brand-subtle text-brand-subtle-fg"
                     : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
@@ -213,7 +213,7 @@ export function RegisterForm() {
         </button>
       </div>
 
-      <p className="rounded-[8px] bg-bg-subtle px-3 py-2 text-center text-xs text-fg-muted">
+      <p className="rounded-field bg-bg-subtle px-3 py-2 text-center text-xs text-fg-muted">
         {t("staffNotice")}
       </p>
 

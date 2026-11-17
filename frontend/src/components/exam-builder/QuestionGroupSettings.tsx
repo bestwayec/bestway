@@ -7,7 +7,7 @@ import type { BuilderPart } from "@/components/mock/exam-builder/types";
 import type { MockQuestionType, MockSkill } from "@/lib/types";
 import { applyFormatPreset, applySharedOptionBank, gapHtmlToText, gapTextToHtml, presetForPart, QUESTION_FORMAT_PRESETS, type QuestionFormatPreset } from "./question-format-model";
 
-const selectClass = "min-h-10 w-full rounded-[8px] border border-border bg-surface px-3 text-sm text-fg";
+const selectClass = "min-h-10 w-full rounded-field border border-border bg-surface px-3 text-sm text-fg";
 
 /** Small typed authoring controls shared by Reading and Listening editors. */
 export function QuestionGroupSettings({ part, skill, allowedTypes, onChange, onPreset, selectedPreset }: {
@@ -24,7 +24,7 @@ export function QuestionGroupSettings({ part, skill, allowedTypes, onChange, onP
   const [bank, setBank] = React.useState(() => part.questions.find((q) => ["matching", "matching_headings", "map_labelling"].includes(q.type))?.options.join("\n") ?? "");
   const [gapText, setGapText] = React.useState(() => gapHtmlToText(part.contentHtml));
   return (
-    <div className="space-y-3 rounded-[8px] border border-border p-3">
+    <div className="space-y-3 rounded-field border border-border p-3">
       <Field label="Question group format" hint="Choose the interaction for new questions. Existing questions keep their content and type.">
         <select className={selectClass} aria-label="Question group format" value={preset?.key ?? ""} onChange={(event) => {
           const next = QUESTION_FORMAT_PRESETS.find((item) => item.key === event.target.value);

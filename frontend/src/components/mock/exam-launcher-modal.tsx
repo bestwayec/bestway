@@ -103,7 +103,7 @@ export function ExamLauncherModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto rounded-[12px] border border-border bg-surface p-4 sm:p-6">
+      <DialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto rounded-card border border-border bg-surface p-4 sm:p-6">
         <DialogHeader className="text-left space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-sm">
@@ -129,7 +129,7 @@ export function ExamLauncherModal({
         </DialogHeader>
 
         <DialogBody className="space-y-6 pt-2">
-          <div className="rounded-[12px] border border-border bg-bg p-4 text-sm leading-relaxed text-fg-muted">
+          <div className="rounded-card border border-border bg-bg p-4 text-sm leading-relaxed text-fg-muted">
             <h3 className="mb-2 font-semibold text-fg">{tl("beforeTitle")}</h3>
             <ul className="list-disc space-y-1 pl-5">
               <li>{tl("before1")}</li>
@@ -141,7 +141,7 @@ export function ExamLauncherModal({
           {fullMockAvailable ? (
             <>
           {/* Tanlov 1: To'liq Mock Imtihon (Full Mock) */}
-          <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
+          <div className="rounded-card border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-fg">
                 {tl("fullTitle")}
@@ -163,7 +163,7 @@ export function ExamLauncherModal({
           </div>
             </>
           ) : availableSkills.length > 1 ? (
-            <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
+            <div className="rounded-card border border-border bg-surface p-5 space-y-3">
               <h3 className="text-base font-bold text-fg">{tl("allTitle")}</h3>
               <p className="text-sm text-fg-muted leading-relaxed">
                 {tl("allDescription", { skills: availableSkills.map((s) => SKILL_TITLES[s]).join(" → ") })}
@@ -181,7 +181,7 @@ export function ExamLauncherModal({
           ) : null}
 
           {/* Tanlov 2: Alohida Bo'lim Topshirish (Single Section) */}
-          <div className="rounded-[12px] border border-border bg-surface p-5 space-y-3">
+          <div className="rounded-card border border-border bg-surface p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-fg">
                 {tl("singleTitle")}

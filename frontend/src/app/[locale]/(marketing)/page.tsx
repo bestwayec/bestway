@@ -160,7 +160,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="marketing-section relative border-b border-border bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand-subtle-fg mb-6 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand-subtle-fg mb-6">
             <span className="size-2 rounded-full bg-brand animate-pulse" />
             <span>{t("lmsBadge")}</span>
           </div>
@@ -179,7 +179,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
             <a
               href="#placement-test"
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-brand hover:bg-brand-hover px-7 text-base font-bold text-brand-fg transition-all duration-150 shadow-md shadow-brand/20 active:scale-[0.98]"
+              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-brand hover:bg-brand-hover px-7 text-base font-bold text-brand-fg transition-all duration-150 shadow-md active:scale-[0.98]"
             >
               <Zap className="size-5 fill-current" />
               <span>{t("heroCta")}</span>
@@ -194,7 +194,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
           {/* 3 ta asosiy afzallik */}
           <div className="mt-14 grid gap-5 sm:grid-cols-3 text-left">
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Monitor className="size-5" />
               </div>
@@ -202,7 +202,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit1Desc")}</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Sparkles className="size-5" />
               </div>
@@ -210,7 +210,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit2Desc")}</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/30">
+            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
               <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
                 <Award className="size-5" />
               </div>
@@ -239,7 +239,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Feature 1: video lessons */}
             <Reveal delay={0} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
@@ -269,7 +269,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 2: CDI & Multi-Level Simulator */}
             <Reveal delay={100} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
@@ -302,7 +302,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
             {/* Feature 3: Teacher Workspace */}
             <Reveal delay={200} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl hover:shadow-brand/30">
+              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
                 <span
                   aria-hidden
                   className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
@@ -519,7 +519,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
           {/* Live map — client-only Leaflet, lazy-loaded below the fold. */}
           <Reveal delay={120}>
-            <div className="relative mt-4 h-[380px] overflow-hidden rounded-[18px] border border-border shadow-lg sm:h-[440px]">
+            <div className="relative mt-4 h-[380px] overflow-hidden rounded-dialog border border-border shadow-lg sm:h-[440px]">
               <CenterMap
                 regionLabel={t("mapRegionLabel")}
                 findUsLabel={t("mapFindUs")}
@@ -559,7 +559,7 @@ function FancyCard({
   className?: string;
 }) {
   return (
-    <TiltCard maxTilt={5} className="h-full rounded-[18px]">
+    <TiltCard maxTilt={5} className="h-full rounded-dialog">
       <Card
         className={cn(
           "shine hover-elevate group relative flex h-full flex-col overflow-hidden p-6 transition-colors duration-300 hover:border-border-strong",

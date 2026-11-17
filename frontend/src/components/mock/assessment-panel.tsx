@@ -276,7 +276,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => {
             // A score on a job that is still being assessed is intermediate: never shown as a result.
             const value = active ? null : job[key];
-            return <div key={key} className="rounded-[8px] bg-bg-subtle p-3">
+            return <div key={key} className="rounded-field bg-bg-subtle p-3">
             <dt className="text-xs text-fg-muted">{t(key)}</dt>
             <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{value ?? t("pending")}{value != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : value != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
           </div>;})}
@@ -286,7 +286,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           <span>{t("confidence")}: {job.confidence == null ? t("unavailable") : `${Math.round(job.confidence * 100)}%`}</span>
           {isStaff && <span>{t(`policies.${job.policyMode}`)}</span>}
         </div>
-        {pronunciationUnavailable && <p className="rounded-[8px] bg-warning-bg p-3 text-sm text-warning">{t("pronunciationUnavailable")}</p>}
+        {pronunciationUnavailable && <p className="rounded-field bg-warning-bg p-3 text-sm text-warning">{t("pronunciationUnavailable")}</p>}
         {(job.status === "FAILED" || job.status === "NEEDS_REVIEW") && <p className="text-sm text-fg-muted">{t("reviewFallback")}</p>}
         {job.finalScore == null && <p className="text-sm text-fg-muted">{t("resultPending")}</p>}
         {reviewed && <p className="text-sm text-fg-muted">{t(job.evaluation ? "teacherReviewed" : "teacherReviewedManual")}</p>}
@@ -302,7 +302,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
             </div>
             {part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{part.context}</p>}
             {isStaff && job.program === "MULTILEVEL" && job.skill === "speaking" && submissions.length > 1 && <p className="text-xs text-fg-subtle">{t("holisticPart")}</p>}
-            {submissions.map((submission) => <div key={submission.questionId} className="space-y-2 rounded-[10px] border border-border p-3">
+            {submissions.map((submission) => <div key={submission.questionId} className="space-y-2 rounded-control border border-border p-3">
               <p className="whitespace-pre-wrap text-sm font-medium text-fg">{submission.prompt}</p>
               {submission.context && submission.context !== part.context && <p className="whitespace-pre-wrap text-sm text-fg-muted">{submission.context}</p>}
               <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("original")}</h5>
@@ -341,7 +341,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               {submission.audioUrl && <audio controls preload="none" className="w-full max-w-md" aria-label={t("originalAudio")}
                 src={assessmentAudioPath(attemptId, submission.questionId)}><track kind="captions" /></audio>}
               {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{scoringUnavailable ? t("scoringUnavailable") : t("noResponse")}</p>}
-              {job.skill === "speaking" && <div className="rounded-[8px] bg-bg-subtle p-3">
+              {job.skill === "speaking" && <div className="rounded-field bg-bg-subtle p-3">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("transcript")}</h5>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-fg-muted">{submission.transcript?.text || (scoringUnavailable ? t("scoringUnavailable") : t("transcriptPending"))}</p>
                 {submission.transcript?.confidence != null && <p className="mt-1 text-xs text-fg-subtle">{t("transcriptConfidence")}: {Math.round(submission.transcript.confidence * 100)}%</p>}
@@ -379,7 +379,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 )}
               </div>}
             </div>)}
-            {partResult && <div className="space-y-3 rounded-[10px] bg-bg-subtle p-4">
+            {partResult && <div className="space-y-3 rounded-control bg-bg-subtle p-4">
               <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("feedback")}</h5>
               {!!Object.keys(partResult.criteria).length && <p className="text-xs font-medium text-fg-subtle">{t(reviewed ? "teacherRubric" : "aiRubric")}</p>}
               <dl className="grid gap-2 sm:grid-cols-2">{Object.entries(partResult.criteria).map(([key, score]) => <div key={key} className="text-sm">
@@ -390,7 +390,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
               <PartFeedbackView feedback={partResult.feedback} t={t} />
             </div>}
             {result?.improvedExamples.filter((example) => example.partId === part.id).map((example, index) => (
-              <div key={index} className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 space-y-2 backdrop-blur-sm shadow-md shadow-brand/5">
+              <div key={index} className="rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 space-y-2 backdrop-blur-sm shadow-md">
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold text-brand-subtle-fg">
                     <Sparkles className="size-3" /> {t("panel.exampleAnswer")}
@@ -405,7 +405,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
           </section>;
         })}
         {result && <OverallFeedback result={result} t={t} />}
-        {isStaff && job.approvedFeedback && job.evaluation && <details className="rounded-[10px] border border-border p-3">
+        {isStaff && job.approvedFeedback && job.evaluation && <details className="rounded-control border border-border p-3">
           <summary className="cursor-pointer text-sm font-medium">{t("originalAiFeedback")}</summary>
           <div className="mt-3 space-y-3">{job.evaluation.result.parts.map((part) => <div key={part.id}><h5 className="text-sm font-semibold">{part.id}</h5><PartFeedbackView feedback={part.feedback} t={t} /></div>)}
             <OverallFeedback result={job.evaluation.result} t={t} />
@@ -561,18 +561,18 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
     });
   }
 
-  return <form onSubmit={submit} className="space-y-3 rounded-[10px] border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
+  return <form onSubmit={submit} className="space-y-3 rounded-control border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
     <h4 className="font-semibold">{t("teacherReview")}</h4>
     <p className="text-xs text-fg-muted">{t("auditNotice")}</p>
     <label className="block space-y-1 text-sm"><span>{t("action")}</span>
-      <select value={action} onChange={(event) => { setAction(event.target.value as AssessmentReviewAction); setError(null); }} className="w-full rounded-[8px] border border-border bg-surface p-2 text-fg">
+      <select value={action} onChange={(event) => { setAction(event.target.value as AssessmentReviewAction); setError(null); }} className="w-full rounded-field border border-border bg-surface p-2 text-fg">
         {ACTIONS.map((value) => <option value={value} key={value}>{t(`actions.${value}`)}</option>)}
       </select>
     </label>
     {action === "ACCEPT" && !canAcceptAssessment(job) && <p className="text-sm text-fg-muted">{t("acceptUnavailable")}</p>}
     {action === "OVERRIDE" && <div className="space-y-3">
       {job.skill === "speaking" && job.program !== "MULTILEVEL" && <p className="text-sm text-warning">{t("teacherPronunciation")}</p>}
-      {job.parts.map((part) => <fieldset key={part.id} className="space-y-2 rounded-[8px] border border-border p-3"><legend className="px-1 text-sm font-semibold">{part.task}</legend>
+      {job.parts.map((part) => <fieldset key={part.id} className="space-y-2 rounded-field border border-border p-3"><legend className="px-1 text-sm font-semibold">{part.task}</legend>
         {(job.program === "MULTILEVEL" ? ["rawScore"] : criterionKeys(job)).map((key) => <label key={key} className="flex items-center justify-between gap-3 text-sm">
           <span>{key === "rawScore" ? t("rawPart") : t(`criteria.${key}`)} (0–{job.program === "MULTILEVEL" ? part.max : 9})</span>
           <Input type="number" min={0} max={job.program === "MULTILEVEL" ? part.max : 9} step={0.5} required value={scores[part.id]?.[key] ?? ""} className="w-24"
@@ -584,7 +584,7 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
       {(["overallStrengths", "priorityImprovements", "recommendedPractice"] as const).map((key) => <label className="block space-y-1 text-sm" key={key}><span>{t(key === "overallStrengths" ? "strengths" : key === "priorityImprovements" ? "priorities" : "practice")}</span>
         <Textarea value={feedback[key].join("\n")} maxLength={12000} onChange={(event) => setFeedback({ ...feedback, [key]: splitFeedbackLines(event.target.value) })} />
       </label>)}
-      {feedback.parts.map((part) => <details key={part.id} className="rounded-[8px] border border-border p-3"><summary className="cursor-pointer text-sm font-semibold">{job.parts.find((item) => item.id === part.id)?.task ?? part.id}</summary>
+      {feedback.parts.map((part) => <details key={part.id} className="rounded-field border border-border p-3"><summary className="cursor-pointer text-sm font-semibold">{job.parts.find((item) => item.id === part.id)?.task ?? part.id}</summary>
         <div className="mt-3 space-y-3">{TEXT_FEEDBACK.map((key) => <label key={key} className="block space-y-1 text-sm"><span>{t(`feedbackFields.${key}`)}</span>
           <Textarea value={part.feedback[key]} maxLength={12000} onChange={(event) => updatePartFeedback(part.id, key, event.target.value)} />
         </label>)}{LIST_FEEDBACK.map((key) => <label key={key} className="block space-y-1 text-sm"><span>{t(`feedbackFields.${key}`)}</span>

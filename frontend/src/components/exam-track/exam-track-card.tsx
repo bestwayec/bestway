@@ -34,7 +34,7 @@ export function ExamTrackCard({
       data-testid={`exam-track-card-${program}`}
       aria-current={isActive ? "true" : undefined}
       className={cn(
-        "flex h-full min-w-0 flex-col rounded-[12px] border p-4 transition-colors",
+        "flex h-full min-w-0 flex-col rounded-card border p-4 transition-colors",
         isActive ? "border-brand bg-brand-subtle ring-1 ring-brand/40" : "border-border bg-surface hover:border-border-strong",
       )}
     >

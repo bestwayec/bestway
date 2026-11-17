@@ -453,7 +453,7 @@ export function ReadingPassageEditor({
   return (
     <div className="space-y-4">
       {errors.length > 0 && (
-        <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" role="alert">
+        <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" role="alert">
           <ul className="list-disc space-y-0.5 pl-4">
             {errors.map((e) => (
               <li key={e}>{e}</li>
@@ -560,7 +560,7 @@ export function ReadingPassageEditor({
             </Field>
 
             {/* Figure / diagram (e.g. map labelling) — optional. */}
-            <div className="rounded-[8px] border border-border p-3">
+            <div className="rounded-field border border-border p-3">
               <p className="text-sm font-semibold text-fg">
                 <ImagePlus className="mr-1.5 inline size-4" aria-hidden />
                 {tx(t, "image", "Diagram / image")}{" "}
@@ -571,7 +571,7 @@ export function ReadingPassageEditor({
                 <img
                   src={localImageUrl ?? serverImage}
                   alt=""
-                  className="mt-2 max-h-48 rounded-[8px] border border-border"
+                  className="mt-2 max-h-48 rounded-field border border-border"
                 />
               )}
               <div className="mt-2">
@@ -652,7 +652,7 @@ export function ReadingPassageEditor({
             </h3>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <div
-                className="flex items-center gap-1 rounded-[8px] border border-border p-0.5"
+                className="flex items-center gap-1 rounded-field border border-border p-0.5"
                 role="tablist"
                 aria-label={tx(t, "questionMode", "Question mode")}
               >
@@ -661,7 +661,7 @@ export function ReadingPassageEditor({
                   role="tab"
                   aria-selected={mode === "form"}
                   onClick={() => selectMode("form")}
-                  className={`rounded-[6px] px-2.5 py-1 text-xs font-medium transition ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+                  className={`rounded-chip px-2.5 py-1 text-xs font-medium transition ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
                 >
                   {tx(t, "formList", "Form list")}
                 </button>
@@ -670,7 +670,7 @@ export function ReadingPassageEditor({
                   role="tab"
                   aria-selected={mode === "visual"}
                   onClick={() => selectMode("visual")}
-                  className={`rounded-[6px] px-2.5 py-1 text-xs font-medium transition ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+                  className={`rounded-chip px-2.5 py-1 text-xs font-medium transition ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
                 >
                   {tx(t, "visualPaste", "Visual paste")}
                 </button>
@@ -733,7 +733,7 @@ export function ReadingPassageEditor({
           )}
 
           {mode === "form" && showTypeChooser && (
-            <div className="rounded-[8px] border border-brand/30 bg-surface p-3">
+            <div className="rounded-field border border-brand/30 bg-surface p-3">
               <p className="text-sm font-semibold text-fg">
                 {tx(t, "chooseGroupType", "What kind of questions will this group hold?")}
               </p>
@@ -746,7 +746,7 @@ export function ReadingPassageEditor({
                     key={ty}
                     type="button"
                     onClick={() => addQuestion(ty)}
-                    className="rounded-[8px] border border-border px-2.5 py-2 text-left text-[13px] text-fg transition hover:border-brand hover:bg-brand-subtle/40 focus-visible:outline-2 focus-visible:outline-brand"
+                    className="rounded-field border border-border px-2.5 py-2 text-left text-[13px] text-fg transition hover:border-brand hover:bg-brand-subtle/40 focus-visible:outline-2 focus-visible:outline-brand"
                   >
                     {QTYPE_LABEL[ty]}
                   </button>
@@ -772,13 +772,13 @@ export function ReadingPassageEditor({
           {mode === "form" && runs.length > 1 && (
             <nav
               aria-label={tx(t, "questionGroups", "Question groups")}
-              className="sticky top-36 z-[5] flex flex-wrap gap-1.5 rounded-[8px] border border-border bg-bg/95 py-1.5 backdrop-blur"
+              className="sticky top-36 z-[5] flex flex-wrap gap-1.5 rounded-field border border-border bg-bg/95 py-1.5 backdrop-blur"
             >
               {runs.map((r) => (
                 <a
                   key={r.key}
                   href={`#rg-${r.key}`}
-                  className="rounded-[6px] border border-border bg-surface px-2 py-1 text-xs text-fg-muted transition hover:border-fg-subtle hover:text-fg"
+                  className="rounded-chip border border-border bg-surface px-2 py-1 text-xs text-fg-muted transition hover:border-fg-subtle hover:text-fg"
                 >
                   Q{r.min}–{r.max} · {QTYPE_LABEL[r.type]}
                 </a>
@@ -787,7 +787,7 @@ export function ReadingPassageEditor({
           )}
 
           {mode === "form" && (runs.length === 0 ? (
-            <div className="rounded-[8px] border border-dashed border-border-strong p-4">
+            <div className="rounded-field border border-dashed border-border-strong p-4">
               <p className="text-sm font-semibold text-fg">
                 {tx(t, "emptyGroupsTitle", "No question groups yet.")}
               </p>
@@ -822,7 +822,7 @@ export function ReadingPassageEditor({
                   key={r.key}
                   id={`rg-${r.key}`}
                   aria-label={`${tx(t, "questionsTitle", "Questions")} ${range} — ${QTYPE_LABEL[r.type]}`}
-                  className="scroll-mt-44 rounded-[12px] border border-border bg-surface p-3"
+                  className="scroll-mt-44 rounded-card border border-border bg-surface p-3"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {bad > 0 ? (
@@ -869,16 +869,16 @@ export function ReadingPassageEditor({
                       const excerpt = q.prompt.trim() ? q.prompt.trim().split("\n")[0].slice(0, 90) : "";
                       const idx = part.questions.findIndex((x) => x.clientId === q.clientId);
                       return (
-                        <li key={q.clientId} className={`rounded-[8px] border ${badRow ? "border-danger-border" : "border-border"}`}>
+                        <li key={q.clientId} className={`rounded-field border ${badRow ? "border-danger-border" : "border-border"}`}>
                           <div className="flex items-start gap-1 p-1.5">
                             <button
                               type="button"
                               onClick={() => setExpandedId(open ? null : q.clientId)}
                               aria-expanded={open}
                               aria-label={`${tx(t, "question", "Question")} ${q.number} — ${QTYPE_LABEL[q.type]} — ${open ? tx(t, "collapse", "Collapse") : tx(t, "expand", "Expand")}`}
-                              className="flex min-w-0 flex-1 items-start gap-2.5 rounded-[6px] px-1.5 py-1 text-left transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
+                              className="flex min-w-0 flex-1 items-start gap-2.5 rounded-chip px-1.5 py-1 text-left transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
                             >
-                              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-surface-hover text-sm font-bold text-fg tabular-nums" aria-hidden>
+                              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-chip border border-border bg-surface-hover text-sm font-bold text-fg tabular-nums" aria-hidden>
                                 {q.number}
                               </span>
                               <span className="min-w-0 flex-1">

@@ -212,7 +212,7 @@ export function ExamBuilderList() {
             <Link href="/exam-builder/new">
               <Button
                 size="sm"
-                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-sm shadow-brand/20"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-sm"
               >
                 <Plus aria-hidden />
                 {tx(t, "createExam", "Create Exam")}
@@ -296,7 +296,7 @@ export function ExamBuilderList() {
           }
         />
       ) : examsQ.isLoading ? (
-        <div className="overflow-hidden rounded-[12px] border border-border" aria-label={tx(t, "loading", "Loading")}>
+        <div className="overflow-hidden rounded-card border border-border" aria-label={tx(t, "loading", "Loading")}>
           <div className="space-y-px bg-border/40" role="status">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-none" />
@@ -331,7 +331,7 @@ export function ExamBuilderList() {
         <>
         <div className="space-y-3 md:hidden">
           {items.map((e) => (
-            <article key={e.id} className="min-w-0 rounded-[12px] border border-border bg-surface p-3">
+            <article key={e.id} className="min-w-0 rounded-card border border-border bg-surface p-3">
               <div className="flex min-w-0 items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-fg" title={e.title}>
@@ -443,7 +443,7 @@ export function ExamBuilderList() {
             </article>
           ))}
         </div>
-        <div className="hidden overflow-x-auto rounded-[12px] border border-border md:block">
+        <div className="hidden overflow-x-auto rounded-card border border-border md:block">
           <table className="w-full min-w-[900px] border-collapse bg-surface text-left text-sm">
             <thead className="sticky top-0 bg-surface">
               <tr className="border-b border-border text-xs uppercase tracking-wide text-fg-subtle">

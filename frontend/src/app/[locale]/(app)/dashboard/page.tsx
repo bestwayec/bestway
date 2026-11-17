@@ -6,19 +6,19 @@ import { setRequestLocale } from "next-intl/server";
 import { getRefreshToken, getSessionRole, getVerifiedSessionRole } from "@/lib/auth";
 import { HydrationGate } from "@/components/common/hydration-gate";
 
-const skeleton = <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />;
+const skeleton = <div className="h-64 animate-pulse rounded-card bg-border/40" />;
 
 const AdminDashboard = dynamic(() => import("@/components/dashboard/admin-dashboard").then((m) => m.AdminDashboard), {
-  loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
+  loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 const TeacherDashboard = dynamic(() => import("@/components/dashboard/teacher-dashboard").then((m) => m.TeacherDashboard), {
-  loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
+  loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 const StudentDashboard = dynamic(() => import("@/components/dashboard/student-dashboard").then((m) => m.StudentDashboard), {
-  loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
+  loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 const ParentDashboard = dynamic(() => import("@/components/dashboard/parent-dashboard").then((m) => m.ParentDashboard), {
-  loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
+  loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 
 export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {

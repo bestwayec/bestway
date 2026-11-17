@@ -59,7 +59,7 @@ export function PreviewDialog({ examId, onClose }: { examId: string; onClose: ()
           onClick={onClose}
           autoFocus
           aria-label={tx(t, "backToEditing", "Back to editing")}
-          className="absolute right-3 top-3 z-10 size-8 rounded-[6px] border border-border bg-bg/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
+          className="absolute right-3 top-3 z-10 size-8 rounded-chip border border-border bg-bg/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
         >
           <X aria-hidden />
         </Button>
@@ -79,7 +79,7 @@ export function PreviewDialog({ examId, onClose }: { examId: string; onClose: ()
                 aria-selected={i === clampedSection}
                 onClick={() => setActiveSection(i)}
                 className={cn(
-                  "h-8 shrink-0 rounded-[6px] border px-2.5 text-xs font-medium capitalize transition-colors",
+                  "h-8 shrink-0 rounded-chip border px-2.5 text-xs font-medium capitalize transition-colors",
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                   i === clampedSection
                     ? "border-brand bg-brand-subtle text-brand-subtle-fg"

@@ -91,7 +91,7 @@ export function ReadingPreviewShell({ groups }: { groups: PreviewGroup[] }) {
               aria-selected={mobileTab === tab}
               onClick={() => setMobileTab(tab)}
               className={cn(
-                "min-h-11 rounded-t-[8px] px-3 text-sm font-medium transition-colors",
+                "min-h-11 rounded-t-field px-3 text-sm font-medium transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                 mobileTab === tab ? "bg-surface text-fg" : "text-fg-muted hover:text-fg",
               )}

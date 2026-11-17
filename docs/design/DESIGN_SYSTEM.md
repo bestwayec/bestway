@@ -68,10 +68,11 @@ Font: Inter (SIL OFL), self-hosted. The Latin face (covers Uzbek ʻ U+02BB and �
 `next/font/local`; Latin Extended and Cyrillic faces come from `@fontsource-variable/inter` with
 `unicode-range`, so they download only when a page contains those characters.
 
-Four levels, never smaller than 14px (`--text-xs` and `--text-sm` are both 14px):
+Four reading levels plus `text-display` (numbers, hero) and `text-overline` (12 px uppercase labels in dense panels only, never sentences); reading text never smaller than 14px (`--text-xs` and `--text-sm` are both 14px):
 
 | Class | Size / line | Weight | Use |
 |---|---|---|---|
+| `text-display` | 48 / 52 | 700 | band score, landing headline |
 | `text-title` | 28 / 34 | 700 | page title (one per page) |
 | `text-subtitle` | 20 / 26 | 600 | section and card titles |
 | `text-body` | 16 / 24 | 400 | reading text, answers |
@@ -79,24 +80,42 @@ Four levels, never smaller than 14px (`--text-xs` and `--text-sm` are both 14px)
 
 Numbers that change (timers, scores, counts) use `tabular-nums`.
 
-## 3. Shape, spacing, touch
+## 3. Shape, elevation, motion, spacing, touch
 
-- Radius: `rounded-[12px]` (`--radius-card`, `--radius-control`) for cards, inputs and buttons;
-  `rounded-full` for chips and pills.
-- Cards: `Card` (`border border-border bg-surface`), no shadows or glows.
-- Spacing: 4px grid; page gutters `px-4` on phones, `sm:px-6` and wider above.
-- Touch targets: at least 44×44px for buttons and links (`buttonVariants` guarantees `min-h-[44px]`).
-- Focus: the global `:focus-visible` outline (2px brand) — do not remove it.
+Redesign 2026-11 (`DIRECTION.md` §3). Values live in `globals.css`; use the named utilities, never
+`rounded-[Npx]` or a coloured shadow (`src/design-system.spec.ts` fails CI; fix with
+`node scripts/tokenize-shape.mjs <file>`).
+
+- Radius: `rounded-chip` 6 (chips, palette cells), `rounded-field` 8 (small inner controls),
+  `rounded-control` 10 (buttons, inputs, selects, menus), `rounded-card` 14 (cards, panels),
+  `rounded-dialog` 18 (dialogs, sheets), `rounded-full` (pills).
+- Elevation: flat cards (border only). `shadow-e1` sticky bars and hovered interactive cards,
+  `shadow-e2` menus, popovers, toasts, `shadow-e3` dialogs and sheets. Tailwind's `shadow-sm…2xl` are
+  mapped onto these, so every shadow is neutral in both themes. Never coloured or glowing.
+- Motion: `duration-fast` 120 ms (hover, press), `duration-base` 180 ms (popover, tab), `duration-slow`
+  260 ms (sheet, dialog); `ease-out` / `ease-in` tokens. Only opacity and transform animate;
+  `prefers-reduced-motion` turns them off.
+- Spacing: 4px grid; page gutters `px-4` on phones, `sm:px-6`, `lg:px-8`; card padding `p-4 sm:p-5`.
+- Touch targets: at least 44×44px (`buttonVariants` guarantees `min-h-[44px]`; inputs and selects are `h-11`).
+- Focus: the global `:focus-visible` outline (2px brand, 2px offset) — do not remove it.
+- Input borders use `border-input-border` (≥ 3:1 against the surface, WCAG 1.4.11).
 
 ## 4. Primitives (`frontend/src/components/ui`)
 
+Gallery: `/dev/ui` (development builds only; 404 in production).
+
 | Primitive | Variants |
 |---|---|
-| `Button` / `buttonVariants` | `primary` (one per screen), `outline`, `ghost`, `subtle`, `danger`; sizes `sm`, `md`, `lg`, `icon` |
-| `Badge` | `neutral`, `outline`, `brand`, `success`, `danger`, `warning`, `info` |
+| `Button` / `buttonVariants` | `primary` (one per screen), `outline`, `ghost`, `subtle`, `danger`, `link`; sizes `sm`, `md`, `lg`, `icon`; `loading` |
+| `Badge` | `neutral`, `outline`, `brand`, `success`, `danger`, `warning`, `info`; sizes `sm`, `md`. At most two on a card. |
 | `Card` + `CardHeader/Title/Description/Content/Footer` | `interactive` for clickable cards |
-| `Input`, `Textarea`, `Select`, `Tabs`, `Dialog`, `DropdownMenu` | token-styled |
-| `feedback.tsx` | `Skeleton`, `EmptyState`, `ErrorState` |
+| `Input`, `Textarea`, `Field`, `Select`, `Dialog`, `DropdownMenu` | token-styled; `Field` wires label, hint, error and `aria-invalid` |
+| `Tabs` | `TabsList variant="underline"` (page sections) or `"segmented"` (2–4 views, e.g. practice / exam) |
+| `Table` + `TableHeader/Body/Row/Head/Cell/Caption` | `numeric` cells align right; scrolls sideways inside its card |
+| `StatTile` | label, value, `hint`, `trend` (`up`/`down`/`flat`), `loading`, `href` (`StatCard` renders it) |
+| `ProgressRing` | `role="meter"` with the real value; tones `brand`, `warning`, `danger`, `neutral` |
+| `feedback.tsx` | `Skeleton`, `Spinner`, `EmptyState`, `ErrorState` (retry label from `common.retry`) |
+| Toast | `sonner` (`toast.success` / `toast.error`), styled in `providers.tsx` |
 
 ## 5. Exam runner
 

@@ -236,7 +236,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
             <Link
               href="/desktop"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
+              className="flex items-center gap-2.5 rounded-control px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
             >
               <MonitorDown className="size-4 shrink-0 text-brand" aria-hidden />
               {t("desktopApp")}
@@ -246,7 +246,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
                 key={s.hash}
                 href={`/#${s.hash}`}
                 onClick={() => setOpen(false)}
-                className="rounded-[10px] px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
+                className="rounded-control px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
               >
                 {t(s.key)}
               </Link>

@@ -323,7 +323,7 @@ export function GroupEditor({
   return (
     <div className="min-w-0 space-y-4">
       {errors.length > 0 && (
-        <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+        <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
           <ul className="list-disc space-y-0.5 pl-4">
             {errors.map((e) => (
               <li key={e}>{e}</li>
@@ -346,7 +346,7 @@ export function GroupEditor({
         </CardHeader>
         <CardContent className="space-y-3">
           {multilevelSummary && (
-            <div className="rounded-[8px] border border-border p-3">
+            <div className="rounded-field border border-border p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-fg">
                   {meta.units} · {multilevelSummary.heading}
@@ -453,7 +453,7 @@ export function GroupEditor({
           )}
 
           {/* Audio belongs to the block */}
-          <div className="rounded-[8px] border border-border p-3">
+          <div className="rounded-field border border-border p-3">
             <p className="text-sm font-semibold text-fg">
               <Music className="mr-1.5 inline size-4" />
               {tx(t, "audio", "Audio")} {skill !== "listening" && <span className="font-normal text-fg-subtle">{tx(t, "optional", "(optional)")}</span>}
@@ -515,7 +515,7 @@ export function GroupEditor({
           </div>
 
           {/* Image / diagram */}
-          <div className="rounded-[8px] border border-border p-3">
+          <div className="rounded-field border border-border p-3">
             <p className="text-sm font-semibold text-fg">
               <ImagePlus className="mr-1.5 inline size-4" />
               {tx(t, "image", "Diagram / image")} <span className="font-normal text-fg-subtle">{tx(t, "optional", "(optional)")}</span>
@@ -525,7 +525,7 @@ export function GroupEditor({
               <img
                 src={localImageUrl ?? serverImage}
                 alt=""
-                className="mt-2 max-h-48 rounded-[8px] border border-border"
+                className="mt-2 max-h-48 rounded-field border border-border"
               />
             )}
             <div className="mt-2">
@@ -580,7 +580,7 @@ export function GroupEditor({
         </h3>
         <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
           <div
-            className="col-span-2 flex items-center gap-1 rounded-[8px] border border-border p-1 sm:col-span-1"
+            className="col-span-2 flex items-center gap-1 rounded-field border border-border p-1 sm:col-span-1"
             role="tablist"
             aria-label={tx(t, "questionMode", "Question mode")}
           >
@@ -589,7 +589,7 @@ export function GroupEditor({
               role="tab"
               aria-selected={mode === "form"}
               onClick={() => selectMode("form")}
-              className={`min-h-8 flex-1 rounded-[6px] px-3 py-1.5 text-xs font-medium transition sm:flex-none ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+              className={`min-h-8 flex-1 rounded-chip px-3 py-1.5 text-xs font-medium transition sm:flex-none ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
             >
               {tx(t, "formList", "Form list")}
             </button>
@@ -598,7 +598,7 @@ export function GroupEditor({
               role="tab"
               aria-selected={mode === "visual"}
               onClick={() => selectMode("visual")}
-              className={`min-h-8 flex-1 rounded-[6px] px-3 py-1.5 text-xs font-medium transition sm:flex-none ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+              className={`min-h-8 flex-1 rounded-chip px-3 py-1.5 text-xs font-medium transition sm:flex-none ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
             >
               {tx(t, "visualPaste", "Visual paste")}
             </button>

@@ -103,7 +103,7 @@ export function StudentsView() {
             <Card key={s.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
               <Link
                 href={`/students/${s.id}`}
-                className="-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-[8px] p-1 hover:bg-surface-hover"
+                className="-m-1 flex min-w-0 flex-1 items-center gap-3 rounded-field p-1 hover:bg-surface-hover"
               >
                 <Avatar name={s.name} />
                 <div className="min-w-0">

@@ -441,7 +441,7 @@ export function ListeningPartEditor({
   return (
     <div className="space-y-4">
       {errors.length > 0 && (
-        <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" role="alert">
+        <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" role="alert">
           <ul className="list-disc space-y-0.5 pl-4">
             {errors.map((e) => (
               <li key={e}>{e}</li>
@@ -542,7 +542,7 @@ export function ListeningPartEditor({
           />
 
           {/* Diagram / image (e.g. map labelling) — optional. */}
-          <div className="rounded-[8px] border border-border p-3">
+          <div className="rounded-field border border-border p-3">
             <p className="text-sm font-semibold text-fg">
               <ImagePlus className="mr-1.5 inline size-4" aria-hidden />
               {tx(t, "image", "Diagram / image")}{" "}
@@ -553,7 +553,7 @@ export function ListeningPartEditor({
               <img
                 src={localImageUrl ?? serverImage}
                 alt=""
-                className="mt-2 max-h-48 rounded-[8px] border border-border"
+                className="mt-2 max-h-48 rounded-field border border-border"
               />
             )}
             <div className="mt-2">
@@ -600,7 +600,7 @@ export function ListeningPartEditor({
       </Card>
 
       {/* Question group — the part's question set owns its questions. */}
-      <section aria-label={tx(t, "questionGroup", "Question group")} className="rounded-[12px] border border-border bg-surface p-4">
+      <section aria-label={tx(t, "questionGroup", "Question group")} className="rounded-card border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
@@ -619,7 +619,7 @@ export function ListeningPartEditor({
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <div
-              className="flex items-center gap-1 rounded-[8px] border border-border p-0.5"
+              className="flex items-center gap-1 rounded-field border border-border p-0.5"
               role="tablist"
               aria-label={tx(t, "questionMode", "Question mode")}
             >
@@ -628,7 +628,7 @@ export function ListeningPartEditor({
                 role="tab"
                 aria-selected={mode === "form"}
                 onClick={() => selectMode("form")}
-                className={`rounded-[6px] px-2.5 py-1 text-xs font-medium transition ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+                className={`rounded-chip px-2.5 py-1 text-xs font-medium transition ${mode === "form" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
               >
                 {tx(t, "formList", "Form list")}
               </button>
@@ -637,7 +637,7 @@ export function ListeningPartEditor({
                 role="tab"
                 aria-selected={mode === "visual"}
                 onClick={() => selectMode("visual")}
-                className={`rounded-[6px] px-2.5 py-1 text-xs font-medium transition ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
+                className={`rounded-chip px-2.5 py-1 text-xs font-medium transition ${mode === "visual" ? "bg-surface-hover text-fg" : "text-fg-muted hover:text-fg"}`}
               >
                 {tx(t, "visualPaste", "Visual paste")}
               </button>
@@ -729,7 +729,7 @@ export function ListeningPartEditor({
             </div>
           </div>
         ) : part.questions.length === 0 ? (
-          <div className="mt-3 rounded-[8px] border border-dashed border-border-strong p-4">
+          <div className="mt-3 rounded-field border border-dashed border-border-strong p-4">
             <p className="text-sm font-semibold text-fg">
               {tx(t, "emptyGroupTitle", "This question group is empty.")}
             </p>
@@ -775,15 +775,15 @@ export function ListeningPartEditor({
               const answerOk = q.correctAnswers.some((a) => a.trim() !== "");
               const excerpt = q.prompt.trim() ? q.prompt.trim().split("\n")[0].slice(0, 90) : "";
               return (
-                <li key={q.clientId} className={`rounded-[8px] border bg-surface ${bad ? "border-danger-border" : "border-border"}`}>
+                <li key={q.clientId} className={`rounded-field border bg-surface ${bad ? "border-danger-border" : "border-border"}`}>
                   <button
                     type="button"
                     onClick={() => toggleExpanded(q.clientId)}
                     aria-expanded={open}
                     aria-label={`${tx(t, "question", "Question")} ${q.number} — ${QTYPE_LABEL[q.type]} — ${open ? tx(t, "collapse", "Collapse") : tx(t, "expand", "Expand")}`}
-                    className="flex w-full items-start gap-2.5 rounded-[8px] px-3 py-2 text-left transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
+                    className="flex w-full items-start gap-2.5 rounded-field px-3 py-2 text-left transition hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
                   >
-                    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[6px] border border-border bg-surface-hover text-sm font-bold text-fg tabular-nums" aria-hidden>
+                    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-chip border border-border bg-surface-hover text-sm font-bold text-fg tabular-nums" aria-hidden>
                       {q.number}
                     </span>
                     <span className="min-w-0 flex-1">

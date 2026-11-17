@@ -377,7 +377,7 @@ export function TestManageView({ testId }: { testId: string }) {
 
       {/* Bulk bar */}
       {selected.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-brand/20 bg-brand-subtle px-3 py-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-control border border-brand/20 bg-brand-subtle px-3 py-2">
           <span className="text-sm font-medium text-brand-subtle-fg flex items-center gap-1.5">
             <CheckSquare className="size-4" /> {selected.size} {tFallback(t, "selected", "selected")}
           </span>
@@ -486,7 +486,7 @@ export function TestManageView({ testId }: { testId: string }) {
                               aria-label="Select"
                               onClick={() => toggleSelect(q.id)}
                               className={cn(
-                                "mt-1 grid size-5 place-items-center rounded-[6px] border shrink-0 transition-colors",
+                                "mt-1 grid size-5 place-items-center rounded-chip border shrink-0 transition-colors",
                                 isSel ? "bg-brand border-brand text-brand-fg" : "border-border bg-surface hover:border-border-strong",
                               )}
                             >
@@ -512,13 +512,13 @@ export function TestManageView({ testId }: { testId: string }) {
                               </div>
 
                               {instr && (
-                                <div className="mt-2 rounded-[8px] border border-info/20 bg-info-bg px-3 py-2 text-xs leading-relaxed text-info">
+                                <div className="mt-2 rounded-field border border-info/20 bg-info-bg px-3 py-2 text-xs leading-relaxed text-info">
                                   <p className="font-semibold">{tFallback(t, "instructions", "Instructions")}</p>
                                   <p className="mt-0.5 opacity-90">{instr}</p>
                                 </div>
                               )}
                               {passage && (
-                                <div className="mt-2 rounded-[8px] border border-border bg-bg-subtle px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-fg-muted max-h-28 overflow-y-auto">
+                                <div className="mt-2 rounded-field border border-border bg-bg-subtle px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-fg-muted max-h-28 overflow-y-auto">
                                   <p className="font-medium text-fg text-[11px] uppercase tracking-wide mb-1">{tFallback(t, "passage", "Passage")}</p>
                                   {passage}
                                 </div>

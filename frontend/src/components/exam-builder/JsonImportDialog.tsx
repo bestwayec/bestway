@@ -305,7 +305,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
         </DialogHeader>
         <DialogBody>
           {!sessionExpired && (phase === "edit" || phase === "report") && (
-            <section className="mb-4 space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3">
+            <section className="mb-4 space-y-2 rounded-control border border-border bg-bg-subtle p-3">
               <div>
                 <p className="text-sm font-semibold text-fg">
                   {tx(t, "importDestination", "Import destination")}
@@ -344,7 +344,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
             </section>
           )}
           {sessionExpired ? (
-            <div className="rounded-[8px] border border-danger/40 bg-danger/5 px-3 py-3 text-sm" role="alert">
+            <div className="rounded-field border border-danger/40 bg-danger/5 px-3 py-3 text-sm" role="alert">
               <p className="font-medium">
                 {tx(t, "sessionExpired", "Your session expired — sign in again to continue.")}
               </p>
@@ -398,7 +398,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
             </div>
           ) : phase === "edit" ? (
             <div className="space-y-4">
-              <section className="space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3" aria-labelledby="json-template-title">
+              <section className="space-y-2 rounded-control border border-border bg-bg-subtle p-3" aria-labelledby="json-template-title">
                 <div>
                   <p id="json-template-title" className="text-sm font-semibold text-fg">
                     {tx(t, "jsonTemplateTitle", "Start from a template")}
@@ -472,7 +472,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
                 rows={10}
                 spellCheck={false}
                 placeholder='{"schemaVersion": "1.0", "packageId": "…"}'
-                className="w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 font-mono text-xs"
+                className="w-full min-w-0 rounded-field border border-border bg-bg px-3 py-2 font-mono text-xs"
               />
               <div className="flex flex-wrap items-center gap-2">
                 <input
@@ -542,7 +542,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
                   {decls.map((d) => (
                     <div
                       key={d.key}
-                      className="flex min-w-0 flex-wrap items-center gap-2 rounded-[8px] border border-border px-3 py-2 text-sm"
+                      className="flex min-w-0 flex-wrap items-center gap-2 rounded-field border border-border px-3 py-2 text-sm"
                     >
                       <Plug className="size-4 shrink-0 text-fg-muted" aria-hidden />
                       <span className="min-w-0 flex-1 truncate font-mono text-xs" title={d.fileName}>
@@ -554,7 +554,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
                       {stagedNames[d.key] ? (
                         <Badge variant="success">{stagedNames[d.key]}</Badge>
                       ) : (
-                        <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-[8px] border border-border px-2.5 text-xs font-medium hover:bg-surface-hover">
+                        <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-field border border-border px-2.5 text-xs font-medium hover:bg-surface-hover">
                           {stage.isPending
                             ? tx(t, "uploading", "Uploading…")
                             : tx(t, "chooseMediaFile", "Choose file")}
@@ -572,7 +572,7 @@ export function JsonImportDialog({ open, onClose }: { open: boolean; onClose: ()
                 </div>
               )}
               {commitError && (
-                <div className="rounded-[8px] border border-danger/40 bg-danger/5 px-3 py-2 text-sm" role="alert">
+                <div className="rounded-field border border-danger/40 bg-danger/5 px-3 py-2 text-sm" role="alert">
                   <p className="flex items-center gap-1.5 font-medium text-danger">
                     <TriangleAlert className="size-4 shrink-0" aria-hidden />
                     {commitError}
@@ -649,7 +649,7 @@ function IssueList({
       <p className="text-sm font-medium">
         {title} ({issues.length})
       </p>
-      <ul className="max-h-48 space-y-1 overflow-y-auto rounded-[8px] border border-border p-2 text-xs">
+      <ul className="max-h-48 space-y-1 overflow-y-auto rounded-field border border-border p-2 text-xs">
         {shown.map((i, idx) => (
           <li key={`${i.code}-${i.path}-${idx}`} className="break-words">
             <span className="font-mono font-semibold">{i.code}</span>{" "}

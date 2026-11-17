@@ -213,7 +213,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             return (
               <div
                 key={s.id}
-                className="flex flex-col justify-between rounded-[12px] border border-border bg-surface p-3.5 shadow-sm text-left"
+                className="flex flex-col justify-between rounded-card border border-border bg-surface p-3.5 shadow-sm text-left"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-fg capitalize flex items-center gap-1.5">
@@ -291,7 +291,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               href={media(`/mock/attempts/${attempt.id}/certificate`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
               {partialPractice ? t("resultView.practiceReport") : internalCertificate ? t("resultView.internalCertificate") : `${t("certificate")} (PDF)`}
@@ -388,7 +388,7 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
           const question = group.questions[0];
           if (!question) return null;
           const max = scoreMaximum(question.guidance) ?? question.points;
-          return <div key={group.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-bg-subtle px-3 py-2 text-sm">
+          return <div key={group.id} className="flex items-center justify-between gap-3 rounded-field bg-bg-subtle px-3 py-2 text-sm">
             <span className="font-medium text-fg">{multilevelTaskName(question.guidance, `${section.skill === "writing" ? "Task" : "Part"} ${index + 1}`)}</span>
             <span className="tabular-nums text-fg-muted">{section.skill === "speaking" ? group.questions.every((q) => q.isGraded && q.score != null) ? Math.round(group.questions.reduce((sum, q) => sum + (q.score ?? 0), 0) / group.questions.length * 2) / 2 : "—" : question.isGraded ? question.score ?? "—" : "—"} / {max}</span>
           </div>;
@@ -524,7 +524,7 @@ function ReviewRow({  q,
 
           {/* IELTS live speaking: nothing was recorded; the teacher scores the interview with the criteria. */}
           {canGrade && skill === "speaking" && !q.hasAudio && !q.guidance && (
-            <p className="mt-2 rounded-[8px] border border-border bg-bg-subtle px-3 py-2 text-xs text-fg-muted" role="note">
+            <p className="mt-2 rounded-field border border-border bg-bg-subtle px-3 py-2 text-xs text-fg-muted" role="note">
               {t("liveSpeakingNote")}
             </p>
           )}
@@ -554,7 +554,7 @@ function ReviewRow({  q,
             </p>
           )}
           {q.feedback && !canGrade && (
-            <p className="mt-1 rounded-[6px] bg-bg-subtle px-2.5 py-1.5 text-sm text-fg-muted">
+            <p className="mt-1 rounded-chip bg-bg-subtle px-2.5 py-1.5 text-sm text-fg-muted">
               {q.feedback}
             </p>
           )}
@@ -678,7 +678,7 @@ function GradeForm({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3">
+    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3">
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium text-fg-muted">
           {t("score")} (0–{maximum})

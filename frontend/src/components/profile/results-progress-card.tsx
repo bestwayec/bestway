@@ -115,7 +115,7 @@ function PointsChart({
             <div
               role="tooltip"
               className={cn(
-                "pointer-events-none absolute z-10 w-max max-w-[220px] rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-xs shadow-md",
+                "pointer-events-none absolute z-10 w-max max-w-[220px] rounded-field border border-border bg-surface px-2.5 py-1.5 text-xs shadow-md",
                 x(active) < 20 ? "translate-x-0" : x(active) > 80 ? "-translate-x-full" : "-translate-x-1/2",
               )}
               style={{ left: `${x(active)}%`, bottom: `calc(${Math.min(y(activePoint.value), 70)}% + 14px)` }}
@@ -169,7 +169,7 @@ export function ResultsProgressCard({ attempts, loading }: { attempts: MockAttem
     `${family === "ielts" ? t("band", { value: value.toFixed(1) }) : t("score", { value })}${cefr ? ` · ${multilevelLevelText(cefr, tMock("levelBelowB1"))}` : ""}`;
 
   return (
-    <Card className="rounded-[12px] border border-border bg-surface p-5 sm:p-6">
+    <Card className="rounded-card border border-border bg-surface p-5 sm:p-6">
       <div className="flex flex-col gap-1 border-b border-border pb-4">
         <h3 className="flex items-center gap-2 text-lg font-bold text-fg">
           <TrendingUp className="size-5 text-brand" aria-hidden="true" />
@@ -180,24 +180,24 @@ export function ResultsProgressCard({ attempts, loading }: { attempts: MockAttem
 
       {loading ? (
         <div className="mt-4 space-y-3">
-          <Skeleton className="h-16 w-full rounded-[12px]" />
-          <Skeleton className="h-40 w-full rounded-[12px]" />
+          <Skeleton className="h-16 w-full rounded-card" />
+          <Skeleton className="h-40 w-full rounded-card" />
         </div>
       ) : (
         <div className="mt-4 space-y-6">
           <dl className="grid grid-cols-2 gap-3">
-            <div className="rounded-[12px] border border-border bg-bg-subtle p-3">
+            <div className="rounded-card border border-border bg-bg-subtle p-3">
               <dt className="text-sm text-fg-muted">{t("finished")}</dt>
               <dd className="text-2xl font-bold tabular-nums text-fg">{data.finished}</dd>
             </div>
-            <div className="rounded-[12px] border border-border bg-bg-subtle p-3">
+            <div className="rounded-card border border-border bg-bg-subtle p-3">
               <dt className="text-sm text-fg-muted">{t("checking")}</dt>
               <dd className="text-2xl font-bold tabular-nums text-fg">{data.checking}</dd>
             </div>
           </dl>
 
           {!hasCharts ? (
-            <p className="rounded-[12px] border border-dashed border-border p-6 text-center text-sm text-fg-muted">
+            <p className="rounded-card border border-dashed border-border p-6 text-center text-sm text-fg-muted">
               {data.finished > 0 ? t("emptyChecking") : t("emptyNone")}
             </p>
           ) : (

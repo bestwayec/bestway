@@ -16,7 +16,7 @@ export function ExamTrackSwitch() {
   const state = useExamPrograms();
   const save = useSetExamPrograms();
 
-  if (state.isPending) return <Skeleton className="h-11 w-72 rounded-[10px]" aria-label={t("loading")} />;
+  if (state.isPending) return <Skeleton className="h-11 w-72 rounded-control" aria-label={t("loading")} />;
   if (!state.data) {
     return <p role="alert" className="text-sm text-danger">{t("loadError")}</p>;
   }
@@ -25,7 +25,7 @@ export function ExamTrackSwitch() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div role="group" aria-label={t("title")} className="inline-flex rounded-[10px] border border-border bg-bg-subtle p-1">
+      <div role="group" aria-label={t("title")} className="inline-flex rounded-control border border-border bg-bg-subtle p-1">
         {(["IELTS", "MULTILEVEL"] as ExamProgram[]).map((program) => {
           const name = program === "IELTS" ? t("ieltsName") : t("multilevelName");
           const active = current.activeProgram === program;
@@ -41,7 +41,7 @@ export function ExamTrackSwitch() {
                 disabled={!selectable || save.isPending}
                 onClick={() => { if (!active) save.mutate({ ...current, activeProgram: program }); }}
                 className={cn(
-                  "inline-flex min-h-[36px] items-center gap-1.5 rounded-[8px] px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed",
+                  "inline-flex min-h-[36px] items-center gap-1.5 rounded-field px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed",
                   active ? "bg-brand text-brand-fg shadow-sm" : "text-fg-muted hover:text-fg disabled:opacity-60",
                 )}
               >

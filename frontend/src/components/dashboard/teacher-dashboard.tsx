@@ -35,7 +35,7 @@ import type { GroupAttendanceSummaryResponse, TeacherGroupSummary, TeacherSelfPr
 /** Obsidian + zumrad shisha (glass) kartasi */
 const GLASS =
   "relative overflow-hidden rounded-2xl border border-border/70 bg-surface/60 backdrop-blur-md " +
-  "shadow-[0_0_0_1px_rgba(16,185,129,0.04),0_10px_30px_-12px_rgba(0,0,0,0.55)]";
+  "";
 
 function GlowCorner({ className }: { className?: string }) {
   return (

@@ -267,7 +267,7 @@ export function ExamQuestionsEditorDialog({
                 type="button"
                 size="sm"
                 onClick={() => setBulkImporterOpen(true)}
-                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md shadow-brand/20"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md"
               >
                 <Zap className="size-3.5 fill-fg" />
                 ⚡️ Tezkor Matn Orqali Kiritish (Bulk Paste)
@@ -292,7 +292,7 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("writing")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "writing"
-                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  ? "bg-brand text-brand-fg shadow-md"
                   : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
@@ -304,7 +304,7 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("speaking")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "speaking"
-                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  ? "bg-brand text-brand-fg shadow-md"
                   : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
@@ -316,7 +316,7 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("reading")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "reading"
-                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  ? "bg-brand text-brand-fg shadow-md"
                   : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
@@ -328,7 +328,7 @@ export function ExamQuestionsEditorDialog({
               onClick={() => setActiveTab("listening")}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "listening"
-                  ? "bg-brand text-brand-fg shadow-md shadow-brand/30"
+                  ? "bg-brand text-brand-fg shadow-md"
                   : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
               }`}
             >
@@ -751,7 +751,7 @@ export function ExamQuestionsEditorDialog({
 
           <Button
             type="button"
-            className="border border-brand/50 bg-brand text-brand-fg shadow-lg shadow-brand/30 hover:bg-brand-hover"
+            className="border border-brand/50 bg-brand text-brand-fg shadow-lg hover:bg-brand-hover"
             onClick={handleSaveAndPublish}
             loading={saving}
           >

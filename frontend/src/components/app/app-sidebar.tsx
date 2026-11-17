@@ -98,7 +98,7 @@ export function AppSidebar({ role }: { role: Role }) {
               title={collapsed ? t(item.key) : undefined}
               aria-label={collapsed ? t(item.key) : undefined}
               className={cn(
-                "group relative flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",
                 active
                   ? "bg-brand-subtle text-brand-subtle-fg font-semibold"
@@ -127,13 +127,13 @@ export function AppSidebar({ role }: { role: Role }) {
         {hasSecondary && (
           <div className="pt-2">
             {!collapsed ? (
-              <div className="rounded-[12px] border border-border/60 bg-bg-subtle/50 p-1">
+              <div className="rounded-card border border-border/60 bg-bg-subtle/50 p-1">
                 <button
                   type="button"
                   onClick={() => setMoreExpanded(!moreExpanded)}
                   aria-expanded={moreExpanded}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-[8px] px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
+                    "flex w-full items-center justify-between rounded-field px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors",
                     isSecondaryActive ? "text-brand" : "text-fg-muted hover:text-fg",
                   )}
                 >
@@ -159,7 +159,7 @@ export function AppSidebar({ role }: { role: Role }) {
                           href={item.href}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-sm transition-colors",
+                            "flex items-center gap-3 rounded-field px-2.5 py-2 text-sm transition-colors",
                             active
                               ? "bg-brand-subtle text-brand-subtle-fg font-medium"
                               : "text-fg-muted hover:bg-surface-hover hover:text-fg",
@@ -186,7 +186,7 @@ export function AppSidebar({ role }: { role: Role }) {
                       title={t(item.key)}
                       aria-label={t(item.key)}
                       className={cn(
-                        "flex items-center justify-center rounded-[12px] p-2 text-sm transition-colors",
+                        "flex items-center justify-center rounded-card p-2 text-sm transition-colors",
                         active
                           ? "bg-brand-subtle text-brand-subtle-fg"
                           : "text-fg-muted hover:bg-surface-hover hover:text-fg",
@@ -222,7 +222,7 @@ export function AppSidebar({ role }: { role: Role }) {
             aria-expanded={!collapsed}
             aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
             title={t(collapsed ? "expandSidebar" : "collapseSidebar")}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
           >
             {collapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
           </button>

@@ -43,7 +43,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           position="top-center"
           toastOptions={{
             classNames: {
-              toast: "!bg-surface !text-fg !border-border !rounded-[10px]",
+              toast: "!bg-surface !text-fg !border-border !rounded-card !shadow-e2 !font-sans",
               description: "!text-fg-muted",
               success: "!text-success",
               error: "!text-danger",

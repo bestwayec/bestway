@@ -139,7 +139,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             Better
           </span>
           <span className="text-[10px] text-amber-400 font-black">➔</span>
-          <span className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 text-[10px] font-black shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+          <span className="px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 text-[10px] font-black">
             ★ Best
           </span>
         </div>
@@ -259,7 +259,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
           <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-black text-slate-300">
             AN
           </span>
-          <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-xs font-black text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+          <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-xs font-black text-emerald-300">
             THE
           </span>
           <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400 text-xs font-bold text-rose-300">
@@ -300,7 +300,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             S + V1 / V-s
           </div>
           <span className="text-xs text-emerald-400 font-bold">&bull;</span>
-          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white">
             Do / Does
           </div>
         </div>
@@ -374,7 +374,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             have / has been
           </span>
           <span className="text-xs text-emerald-400 font-extrabold">+</span>
-          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-[11px] font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-[11px] font-bold text-white">
             V-ing
           </span>
         </div>
@@ -411,7 +411,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             have / has
           </div>
           <span className="text-xs text-emerald-400 font-extrabold">+</span>
-          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white">
             V3 / -ed
           </div>
         </div>
@@ -489,7 +489,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             <span>➕</span> <span>Some</span>
           </div>
           <span className="text-xs text-emerald-400 font-bold">vs</span>
-          <div className="px-2.5 py-1 rounded-xl bg-teal-500/20 border border-teal-400 text-xs font-bold text-teal-200 shadow-[0_0_12px_rgba(20,184,166,0.3)] flex items-center gap-1">
+          <div className="px-2.5 py-1 rounded-xl bg-teal-500/20 border border-teal-400 text-xs font-bold text-teal-200 flex items-center gap-1">
             <span>❓/➖</span> <span>Any</span>
           </div>
         </div>
@@ -565,7 +565,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             will be
           </div>
           <span className="text-xs text-emerald-400 font-extrabold">+</span>
-          <div className="px-2.5 py-1 rounded-xl bg-teal-500/20 border border-teal-400 text-xs font-bold text-white shadow-[0_0_12px_rgba(20,184,166,0.3)]">
+          <div className="px-2.5 py-1 rounded-xl bg-teal-500/20 border border-teal-400 text-xs font-bold text-white">
             V-ing
           </div>
         </div>
@@ -603,7 +603,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             If + Condition
           </span>
           <span className="text-emerald-400 font-extrabold">➔</span>
-          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-white font-bold shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-white font-bold">
             Result Clause
           </span>
         </div>
@@ -641,7 +641,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
             Object + to be
           </div>
           <span className="text-xs text-emerald-400 font-extrabold">+</span>
-          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <div className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400 text-xs font-bold text-white">
             V3 / Participle
           </div>
         </div>
@@ -681,7 +681,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
           <span className="px-2 py-0.5 rounded-lg bg-slate-900 border border-amber-500/40 text-amber-300 font-bold">
             Should / May
           </span>
-          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+          <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold">
             + Bare Inf
           </span>
         </div>
@@ -714,7 +714,7 @@ export function CourseCardThumbnail({ title, className = "" }: CourseCardThumbna
         </span>
       </div>
 
-      <div className="relative z-10 w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 mb-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+      <div className="relative z-10 w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 mb-2">
         <div className="size-full rounded-2xl bg-bg-subtle flex items-center justify-center text-emerald-400">
           <BookMarked className="w-6 h-6" />
         </div>

@@ -76,7 +76,7 @@ export function LiveExamPinCard({ className }: { className?: string }) {
   return (
     <Card
       className={cn(
-        "rounded-[12px] border border-border bg-surface p-5",
+        "rounded-card border border-border bg-surface p-5",
         className,
       )}
     >

@@ -116,7 +116,7 @@ export default function DemoRunner({
           {remaining !== null && !submitted && (
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-1.5 text-sm font-semibold tabular-nums",
+                "inline-flex items-center gap-1.5 rounded-field px-2.5 py-1.5 text-sm font-semibold tabular-nums",
                 remaining < 60 ? "bg-danger-bg text-danger" : "bg-bg-subtle text-fg",
               )}
             >
@@ -141,7 +141,7 @@ export default function DemoRunner({
       </div>
 
       {failed && (
-        <p role="alert" className="rounded-[10px] border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger">
+        <p role="alert" className="rounded-control border border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger">
           {t("demoSubmitFailed")}
         </p>
       )}
@@ -152,7 +152,7 @@ export default function DemoRunner({
             const value = answers[q.id] ?? "";
             const row = verdict.get(q.id);
             return (
-              <div key={q.id} className="flex items-start gap-3 rounded-[10px] border border-border bg-surface p-3">
+              <div key={q.id} className="flex items-start gap-3 rounded-control border border-border bg-surface p-3">
                 <span className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-xs font-bold text-brand-subtle-fg">
                   {index + 1}
                 </span>
@@ -167,7 +167,7 @@ export default function DemoRunner({
                         <label
                           key={i}
                           className={cn(
-                            "flex cursor-pointer items-center gap-2 rounded-[8px] border px-3 py-2 text-sm transition-colors",
+                            "flex cursor-pointer items-center gap-2 rounded-field border px-3 py-2 text-sm transition-colors",
                             value === opt ? "border-brand bg-brand-subtle/40 text-fg" : "border-border hover:bg-surface-hover",
                           )}
                         >
@@ -227,7 +227,7 @@ export default function DemoRunner({
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[12px] border border-border bg-bg-subtle p-4 text-center">
+            <div className="rounded-card border border-border bg-bg-subtle p-4 text-center">
               <p className="text-xs tracking-wide text-fg-subtle uppercase">{t("demoTotalScore")}</p>
               <p className="mt-2 text-3xl font-bold text-fg">
                 {score.autoScore} <span className="text-lg font-medium text-fg-muted">/ {score.autoMax}</span>
@@ -238,11 +238,11 @@ export default function DemoRunner({
             </div>
 
             {score.bySection.length > 0 && (
-              <div className="rounded-[12px] border border-border bg-surface p-4 sm:col-span-2">
+              <div className="rounded-card border border-border bg-surface p-4 sm:col-span-2">
                 <p className="text-xs tracking-wide text-fg-subtle uppercase">{t("demoPerSection")}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {score.bySection.map((v) => (
-                    <div key={v.section} className="rounded-[8px] bg-bg-subtle px-3 py-2">
+                    <div key={v.section} className="rounded-field bg-bg-subtle px-3 py-2">
                       <p className="text-xs font-medium text-fg-muted capitalize">{v.section}</p>
                       {autoChecked(v.section) ? (
                         <p className="text-sm font-semibold text-fg">
@@ -258,7 +258,7 @@ export default function DemoRunner({
             )}
           </div>
 
-          <div className="mt-6 rounded-[12px] border border-brand/20 bg-brand-subtle/30 p-4">
+          <div className="mt-6 rounded-card border border-brand/20 bg-brand-subtle/30 p-4">
             <p className="text-sm font-semibold text-fg">{t("demoLoginCta")}</p>
             <p className="mt-1 text-sm text-fg-muted">{t("demoLoginCtaHint")}</p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">

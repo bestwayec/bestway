@@ -261,7 +261,7 @@ export function WritingTaskEditor({
       </div>
 
       {errors.length > 0 && (
-        <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+        <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
           <ul className="list-disc space-y-0.5 pl-4">
             {errors.map((e, i) => (
               <li key={`${e}-${i}`}>{e}</li>
@@ -316,7 +316,7 @@ export function WritingTaskEditor({
             />
           </Field>
 
-          <div className="rounded-[8px] border border-border p-3">
+          <div className="rounded-field border border-border p-3">
             <p className="text-sm font-semibold text-fg">
               <ImagePlus className="mr-1.5 inline size-4" aria-hidden />
               Diagram / image <span className="font-normal text-fg-subtle">(optional)</span>
@@ -326,7 +326,7 @@ export function WritingTaskEditor({
               <img
                 src={localImageUrl ?? serverImage}
                 alt=""
-                className="mt-2 max-h-48 rounded-[8px] border border-border"
+                className="mt-2 max-h-48 rounded-field border border-border"
               />
             )}
             <div className="mt-2">
@@ -377,7 +377,7 @@ export function WritingTaskEditor({
             </Field>
           ))}
 
-          <div className="rounded-[8px] border border-border bg-surface-hover p-3 text-sm">
+          <div className="rounded-field border border-border bg-surface-hover p-3 text-sm">
             <p className="font-semibold text-fg">Recommended minimum: {meta.recommended} words</p>
             <p className="mt-0.5 text-xs text-fg-muted">
               Students see a gentle reminder at {meta.recommended} words. There is no automatic
@@ -385,7 +385,7 @@ export function WritingTaskEditor({
             </p>
           </div>
 
-          <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
+          <div className="rounded-field border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="font-semibold text-fg">Teacher graded</p>
             <p className="mt-0.5 text-xs text-fg-muted">
               No answer key needed. You score this 0–9; it counts toward the Writing band
@@ -422,7 +422,7 @@ export function WritingTaskEditor({
       </Card>
 
       {showPreview && (
-        <div className="rounded-[12px] border border-brand/30 bg-surface p-4">
+        <div className="rounded-card border border-brand/30 bg-surface p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
             Student view · writing
           </p>
@@ -431,7 +431,7 @@ export function WritingTaskEditor({
           </h4>
           <p className="mt-1 text-[13px] text-fg-muted">{meta.time}</p>
           {(instructions.trim() || passageText.trim()) && (
-            <p className="mt-1.5 rounded-[8px] bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
+            <p className="mt-1.5 rounded-field bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
               {[instructions.trim(), passageText.trim()].filter(Boolean).join("\n\n")}
             </p>
           )}
@@ -440,7 +440,7 @@ export function WritingTaskEditor({
             <img
               src={localImageUrl ?? serverImage}
               alt=""
-              className="mt-2 max-h-56 rounded-[8px] border border-border"
+              className="mt-2 max-h-56 rounded-field border border-border"
             />
           )}
           <div className="mt-3">

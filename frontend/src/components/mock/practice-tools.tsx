@@ -53,7 +53,7 @@ export function AudioScriptToggle({ script }: { script?: string | null }) {
         <FileText className="mr-1.5 size-4" aria-hidden />{t(open ? "hideScript" : "showScript")}
       </Button>
       {open && (
-        <div id={id} role="region" tabIndex={0} aria-label={t("scriptTitle")} className="max-h-60 overflow-y-auto whitespace-pre-line rounded-[8px] border border-border bg-bg-subtle p-3 text-sm leading-relaxed text-fg">
+        <div id={id} role="region" tabIndex={0} aria-label={t("scriptTitle")} className="max-h-60 overflow-y-auto whitespace-pre-line rounded-field border border-border bg-bg-subtle p-3 text-sm leading-relaxed text-fg">
           {script}
         </div>
       )}
@@ -76,7 +76,7 @@ export function RevealAnswer({ attemptId, questionId, initiallyRevealed = false 
   };
   if (value) {
     return (
-      <div className="mt-2 rounded-[8px] border border-success-border bg-success-bg px-3 py-2 text-sm" role="status" data-testid="practice-revealed">
+      <div className="mt-2 rounded-field border border-success-border bg-success-bg px-3 py-2 text-sm" role="status" data-testid="practice-revealed">
         <p className="text-fg"><span className="font-semibold">{t("answerLabel")}:</span> {value.correctAnswers.length ? value.correctAnswers.join(" / ") : "—"}</p>
         {value.evidence && <p className="mt-1 text-xs text-fg-muted">{t("whereLabel")}: “{value.evidence.text}”</p>}
       </div>

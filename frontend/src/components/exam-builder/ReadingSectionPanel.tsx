@@ -205,7 +205,7 @@ export function ReadingSectionPanel({
                 type="button"
                 onClick={() => onSelect({ kind: "group", groupId: firstGroup.id })}
                 aria-label={`Passage ${passageNo}${passage.title?.trim() ? ` — ${passage.title.trim()}` : ""} — ${missing.length ? missing.join(", ") : tx(t, "ready", "Ready")}`}
-                className="rounded-[12px] border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
+                className="rounded-card border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
               >
                 <div className="flex items-center gap-2">
                   {missing.length > 0 ? (

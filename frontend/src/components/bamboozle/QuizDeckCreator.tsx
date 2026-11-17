@@ -597,7 +597,7 @@ export function QuizDeckCreator({
                             }}
                             className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
                               isCorrect
-                                ? "bg-emerald-500 border-emerald-400 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                ? "bg-emerald-500 border-emerald-400 text-slate-950"
                                 : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500"
                             }`}
                           >
@@ -652,7 +652,7 @@ export function QuizDeckCreator({
           <Button
             type="submit"
             disabled={isSaving}
-            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+            className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             <span>{isSaving ? "Saqlanmoqda..." : "Quiz To'plamini Saqlash"}</span>

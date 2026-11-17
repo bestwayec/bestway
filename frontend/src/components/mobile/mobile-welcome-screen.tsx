@@ -36,7 +36,7 @@ export function MobileWelcomeScreen({ locale }: { locale: string }) {
       {/* Top Bar with Language Switcher */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand font-bold text-bg shadow-[0_0_20px_rgba(16,185,129,0.35)]">
+          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand font-bold text-bg">
             BW
           </div>
           <span className="text-base font-bold tracking-tight text-fg">BestWay CBT</span>
@@ -65,7 +65,7 @@ export function MobileWelcomeScreen({ locale }: { locale: string }) {
 
       {/* Hero Visual & Brand */}
       <div className="my-auto py-6 text-center">
-        <div className="relative mx-auto mb-5 grid size-24 place-items-center rounded-3xl border border-brand/30 bg-gradient-to-br from-brand/20 to-brand/5 p-4 shadow-[0_0_40px_rgba(16,185,129,0.25)]">
+        <div className="relative mx-auto mb-5 grid size-24 place-items-center rounded-3xl border border-brand/30 bg-gradient-to-br from-brand/20 to-brand/5 p-4">
           <Award className="size-12 text-brand animate-pulse" />
           <div className="absolute -bottom-2 -right-2 rounded-full border border-brand/40 bg-brand px-2 py-0.5 text-[10px] font-bold text-bg shadow">
             CBT

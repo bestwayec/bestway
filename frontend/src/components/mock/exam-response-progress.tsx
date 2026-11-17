@@ -66,7 +66,7 @@ export function WritingResponseGuide({ value, minimum = 0, maximum, taskKey = nu
     ? minimum === maximum ? `~${minimum}` : `${minimum}–${maximum}`
     : hasTarget ? `${minimum}+` : null;
   const remaining = Math.max(0, minimum - words);
-  return <div className="space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3">
+  return <div className="space-y-2 rounded-control border border-border bg-bg-subtle p-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="inline-flex items-center gap-1.5 text-sm font-medium text-fg">
         {reached ? <CheckCircle2 className="size-4 text-success" /> : <PenLine className="size-4 text-brand" />}

@@ -111,7 +111,7 @@ function PaymentCellFields({
                 }}
                 aria-pressed={state === s}
                 className={cn(
-                  "rounded-[8px] border px-3 py-2 text-sm font-medium transition-colors",
+                  "rounded-field border px-3 py-2 text-sm font-medium transition-colors",
                   state === s
                     ? stateStyle[s]
                     : "border-border bg-surface text-fg-muted hover:bg-surface-hover",

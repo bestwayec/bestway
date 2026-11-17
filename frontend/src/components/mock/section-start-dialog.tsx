@@ -23,7 +23,7 @@ function Choice({ name, value, current, onChange, label, hint }: {
 }) {
   const id = `${name}-${value}`;
   return (
-    <label htmlFor={id} className={cn("flex cursor-pointer items-start gap-2 rounded-[8px] border p-2.5 text-sm",
+    <label htmlFor={id} className={cn("flex cursor-pointer items-start gap-2 rounded-field border p-2.5 text-sm",
       current === value ? "border-brand bg-brand-subtle" : "border-border bg-surface hover:bg-surface-hover")}>
       <input id={id} type="radio" name={name} value={value} checked={current === value} onChange={() => onChange(value)} className="mt-0.5 accent-brand" />
       <span>

@@ -303,7 +303,7 @@ export function ExamLocker({
           role="status"
           aria-live="polite"
           data-testid="exam-integrity-notice"
-          className="fixed inset-x-3 top-3 z-[9998] mx-auto flex max-w-xl flex-col gap-2 rounded-[12px] border border-warning-border bg-surface p-3 text-sm text-fg shadow-lg sm:flex-row sm:items-center"
+          className="fixed inset-x-3 top-3 z-[9998] mx-auto flex max-w-xl flex-col gap-2 rounded-card border border-warning-border bg-surface p-3 text-sm text-fg shadow-lg sm:flex-row sm:items-center"
         >
           <ShieldAlert className="size-5 shrink-0 text-warning" aria-hidden />
           <p className="flex-1">

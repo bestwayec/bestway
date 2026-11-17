@@ -35,7 +35,7 @@ export function MobileNavMoreSheet({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="anim-fade fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content
-          className="anim-sheet pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-[12px] border-t border-border bg-surface"
+          className="anim-sheet pb-safe fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-card border-t border-border bg-surface"
           aria-label={t("more")}
         >
           <div className="sticky top-0 bg-surface pt-2 pb-1 border-b border-border/40">
@@ -45,7 +45,7 @@ export function MobileNavMoreSheet({
                 {t("more")}
               </DialogPrimitive.Title>
               <DialogPrimitive.Close
-                className="inline-flex size-9 items-center justify-center rounded-[8px] text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+                className="inline-flex size-9 items-center justify-center rounded-field text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
                 aria-label={tc("close")}
               >
                 <X className="size-5" />
@@ -63,7 +63,7 @@ export function MobileNavMoreSheet({
                   onClick={() => onOpenChange(false)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-[44px] items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex min-h-[44px] items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium transition-colors",
                     active ? "bg-brand-subtle text-brand-subtle-fg font-semibold" : "text-fg hover:bg-surface-hover",
                   )}
                 >

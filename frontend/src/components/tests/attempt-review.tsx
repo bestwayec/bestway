@@ -99,7 +99,7 @@ export function AttemptReview({ attempt }: { attempt: AttemptDetail }) {
             {attempt.status === "completed" && isStudent && (
               <a
                 href={`/api/backend/tests/attempts/${attempt.id}/certificate`}
-                className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand-hover"
+                className="inline-flex h-9 items-center gap-2 rounded-field bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand-hover"
               >
                 <Award className="size-4" />
                 {tFallback(t, "certificate", "Certificate")}
@@ -188,7 +188,7 @@ export function AttemptReview({ attempt }: { attempt: AttemptDetail }) {
               const data = perSection.get(sec)!;
               const pct = data.max ? Math.round((data.score / data.max) * 100) : 0;
               return (
-                <div key={sec} className="flex items-center justify-between rounded-[10px] border border-border bg-bg-subtle px-3 py-2.5">
+                <div key={sec} className="flex items-center justify-between rounded-control border border-border bg-bg-subtle px-3 py-2.5">
                   <div>
                     <p className="text-sm font-medium capitalize text-fg">
                       {tFallback(t, `sections.${sec}`, sec)}
@@ -210,7 +210,7 @@ export function AttemptReview({ attempt }: { attempt: AttemptDetail }) {
           </div>
 
           {attempt.status !== "completed" && (
-            <p className="mt-3 flex items-center gap-1.5 rounded-[8px] bg-warning-bg px-3 py-2 text-xs text-warning">
+            <p className="mt-3 flex items-center gap-1.5 rounded-field bg-warning-bg px-3 py-2 text-xs text-warning">
               <Lightbulb className="size-3.5" />
               {tFallback(t, "gradingNotice", "Some sections (Writing/Speaking) are graded manually by your teacher. You’ll be notified when grading is complete.")}
             </p>
@@ -331,7 +331,7 @@ function QuestionReview({
 
       <p className="mb-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{q.prompt}</p>
 
-      <div className={cn("rounded-[8px] px-3 py-2 text-sm", autoCorrect === false ? "bg-danger-bg/50" : "bg-bg-subtle")}>
+      <div className={cn("rounded-field px-3 py-2 text-sm", autoCorrect === false ? "bg-danger-bg/50" : "bg-bg-subtle")}>
         <span className="text-xs font-medium text-fg-subtle">{tFallback(t, "yourAnswer", "Your answer")}: </span>
         <span className={cn("font-medium", autoCorrect === false ? "text-danger" : "text-fg")}>
           {q.answer ? q.answer : <em className="font-normal text-fg-subtle">{tFallback(t, "noAnswer", "No answer")}</em>}
@@ -347,7 +347,7 @@ function QuestionReview({
       )}
 
       {q.comment && (
-        <div className="mt-2 rounded-[8px] border border-border bg-surface px-3 py-2">
+        <div className="mt-2 rounded-field border border-border bg-surface px-3 py-2">
           <p className="text-xs font-medium text-fg-muted">{tFallback(t, "comment", "Feedback")}:</p>
           <p className="mt-0.5 text-sm text-fg">{q.comment}</p>
         </div>
@@ -355,7 +355,7 @@ function QuestionReview({
 
       {/* Teacher grading form */}
       {isStaff && isManual && (
-        <div className="mt-4 rounded-[10px] border border-border bg-bg-subtle p-3">
+        <div className="mt-4 rounded-control border border-border bg-bg-subtle p-3">
           <p className="mb-2 text-xs font-semibold text-fg-muted">{tFallback(t, "gradeSection", "Grade this answer")}</p>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="w-24 shrink-0">

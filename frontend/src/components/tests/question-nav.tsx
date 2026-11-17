@@ -42,7 +42,7 @@ export function QuestionNav({
   const currentList = bySection.get(activeSection) ?? questions;
 
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:mx-0 sm:rounded-t-[12px] sm:border sm:px-4">
+    <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:mx-0 sm:rounded-t-card sm:border sm:px-4">
       {/* mobile: horizontal scroll pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
         {/* Scores pill */}

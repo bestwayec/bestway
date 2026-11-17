@@ -27,7 +27,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
 
   return (
-    <div className={cn("space-y-2 rounded-[10px] border p-3 transition-colors", hasResponse ? "border-brand/30 bg-brand-subtle/20" : "border-border bg-surface")}>
+    <div className={cn("space-y-2 rounded-control border p-3 transition-colors", hasResponse ? "border-brand/30 bg-brand-subtle/20" : "border-border bg-surface")}>
       <div className="flex items-start gap-2.5">
         <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.displayNumber ?? q.number}</span>
         {q.prompt && q.prompt.trim() ? (
@@ -71,7 +71,7 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
                   return (
-                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-[8px] border px-3 py-2 text-sm leading-snug transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
+                    <label key={option} className={cn("flex min-h-11 items-center gap-3 rounded-field border px-3 py-2 text-sm leading-snug transition-colors focus-within:ring-2 focus-within:ring-brand/30", checked ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg" : "border-border text-fg", unavailable || disabled ? "opacity-50" : "cursor-pointer hover:border-brand/50 hover:bg-bg-subtle")}>
                       <input type={multiple ? "checkbox" : "radio"} name={`objective-answer-${q.id}`} value={option} checked={checked} disabled={disabled || unavailable}
                         onChange={() => onChange(multiple ? toggleObjectiveOption(value, option, options) : option)} className="size-4 shrink-0 accent-brand" />
                       <span className="min-w-0 flex-1 break-words">{option}</span>

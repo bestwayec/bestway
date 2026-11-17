@@ -44,7 +44,7 @@ export function PreviewBottomNavigation({
                   aria-current={p.key === active.key ? "page" : undefined}
                   title={p.title?.trim() || `Passage ${p.ordinal}`}
                   className={cn(
-                    "h-7 shrink-0 rounded-[6px] border px-2 text-xs font-semibold tabular-nums transition-colors",
+                    "h-7 shrink-0 rounded-chip border px-2 text-xs font-semibold tabular-nums transition-colors",
                     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                     p.key === active.key
                       ? "border-brand bg-brand-subtle text-brand-subtle-fg"
@@ -75,7 +75,7 @@ export function PreviewBottomNavigation({
                 title={`Q${q.number}${answered ? " — answered" : ""}`}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "grid size-7 shrink-0 place-items-center rounded-[6px] border text-xs font-semibold tabular-nums transition-colors",
+                  "grid size-7 shrink-0 place-items-center rounded-chip border text-xs font-semibold tabular-nums transition-colors",
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                   answered
                     ? "border-brand/60 bg-brand-subtle text-brand-subtle-fg"

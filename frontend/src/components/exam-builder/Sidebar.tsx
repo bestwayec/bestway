@@ -68,7 +68,7 @@ function OutlineButton({
       onClick={onClick}
       aria-current={current ?? active ? "true" : undefined}
       aria-label={label}
-      className={`relative flex w-full items-start gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[13px] transition focus-visible:outline-2 focus-visible:outline-brand ${
+      className={`relative flex w-full items-start gap-2 rounded-field px-2.5 py-1.5 text-left text-[13px] transition focus-visible:outline-2 focus-visible:outline-brand ${
         active
           ? "bg-brand-subtle font-semibold text-fg"
           : "text-fg-muted hover:bg-surface-hover hover:text-fg"
@@ -150,7 +150,7 @@ export function Sidebar({
 
   return (
     <aside className="w-60 shrink-0 lg:w-64" aria-label={tx(t, "outline", "Exam outline")}>
-      <div className="scrollbar-thin sticky top-32 max-h-[calc(100vh-10rem)] space-y-3 overflow-y-auto rounded-[12px] border border-border bg-surface p-3">
+      <div className="scrollbar-thin sticky top-32 max-h-[calc(100vh-10rem)] space-y-3 overflow-y-auto rounded-card border border-border bg-surface p-3">
         <div className="px-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
             {tx(t, "outline", "Exam outline")}
@@ -194,7 +194,7 @@ export function Sidebar({
                     disabled={busy}
                     onClick={() => handleAddUnit(skill)}
                     aria-label={`${meta.addUnit} — ${name} ${tx(t, "notConfigured", "not configured")}`}
-                    className="flex w-full items-center gap-2 rounded-[8px] border border-dashed border-border-strong px-2.5 py-1.5 text-left text-[13px] text-fg-subtle transition hover:border-brand hover:text-fg disabled:opacity-50"
+                    className="flex w-full items-center gap-2 rounded-field border border-dashed border-border-strong px-2.5 py-1.5 text-left text-[13px] text-fg-subtle transition hover:border-brand hover:text-fg disabled:opacity-50"
                   >
                     <Icon className="size-4 shrink-0" aria-hidden />
                     <span className="min-w-0 flex-1 truncate">{name}</span>

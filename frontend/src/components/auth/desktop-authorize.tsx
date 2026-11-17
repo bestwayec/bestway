@@ -153,7 +153,7 @@ export function DesktopAuthorize() {
       </div>
 
       {phase.name === "invalid" && (
-        <p role="alert" className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger">
+        <p role="alert" className="rounded-field border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger">
           {t("invalidParams")}
         </p>
       )}
@@ -163,7 +163,7 @@ export function DesktopAuthorize() {
           <p className="text-sm text-fg-muted">{t("needLogin")}</p>
           <Link
             href={`/login?next=${loginNext}`}
-            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
+            className="inline-flex w-full items-center justify-center rounded-card bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
           >
             {t("loginButton")}
           </Link>
@@ -178,7 +178,7 @@ export function DesktopAuthorize() {
               {t("deviceLabel")} · {device.slice(0, 8)}…
             </span>
           </p>
-          <label className="flex cursor-pointer items-start gap-3 rounded-[12px] border border-border/70 bg-black/20 px-3.5 py-3 text-left transition hover:border-brand/40 has-checked:border-brand/60 has-checked:bg-brand/5">
+          <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border/70 bg-black/20 px-3.5 py-3 text-left transition hover:border-brand/40 has-checked:border-brand/60 has-checked:bg-brand/5">
             <input
               type="checkbox"
               checked={agreed}
@@ -226,13 +226,13 @@ export function DesktopAuthorize() {
 
       {phase.name === "error" && (
         <div className="space-y-4">
-          <p role="alert" className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger">
+          <p role="alert" className="rounded-field border border-danger-border bg-danger-bg px-3 py-2.5 text-sm text-danger">
             {phase.message}
           </p>
           <button
             type="button"
             onClick={() => setPhase({ name: "ready" })}
-            className="w-full rounded-[12px] border border-border px-4 py-2.5 text-sm font-medium text-fg hover:bg-surface"
+            className="w-full rounded-card border border-border px-4 py-2.5 text-sm font-medium text-fg hover:bg-surface"
           >
             {t("retryButton")}
           </button>
@@ -249,7 +249,7 @@ export function DesktopAuthorize() {
               <button
                 type="button"
                 onClick={() => copyCode(phase.code)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-border px-3 text-sm text-fg hover:bg-surface"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-field border border-border px-3 text-sm text-fg hover:bg-surface"
               >
                 {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
                 {copied ? t("copied") : t("copyButton")}
@@ -268,7 +268,7 @@ export function DesktopAuthorize() {
               <button
                 type="button"
                 onClick={() => copyCallbackUrl(phase.callbackUrl)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-border px-3 text-sm text-fg hover:bg-surface"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-field border border-border px-3 text-sm text-fg hover:bg-surface"
               >
                 {copiedUrl ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
                 {copiedUrl ? t("copied") : t("copyButton")}
@@ -277,7 +277,7 @@ export function DesktopAuthorize() {
           </Field>
           <a
             href={phase.callbackUrl}
-            className="inline-flex w-full items-center justify-center rounded-[12px] bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
+            className="inline-flex w-full items-center justify-center rounded-card bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg hover:brightness-110"
           >
             {t("openAppButton")}
           </a>

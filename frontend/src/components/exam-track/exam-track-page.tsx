@@ -67,7 +67,7 @@ export function ExamTrackPage() {
       </div>
 
       {save.isError && (
-        <div role="alert" className="rounded-[8px] border border-danger bg-danger-bg/50 p-3 text-sm text-danger">
+        <div role="alert" className="rounded-field border border-danger bg-danger-bg/50 p-3 text-sm text-danger">
           {save.error.message}
         </div>
       )}

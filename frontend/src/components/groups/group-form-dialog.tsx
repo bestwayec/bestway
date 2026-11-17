@@ -192,7 +192,7 @@ function GroupFormFields({
                 onClick={() => toggleDay(d)}
                 aria-pressed={days.has(d)}
                 className={cn(
-                  "size-9 rounded-[8px] border text-xs font-medium capitalize transition-colors",
+                  "size-9 rounded-field border text-xs font-medium capitalize transition-colors",
                   days.has(d)
                     ? "border-brand bg-brand-subtle text-brand-subtle-fg"
                     : "border-border bg-surface text-fg-muted hover:bg-surface-hover",

@@ -68,7 +68,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
             <Button
               asChild
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-lg shadow-emerald-900/30"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-lg"
             >
               <a href={`/api/backend/mock/attempts/${attempt.id}/certificate`} target="_blank" rel="noopener noreferrer">
                 <Download className="size-4 mr-1.5" />

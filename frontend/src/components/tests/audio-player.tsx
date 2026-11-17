@@ -42,7 +42,7 @@ export function AudioPlayer({
       : "Audio preview — placeholder";
 
   return (
-    <div className="rounded-[10px] border border-border bg-bg-subtle p-3 sm:p-4">
+    <div className="rounded-control border border-border bg-bg-subtle p-3 sm:p-4">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-fg">
         <span className="grid size-7 place-items-center rounded-full bg-brand-subtle text-brand-subtle-fg">
           <Headphones className="size-4" />
@@ -59,7 +59,7 @@ export function AudioPlayer({
           {fallbackLabel}
         </span>
       </div>
-      <audio controls src={url} preload="none" className="h-10 w-full rounded-[8px]">
+      <audio controls src={url} preload="none" className="h-10 w-full rounded-field">
         <track kind="captions" />
       </audio>
       <p className="mt-1.5 text-[11px] leading-relaxed text-fg-subtle">
@@ -95,7 +95,7 @@ export function AudioscriptDetails({
   return (
     <details
       open={open}
-      className="group rounded-[10px] border border-border bg-surface open:bg-bg-subtle"
+      className="group rounded-control border border-border bg-surface open:bg-bg-subtle"
     >
       <summary
         className={cn(

@@ -114,7 +114,7 @@ function PreviewBody({
     <>
         {group.title?.trim() && <h3 className="font-semibold text-fg">{group.title}</h3>}
         {skill === "listening" && !group.hasAudio && (
-          <p className="mt-3 rounded-[8px] border border-warning/25 bg-warning/5 px-3 py-2 text-xs text-fg-muted">
+          <p className="mt-3 rounded-field border border-warning/25 bg-warning/5 px-3 py-2 text-xs text-fg-muted">
             {tx(t, "noAudioPreview", "No audio uploaded — students see no player here.")}
           </p>
         )}
@@ -130,7 +130,7 @@ function PreviewBody({
             alt=""
             loading="lazy"
             decoding="async"
-            className="mt-3 max-h-96 w-full rounded-[8px] border border-border object-contain"
+            className="mt-3 max-h-96 w-full rounded-field border border-border object-contain"
           />
         )}
         {group.instructions?.trim() && (
@@ -139,12 +139,12 @@ function PreviewBody({
 
         <div className={cn("mt-3 min-w-0", hasPassage && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6")}>
           {hasPassage && !hasGappedContent && (
-            <div className="mb-4 max-h-[40vh] min-w-0 overflow-y-auto whitespace-pre-line break-words rounded-[8px] border border-border bg-bg-subtle p-3 text-sm leading-relaxed text-fg sm:p-4 lg:mb-0 lg:max-h-[70vh]">
+            <div className="mb-4 max-h-[40vh] min-w-0 overflow-y-auto whitespace-pre-line break-words rounded-field border border-border bg-bg-subtle p-3 text-sm leading-relaxed text-fg sm:p-4 lg:mb-0 lg:max-h-[70vh]">
               {group.passageText}
             </div>
           )}
           {hasGappedContent ? (
-            <div className="overflow-x-auto rounded-[8px] border border-border bg-surface p-3 sm:p-4">
+            <div className="overflow-x-auto rounded-field border border-border bg-surface p-3 sm:p-4">
               <GappedContent
                 contentHtml={group.contentHtml!}
                 questions={group.questions}

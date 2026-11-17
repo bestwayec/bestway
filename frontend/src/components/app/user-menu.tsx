@@ -57,7 +57,7 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-[10px] p-1 outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-brand/20">
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-control p-1 outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-brand/20">
         <Avatar name={user.name} size="sm" />
         <span className="hidden text-left sm:block">
           <span className="block max-w-32 truncate text-sm font-medium text-fg">{user.name}</span>

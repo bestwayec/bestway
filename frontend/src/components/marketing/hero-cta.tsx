@@ -11,7 +11,7 @@ export function HeroCta({ label }: { label: string }) {
   const isLoggedIn = !!me?.user;
 
   if (isLoading) {
-    return <span className="inline-flex h-12 w-44 animate-pulse rounded-[14px] bg-border/40" aria-hidden />;
+    return <span className="inline-flex h-12 w-44 animate-pulse rounded-card bg-border/40" aria-hidden />;
   }
 
   if (isLoggedIn) return null;
@@ -32,7 +32,7 @@ export function HeroCta({ label }: { label: string }) {
       followMouse
       proximity={250}
       onClick={() => router.push("/register")}
-      className="shadow-lg shadow-brand/20"
+      className="shadow-lg"
     >
       {label}
       <ArrowRight className="size-5" />

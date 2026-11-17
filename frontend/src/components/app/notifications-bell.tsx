@@ -14,7 +14,7 @@ export function NotificationsBell() {
     <Link
       href="/notifications"
       aria-label={t("notifications")}
-      className="relative inline-flex size-8 items-center justify-center rounded-[8px] text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+      className="relative inline-flex size-8 items-center justify-center rounded-field text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
     >
       <Bell className="size-[18px]" />
       {count > 0 && (

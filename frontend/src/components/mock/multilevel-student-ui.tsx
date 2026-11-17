@@ -116,7 +116,7 @@ export function MultilevelSectionProgress({ current, complete = [], skills = MUL
         const active = skill === current;
         const done = complete.includes(skill);
         return <div key={skill} aria-current={active ? "step" : undefined} className={cn(
-          "flex items-center gap-2 rounded-[8px] border px-3 py-2 text-sm",
+          "flex items-center gap-2 rounded-field border px-3 py-2 text-sm",
           active ? "border-brand bg-brand-subtle text-brand-subtle-fg" : "border-border bg-surface text-fg-muted",
         )}>
           {done ? <CheckCircle2 className="size-4 text-success" /> : active ? <Circle className="size-4 fill-current" /> : <LockKeyhole className="size-3.5" />}
@@ -148,7 +148,7 @@ export function MultilevelTaskProgress({
 }) {
   const t = useTranslations("mock.runnerUx");
   const sectionName = SKILL_NAMES[skill];
-  return <div className="space-y-2 rounded-[10px] border border-border bg-bg-subtle p-3 sm:p-4">
+  return <div className="space-y-2 rounded-control border border-border bg-bg-subtle p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="font-semibold text-fg">{sectionName}</p>

@@ -103,7 +103,7 @@ function AuditRow({
       {hasDetails && (
         <details className="mt-2">
           <summary className="cursor-pointer text-xs text-fg-subtle">{entityLabel}</summary>
-          <pre className="scrollbar-thin mt-1 max-h-40 overflow-auto rounded-[6px] bg-bg-subtle p-2 text-[11px] leading-relaxed text-fg-muted">
+          <pre className="scrollbar-thin mt-1 max-h-40 overflow-auto rounded-chip bg-bg-subtle p-2 text-[11px] leading-relaxed text-fg-muted">
             {JSON.stringify({ old: item.oldValue, new: item.newValue }, null, 2)}
           </pre>
         </details>

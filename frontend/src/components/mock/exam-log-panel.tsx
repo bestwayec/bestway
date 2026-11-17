@@ -40,7 +40,7 @@ export function ExamLogPanel({ events }: { events: { event: string; date: string
       ) : (
         <ol className="mt-3 space-y-1.5 text-sm">
           {events.map((item, index) => (
-            <li key={`${item.date}-${index}`} className="flex flex-wrap items-baseline gap-x-3 rounded-[8px] bg-bg-subtle px-3 py-2">
+            <li key={`${item.date}-${index}`} className="flex flex-wrap items-baseline gap-x-3 rounded-field bg-bg-subtle px-3 py-2">
               <span className="font-mono text-xs tabular-nums text-fg-muted">{time(item.date)}</span>
               <span className="text-fg">{KNOWN.has(item.event) ? t(`events.${item.event}`) : t("events.other", { event: item.event })}</span>
             </li>

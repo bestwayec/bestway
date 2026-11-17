@@ -354,7 +354,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting || words.length === 0}
-          className="bg-brand hover:bg-brand-hover text-brand-fg px-6 font-semibold shadow-lg shadow-brand/20"
+          className="bg-brand hover:bg-brand-hover text-brand-fg px-6 font-semibold shadow-lg"
         >
           {isSubmitting ? t("saving") : t("publish")}
         </Button>

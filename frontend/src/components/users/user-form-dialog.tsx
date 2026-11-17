@@ -142,7 +142,7 @@ function UserFormFields({
     <>
       <DialogBody className="space-y-4">
         {error && (
-          <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {error}
           </div>
         )}
@@ -157,7 +157,7 @@ function UserFormFields({
                   onClick={() => setRole(r)}
                   aria-pressed={role === r}
                   className={cn(
-                    "rounded-[8px] border px-3 py-2 text-sm font-medium transition-colors",
+                    "rounded-field border px-3 py-2 text-sm font-medium transition-colors",
                     role === r
                       ? "border-brand bg-brand-subtle text-brand-subtle-fg"
                       : "border-border bg-surface text-fg-muted hover:bg-surface-hover",

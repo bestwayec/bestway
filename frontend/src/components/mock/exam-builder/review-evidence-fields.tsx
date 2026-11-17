@@ -30,7 +30,7 @@ export function ReviewEvidenceFields({ question, skill, source, audioDurationSec
   const clockError = seconds !== null && (Number.isNaN(seconds) || (audioDurationSec ? seconds > audioDurationSec : false));
 
   return (
-    <fieldset className="space-y-2 rounded-[8px] border border-dashed border-border p-3" data-testid="review-evidence-fields">
+    <fieldset className="space-y-2 rounded-field border border-dashed border-border p-3" data-testid="review-evidence-fields">
       <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{t("legend")}</legend>
       <p className="text-xs text-fg-muted">{t(skill === "listening" ? "hintListening" : "hintReading")}</p>
       <label htmlFor={`${id}-evidence`} className="block text-sm font-medium text-fg">{t("evidenceLabel")}</label>

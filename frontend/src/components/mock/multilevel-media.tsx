@@ -360,10 +360,10 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   const uploaded = recorded && ['idle', 'saved'].includes(status);
   const activeStep = uploaded ? 3 : ['finalizing', 'uploading', 'retry'].includes(status) ? 2 : ['ready', 'starting', 'preparing', 'recording'].includes(status) ? 1 : 0;
   const hint = uploaded ? 'uploadedHint' : status === 'preparing' ? 'preparationHint' : status === 'recording' ? 'recordingHint' : ['finalizing', 'uploading', 'retry'].includes(status) ? 'uploadHint' : 'microphoneHint';
-  return <div className="my-3 space-y-3 rounded-[12px] border border-brand/25 bg-bg-subtle p-4">
+  return <div className="my-3 space-y-3 rounded-card border border-brand/25 bg-bg-subtle p-4">
     {prompt && <ReadPromptButton text={prompt} silence={['recording', 'finalizing', 'uploading'].includes(status)} />}
     <ol aria-label={t('speakingSteps')} className="grid grid-cols-3 gap-2">
-      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex min-w-0 flex-col items-center gap-1 rounded-[8px] px-1.5 py-2 text-center text-xs font-medium sm:flex-row sm:gap-1.5 sm:px-2 sm:text-left', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
+      {['microphoneStep', 'recordStep', 'uploadStep'].map((label, index) => <li key={label} aria-current={index === activeStep ? 'step' : undefined} className={cn('flex min-w-0 flex-col items-center gap-1 rounded-field px-1.5 py-2 text-center text-xs font-medium sm:flex-row sm:gap-1.5 sm:px-2 sm:text-left', index < activeStep ? 'bg-success/10 text-success' : index === activeStep ? 'bg-brand-subtle text-brand-subtle-fg' : 'bg-surface text-fg-subtle')}>
         {index < activeStep ? <CheckCircle2 aria-hidden className="size-3.5 shrink-0" /> : <Circle aria-hidden className="size-3.5 shrink-0" />}<span>{t(label)}</span>
       </li>)}
     </ol>
@@ -391,8 +391,8 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       <Button size="sm" variant="outline" type="button" className="min-h-[48px] px-4 font-medium touch-manipulation" disabled={['checking','starting','preparing','recording','finalizing','uploading'].includes(status)} onClick={() => void preflight()}><Mic aria-hidden />{t('testMicrophone')}</Button>
       {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label={t('inputLevel')} min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[50px] min-w-[140px] px-6 text-sm font-bold bg-brand text-bg hover:bg-brand-hover shadow-md active:scale-95 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
     </>}
-    {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
-    {uploaded && <div className="space-y-1.5 rounded-[8px] border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}
+    {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-field border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
+    {uploaded && <div className="space-y-1.5 rounded-field border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
   </div>;
 }

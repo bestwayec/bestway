@@ -744,7 +744,7 @@ export function GamifiedVideoPlayer({
       {/* Obsidian-Emerald Fallback / Stream Recovery Card */}
       {streamError && !completionData && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-bg-subtle/95 p-6 text-center backdrop-blur-md animate-in fade-in duration-300">
-          <div className="size-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+          <div className="size-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
             <AlertTriangle className="size-8" />
           </div>
           <h4 className="text-lg font-bold text-white mb-2">Video oqimi qayta ishlanmoqda</h4>
@@ -756,7 +756,7 @@ export function GamifiedVideoPlayer({
               type="button"
               size="sm"
               onClick={handleRetry}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2 rounded-xl transition-all"
             >
               <RotateCcw className="size-4 mr-2" />
               Qayta urinish
@@ -781,7 +781,7 @@ export function GamifiedVideoPlayer({
           onClick={handleManualStart}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] cursor-pointer group/play transition-all"
         >
-          <div className="size-20 rounded-full bg-emerald-500/90 border-2 border-emerald-400 flex items-center justify-center text-slate-950 shadow-[0_0_35px_rgba(16,185,129,0.7)] group-hover/play:scale-110 transition-transform">
+          <div className="size-20 rounded-full bg-emerald-500/90 border-2 border-emerald-400 flex items-center justify-center text-slate-950 group-hover/play:scale-110 transition-transform">
             <Play className="size-9 fill-slate-950 ml-1" />
           </div>
           <span className="text-white font-bold text-sm mt-3 bg-slate-950/80 px-4 py-1.5 rounded-full border border-emerald-500/30 backdrop-blur shadow-lg">
@@ -1009,7 +1009,7 @@ export function GamifiedVideoPlayer({
       {/* Lesson Complete Celebration Modal */}
       {completionData && (
         <div className="absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
-          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center text-emerald-400 mb-4 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/60 flex items-center justify-center text-emerald-400 mb-4">
             <CheckCircle2 className="w-12 h-12" />
           </div>
 
