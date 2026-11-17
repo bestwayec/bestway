@@ -21,7 +21,7 @@ type ToolState = {
   onFocus: () => void;
 };
 
-const icon = "min-h-[40px] min-w-[40px] px-2 touch-manipulation";
+const icon = "min-h-11 min-w-11 px-2 touch-manipulation md:min-h-10 md:min-w-10";
 
 /** Highlights the selected words; without a selection it says how. Keeps the selection on press. */
 function useHighlight() {
@@ -39,7 +39,7 @@ export function RunnerTools({ infoOpen, onInfo, children, ...tools }: ToolState 
   const t = useTranslations("mock.runnerUx");
   const highlight = useHighlight();
   return (
-    <div className="flex items-center gap-0.5" role="group" aria-label={t("toolsLabel")}>
+    <div className="flex items-center gap-0.5 border-x border-border px-1 max-sm:border-x-0 max-sm:px-0" role="group" aria-label={t("toolsLabel")}>
       <Button size="sm" variant={infoOpen ? "subtle" : "ghost"} className={icon} aria-expanded={infoOpen} aria-controls="runner-info" onClick={onInfo} aria-label={t("infoTitle")} title={t("infoTitle")}>
         <Info className="size-4" aria-hidden />
       </Button>
@@ -48,8 +48,8 @@ export function RunnerTools({ infoOpen, onInfo, children, ...tools }: ToolState 
           <Highlighter className="size-4" aria-hidden />
         </Button>
         <Button size="sm" variant={tools.notesOpen ? "subtle" : "ghost"} className={cn(icon, "relative")} aria-expanded={tools.notesOpen} onClick={tools.onNotes} aria-label={t("notesButton", { count: tools.notesCount })} title={t("notesButton", { count: tools.notesCount })}>
-          <StickyNote className="size-4 text-warning" aria-hidden />
-          {tools.notesCount > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-warning px-1 text-[10px] font-bold leading-4 text-warning-fg" aria-hidden>{tools.notesCount}</span>}
+          <StickyNote className="size-4" aria-hidden />
+          {tools.notesCount > 0 && <span className="absolute right-0.5 top-0.5 rounded-full bg-warning px-1 text-xs font-bold leading-4 text-warning-fg" aria-hidden>{tools.notesCount}</span>}
         </Button>
         {tools.vocab !== null && (
           <Button size="sm" variant={tools.vocab ? "subtle" : "ghost"} className={icon} aria-pressed={tools.vocab} onClick={tools.onVocab} aria-label={t("vocab")} title={t("vocab")}>
@@ -70,7 +70,7 @@ export function PhoneToolsRow({ toolbar, ...tools }: ToolState & { toolbar: Reac
   const t = useTranslations("mock.runnerUx");
   const te = useTranslations("mock.examTools");
   const highlight = useHighlight();
-  const item = "min-h-[40px] justify-start gap-2 px-3 text-sm";
+  const item = "min-h-11 justify-start gap-2 px-3 text-sm";
   return (
     <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 2xl:hidden" role="group" aria-label={t("toolsLabel")}>
       <Button size="sm" variant="outline" className={cn(item, "md:hidden")} onMouseDown={(event) => event.preventDefault()} onClick={highlight}><Highlighter className="size-4" aria-hidden />{t("highlight")}</Button>

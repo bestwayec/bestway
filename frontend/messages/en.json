@@ -1201,7 +1201,20 @@
       "paragraphCount": "{count, plural, one {# paragraph} other {# paragraphs}}",
       "timeOnTask": "{minutes} min on this task",
       "timeOnTaskOf": "{minutes} min on this task · suggested {suggested} min",
-      "shortcutsButton": "Keyboard shortcuts (?)"
+      "shortcutsButton": "Keyboard shortcuts (?)",
+      "previousTask": "Previous",
+      "nextTask": "Next",
+      "partN": "Part {n}",
+      "pictureFor": "{title} — picture",
+      "pictureForPart": "Picture for this part",
+      "speakingPart": "Speaking part",
+      "responsesCount": "{count, plural, one {# response} other {# responses}}",
+      "responseTiming": "Response timing",
+      "map": "Map",
+      "mapFor": "{title} — map",
+      "mapForPart": "Map for this part",
+      "passageOrQuestions": "Show the passage or the questions",
+      "writingModeLabel": "How you answer"
     },
     "title": "Mock exams",
     "partialPracticeResult": "Selected task practice result",
@@ -1569,7 +1582,8 @@
       "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now.",
       "listeningResume": "Continue listening",
       "listeningStartFailed": "The recording could not be started. Check the connection and press Play again.",
-      "listeningRulesScheduled": "Exam mode: after Play you first have time to read the questions, then the recording plays once, with no pause or rewind. If the page reloads, it continues from where the exam is."
+      "listeningRulesScheduled": "Exam mode: after Play you first have time to read the questions, then the recording plays once, with no pause or rewind. If the page reloads, it continues from where the exam is.",
+      "timeWarningOne": "1 minute left. Check your answers."
     },
     "textTools": {
       "toolbar": "Text tools",

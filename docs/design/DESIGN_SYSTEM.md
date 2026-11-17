@@ -119,16 +119,24 @@ Gallery: `/dev/ui` (development builds only; 404 in production).
 
 ## 5. Exam runner
 
-The runner header must answer, at a glance: which section and exam, which question, how many are
-answered, how many are flagged, whether answers are saved, how much time is left, and how to
-finish.
+The runner header must answer, at a glance: which section and exam, how many are answered, whether
+answers are saved, how much time is left, and how to finish. One 56 px row on every size.
 
-- Row 1: section badge + exam title; timer pill (only when the attempt has a deadline; turns
-  `danger` under 5 minutes); next-section button (full test); **Finish** (`primary`).
-- Row 2, status chips: current question, answered / total, flagged count (`warning`, only when > 0),
-  save state (`success` saved, neutral saving, `danger` error or offline with a Retry button).
-  Only the save chip is an `aria-live` region.
-- Question palette: answered = brand, flagged = warning, current = ring. Legend always visible.
+- Header: section badge + exam title · answered chip · save state · tools (Info, highlight, notes,
+  dictionary, focus — grouped between dividers, neutral icons) · **timer** (bordered 36 px pill, 16 px
+  tabular digits) · next section (full test) · **Finish** (`primary`). Phones keep title, save state,
+  Info, timer and Finish; everything else is under Info. Buttons are 44 px on phones.
+- Timer (`lib/exam-settings.ts`): neutral above 5:00, `warning` colours under 5 minutes, `danger` in the
+  last minute. A calm notice appears under the clock for ten seconds at 5:00 and at 1:00 (and is
+  announced once); nothing flashes or pulses. The time always comes from the server.
+- Canvas: the exam area spans the window (max 1680 px) on a `bg-subtle` page; at 1366×768 the passage
+  and questions take ~84% of the height. Reading passage on wide screens is a plain column (no card in
+  a card), 17 px / 1.75; the split is resizable (`ReadingSplitDivider`).
+- Question card: number square (filled brand when answered) · prompt 16 px · **Flag** at the end of the
+  same row (`aria-pressed`, 44 px on phones, label from 1024 px).
+- Navigator: answered = brand fill, unanswered = outlined, flagged = warning outline + corner mark,
+  current = 2 px ring; legend in the "All questions" sheet. On phones the sheet slides up from the
+  bottom with 44 px cells.
 
 Never change timing, text selection rules, autosave, audio or microphone behaviour when restyling the
 runner.

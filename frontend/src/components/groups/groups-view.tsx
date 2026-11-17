@@ -72,7 +72,7 @@ export function GroupAnalyticsPanel({
 
   return (
     <Card className="mb-6 overflow-hidden border-border">
-      <CardHeader className="border-b border-border bg-surface-subtle/50 pb-4">
+      <CardHeader className="border-b border-border bg-bg-subtle/50 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <CardTitle className="text-base font-bold text-fg">
@@ -155,7 +155,7 @@ export function GroupAnalyticsPanel({
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-border bg-surface-subtle/60 p-4">
+              <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-fg-muted">
                     Guruh O&apos;rtacha Balli (Average Band)
@@ -172,7 +172,7 @@ export function GroupAnalyticsPanel({
                 )}
               </div>
 
-              <div className="rounded-xl border border-border bg-surface-subtle/60 p-4">
+              <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-fg-muted">Faol o&apos;quvchilar</span>
                   <Users className="size-4 text-emerald-500" />
@@ -182,7 +182,7 @@ export function GroupAnalyticsPanel({
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border bg-surface-subtle/60 p-4">
+              <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-fg-muted">
                     Topshirilgan imtihonlar soni
@@ -204,7 +204,7 @@ export function GroupAnalyticsPanel({
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-surface-subtle text-xs font-semibold text-fg-muted">
+                  <tr className="border-b border-border bg-bg-subtle text-xs font-semibold text-fg-muted">
                     <th className="px-3.5 py-2.5">#</th>
                     <th className="px-3.5 py-2.5">O&apos;quvchi F.I.Sh.</th>
                     <th className="px-3.5 py-2.5 text-center">Topshirilgan imtihonlar</th>

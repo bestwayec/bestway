@@ -41,19 +41,21 @@ export function broadcastVolume(volume: number) {
 }
 
 /**
- * Time warnings. Reading and Writing warn when 10 and 5 minutes are left (the clock
- * flashes in IELTS on computer); every section shows the danger colour in the last minute.
+ * Time warnings (DIRECTION.md, exam window): a calm notice when 5 minutes and 1 minute are left. The
+ * clock turns to the warning colour under 5 minutes and the danger colour in the last minute; nothing
+ * flashes. The time itself always comes from the server.
  */
-export type TimerAlert = "none" | "ten" | "five";
+export type TimerAlert = "none" | "five" | "one";
 export const ALERT_SECONDS = 10;
-/** The clock flashes for ten seconds after 10:00 and after 5:00 (Reading and Writing only). */
+/** The notice shows for ten seconds after 5:00 and after 1:00, where the section warns. */
 export function timerAlert(ms: number, warnSkill: boolean): TimerAlert {
   if (!warnSkill) return "none";
   const window = ALERT_SECONDS * 1000;
-  if (ms <= 10 * 60_000 && ms > 10 * 60_000 - window) return "ten";
   if (ms <= 5 * 60_000 && ms > 5 * 60_000 - window) return "five";
+  if (ms <= 60_000 && ms > 60_000 - window) return "one";
   return "none";
 }
-export function timerTone(ms: number): "normal" | "danger" {
-  return ms <= 60_000 ? "danger" : "normal";
+export function timerTone(ms: number): "normal" | "warning" | "danger" {
+  if (ms <= 60_000) return "danger";
+  return ms <= 5 * 60_000 ? "warning" : "normal";
 }

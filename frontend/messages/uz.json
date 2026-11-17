@@ -1201,7 +1201,20 @@
       "paragraphCount": "{count} ta abzats",
       "timeOnTask": "Bu topshiriqqa {minutes} daqiqa",
       "timeOnTaskOf": "Bu topshiriqqa {minutes} daqiqa · tavsiya {suggested} daqiqa",
-      "shortcutsButton": "Klaviatura yorliqlari (?)"
+      "shortcutsButton": "Klaviatura yorliqlari (?)",
+      "previousTask": "Oldingi",
+      "nextTask": "Keyingi",
+      "partN": "{n}-qism",
+      "pictureFor": "{title} — rasm",
+      "pictureForPart": "Bu qism uchun rasm",
+      "speakingPart": "Speaking qismi",
+      "responsesCount": "{count} ta javob",
+      "responseTiming": "Javob vaqti",
+      "map": "Xarita",
+      "mapFor": "{title} — xarita",
+      "mapForPart": "Bu qism uchun xarita",
+      "passageOrQuestions": "Matn yoki savollarni ko'rsatish",
+      "writingModeLabel": "Javob berish usuli"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
@@ -1569,7 +1582,8 @@
       "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi.",
       "listeningResume": "Tinglashni davom ettirish",
       "listeningStartFailed": "Yozuvni boshlab bo‘lmadi. Internetni tekshiring va Play tugmasini qayta bosing.",
-      "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi."
+      "listeningRulesScheduled": "Imtihon rejimi: Play bosilgach avval savollarni o‘qish vaqti beriladi, keyin yozuv bir marta, to‘xtatmasdan va orqaga qaytarmasdan eshittiriladi. Sahifa qayta yuklansa, yozuv imtihon turgan joydan davom etadi.",
+      "timeWarningOne": "1 daqiqa qoldi. Javoblaringizni tekshiring."
     },
     "textTools": {
       "toolbar": "Matn vositalari",

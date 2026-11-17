@@ -226,25 +226,25 @@ export function CbtSectionStepper({
           isAns ? ` - ${t("stateAnswered")}` : ""
         }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
         className={cn(
-          "relative flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold tabular-nums transition-colors touch-manipulation md:size-8",
-          isCurrent && "ring-2 ring-brand ring-offset-1 ring-offset-surface font-black",
+          "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-field text-sm font-bold tabular-nums transition-colors duration-fast touch-manipulation md:size-9",
+          isCurrent && "ring-2 ring-fg ring-offset-2 ring-offset-surface",
           isDtm
             ? isFlag
               ? "bg-warning text-warning-fg border border-warning shadow-xs"
               : isAns
               ? "bg-brand text-brand-fg border border-brand shadow-xs"
               : "bg-surface-hover text-fg-muted border border-border-strong"
-            : isFlag
-            ? "bg-warning/25 text-warning ring-1 ring-warning"
             : isAns
-            ? "bg-brand text-brand-fg shadow-sm"
+            ? "bg-brand text-brand-fg"
             : isCurrentPart
-            ? "bg-bg-subtle text-fg border border-border/80 hover:bg-surface-hover"
-            : "bg-surface text-fg-muted border border-border/40 hover:text-fg"
+            ? "border border-border-strong bg-surface text-fg hover:bg-surface-hover"
+            : "border border-border bg-bg-subtle text-fg-muted hover:text-fg",
+          // Flagged keeps its answered / unanswered fill and adds a warning outline and corner mark.
+          isFlag && !isDtm && "outline outline-2 -outline-offset-2 outline-warning",
         )}
       >
         {q.label}
-        {isFlag && <span className="absolute -top-1 -right-1 text-[9px] leading-none text-warning" aria-hidden>⚑</span>}
+        {isFlag && <span className="absolute right-0 top-0 size-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-warning" aria-hidden />}
       </button>
     );
   };
@@ -261,13 +261,13 @@ export function CbtSectionStepper({
   });
   const onLastPart = activePartIndex >= safeGroups.length - 1;
   const legend = (
-    <div className="flex flex-wrap items-center gap-3 text-[11px] text-fg-muted">
-      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-brand" />{t("legendAnswered")}</span>
-      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-warning" />{t("legendFlagged")}</span>
-      <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-border bg-border-strong" />{t("legendUnanswered")}</span>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-muted">
+      <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] bg-brand" />{t("legendAnswered")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface outline outline-2 -outline-offset-2 outline-warning" />{t("legendFlagged")}</span>
+      <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] border border-border-strong bg-surface" />{t("legendUnanswered")}</span>
     </div>
   );
-  const iconButton = "min-h-[40px] min-w-[40px] px-2 touch-manipulation";
+  const iconButton = "min-h-11 min-w-11 px-2 touch-manipulation md:min-h-10 md:min-w-10";
 
   return (
     // At least one screen tall, so the bar sits at the bottom even under a short part.
@@ -283,7 +283,7 @@ export function CbtSectionStepper({
       <div
         data-runner-bottom
         className={cn(
-          "sticky bottom-0 z-30 -mx-4 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:mx-0 sm:rounded-t-card sm:border-x sm:px-3",
+          "sticky bottom-0 z-30 -mx-4 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:mx-0 sm:px-3",
           isDtm ? "border-border-strong bg-surface" : "border-border/80 bg-surface/95",
         )}
       >
@@ -314,14 +314,14 @@ export function CbtSectionStepper({
                     title={part.label}
                     onClick={() => setActivePartIndex(idx)}
                     className={cn(
-                      "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors touch-manipulation",
+                      "flex min-h-10 shrink-0 items-center gap-1.5 rounded-control px-3 text-sm font-semibold transition-colors duration-fast touch-manipulation",
                       isActive ? "bg-brand text-brand-fg" : "text-fg-muted hover:bg-surface-hover hover:text-fg",
                     )}
                   >
                     <span>{part.shortLabel}</span>
                     <span
                       className={cn(
-                        "flex items-center gap-0.5 rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+                        "flex items-center gap-0.5 rounded-full px-1.5 text-xs font-bold tabular-nums",
                         isActive ? "bg-black/20 text-brand-fg dark:bg-fg/25" : "bg-bg-subtle text-fg-muted",
                         // Phones: the count on the open part only, so every part tab fits on one row.
                         !isActive && !part.isComplete && "max-sm:hidden",
@@ -357,7 +357,7 @@ export function CbtSectionStepper({
               aria-haspopup="dialog"
               aria-expanded={sheetOpen}
               onClick={() => setSheetOpen(true)}
-              className="min-h-[40px] flex-1 justify-start gap-1.5 px-2.5 text-xs font-semibold md:flex-none"
+              className="min-h-11 flex-1 justify-start gap-1.5 px-3 text-sm font-semibold md:min-h-10 md:flex-none"
               title={t("allQuestions")}
             >
               <LayoutGrid className="size-4" aria-hidden />
@@ -385,11 +385,11 @@ export function CbtSectionStepper({
               <ArrowRight className="size-4" aria-hidden />
             </Button>
             {onLastPart && (isFullTest && !isLastSection && onNextSection ? (
-              <Button type="button" size="sm" onClick={onNextSection} className="min-h-[40px] bg-brand px-3 text-xs font-semibold text-brand-fg shadow hover:bg-brand-hover touch-manipulation">
+              <Button type="button" size="sm" onClick={onNextSection} className="min-h-11 px-3 text-sm font-semibold touch-manipulation md:min-h-10">
                 {t("nextSection")} →
               </Button>
             ) : onSubmitSection ? (
-              <Button type="button" size="sm" onClick={onSubmitSection} className="min-h-[40px] bg-brand px-3 text-xs font-semibold text-brand-fg shadow hover:bg-brand-hover touch-manipulation">
+              <Button type="button" size="sm" onClick={onSubmitSection} className="min-h-11 px-3 text-sm font-semibold touch-manipulation md:min-h-10">
                 {t("submitSection")}
               </Button>
             ) : null)}
@@ -398,16 +398,18 @@ export function CbtSectionStepper({
       </div>
 
       {sheetOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setSheetOpen(false)}>
+        <div className="anim-fade fixed inset-0 z-[60] flex items-end justify-center bg-black/45 sm:items-center sm:p-4" data-state="open" onClick={() => setSheetOpen(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="question-sheet-title"
-            className="max-h-[75dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 shadow-2xl sm:max-w-2xl sm:rounded-2xl"
+            data-state="open"
+            className="anim-sheet max-h-[80dvh] w-full overflow-y-auto rounded-t-dialog border border-border bg-surface px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-e3 sm:anim-pop sm:max-w-2xl sm:rounded-dialog sm:pt-4"
             onClick={(event) => event.stopPropagation()}
           >
+            <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-border-strong sm:hidden" aria-hidden />
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 id="question-sheet-title" className="text-sm font-semibold text-fg">
+              <h2 id="question-sheet-title" className="text-base font-semibold text-fg">
                 {t("palette")} ({answeredTotal}/{flattenedQuestions.length})
               </h2>
               <Button ref={sheetClose} type="button" variant="ghost" size="sm" className={iconButton} onClick={() => setSheetOpen(false)} aria-label={t("closePalette")}>
@@ -426,8 +428,8 @@ export function CbtSectionStepper({
             >
               {partStats.map((part, idx) => (
                 <section key={idx} aria-label={part.label}>
-                  <p className="mb-1.5 text-xs font-semibold text-fg-muted">{part.label} · {part.answeredCount}/{part.totalCount}</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <p className="mb-2 text-sm font-semibold text-fg-muted">{part.label} · {part.answeredCount}/{part.totalCount}</p>
+                  <div className="flex flex-wrap gap-2">
                     {flattenedQuestions.filter((q) => q.groupIndex === idx).map((q) => paletteButton(q, sheetTabStop, () => setSheetOpen(false)))}
                   </div>
                 </section>
