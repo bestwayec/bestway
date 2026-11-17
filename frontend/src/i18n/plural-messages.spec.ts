@@ -17,6 +17,9 @@ describe("count messages with the real formatter", () => {
     expect(t("groups.studentsCount", { count: 1 })).toBe("1 student");
     expect(t("mock.examTools.timeWarning", { minutes: 1 })).toBe("1 minute left.");
     expect(t("mock.examTools.timeWarning", { minutes: 5 })).toBe("5 minutes left.");
+    expect(t("mock.runnerUx.paragraphCount", { count: 1 })).toBe("1 paragraph");
+    expect(t("mock.runnerUx.paragraphCount", { count: 3 })).toBe("3 paragraphs");
+    expect(t("mock.runnerUx.timeOnTaskOf", { minutes: 12, suggested: 20 })).toBe("12 min on this task · suggested 20 min");
   });
 
   it("a word target is text (150+, ~150, 150–250), never a plural", () => {
