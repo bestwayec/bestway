@@ -161,6 +161,7 @@ def for_attempt(actor,identifier):
     teacher_confirmed = bool(latest) and all(j.status == 'SUCCEEDED' and (j.final_score_source == 'TEACHER' or j.id in reviewed_ids) for j in latest)
 
     criteria_scores = {}
+    criteria_by_part = {}
     strengths = []
     weaknesses = []
     mistakes_and_fixes = []
@@ -172,6 +173,7 @@ def for_attempt(actor,identifier):
         active_res = val.get('approvedFeedback') or val.get('finalResult') or (val.get('evaluation') or {}).get('result')
         if not active_res:
             continue
+        criteria_by_part[val['skill']] = results.criteria_by_part(active_res, dict(program=val.get('program')))
         for p in active_res.get('parts', []):
             crit = p.get('criteria') or {}
             evid = p.get('evidence') or {}
@@ -245,6 +247,8 @@ def for_attempt(actor,identifier):
         teacherComment=teacher_comment,
         teacher_reviewed_by=reviewed_by,
         criteria_scores=criteria_scores,
+        criteria_by_part=criteria_by_part,
+        provisional_skills=results.provisional_skills(latest, reviewed_ids),
         strengths=strengths,
         weaknesses=weaknesses,
         mistakes_and_fixes=mistakes_and_fixes,

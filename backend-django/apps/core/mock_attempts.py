@@ -948,8 +948,14 @@ def detail(actor, attempt_id):
     try:
         from apps.legacy_schema.models import AssessmentEvaluation, AssessmentJob
 
-        from .assessment_results import format_diagnostic_feedback
-        jobs = AssessmentJob.objects.filter(attempt_id=attempt_id).order_by('-generation', '-created_at')
+        from .assessment_results import assessment_reviewed_job_ids, format_diagnostic_feedback, provisional_skills
+        jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id).order_by('-generation', '-created_at'))
+        latest = {}
+        for job in jobs:
+            latest.setdefault(job.skill, job)
+        reviewed_ids = assessment_reviewed_job_ids([job.id for job in latest.values()])
+        provisional = provisional_skills(latest.values(), reviewed_ids)
+        result['provisionalSkills'] = provisional
         diagnostic = {}
         for job in jobs:
             if job.skill not in diagnostic:
@@ -959,7 +965,8 @@ def detail(actor, attempt_id):
                     if ev and ev.result:
                         res = ev.result
                 if res:
-                    diagnostic[job.skill] = format_diagnostic_feedback(res)
+                    diagnostic[job.skill] = dict(format_diagnostic_feedback(res, job.input_snapshot),
+                        provisional=job.skill in provisional)
         if diagnostic:
             result['diagnosticFeedback'] = diagnostic
     except Exception:
