@@ -118,7 +118,7 @@ function countAnswered(exam: MockExamDetail, answers: Record<string, string>, au
 }
 
 // Sections list their groups as `groups` (newer exams) or `parts` (older ones).
-type SectionGroupShape = { hasAudio?: boolean; questions?: Array<{ id: string; type?: unknown }> };
+type SectionGroupShape = { title?: string | null; hasAudio?: boolean; questions?: Array<{ id: string; number?: number; displayNumber?: number | null; type?: unknown }> };
 function sectionGroupsOf(section: unknown): SectionGroupShape[] {
   const value = section as { groups?: unknown; parts?: unknown } | null | undefined;
   if (value?.groups) return value.groups as SectionGroupShape[];
@@ -130,6 +130,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const tc = useTranslations("common");
   const tm = useTranslations("errorPanel");
   const tr = useTranslations("mock.runnerUx");
+  const ts = useTranslations("mock.sectionStart");
   const examQ = useMockExam(attempt.examId);
   const audioTimestampsQ = useAudioTimestamps(attempt.examId);
   const exam = React.useMemo(() => practiceExam(examQ.data, attempt), [examQ.data, attempt]);
@@ -772,6 +773,15 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     ? sectionGroupsOf(section).flatMap((g) => (g?.questions || []).map((q) => q.id)).filter((id) => (answers[id] ?? "") !== "")
     : [];
   const canClearSection = clearableIds.length > 0 && !submit.isPending;
+  // The open part (the one holding the current question), offered as the smaller thing to clear.
+  const clearGroups = sectionGroupsOf(section);
+  const openPartIndex = clearGroups.findIndex((g) => (g?.questions || []).some((q) => (q.displayNumber ?? q.number) === activeQuestionNumber));
+  const clearPart = sectionEditable && clearGroups.length > 1 && openPartIndex >= 0
+    ? {
+        name: clearGroups[openPartIndex]?.title || ts(section?.skill === "reading" ? "passageN" : "partN", { n: openPartIndex + 1 }),
+        ids: (clearGroups[openPartIndex]?.questions || []).map((q) => q.id).filter((id) => (answers[id] ?? "") !== ""),
+      }
+    : null;
 
   const sectionSwitcher = (kind: "compact" | "full") => exam.sections.map((s, i) => (
     <button
@@ -931,11 +941,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           open={clearOpen}
           sectionName={section ? section.title || t(`skills.${section.skill}`) : ""}
           count={clearableIds.length}
+          part={clearPart ? { name: clearPart.name, count: clearPart.ids.length } : null}
           onCancel={() => setClearOpen(false)}
-          onConfirm={() => {
+          onConfirm={(scope) => {
             setClearOpen(false);
-            for (const id of clearableIds) setAnswer(id, "");
-            toast.success(tr("clearDone", { count: clearableIds.length }));
+            const ids = scope === "part" && clearPart ? clearPart.ids : clearableIds;
+            for (const id of ids) setAnswer(id, "");
+            toast.success(tr("clearDone", { count: ids.length }));
           }}
         />
         <VocabLookup enabled={!strict && vocabOn} />

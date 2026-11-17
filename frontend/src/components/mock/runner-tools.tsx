@@ -84,25 +84,50 @@ export function PhoneToolsRow({ toolbar, ...tools }: ToolState & { toolbar: Reac
   );
 }
 
-/** Clearing answers asks first and says what stays (recordings, other sections). */
-export function ClearAnswersDialog({ open, sectionName, count, onCancel, onConfirm }: {
+export type ClearScope = "part" | "section";
+
+/**
+ * Clearing answers asks first and says what stays (recordings, other parts and sections).
+ * With more than one part the student chooses: only the open part, or the whole section.
+ */
+export function ClearAnswersDialog({ open, sectionName, count, part, onCancel, onConfirm }: {
   open: boolean;
   sectionName: string;
   count: number;
+  /** The open part, when the section has more than one; its answered count may be 0. */
+  part?: { name: string; count: number } | null;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (scope: ClearScope) => void;
 }) {
   const t = useTranslations("mock.runnerUx");
+  const [scope, setScope] = React.useState<ClearScope>("part");
+  const partUsable = Boolean(part && part.count > 0);
+  const effective: ClearScope = partUsable ? scope : "section";
+  React.useEffect(() => { if (open) setScope(partUsable ? "part" : "section"); }, [open, partUsable]);
+  const removing = effective === "part" && part ? part.count : count;
+  const option = (value: ClearScope, label: string, disabled = false) => (
+    <label className={cn("flex items-center gap-2 rounded-[8px] border p-2.5 text-sm", effective === value ? "border-danger/50 bg-danger-bg" : "border-border bg-surface", disabled ? "opacity-60" : "cursor-pointer")}>
+      <input type="radio" name="clear-scope" value={value} checked={effective === value} disabled={disabled} onChange={() => setScope(value)} className="accent-danger" />
+      <span className="text-fg">{label}</span>
+    </label>
+  );
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!value) onCancel(); }}>
       <DialogContent className="max-w-md border border-border bg-bg-subtle p-6 text-fg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-fg"><Trash2 className="size-5 text-danger" aria-hidden />{t("clearTitle", { section: sectionName })}</DialogTitle>
-          <DialogDescription className="text-sm text-fg-muted">{t("clearBody", { count })}</DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-fg"><Trash2 className="size-5 text-danger" aria-hidden />{part ? t("clearTitleAny") : t("clearTitle", { section: sectionName })}</DialogTitle>
+          <DialogDescription className="text-sm text-fg-muted">{t(effective === "part" ? "clearBodyPart" : "clearBody", { count: removing })}</DialogDescription>
         </DialogHeader>
+        {part && (
+          <fieldset className="space-y-1.5" data-testid="clear-scope">
+            <legend className="sr-only">{t("clearScopeLabel")}</legend>
+            {option("part", t("clearScopePart", { part: part.name, count: part.count }), !partUsable)}
+            {option("section", t("clearScopeSection", { section: sectionName, count }))}
+          </fieldset>
+        )}
         <DialogFooter className="flex flex-col gap-2 sm:flex-row">
           <Button type="button" variant="outline" className="min-h-[44px] flex-1" onClick={onCancel}>{t("clearCancel")}</Button>
-          <Button type="button" className="min-h-[44px] flex-1 bg-danger font-bold text-white hover:bg-danger/90" onClick={onConfirm}>{t("clearConfirm")}</Button>
+          <Button type="button" className="min-h-[44px] flex-1 bg-danger font-bold text-white hover:bg-danger/90" disabled={removing === 0} onClick={() => onConfirm(effective)}>{t("clearConfirm")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

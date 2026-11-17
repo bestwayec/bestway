@@ -10,7 +10,12 @@ vi.mock("next-intl", () => ({
     const lookup = (path: string) => path.split(".").reduce<unknown>((value, key) => value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined, en.assessment);
     return Object.assign((key: string, values?: Record<string, unknown>) => {
       const value = lookup(key);
-      return typeof value === "string" ? value.replace(/\{(\w+)\}/g, (_, name: string) => String(values?.[name] ?? name)) : key;
+      if (typeof value !== "string") return key;
+      // Enough ICU for these messages: {n, plural, one {# x} other {# xs}}, then {name}.
+      return value
+        .replace(/\{(\w+), plural, one \{([^}]*)\} other \{([^}]*)\}\}/g, (_, name: string, one: string, other: string) =>
+          (Number(values?.[name]) === 1 ? one : other).replace("#", String(values?.[name])))
+        .replace(/\{(\w+)\}/g, (_, name: string) => String(values?.[name] ?? name));
     }, { has: (key: string) => typeof lookup(key) === "string" });
   },
 }));

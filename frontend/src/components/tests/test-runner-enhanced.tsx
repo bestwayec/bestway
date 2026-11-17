@@ -441,7 +441,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                     <span>
                       {q.type === "essay" || q.type === "speaking_prompt" ? tFallback(t, "essayHint", "Write as clearly as you can. Your answer is saved automatically.") : null}
                     </span>
-                    <span className="tabular-nums">{(answers[q.questionId] ?? "").trim().split(/\s+/).filter(Boolean).length} words</span>
+                    <span className="tabular-nums">{tc("wordCount", { count: (answers[q.questionId] ?? "").trim().split(/\s+/).filter(Boolean).length })}</span>
                   </div>
                 </div>
               )}
