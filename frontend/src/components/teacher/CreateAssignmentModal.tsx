@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, Calendar, CheckCircle2, Clock, FileText, Loader2, Target, X } from "lucide-react";
+import { BookOpen, Target } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 
 const GRAMMAR_29_LESSONS = [
   { order: 1, title: "Future Continuous" },
@@ -40,6 +42,12 @@ const GRAMMAR_29_LESSONS = [
   { order: 29, title: "Used to and Would" },
 ];
 
+/** Exams a group can be given as homework (ids of the seeded exams; titles are their product names). */
+const ASSIGNABLE_EXAMS = [
+  { id: "multilevel-test-01-gym-vegetarian", title: "Multi-Level CEFR Mock Test 1 (Gym & Diet)" },
+  { id: "ielts-academic-mock-01", title: "IELTS Academic Mock Test (Full 4-skills)" },
+];
+
 interface CreateAssignmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,17 +56,14 @@ interface CreateAssignmentModalProps {
   onCreated: () => void;
 }
 
-export function CreateAssignmentModal({
-  open,
-  onOpenChange,
-  cohortId,
-  cohortName,
-  onCreated,
-}: CreateAssignmentModalProps) {
+export function CreateAssignmentModal({ open, onOpenChange, cohortId, cohortName, onCreated }: CreateAssignmentModalProps) {
+  const t = useTranslations("teacherWorkspace");
+  const tc = useTranslations("common");
   const [type, setType] = React.useState<"lesson" | "exam">("lesson");
   const [title, setTitle] = React.useState("");
+  const [titleError, setTitleError] = React.useState<string | undefined>();
   const [selectedLessonOrder, setSelectedLessonOrder] = React.useState<number>(1);
-  const [selectedExamId, setSelectedExamId] = React.useState("multilevel-test-01-gym-vegetarian");
+  const [selectedExamId, setSelectedExamId] = React.useState(ASSIGNABLE_EXAMS[0].id);
   const [deadline, setDeadline] = React.useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
@@ -68,25 +73,23 @@ export function CreateAssignmentModal({
   const [minPassPercent, setMinPassPercent] = React.useState(80);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Auto-fill default title when selecting lesson
+  // A default title for the chosen lesson or exam; the teacher can change it.
   React.useEffect(() => {
     if (type === "lesson") {
       const lesson = GRAMMAR_29_LESSONS.find((l) => l.order === selectedLessonOrder);
-      if (lesson) {
-        setTitle(`${lesson.order}-dars: ${lesson.title} video va test vazifasi`);
-      }
+      if (lesson) setTitle(t("lessonTaskTitle", { n: lesson.order, title: lesson.title }));
     } else {
-      setTitle("Multi-Level Mock Test 1 (Writing & Speaking)");
+      setTitle(ASSIGNABLE_EXAMS.find((e) => e.id === selectedExamId)?.title ?? "");
     }
-  }, [type, selectedLessonOrder]);
+  }, [type, selectedLessonOrder, selectedExamId, t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("Vazifa sarlavhasini kiriting");
+      setTitleError(t("assignmentTitleRequired"));
       return;
     }
-
+    setTitleError(undefined);
     try {
       setIsSubmitting(true);
       const payload: Record<string, unknown> = {
@@ -95,172 +98,82 @@ export function CreateAssignmentModal({
         deadline: new Date(deadline).toISOString(),
         min_pass_percent: minPassPercent,
       };
-
-      if (type === "lesson") {
-        payload.lesson_id = `lesson-grammar-${selectedLessonOrder}`;
-      } else {
-        payload.exam_id = selectedExamId;
-      }
-
+      if (type === "lesson") payload.lesson_id = `lesson-grammar-${selectedLessonOrder}`;
+      else payload.exam_id = selectedExamId;
       await apiClient.post("/teacher/assignments", payload);
-      toast.success("Uyga vazifa muvaffaqiyatli biriktirildi!");
+      toast.success(t("assignmentCreated"));
       onCreated();
       onOpenChange(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Xatolik yuz berdi";
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : tc("unknownError"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const select = "h-11 w-full rounded-control border border-input-border bg-surface px-3 text-base text-fg sm:text-sm focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25";
+  const typeButton = (value: "lesson" | "exam", Icon: typeof BookOpen, label: string) => (
+    <button
+      type="button"
+      aria-pressed={type === value}
+      onClick={() => setType(value)}
+      className={cn(
+        "flex min-h-10 items-center justify-center gap-2 rounded-field text-sm font-semibold transition-colors duration-fast",
+        type === value ? "bg-surface text-fg shadow-e1" : "text-fg-muted hover:text-fg",
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+      {label}
+    </button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border border-border/80 bg-surface-elevated/95 p-6 backdrop-blur-xl sm:rounded-2xl">
-        <DialogHeader className="space-y-1 text-left">
-          <DialogTitle className="text-xl font-bold text-fg">
-            Yangi Uyga Vazifa Biriktirish
-          </DialogTitle>
-          <DialogDescription className="text-sm text-fg-muted">
-            Guruh: <span className="font-semibold text-brand">{cohortName}</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {/* Type Toggle */}
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-muted/50 p-1 border border-border/50">
-            <button
-              type="button"
-              onClick={() => setType("lesson")}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                type === "lesson"
-                  ? "bg-brand text-brand-fg shadow-sm"
-                  : "text-fg-muted hover:text-fg hover:bg-surface-elevated"
-              }`}
-            >
-              <BookOpen className="h-4 w-4" />
-              29 ta Darslik
-            </button>
-            <button
-              type="button"
-              onClick={() => setType("exam")}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                type === "exam"
-                  ? "bg-brand text-brand-fg shadow-sm"
-                  : "text-fg-muted hover:text-fg hover:bg-surface-elevated"
-              }`}
-            >
-              <Target className="h-4 w-4" />
-              IELTS / CEFR Mock
-            </button>
-          </div>
-
-          {/* Title */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-fg-muted">Vazifa Nomi</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              placeholder="Masalan: 5-dars testini topshirish"
-              required
-            />
-          </div>
-
-          {/* Content Selector */}
-          {type === "lesson" ? (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted">Grammatika Darsini Tanlang</label>
-              <select
-                value={selectedLessonOrder}
-                onChange={(e) => setSelectedLessonOrder(Number(e.target.value))}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              >
-                {GRAMMAR_29_LESSONS.map((l) => (
-                  <option key={l.order} value={l.order}>
-                    {l.order}-dars: {l.title}
-                  </option>
-                ))}
-              </select>
+      <DialogContent>
+        <form onSubmit={handleSubmit} noValidate>
+          <DialogHeader>
+            <DialogTitle>{t("newAssignmentTitle")}</DialogTitle>
+            <DialogDescription>{t("forGroup", { name: cohortName })}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 px-5 py-2">
+            <div className="grid grid-cols-2 gap-1 rounded-control border border-border bg-bg-subtle p-1" role="group" aria-label={t("assignmentType")}>
+              {typeButton("lesson", BookOpen, t("typeLesson"))}
+              {typeButton("exam", Target, t("typeExam"))}
             </div>
-          ) : (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted">Imtihonni Tanlang</label>
-              <select
-                value={selectedExamId}
-                onChange={(e) => setSelectedExamId(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              >
-                <option value="multilevel-test-01-gym-vegetarian">
-                  Multi-Level CEFR Mock Test 1 (Gym & Diet)
-                </option>
-                <option value="ielts-academic-mock-01">
-                  IELTS Academic Mock Test (Full 4-skills)
-                </option>
-              </select>
-            </div>
-          )}
 
-          {/* Deadline & Min Score */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-brand" />
-                Muddati (Deadline)
-              </label>
-              <input
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-xs text-fg focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-fg-muted flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand" />
-                O'tish Balli ({minPassPercent}%)
-              </label>
-              <input
-                type="range"
-                min="50"
-                max="100"
-                step="5"
-                value={minPassPercent}
-                onChange={(e) => setMinPassPercent(Number(e.target.value))}
-                className="w-full accent-brand"
-              />
+            {type === "lesson" ? (
+              <Field label={t("chooseLesson")} htmlFor="assignment-lesson">
+                <select id="assignment-lesson" value={selectedLessonOrder} onChange={(e) => setSelectedLessonOrder(Number(e.target.value))} className={select}>
+                  {GRAMMAR_29_LESSONS.map((l) => (
+                    <option key={l.order} value={l.order}>{t("lessonOption", { n: l.order, title: l.title })}</option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <Field label={t("chooseExam")} htmlFor="assignment-exam">
+                <select id="assignment-exam" value={selectedExamId} onChange={(e) => setSelectedExamId(e.target.value)} className={select}>
+                  {ASSIGNABLE_EXAMS.map((exam) => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
+                </select>
+              </Field>
+            )}
+
+            <Field label={t("assignmentTitle")} htmlFor="assignment-title" error={titleError}>
+              <Input id="assignment-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </Field>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label={t("deadline")} htmlFor="assignment-deadline">
+                <Input id="assignment-deadline" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} required />
+              </Field>
+              <Field label={t("passMark", { percent: minPassPercent })} htmlFor="assignment-pass">
+                <input id="assignment-pass" type="range" min="50" max="100" step="5" value={minPassPercent} onChange={(e) => setMinPassPercent(Number(e.target.value))} className="h-11 w-full accent-brand" />
+              </Field>
             </div>
           </div>
-
-          {/* Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Bekor qilish
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isSubmitting}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Biriktirilmoqda...
-                </>
-              ) : (
-                "Vazifani Biriktirish"
-              )}
-            </Button>
-          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{tc("cancel")}</Button>
+            <Button type="submit" loading={isSubmitting}>{t("assign")}</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

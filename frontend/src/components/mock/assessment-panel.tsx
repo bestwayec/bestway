@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Award, CheckCircle2, Image as ImageIcon, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -561,19 +562,41 @@ export function AssessmentReviewForm({ job, attemptId }: { job: AssessmentJobVie
     });
   }
 
-  return <form onSubmit={submit} className="space-y-3 rounded-control border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
-    <h4 className="font-semibold">{t("teacherReview")}</h4>
-    <p className="text-xs text-fg-muted">{t("auditNotice")}</p>
-    <label className="block space-y-1 text-sm"><span>{t("action")}</span>
-      <select value={action} onChange={(event) => { setAction(event.target.value as AssessmentReviewAction); setError(null); }} className="w-full rounded-field border border-border bg-surface p-2 text-fg">
-        {ACTIONS.map((value) => <option value={value} key={value}>{t(`actions.${value}`)}</option>)}
-      </select>
-    </label>
+  // Keyboard: Ctrl/⌘ + Enter saves the review from any field.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.requestSubmit(); }
+  };
+
+  return <form onSubmit={submit} onKeyDown={onKeyDown} className="space-y-3 rounded-card border border-border bg-bg-subtle p-4" aria-label={t("teacherReview")}>
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <h4 className="font-semibold">{t("teacherReview")}</h4>
+      <p className="text-sm text-fg-subtle">{t("saveShortcut")}</p>
+    </div>
+    <p className="text-sm text-fg-muted">{t("auditNotice")}</p>
+    {/* The actions as one segmented choice: accept the AI suggestion, or edit it. */}
+    <div role="radiogroup" aria-label={t("action")} className="flex flex-wrap gap-1 rounded-control border border-border bg-surface p-1">
+      {ACTIONS.map((value) => (
+        <button
+          type="button"
+          role="radio"
+          key={value}
+          value={value}
+          aria-checked={action === value}
+          onClick={() => { setAction(value); setError(null); }}
+          className={cn(
+            "min-h-10 rounded-field px-3 text-sm font-medium transition-colors duration-fast",
+            action === value ? "bg-brand text-brand-fg" : "text-fg-muted hover:bg-surface-hover hover:text-fg",
+          )}
+        >
+          {t(`actions.${value}`)}
+        </button>
+      ))}
+    </div>
     {action === "ACCEPT" && !canAcceptAssessment(job) && <p className="text-sm text-fg-muted">{t("acceptUnavailable")}</p>}
     {action === "OVERRIDE" && <div className="space-y-3">
       {job.skill === "speaking" && job.program !== "MULTILEVEL" && <p className="text-sm text-warning">{t("teacherPronunciation")}</p>}
-      {job.parts.map((part) => <fieldset key={part.id} className="space-y-2 rounded-field border border-border p-3"><legend className="px-1 text-sm font-semibold">{part.task}</legend>
-        {(job.program === "MULTILEVEL" ? ["rawScore"] : criterionKeys(job)).map((key) => <label key={key} className="flex items-center justify-between gap-3 text-sm">
+      {job.parts.map((part) => <fieldset key={part.id} className="grid gap-2 rounded-control border border-border bg-surface p-3 sm:grid-cols-2 xl:grid-cols-4"><legend className="px-1 text-sm font-semibold">{part.task}</legend>
+        {(job.program === "MULTILEVEL" ? ["rawScore"] : criterionKeys(job)).map((key) => <label key={key} className="flex items-center justify-between gap-3 text-sm sm:flex-col sm:items-start sm:gap-1">
           <span>{key === "rawScore" ? t("rawPart") : t(`criteria.${key}`)} (0–{job.program === "MULTILEVEL" ? part.max : 9})</span>
           <Input type="number" min={0} max={job.program === "MULTILEVEL" ? part.max : 9} step={0.5} required value={scores[part.id]?.[key] ?? ""} className="w-24"
             onChange={(event) => setScores((current) => ({ ...current, [part.id]: { ...current[part.id], [key]: event.target.value } }))} />

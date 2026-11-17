@@ -1,17 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, CheckCircle, Clock, GraduationCap, Plus, RefreshCw, Trophy, Users } from "lucide-react";
+import { ClipboardList, GraduationCap, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/feedback";
+import { StatTile } from "@/components/ui/stat-tile";
+import { PageHeader } from "@/components/app/page-header";
 import { apiClient } from "@/lib/api-client";
 import { CohortListItem, TeacherCohortList } from "./TeacherCohortList";
 import { CohortDetailData, CohortProgressTable } from "./CohortProgressTable";
 import { CreateAssignmentModal } from "./CreateAssignmentModal";
 
 export function TeacherWorkspaceView() {
+  const t = useTranslations("teacherWorkspace");
   const [cohorts, setCohorts] = React.useState<CohortListItem[]>([]);
   const [selectedCohortId, setSelectedCohortId] = React.useState<string | null>(null);
   const [cohortDetail, setCohortDetail] = React.useState<CohortDetailData | null>(null);
@@ -28,12 +30,12 @@ export function TeacherWorkspaceView() {
         setSelectedCohortId(res[0].id);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Guruhlarni yuklashda xatolik";
+      const msg = err instanceof Error ? err.message : t("loadGroupsError");
       toast.error(msg);
     } finally {
       setIsLoadingCohorts(false);
     }
-  }, [selectedCohortId]);
+  }, [selectedCohortId, t]);
 
   const fetchCohortAnalytics = React.useCallback(async (cohortId: string) => {
     try {
@@ -41,12 +43,12 @@ export function TeacherWorkspaceView() {
       const res = await apiClient.get<CohortDetailData>(`/teacher/cohorts/${cohortId}/analytics`);
       setCohortDetail(res);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Tahlilni yuklashda xatolik";
+      const msg = err instanceof Error ? err.message : t("loadAnalyticsError");
       toast.error(msg);
     } finally {
       setIsLoadingDetail(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     fetchCohorts(true);
@@ -67,56 +69,32 @@ export function TeacherWorkspaceView() {
   const selectedCohort = cohorts.find((c) => c.id === selectedCohortId);
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Stats */}
-      <div className="relative overflow-hidden rounded-3xl border border-brand/20 bg-gradient-to-br from-surface-elevated/90 via-surface/90 to-surface-muted/80 p-6 backdrop-blur-2xl shadow-xl shadow-border">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand/10 blur-3xl"
-        />
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader title={t("title")} description={t("subtitle")} />
 
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
-              <GraduationCap className="h-3.5 w-3.5" />
-              Teacher Workspace v1.0
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
-              O'qituvchi Kabineti
-            </h1>
-            <p className="text-xs text-fg-muted sm:text-sm max-w-xl">
-              O'quv guruhlaringizni boshqaring, 29 ta grammatika darslari va IELTS imtihonlaridan muddatli topshiriqlar bering hamda o'quvchilar natijalarini kuzating.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 shrink-0">
-            <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-brand">{cohorts.length}</div>
-              <div className="text-[11px] text-fg-muted">Guruhlar</div>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-info">{totalStudents}</div>
-              <div className="text-[11px] text-fg-muted">O'quvchilar</div>
-            </div>
-            <div className="rounded-2xl border border-border/60 bg-surface/60 p-3 text-center">
-              <div className="text-xl font-bold text-warning">{totalAssignments}</div>
-              <div className="text-[11px] text-fg-muted">Vazifalar</div>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-3 gap-3">
+        <StatTile label={t("statGroups")} value={cohorts.length} icon={GraduationCap} loading={isLoadingCohorts} />
+        <StatTile label={t("statStudents")} value={totalStudents} icon={Users} loading={isLoadingCohorts} />
+        <StatTile label={t("statAssignments")} value={totalAssignments} icon={ClipboardList} loading={isLoadingCohorts} />
       </div>
 
-      {/* Cohorts List */}
+      {isLoadingCohorts && cohorts.length === 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      ) : (
       <TeacherCohortList
         cohorts={cohorts}
         selectedCohortId={selectedCohortId}
         onSelectCohort={(id) => setSelectedCohortId(id)}
         onCohortCreated={() => fetchCohorts(false)}
       />
+      )}
 
       {/* Cohort Progress Matrix */}
       {selectedCohortId && cohortDetail && (
-        <div className="mt-8 pt-4 border-t border-border/60">
+        <div className="border-t border-border pt-6">
           <CohortProgressTable
             data={cohortDetail}
             isLoading={isLoadingDetail}

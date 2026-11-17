@@ -7,6 +7,10 @@ import { describe, expect, it } from "vitest";
  * Comments are stripped first: code comments in Uzbek are fine. Extend FILES as more screens are migrated.
  */
 const FILES = [
+  "src/components/teacher/TeacherWorkspaceView.tsx",
+  "src/components/teacher/TeacherCohortList.tsx",
+  "src/components/teacher/CohortProgressTable.tsx",
+  "src/components/teacher/CreateAssignmentModal.tsx",
   "src/components/mock/mock-runner.tsx",
   "src/components/mock/section-transition-modal.tsx",
   "src/components/dashboard/student-dashboard.tsx",

@@ -1,27 +1,16 @@
 "use client";
 
 import * as React from "react";
-import {
-  AlertCircle,
-  Calendar,
-  Check,
-  CheckCircle2,
-  Clock,
-  Copy,
-  ExternalLink,
-  Plus,
-  Send,
-  Sparkles,
-  Trophy,
-  Users,
-  XCircle,
-} from "lucide-react";
+import { Check, ClipboardList, Copy, Plus, Send, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/feedback";
+import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import { useCohortShareUrl } from "./TeacherCohortList";
 
 export interface CohortAssignmentItem {
   id: string;
@@ -78,310 +67,172 @@ interface CohortProgressTableProps {
 }
 
 /** The only place a non-exam homework gets its score: the teacher enters it. */
-function GradeCell({ assignmentId, studentId, onGraded }: { assignmentId: string; studentId: string; onGraded?: () => void }) {
+function GradeCell({ assignmentId, studentId, studentName, onGraded }: { assignmentId: string; studentId: string; studentName: string; onGraded?: () => void }) {
+  const t = useTranslations("teacherWorkspace");
+  const tc = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)}
-        className="min-h-8 rounded-md border border-brand/40 px-2 text-[11px] font-semibold text-brand hover:bg-brand-subtle">
-        Baholang
-      </button>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} aria-label={t("gradeFor", { name: studentName })}>
+        {t("grade")}
+      </Button>
     );
   }
   const score = Number(value);
   const valid = value.trim() !== "" && Number.isInteger(score) && score >= 0 && score <= 100;
   const save = async () => {
+    if (!valid) return;
     setSaving(true);
     try {
       await apiClient.post(`/teacher/assignments/${assignmentId}/grade`, { student_id: studentId, score_percent: score });
-      toast.success("Baho saqlandi");
+      toast.success(t("gradeSaved"));
       setOpen(false);
       onGraded?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Bahoni saqlab bo'lmadi");
+      toast.error(err instanceof Error ? err.message : t("gradeSaveFailed"));
     } finally {
       setSaving(false);
     }
   };
+  // Keyboard: Enter saves, Escape cancels.
   return (
     <div className="flex items-center justify-center gap-1">
-      <input type="number" min={0} max={100} inputMode="numeric" aria-label="Baho, foizda (0–100)" value={value}
+      <input
+        ref={inputRef}
+        type="number"
+        min={0}
+        max={100}
+        inputMode="numeric"
+        aria-label={t("gradeInputLabel", { name: studentName })}
+        value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="h-8 w-14 rounded-md border border-border bg-surface px-1 text-center text-xs text-fg" />
-      <button type="button" disabled={!valid || saving} onClick={() => void save()}
-        className="min-h-8 rounded-md bg-brand px-2 text-[11px] font-semibold text-brand-fg disabled:opacity-50">
-        {saving ? "…" : "Saqlash"}
-      </button>
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void save(); } else if (e.key === "Escape") setOpen(false); }}
+        className="h-10 w-16 rounded-control border border-input-border bg-surface px-2 text-center text-sm tabular-nums text-fg"
+      />
+      <Button type="button" size="sm" disabled={!valid} loading={saving} onClick={() => void save()}>
+        {tc("save")}
+      </Button>
     </div>
   );
 }
 
-export function CohortProgressTable({
-  data,
-  isLoading,
-  onOpenCreateAssignment,
-  onGraded,
-}: CohortProgressTableProps) {
+export function CohortProgressTable({ data, isLoading, onOpenCreateAssignment, onGraded }: CohortProgressTableProps) {
+  const t = useTranslations("teacherWorkspace");
+  const shareUrl = useCohortShareUrl();
   const [copied, setCopied] = React.useState(false);
-
   const { cohort, assignments, students } = data;
 
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(cohort.invite_code);
       setCopied(true);
-      toast.success("Taklif kodi nusxalandi!");
+      toast.success(t("codeCopied", { code: cohort.invite_code }));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Nusxalashda xatolik");
+      toast.error(t("copyFailed"));
     }
   };
-
-  const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(
-    "https://bestwayec.uz/en/dashboard"
-  )}&text=${encodeURIComponent(
-    `🎓 BestWay platformasida "${cohort.name}" guruhimiz ochildi! Taklif kodi: ${cohort.invite_code}\nHoziroq kiring va darslarni boshlang!`
-  )}`;
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-20 w-full rounded-2xl" />
-        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   const now = new Date();
+  const statusBadge = (label: string, variant: "success" | "warning" | "danger" | "neutral" | "info") => <Badge variant={variant} size="sm" className="tabular-nums">{label}</Badge>;
 
   return (
-    <div className="space-y-5">
-      {/* Cohort Header Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-brand/20 bg-surface-elevated/70 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+    <section className="space-y-4" aria-labelledby="cohort-detail-title">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-fg">
-              {cohort.name}
-            </h2>
-            <Badge
-              
-              className="border-brand/30 bg-brand/10 text-brand-subtle-fg font-mono text-xs px-2.5 py-0.5"
-            >
-              Kod: {cohort.invite_code}
-            </Badge>
+            <h2 id="cohort-detail-title" className="text-xl font-semibold text-fg">{cohort.name}</h2>
+            <Badge variant="outline" className="font-mono">{t("codeLabel", { code: cohort.invite_code })}</Badge>
           </div>
-          {cohort.description && (
-            <p className="text-xs text-fg-muted">{cohort.description}</p>
-          )}
-          <div className="flex items-center gap-4 text-xs text-fg-subtle pt-1">
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5 text-brand" />
-              {students.length} ta o'quvchi
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-info" />
-              {assignments.length} ta vazifa
-            </span>
-          </div>
+          {cohort.description && <p className="text-sm text-fg-muted">{cohort.description}</p>}
+          <p className="flex flex-wrap items-center gap-4 pt-1 text-sm text-fg-muted tabular-nums">
+            <span className="flex items-center gap-1"><Users className="size-4 text-fg-subtle" aria-hidden />{t("studentsCount", { count: students.length })}</span>
+            <span className="flex items-center gap-1"><ClipboardList className="size-4 text-fg-subtle" aria-hidden />{t("assignmentsCount", { count: assignments.length })}</span>
+          </p>
         </div>
-
-        {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            
-            onClick={copyCode}
-            className="border-border/70 hover:border-brand/40 text-xs gap-1.5"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-brand" />
-                Nusxalandi
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" />
-                Kodni nusxalash
-              </>
-            )}
+          <Button variant="ghost" onClick={() => void copyCode()}>
+            {copied ? <Check className="text-success" aria-hidden /> : <Copy aria-hidden />}
+            {copied ? t("copied") : t("copyCode")}
           </Button>
-          <a
-            href={telegramShareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info/10 px-3 py-1.5 text-xs font-medium text-info hover:bg-info/20 transition-colors"
-          >
-            <Send className="h-3.5 w-3.5" />
-            Telegramda Ulashish
+          <a href={shareUrl(cohort.name, cohort.invite_code)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg">
+            <Send className="size-4" aria-hidden />
+            {t("shareTelegram")}
           </a>
-          <Button
-            size="sm"
-            onClick={onOpenCreateAssignment}
-            className="bg-brand hover:bg-brand-hover text-brand-fg font-medium text-xs gap-1.5 shadow-sm"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Yangi Vazifa Biriktirish
+          <Button onClick={onOpenCreateAssignment}>
+            <Plus aria-hidden />
+            {t("newAssignment")}
           </Button>
         </div>
       </div>
 
-      {/* Analytics Matrix Table */}
       {students.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed border-border/80 bg-surface/50">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand-subtle-fg mb-3">
-            <Users className="h-6 w-6" />
-          </div>
-          <h3 className="text-sm font-semibold text-fg">
-            Hozircha guruhda o'quvchilar yo'q
-          </h3>
-          <p className="mt-1 max-w-sm text-xs text-fg-muted">
-            O'quvchilaringizga <span className="font-mono text-brand font-bold">{cohort.invite_code}</span> taklif kodini bering. Ular platformaga kirib guruhga a'zo bo'lishlari mumkin.
-          </p>
-          <Button
-            size="sm"
-            
-            onClick={copyCode}
-            className="mt-4 text-xs gap-1.5 border-brand/30 text-brand hover:bg-brand-hover/10"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Taklif kodini nusxalash
-          </Button>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title={t("noStudentsTitle")}
+          description={t("noStudentsBody", { code: cohort.invite_code })}
+          action={<Button variant="outline" onClick={() => void copyCode()}><Copy aria-hidden />{t("copyCode")}</Button>}
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border/80 bg-surface-elevated/50 shadow-sm backdrop-blur-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead>
-                <tr className="border-b border-border/70 bg-surface-muted/40 font-semibold text-fg-muted">
-                  <th className="py-3.5 px-4 min-w-[180px]">O'quvchi</th>
-                  <th className="py-3.5 px-3 text-center min-w-[90px]">Darslar (29)</th>
-                  <th className="py-3.5 px-3 text-center min-w-[90px]">O'rtacha Ball</th>
-                  {assignments.map((a) => (
-                    <th key={a.id} className="py-3.5 px-3 text-center min-w-[140px]">
-                      <div className="truncate font-medium text-fg" title={a.title}>
-                        {a.title}
-                      </div>
-                      <div className="text-[10px] text-fg-subtle font-normal mt-0.5">
-                        {new Date(a.deadline).toLocaleDateString()} gacha ({a.min_pass_percent}%)
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50 text-fg">
-                {students.map((student) => {
-                  return (
-                    <tr
-                      key={student.student_id}
-                      className="hover:bg-surface-hover/50 transition-colors"
-                    >
-                      {/* Student Info */}
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-fg">{student.name}</div>
-                        <div className="text-[11px] text-fg-muted font-mono">
-                          {student.phone || student.email || "—"}
-                        </div>
-                      </td>
-
-                      {/* Completed Video Lessons */}
-                      <td className="py-3 px-3 text-center">
-                        <span className="font-semibold text-brand">
-                          {student.lessons_completed}
-                        </span>
-                        <span className="text-[10px] text-fg-muted"> / 29</span>
-                      </td>
-
-                      {/* Average Score */}
-                      <td className="py-3 px-3 text-center">
-                        {student.total_submissions > 0 ? (
-                          <span
-                            className={`font-bold ${
-                              student.average_score >= 80
-                                ? "text-brand"
-                                : student.average_score >= 60
-                                ? "text-warning"
-                                : "text-danger"
-                            }`}
-                          >
-                            {student.average_score}%
-                          </span>
-                        ) : (
-                          <span className="text-fg-subtle">—</span>
-                        )}
-                      </td>
-
-                      {/* Submissions by assignment */}
-                      {assignments.map((a) => {
-                        const sub = student.submissions[a.id];
-                        const deadlineDate = new Date(a.deadline);
-                        const isOverdue = !sub && deadlineDate < now;
-
-                        if (sub && sub.is_passed) {
-                          return (
-                            <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-brand/20 text-brand-subtle-fg border border-brand/30 text-[11px] font-mono font-semibold px-2 py-0.5">
-                                {sub.score_percent}% ✓
-                              </Badge>
-                            </td>
-                          );
-                        }
-
-                        if (sub && sub.status === "awaiting_review") {
-                          return (
-                            <td key={a.id} className="py-3 px-2 text-center">
-                              <GradeCell assignmentId={a.id} studentId={student.student_id} onGraded={onGraded} />
-                            </td>
-                          );
-                        }
-
-                        if (sub && sub.status === "awaiting_result") {
-                          return (
-                            <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="border border-border bg-surface text-fg-muted text-[11px] font-semibold px-2 py-0.5">
-                                Kutilmoqda
-                              </Badge>
-                            </td>
-                          );
-                        }
-
-                        if (sub && !sub.is_passed) {
-                          return (
-                            <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-warning/20 text-warning border border-warning/30 text-[11px] font-mono font-semibold px-2 py-0.5">
-                                {sub.score_percent}% ✕
-                              </Badge>
-                            </td>
-                          );
-                        }
-
-                        if (isOverdue) {
-                          return (
-                            <td key={a.id} className="py-3 px-2 text-center">
-                              <Badge className="bg-danger/20 text-danger border border-danger/30 text-[10px] font-medium px-2 py-0.5">
-                                Topshirmadi ✕
-                              </Badge>
-                            </td>
-                          );
-                        }
-
-                        return (
-                          <td key={a.id} className="py-3 px-2 text-center">
-                            <Badge className="bg-info/10 text-info border border-info/20 text-[10px] font-medium px-2 py-0.5">
-                              Kutilmoqda ⏳
-                            </Badge>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="sticky-col min-w-44 bg-bg-subtle">{t("colStudent")}</TableHead>
+              <TableHead numeric>{t("colLessons")}</TableHead>
+              <TableHead numeric>{t("colAverage")}</TableHead>
+              {assignments.map((a) => (
+                <TableHead key={a.id} className="min-w-36 text-center">
+                  <span className="block max-w-44 truncate text-fg" title={a.title}>{a.title}</span>
+                  <span className="block text-sm font-normal text-fg-subtle">{t("dueBy", { date: new Date(a.deadline).toLocaleDateString(), percent: a.min_pass_percent })}</span>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => (
+              <TableRow key={student.student_id}>
+                <TableCell className="sticky-col bg-surface">
+                  <div className="font-medium text-fg">{student.name}</div>
+                  <div className="font-mono text-sm text-fg-muted">{student.phone || student.email || "—"}</div>
+                </TableCell>
+                <TableCell numeric>
+                  {student.lessons_completed}<span className="text-fg-muted"> / 29</span>
+                </TableCell>
+                <TableCell numeric>
+                  {student.total_submissions > 0 ? (
+                    <span className={cn("font-semibold", student.average_score >= 80 ? "text-success" : student.average_score >= 60 ? "text-warning" : "text-danger")}>{student.average_score}%</span>
+                  ) : <span className="text-fg-subtle">—</span>}
+                </TableCell>
+                {assignments.map((a) => {
+                  const sub = student.submissions[a.id];
+                  const isOverdue = !sub && new Date(a.deadline) < now;
+                  let cell: React.ReactNode;
+                  if (sub && sub.is_passed) cell = statusBadge(t("passed", { percent: sub.score_percent ?? 0 }), "success");
+                  else if (sub && sub.status === "awaiting_review") cell = <GradeCell assignmentId={a.id} studentId={student.student_id} studentName={student.name} onGraded={onGraded} />;
+                  else if (sub && sub.status === "awaiting_result") cell = statusBadge(t("awaitingResult"), "neutral");
+                  else if (sub && !sub.is_passed) cell = statusBadge(t("notPassed", { percent: sub.score_percent ?? 0 }), "warning");
+                  else if (isOverdue) cell = statusBadge(t("notSubmitted"), "danger");
+                  else cell = statusBadge(t("pending"), "info");
+                  return <TableCell key={a.id} className="text-center">{cell}</TableCell>;
                 })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
-    </div>
+    </section>
   );
 }
