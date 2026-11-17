@@ -17,6 +17,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api-client";
@@ -68,6 +69,7 @@ export function ImageZoomModal({
   title?: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("mock.ocr");
   const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export function ImageZoomModal({
         onClick={(e) => e.stopPropagation()}
       >
         <span className="text-sm font-semibold truncate text-fg">
-          {title || "Qo'lyozma rasm (Kattalashtirilgan ko'rinish)"}
+          {title || t("zoomTitle")}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -103,7 +105,7 @@ export function ImageZoomModal({
             variant="outline"
             className="size-8 p-0 border-border-strong bg-surface-hover text-fg hover:bg-border-strong"
             onClick={() => setZoomLevel((z) => Math.min(z + 0.3, 3))}
-            title="Kattalashtirish"
+            title={t("zoomIn")}
           >
             <ZoomIn className="size-4" />
           </Button>
@@ -113,7 +115,7 @@ export function ImageZoomModal({
             variant="outline"
             className="size-8 p-0 border-border-strong bg-surface-hover text-fg hover:bg-border-strong"
             onClick={() => setZoomLevel((z) => Math.max(z - 0.3, 0.6))}
-            title="Kichiklashtirish"
+            title={t("zoomOut")}
           >
             <ZoomOut className="size-4" />
           </Button>
@@ -132,7 +134,7 @@ export function ImageZoomModal({
             variant="outline"
             className="size-8 p-0 border-danger-border/60 bg-danger-bg/40 text-danger hover:bg-danger-bg/60"
             onClick={onClose}
-            title="Yopish (Esc)"
+            title={t("closeEsc")}
           >
             <X className="size-4" />
           </Button>
@@ -147,7 +149,7 @@ export function ImageZoomModal({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}
-          alt={title || "Qo'lyozma sahifa"}
+          alt={title || t("pageAlt")}
           className="max-h-[80vh] max-w-full rounded-md object-contain shadow-2xl transition-transform duration-150"
           style={{ transform: `scale(${zoomLevel})` }}
         />
@@ -166,11 +168,12 @@ export function WritingImageOcr({
   ocrEndpoint,
   className,
 }: WritingImageOcrProps) {
+  const t = useTranslations("mock.ocr");
   const [pages, setPages] = useState<WritingPageItem[]>(() =>
     (initialImageUrls ?? []).slice(0, maxPages).map((url, idx) => ({
       id: `init-${idx}-${url}`,
       previewUrl: url,
-      name: `${idx + 1}-bet`,
+      name: t("pageN", { n: idx + 1 }),
       uploadedUrl: url,
     })),
   );
@@ -203,13 +206,13 @@ export function WritingImageOcr({
       ALLOWED_MIME_TYPES.has(file.type.toLowerCase()) ||
       ALLOWED_EXTENSIONS.test(file.name);
     if (!validType) {
-      return `${file.name}: format qo'llab-quvvatlanmaydi. Faqat JPG, PNG yoki WEBP formatidagi rasmlar ruxsat etiladi.`;
+      return t("badFormat", { name: file.name });
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      return `${file.name}: fayl hajmi 10 MB dan oshmasligi kerak.`;
+      return t("tooLarge", { name: file.name });
     }
     return null;
-  }, []);
+  }, [t]);
 
   const addFiles = useCallback(
     (fileList: FileList | File[]) => {
@@ -218,15 +221,13 @@ export function WritingImageOcr({
 
       const remainingSlots = maxPages - pages.length;
       if (remainingSlots <= 0) {
-        toast.warning(`Ko'pi bilan ${maxPages} ta sahifa yuklash mumkin.`);
+        toast.warning(t("maxPages", { max: maxPages }));
         return;
       }
 
       const filesToAdd = incoming.slice(0, remainingSlots);
       if (incoming.length > remainingSlots) {
-        toast.info(
-          `Faqat dastlabki ${remainingSlots} ta sahifa qo'shildi (chegara: ${maxPages} ta).`,
-        );
+        toast.info(t("partlyAdded", { added: remainingSlots, max: maxPages }));
       }
 
       const validNewPages: WritingPageItem[] = [];
@@ -248,12 +249,10 @@ export function WritingImageOcr({
 
       if (validNewPages.length > 0) {
         setPages((prev) => [...prev, ...validNewPages]);
-        toast.success(
-          `${validNewPages.length} ta qo'lyozma sahifasi yuklandi. AI matnni o'qishi uchun quyidagi tugmani bosing.`,
-        );
+        toast.success(t("pagesAdded", { count: validNewPages.length }));
       }
     },
-    [maxPages, pages.length, validateFile],
+    [maxPages, pages.length, validateFile, t],
   );
 
   const handleRemovePage = useCallback((index: number) => {
@@ -289,9 +288,9 @@ export function WritingImageOcr({
         };
         return next;
       });
-      toast.success(`${index + 1}-bet yangi rasmga almashtirildi.`);
+      toast.success(t("pageReplaced", { n: index + 1 }));
     },
-    [validateFile],
+    [validateFile, t],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -321,7 +320,7 @@ export function WritingImageOcr({
   const handleExtractOcr = async (mode: "replace" | "append" = "replace") => {
     const filesToUpload = pages.filter((p) => p.file instanceof File);
     if (filesToUpload.length === 0 && pages.length === 0) {
-      toast.error("Avval kamida bitta qo'lyozma varag'i rasmini yuklang.");
+      toast.error(t("needImage"));
       return;
     }
 
@@ -342,7 +341,7 @@ export function WritingImageOcr({
 
       const extracted = (result?.ocrText ?? "").trim();
       if (!extracted) {
-        toast.warning("Rasmdan matn aniqlanmadi. Iltimos, yorug'roq va aniqroq rasm yuklang.");
+        toast.warning(t("noText"));
         return;
       }
 
@@ -358,12 +357,12 @@ export function WritingImageOcr({
       const words = countWords(extracted);
       setLastExtractedCount(words);
       onExtractedText(extracted, mode);
-      toast.success(`Qo'lyozma o'qildi (${words} ta so'z). Matn muharririga ko'chirildi.`);
+      toast.success(t("read", { count: words }));
     } catch (err) {
       const msg =
         err instanceof ApiError
           ? err.message
-          : "OCR matnni ajratib olishda xatolik yuz berdi. Qayta urinib ko'ring.";
+          : t("failed");
       toast.error(msg);
     } finally {
       setIsExtracting(false);
@@ -425,14 +424,12 @@ export function WritingImageOcr({
           </span>
           <div>
             <p className="text-xs font-bold text-fg flex items-center gap-1.5">
-              <span>Qo&apos;lyozma Inshoni Yuklash & AI Vision OCR</span>
+              <span>{t("title")}</span>
               <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[10px] font-semibold text-brand-subtle-fg border border-brand/30">
                 DeepSeek Vision
               </span>
             </p>
-            <p className="text-[11px] text-fg-muted">
-              Daftarga yozilgan varaqni telefon kamerasi yoki fayl orqali yuklang (JPG, PNG, max 10MB)
-            </p>
+            <p className="text-[11px] text-fg-muted">{t("subtitle")}</p>
           </div>
         </div>
 
@@ -445,7 +442,7 @@ export function WritingImageOcr({
             className="h-8 gap-1.5 rounded-xl border border-brand/40 bg-brand-subtle/30 text-xs font-semibold text-brand hover:bg-brand-subtle/50"
           >
             <Camera className="size-3.5 text-brand" />
-            <span>📷 Kamera / Rasm olish</span>
+            <span>{t("camera")}</span>
           </Button>
 
           <Button
@@ -457,7 +454,7 @@ export function WritingImageOcr({
             className="h-8 gap-1.5 rounded-xl border-border-strong bg-surface/80 text-xs font-medium text-fg hover:bg-surface-hover"
           >
             <UploadCloud className="size-3.5 text-fg-muted" />
-            <span>Fayldan tanlash</span>
+            <span>{t("fromFile")}</span>
           </Button>
         </div>
       </div>
@@ -490,11 +487,9 @@ export function WritingImageOcr({
       >
         <div className="flex flex-col items-center justify-center gap-1.5">
           <FileImage className="size-6 text-brand/70" />
-          <p className="text-xs font-medium text-fg-muted">
-            Daftar varag&apos;i rasmlarini bu yerga tashlang yoki bosib yuklang
-          </p>
+          <p className="text-xs font-medium text-fg-muted">{t("dropHint")}</p>
           <p className="text-[11px] text-fg-subtle">
-            Sahifalar: <strong className="text-brand">{pages.length}</strong> / {maxPages} ta
+            {t.rich("pagesCount", { count: pages.length, max: maxPages, b: (chunks) => <strong className="text-brand">{chunks}</strong> })}
           </p>
         </div>
       </div>
@@ -510,26 +505,26 @@ export function WritingImageOcr({
               >
                 <div
                   className="relative aspect-4/3 w-full cursor-pointer bg-black/60"
-                  onClick={() => setZoomPage({ url: page.previewUrl, title: `${idx + 1}-bet: ${page.name}` })}
+                  onClick={() => setZoomPage({ url: page.previewUrl, title: t("pageTitle", { n: idx + 1, name: page.name }) })}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={page.previewUrl}
-                    alt={`${idx + 1}-bet`}
+                    alt={t("pageN", { n: idx + 1 })}
                     className="size-full object-cover transition-transform group-hover:scale-105"
                   />
                   <span className="absolute top-1.5 left-1.5 rounded-md bg-bg/90 px-1.5 py-0.5 text-[10px] font-bold text-brand border border-border">
-                    {idx + 1}-bet
+                    {t("pageN", { n: idx + 1 })}
                   </span>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <span className="inline-flex items-center gap-1 rounded-md bg-surface/90 px-2 py-1 text-[10px] font-semibold text-fg">
                       <Maximize2 className="size-3 text-brand" />
-                      Kattalashtirish
+                      {t("enlarge")}
                     </span>
                   </div>
                   <button
                     type="button"
-                    title="O'chirish"
+                    title={t("remove")}
                     disabled={isExtracting}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -543,7 +538,7 @@ export function WritingImageOcr({
 
                 <div className="flex items-center justify-between gap-1 p-2 bg-bg/80 border-t border-border/80">
                   <span className="truncate text-[10px] font-medium text-fg-muted" title={page.name}>
-                    {idx + 1}-bet
+                    {t("pageN", { n: idx + 1 })}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -555,10 +550,10 @@ export function WritingImageOcr({
                         replaceInputRef.current?.click();
                       }}
                       className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-surface-hover hover:text-brand disabled:opacity-50"
-                      title="Almashtirish"
+                      title={t("replace")}
                     >
                       <RefreshCw className="size-2.5 text-brand" />
-                      <span>Almashtirish</span>
+                      <span>{t("replace")}</span>
                     </button>
                     <button
                       type="button"
@@ -568,7 +563,7 @@ export function WritingImageOcr({
                         handleRemovePage(idx);
                       }}
                       className="inline-flex items-center rounded p-1 text-fg-subtle hover:bg-danger-bg/40 hover:text-danger disabled:opacity-50"
-                      title="O'chirish"
+                      title={t("remove")}
                     >
                       <Trash2 className="size-3" />
                     </button>
@@ -583,7 +578,7 @@ export function WritingImageOcr({
             <div className="rounded-xl border border-brand/30 bg-brand-subtle/30 p-3.5 backdrop-blur-md">
               <div className="flex items-center gap-2.5 text-xs font-semibold text-brand">
                 <Loader2 className="size-4 animate-spin text-brand" />
-                <span>AI Vision qo&apos;lyozmani matnga aylantirmoqda...</span>
+                <span>{t("reading")}</span>
               </div>
               <div className="mt-2.5 space-y-1.5">
                 <div className="h-2 w-5/6 animate-pulse rounded bg-brand/20" />
@@ -605,12 +600,12 @@ export function WritingImageOcr({
                 {isExtracting ? (
                   <>
                     <Loader2 className="size-3.5 animate-spin" />
-                    <span>Qo&apos;lyozma o&apos;qilmoqda...</span>
+                    <span>{t("readingShort")}</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="size-3.5" />
-                    <span>🔍 Matnni ajratib olish (OCR & AI)</span>
+                    <span>{t("extract")}</span>
                   </>
                 )}
               </Button>
@@ -623,7 +618,7 @@ export function WritingImageOcr({
                   onClick={() => handleExtractOcr("append")}
                   className="h-9 rounded-xl border-border-strong bg-surface/80 text-xs font-medium text-fg-muted hover:bg-surface-hover"
                 >
-                  Davomiga qo&apos;shish
+                  {t("append")}
                 </Button>
               )}
             </div>
@@ -631,7 +626,7 @@ export function WritingImageOcr({
             {lastExtractedCount !== null && !isExtracting && (
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-brand-subtle/40 px-2.5 py-1 text-[11px] font-semibold text-brand">
                 <CheckCircle2 className="size-3.5" />
-                OCR: {lastExtractedCount} ta so&apos;z ajratib olindi
+                {t("extractedCount", { count: lastExtractedCount })}
               </span>
             )}
           </div>

@@ -16,6 +16,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export function InstantAiCheckerModal({
   onClose,
   defaultPrompt = "",
 }: InstantAiCheckerModalProps) {
+  const t = useTranslations("aiChecker");
   const [text, setText] = React.useState("");
   const [prompt, setPrompt] = React.useState(defaultPrompt);
   const [loading, setLoading] = React.useState(false);
@@ -88,7 +90,7 @@ export function InstantAiCheckerModal({
 
   const handleEvaluate = async () => {
     if (!text.trim() || wordCount < 15) {
-      toast.error("Iltimos, kamida 15 ta so'zdan iborat matn kiriting!");
+      toast.error(t("tooShort", { min: 15 }));
       return;
     }
 
@@ -107,10 +109,10 @@ export function InstantAiCheckerModal({
         }
       );
       setResult(res);
-      toast.success("✅ AI tahlili muvaffaqiyatli yakunlandi!");
+      toast.success(t("done"));
     } catch (err) {
       console.error("Evaluation error:", err);
-      toast.error("Baholashda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.");
+      toast.error(t("failed"));
     } finally {
       setLoading(false);
     }
@@ -120,7 +122,7 @@ export function InstantAiCheckerModal({
     if (!result?.model_answer) return;
     navigator.clipboard.writeText(result.model_answer);
     setCopied(true);
-    toast.success("C1 Namuna nusxalandi!");
+    toast.success(t("modelCopied"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -136,19 +138,17 @@ export function InstantAiCheckerModal({
               </div>
               <div>
                 <DialogTitle className="text-base font-bold text-slate-100 sm:text-lg flex items-center gap-2">
-                  Instant AI Writing & Speaking Checker
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                    Real-Time
-                  </span>
+                  {t("title")}
                 </DialogTitle>
                 <p className="text-xs text-slate-400">
-                  Tezkor baholash vaqtincha mavjud emas. Imtihon natijalari sahifasidan foydalaning.
+                  {t("unavailable")}
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
+              aria-label={t("close")}
               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
             >
               <X className="size-5" />
@@ -162,13 +162,13 @@ export function InstantAiCheckerModal({
           <div className="space-y-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Mavzu yoki Savol (Prompt) - Ixtiyoriy:
+                {t("promptLabel")}
               </label>
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Masalan: Some people think that universities should focus on vocational skills..."
+                placeholder={t("promptPlaceholder")}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2 text-xs sm:text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40"
               />
             </div>
@@ -176,17 +176,17 @@ export function InstantAiCheckerModal({
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <label className="font-semibold text-slate-300 uppercase tracking-wider">
-                  Matn yoki Insho (Essay):
+                  {t("textLabel")}
                 </label>
                 <span className={cn("font-mono font-medium", wordCount >= 250 ? "text-emerald-400" : "text-slate-400")}>
-                  {wordCount} ta so&apos;z (Tavsiya: 150-250+)
+                  {t("wordCount", { count: wordCount })}
                 </span>
               </div>
               <textarea
                 rows={6}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Insho matningizni bu yerga kiriting yoki nusxalab tashlang..."
+                placeholder={t("textPlaceholder")}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-xs sm:text-sm text-slate-200 leading-relaxed placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-hidden focus:ring-1 focus:ring-emerald-500/40"
               />
             </div>
@@ -201,12 +201,12 @@ export function InstantAiCheckerModal({
                 {loading ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    <span>AI Baholamoqda...</span>
+                    <span>{t("evaluating")}</span>
                   </>
                 ) : (
                   <>
                     <Zap className="size-4 fill-slate-950" />
-                    <span>Darhol Baholash (Instant Evaluate)</span>
+                    <span>{t("evaluate")}</span>
                   </>
                 )}
               </Button>
@@ -221,10 +221,10 @@ export function InstantAiCheckerModal({
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="space-y-1">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-400">
-                      <Award className="size-3.5" /> Rasmiy Natija
+                      <Award className="size-3.5" /> {t("estimateBadge")}
                     </span>
                     <h3 className="text-lg font-black text-slate-100">
-                      Umumiy Baho: <span className="text-emerald-400 text-2xl font-black">{result.band.toFixed(1)} Band</span>
+                      {t.rich("overall", { band: result.band.toFixed(1), b: (chunks) => <span className="text-emerald-400 text-2xl font-black">{chunks}</span> })}
                     </h3>
                     <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
                       {result.summary}
@@ -233,11 +233,11 @@ export function InstantAiCheckerModal({
 
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-2">
-                      <p className="text-[10px] font-semibold uppercase text-slate-400">CEFR Daraja</p>
+                      <p className="text-[10px] font-semibold uppercase text-slate-400">{t("cefr")}</p>
                       <p className="text-xl font-black text-emerald-400">{result.cefr_level}</p>
                     </div>
                     <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-2">
-                      <p className="text-[10px] font-semibold uppercase text-slate-400">So&apos;zlar</p>
+                      <p className="text-[10px] font-semibold uppercase text-slate-400">{t("words")}</p>
                       <p className="text-xl font-black text-teal-400">{result.word_count}</p>
                     </div>
                   </div>
@@ -248,7 +248,7 @@ export function InstantAiCheckerModal({
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <TrendingUp className="size-3.5 text-emerald-400" />
-                  4 ta Rasmiy Baholash Mezoni (IELTS / Multilevel Criteria)
+                  {t("criteria")}
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {Object.entries(result.criteria_scores).map(([key, item]) => (
@@ -275,7 +275,7 @@ export function InstantAiCheckerModal({
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
                     <span className="inline-block size-2 rounded-full bg-rose-500" />
-                    Grammatik Xatolar & Tuzatishlar ({result.grammar_corrections.length} ta)
+                    {t("grammar", { count: result.grammar_corrections.length })}
                   </h4>
                   <ul className="space-y-2.5">
                     {result.grammar_corrections.map((corr, idx) => (
@@ -306,7 +306,7 @@ export function InstantAiCheckerModal({
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
                     <span className="inline-block size-2 rounded-full bg-teal-400" />
-                    Lug&apos;at Boyligini Oshirish (C1/C2 Lexical Upgrades) ({result.vocabulary_upgrades.length} ta)
+                    {t("vocabulary", { count: result.vocabulary_upgrades.length })}
                   </h4>
                   <ul className="space-y-2.5">
                     {result.vocabulary_upgrades.map((upg, idx) => (
@@ -335,7 +335,7 @@ export function InstantAiCheckerModal({
                 <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-5 space-y-3 shadow-lg">
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400">
-                      <Sparkles className="size-3.5" /> C1 Namuna Javob (Model Answer)
+                      <Sparkles className="size-3.5" /> {t("modelAnswer")}
                     </span>
                     <Button
                       type="button"
@@ -345,7 +345,7 @@ export function InstantAiCheckerModal({
                       className="border-emerald-500/30 text-xs text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1.5"
                     >
                       {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                      <span>{copied ? "Nusxalandi" : "Nusxa Olish"}</span>
+                      <span>{t(copied ? "copied" : "copy")}</span>
                     </Button>
                   </div>
 

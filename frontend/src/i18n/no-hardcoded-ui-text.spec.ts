@@ -68,6 +68,8 @@ const FILES = [
   "src/components/demo/cd-exam-view.tsx",
   "src/components/mock/speaking-visuals.tsx",
   "src/components/mock/runner-shortcuts.tsx",
+  "src/components/mock/writing-image-ocr.tsx",
+  "src/components/dashboard/InstantAiCheckerModal.tsx",
 ];
 
 /** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */
@@ -76,10 +78,13 @@ const MEDIA_FILES = [
   "src/components/mock/device-check.tsx",
   "src/components/mock/speaking-recorder.tsx",
   "src/components/mock/multilevel-media.tsx",
+  // Handwriting upload (OCR) and the AI writing checker: toasts come from the catalogue too.
+  "src/components/mock/writing-image-ocr.tsx",
+  "src/components/dashboard/InstantAiCheckerModal.tsx",
 ];
 // A quoted literal with words in it; a template that only interpolates translated text is fine.
 const LITERAL_MESSAGE = /\b(setError|toast\.(?:error|success|info|warning))\(\s*["'`][^"'`$]*[A-Za-z]{3}/;
-const UZBEK_UI = /\b(Rasmiy|Palitras\w*|Ishlangan|Belgilangan|Javobsiz|Tozalash|Oldingi qism|Keyingi qism|Guruhga|Kodni|Bajarish|Chop [Ee]tish|Yuklab [Oo]lish|Diagnostik|Sun.iy intellekt|Keyingisi|Oldingisi|Kabinet\w*|Darslar katalog\w*|Bekor qilish|Aniqlik|Tasdiqla\w*|Ustoz\w*|Eshitib|To'xtatish|Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish|huquqlar|Sizda|Ruxsat\w*|Platforma\w*|O&apos;rnatgich\w*|O'rnatgich\w*|Ilovasi|Qo&apos;shish|Qo'shish)\b/;
+const UZBEK_UI = /\b(Rasmiy|Palitras\w*|Ishlangan|Belgilangan|Javobsiz|Tozalash|Oldingi qism|Keyingi qism|Guruhga|Kodni|Bajarish|Chop [Ee]tish|Yuklab [Oo]lish|Diagnostik|Sun.iy intellekt|Keyingisi|Oldingisi|Kabinet\w*|Darslar katalog\w*|Bekor qilish|Aniqlik|Tasdiqla\w*|Ustoz\w*|Eshitib|To'xtatish|Qoralama|saqlanmoqda|saqlandi|Ulanish|Yopish|hisoboti|Chop etish|tekshirilmoqda|tkazib|kiriting|urinish|savol|o&apos;tish|o'tish|jarayonda|davom ettir\w*|natijangiz|Belgila\w*|Belgini|daqiqa\w*|soniya\w*|yakunlandi|Keyingi|boshlash\w*|saqlandi|bo&apos;lim\w*|bo'lim\w*|bo‘lim\w*|Lug'at\w*|Lug&apos;at\w*|so'z\w*|so&apos;z\w*|to'plam\w*|to&apos;plam\w*|Mashq\w*|Xato\w*|xato\w*|Yangilash|Tanla\w*|yuklanmoqda|javob\w*|Hammasi|zlashtir\w*|marta|Holati|topshir\w*|Imtihon\w*|imtihon\w*|qaytish|huquqlar|Sizda|Ruxsat\w*|Platforma\w*|O&apos;rnatgich\w*|O'rnatgich\w*|Ilovasi|Qo&apos;shish|Qo'shish|Qo'lyozma\w*|Qo&apos;lyozma\w*|Kattalashtir\w*|Almashtir\w*|O'chirish|Fayldan|Daftar\w*|Nusxa\w*|Baho\w*|Rasmiy|Tezkor)\b/;
 
 const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 
