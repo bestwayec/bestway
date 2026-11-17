@@ -73,11 +73,24 @@ for (const theme of ["light", "dark"]) for (const [width, height] of VIEWPORTS) 
   let typed = "no text field";
   if (await textBox.count()) { const before = await current(); await textBox.click(); await page.keyboard.type("n"); typed = (await current()) === before ? "stayed" : "MOVED"; }
 
-  // The same attempt on the Uzbek site: part tab names.
+  // The same Reading attempt on the Uzbek site: part tab names.
   await page.goto(`${WEB}/uz/mock/attempt/${started.attemptId}`, { waitUntil: "networkidle" });
   await hide();
   const tabs = await page.locator('nav [role="tablist"] [role="tab"]').allInnerTexts().catch(() => []);
   await page.screenshot({ path: join(OUT, `uz-tabs-${width}x${height}-${theme}.png`) });
+  // Writing: N typed in the answer is a letter, not "next question".
+  if (typed === "no text field") {
+    await api("POST", `/mock/attempts/${started.attemptId}/submit`, { confirm: true, confirmed: true, force: true });
+    const writing = await api("POST", `/mock/exams/${state.examId}/start`, { mode: "practice", flow: "single_skill", skills: ["writing"] });
+    await page.goto(`${WEB}/en/mock/attempt/${writing.attemptId}`, { waitUntil: "networkidle" });
+    await hide();
+    const area = page.locator("textarea").first();
+    const before = await current();
+    await area.click(); await page.keyboard.type("np f");
+    typed = (await current()) === before && (await area.inputValue()).endsWith("np f") ? "stayed (Writing, text typed)" : "MOVED";
+    await api("POST", `/mock/attempts/${writing.attemptId}/submit`, { confirm: true, confirmed: true, force: true });
+  }
+
   console.log(`${theme} ${width}x${height}: Today title "${todayTitle}"; N,N ${start}→${afterNext}, P → ${afterPrev}; F flag: ${/flag/i.test(flagged || "") ? "yes" : "no"}; ? list ${dialog ? "shown" : "none"}; typing n in a field: ${typed}; uz tabs: ${tabs.map((x) => x.replace(/\s+/g, " ").trim()).join(" | ")}`);
   await api("POST", `/mock/attempts/${started.attemptId}/submit`, { confirm: true, confirmed: true, force: true });
   await ctx.close();
