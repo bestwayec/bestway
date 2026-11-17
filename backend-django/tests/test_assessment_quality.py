@@ -295,10 +295,57 @@ class InternalGradeDeliveryTests(SimpleTestCase):
                 self._certificate(score,level)
             self.assertEqual((error.exception.contract_code,error.exception.status_code),('MULTILEVEL_BELOW_B1_NO_CERTIFICATE',409))
 
-    def test_multilevel_b1_and_stored_older_levels_keep_their_certificate(self):
+    def test_multilevel_b1_and_the_stored_level_decide_the_certificate(self):
         self.assertEqual(self._certificate(38,'B1')['cefrLevel'],'B1')
-        # An older attempt scored under the earlier thresholds keeps its stored level (owner decision).
+        # The certificate states the level stored with the attempt. Owner decision 2026-11-17: the earlier level maps
+        # were wrong, so stored levels are re-derived with rescore_cefr_levels; a certificate that was already
+        # printed is kept as it was through `certificateAsIssued` (see the next tests).
         self.assertEqual(self._certificate(36,'B1')['cefrLevel'],'B1')
+
+    def legacy_attempt(self):
+        row=self.attempt();row.overall_score=61.1;row.cefr_level='B2';row.media_state=None
+        row.raw_scores=dict(writing=dict(score=13,max=16,practiceGrade=dict(policyId='OLD',score=47.2)),
+            speaking=dict(score=17,max=21,practiceGrade=dict(policyId='OLD',score=47.1)))
+        row.standard_scores={k:dict(estimatedStandardScore=v,level='x') for k,v in dict(listening=75.0,reading=75.0,writing=63,speaking=61).items()}
+        row.section_bands={};row.overall_band=None;row.flow_mode='full_test';row.specification_version=CURRENT_SPEC;row.score_method='ESTIMATED'
+        return row
+
+    def _jobs(self):
+        return [SimpleNamespace(skill=skill,status='SUCCEEDED',final_score=45,final_score_source='TEACHER') for skill in ('writing','speaking')]
+
+    def test_an_old_attempt_still_prints_the_section_scores_and_overall_it_was_given(self):
+        row=self.legacy_attempt()
+        data=self._internal(row,self._jobs())
+        scores={s['skill']:s['standardScore'] for s in data['sections']}
+        self.assertEqual((scores['writing'],scores['speaking']),(47.2,47.1))       # the removed internal grade, as printed
+        self.assertEqual((data['overallScore'],data['cefrLevel']),(61.1,'B2'))
+
+    def test_rescoring_an_attempt_does_not_change_its_issued_certificate(self):
+        from apps.core.management.commands.rescore_cefr_levels import plan
+        row=self.legacy_attempt()
+        before=self._internal(row,self._jobs())
+        changes=plan(row)
+        self.assertEqual((changes['overall_score'],changes['cefr_level']),(68.5,'C1'))     # the stored result is re-derived
+        for field,value in changes.items():setattr(row,field,value)
+        self.assertNotIn('practiceGrade',row.raw_scores['writing'])
+        after=self._internal(row,self._jobs())
+        self.assertEqual(after,before)                                             # the certificate is exactly as before
+        self.assertEqual((after['overallScore'],after['cefrLevel']),(61.1,'B2'))
+        # The public check of the printed code says the same.
+        code=mock_support.verification_code('attempt')
+        with patch.object(mock_support.MockAttempt,'objects') as attempts:
+            attempts.select_related.return_value.filter.return_value.first.return_value=row
+            verified=mock_support.verify_certificate('attempt',code)
+        self.assertEqual((verified['valid'],verified['level'],verified['overallScore']),(True,'B2',61.1))
+
+    def test_a_rescored_attempt_that_is_below_b1_on_the_new_scale_keeps_its_issued_certificate(self):
+        from apps.core.management.commands.rescore_cefr_levels import plan
+        row=self.legacy_attempt();row.cefr_level='B1';row.overall_score=40.0
+        row.standard_scores={k:dict(estimatedStandardScore=v,level='x') for k,v in dict(listening=40.0,reading=40.0,writing=30,speaking=30).items()}
+        for field,value in plan(row).items():setattr(row,field,value)
+        self.assertEqual((row.overall_score,row.cefr_level),(35.0,'BELOW_B1'))
+        data=self._internal(row,self._jobs())          # printed as B1, 40: still issued, no 409 now
+        self.assertEqual((data['overallScore'],data['cefrLevel']),(40.0,'B1'))
 
     def test_student_parent_notifications_use_internal_grade_without_native_overall(self):
         row=self.attempt()

@@ -77,6 +77,8 @@ export interface GroupStudentAnalyticsRow {
   listeningScore: number | null;
   readingScore: number | null;
   overallBand: number | null;
+  /** True when the overall was taken without the sections the student skipped ("to'liq emas"). */
+  overallBandIncomplete?: boolean;
 }
 
 export interface GroupAnalyticsData {
@@ -88,6 +90,8 @@ export interface GroupAnalyticsData {
   totalCompletedAttempts: number;
   /** Sections left unanswered in finished attempts; they are not in any average. */
   skippedSections: number;
+  /** Students whose overall in the average was taken without their skipped sections. */
+  incompleteOverallCount: number;
   students: GroupStudentAnalyticsRow[];
 }
 
@@ -241,6 +245,7 @@ export function useGroupAnalytics(groupId?: string) {
           listeningScore: l,
           readingScore: r,
           overallBand: overall,
+          overallBandIncomplete: rs.overallBandIncomplete === true,
         });
       }
 
@@ -284,6 +289,7 @@ export function useGroupAnalytics(groupId?: string) {
         activeStudents,
         totalCompletedAttempts,
         skippedSections,
+        incompleteOverallCount: typeof rawAnalytics?.incompleteOverallCount === "number" ? rawAnalytics.incompleteOverallCount : 0,
         students,
       };
     },

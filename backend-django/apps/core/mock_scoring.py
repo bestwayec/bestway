@@ -378,6 +378,21 @@ def skipped_skills(exam_type, raw_scores, section_bands, standard_scores):
     return skipped
 
 
+def overall_without_skipped(exam_type, overall, section_bands, skipped):
+    """(value, incomplete) - an attempt's overall as a GROUP average should count it: only the sections that
+    were answered. IELTS divides by 4 in a full test, so a skipped section counted as a 0; here the overall is
+    the mean of the answered sections' bands. A Multilevel overall already excludes skipped sections. The
+    attempt's own stored overall (the student's result) is never changed; `incomplete` marks that sections
+    were left out."""
+    if overall is None or not skipped:
+        return overall, False
+    if exam_type == 'multilevel':
+        return overall, True
+    bands = [b for skill, b in (section_bands or {}).items()
+        if skill not in skipped and type(b) in (int, float) and not isinstance(b, bool)]
+    return (ielts_overall_band(bands) if bands else None), True
+
+
 def partial_result(result):
     """A selected/incomplete practice is graded only on its observed work."""
     standards = (result.get('standardScores') or {}) if len(result.get('rawScores') or {}) <= 1 else {}

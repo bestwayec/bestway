@@ -13,7 +13,7 @@ from apps.core.management.commands import rescore_cefr_levels as command
 
 def attempt(exam='ielts_academic', **fields):
     values = dict(id='a', status='completed', flow_mode='full_test', score_method=None, overall_band=None, overall_score=None,
-                  cefr_level=None, standard_scores=None, raw_scores=None, exam=SimpleNamespace(type=exam))
+                  cefr_level=None, standard_scores=None, raw_scores=None, media_state=None, exam=SimpleNamespace(type=exam))
     values.update(fields)
     return SimpleNamespace(**values)
 
@@ -27,7 +27,9 @@ def attempt(exam='ielts_academic', **fields):
 def test_ielts_level_follows_the_overall_band(band, old, new):
     changes = command.plan(attempt(overall_band=band, cefr_level=old))
     assert changes.get('cefr_level') == new
-    assert set(changes) <= {'cefr_level'}      # nothing else of an IELTS result is touched
+    assert set(changes) <= {'cefr_level', 'media_state'}      # nothing else of an IELTS result is touched
+    if new:
+        assert changes['media_state']['certificateAsIssued']['cefrLevel'] == old      # the printed value is kept
 
 
 def test_ielts_without_a_band_or_with_a_junk_band_is_left_alone():
@@ -125,15 +127,52 @@ def test_apply_writes_only_the_changed_fields_of_the_changed_attempts():
     assert text.startswith('APPLY: scanned 3 finished attempts; changed 2 (written: 2)')
     assert target.update.call_count == 2
     assert sorted(call.kwargs['cefr_level'] for call in target.update.call_args_list) == ['B2', 'BELOW_B1']
-    assert all(set(call.kwargs) == {'cefr_level'} for call in target.update.call_args_list)     # only the changed field is written
+    # only the changed field is written, plus the saved certificate values
+    assert all(set(call.kwargs) == {'cefr_level', 'media_state'} for call in target.update.call_args_list)
 
 
 def test_json_report_and_option_checks():
     text, _ = run(ROWS(), '--json')
     report = json.loads(text)
     assert (report['mode'], report['scanned'], report['wouldChange'], report['applied']) == ('DRY_RUN', 3, 2, 0)
-    assert report['transitions'] == {'ielts_academic: A2 -> BELOW_B1': 1, 'ielts_academic: C1 -> B2': 1}
+    assert report['transitions'] == {'ielts_academic: A2 -> BELOW_B1': 1, 'ielts_academic: C1 -> B2': 1,
+                                     'ielts_academic: certificate values kept as issued': 2}
     with pytest.raises(CommandError):
         call_command('rescore_cefr_levels', '--dry-run', '--apply', stdout=StringIO())
     with pytest.raises(CommandError):
         call_command('rescore_cefr_levels', '--batch', '0', stdout=StringIO())
+
+
+# ---- certificates already issued do not change -------------------------------------------------
+
+def test_the_old_values_are_saved_before_a_row_is_rewritten_and_only_once():
+    from datetime import UTC, datetime
+    now = datetime(2026, 11, 20, 9, 0, tzinfo=UTC)
+    row = attempt('multilevel', overall_score=61.1, cefr_level='B2', media_state={'teacher_comment': 'well done'},
+        standard_scores={k: dict(estimatedStandardScore=v, level='x') for k, v in dict(listening=75.0, reading=75.0, writing=63, speaking=61).items()},
+        raw_scores=dict(writing=dict(score=13, max=16, practiceGrade=dict(score=47.2)), speaking=dict(score=17, max=21, practiceGrade=dict(score=47.1))))
+    changes = command.plan(row, now)
+    saved = changes['media_state']
+    assert saved['teacher_comment'] == 'well done'                       # the rest of the state is kept
+    assert saved['certificateAsIssued'] == dict(overallScore=61.1, overallBand=None, cefrLevel='B2',
+        standardScores=dict(writing=47.2, speaking=47.1), rescoredAt=now.isoformat())
+    assert row.media_state == {'teacher_comment': 'well done'}            # the input is not mutated
+    # Run again on the rewritten row: nothing to do, and the first snapshot is never overwritten.
+    for field, value in changes.items():
+        setattr(row, field, value)
+    assert command.plan(row, now) == {}
+    row.cefr_level = 'B2'                                                # even if it changed again later
+    assert 'media_state' not in command.plan(row, now) or command.plan(row, now)['media_state']['certificateAsIssued'] == saved['certificateAsIssued']
+
+
+def test_section_level_only_changes_save_no_certificate_values():
+    row = attempt('multilevel', overall_score=65.0, cefr_level='C1', standard_scores={'listening': dict(estimatedStandardScore=64, level='C1'),
+        'reading': dict(estimatedStandardScore=66, level='C1')})
+    changes = command.plan(row)          # Listening 64 is B2, not C1; the overall (65.0, C1) is right as stored
+    assert changes['standard_scores']['listening']['level'] == 'B2' and 'media_state' not in changes and 'cefr_level' not in changes
+
+
+def test_dry_run_report_says_the_certificate_values_are_kept():
+    text, _ = run([attempt(id='a1', overall_band=6.5, cefr_level='C1')])
+    assert 'certificate values kept as issued' in text and '"certificateKept": true' in text
+

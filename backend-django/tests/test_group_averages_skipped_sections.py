@@ -8,7 +8,7 @@ import pytest
 from openpyxl import load_workbook
 
 from apps.core import groups, statistics
-from apps.core.mock_scoring import skipped_skills
+from apps.core.mock_scoring import overall_without_skipped, skipped_skills
 
 # ---- which sections count as skipped -----------------------------------------------------------
 
@@ -106,6 +106,10 @@ def test_excel_averages_leave_out_skipped_sections_and_count_them_apart():
     assert average[4] == 5.5        # (7 + 4) / 2: the blank Listening is not a 0
     assert average[5] == 5.7        # (7 + 6.5 + 3.5) / 3
     assert skipped[0] == 'SKIPPED SECTIONS' and skipped[4] == 1 and skipped[5] == 0 and '1 in total' in skipped[1]
+    # The overall in the group average is taken over the answered sections: s1 -> Reading 7 only (its own 3.5 stays in the note).
+    assert body['S1'][8] == 7 and "student's own overall: 3.5" in body['S1'][12] and body['S1'][12].startswith('Incomplete')
+    assert body['S2'][8] == 7 and not body['S2'][12]
+    assert average[8] == 5.8 and 'answered sections only' in average[12]       # (7 + 7 + 3.5) / 3
 
 
 # ---- CSV (statistics) -----------------------------------------------------------------------------
@@ -132,3 +136,40 @@ def test_results_csv_row_without_attempts_keeps_the_same_width():
         mocks.filter.return_value.select_related.return_value.order_by.return_value = []
         headers, rows = statistics.group_results_csv('g')
     assert len(rows[0]) == len(headers) and rows[0][-1] == 0
+
+
+# ---- the group's "average band" counts the answered sections only ---------------------------------
+
+def test_overall_without_skipped_sections():
+    bands = dict(listening=0, reading=7, writing=7, speaking=7)
+    assert overall_without_skipped('ielts_academic', 5.5, bands, {'listening'}) == (7.0, True)     # own overall 5.5 (0 counted)
+    assert overall_without_skipped('ielts_academic', 5.5, dict(listening=0, reading=6.5, writing=6, speaking=6), {'listening'}) == (6.0, True)   # mean 6.17 -> 6.0
+    assert overall_without_skipped('ielts_academic', 7.0, bands, set()) == (7.0, False)           # nothing skipped: as stored
+    assert overall_without_skipped('ielts_academic', None, bands, {'listening'}) == (None, False)
+    assert overall_without_skipped('ielts_academic', 3.0, dict(listening=0), {'listening'}) == (None, True)   # nothing left to average
+    assert overall_without_skipped('multilevel', 61.0, {}, {'reading'}) == (61.0, True)          # its overall already leaves them out
+    assert overall_without_skipped('ielts_general', 5.5, dict(listening=0, reading=7, writing=None, speaking=7), {'listening'}) == (7.0, True)
+
+
+def test_group_average_band_is_over_answered_sections_and_flags_incomplete_ones():
+    skipped = attempt('s1', 'ielts_academic', dict(listening=dict(score=0, max=40), reading=dict(score=33, max=40), writing=dict(score=0, max=18), speaking=dict(score=0, max=18)),
+        dict(listening=0, reading=7, writing=7, speaking=7), overall=5.5)          # stored 5.5 = (0 + 7 + 7 + 7) / 4
+    full = attempt('s2', 'ielts_academic', dict(listening=dict(score=30, max=40)), dict(listening=6.5, reading=6.5, writing=6.5, speaking=6.5), overall=6.5)
+    per_student, group = run_analytics([skipped, full])
+    assert per_student['s1']['overallBand'] == 7.0 and per_student['s1']['overallBandIncomplete'] is True
+    assert per_student['s2']['overallBand'] == 6.5 and per_student['s2']['overallBandIncomplete'] is False
+    assert group['averageBandScore'] == 6.8 and group['incompleteOverallCount'] == 1            # (7.0 + 6.5) / 2 = 6.75 -> 6.8
+    # The attempt's own overall - the student's result - is untouched.
+    assert skipped.overall_band == 5.5 and skipped.section_bands['listening'] == 0
+
+
+def test_group_detail_rows_carry_the_incomplete_flag():
+    skipped = attempt('s1', 'ielts_academic', dict(listening=dict(score=0, max=40), reading=dict(score=33, max=40)), dict(listening=0, reading=7), overall=3.5)
+    per_student, group = run_analytics([skipped])
+    assert (per_student['s1']['overallBand'], per_student['s1']['overallBandIncomplete'], group['averageBandScore']) == (7.0, True, 7.0)
+
+
+def test_a_group_without_skipped_sections_is_exactly_as_before():
+    per_student, group = run_analytics([attempt('s1', 'ielts_academic', dict(listening=dict(score=30, max=40)), dict(listening=7, reading=6, writing=6, speaking=6), overall=6.5)])
+    assert (per_student['s1']['overallBand'], per_student['s1']['overallBandIncomplete']) == (6.5, False)
+    assert group['averageBandScore'] == 6.5 and group['incompleteOverallCount'] == 0
