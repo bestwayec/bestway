@@ -485,7 +485,7 @@ function OverallFeedback({ result, t }: { result: AssessmentResult; t: Translate
         <div className="space-y-2.5">
           <h5 className="text-sm font-bold text-fg flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-brand" />
-            {t("vocabularyUpgrades")} ({result.vocabularyUpgrades.length} ta)
+            {t("vocabularyUpgrades")} ({result.vocabularyUpgrades.length})
           </h5>
           <ul className="space-y-2.5">
             {result.vocabularyUpgrades.map((item, index) => (
