@@ -270,7 +270,7 @@ export function BulkQuestionImporterModal({
               type="button"
               size="sm"
               onClick={handleParse}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-bold px-4 rounded-xl shadow-md shadow-brand/20"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-bold px-4 rounded-xl shadow-md"
             >
               <Zap className="size-4 mr-1.5 fill-fg" />
               Matnni tahlil qilish (Parse)
@@ -337,7 +337,7 @@ export function BulkQuestionImporterModal({
                             onClick={() => handleOptionCorrectChange(q.id, letter)}
                             className={`flex items-center gap-2 p-2 rounded-lg text-xs cursor-pointer border transition-all ${
                               isCorrect
-                                ? "bg-brand/20 border-brand text-brand-subtle-fg font-semibold shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                                ? "bg-brand/20 border-brand text-brand-subtle-fg font-semibold"
                                 : "bg-bg/60 border-border text-fg-muted hover:border-border-strong"
                             }`}
                           >
@@ -377,7 +377,7 @@ export function BulkQuestionImporterModal({
             size="sm"
             disabled={parsedList.length === 0 || isSubmitting}
             onClick={handleSaveAndAttach}
-            className="bg-brand hover:bg-brand-hover text-brand-fg font-bold px-5 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
+            className="bg-brand hover:bg-brand-hover text-brand-fg font-bold px-5 rounded-xl transition-all"
           >
             {isSubmitting ? (
               <Loader2 className="size-4 animate-spin mr-1.5" />

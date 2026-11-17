@@ -283,7 +283,7 @@ export function CbtSectionStepper({
       <div
         data-runner-bottom
         className={cn(
-          "sticky bottom-0 z-30 -mx-4 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:mx-0 sm:rounded-t-[12px] sm:border-x sm:px-3",
+          "sticky bottom-0 z-30 -mx-4 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:mx-0 sm:rounded-t-card sm:border-x sm:px-3",
           isDtm ? "border-border-strong bg-surface" : "border-border/80 bg-surface/95",
         )}
       >

@@ -70,7 +70,7 @@ export function ListeningAudioCard({
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   return (
-    <section aria-label={tx(t, "audio", "Audio")} className="rounded-[8px] border border-border p-3">
+    <section aria-label={tx(t, "audio", "Audio")} className="rounded-field border border-border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="flex items-center gap-1.5 text-sm font-semibold text-fg">
           <Music className="size-4" aria-hidden />
@@ -108,7 +108,7 @@ export function ListeningAudioCard({
 
       {/* 1. No audio */}
       {!hasAudio && !pendingFile && (
-        <div className="mt-2 rounded-[8px] border border-dashed border-border-strong p-4 text-center">
+        <div className="mt-2 rounded-field border border-dashed border-border-strong p-4 text-center">
           <p className="text-sm font-medium text-fg">
             {tx(t, "uploadListeningAudio", "Upload listening audio")}
           </p>
@@ -189,7 +189,7 @@ export function ListeningAudioCard({
 
       {/* 5. Upload failed — friendly first, technical detail collapsed. */}
       {uploadError && (
-        <div className="mt-2 flex items-start gap-2 rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2" role="alert">
+        <div className="mt-2 flex items-start gap-2 rounded-field border border-danger-border bg-danger-bg px-3 py-2" role="alert">
           <XCircle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
           <div className="min-w-0">
             <p className="text-sm font-medium text-danger">{uploadError}</p>
@@ -218,7 +218,7 @@ export function ListeningAudioCard({
             id={`replay-${groupId}`}
             value={playLimit}
             onChange={(e) => onPlayLimitChange(Number(e.target.value))}
-            className="h-9 w-full rounded-[8px] border border-border bg-surface px-2 text-sm text-fg"
+            className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm text-fg"
           >
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>

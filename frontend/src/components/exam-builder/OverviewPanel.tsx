@@ -191,15 +191,15 @@ export function OverviewPanel({
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="grid grid-cols-3 gap-1.5 text-center sm:gap-2">
-              <div className="min-w-0 rounded-[8px] bg-surface-hover p-2 sm:p-2.5">
+              <div className="min-w-0 rounded-field bg-surface-hover p-2 sm:p-2.5">
                 <p className="text-lg font-bold text-fg tabular-nums sm:text-xl">{detail.sections.length}</p>
                 <p className="truncate text-[11px] text-fg-muted">{tx(t, "sections", "sections")}</p>
               </div>
-              <div className="min-w-0 rounded-[8px] bg-surface-hover p-2 sm:p-2.5">
+              <div className="min-w-0 rounded-field bg-surface-hover p-2 sm:p-2.5">
                 <p className="text-lg font-bold text-fg tabular-nums sm:text-xl">{totalGroups}</p>
                 <p className="truncate text-[11px] text-fg-muted">{tx(t, "blocks", "blocks")}</p>
               </div>
-              <div className="min-w-0 rounded-[8px] bg-surface-hover p-2 sm:p-2.5">
+              <div className="min-w-0 rounded-field bg-surface-hover p-2 sm:p-2.5">
                 <p className="text-lg font-bold text-fg tabular-nums sm:text-xl">{detail.questionCount}</p>
                 <p className="truncate text-[11px] text-fg-muted">{tx(t, "questions", "questions")}</p>
               </div>
@@ -212,7 +212,7 @@ export function OverviewPanel({
                   key={s.id}
                   type="button"
                   onClick={() => onSelect({ kind: "section", sectionId: s.id })}
-                  className="flex min-h-[44px] w-full min-w-0 items-center gap-2 rounded-[8px] border border-border px-3 py-2 text-left text-sm transition hover:border-fg-subtle"
+                  className="flex min-h-[44px] w-full min-w-0 items-center gap-2 rounded-field border border-border px-3 py-2 text-left text-sm transition hover:border-fg-subtle"
                 >
                   <Icon className="size-4 shrink-0 text-fg-muted" aria-hidden />
                   <span className="truncate font-medium capitalize text-fg">{s.skill}</span>

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Oddiy, toza karta uslubi:
- * Oq yoki qora fon, 1px chegara, 12px burchak. Soya va glow yo'q.
+ * Surface fon, 1px chegara, rounded-card (14px). Soya faqat interaktiv kartada hover'da (shadow-e1).
  */
 export function Card({
   className,
@@ -13,8 +13,8 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[12px] border border-border bg-surface transition-colors",
-        interactive && "hover:border-border-strong",
+        "rounded-card border border-border bg-surface transition-[border-color,box-shadow] duration-fast",
+        interactive && "hover:border-border-strong hover:shadow-e1",
         className,
       )}
       {...props}

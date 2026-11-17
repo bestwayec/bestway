@@ -220,7 +220,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
             ) : (
               <div className="grid grid-cols-3 gap-2 sm:gap-2 max-[360px]:grid-cols-1">
                 {(["present", "absent", "late"] as const).map((s) => (
-                  <div key={s} className="rounded-[8px] bg-bg-subtle px-2 py-2 text-center">
+                  <div key={s} className="rounded-field bg-bg-subtle px-2 py-2 text-center">
                     <p className={cn("text-lg font-bold tabular-nums", ATT_TONE[s])}>{att[s]}</p>
                     <p className="text-[11px] text-fg-muted">{tatt(s)}</p>
                   </div>
@@ -248,7 +248,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
                       key={m}
                       title={`${tMonthsShort(String(m))} · ${state ? tpay(state) : tpay("notMarked")}`}
                       className={cn(
-                        "flex h-7 items-center justify-center rounded-[6px] border text-[10px] font-semibold",
+                        "flex h-7 items-center justify-center rounded-chip border text-[10px] font-semibold",
                         state ? PAY_TONE[state] : "border-border bg-surface text-fg-subtle",
                       )}
                     >

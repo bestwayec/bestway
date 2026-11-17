@@ -187,7 +187,7 @@ function ScheduledListeningAudio({
     : null;
 
   return (
-    <div className="mt-3 space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3" data-testid="listening-scheduled">
+    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3" data-testid="listening-scheduled">
       {objectUrl && (
         <audio
           ref={audioRef}
@@ -422,7 +422,7 @@ function PlainListeningAudio({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3">
+    <div className="mt-3 space-y-2 rounded-field border border-border bg-bg-subtle p-3">
       {/* Hidden audio: no native controls → no pause/seek UI. Volume via control below. */}
       <audio
         ref={audioRef}

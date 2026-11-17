@@ -209,7 +209,7 @@ export function ScorePredictionCard({
   
   if (!hasEvidence) {
     return (
-      <Card className="rounded-[12px] border border-border bg-surface p-6 sm:p-8 text-center" data-testid="prediction-no-evidence">
+      <Card className="rounded-card border border-border bg-surface p-6 sm:p-8 text-center" data-testid="prediction-no-evidence">
         <Award className="mx-auto size-12 text-fg-muted mb-3" />
         <h3 className="text-xl font-bold text-fg">
           Hali natija yo'q — birinchi testni boshlang
@@ -280,7 +280,7 @@ export function ScorePredictionCard({
                 className={cn(
                   "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                   scaleTab === t.id
-                    ? "bg-brand text-brand-fg  shadow-brand/30 ring-1 ring-brand/50"
+                    ? "bg-brand text-brand-fg  ring-1 ring-brand/50"
                     : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
                 )}
               >

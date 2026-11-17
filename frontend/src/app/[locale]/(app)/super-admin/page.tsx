@@ -6,7 +6,7 @@ import { getPathname } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 
 const AdminDashboard = dynamic(() => import("@/components/dashboard/admin-dashboard").then((m) => m.AdminDashboard), {
-  loading: () => <div className="h-64 animate-pulse rounded-[12px] bg-border/40" />,
+  loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 
 export default async function SuperAdminPage({ params }: { params: Promise<{ locale: string }> }) {

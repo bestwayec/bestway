@@ -64,7 +64,7 @@ export function TodayCard({ skipResume = false }: { skipResume?: boolean }) {
           <Skeleton className="h-14 w-full" />
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-start gap-2 rounded-[12px] border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col items-start gap-2 rounded-card border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-fg-muted">{t("empty")}</p>
           <Link href="/mock" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand hover:underline">
             {t("emptyAction")} <ChevronRight className="size-4" aria-hidden />
@@ -77,7 +77,7 @@ export function TodayCard({ skipResume = false }: { skipResume?: boolean }) {
             const { title, detail } = line(item);
             return (
               <li key={item.kind}>
-                <Link href={item.href} className="flex min-h-[56px] items-center gap-3 py-2.5 text-left hover:bg-surface-hover focus-visible:bg-surface-hover rounded-[8px] px-1">
+                <Link href={item.href} className="flex min-h-[56px] items-center gap-3 py-2.5 text-left hover:bg-surface-hover focus-visible:bg-surface-hover rounded-field px-1">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-brand-subtle-fg">
                     <Icon className="size-4" aria-hidden />
                   </span>

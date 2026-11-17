@@ -33,7 +33,7 @@ function Choice<T extends string>({ name, value, options, label, onChange }: { n
           aria-checked={value === option}
           onClick={() => onChange(option)}
           className={cn(
-            "min-h-[44px] rounded-[8px] border px-3 text-sm font-medium",
+            "min-h-[44px] rounded-field border px-3 text-sm font-medium",
             value === option ? "border-brand bg-brand-subtle text-brand-subtle-fg" : "border-border bg-surface text-fg hover:bg-surface-hover",
           )}
         >
@@ -116,12 +116,12 @@ export const ExamToolbar = React.forwardRef<ExamToolbarHandle, {
             <DialogDescription>{t("helpIntro")}</DialogDescription>
           </DialogHeader>
           <DialogBody className="max-h-[60vh] space-y-3 overflow-y-auto">
-            <section className="rounded-[8px] bg-bg-subtle p-3 text-sm">
+            <section className="rounded-field bg-bg-subtle p-3 text-sm">
               <h3 className="font-semibold text-fg">{t("helpNavigationTitle")}</h3>
               <p className="mt-1 text-fg-muted">{t("helpNavigation")}</p>
             </section>
             {helpTypes.map((type) => (
-              <section key={type} className="rounded-[8px] bg-bg-subtle p-3 text-sm" data-help-type={type}>
+              <section key={type} className="rounded-field bg-bg-subtle p-3 text-sm" data-help-type={type}>
                 <h3 className="font-semibold text-fg">{t(`helpTitle_${type}`)}</h3>
                 <p className="mt-1 text-fg-muted">{t(`help_${type}`)}</p>
               </section>

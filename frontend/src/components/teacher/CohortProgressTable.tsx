@@ -219,7 +219,7 @@ export function CohortProgressTable({
           <Button
             size="sm"
             onClick={onOpenCreateAssignment}
-            className="bg-brand hover:bg-brand-hover text-brand-fg font-medium text-xs gap-1.5 shadow-sm shadow-brand/30"
+            className="bg-brand hover:bg-brand-hover text-brand-fg font-medium text-xs gap-1.5 shadow-sm"
           >
             <Plus className="h-3.5 w-3.5" />
             Yangi Vazifa Biriktirish

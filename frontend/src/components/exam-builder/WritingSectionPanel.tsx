@@ -46,7 +46,7 @@ function TaskCard({
       type="button"
       onClick={() => onOpen(group.id)}
       aria-label={`${taskLabel} — ${ready ? "Ready" : "Needs attention"}`}
-      className="rounded-[12px] border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
+      className="rounded-card border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
     >
       <div className="flex items-center gap-2">
         {ready ? (
@@ -268,7 +268,7 @@ export function WritingSectionPanel({
                   key={g.id}
                   type="button"
                   onClick={() => onSelect({ kind: "group", groupId: g.id })}
-                  className="rounded-[12px] border border-dashed border-border bg-surface p-4 text-left transition hover:border-fg-subtle"
+                  className="rounded-card border border-dashed border-border bg-surface p-4 text-left transition hover:border-fg-subtle"
                 >
                   <div className="flex items-center gap-2">
                     {issues > 0 ? (

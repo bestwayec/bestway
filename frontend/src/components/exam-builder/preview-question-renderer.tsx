@@ -47,7 +47,7 @@ export function PreviewQuestionInput({
     return (
       <div className="space-y-2">
         <QuestionHeader number={q.number} prompt={q.prompt} />
-        <div className="ml-[34px] flex flex-wrap items-center gap-3 rounded-[6px] border border-border bg-bg-subtle p-3">
+        <div className="ml-[34px] flex flex-wrap items-center gap-3 rounded-chip border border-border bg-bg-subtle p-3">
           <Button size="sm" variant="outline" disabled aria-disabled="true">
             <Mic aria-hidden />
             {t("record")}

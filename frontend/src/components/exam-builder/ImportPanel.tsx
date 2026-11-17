@@ -479,7 +479,7 @@ export function ImportPanel({
         </div>
 
         {previewError && (
-          <p role="alert" className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <p role="alert" className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {previewError}
           </p>
         )}
@@ -492,7 +492,7 @@ export function ImportPanel({
                 2 · Preview — check before anything is saved
               </p>
               {stale && (
-                <p role="alert" className="rounded-[8px] border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-fg">
+                <p role="alert" className="rounded-field border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-fg">
                   Inputs changed since parsing — press Parse again to refresh this preview. Import is paused until then.
                 </p>
               )}
@@ -503,14 +503,14 @@ export function ImportPanel({
                   { v: String(allErrors.length), l: "Errors" },
                   { v: String(analysis.warnings.length), l: "Warnings" },
                 ].map((s) => (
-                  <div key={s.l} className="rounded-[10px] border border-border bg-surface p-3 text-center">
+                  <div key={s.l} className="rounded-control border border-border bg-surface p-3 text-center">
                     <p className="text-2xl font-black text-fg">{s.v}</p>
                     <p className="text-[11px] uppercase tracking-wider text-fg-muted">{s.l}</p>
                   </div>
                 ))}
               </div>
               {typeCounts.length > 0 && (
-                <div className="rounded-[8px] border border-border p-3">
+                <div className="rounded-field border border-border p-3">
                   <p className="text-xs font-semibold text-fg">Question types</p>
                   <ul className="mt-1 space-y-0.5 text-sm text-fg-muted">
                     {typeCounts.map(([ty, n]) => (
@@ -527,12 +527,12 @@ export function ImportPanel({
                 </div>
               )}
               {preview.instructions?.trim() && (
-                <p className="rounded-[8px] bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
+                <p className="rounded-field bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
                   Instructions found in paste: {preview.instructions.trim()}
                 </p>
               )}
               {allErrors.length > 0 && (
-                <div role="alert" className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+                <div role="alert" className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
                   <ul className="list-disc space-y-0.5 pl-4">
                     {allErrors.map((e) => (
                       <li key={e}>{e}</li>
@@ -541,7 +541,7 @@ export function ImportPanel({
                 </div>
               )}
               {analysis.warnings.length > 0 && (
-                <div className="rounded-[8px] border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-fg">
+                <div className="rounded-field border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-fg">
                   <ul className="list-disc space-y-0.5 pl-4">
                     {analysis.warnings.map((w) => (
                       <li key={w}>{w}</li>
@@ -578,7 +578,7 @@ export function ImportPanel({
                           : undefined;
                   const opts = (q.options ?? []).filter((o) => o.trim() !== "");
                   return (
-                    <li key={`${q.number}-${q.prompt.slice(0, 24)}`} className="rounded-[8px] border border-border p-3">
+                    <li key={`${q.number}-${q.prompt.slice(0, 24)}`} className="rounded-field border border-border p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
                         Q{q.number} · {typeLabel(q.type)}
                       </p>
@@ -615,7 +615,7 @@ export function ImportPanel({
             )}
 
             {/* Step 3 — Confirm */}
-            <div className="rounded-[8px] border border-border p-3">
+            <div className="rounded-field border border-border p-3">
               <p className="text-sm font-semibold text-fg">
                 Import {detected.length} question{detected.length === 1 ? "" : "s"} into {targetLabel}?
               </p>
@@ -630,7 +630,7 @@ export function ImportPanel({
                     )}
               </p>
               {importError && (
-                <p role="alert" className="mt-2 rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+                <p role="alert" className="mt-2 rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
                   {importError}
                 </p>
               )}

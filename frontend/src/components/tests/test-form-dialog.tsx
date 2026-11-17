@@ -182,7 +182,7 @@ function TestFormFields({
     <>
       <DialogBody className="space-y-5 overflow-y-auto pr-1">
         {error && (
-          <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger flex gap-2">
+          <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger flex gap-2">
             <Info className="size-4 shrink-0 mt-0.5" /> <span>{error}</span>
           </div>
         )}
@@ -198,7 +198,7 @@ function TestFormFields({
                   onClick={() => setType(ty)}
                   aria-pressed={type === ty}
                   className={cn(
-                    "rounded-[10px] border px-3 py-3 text-sm font-medium uppercase transition-colors text-left flex flex-col gap-1",
+                    "rounded-control border px-3 py-3 text-sm font-medium uppercase transition-colors text-left flex flex-col gap-1",
                     type === ty
                       ? "border-brand bg-brand-subtle text-brand-subtle-fg ring-1 ring-brand/10"
                       : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
@@ -271,7 +271,7 @@ function TestFormFields({
         </div>
 
         {/* Per-section random limits */}
-        <div className="rounded-[10px] border border-border bg-bg-subtle p-3">
+        <div className="rounded-control border border-border bg-bg-subtle p-3">
           <div className="flex items-center gap-2 mb-2">
             <Layers className="size-3.5 text-brand" />
             <p className="text-sm font-medium text-fg">{tFallback(t, "sectionLimits", "Per-section question limits")}</p>
@@ -311,7 +311,7 @@ function TestFormFields({
         <div className="space-y-3">
           <div
             className={cn(
-              "rounded-[10px] border p-3 flex items-start gap-3 transition-colors cursor-pointer",
+              "rounded-control border p-3 flex items-start gap-3 transition-colors cursor-pointer",
               isDemo ? "border-info bg-info-bg/50" : "border-border bg-surface hover:bg-surface-hover",
             )}
             role="button"
@@ -322,7 +322,7 @@ function TestFormFields({
           >
             <span
               className={cn(
-                "mt-0.5 grid size-5 place-items-center rounded-[6px] border shrink-0",
+                "mt-0.5 grid size-5 place-items-center rounded-chip border shrink-0",
                 isDemo ? "bg-info border-info text-white" : "border-border bg-surface",
               )}
               aria-hidden
@@ -351,7 +351,7 @@ function TestFormFields({
           {isEdit && (
             <div
               className={cn(
-                "rounded-[10px] border p-3 flex items-start gap-3 transition-colors cursor-pointer",
+                "rounded-control border p-3 flex items-start gap-3 transition-colors cursor-pointer",
                 isActive ? "border-success bg-success-bg/40" : "border-warning bg-warning-bg/30",
               )}
               role="button"
@@ -362,7 +362,7 @@ function TestFormFields({
             >
               <span
                 className={cn(
-                  "mt-0.5 grid size-5 place-items-center rounded-[6px] border shrink-0",
+                  "mt-0.5 grid size-5 place-items-center rounded-chip border shrink-0",
                   isActive ? "bg-success border-success text-white" : "border-warning bg-warning text-warning-fg",
                 )}
                 aria-hidden

@@ -1,12 +1,13 @@
 import * as React from "react";
 import { AlertTriangle, Loader2, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("animate-pulse rounded-[12px] bg-border/50", className)}
+      className={cn("animate-pulse rounded-control bg-border/60 motion-reduce:animate-none", className)}
       aria-hidden
       {...props}
     />
@@ -34,12 +35,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-border bg-surface px-6 py-12 text-center",
+        "flex flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border-strong bg-surface px-6 py-10 text-center sm:py-12",
         className,
       )}
     >
       {Icon && (
-        <div className="rounded-full bg-surface-elevated p-3 border border-border">
+        <div className="rounded-full border border-border bg-bg-subtle p-3">
           <Icon className="size-6 text-fg-muted" aria-hidden />
         </div>
       )}
@@ -58,18 +59,21 @@ export function ErrorState({
   description,
   action,
   onRetry,
+  retryLabel,
   className,
 }: {
   title: string;
   description?: string;
   action?: React.ReactNode;
   onRetry?: () => void;
+  retryLabel?: string;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-[12px] border border-danger-border bg-surface p-6 sm:p-8 text-center",
+        "flex flex-col items-center justify-center gap-3 rounded-card border border-danger-border bg-surface p-6 sm:p-8 text-center",
         className,
       )}
       role="alert"
@@ -91,7 +95,7 @@ export function ErrorState({
           className="mt-2 min-h-[44px] px-5"
         >
           <RotateCcw className="mr-1.5 size-4" />
-          Qayta urinish
+          {retryLabel ?? tc("retry")}
         </Button>
       ) : null}
     </div>

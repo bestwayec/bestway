@@ -48,14 +48,14 @@ export function ReviewExplain({ skill, group, question }: { skill: MockSkill; gr
   const hasText = Boolean(parts) && text.trim();
   const hasAudio = skill === "listening" && Boolean(group.reviewAudioUrl);
   return (
-    <div ref={panel} className="space-y-2 rounded-[8px] border border-border bg-bg-subtle p-3" data-testid="review-explain">
+    <div ref={panel} className="space-y-2 rounded-field border border-border bg-bg-subtle p-3" data-testid="review-explain">
       {hasText ? (
         <div
           ref={box}
           role="region"
           tabIndex={0}
           aria-label={t(skill === "listening" ? "scriptLabel" : "passageLabel")}
-          className="max-h-64 overflow-y-auto whitespace-pre-line rounded-[8px] border border-border bg-surface p-3 text-sm leading-relaxed text-fg"
+          className="max-h-64 overflow-y-auto whitespace-pre-line rounded-field border border-border bg-surface p-3 text-sm leading-relaxed text-fg"
         >
           {parts![0]}
           <mark ref={mark} className="rounded bg-warning-bg px-0.5 text-fg ring-1 ring-warning" data-testid="review-evidence">{parts![1]}</mark>

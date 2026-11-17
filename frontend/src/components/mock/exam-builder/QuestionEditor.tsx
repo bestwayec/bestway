@@ -593,7 +593,7 @@ function QuestionPreview({ question }: { question: BuilderQuestion }) {
   );
   const pillClass = (active: boolean) =>
     cn(
-      "rounded-[8px] border px-3 py-1.5 text-sm",
+      "rounded-field border px-3 py-1.5 text-sm",
       active
         ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg"
         : "border-border bg-surface text-fg-muted",
@@ -676,7 +676,7 @@ function QuestionPreview({ question }: { question: BuilderQuestion }) {
         {badge}
         <p className="whitespace-pre-line text-sm text-fg">{prompt}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-3 rounded-[8px] border bg-bg-subtle p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-field border bg-bg-subtle p-3">
         <Button type="button" size="sm" variant="outline" disabled>
           <Mic className="size-4" aria-hidden />
           Record
@@ -956,7 +956,7 @@ export function QuestionFieldSet(props: {
                   <label
                     key={opt}
                     className={cn(
-                      "min-h-[40px] cursor-pointer rounded-[8px] border px-4 py-2 text-center text-sm transition-colors sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-left",
+                      "min-h-[40px] cursor-pointer rounded-field border px-4 py-2 text-center text-sm transition-colors sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-left",
                       checked
                         ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg"
                         : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
@@ -987,7 +987,7 @@ export function QuestionFieldSet(props: {
                   <label
                     key={opt}
                     className={cn(
-                      "min-h-[40px] cursor-pointer rounded-[8px] border px-4 py-2 text-center text-sm transition-colors sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-left",
+                      "min-h-[40px] cursor-pointer rounded-field border px-4 py-2 text-center text-sm transition-colors sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-left",
                       checked
                         ? "border-brand bg-brand-subtle font-medium text-brand-subtle-fg"
                         : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
@@ -1082,7 +1082,7 @@ export function QuestionFieldSet(props: {
                 </SelectContent>
               </Select>
               {mappingResolved && question.prompt.trim() && (
-                <p className="mt-1.5 rounded-[8px] border border-border bg-surface-hover px-2.5 py-1.5 text-sm text-fg">
+                <p className="mt-1.5 rounded-field border border-border bg-surface-hover px-2.5 py-1.5 text-sm text-fg">
                   <span className="line-clamp-1 font-medium">{question.prompt.trim()}</span>
                   <span aria-hidden className="mx-1.5 text-fg-subtle">
                     →
@@ -1145,7 +1145,7 @@ export function QuestionFieldSet(props: {
                   ...question,
                   answerRule: event.target.value === "word_limit" ? null : event.target.value as ObjectiveAnswerRule,
                 })}
-                className="h-10 w-full rounded-[6px] border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-brand"
+                className="h-10 w-full rounded-chip border border-border bg-bg px-3 text-sm text-fg focus-visible:outline-2 focus-visible:outline-brand"
               >
                 <option value="word_limit">Use word limit</option>
                 <option value="ONE_WORD">ONE WORD</option>
@@ -1166,7 +1166,7 @@ export function QuestionFieldSet(props: {
 
         {kind === "map" && (
           <div className="space-y-3">
-            <div className="rounded-[8px] border border-border bg-surface-hover p-2.5 text-xs text-fg-muted">
+            <div className="rounded-field border border-border bg-surface-hover p-2.5 text-xs text-fg-muted">
               Map / diagram image is managed at block level (Diagram / image section above). The
               answer below labels this point on that image.
             </div>
@@ -1200,7 +1200,7 @@ export function QuestionFieldSet(props: {
         )}
 
         {kind === "essay" && (
-          <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
+          <div className="rounded-field border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="font-semibold text-fg">Teacher graded</p>
             <p className="mt-0.5 text-xs text-fg-muted">
               No answer key — raw score 0–{question.points}. Follow the versioned task instructions for word targets.
@@ -1209,7 +1209,7 @@ export function QuestionFieldSet(props: {
         )}
 
         {kind === "speaking" && (
-          <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
+          <div className="rounded-field border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="flex items-center gap-1.5 font-semibold text-fg">
               <Mic className="size-4" aria-hidden /> Teacher graded
             </p>
@@ -1222,7 +1222,7 @@ export function QuestionFieldSet(props: {
         {/* Stored word limit on a type that no longer uses it: surface, don't strand. */}
         {!showWordLimit && question.wordLimit != null && (
           <Field label="Word limit">
-            <div className="flex flex-wrap items-center gap-2 rounded-[8px] border border-border p-2.5 text-sm">
+            <div className="flex flex-wrap items-center gap-2 rounded-field border border-border p-2.5 text-sm">
               <span className="text-fg-muted">
                 Stored limit ≤{question.wordLimit} — this type does not use word limits.
               </span>
@@ -1323,16 +1323,16 @@ export function QuestionEditor(props: {
   }
 
   return (
-    <div className="min-w-0 space-y-3 rounded-[8px] border border-border bg-surface p-3 sm:p-4">
+    <div className="min-w-0 space-y-3 rounded-field border border-border bg-surface p-3 sm:p-4">
       {/* Question + Type */}
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           <span className="shrink-0 text-sm font-medium text-fg tabular-nums">#{question.number}</span>
-          <span className="max-w-full truncate rounded-[6px] border border-border bg-surface-hover px-1.5 py-0.5 text-[11px] text-fg-muted">
+          <span className="max-w-full truncate rounded-chip border border-border bg-surface-hover px-1.5 py-0.5 text-[11px] text-fg-muted">
             {QTYPE_LABEL[question.type]}
           </span>
           {question.savedQuestionId ? (
-            <span className="shrink-0 rounded-[6px] border border-border bg-surface-hover px-1.5 py-0.5 text-[11px] text-fg-muted">
+            <span className="shrink-0 rounded-chip border border-border bg-surface-hover px-1.5 py-0.5 text-[11px] text-fg-muted">
               saved
             </span>
           ) : null}
@@ -1387,7 +1387,7 @@ export function QuestionEditor(props: {
           role="alertdialog"
           aria-labelledby={`qe-${question.clientId}-switch-title`}
           aria-describedby={`qe-${question.clientId}-switch-desc`}
-          className="space-y-2 rounded-[8px] border border-warning-border bg-warning-bg p-3"
+          className="space-y-2 rounded-field border border-warning-border bg-warning-bg p-3"
         >
           <p id={`qe-${question.clientId}-switch-title`} className="text-sm font-semibold text-fg">
             Change question type to {QTYPE_LABEL[pendingType]}?
@@ -1422,7 +1422,7 @@ export function QuestionEditor(props: {
       {/* Preview (always the student control, never the key) */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">Preview</p>
-        <div className="rounded-[8px] border border-border bg-surface-hover p-3">
+        <div className="rounded-field border border-border bg-surface-hover p-3">
           <QuestionPreview question={question} />
         </div>
       </div>

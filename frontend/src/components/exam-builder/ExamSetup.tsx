@@ -109,7 +109,7 @@ export function ExamSetup() {
       />
 
       {error && (
-        <div className="mb-4 rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+        <div className="mb-4 rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
           {error}
         </div>
       )}
@@ -130,7 +130,7 @@ export function ExamSetup() {
                   role="radio"
                   aria-checked={active}
                   onClick={() => setType(ty)}
-                  className={`min-h-[88px] min-w-0 rounded-[10px] border p-4 text-left transition sm:p-3 ${
+                  className={`min-h-[88px] min-w-0 rounded-control border p-4 text-left transition sm:p-3 ${
                     active
                       ? "border-brand bg-brand-subtle"
                       : "border-border bg-surface hover:border-fg-subtle"
@@ -158,7 +158,7 @@ export function ExamSetup() {
               role="radio"
               aria-checked={mode === "single"}
               onClick={() => setMode("single")}
-              className={`min-h-[72px] min-w-0 rounded-[10px] border p-3 text-left transition ${
+              className={`min-h-[72px] min-w-0 rounded-control border p-3 text-left transition ${
                 mode === "single"
                   ? "border-brand bg-brand-subtle"
                   : "border-border bg-surface hover:border-fg-subtle"
@@ -177,7 +177,7 @@ export function ExamSetup() {
               role="radio"
               aria-checked={mode === "full"}
               onClick={() => setMode("full")}
-              className={`min-h-[72px] min-w-0 rounded-[10px] border p-3 text-left transition ${
+              className={`min-h-[72px] min-w-0 rounded-control border p-3 text-left transition ${
                 mode === "full"
                   ? "border-brand bg-brand-subtle"
                   : "border-border bg-surface hover:border-fg-subtle"
@@ -205,7 +205,7 @@ export function ExamSetup() {
                       type="button"
                       aria-pressed={active}
                       onClick={() => toggleSkill(s)}
-                      className={`min-h-9 rounded-[8px] border px-3 text-sm font-medium capitalize transition ${
+                      className={`min-h-9 rounded-field border px-3 text-sm font-medium capitalize transition ${
                         active
                           ? "border-brand bg-brand-subtle text-fg"
                           : "border-border text-fg-muted hover:border-fg-subtle hover:text-fg"
@@ -275,7 +275,7 @@ export function ExamSetup() {
               />
             </Field>
           </div>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-[8px] border border-border p-3">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-field border border-border p-3">
             <input
               type="checkbox"
               checked={isFreeForApproved}

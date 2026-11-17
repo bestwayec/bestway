@@ -95,7 +95,7 @@ export default function VocabularyDetailPage() {
                 onClick={() => setMode(m.id)}
                 className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex items-center justify-between gap-4 ${
                   isSelected
-                    ? "border-brand bg-brand/10 shadow-md shadow-brand/5 ring-1 ring-brand"
+                    ? "border-brand bg-brand/10 shadow-md ring-1 ring-brand"
                     : "border-border bg-surface hover:bg-bg-subtle/50 hover:border-border"
                 }`}
               >
@@ -126,7 +126,7 @@ export default function VocabularyDetailPage() {
         <Button
           type="button"
           onClick={() => setIsQuizStarted(true)}
-          className="w-full bg-brand hover:bg-brand-hover text-brand-fg h-12 text-base font-semibold shadow-lg shadow-brand/20"
+          className="w-full bg-brand hover:bg-brand-hover text-brand-fg h-12 text-base font-semibold shadow-lg"
         >
           {tm("start")}
         </Button>

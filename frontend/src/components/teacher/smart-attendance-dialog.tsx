@@ -272,7 +272,7 @@ export function SmartAttendanceDialog({
                       className={cn(
                         "rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all flex items-center justify-center gap-1",
                         isPresent
-                          ? "bg-emerald-600 text-white font-medium shadow-md shadow-emerald-900/30 ring-1 ring-emerald-400"
+                          ? "bg-emerald-600 text-white font-medium shadow-md ring-1 ring-emerald-400"
                           : "bg-slate-950/40 text-slate-400 hover:text-slate-200 border border-slate-800/60"
                       )}
                     >
@@ -347,7 +347,7 @@ export function SmartAttendanceDialog({
               size="sm"
               disabled={isSubmitting || students.length === 0}
               onClick={handleSaveAttendance}
-              className="bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold rounded-xl px-6 py-2.5 shadow-lg shadow-emerald-950/40 transition-all flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold rounded-xl px-6 py-2.5 shadow-lg transition-all flex items-center gap-1.5"
             >
               {isSubmitting ? "Saqlanmoqda..." : "Saqlash va Tasdiqlash"}
             </Button>

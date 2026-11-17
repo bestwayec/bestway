@@ -12,7 +12,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"in
         className={cn(
           // text-base (16px) mobilda — iOS fokusda avtomatik zoom qilmasligi uchun;
           // sm dan boshlab 14px (zich formalar chiroyliroq ko'rinadi)
-          "h-10 w-full rounded-[8px] border border-border bg-surface px-3 text-base text-fg sm:text-sm",
+          "h-11 w-full rounded-control border border-input-border bg-surface px-3 text-base text-fg sm:text-sm",
           "placeholder:text-fg-subtle",
           "focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -31,7 +31,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentPro
       <textarea
         ref={ref}
         className={cn(
-          "min-h-20 w-full rounded-[8px] border border-border bg-surface px-3 py-2 text-base text-fg sm:text-sm",
+          "min-h-20 w-full rounded-control border border-input-border bg-surface px-3 py-2 text-base text-fg sm:text-sm",
           "placeholder:text-fg-subtle",
           "focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -94,11 +94,11 @@ export function Field({
       {label && <Label htmlFor={htmlFor}>{label}</Label>}
       {enhancedChildren}
       {error ? (
-        <p id={errorId} className="text-xs text-danger" role={error ? 'alert' : undefined}>
+        <p id={errorId} className="text-sm text-danger" role={error ? 'alert' : undefined}>
           {error}
         </p>
       ) : hint ? (
-        <p id={hintId} className="text-xs text-fg-muted">
+        <p id={hintId} className="text-sm text-fg-muted">
           {hint}
         </p>
       ) : null}

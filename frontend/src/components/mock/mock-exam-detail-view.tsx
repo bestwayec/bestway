@@ -177,7 +177,7 @@ export function MockExamDetailView({ examId }: { examId: string }) {
             return (
               <div
                 key={sec.id}
-                className="flex items-center gap-3 rounded-[10px] border border-border bg-bg-subtle px-3 py-2.5"
+                className="flex items-center gap-3 rounded-control border border-border bg-bg-subtle px-3 py-2.5"
               >
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-subtle text-brand-subtle-fg">
                   <Icon className="size-4" />

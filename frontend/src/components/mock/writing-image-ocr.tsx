@@ -595,7 +595,7 @@ export function WritingImageOcr({
                 size="sm"
                 disabled={isExtracting}
                 onClick={() => handleExtractOcr("replace")}
-                className="h-9 gap-2 rounded-xl bg-brand px-4 text-xs font-semibold text-brand-fg shadow-lg shadow-brand/30 hover:bg-brand-hover"
+                className="h-9 gap-2 rounded-xl bg-brand px-4 text-xs font-semibold text-brand-fg shadow-lg hover:bg-brand-hover"
               >
                 {isExtracting ? (
                   <>

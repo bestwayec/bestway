@@ -52,7 +52,7 @@ export function TeacherProfileCard({
     <TiltCard
       maxTilt={6}
       className={cn(
-        "group relative aspect-[3/4] w-full overflow-hidden rounded-[20px] border bg-surface transition-[border-color,box-shadow] duration-300",
+        "group relative aspect-[3/4] w-full overflow-hidden rounded-dialog border bg-surface transition-[border-color,box-shadow] duration-300",
         // restrained green glow — slightly stronger on the active card
         active
           ? "border-border-strong shadow-[0_20px_50px_-24px_color-mix(in_srgb,var(--brand)_65%,transparent)]"

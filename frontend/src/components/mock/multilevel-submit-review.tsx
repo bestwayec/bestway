@@ -50,7 +50,7 @@ export function MultilevelSubmitReview({
     <div className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-black/50 p-3 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={advance ? "Before you move on" : "Before you submit"}>
       {/* Short viewports (mobile landscape) scroll inside the panel so its
           heading and both actions stay reachable. */}
-      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-[12px] border border-border bg-surface p-4 shadow-xl sm:p-5">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-card border border-border bg-surface p-4 shadow-xl sm:p-5">
         <h2 className="text-lg font-semibold text-fg">{advance ? "Before you move on" : "Before you submit"}</h2>
         <p className="mt-1 text-sm text-fg-muted">
           {work.complete
@@ -63,7 +63,7 @@ export function MultilevelSubmitReview({
             const done = section.closed || (section.required && !section.missing);
             const canJump = !!onJump && !section.expired && !section.closed && (section.missing > 0 || !section.required);
             return (
-              <li key={section.skill} className={cn("flex flex-wrap items-center gap-2 rounded-[8px] border px-3 py-2 text-sm", section.required && section.missing > 0 ? "border-warning-border bg-warning-bg" : "border-border bg-bg-subtle")}>
+              <li key={section.skill} className={cn("flex flex-wrap items-center gap-2 rounded-field border px-3 py-2 text-sm", section.required && section.missing > 0 ? "border-warning-border bg-warning-bg" : "border-border bg-bg-subtle")}>
                 {done ? (
                   <CheckCircle2 className="size-4 shrink-0 text-success" />
                 ) : section.expired ? (

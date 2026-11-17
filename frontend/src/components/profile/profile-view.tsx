@@ -129,7 +129,7 @@ export function ProfileView() {
           <ResultsProgressCard attempts={attempts} loading={attemptsQ.isLoading} />
 
           {/* Student Stats & Recent Mock Results */}
-          <Card className="rounded-[12px] border border-border bg-surface p-5 sm:p-6">
+          <Card className="rounded-card border border-border bg-surface p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
               <div>
                 <h3 className="text-lg font-bold text-fg flex items-center gap-2">

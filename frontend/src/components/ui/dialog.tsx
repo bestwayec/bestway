@@ -3,11 +3,21 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
+
+/** The close button's name from the catalogue; "Close" where a test renders a dialog without next-intl. */
+function useCloseLabel(): string {
+  try {
+    return useTranslations("common")("close");
+  } catch {
+    return "Close";
+  }
+}
 
 export const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
@@ -23,9 +33,10 @@ export const DialogContent = React.forwardRef<
     fullscreen?: boolean;
   }
 >(function DialogContent({ className, children, hideClose, fullscreen, ...props }, ref) {
+  const closeLabel = useCloseLabel();
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="anim-fade fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
+      <DialogPrimitive.Overlay className="anim-fade fixed inset-0 z-50 bg-black/45" />
       <DialogPrimitive.Content
         ref={ref}
         className={
@@ -38,7 +49,7 @@ export const DialogContent = React.forwardRef<
               )
             : cn(
                 "anim-dialog fixed left-1/2 top-1/2 z-50 max-h-[min(92dvh,720px)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-                "overflow-y-auto overscroll-contain rounded-[12px] border border-border bg-surface shadow-lg",
+                "overflow-y-auto overscroll-contain rounded-dialog border border-border bg-surface shadow-e3",
                 "max-sm:max-h-[92dvh]",
                 className,
               )
@@ -48,8 +59,8 @@ export const DialogContent = React.forwardRef<
         {children}
         {!hideClose && (
           <DialogPrimitive.Close
-            className="absolute right-4 top-4 rounded-[6px] p-1 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            aria-label="Close"
+            className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-control text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            aria-label={closeLabel}
           >
             <X className="size-4" />
           </DialogPrimitive.Close>
@@ -83,7 +94,7 @@ export const DialogTitle = React.forwardRef<
   return (
     <DialogPrimitive.Title
       ref={ref}
-      className={cn("pr-8 text-base font-semibold text-fg", className)}
+      className={cn("pr-10 text-lg font-semibold text-fg", className)}
       {...props}
     />
   );

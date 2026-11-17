@@ -119,7 +119,7 @@ export default function VocabularySrsPage() {
               type="button"
               disabled={!stats || stats.totalWeakWords === 0}
               onClick={() => setIsQuizActive(true)}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md shadow-brand/20"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md"
             >
               <Play className="mr-2 h-4 w-4" />
               {ts("start")}

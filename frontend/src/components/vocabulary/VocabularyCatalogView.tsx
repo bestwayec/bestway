@@ -166,7 +166,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Button
               type="button"
               onClick={() => setIsBuilderOpen(true)}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md shadow-brand/20"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md"
             >
               <Plus className="mr-2 h-4 w-4" />
               {tc("createSet")}
@@ -176,7 +176,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       </div>
 
       {/* Subway Vocab Runner Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-r from-brand-subtle/40 via-bg-subtle to-brand-subtle/20 p-6 md:p-7 shadow-xl shadow-brand/30">
+      <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-r from-brand-subtle/40 via-bg-subtle to-brand-subtle/20 p-6 md:p-7 shadow-xl">
         <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-2xl">
@@ -196,7 +196,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Link href="/vocabulary/runner">
               <Button
                 size="lg"
-                className="bg-brand hover:bg-brand-hover text-brand-fg font-extrabold px-6 py-3 rounded-xl shadow-lg shadow-brand/25 transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
+                className="bg-brand hover:bg-brand-hover text-brand-fg font-extrabold px-6 py-3 rounded-xl shadow-lg transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
               >
                 <Gamepad2 className="h-5 w-5" />
                 <span>{tc("playNow")}</span>
@@ -248,7 +248,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               onClick={() => setSelectedLevel(lvl)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedLevel === lvl
-                  ? "bg-brand text-brand-fg shadow-md shadow-brand/25"
+                  ? "bg-brand text-brand-fg shadow-md"
                   : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
               }`}
             >

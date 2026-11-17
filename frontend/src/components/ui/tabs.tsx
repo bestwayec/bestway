@@ -8,12 +8,22 @@ export const Tabs = TabsPrimitive.Root;
 
 export const TabsList = React.forwardRef<
   React.ComponentRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(function TabsList({ className, ...props }, ref) {
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & {
+    /** "underline" (default): page sections. "segmented": a compact switch between 2–4 views. */
+    variant?: "underline" | "segmented";
+  }
+>(function TabsList({ className, variant = "underline", ...props }, ref) {
   return (
     <TabsPrimitive.List
       ref={ref}
-      className={cn("scrollbar-thin flex items-center gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] max-sm:gap-0.5 [&::-webkit-scrollbar]:hidden", className)}
+      data-variant={variant}
+      className={cn(
+        "group/tabs scrollbar-thin flex items-center overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        variant === "segmented"
+          ? "inline-flex max-w-full gap-1 rounded-control border border-border bg-bg-subtle p-1"
+          : "gap-1 border-b border-border max-sm:gap-0.5",
+        className,
+      )}
       {...props}
     />
   );
@@ -31,9 +41,11 @@ export const TabsTrigger = React.forwardRef<
       ref={ref}
 
       className={cn(
-        "relative -mb-px shrink-0 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-fg-muted transition-colors",
-        "hover:text-fg",
-        "data-[state=active]:border-brand data-[state=active]:text-fg",
+        "relative shrink-0 whitespace-nowrap text-sm font-medium text-fg-muted transition-colors duration-fast hover:text-fg",
+        "group-data-[variant=underline]/tabs:-mb-px group-data-[variant=underline]/tabs:min-h-11 group-data-[variant=underline]/tabs:border-b-2 group-data-[variant=underline]/tabs:border-transparent group-data-[variant=underline]/tabs:px-3 group-data-[variant=underline]/tabs:py-2",
+        "group-data-[variant=underline]/tabs:data-[state=active]:border-brand group-data-[variant=underline]/tabs:data-[state=active]:text-fg",
+        "group-data-[variant=segmented]/tabs:min-h-9 group-data-[variant=segmented]/tabs:rounded-field group-data-[variant=segmented]/tabs:px-3 group-data-[variant=segmented]/tabs:py-1.5",
+        "group-data-[variant=segmented]/tabs:data-[state=active]:bg-surface group-data-[variant=segmented]/tabs:data-[state=active]:text-fg group-data-[variant=segmented]/tabs:data-[state=active]:shadow-e1",
         className,
       )}
       {...props}

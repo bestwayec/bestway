@@ -121,7 +121,7 @@ function ArticleFormFields({
       </DialogHeader>
       <DialogBody className="space-y-4">
         {error && (
-          <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {error}
           </div>
         )}

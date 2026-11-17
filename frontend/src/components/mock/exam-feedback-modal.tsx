@@ -173,12 +173,12 @@ export function ExamFeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-brand/20 bg-bg-subtle p-0 text-fg shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-brand/20 bg-bg-subtle p-0 text-fg">
         {/* Header */}
         <div className="sticky top-0 z-20 border-b border-brand/15 bg-bg-subtle/95 px-6 py-5 backdrop-blur-md">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-tr from-brand to-brand text-fg shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+              <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-tr from-brand to-brand text-fg">
                 <Sparkles className="size-6 fill-current" />
               </div>
               <div>
@@ -214,7 +214,7 @@ export function ExamFeedbackModal({
                     className={cn(
                       "flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all",
                       isActive
-                        ? "bg-brand text-brand-fg shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                        ? "bg-brand text-brand-fg"
                         : "bg-surface/80 text-fg-muted hover:bg-surface-hover hover:text-fg"
                     )}
                   >

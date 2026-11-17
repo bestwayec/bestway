@@ -537,7 +537,7 @@ export function TeacherEvaluationDialog({
                 type="submit"
                 size="sm"
                 loading={gradeMutation.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-1.5 shadow-lg shadow-emerald-900/30"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-1.5 shadow-lg"
               >
                 <CheckCircle2 className="size-4" />
                 <span>Yakuniy Bahoni Tasdiqlash</span>

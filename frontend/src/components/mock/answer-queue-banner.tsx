@@ -35,7 +35,7 @@ export function AnswerQueueBanner({
 
   if (submitUnconfirmed) {
     return (
-      <div role="alert" data-testid="submit-unconfirmed" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] z-[60] flex flex-col gap-2 rounded-[10px] border border-warning-border bg-surface px-3.5 py-3 text-sm text-fg shadow-lg sm:flex-row sm:items-center">
+      <div role="alert" data-testid="submit-unconfirmed" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] z-[60] flex flex-col gap-2 rounded-control border border-warning-border bg-surface px-3.5 py-3 text-sm text-fg shadow-lg sm:flex-row sm:items-center">
         <ShieldCheck className="size-4 shrink-0 text-success" aria-hidden />
         <span className="flex-1">{queued > 0 ? t("submitUnconfirmedQueued", { count: queued }) : t("submitUnconfirmed")}</span>
         <Button size="sm" onClick={onRetrySubmit} className="min-h-[44px]">
@@ -47,7 +47,7 @@ export function AnswerQueueBanner({
   }
   if (online && !(failing && queued > 0)) return null;
   return (
-    <div role="status" aria-live="polite" data-testid="answer-queue-banner" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] z-[60] flex items-center gap-2 rounded-[10px] border border-warning-border bg-surface px-3.5 py-2.5 text-sm text-fg shadow-lg">
+    <div role="status" aria-live="polite" data-testid="answer-queue-banner" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] z-[60] flex items-center gap-2 rounded-control border border-warning-border bg-surface px-3.5 py-2.5 text-sm text-fg shadow-lg">
       <CloudOff className="size-4 shrink-0 text-warning" aria-hidden />
       <span>{queued > 0 ? t("queueWaiting", { count: queued }) : t("queueOfflineAllSaved")}</span>
     </div>

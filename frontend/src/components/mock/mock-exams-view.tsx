@@ -203,7 +203,7 @@ export function MockExamsView() {
             aria-pressed={levelFilter === lvl}
             onClick={() => setLevelFilter(lvl)}
             className={cn(
-              "min-h-[44px] px-4 rounded-[8px] border text-sm font-medium transition-colors",
+              "min-h-[44px] px-4 rounded-field border text-sm font-medium transition-colors",
               levelFilter === lvl
                 ? "border-brand bg-brand text-brand-fg"
                 : "border-border bg-surface text-fg hover:border-brand/40"
@@ -268,7 +268,7 @@ export function MockExamsView() {
       ) : examsQ.isPending ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-52 rounded-[12px]" />
+            <Skeleton key={i} className="h-52 rounded-card" />
           ))}
         </div>
       ) : displayedExams.length === 0 ? (
@@ -376,7 +376,7 @@ export function MockExamCard({
 
   return (
     <Card
-      className="flex h-full flex-col justify-between rounded-[12px] border border-border bg-surface p-4"
+      className="flex h-full flex-col justify-between rounded-card border border-border bg-surface p-4"
       data-testid={`mock-card-${exam.id}`}
     >
       <div className="space-y-3">
@@ -443,7 +443,7 @@ export function MockExamCard({
                     onClick={() => setSetupSkill(s as MockPracticeSkill)}
                     aria-label={tCat("startSection", { skill: t(`skills.${s}`) })}
                     title={startable ? tCat("startSection", { skill: t(`skills.${s}`) }) : tCat("sectionNotReady")}
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-fg"
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-field border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-fg"
                   >
                     {startingSkill === s ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : <Icon className="size-3.5" aria-hidden />}
                     {t(`skills.${s}`)}
@@ -467,7 +467,7 @@ export function MockExamCard({
                 return (
                   <span
                     key={s}
-                    className="inline-flex items-center gap-1 rounded-[6px] border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
+                    className="inline-flex items-center gap-1 rounded-chip border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
                   >
                     <Icon className="size-3.5" />
                     {t(`skills.${s}`)}
@@ -485,7 +485,7 @@ export function MockExamCard({
           <div className="flex items-center gap-2">
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-elevated"
+              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-field border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-elevated"
             >
               <ClipboardCheck className="size-4" />
               {t("manage")}
@@ -546,7 +546,7 @@ export function MockExamCard({
             ) : (
               <Link
                 href={`/mock/attempt/${inProgress.id}`}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-field bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
               >
                 <RefreshCw className="size-4" />
                 {t("resume")}
@@ -580,7 +580,7 @@ export function MockExamCard({
           ) : (
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[8px] bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
+              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-field bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
             >
               <Play className="size-4 fill-current mr-2" />
               {t("start")}
@@ -631,7 +631,7 @@ function GradingPanel() {
             aria-label={tCat("gradingProgramLabel")}
             value={program}
             onChange={(e) => setProgram(e.target.value as typeof program)}
-            className="ml-2 rounded-[8px] border border-border bg-surface p-2 text-sm"
+            className="ml-2 rounded-field border border-border bg-surface p-2 text-sm"
           >
             <option value="all">{tCat("gradingProgramAll")}</option>
             <option value="IELTS">IELTS</option>
@@ -643,7 +643,7 @@ function GradingPanel() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="ml-2 rounded-[8px] border border-border bg-surface p-2 text-sm"
+            className="ml-2 rounded-field border border-border bg-surface p-2 text-sm"
           >
             <option value="grading">{ta("pendingReview")}</option>
             <option value="completed">{ta("completedReview")}</option>
@@ -651,14 +651,14 @@ function GradingPanel() {
         </label>
       </div>
 
-      {isLoading && <Skeleton className="h-16 rounded-[12px]" />}
+      {isLoading && <Skeleton className="h-16 rounded-card" />}
       {isError && <p role="alert" className="text-sm text-danger">{tCat("gradingLoadFailed")}</p>}
       {!isLoading && !isError && attempts.length === 0 && (
         <EmptyState icon={CheckCircle2} title={t("noAttempts")} />
       )}
       {attempts.map((a) => (
         <Link key={a.id} href={`/mock/attempt/${a.id}#assessment-feedback`}>
-          <Card className="flex items-center justify-between gap-3 p-4 rounded-[12px] border border-border bg-surface transition-colors hover:bg-surface-elevated">
+          <Card className="flex items-center justify-between gap-3 p-4 rounded-card border border-border bg-surface transition-colors hover:bg-surface-elevated">
             <div className="min-w-0">
               <p className="truncate font-semibold text-fg">{a.studentName ?? "—"}</p>
               <p className="truncate text-sm text-fg-muted">{a.examTitle}</p>
@@ -692,7 +692,7 @@ function PurchasesPanel() {
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 rounded-[12px]" />
+          <Skeleton key={i} className="h-16 rounded-card" />
         ))}
       </div>
     );
@@ -703,7 +703,7 @@ function PurchasesPanel() {
   return (
     <div className="space-y-3">
       {purchases.map((p) => (
-        <Card key={p.id} className="flex items-center justify-between gap-3 p-4 rounded-[12px] border border-border bg-surface">
+        <Card key={p.id} className="flex items-center justify-between gap-3 p-4 rounded-card border border-border bg-surface">
           <div className="min-w-0">
             <p className="truncate font-semibold text-fg">{p.userName}</p>
             <p className="truncate text-sm text-fg-muted">

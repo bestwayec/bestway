@@ -38,7 +38,7 @@ export function GalleryFormDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl" hideClose>
         {open && (
-          <div className="flex max-h-[min(92dvh,720px)] flex-col overflow-hidden rounded-[12px]">
+          <div className="flex max-h-[min(92dvh,720px)] flex-col overflow-hidden rounded-card">
             <GalleryFormFields
             key={item?.id ?? "new"}
             item={item}
@@ -129,7 +129,7 @@ function GalleryFormFields({
         {error && (
           <div
             role="alert"
-            className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger"
+            className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger"
           >
             {error}
           </div>

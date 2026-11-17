@@ -151,7 +151,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio, promp
     }
   }
 
-  return <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-border bg-bg-subtle p-3">
+  return <div className="flex flex-wrap items-center gap-3 rounded-field border border-border bg-bg-subtle p-3">
     {prompt && <div className="w-full"><ReadPromptButton text={prompt} silence={recording} /></div>}
     <p className="w-full text-xs text-fg-muted">{tx(recording ? 'recordingHint' : sending || pending ? 'uploadHint' : hasAudio ? 'uploadedHint' : 'microphoneHint')}</p>
     {recording ? <Button size="sm" variant="danger" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>

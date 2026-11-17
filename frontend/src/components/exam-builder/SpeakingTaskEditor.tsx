@@ -187,7 +187,7 @@ export function SpeakingTaskEditor({
       </div>
 
       {errors.length > 0 && (
-        <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+        <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
           <ul className="list-disc space-y-0.5 pl-4">
             {errors.map((e, i) => (
               <li key={`${e}-${i}`}>{e}</li>
@@ -276,7 +276,7 @@ export function SpeakingTaskEditor({
             </Field>
           )}
 
-          <div className="rounded-[8px] border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
+          <div className="rounded-field border border-brand/25 bg-brand-subtle/40 p-3 text-sm">
             <p className="flex items-center gap-1.5 font-semibold text-fg">
               <Mic className="size-4" aria-hidden /> Teacher graded
             </p>
@@ -315,18 +315,18 @@ export function SpeakingTaskEditor({
       </Card>
 
       {showPreview && (
-        <div className="rounded-[12px] border border-brand/30 bg-surface p-4">
+        <div className="rounded-card border border-brand/30 bg-surface p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
             Student view · speaking
           </p>
           <h4 className="mt-1 text-base font-bold text-fg">{partLabel}</h4>
           {instructions.trim() && (
-            <p className="mt-1.5 rounded-[8px] bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
+            <p className="mt-1.5 rounded-field bg-info/10 px-2.5 py-1.5 text-[13px] text-fg ring-1 ring-info/20">
               {instructions.trim()}
             </p>
           )}
           {context.trim() && (
-            <div className="mt-2 whitespace-pre-wrap rounded-[8px] bg-surface-hover p-3 text-sm leading-relaxed text-fg">
+            <div className="mt-2 whitespace-pre-wrap rounded-field bg-surface-hover p-3 text-sm leading-relaxed text-fg">
               {context.trim()}
             </div>
           )}

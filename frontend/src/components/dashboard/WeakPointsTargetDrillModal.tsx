@@ -246,7 +246,7 @@ export function WeakPointsTargetDrillModal({
           ) : isFinished ? (
             /* Finished Summary View */
             <div className="py-6 text-center space-y-5">
-              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-brand/40 bg-brand/20 text-brand-subtle-fg shadow-lg shadow-brand/10">
+              <div className="mx-auto grid size-20 place-items-center rounded-2xl border border-brand/40 bg-brand/20 text-brand-subtle-fg shadow-lg">
                 <Award className="size-10" />
               </div>
 
@@ -287,7 +287,7 @@ export function WeakPointsTargetDrillModal({
                 <Button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover shadow-md shadow-brand/20"
+                  className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover shadow-md"
                 >
                   Zaif Nuqtalar Xaritasiga Qaytish
                 </Button>

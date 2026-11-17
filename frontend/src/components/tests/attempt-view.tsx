@@ -30,7 +30,7 @@ export function AttemptView({ attemptId }: { attemptId: string }) {
   if (isLoading || !data) {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
-        <Skeleton className="h-14 w-full rounded-[12px]" />
+        <Skeleton className="h-14 w-full rounded-card" />
         <div className="flex gap-2">
           <Skeleton className="h-8 w-24 rounded-full" />
           <Skeleton className="h-8 w-24 rounded-full" />

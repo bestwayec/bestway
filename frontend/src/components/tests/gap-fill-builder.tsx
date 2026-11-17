@@ -153,7 +153,7 @@ export function GapFillBuilder({
             <>
               <div>
                 <p className="mb-1 text-xs font-medium text-fg-muted">Preview (student sees inputs on blanks)</p>
-                <div className="rounded-[10px] border border-border bg-surface px-3 py-2 text-sm leading-7 whitespace-pre-wrap">
+                <div className="rounded-control border border-border bg-surface px-3 py-2 text-sm leading-7 whitespace-pre-wrap">
                   {parsed.segments.map((s, i) =>
                     s.kind === "text" ? (
                       <span key={i}>{s.value}</span>
@@ -174,7 +174,7 @@ export function GapFillBuilder({
                   Answers ({drafts.length - missing.length}/{drafts.length} filled)
                 </p>
                 {drafts.map((d) => (
-                  <div key={d.gapNumber} className="flex flex-col gap-1 rounded-[10px] border border-border p-2.5">
+                  <div key={d.gapNumber} className="flex flex-col gap-1 rounded-control border border-border p-2.5">
                     <div className="flex items-center gap-2">
                       <Badge variant="info">[{d.gapNumber}]</Badge>
                       <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">

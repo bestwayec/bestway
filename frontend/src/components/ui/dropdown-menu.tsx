@@ -19,7 +19,7 @@ export const DropdownMenuContent = React.forwardRef<
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          "anim-pop z-50 min-w-44 overflow-hidden rounded-[10px] border border-border bg-surface p-1 shadow-lg",
+          "anim-pop z-50 min-w-44 overflow-hidden rounded-control border border-border bg-surface p-1 shadow-e2",
           className,
         )}
         {...props}
@@ -36,7 +36,7 @@ export const DropdownMenuItem = React.forwardRef<
     <DropdownMenuPrimitive.Item
       ref={ref}
       className={cn(
-        "flex cursor-pointer select-none items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm outline-none",
+        "flex cursor-pointer select-none items-center gap-2 rounded-chip px-2 py-1.5 text-sm outline-none",
         "focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         "[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-fg-muted",
         destructive ? "text-danger [&_svg]:text-danger focus:bg-danger-bg" : "text-fg",
@@ -56,7 +56,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
       ref={ref}
       checked={checked}
       className={cn(
-        "flex cursor-pointer select-none items-center justify-between gap-2 rounded-[6px] px-2 py-1.5 text-sm text-fg outline-none",
+        "flex cursor-pointer select-none items-center justify-between gap-2 rounded-chip px-2 py-1.5 text-sm text-fg outline-none",
         "focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}

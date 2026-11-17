@@ -532,7 +532,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
       {/* Live-edit warning (ported from the removed legacy manage view):
           published exams serve students immediately. */}
       {detail.isPublished && (
-        <p className="mt-3 rounded-[8px] border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning">
+        <p className="mt-3 rounded-field border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning">
           {tx(
             t,
             "liveEditWarning",
@@ -567,7 +567,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 );
                 if (found) requestSelect(found.sel);
               }}
-              className="h-10 w-full min-w-0 rounded-[8px] border border-border bg-surface px-2 text-sm text-fg"
+              className="h-10 w-full min-w-0 rounded-field border border-border bg-surface px-2 text-sm text-fg"
             >
               {outlineOptions(detail, (k, f) => tx(t, k, f)).map((o) => (
                 <option key={o.key} value={o.key}>

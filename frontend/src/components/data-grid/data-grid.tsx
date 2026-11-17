@@ -83,7 +83,7 @@ export const DataGrid = React.memo(function DataGrid({
       ref={scrollRef}
       onKeyDown={onKeyDown}
       className={cn(
-        "scrollbar-thin overscroll-x-contain overflow-x-auto rounded-[12px] border border-border bg-surface",
+        "scrollbar-thin overscroll-x-contain overflow-x-auto rounded-card border border-border bg-surface",
         className,
       )}
     >

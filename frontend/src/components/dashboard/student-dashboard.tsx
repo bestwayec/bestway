@@ -144,11 +144,11 @@ export function StudentDashboard() {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         <PageHeader title={t("greeting", { name: firstName || "..." })} />
-        <Skeleton className="h-44 w-full rounded-[12px]" />
+        <Skeleton className="h-44 w-full rounded-card" />
         <div className="grid gap-4 sm:grid-cols-3">
-          <Skeleton className="h-28 rounded-[12px]" />
-          <Skeleton className="h-28 rounded-[12px]" />
-          <Skeleton className="h-28 rounded-[12px]" />
+          <Skeleton className="h-28 rounded-card" />
+          <Skeleton className="h-28 rounded-card" />
+          <Skeleton className="h-28 rounded-card" />
         </div>
       </div>
     );
@@ -176,7 +176,7 @@ export function StudentDashboard() {
       <PageHeader title={t("greeting", { name: firstName })} />
 
       {!profile.isApproved && (
-        <div className="flex items-start gap-3 rounded-[12px] border border-warning-border bg-warning-bg/40 px-4 py-3 text-sm">
+        <div className="flex items-start gap-3 rounded-card border border-warning-border bg-warning-bg/40 px-4 py-3 text-sm">
           <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" />
           <p className="font-medium text-fg">{ts("notApproved")}</p>
         </div>
@@ -186,7 +186,7 @@ export function StudentDashboard() {
 
       {/* 2. BITTA katta "Davom etish" kartasi */}
       {unfinishedAttempt ? (
-        <Card className="rounded-[12px] border border-border bg-surface p-6 sm:p-8">
+        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
               <Badge variant="outline" className="text-sm border-brand text-brand">
@@ -214,7 +214,7 @@ export function StudentDashboard() {
           </div>
         </Card>
       ) : recommendedExam ? (
-        <Card className="rounded-[12px] border border-border bg-surface p-6 sm:p-8">
+        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
               <Badge variant="outline" className="text-sm">
@@ -240,7 +240,7 @@ export function StudentDashboard() {
           </div>
         </Card>
       ) : (
-        <Card className="rounded-[12px] border border-border bg-surface p-6 sm:p-8">
+        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
               <Badge variant="outline" className="text-sm">
@@ -304,14 +304,14 @@ export function StudentDashboard() {
         {/* Guruh, ballar va ota-ona bog'lash kodi */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Bog'lash kodi */}
-          <Card className="rounded-[12px] border border-border bg-surface p-5">
+          <Card className="rounded-card border border-border bg-surface p-5">
             <div className="flex flex-col justify-between h-full gap-3">
               <div>
                 <p className="text-sm font-medium text-fg">{ts("linkCode")}</p>
                 <p className="mt-1 text-sm text-fg-muted">{ts("linkCodeHint")}</p>
               </div>
               <div className="flex items-center gap-2 pt-2">
-                <code className="rounded-[8px] border border-border bg-surface-elevated px-3 py-2 text-lg font-bold tracking-[0.2em] text-fg tabular-nums">
+                <code className="rounded-field border border-border bg-surface-elevated px-3 py-2 text-lg font-bold tracking-[0.2em] text-fg tabular-nums">
                   {profile.linkCode}
                 </code>
                 <Button
@@ -328,7 +328,7 @@ export function StudentDashboard() {
           </Card>
 
           {/* Guruh va ballar */}
-          <Card className="rounded-[12px] border border-border bg-surface p-5">
+          <Card className="rounded-card border border-border bg-surface p-5">
             <div className="flex flex-col justify-between h-full gap-3">
               <div>
                 <p className="text-sm font-medium text-fg">{tc("group")}</p>

@@ -22,7 +22,7 @@ export function ExamNotesPanel({
   const t = useTranslations("mock.runnerUx");
   const [confirming, setConfirming] = React.useState<string | null>(null);
   return (
-    <section aria-labelledby="exam-notes-title" className="mb-4 rounded-[10px] border border-border bg-surface p-4" data-testid="exam-notes-panel">
+    <section aria-labelledby="exam-notes-title" className="mb-4 rounded-control border border-border bg-surface p-4" data-testid="exam-notes-panel">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 id="exam-notes-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
           <StickyNote className="size-4 text-warning" aria-hidden />
@@ -37,7 +37,7 @@ export function ExamNotesPanel({
       ) : (
         <ul className="space-y-2">
           {notes.map((note) => (
-            <li key={`${note.storageKey ?? ""}:${note.id}`} className="rounded-[8px] border border-border bg-bg-subtle p-3 text-sm">
+            <li key={`${note.storageKey ?? ""}:${note.id}`} className="rounded-field border border-border bg-bg-subtle p-3 text-sm">
               <p className="text-xs text-fg-muted">&ldquo;{note.quote}&rdquo;</p>
               <p className="mt-1 whitespace-pre-wrap text-fg">{note.text}</p>
               {confirming === note.id ? (

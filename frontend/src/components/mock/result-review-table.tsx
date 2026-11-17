@@ -40,7 +40,7 @@ export function ResultReviewTable({ title, skill, groups }: { title: string; ski
   const tableId = React.useId();
 
   return (
-    <section aria-label={title} className="rounded-[12px] border border-border bg-surface">
+    <section aria-label={title} className="rounded-card border border-border bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <h2 className="text-sm font-semibold text-fg">
           {title} <span className="font-normal tabular-nums text-fg-muted">· {t("correctOf", { correct, total: questions.length })}</span>

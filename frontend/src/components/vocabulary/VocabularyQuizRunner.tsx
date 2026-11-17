@@ -323,7 +323,7 @@ export function VocabularyQuizRunner({
 
         {/* Gamified Points Banner */}
         {hasBonus ? (
-          <div className="rounded-xl border border-warning/30 bg-gradient-to-r from-warning/10 via-brand/10 to-warning/10 p-5 text-center space-y-1 shadow-lg shadow-brand/5">
+          <div className="rounded-xl border border-warning/30 bg-gradient-to-r from-warning/10 via-brand/10 to-warning/10 p-5 text-center space-y-1 shadow-lg">
             <div className="flex items-center justify-center gap-2 text-warning font-extrabold text-lg">
               <Sparkles className="h-5 w-5" />
               <span>{t("pointsAdded", { points: quizResult.pointsAwarded })}</span>

@@ -196,7 +196,7 @@ export function InstantAiCheckerModal({
                 type="button"
                 disabled
                 onClick={handleEvaluate}
-                className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 flex items-center gap-2 shadow-md shadow-emerald-500/20"
+                className="rounded-xl bg-emerald-500 px-6 font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-40 flex items-center gap-2 shadow-md"
               >
                 {loading ? (
                   <>

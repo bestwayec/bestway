@@ -625,7 +625,7 @@ export function BamboozleArena({
         <div
           className={`p-4 rounded-2xl border transition-all ${
             activeTeam === 1
-              ? "bg-emerald-950/60 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.3)] ring-2 ring-emerald-500/40"
+              ? "bg-emerald-950/60 border-emerald-500 ring-2 ring-emerald-500/40"
               : "bg-slate-900/40 border-slate-800 opacity-75"
           }`}
         >
@@ -654,7 +654,7 @@ export function BamboozleArena({
         <div
           className={`p-4 rounded-2xl border transition-all ${
             activeTeam === 2
-              ? "bg-amber-950/60 border-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.3)] ring-2 ring-amber-500/40"
+              ? "bg-amber-950/60 border-amber-500 ring-2 ring-amber-500/40"
               : "bg-slate-900/40 border-slate-800 opacity-75"
           }`}
         >
@@ -718,8 +718,8 @@ export function BamboozleArena({
                 isRevealed
                   ? "bg-slate-900/80 border-slate-700 text-slate-400 cursor-not-allowed opacity-90"
                   : activeTeam === 1
-                  ? "bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border-emerald-500/40 text-emerald-300 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] cursor-pointer"
-                  : "bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/40 text-amber-300 hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
+                  ? "bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 border-emerald-500/40 text-emerald-300 hover:border-emerald-400 cursor-pointer"
+                  : "bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-950 border-amber-500/40 text-amber-300 hover:border-amber-400 cursor-pointer"
               }`}
             >
               {isRevealed ? (
@@ -785,7 +785,7 @@ export function BamboozleArena({
               exit={{ scale: 0.8, y: -20 }}
               transition={{ type: "spring", damping: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-b from-slate-900 via-bg-subtle to-black border-2 border-amber-500/50 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col items-center text-center relative"
+              className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-b from-slate-900 via-bg-subtle to-black border-2 border-amber-500/50 flex flex-col items-center text-center relative"
             >
               <div className="text-6xl mb-3 animate-bounce">{surpriseModal.icon}</div>
               <h3 className="text-2xl font-black text-white mb-2 tracking-wide uppercase">
@@ -885,7 +885,7 @@ export function BamboozleArena({
                   <Button
                     type="button"
                     onClick={() => handleAnswerResult(true)}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-3 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-6 py-3 rounded-xl flex items-center gap-2"
                   >
                     <CheckCircle className="w-5 h-5" />
                     <span>To&apos;g&apos;ri Javob (+{activeCard.points})</span>
@@ -909,7 +909,7 @@ export function BamboozleArena({
       {/* Game Over Celebration Modal */}
       {gameOver && (
         <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in zoom-in-95 duration-300">
-          <div className="w-24 h-24 rounded-full bg-amber-500/20 border-2 border-amber-500/60 flex items-center justify-center text-amber-400 mb-4 shadow-[0_0_40px_rgba(245,158,11,0.4)] animate-bounce">
+          <div className="w-24 h-24 rounded-full bg-amber-500/20 border-2 border-amber-500/60 flex items-center justify-center text-amber-400 mb-4 animate-bounce">
             <Trophy className="w-14 h-14" />
           </div>
 

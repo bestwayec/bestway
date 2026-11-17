@@ -310,7 +310,7 @@ export function ExpressPlacementTest({
             <button
               type="button"
               onClick={startTest}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl shadow-brand/30 transition-all duration-200 hover:from-brand-hover hover:to-brand-hover hover:scale-[1.02] active:scale-95"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand px-8 py-4 text-base sm:text-lg font-bold text-brand-fg shadow-xl transition-all duration-200 hover:from-brand-hover hover:to-brand-hover hover:scale-[1.02] active:scale-95"
             >
               <Zap className="size-5 fill-current" />
               <span>{tu("placement.start")}</span>
@@ -445,7 +445,7 @@ export function ExpressPlacementTest({
                   className={cn(
                     "group flex items-center gap-3.5 rounded-xl border p-4 text-left transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand",
                     isSelected
-                      ? "border-brand bg-brand-subtle/40 text-fg shadow-md shadow-brand/30 ring-1 ring-brand"
+                      ? "border-brand bg-brand-subtle/40 text-fg shadow-md ring-1 ring-brand"
                       : "border-border bg-bg-subtle/80 text-fg-muted hover:border-border-strong hover:bg-surface-hover/40",
                   )}
                 >
@@ -521,7 +521,7 @@ export function ExpressPlacementTest({
               <button
                 type="button"
                 onClick={handleSubmitTest}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand to-brand px-6 py-2.5 text-sm font-bold text-brand-fg shadow-lg shadow-brand/30 hover:from-brand-hover hover:to-brand-hover active:scale-95 transition"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand to-brand px-6 py-2.5 text-sm font-bold text-brand-fg shadow-lg hover:from-brand-hover hover:to-brand-hover active:scale-95 transition"
               >
                 <Zap className="size-4 fill-current" />
                 <span>Testni Yakunlash ({answeredCount}/{questions.length})</span>

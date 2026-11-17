@@ -281,7 +281,7 @@ export function VideosView() {
                           aria-label={t("watch")}
                           className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 focus-visible:opacity-100 bg-black/40 backdrop-blur-[2px]"
                         >
-                          <span className="grid size-14 place-items-center rounded-full bg-emerald-500 text-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-transform duration-300 group-hover:scale-110">
+                          <span className="grid size-14 place-items-center rounded-full bg-emerald-500 text-slate-950 transition-transform duration-300 group-hover:scale-110">
                             <Play className="size-6 fill-current ml-0.5" />
                           </span>
                         </button>
@@ -323,7 +323,7 @@ export function VideosView() {
                             {/* 1. Watch Action */}
                             <Button
                               size="sm"
-                              className="flex-1 min-w-[75px] h-9 text-xs sm:text-sm bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                              className="flex-1 min-w-[75px] h-9 text-xs sm:text-sm bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md"
                               loading={stream.isPending}
                               onClick={() => onWatch(v)}
                             >

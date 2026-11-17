@@ -341,7 +341,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/30 transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
@@ -395,7 +395,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isVerifyingOtp || otpDigits.join("").length !== 6}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/30 transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
           >
             {isVerifyingOtp ? (
               <>

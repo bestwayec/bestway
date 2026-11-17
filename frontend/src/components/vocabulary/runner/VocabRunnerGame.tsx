@@ -933,7 +933,7 @@ export function VocabRunnerGame() {
         {/* Start / Overlay Screen */}
         {!isPlaying && !isGameOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-6 text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl shadow-emerald-500/40 text-brand-fg animate-bounce-slow">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl text-brand-fg animate-bounce-slow">
               <Zap className="h-10 w-10 fill-current" />
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mb-2">
@@ -958,7 +958,7 @@ export function VocabRunnerGame() {
             <button
               type="button"
               onClick={() => void startGame()}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-brand-fg font-black px-8 py-4 text-base shadow-2xl shadow-emerald-950/60 transition cursor-pointer hover:scale-105 active:scale-95"
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-brand-fg font-black px-8 py-4 text-base shadow-2xl transition cursor-pointer hover:scale-105 active:scale-95"
             >
               <Play className="h-5 w-5 fill-current" />
               <span>O&apos;yinni Boshlash</span>

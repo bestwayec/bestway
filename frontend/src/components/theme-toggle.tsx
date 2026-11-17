@@ -14,7 +14,7 @@ export function ThemeToggle({ className }: { className?: string }) {
 
   if (!mounted) {
     return (
-      <div className="size-9 rounded-[10px] border border-border bg-surface" aria-hidden="true" />
+      <div className="size-9 rounded-control border border-border bg-surface" aria-hidden="true" />
     );
   }
 
@@ -26,7 +26,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? "Yorug' mavzuga o'tish" : "Qorong'i mavzuga o'tish"}
       title={isDark ? "Yorug' mavzu" : "Qorong'i mavzu"}
-      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-brand ${className ?? ""}`}
+      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-brand ${className ?? ""}`}
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>

@@ -366,8 +366,8 @@ export function LessonQuizModal({
                 <div
                   className={`inline-flex items-center justify-center size-20 rounded-2xl border ${
                     result.passed
-                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
-                      : "bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.2)]"
+                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
+                      : "bg-amber-500/15 border-amber-500/40 text-amber-400"
                   }`}
                 >
                   {result.passed ? <Trophy className="size-10" /> : <AlertCircle className="size-10" />}
@@ -552,7 +552,7 @@ export function LessonQuizModal({
                             onClick={() => handleSelectOption(opt)}
                             className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all duration-200 ${
                               isSelected
-                                ? "bg-emerald-500/15 border-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500"
+                                ? "bg-emerald-500/15 border-emerald-500 text-white ring-1 ring-emerald-500"
                                 : "bg-slate-900/60 border-slate-800/80 text-slate-300 hover:bg-slate-800 hover:border-slate-700 hover:text-white"
                             }`}
                           >
@@ -627,7 +627,7 @@ export function LessonQuizModal({
                     onClick={handleSubmit}
                     loading={submitting}
                     disabled={totalQuestions === 0}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black shadow-md hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black shadow-md"
                   >
                     <CheckCircle2 className="size-4 mr-1.5" />
                     Yakunlash

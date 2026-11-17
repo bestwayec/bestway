@@ -158,7 +158,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
   return (
     <div className="mx-auto max-w-4xl pb-28">
       {/* Top sticky header */}
-      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/80 sm:mx-0 sm:rounded-b-[12px] sm:px-5">
+      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/80 sm:mx-0 sm:rounded-b-card sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold tracking-tight text-fg sm:text-lg">{title}</h1>
@@ -221,7 +221,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
 
         {cheatSeen && (
           <div
-            className="mt-3 flex items-center gap-2 rounded-[8px] border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning"
+            className="mt-3 flex items-center gap-2 rounded-field border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning"
             role="alert"
           >
             <AlertTriangle className="size-4 shrink-0" />
@@ -271,7 +271,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
         <div className="mb-4 space-y-3">
           <AudioPlayer />
           <AudioscriptDetails />
-          <div className="rounded-[10px] border border-dashed border-border bg-surface px-4 py-3 text-sm leading-relaxed text-fg-muted">
+          <div className="rounded-control border border-dashed border-border bg-surface px-4 py-3 text-sm leading-relaxed text-fg-muted">
             <p className="font-medium text-fg">{tFallback(t, "instructions", "Instructions")}</p>
             <p className="mt-1">
               {tFallback(
@@ -286,7 +286,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
       )}
 
       {activeSection === "reading" && activeQuestions.some((q) => q.prompt.length > 300) && (
-        <div className="mb-3 rounded-[8px] bg-info-bg px-3 py-2 text-xs text-info">
+        <div className="mb-3 rounded-field bg-info-bg px-3 py-2 text-xs text-info">
           {tFallback(t, "readingTip", "Tip: Read the passage carefully before answering. You can jump between questions using the numbers below.")}
         </div>
       )}
@@ -370,7 +370,7 @@ export function TestRunner({ attempt }: { attempt: AttemptDetail }) {
                       <label
                         key={i}
                         className={cn(
-                          "flex cursor-pointer items-center gap-2.5 rounded-[10px] border px-3 py-2.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-brand/20",
+                          "flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2.5 text-sm transition-colors focus-within:ring-2 focus-within:ring-brand/20",
                           selected ? "border-brand bg-brand-subtle/40 text-fg ring-1 ring-brand/10" : "border-border bg-surface hover:bg-surface-hover",
                         )}
                       >

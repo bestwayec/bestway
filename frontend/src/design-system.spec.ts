@@ -159,3 +159,60 @@ describe("migrated screens use theme tokens only", () => {
     });
   }
 });
+
+/** Redesign 2026-11 (docs/design/DIRECTION.md §3): radii and elevation come from tokens only. */
+describe("shape tokens", () => {
+  const walk = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? walk(p) : /\.(tsx|ts)$/.test(e.name) && !/\.spec\.tsx?$/.test(e.name) ? [p] : [];
+    });
+  const files = walk(path.resolve(__dirname));
+  let tokenizeShape: (src: string) => string;
+  beforeAll(async () => {
+    ({ tokenizeShape } = await import(pathToFileURL(path.resolve(__dirname, "..", "scripts", "tokenize-shape.mjs")).href));
+  });
+
+  it("the codemod maps radii and drops coloured glows", () => {
+    expect(tokenizeShape('className="rounded-[12px] sm:rounded-t-[8px] shadow-lg shadow-brand/30"')).toBe('className="rounded-card sm:rounded-t-field shadow-lg"');
+    expect(tokenizeShape('"p-2 hover:shadow-[0_0_12px_rgba(16,185,129,0.3)]"')).toBe('"p-2"');
+  });
+
+  it("no arbitrary card/control radius or coloured glow comes back (node scripts/tokenize-shape.mjs <file>)", () => {
+    const offenders = files.filter((f) => {
+      const src = fs.readFileSync(f, "utf8");
+      return tokenizeShape(src) !== src;
+    });
+    expect(offenders.map((f) => path.relative(path.resolve(__dirname, ".."), f))).toEqual([]);
+  });
+});
+
+describe("theme token contrast (WCAG AA)", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "app", "globals.css"), "utf8");
+  const block = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    const body = css.slice(start, css.indexOf("\n}", start));
+    return Object.fromEntries([...body.matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6})\b/gi)].map((m) => [m[1], m[2]]));
+  };
+  const lum = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a: string, b: string) => {
+    const [x, y] = [lum(a), lum(b)];
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  for (const theme of [":root", ".dark"]) {
+    const t = block(theme);
+    it(`${theme}: text tokens ≥ 4.5:1 on every background, input border ≥ 3:1`, () => {
+      for (const fg of ["fg", "fg-muted", "fg-subtle", "danger", "warning", "info", "success"]) {
+        for (const bg of ["bg", "bg-subtle", "surface", "surface-hover"]) {
+          expect(ratio(t[fg], t[bg]), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+      expect(ratio(t["brand-fg"], t.brand), "brand-fg on brand").toBeGreaterThanOrEqual(4.5);
+      expect(ratio(t["danger-fg"], t.danger), "danger-fg on danger").toBeGreaterThanOrEqual(4.5);
+      expect(ratio(t["input-border"], t.surface), "input-border on surface").toBeGreaterThanOrEqual(3);
+    });
+  }
+});

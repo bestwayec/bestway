@@ -251,7 +251,7 @@ function QuestionFormFields({
     <>
       <DialogBody className="space-y-5 overflow-y-auto px-5 py-3 flex-1">
         {error && (
-          <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger flex gap-2">
+          <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger flex gap-2">
             <Info className="size-4 shrink-0 mt-0.5" /> <span>{error}</span>
           </div>
         )}
@@ -422,7 +422,7 @@ function QuestionFormFields({
           hint={tFallback(t, "audioUploadHint", "Optional for listening. Upload mp3/m4a/wav/ogg (up to 50MB). Preview below.")}
         >
           <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 rounded-[8px] border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-hover cursor-pointer">
+            <label className="inline-flex items-center gap-2 rounded-field border border-border bg-surface px-3 py-2 text-sm hover:bg-surface-hover cursor-pointer">
               <Upload className="size-4" />
               {audioFile ? audioFile.name : tFallback(t, "chooseAudio", "Choose file")}
               <input
@@ -451,7 +451,7 @@ function QuestionFormFields({
         </Field>
 
         {/* Preview as student will see */}
-        <div className="rounded-[10px] border border-dashed border-border bg-bg-subtle/50 p-3">
+        <div className="rounded-control border border-dashed border-border bg-bg-subtle/50 p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-fg-muted flex items-center gap-1.5">
               <Eye className="size-3.5" /> {tFallback(t, "preview", "Preview — as student will see")}
@@ -463,18 +463,18 @@ function QuestionFormFields({
           {showPreview && (
             <Card className="p-4 space-y-3 bg-surface">
               {instructions.trim() && (
-                <div className="rounded-[8px] bg-info-bg border border-info/20 px-3 py-2 text-sm text-info">
+                <div className="rounded-field bg-info-bg border border-info/20 px-3 py-2 text-sm text-info">
                   <p className="font-medium">{tFallback(t, "instructions", "Instructions")}</p>
                   <p className="text-xs mt-0.5 text-info/80">{instructions}</p>
                 </div>
               )}
               {passageText.trim() && (
-                <div className="rounded-[8px] bg-surface border border-border p-3 text-sm leading-relaxed whitespace-pre-wrap text-fg-muted max-h-32 overflow-y-auto">
+                <div className="rounded-field bg-surface border border-border p-3 text-sm leading-relaxed whitespace-pre-wrap text-fg-muted max-h-32 overflow-y-auto">
                   {passageText}
                 </div>
               )}
               {(audioPreview || existingAudioUrl) && (
-                <div className="rounded-[8px] border border-border bg-bg-subtle p-3">
+                <div className="rounded-field border border-border bg-bg-subtle p-3">
                   <p className="text-xs font-medium flex items-center gap-1 mb-2">
                     <Headphones className="size-3.5" /> {tFallback(t, "listening", "Listening")} audio
                   </p>
@@ -497,7 +497,7 @@ function QuestionFormFields({
                 {type === "multiple_choice" && optsArr.length > 0 && (
                   <div className="mt-3 space-y-1.5">
                     {optsArr.map((o, i) => (
-                      <label key={i} className="flex items-center gap-2 rounded-[8px] border border-border px-3 py-2 text-sm bg-surface">
+                      <label key={i} className="flex items-center gap-2 rounded-field border border-border px-3 py-2 text-sm bg-surface">
                         <input type="radio" disabled name="preview" className="size-3.5" /> <span>{o}</span>
                       </label>
                     ))}
@@ -511,7 +511,7 @@ function QuestionFormFields({
                 )}
                 {type === "essay" && <Textarea disabled placeholder={tFallback(t, "yourAnswer", "Your answer")} className="min-h-24 mt-3" />}
                 {type === "speaking_prompt" && (
-                  <div className="mt-3 rounded-[8px] border border-dashed border-border px-3 py-4 text-center text-sm text-fg-muted">
+                  <div className="mt-3 rounded-field border border-dashed border-border px-3 py-4 text-center text-sm text-fg-muted">
                     <Mic className="size-5 mx-auto mb-1 text-fg-subtle" /> Speaking — student records audio
                   </div>
                 )}

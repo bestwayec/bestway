@@ -141,7 +141,7 @@ export function TeacherCohortList({
                 onClick={() => onSelectCohort(cohort.id)}
                 className={`group relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${
                   isSelected
-                    ? "border-brand bg-surface-elevated shadow-md shadow-brand/30 ring-1 ring-brand/30"
+                    ? "border-brand bg-surface-elevated shadow-md ring-1 ring-brand/30"
                     : "border-border/70 bg-surface/80 hover:border-brand/40 hover:bg-surface-elevated/70"
                 }`}
               >

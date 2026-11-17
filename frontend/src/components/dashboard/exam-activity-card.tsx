@@ -111,9 +111,9 @@ export function ExamActivityCard() {
         </div>
 
         {isLoading || !data ? (
-          <div className="mt-4 h-[340px] animate-pulse rounded-[8px] bg-border/40" />
+          <div className="mt-4 h-[340px] animate-pulse rounded-field bg-border/40" />
         ) : isError ? (
-          <div className="mt-4 rounded-[8px] border border-danger-border bg-danger-bg/40 p-5 text-center">
+          <div className="mt-4 rounded-field border border-danger-border bg-danger-bg/40 p-5 text-center">
             <p className="text-sm font-medium text-danger">{t("noActivity")}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
               Retry
@@ -172,7 +172,7 @@ export function ExamActivityCard() {
             </div>
 
             {empty && (
-              <p className="mt-2 rounded-[8px] border border-dashed border-border px-3 py-2 text-center text-xs text-fg-muted">
+              <p className="mt-2 rounded-field border border-dashed border-border px-3 py-2 text-center text-xs text-fg-muted">
                 {t("noActivity")}
               </p>
             )}
@@ -225,7 +225,7 @@ export function ExamActivityCard() {
                         | { completed?: number; avgScore?: number | null }
                         | undefined;
                       return (
-                        <div className="rounded-[8px] border border-border bg-surface px-3 py-2 text-sm shadow-lg">
+                        <div className="rounded-field border border-border bg-surface px-3 py-2 text-sm shadow-lg">
                           <p className="font-medium text-fg">{label}</p>
                           <p className="mt-1 text-fg-muted">
                             {t("completedExams")}:{" "}
@@ -269,7 +269,7 @@ export function ExamActivityCard() {
 
             {/* Bottom summary tiles — real period totals */}
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-[10px] border border-border bg-bg-subtle px-4 py-3">
+              <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
                   {t("totalCompleted")}
                 </p>
@@ -277,7 +277,7 @@ export function ExamActivityCard() {
                   {data.totals.completed}
                 </p>
               </div>
-              <div className="rounded-[10px] border border-border bg-bg-subtle px-4 py-3">
+              <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
                   {t("avgScore")}
                 </p>
@@ -285,7 +285,7 @@ export function ExamActivityCard() {
                   {data.totals.avgScore ?? "—"}
                 </p>
               </div>
-              <div className="rounded-[10px] border border-border bg-bg-subtle px-4 py-3">
+              <div className="rounded-control border border-border bg-bg-subtle px-4 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
                   {t("completionRate")}
                 </p>

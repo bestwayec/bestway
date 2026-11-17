@@ -164,7 +164,7 @@ export function ClickToVocabWrapper({
             left: Math.max(10, Math.min(popoverPosition.x, (containerRef.current?.offsetWidth || 300) - 280)),
             top: popoverPosition.y,
           }}
-          className="absolute z-50 w-72 rounded-2xl border border-brand/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl shadow-brand/30 text-fg animate-in fade-in zoom-in-95 duration-150"
+          className="absolute z-50 w-72 rounded-2xl border border-brand/30 bg-bg-subtle/95 backdrop-blur-md p-4 shadow-2xl text-fg animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-start justify-between gap-2 border-b border-border pb-2.5 mb-2.5">
             <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ export function ClickToVocabWrapper({
                 className={`w-full text-xs font-medium transition-all ${
                   isAddedSrs
                     ? "bg-brand/30 text-brand-subtle-fg border border-brand/30"
-                    : "bg-brand hover:bg-brand-hover text-brand-fg shadow-md shadow-brand/30"
+                    : "bg-brand hover:bg-brand-hover text-brand-fg shadow-md"
                 }`}
               >
                 {isAddingSrs ? (

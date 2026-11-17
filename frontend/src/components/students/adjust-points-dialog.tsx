@@ -97,7 +97,7 @@ function AdjustPointsFields({
     <>
       <DialogBody className="space-y-4">
         {error && (
-          <div className="rounded-[8px] border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-field border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
             {error}
           </div>
         )}
@@ -108,7 +108,7 @@ function AdjustPointsFields({
             onClick={() => setDir(1)}
             aria-pressed={dir === 1}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-[8px] border px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center justify-center gap-1.5 rounded-field border px-3 py-2.5 text-sm font-medium transition-colors",
               dir === 1
                 ? "border-success bg-success-bg text-success"
                 : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
@@ -122,7 +122,7 @@ function AdjustPointsFields({
             onClick={() => setDir(-1)}
             aria-pressed={dir === -1}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-[8px] border px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center justify-center gap-1.5 rounded-field border px-3 py-2.5 text-sm font-medium transition-colors",
               dir === -1
                 ? "border-danger bg-danger-bg text-danger"
                 : "border-border bg-surface text-fg-muted hover:bg-surface-hover",

@@ -128,7 +128,7 @@ export function ImportProvenanceDialog({
                     return (
                       <li
                         key={issue.id}
-                        className="rounded-[8px] border border-border p-2.5 text-sm"
+                        className="rounded-field border border-border p-2.5 text-sm"
                       >
                         <p className="flex flex-wrap items-center gap-1.5">
                           <span className="font-mono text-xs font-semibold">{issue.code}</span>

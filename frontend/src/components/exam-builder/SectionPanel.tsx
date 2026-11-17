@@ -247,7 +247,7 @@ export function SectionPanel({
                 key={g.id}
                 type="button"
                 onClick={() => onSelect({ kind: "group", groupId: g.id })}
-                className="min-w-0 rounded-[12px] border border-border bg-surface p-3 text-left transition hover:border-fg-subtle sm:p-4"
+                className="min-w-0 rounded-card border border-border bg-surface p-3 text-left transition hover:border-fg-subtle sm:p-4"
               >
                 <div className="flex min-w-0 items-center gap-2">
                   {issues > 0 ? (

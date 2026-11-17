@@ -178,7 +178,7 @@ export function VideoPlayer({ src, autoPlay = false, title }: VideoPlayerProps) 
     <div
       data-slot="video-player"
       className={cn(
-        "group relative aspect-video w-full overflow-hidden rounded-[12px] bg-black",
+        "group relative aspect-video w-full overflow-hidden rounded-card bg-black",
         "focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-black",
       )}
       onMouseEnter={() => {

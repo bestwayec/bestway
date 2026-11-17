@@ -300,7 +300,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
             <audio controls preload="none" src={part.group.audioUrl} className="mb-3 w-full" />
           )}
 
-          <div className="rounded-[12px] border border-border bg-surface p-4">
+          <div className="rounded-card border border-border bg-surface p-4">
             <div data-passage>
               {part.group.title && <p className="text-center text-base font-bold text-fg">{part.group.title}</p>}
               {part.group.instructions && (
@@ -330,7 +330,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
           {part.group.instructions && (
             <p className="mt-1 text-sm text-fg-muted">{part.group.instructions}</p>
           )}
-          <div className="mt-4 rounded-[12px] border border-border-strong/60 bg-surface p-4">
+          <div className="mt-4 rounded-card border border-border-strong/60 bg-surface p-4">
             <div className="space-y-5">
               {(part.group.questions || []).map((q, qi) => {
                 const promptText = q.prompt || (q as any).text || "";
@@ -411,7 +411,7 @@ export function CdExamView({ exam }: { exam: MockExamDetail }) {
                   aria-current={i === partIdx ? "true" : undefined}
                   aria-label={`Part ${i + 1}, ${p.skill}, ${answered} of ${total} answered`}
                   className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                    "flex shrink-0 items-center gap-1.5 rounded-control border px-2.5 py-1.5 text-xs font-semibold transition-colors",
                     i === partIdx
                       ? "border-brand bg-brand-subtle text-brand-subtle-fg"
                       : answered === total && total > 0
@@ -497,7 +497,7 @@ function CdAnswerInput({
           onChange={(e) => onChange(e.target.value)}
           rows={6}
           placeholder={tc("writeAnswer")}
-          className="w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
+          className="w-full min-w-0 rounded-field border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
         />
         <p className={cn("mt-1 text-xs tabular-nums", n >= min ? "text-brand" : "text-fg-subtle")}>
           {min ? tc("wordCountMin", { count: n, min }) : tc("wordCount", { count: n })}
@@ -528,7 +528,7 @@ function CdAnswerInput({
               aria-checked={selected}
               onClick={() => onChange(selected ? "" : opt)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-[10px] border px-3 py-2 text-left text-sm transition-colors",
+                "flex w-full items-center gap-2.5 rounded-control border px-3 py-2 text-left text-sm transition-colors",
                 selected
                   ? "border-brand bg-brand-subtle/50 text-fg"
                   : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg",
@@ -565,7 +565,7 @@ function CdAnswerInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 aria-label={promptText.replaceAll("___", "___answer___")}
-                className="mx-1 inline-block w-36 rounded-[6px] border border-border-strong bg-bg px-2 py-1 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
+                className="mx-1 inline-block w-36 rounded-chip border border-border-strong bg-bg px-2 py-1 text-sm text-fg placeholder:text-fg-subtle focus:border-brand focus:outline-none"
               />
             </span>
           ),
@@ -579,7 +579,7 @@ function CdAnswerInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={tc("typeAnswer")}
       aria-label={promptText}
-      className="mt-2 w-full min-w-0 rounded-[8px] border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
+      className="mt-2 w-full min-w-0 rounded-field border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle"
     />
   );
 }

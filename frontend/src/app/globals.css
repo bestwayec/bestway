@@ -11,20 +11,25 @@
  * Neon, gradient, glow va soya effektlari olib tashlangan.
  */
 :root {
-  --bg: #ffffff;
-  --bg-subtle: #f8fafc;
+  /* Redesign 2026-11 (docs/design/DIRECTION.md): warm "paper" neutrals, one brand green.
+     WCAG (computed, src/design-system.spec.ts): fg ≥ 15.6:1, fg-muted ≥ 6.8:1, fg-subtle ≥ 5.2:1 on
+     bg / bg-subtle / surface / surface-hover; input-border 3.6:1 on surface (non-text 3:1). */
+  --bg: #fafaf9;
+  --bg-subtle: #f4f4f2;
   --surface: #ffffff;
-  --surface-hover: #f1f5f9;
+  --surface-hover: #f4f4f1;
+  --surface-elevated: #ffffff;
 
-  --fg: #0f172a;
-  --fg-muted: #475569;
-  --fg-subtle: #566479;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --fg-subtle: #63636b;
 
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+  --input-border: #8c8781;
 
   /* Owner-approved brand green (2026-11-14). WCAG (computed): white on brand 5.0:1, white on
-     brand-hover 7.1:1, brand-subtle-fg on brand-subtle 6.8:1, on brand/10 6.2:1, on brand/30 4.7:1. */
+     brand-hover 7.1:1, brand-subtle-fg on brand-subtle 6.8:1, brand text on surface-hover 4.55:1. */
   --brand: #15803d;
   /* Single-series chart mark; validated (dataviz validator) against the light surface. */
   --chart-series: #16a34a;
@@ -48,6 +53,7 @@
   --success-border: #bbf7d0;
 
   --danger: #b91c1c;
+  --danger-fg: #ffffff;
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
 
@@ -60,21 +66,30 @@
   --info-bg: #f0f9ff;
   --info-border: #bae6fd;
 
+  /* Elevation: flat cards (border only); shadows only for what floats. Never coloured. */
+  --shadow-1: 0 1px 2px rgb(24 24 27 / 0.06);
+  --shadow-2: 0 4px 12px rgb(24 24 27 / 0.08), 0 1px 3px rgb(24 24 27 / 0.06);
+  --shadow-3: 0 16px 40px rgb(24 24 27 / 0.14), 0 2px 6px rgb(24 24 27 / 0.08);
+
   color-scheme: light;
 }
 
 .dark {
-  --bg: #090d16;
-  --bg-subtle: #0f172a;
-  --surface: #131c2e;
-  --surface-hover: #1e293b;
+  /* Deeper, less blue dark theme for long reading. WCAG (computed): fg ≥ 14.7:1, fg-muted ≥ 7.1:1,
+     fg-subtle ≥ 5.1:1, danger ≥ 5.8:1 on every background. */
+  --bg: #0b0f0d;
+  --bg-subtle: #111613;
+  --surface: #141a17;
+  --surface-hover: #1b221e;
+  --surface-elevated: #19201c;
 
-  --fg: #f8fafc;
-  --fg-muted: #94a3b8;
-  --fg-subtle: #8796ac;
+  --fg: #f4f4f2;
+  --fg-muted: #a8aea9;
+  --fg-subtle: #8b928d;
 
-  --border: #1e293b;
-  --border-strong: #334155;
+  --border: #232b26;
+  --border-strong: #34403a;
+  --input-border: #66716a;
 
   --brand: #22c55e;
   /* #22c55e is too light for a chart mark on the dark surface (lightness band); #16a34a passes. */
@@ -98,7 +113,8 @@
   --success-bg: #14532d40;
   --success-border: #166534;
 
-  --danger: #ef4444;
+  --danger: #f87171;
+  --danger-fg: #450a0a;
   --danger-bg: #450a0a40;
   --danger-border: #991b1b;
 
@@ -110,6 +126,10 @@
   --info: #38bdf8;
   --info-bg: #082f4940;
   --info-border: #075985;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 6px 16px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-3: 0 20px 48px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.4);
 
   color-scheme: dark;
 }
@@ -144,6 +164,8 @@
   --color-bg-subtle: var(--bg-subtle);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-input-border: var(--input-border);
 
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
@@ -174,6 +196,7 @@
   --color-success-border: var(--success-border);
 
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-warning-fg: var(--warning-fg);
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
@@ -188,7 +211,7 @@
 
   --font-sans: var(--font-inter), "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
-  /* Soddalashtirilgan o'lchamlar: matn hech qachon 14 dan kichik emas */
+  /* Type scale (DIRECTION.md §3.1): reading text never below 14 px. */
   --text-xs: 14px;
   --text-sm: 14px;
   --text-base: 16px;
@@ -197,10 +220,40 @@
   --text-2xl: 28px;
   --text-3xl: 28px;
   --text-4xl: 28px;
+  --text-display: 48px;
+  --text-display--line-height: 52px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+  --text-overline: 12px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
 
-  /* Kartalar va boshqaruv elementlari uchun qat'iy 12px */
-  --radius-control: 12px;
-  --radius-card: 12px;
+  /* Radius (DIRECTION.md §3.4): rounded-chip / -field / -control / -card / -dialog. */
+  --radius-chip: 6px;
+  --radius-field: 8px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-dialog: 18px;
+
+  /* Elevation: the Tailwind shadow scale follows the calm tokens, so every shadow-* in the app is
+     neutral and soft in both themes (coloured glows are removed by the shape codemod). */
+  --shadow-xs: var(--shadow-1);
+  --shadow-sm: var(--shadow-1);
+  --shadow: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-2);
+  --shadow-xl: var(--shadow-3);
+  --shadow-2xl: var(--shadow-3);
+  --shadow-e1: var(--shadow-1);
+  --shadow-e2: var(--shadow-2);
+  --shadow-e3: var(--shadow-3);
+
+  /* Motion (DIRECTION.md §3.6): only opacity and transform animate. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
 }
 
 @layer base {
@@ -317,31 +370,31 @@
 
 @layer utilities {
   .anim-fade[data-state="open"] {
-    animation: bw-fade-in 150ms ease-out;
+    animation: bw-fade-in var(--duration-base) var(--ease-out);
   }
   .anim-fade[data-state="closed"] {
-    animation: bw-fade-out 120ms ease-in;
+    animation: bw-fade-out var(--duration-fast) var(--ease-in);
   }
 
   .anim-pop[data-state="open"] {
-    animation: bw-pop-in 140ms ease-out;
+    animation: bw-pop-in var(--duration-base) var(--ease-out);
   }
   .anim-pop[data-state="closed"] {
-    animation: bw-pop-out 110ms ease-in;
+    animation: bw-pop-out var(--duration-fast) var(--ease-in);
   }
 
   .anim-dialog[data-state="open"] {
-    animation: bw-dialog-in 160ms ease-out;
+    animation: bw-dialog-in var(--duration-base) var(--ease-out);
   }
   .anim-dialog[data-state="closed"] {
-    animation: bw-dialog-out 120ms ease-in;
+    animation: bw-dialog-out var(--duration-fast) var(--ease-in);
   }
 
   .anim-sheet[data-state="open"] {
-    animation: bw-sheet-in 180ms ease-out;
+    animation: bw-sheet-in var(--duration-slow) var(--ease-out);
   }
   .anim-sheet[data-state="closed"] {
-    animation: bw-sheet-out 140ms ease-in;
+    animation: bw-sheet-out var(--duration-base) var(--ease-in);
   }
 
   .sticky-col {

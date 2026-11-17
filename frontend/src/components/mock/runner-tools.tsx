@@ -106,7 +106,7 @@ export function ClearAnswersDialog({ open, sectionName, count, part, onCancel, o
   React.useEffect(() => { if (open) setScope(partUsable ? "part" : "section"); }, [open, partUsable]);
   const removing = effective === "part" && part ? part.count : count;
   const option = (value: ClearScope, label: string, disabled = false) => (
-    <label className={cn("flex items-center gap-2 rounded-[8px] border p-2.5 text-sm", effective === value ? "border-danger/50 bg-danger-bg" : "border-border bg-surface", disabled ? "opacity-60" : "cursor-pointer")}>
+    <label className={cn("flex items-center gap-2 rounded-field border p-2.5 text-sm", effective === value ? "border-danger/50 bg-danger-bg" : "border-border bg-surface", disabled ? "opacity-60" : "cursor-pointer")}>
       <input type="radio" name="clear-scope" value={value} checked={effective === value} disabled={disabled} onChange={() => setScope(value)} className="accent-danger" />
       <span className="text-fg">{label}</span>
     </label>

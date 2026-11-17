@@ -34,7 +34,7 @@ export function LoadErrorPanel({
     >
       <div
         role="alert"
-        className="w-full max-w-md rounded-[12px] border border-danger-border bg-surface p-6 sm:p-8"
+        className="w-full max-w-md rounded-card border border-danger-border bg-surface p-6 sm:p-8"
       >
         <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-danger-bg text-danger border border-danger-border/40">
           <AlertTriangle className="size-6" aria-hidden />
