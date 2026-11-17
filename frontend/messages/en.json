@@ -1742,6 +1742,33 @@
       "extract": "Extract the text (OCR & AI)",
       "append": "Add to the end",
       "extractedCount": "OCR: {count, plural, one {# word} other {# words}} extracted"
+    },
+    "resultOverview": {
+      "cefrBadge": "CEFR {level}",
+      "cefrC2": "Mastery — proficient user",
+      "cefrC1": "Proficient user — effective operational proficiency",
+      "cefrB2": "Independent user — vantage",
+      "cefrB1": "Independent user — threshold",
+      "cefrBelow": "Below the B1 threshold",
+      "estimatedNote": "Estimated: some Writing or Speaking marks are an AI estimate until your teacher confirms them.",
+      "chartTitleIelts": "Band by skill",
+      "chartTitleMultilevel": "Standard score by skill (out of 75)",
+      "pendingShort": "Pending",
+      "ofMax": "of {max}",
+      "provisionalShort": "Estimated",
+      "provisionalNote": "Estimated — awaiting teacher confirmation.",
+      "nextStepsTitle": "Next steps",
+      "nextStepsSubtitle": "From your marked answers in {count, plural, one {# result} other {# results}}.",
+      "weakTitle": "Practise next",
+      "strongTitle": "Your strengths",
+      "accuracyLine": "{correct}/{total} correct ({percent}%)",
+      "weakAdvice": "Do a practice section with this question type and read the review for each mistake.",
+      "noWeak": "No question type below 70% yet.",
+      "noStrong": "No question type at 80% or above yet.",
+      "practiceLink": "Choose a practice section",
+      "trendTitle": "Band over time",
+      "trendChange": "{count} full results · {change} since the first",
+      "trendAria": "Overall band by date: {points}"
     }
   },
   "wizard": {

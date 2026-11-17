@@ -1742,6 +1742,33 @@
       "extract": "Matnni ajratib olish (OCR & AI)",
       "append": "Davomiga qo'shish",
       "extractedCount": "OCR: {count, plural, one {# ta so'z} other {# ta so'z}} ajratib olindi"
+    },
+    "resultOverview": {
+      "cefrBadge": "CEFR {level}",
+      "cefrC2": "Mukammal foydalanuvchi — yuqori daraja",
+      "cefrC1": "Mukammal foydalanuvchi — samarali daraja",
+      "cefrB2": "Mustaqil foydalanuvchi — yuqori o'rta",
+      "cefrB1": "Mustaqil foydalanuvchi — o'rta",
+      "cefrBelow": "B1 darajasidan past",
+      "estimatedNote": "Taxminiy: Writing yoki Speaking ballarining bir qismi ustoz tasdiqlaguncha AI bahosi.",
+      "chartTitleIelts": "Ko'nikmalar bo'yicha band",
+      "chartTitleMultilevel": "Ko'nikmalar bo'yicha standart ball (75 dan)",
+      "pendingShort": "Kutilmoqda",
+      "ofMax": "{max} dan",
+      "provisionalShort": "Taxminiy",
+      "provisionalNote": "Taxminiy — ustoz tasdiqlashi kutilmoqda.",
+      "nextStepsTitle": "Keyingi qadamlar",
+      "nextStepsSubtitle": "{count} ta natijadagi tekshirilgan javoblaringiz asosida.",
+      "weakTitle": "Keyingi mashq",
+      "strongTitle": "Kuchli tomonlaringiz",
+      "accuracyLine": "{correct}/{total} to'g'ri ({percent}%)",
+      "weakAdvice": "Shu savol turi bilan mashq bo'limini bajaring va har bir xato bo'yicha tahlilni o'qing.",
+      "noWeak": "70% dan past savol turi hozircha yo'q.",
+      "noStrong": "80% va undan yuqori savol turi hozircha yo'q.",
+      "practiceLink": "Mashq bo'limini tanlash",
+      "trendTitle": "Vaqt bo'yicha band",
+      "trendChange": "{count} ta to'liq natija · birinchisidan beri {change}",
+      "trendAria": "Sana bo'yicha umumiy band: {points}"
     }
   },
   "wizard": {

@@ -99,7 +99,7 @@ for (const theme of THEMES) for (const [width, height] of SIZES) {
       else if (p === "result") {
         await page.goto(`${WEB}/en/mock/attempt/${state.attemptId}`, { waitUntil: "networkidle" });
         await shot(page, p, width, height, theme);
-        await page.evaluate(() => window.scrollTo(0, window.innerHeight * 0.9));
+        await page.evaluate(() => { const m = document.querySelector("main"); window.scrollTo(0, window.innerHeight * 0.9); if (m) m.scrollTop = m.clientHeight * 0.9; });
         await shot(page, "result-more", width, height, theme);
       } else {
         const id = await runner(page, api, p);

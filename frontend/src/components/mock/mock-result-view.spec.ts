@@ -17,7 +17,8 @@ vi.mock("@/hooks/use-mock", () => {
   return Object.fromEntries(["useGradeMock", "useDeleteMockAttempt", "useExtendMockDeadline", "useForceSubmitMock", "useReopenMock"].map((name) => [name, useMutation]));
 });
 vi.mock("./assessment-panel", () => ({ AssessmentPanel: () => null }));
-vi.mock("./type-accuracy-card", () => ({ TypeAccuracyCard: () => null }));
+vi.mock("./type-accuracy-card", () => ({ TypeAccuracyCard: () => null, familyRows: () => [] }));
+vi.mock("./result-overview", async (importOriginal) => ({ ...(await importOriginal<typeof import("./result-overview")>()), NextSteps: () => null, BandTrend: () => null }));
 import { MockResultView, MultilevelResultBreakdown } from "./mock-result-view";
 
 const attempt = (partial = true) => ({
