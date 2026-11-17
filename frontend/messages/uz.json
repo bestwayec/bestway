@@ -948,7 +948,9 @@
     "placementLinked": "Express Placement Test natijangiz profilingizga bog‘landi.",
     "sectionInProgress": "{skill} bo‘limi jarayonda",
     "resumeWhereLeft": "Imtihonni to‘xtagan joyingizdan davom ettiring",
-    "minutes": "{count} daqiqa"
+    "minutes": "{count} daqiqa",
+    "latestResult": "Oxirgi natija",
+    "noResultYet": "Hali to'liq natija yo'q"
   },
   "parent": {
     "children": "Farzandlarim",
@@ -1494,7 +1496,10 @@
       "gradingLoadFailed": "Tekshiruvlarni yuklab bo'lmadi.",
       "startSectionGroup": "Bitta bo'limni boshlash",
       "startSection": "Faqat {skill} boshlash",
-      "sectionNotReady": "Bu bo'lim hali tayyor emas"
+      "sectionNotReady": "Bu bo'lim hali tayyor emas",
+      "oneSectionLabel": "Yoki bitta bo'lim",
+      "startFullExam": "To'liq imtihonni boshlash",
+      "viewLastResult": "Oxirgi natijani ko'rish"
     },
     "deviceCheck": {
       "intro": "Ixtiyoriy: boshlashdan oldin shu qurilmada internet, ovoz va mikrofonni tekshiring.",
@@ -2634,7 +2639,8 @@
     "resultPending": "Natija o‘qituvchi tekshiruvida",
     "resultReady": "Oxirgi natija tayyor",
     "empty": "Bugun bajariladigan ish yo‘q.",
-    "emptyAction": "Imtihonlarni ko‘rish"
+    "emptyAction": "Imtihonlarni ko‘rish",
+    "resumeAction": "Davom etish"
   },
   "vocabulary": {
     "backToCatalog": "Lug'atlar ro'yxatiga qaytish",

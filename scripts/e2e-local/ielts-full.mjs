@@ -242,7 +242,7 @@ async function student() {
     const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
     if (await toIelts.count()) { await toIelts.click(); await page.waitForTimeout(2500); }
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
-    await card.getByRole("button").filter({ hasText: /^(Start|Resume)$/ }).first().click();
+    await card.getByRole("button").filter({ hasText: /^(Start|Start full exam|Resume)$/ }).first().click();
     const dialog = page.getByRole("dialog"); await dialog.waitFor();
     const started = page.waitForResponse((r) => /\/mock\/exams\/[^/]+\/start$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
     await dialog.getByRole("button", { name: /Start the full exam/ }).click();

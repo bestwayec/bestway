@@ -41,8 +41,8 @@ export function ExamTrackSwitch() {
                 disabled={!selectable || save.isPending}
                 onClick={() => { if (!active) save.mutate({ ...current, activeProgram: program }); }}
                 className={cn(
-                  "inline-flex min-h-[36px] items-center gap-1.5 rounded-field px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed",
-                  active ? "bg-brand text-brand-fg shadow-sm" : "text-fg-muted hover:text-fg disabled:opacity-60",
+                  "inline-flex min-h-10 items-center gap-1.5 rounded-field px-4 text-sm font-semibold transition-colors duration-fast disabled:cursor-not-allowed",
+                  active ? "bg-surface text-fg shadow-e1" : "text-fg-muted hover:text-fg disabled:opacity-60",
                 )}
               >
                 {pending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
@@ -53,7 +53,8 @@ export function ExamTrackSwitch() {
           );
         })}
       </div>
-      <p className="text-xs text-fg-muted">{t(selfSelect ? "subtitleSelfSelect" : "subtitleStaffAssigned")}</p>
+      {/* Self-select: the control explains itself; a staff-assigned track says why the other is locked. */}
+      {!selfSelect && <p className="text-sm text-fg-muted">{t("subtitleStaffAssigned")}</p>}
       {save.isError && <p role="alert" className="w-full text-xs text-danger">{save.error.message}</p>}
     </div>
   );

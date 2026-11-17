@@ -5,11 +5,9 @@ import {
   AlertCircle,
   ArrowRight,
   Award,
-  BookOpen,
   Check,
   CheckCircle2,
   Copy,
-  Flame,
   Play,
   Trophy,
 } from "lucide-react";
@@ -21,7 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
-import { StatCard } from "@/components/dashboard/stat-card";
+import { StatTile } from "@/components/ui/stat-tile";
 import { NamePromptCard } from "@/components/dashboard/name-prompt-card";
 import { LiveExamPinCard } from "@/components/mock/live-exam-pin-card";
 import { StudentAssignmentsWidget } from "@/components/dashboard/StudentAssignmentsWidget";
@@ -32,34 +30,8 @@ import {
   useMyMockAttempts,
   useStudentScorePrediction,
 } from "@/hooks/use-mock";
-import type { MockAttemptSummary, StudentSelfProfile } from "@/lib/types";
+import type { StudentSelfProfile } from "@/lib/types";
 import { multilevelLevelText } from "@/lib/multilevel-scale";
-
-function calculateStreak(attempts?: MockAttemptSummary[]): number {
-  if (typeof window === "undefined") return 1;
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const stored = localStorage.getItem("bw_study_streak");
-    const lastDate = localStorage.getItem("bw_last_active_date");
-
-    if (lastDate === today && stored) {
-      return Math.max(1, parseInt(stored, 10));
-    }
-
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    let streak = 1;
-    if (lastDate === yesterday && stored) {
-      streak = parseInt(stored, 10) + 1;
-    } else if (attempts && attempts.length > 0) {
-      streak = Math.min(Math.max(1, attempts.length), 7);
-    }
-    localStorage.setItem("bw_study_streak", String(streak));
-    localStorage.setItem("bw_last_active_date", today);
-    return streak;
-  } catch {
-    return 1;
-  }
-}
 
 export function StudentDashboard() {
   const t = useTranslations("dashboard");
@@ -138,7 +110,16 @@ export function StudentDashboard() {
     return "—";
   }, [prediction, attempts, tm]);
 
-  const streakDays = React.useMemo(() => calculateStreak(attempts), [attempts]);
+  // The latest released full result (no practice sections): the number students look for first.
+  const latestResult = React.useMemo(() => {
+    const done = (attempts ?? []).filter((a) => a.status === "completed" && a.flowMode !== "single_skill" && a.flowMode !== "partial_practice" && (a.overallBand != null || a.overallScore != null || a.cefrLevel));
+    return done.sort((x, y) => (y.submittedAt ?? y.startedAt).localeCompare(x.submittedAt ?? x.startedAt))[0] ?? null;
+  }, [attempts]);
+  const latestValue = latestResult
+    ? latestResult.examType === "multilevel"
+      ? latestResult.overallScore != null ? `${latestResult.overallScore} /75` : multilevelLevelText(latestResult.cefrLevel ?? "", tm("levelBelowB1"))
+      : latestResult.overallBand != null ? latestResult.overallBand.toFixed(1) : "—"
+    : "—";
 
   if (meLoading || attemptsLoading || examsLoading) {
     return (
@@ -184,53 +165,40 @@ export function StudentDashboard() {
 
       <NamePromptCard />
 
-      {/* 2. BITTA katta "Davom etish" kartasi */}
-      {unfinishedAttempt ? (
-        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
+      {/* 2. Today's plan first: continue the open exam, homework, words to review, latest result */}
+      <TodayCard />
+
+      {/* Three real numbers: latest result, estimated level, completed tests */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatTile
+          label={ts("latestResult")}
+          value={latestValue}
+          hint={latestResult ? latestResult.examTitle : ts("noResultYet")}
+          href={latestResult ? `/mock/attempt/${latestResult.id}` : undefined}
+          icon={Trophy}
+        />
+        <StatTile label={ts("estimatedLevel")} value={estimatedLevel} icon={Award} />
+        <StatTile label={ts("completedTests")} value={completedCount} icon={CheckCircle2} />
+      </div>
+
+      {recommendedExam ? (
+        <Card className="p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
-              <Badge variant="outline" className="text-sm border-brand text-brand">
-                {ts("unfinishedExam")}
-              </Badge>
-              <h2 className="text-2xl font-bold tracking-tight text-fg">
-                {unfinishedAttempt.examTitle ?? ts("unfinishedExam")}
-              </h2>
-              <p className="text-base text-fg-muted">
-                {unfinishedAttempt.currentSkill
-                  ? ts("sectionInProgress", { skill: tm(`skills.${unfinishedAttempt.currentSkill}`) })
-                  : ts("resumeWhereLeft")}
-              </p>
-            </div>
-            <Button
-              asChild
-              size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
-            >
-              <Link href={`/mock/attempt/${unfinishedAttempt.id}`}>
-                <Play className="mr-2 size-4 fill-current" />
-                {ts("continueExam")}
-              </Link>
-            </Button>
-          </div>
-        </Card>
-      ) : recommendedExam ? (
-        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline">
                 {ts("recommendedExam")}
               </Badge>
-              <h2 className="text-2xl font-bold tracking-tight text-fg">
+              <h2 className="text-lg font-semibold text-fg sm:text-xl">
                 {recommendedExam.title}
               </h2>
               <p className="text-base text-fg-muted">
-                {[recommendedExam.type, recommendedExam.durationMinutes ? ts("minutes", { count: recommendedExam.durationMinutes }) : null].filter(Boolean).join(" • ")}
+                {[tm(`types.${recommendedExam.type}`), recommendedExam.durationMinutes ? ts("minutes", { count: recommendedExam.durationMinutes }) : null].filter(Boolean).join(" • ")}
               </p>
             </div>
             <Button
               asChild
-              size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
+              variant={unfinishedAttempt ? "outline" : "primary"}
+              className="shrink-0 px-5"
             >
               <Link href={`/mock/${recommendedExam.id}`}>
                 <Play className="mr-2 size-4 fill-current" />
@@ -240,21 +208,21 @@ export function StudentDashboard() {
           </div>
         </Card>
       ) : (
-        <Card className="rounded-card border border-border bg-surface p-6 sm:p-8">
+        <Card className="p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline">
                 {ts("recommendedExam")}
               </Badge>
-              <h2 className="text-2xl font-bold tracking-tight text-fg">
+              <h2 className="text-lg font-semibold text-fg sm:text-xl">
                 {ts("startFirstTest")}
               </h2>
               <p className="text-base text-fg-muted">{ts("noTestsYet")}</p>
             </div>
             <Button
               asChild
-              size="lg"
-              className="min-h-[44px] shrink-0 bg-brand hover:bg-brand-hover text-brand-fg font-medium px-6 text-base"
+              variant={unfinishedAttempt ? "outline" : "primary"}
+              className="shrink-0 px-5"
             >
               <Link href="/mock">
                 <ArrowRight className="mr-2 size-4" />
@@ -265,29 +233,6 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {/* Today: real next actions (homework, words due, latest result); resume lives in the card above */}
-      <TodayCard skipResume />
-
-      {/* 3. Pastida 3 ta oddiy raqam */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label={ts("estimatedLevel")}
-          value={estimatedLevel}
-          icon={Award}
-          tone="brand"
-        />
-        <StatCard
-          label={ts("completedTests")}
-          value={completedCount}
-          icon={CheckCircle2}
-        />
-        <StatCard
-          label={ts("dayStreak")}
-          value={streakDays}
-          hint={ts("daysCount", { count: streakDays })}
-          icon={Flame}
-        />
-      </div>
 
       {/* 4. Qolgan bloklar (pastroqqa joylashtirilgan) */}
       <div className="space-y-6 pt-4 border-t border-border">

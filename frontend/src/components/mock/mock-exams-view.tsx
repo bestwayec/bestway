@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -190,6 +191,8 @@ export function MockExamsView() {
         }
       />
 
+      {/* One row: the track and the student's own progress filter (wraps on phones, never scrolls sideways). */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
       {isStudent && <ExamTrackSwitch />}
 
       {/* Daraja filtri (A1–C1) */}
@@ -217,7 +220,7 @@ export function MockExamsView() {
 
       {/* Talabaning o'z natijasi bo'yicha filtr: faqat serverdagi urinishlardan */}
       {showProgress && tab === "exams" && !scope.needsProgramSelection && (
-        <div role="group" aria-label={tCat("statusFilter")} className="flex gap-2 overflow-x-auto pb-1">
+        <div role="group" aria-label={tCat("statusFilter")} className="flex flex-wrap gap-1.5">
           {PROGRESS_FILTERS.map((f) => (
             <button
               key={f.id}
@@ -225,10 +228,10 @@ export function MockExamsView() {
               aria-pressed={progressFilter === f.id}
               onClick={() => setProgressFilter(f.id)}
               className={cn(
-                "min-h-[44px] shrink-0 rounded-full border px-4 text-sm font-medium tabular-nums transition-colors",
+                "min-h-10 shrink-0 rounded-full border px-3.5 text-sm font-medium tabular-nums transition-colors duration-fast max-sm:min-h-11",
                 progressFilter === f.id
-                  ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                  : "border-border bg-surface text-fg-muted hover:border-brand/40 hover:text-fg"
+                  ? "border-fg bg-fg text-bg"
+                  : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg"
               )}
             >
               {tCat(f.key, { count: progressCounts[f.id] })}
@@ -236,6 +239,7 @@ export function MockExamsView() {
           ))}
         </div>
       )}
+      </div>
 
       {isStaff && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mb-4">
@@ -329,6 +333,10 @@ export function MockExamCard({
   const multilevel = exam.type === "multilevel";
   const examAttempts = attempts.filter((attempt) => attempt.examId === exam.id);
   const inProgress = examAttempts.find((attempt) => attempt.status === "in_progress");
+  // The latest finished attempt of this exam: the card offers its result next to a new start.
+  const lastDone = examAttempts
+    .filter((attempt) => attempt.status === "completed" || attempt.status === "grading")
+    .sort((x, y) => (y.submittedAt ?? y.startedAt).localeCompare(x.submittedAt ?? x.startedAt))[0];
 
   const availableSkills: MockSkill[] = React.useMemo(() => {
     if (inProgress?.practiceScope?.skills && inProgress.practiceScope.skills.length > 0) {
@@ -429,9 +437,11 @@ export function MockExamCard({
         </div>
 
         {/* 3. Sections: each one starts on its own when the exam can be started; otherwise they are labels. */}
-        <div className="border-t border-border/60 pt-3">
+        <div className="border-t border-border pt-3">
           {sectionStart ? (
-            <div role="group" aria-label={tCat("startSectionGroup")} className="flex flex-wrap gap-1.5">
+            <>
+            <p className="mb-2 text-sm font-medium text-fg-muted" id={`sections-${exam.id}`}>{tCat("oneSectionLabel")}</p>
+            <div role="group" aria-labelledby={`sections-${exam.id}`} className="grid grid-cols-2 gap-1.5">
               {exam.skills.map((s) => {
                 const Icon = SKILL_ICON[s];
                 const startable = practiceSkills.includes(s as MockPracticeSkill);
@@ -443,7 +453,7 @@ export function MockExamCard({
                     onClick={() => setSetupSkill(s as MockPracticeSkill)}
                     aria-label={tCat("startSection", { skill: t(`skills.${s}`) })}
                     title={startable ? tCat("startSection", { skill: t(`skills.${s}`) }) : tCat("sectionNotReady")}
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-field border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-fg"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors duration-fast hover:border-brand hover:bg-brand-subtle/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-surface md:min-h-10"
                   >
                     {startingSkill === s ? <RefreshCw className="size-3.5 animate-spin" aria-hidden /> : <Icon className="size-3.5" aria-hidden />}
                     {t(`skills.${s}`)}
@@ -460,6 +470,7 @@ export function MockExamCard({
                 />
               )}
             </div>
+            </>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               {exam.skills.map((s) => {
@@ -467,7 +478,7 @@ export function MockExamCard({
                 return (
                   <span
                     key={s}
-                    className="inline-flex items-center gap-1 rounded-chip border border-border bg-surface-elevated px-2 py-1 text-sm text-fg-muted"
+                    className="inline-flex items-center gap-1 rounded-chip border border-border bg-bg-subtle px-2 py-1 text-sm text-fg-muted"
                   >
                     <Icon className="size-3.5" />
                     {t(`skills.${s}`)}
@@ -536,17 +547,14 @@ export function MockExamCard({
         ) : inProgress ? (
           <>
             {availableSkills.length > 1 ? (
-              <Button
-                className="w-full min-h-[44px] bg-brand hover:bg-brand-hover font-medium text-brand-fg text-base"
-                onClick={() => setResumeOpen(true)}
-              >
+              <Button className="w-full" onClick={() => setResumeOpen(true)}>
                 <RefreshCw className="mr-2 size-4" />
                 {t("resume")}
               </Button>
             ) : (
               <Link
                 href={`/mock/attempt/${inProgress.id}`}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-field bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
+                className={cn(buttonVariants({ variant: "primary" }), "w-full")}
               >
                 <RefreshCw className="size-4" />
                 {t("resume")}
@@ -563,13 +571,17 @@ export function MockExamCard({
         ) : exam.access === "granted" ? (
           onStart ? (
             <>
-              <Button
-                className="w-full min-h-[44px] bg-brand hover:bg-brand-hover font-medium text-brand-fg text-base"
-                onClick={() => setLauncherOpen(true)}
-              >
-                <Play className="size-4 fill-current mr-2" />
-                {t("start")}
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button className="w-full" onClick={() => setLauncherOpen(true)}>
+                  <Play className="fill-current" aria-hidden />
+                  {tCat("startFullExam")}
+                </Button>
+                {lastDone && (
+                  <Link href={`/mock/attempt/${lastDone.id}`} className={cn(buttonVariants({ variant: "ghost" }), "w-full")}>
+                    {tCat("viewLastResult")}
+                  </Link>
+                )}
+              </div>
               <ExamLauncherModal
                 open={launcherOpen}
                 onOpenChange={setLauncherOpen}
@@ -580,7 +592,7 @@ export function MockExamCard({
           ) : (
             <Link
               href={`/mock/${exam.id}`}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-field bg-brand hover:bg-brand-hover text-base font-medium text-brand-fg transition-colors"
+              className={cn(buttonVariants({ variant: "primary" }), "w-full")}
             >
               <Play className="size-4 fill-current mr-2" />
               {t("start")}
