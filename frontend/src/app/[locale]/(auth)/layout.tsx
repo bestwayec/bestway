@@ -14,16 +14,9 @@ export default async function AuthLayout({
   setRequestLocale(locale);
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-bg-subtle text-slate-100">
-      {/* dekorativ fon — modern obsidian dark glassmorphism */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.12),rgba(255,255,255,0))]" />
-        <div className="anim-float absolute -top-24 -left-16 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="anim-float-slow absolute -bottom-24 -right-16 size-80 rounded-full bg-teal-500/10 blur-3xl" />
-      </div>
-
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-bg-subtle text-fg">
       <header className="flex items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/" aria-label="BESTWAY EC" className="transition-transform hover:scale-[1.02]">
+        <Link href="/" aria-label="BESTWAY EC" className="rounded-control">
           <Brand />
         </Link>
         <div className="flex items-center gap-1.5">
@@ -31,7 +24,7 @@ export default async function AuthLayout({
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
+      <main className="flex flex-1 items-start justify-center px-4 pb-10 pt-2 sm:items-center sm:py-8">
         <div className="w-full max-w-sm sm:max-w-md">{children}</div>
       </main>
     </div>

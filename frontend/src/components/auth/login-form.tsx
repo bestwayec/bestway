@@ -15,6 +15,7 @@ import { routing } from "@/i18n/routing";
 import { homePathForRole } from "@/lib/role-routing";
 import { GoogleAuthButton } from "./google-auth-button";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 const LOGIN_IDENTIFIER_RE =
   /^(?:\+?\d[\d\s]{8,14}|[^\s@]+@[^\s@]+\.[^\s@]+|[a-zA-Z0-9_.-]{3,64})$/;
@@ -250,43 +251,45 @@ export function LoginForm() {
   return (
     <div className="space-y-5">
       {/* Switcher: Password vs Telegram OTP */}
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-bg/60 p-1 border border-border/80">
+      <div className="grid grid-cols-2 gap-1 rounded-control border border-border bg-bg-subtle p-1" role="group" aria-label={t("methodLabel")}>
         <button
           type="button"
+          aria-pressed={loginMethod === "password"}
           onClick={() => {
             setLoginMethod("password");
             setServerError(null);
           }}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
+            "flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-field px-2 text-sm font-semibold transition-colors duration-fast",
             loginMethod === "password"
-              ? "bg-brand text-brand-fg shadow-md"
-              : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
+              ? "bg-surface text-fg shadow-e1"
+              : "text-fg-muted hover:text-fg",
           )}
         >
-          <Smartphone className="size-3.5" />
+          <Smartphone className="size-4 max-[360px]:hidden" aria-hidden />
           {t("passwordTab")}
         </button>
         <button
           type="button"
+          aria-pressed={loginMethod === "otp"}
           onClick={() => {
             setLoginMethod("otp");
             setServerError(null);
           }}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all",
+            "flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-field px-2 text-sm font-semibold transition-colors duration-fast",
             loginMethod === "otp"
-              ? "bg-brand text-brand-fg shadow-md"
-              : "text-fg-muted hover:text-fg hover:bg-surface-hover/50",
+              ? "bg-surface text-fg shadow-e1"
+              : "text-fg-muted hover:text-fg",
           )}
         >
-          <KeyRound className="size-3.5" />
+          <KeyRound className="size-4 max-[360px]:hidden" aria-hidden />
           {t("telegramOtpTab")}
         </button>
       </div>
 
       {params?.get("logout_unconfirmed") === "1" && (
-        <div role="alert" className="rounded-xl border border-warning/60 bg-warning-bg/40 px-3.5 py-3 text-sm text-warning">
+        <div role="alert" className="rounded-control border border-warning-border bg-warning-bg px-3.5 py-3 text-sm text-warning">
           {t("logoutUnconfirmed")}
         </div>
       )}
@@ -294,7 +297,7 @@ export function LoginForm() {
       {serverError && (
         <div
           role="alert"
-          className="rounded-xl border border-danger-border/60 bg-danger-bg/40 px-3.5 py-3 text-sm text-danger"
+          className="rounded-control border border-danger-border bg-danger-bg px-3.5 py-3 text-sm text-danger"
         >
           {serverError}
         </div>
@@ -341,7 +344,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
+            className={cn(buttonVariants({ size: "lg" }), "w-full")}
           >
             {isSubmitting ? (
               <>
@@ -395,7 +398,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isVerifyingOtp || otpDigits.join("").length !== 6}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover active:scale-[0.99] disabled:opacity-50"
+            className={cn(buttonVariants({ size: "lg" }), "w-full")}
           >
             {isVerifyingOtp ? (
               <>
@@ -412,9 +415,10 @@ export function LoginForm() {
             href="https://t.me/xabar_bestway_bot?start=code"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#229ED9]/40 bg-[#229ED9]/10 px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#38bdf8] hover:bg-[#229ED9]/20 transition"
+            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
           >
-            <svg className="size-4 fill-current shrink-0" viewBox="0 0 24 24">
+            {/* Telegram's own brand blue on the mark only; the label uses the theme text colour. */}
+            <svg className="size-4 shrink-0 fill-[#229ED9]" viewBox="0 0 24 24" aria-hidden>
               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
             </svg>
             {t("getTelegramCode")}
@@ -426,7 +430,7 @@ export function LoginForm() {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
-        <div className="relative bg-surface px-3 text-xs uppercase text-fg-muted">
+        <div className="relative bg-surface px-3 text-sm text-fg-muted">
           {t("or")}
         </div>
       </div>
@@ -441,9 +445,9 @@ export function LoginForm() {
         <button
           type="button"
           onClick={handleTelegramLogin}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border-strong/80 bg-bg/50 px-4 py-2.5 text-sm font-semibold text-fg shadow-sm transition hover:bg-surface-hover/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className={cn(buttonVariants({ variant: "outline" }), "w-full")}
         >
-          <svg className="size-5 fill-[#229ED9]" viewBox="0 0 24 24">
+          <svg className="size-5 fill-[#229ED9]" viewBox="0 0 24 24" aria-hidden>
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.535-.194 1.006.128.832.957z" />
           </svg>
           <span>{t("telegramLogin")}</span>
