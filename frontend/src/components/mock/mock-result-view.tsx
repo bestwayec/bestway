@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import {
@@ -25,7 +25,7 @@ import { ResultReviewTable } from "./result-review-table";
 import { TypeAccuracyCard } from "./type-accuracy-card";
 import { AssessmentPanel } from "./assessment-panel";
 import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
-import { CefrResultInfographic } from "./cefr-result-infographic";
+import { SkillBandChart, NextSteps, BandTrend, type SkillBand } from "./result-overview";
 import { CertificateModal } from "./certificate-modal";
 import { ExamFeedbackModal } from "./exam-feedback-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
@@ -84,6 +84,10 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const teacherConfirmed = attempt.provisionalSkills
     ? provisionalSkills.size === 0
     : Boolean(attempt.isTeacherReviewed || attempt.mediaState?.is_teacher_reviewed);
+  const cefrDescriptor = (level: string) => {
+    const key = level.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
+    return ["C2", "C1", "B2", "B1"].includes(key) ? t(`resultOverview.cefr${key}`) : t("resultOverview.cefrBelow");
+  };
 
   return (
     <div className="mx-auto max-w-3xl print:max-w-none print:m-0">
@@ -114,48 +118,24 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       )}
       {empty ? null : <>
 
-      {completed && !partialPractice && (
-        <CefrResultInfographic
-          className="mb-4"
-          cefrLevel={attempt.cefrLevel}
-          overallScore={attempt.overallScore}
-          overallBand={attempt.overallBand}
-          isIelts={isIelts}
-          examTitle={attempt.examTitle}
-          sections={attempt.sections.map((s) => ({
-            skill: s.skill,
-            title: t(`skills.${s.skill}`),
-            score: s.score,
-            max: s.max,
-            standardScore: s.standardScore,
-            band: s.band,
-            bandBelowRange: s.bandBelowRange,
-          }))}
-        />
-      )}
-
       {/* Natija sarlavhasi */}
-      <Card className="p-6 text-center print:border-none print:shadow-none">
+      <Card className="p-5 sm:p-6 print:border-none print:shadow-none">
         <p className="text-sm text-fg-muted">
           {attempt.examTitle}
           {isStaff && attempt.studentName ? ` · ${attempt.studentName}` : ""}
         </p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 print:hidden">
+        <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
           <Badge variant={completed ? "success" : "warning"}>{t(`status.${attempt.status}`)}</Badge>
           {partialPractice && <Badge variant="outline">{t("resultView.sectionPractice")}</Badge>}
           {!hasManualSkill ? null : teacherConfirmed ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
-              <Award className="size-3.5" aria-hidden /> {t("resultView.teacherReviewed")}
-            </span>
+            <Badge variant="brand"><Award aria-hidden /> {t("resultView.teacherReviewed")}</Badge>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-warning-border bg-warning-bg px-3 py-1 text-xs font-semibold text-warning">
-              <Sparkles className="size-3.5" aria-hidden /> {t("resultView.aiPending")}
-            </span>
+            <Badge variant="warning"><Sparkles aria-hidden /> {t("resultView.aiPending")}</Badge>
           )}
         </div>
         {Boolean(attempt.mediaState?.teacher_comment) && (
-          <div className="mt-4 rounded-xl border border-brand/30 bg-brand-subtle/20 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">{t("resultView.teacherComment")}</p>
+          <div className="mt-4 rounded-control border border-brand/30 bg-brand-subtle/40 p-4 text-left">
+            <p className="text-sm font-semibold text-brand-subtle-fg">{t("resultView.teacherComment")}</p>
             <p className="mt-1 whitespace-pre-wrap text-sm italic text-fg">&ldquo;{String(attempt.mediaState?.teacher_comment)}&rdquo;</p>
           </div>
         )}
@@ -171,22 +151,51 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
         )}
         {completed && !partialPractice && (
-          <div className="mt-4">
-            {isIelts ? (
-              <>
-                <p className="text-xs tracking-wide text-fg-subtle uppercase">{t("overallBand")}</p>
-                <p className="bg-gradient-to-br from-brand to-accent bg-clip-text text-5xl font-bold text-transparent tabular-nums">
-                  {attempt.overallBand?.toFixed(1) ?? "—"}
+          <div className="mt-5 flex flex-col gap-6 border-t border-border pt-5 md:flex-row md:items-start md:gap-10">
+            <div className="shrink-0 md:w-60">
+              {isIelts ? (
+                <>
+                  <p className="text-sm font-semibold text-fg-muted">{t("overallBand")}</p>
+                  <p className="text-display text-fg tabular-nums" data-testid="overall-band">
+                    {attempt.overallBand?.toFixed(1) ?? "—"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-fg-muted">{attempt.specificationVersion ? 'Estimated Multilevel Result' : t('cefrLevel')}</p>
+                  {attempt.specificationVersion && <p className="text-display text-fg tabular-nums">{attempt.overallScore ?? '—'}<span className="text-2xl font-semibold text-fg-muted"> /75</span></p>}
+                  {!attempt.specificationVersion && <p className="text-display text-fg">{attempt.cefrLevel ? multilevelLevelText(attempt.cefrLevel, t("levelBelowB1")) : "—"}</p>}
+                  {attempt.specificationVersion && <p className="mt-1 text-sm text-fg-subtle">{attempt.specificationVersion} · {attempt.scoreMethod} · {attempt.scoreVersion}</p>}
+                </>
+              )}
+              {attempt.cefrLevel && (
+                <div className="mt-3 space-y-1">
+                  <Badge variant="brand" size="md" className="text-base">{t("resultOverview.cefrBadge", { level: multilevelLevelText(attempt.cefrLevel, t("levelBelowB1")) })}</Badge>
+                  <p className="text-sm text-fg-muted">{cefrDescriptor(attempt.cefrLevel)}</p>
+                </div>
+              )}
+              {provisionalSkills.size > 0 && (
+                <p className="mt-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning" data-testid="provisional-note">
+                  {t("resultOverview.estimatedNote")}
                 </p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs tracking-wide text-fg-subtle uppercase">{attempt.specificationVersion ? 'Estimated Multilevel Result' : t('cefrLevel')}</p>
-                {attempt.specificationVersion && <p className="text-4xl font-bold text-brand tabular-nums">{attempt.overallScore ?? '—'} /75</p>}
-                <p className="text-5xl font-bold text-brand">{attempt.cefrLevel ? multilevelLevelText(attempt.cefrLevel, t("levelBelowB1")) : "—"}</p>
-                {attempt.specificationVersion && <p className="mt-2 text-xs text-fg-subtle">{attempt.specificationVersion} · {attempt.scoreMethod} · {attempt.scoreVersion}</p>}
-              </>
-            )}
+              )}
+            </div>
+            <SkillBandChart
+              title={isIelts ? t("resultOverview.chartTitleIelts") : t("resultOverview.chartTitleMultilevel")}
+              max={isIelts ? 9 : 75}
+              format={(v) => (isIelts ? v.toFixed(1) : String(v))}
+              rows={attempt.sections.map((s): SkillBand => {
+                const pending = MANUAL_SKILLS.has(s.skill) && !hasCompleteManualGrade(s);
+                const value = isIelts ? s.band : s.standardScore ?? null;
+                return {
+                  skill: s.skill,
+                  label: t(`skills.${s.skill}`),
+                  value: pending ? null : value ?? null,
+                  note: pending ? t("resultOverview.pendingShort") : s.bandBelowRange ? t("bandBelowRange") : undefined,
+                  provisional: !pending && provisionalSkills.has(s.skill),
+                };
+              })}
+            />
           </div>
         )}
 
@@ -201,7 +210,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         )}
 
         {/* Bo'lim ballari va aniqlik tahlili */}
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {attempt.sections.map((s) => {
             const rawSkill = attempt.rawScores?.[s.skill];
             const isSkipped = rawSkill?.skipped || (rawSkill?.status === "SKIPPED") || (!s.score && !s.standardScore && !s.band && attempt.status === "completed" && !MANUAL_SKILLS.has(s.skill));
@@ -213,7 +222,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             return (
               <div
                 key={s.id}
-                className="flex flex-col justify-between rounded-card border border-border bg-surface p-3.5 shadow-sm text-left"
+                className="flex flex-col justify-between rounded-control border border-border bg-bg-subtle p-3.5 text-left"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-fg capitalize flex items-center gap-1.5">
@@ -252,8 +261,19 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                   )}
                 </div>
 
-                {/* Accuracy percentage & visual progress bar */}
-                {!isSkipped && !pendingManual && accuracy !== null && (
+                {/* Writing / Speaking: the criteria marks (TA/TR, CC, LR, GRA; FC, LR, GRA, P), never a derived "accuracy". */}
+                {MANUAL_SKILLS.has(s.skill) && !isSkipped && !pendingManual && (attempt.diagnosticFeedback?.[s.skill]?.criteria_scores?.length ?? 0) > 0 && (
+                  <dl className="mt-2.5 flex flex-wrap gap-1.5" data-testid={`criteria-${s.skill}`}>
+                    {attempt.diagnosticFeedback![s.skill].criteria_scores.map((c, i) => (
+                      <div key={`${c.part ?? ""}-${c.code ?? c.criterion}-${i}`} className="inline-flex items-baseline gap-1 rounded-chip border border-border bg-surface px-2 py-0.5 text-sm" title={c.part ? `${c.part} · ${c.criterion}` : c.criterion}>
+                        <dt className="font-medium text-fg-muted">{c.part && /2/.test(c.part) && s.skill === "writing" ? "T2 " : c.part && s.skill === "writing" ? "T1 " : ""}{c.code ?? c.criterion}</dt>
+                        <dd className="font-semibold tabular-nums text-fg">{c.score}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {/* Accuracy percentage & visual progress bar (auto-marked sections only) */}
+                {!MANUAL_SKILLS.has(s.skill) && !isSkipped && !pendingManual && accuracy !== null && (
                   <div className="mt-2.5 space-y-1">
                     <div className="flex items-center justify-between text-xs text-fg-muted">
                       <span>{t("accuracy")}</span>
@@ -276,34 +296,26 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
         </div>
 
         {completed && (
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 print:hidden">
-            {hasManualSkill && (
-            <button
-              type="button"
-              onClick={() => setFeedbackModalOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-5 text-sm font-semibold text-brand-subtle-fg shadow-sm transition-all hover:bg-brand-hover/20 hover:scale-[1.02]"
-            >
-              <Sparkles className="size-4" />
-              {t("feedbackButton")}
-            </button>
-            )}
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-5 print:hidden">
             <a
               href={media(`/mock/attempts/${attempt.id}/certificate`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg transition-all hover:bg-brand-hover hover:scale-[1.02]"
+              className={buttonVariants({ variant: "primary" })}
             >
-              <Download className="size-4" />
-              {partialPractice ? t("resultView.practiceReport") : internalCertificate ? t("resultView.internalCertificate") : `${t("certificate")} (PDF)`}
+              <Download aria-hidden />
+              {partialPractice ? t("resultView.practiceReport") : internalCertificate ? t("resultView.internalCertificate") : t("certificate")}
             </a>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-fg transition-all hover:bg-surface-hover hover:scale-[1.02]"
-            >
-              <Printer className="size-4 text-brand" />
+            {hasManualSkill && (
+              <Button type="button" variant="outline" onClick={() => setFeedbackModalOpen(true)}>
+                <Sparkles aria-hidden />
+                {t("feedbackButton")}
+              </Button>
+            )}
+            <Button type="button" variant="ghost" onClick={() => window.print()}>
+              <Printer aria-hidden />
               {t("resultView.print")}
-            </button>
+            </Button>
           </div>
         )}
       </Card>
@@ -331,7 +343,11 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
 
       {/* Accuracy per question type over the student's own released results (real data only). */}
       {!isStaff && attempt.status === "completed" && (
-        <div className="mt-6"><TypeAccuracyCard program={isIelts ? "IELTS" : "MULTILEVEL"} /></div>
+        <div className="mt-6 space-y-4">
+          {isIelts && !partialPractice && <BandTrend currentId={attempt.id} />}
+          <NextSteps program={isIelts ? "IELTS" : "MULTILEVEL"} />
+          <TypeAccuracyCard program={isIelts ? "IELTS" : "MULTILEVEL"} />
+        </div>
       )}
 
       {/* Savollar tahlili */}

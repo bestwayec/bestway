@@ -7,6 +7,16 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 30-BLOK: Redizayn, 3-bosqich — natija va tahlil — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **Hero**: overall band bir marta (ilgari 3 marta: infografika, karta, "IELTS BAND" qutisi), 48 px; "CEFR C1" nishoni + en/uz tavsif (ilgari faqat inglizcha qattiq yozilgan); Multilevel — standart ball /75 va daraja.
+- **Diagramma** `SkillBandChart` (`components/mock/result-overview.tsx`): ko'nikmalar bo'yicha bitta rangli gorizontal bar (IELTS — 9 dan band, Multilevel — 75 dan standart ball); kutilayotgan/4.0 dan past yozuv bilan; taxminiy (AI) ballar `*` va izoh bilan.
+- **Writing/Speaking**: hosilaviy "Accuracy 72%" o'rniga mezon ballari (TA/TR, CC, LR, GRA; FC, LR, GRA, P) `diagnosticFeedback.criteria_scores` dan.
+- **Keyingi qadamlar** (`NextSteps`): eng zaif va eng kuchli savol turlari — faqat talabaning tekshirilgan javoblaridan (`/mock/attempts/mine/type-accuracy`, har turda ≥ 4 javob). **Band trendi** (`BandTrend`): to'liq IELTS natijalari ≥ 2 bo'lsa SVG chiziq.
+- **Tugmalar**: "Certificate (PDF) (PDF)" xatosi tuzatildi; primary / outline / ghost.
+- **Tekshiruv**: tsc, lint, vitest 828 (result spec'da ma'lumot yuklovchi bloklar mock qilindi). Skrinshotlar: `docs/agent/screens/redesign-3/`.
+- **Ochiq**: `CefrResultInfographic` hali Exam Track sahifasida (rang-barang ko'nikma ranglari) — 4-bosqichda.
+- **Keyingi**: 4-bosqich — talaba dashboard va katalog.
+
 ### 29-BLOK: Redizayn, 2-bosqich — imtihon oynasi — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Maydon**: imtihon oynasi butun kenglikda (max 1680 px, `bg-subtle` fon), 1366×768 da matn+savollar balandlikning ~84% i; Reading matni kengda "karta ichida karta" emas, 17 px / 1.75; split o'lchami o'zgaradi (avvalgidek).
 - **Flag** savol raqami yonida (`aria-pressed`, telefonda 44 px). **Navigator**: javob berilgan — yashil fon, belgilangan — sariq chegara + burchak, joriy — halqa; telefonda pastdan chiqadigan varaq, 44 px katakchalar.
