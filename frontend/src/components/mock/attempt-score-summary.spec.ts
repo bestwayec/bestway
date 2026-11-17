@@ -29,7 +29,7 @@ const attempt = (): MockAttemptSummary => ({
   studentId: "student", mode: "practice", deadlineAt: null, currentSkill: null, sectionDeadlines: null,
   overallDeadlineAt: null, sectionBands: null, antiCheatCount: 0, submittedAt: "2026-10-10T00:10:00Z", finishedAt: "2026-10-10T00:12:00Z",
   flowMode: "full_test", overallBand: null, overallScore: 75, cefrLevel: "C1", startedAt: "2026-10-10T00:00:00Z",
-  rawScores: { writing: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } }, speaking: { score: 3, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false } } },
+  rawScores: { writing: { score: 4, max: 5 }, speaking: { score: 3, max: 5 } },
 } satisfies MockAttemptSummary);
 const summary = (value: MockAttemptSummary) => renderToStaticMarkup(React.createElement(AttemptScoreSummary, { attempt: value }));
 
@@ -39,18 +39,17 @@ beforeEach(() => {
 });
 
 describe("persisted grades in attempt history", () => {
-  it("shows separate server practice grades without the native overall or a fabricated average", () => {
+  it("shows the overall score and level of a full mock, with no internal grade", () => {
     const html = summary(attempt());
-    expect(html).toContain("Writing"); expect(html).toContain("47 /75"); expect(html).toContain("Speaking"); expect(html).toContain("44 /75");
-    expect(html).not.toContain("75/75"); expect(html).not.toContain("C1"); expect(html).not.toContain("45.5");
+    expect(html).toContain("75/75"); expect(html).toContain("C1");
+    expect(html).not.toContain("47 /75"); expect(html).not.toContain("44 /75");
   });
 
-  it("keeps a missing practice result pending while showing an already persisted grade", () => {
+  it("keeps every section pending while the practice attempt is still being graded", () => {
     const value = attempt(); value.status = "grading"; value.flowMode = "partial_practice";
     value.practiceScope = { skills: ["writing", "speaking"], questionIds: ["w", "s"] };
-    delete value.rawScores!.speaking.practiceGrade;
     const html = summary(value);
-    expect(html).toContain("47 /75"); expect(html).toContain(en.mock.awaitingGrade); expect(html).not.toContain("3 /5");
+    expect(html).toContain(en.mock.awaitingGrade); expect(html).not.toContain("3 /5"); expect(html).not.toContain("4 /5");
     expect(html).not.toContain("C1");
   });
 
@@ -68,7 +67,7 @@ describe("persisted grades in attempt history", () => {
     expect(html).toContain("0 /5"); expect(html).not.toContain("35 /75"); expect(html).not.toContain("C1");
   });
 
-  it("preserves legacy Multilevel overall and CEFR values when there is no new policy", () => {
+  it("shows the stored Multilevel overall and CEFR value of a result with Writing only", () => {
     const value = attempt(); value.rawScores = { writing: { score: 4, max: 5 } };
     const html = summary(value);
     expect(html).toContain("75/75"); expect(html).toContain("C1");
@@ -81,9 +80,9 @@ describe("persisted grades in attempt history", () => {
     value.overallBand = null; expect(summary(value)).toContain(en.mock.awaitingGrade);
   });
 
-  it.each(["dashboard", "exam detail"])("uses the persisted policy grade in %s history", (surface) => {
+  it.each(["dashboard", "exam detail"])("shows the stored overall and level in %s history, with no internal grade", (surface) => {
     const html = renderToStaticMarkup(surface === "dashboard" ? React.createElement(ExamTrackDashboard) : React.createElement(MockExamDetailView, { examId: "exam" }));
-    expect(html).toContain("47 /75"); expect(html).toContain("44 /75"); expect(html).not.toContain("75/75"); expect(html).not.toContain("C1");
+    expect(html).toContain("75/75"); expect(html).toContain("C1"); expect(html).not.toContain("47 /75"); expect(html).not.toContain("44 /75");
     expect(html).toContain("/mock/attempt/attempt#assessment-feedback");
   });
 });

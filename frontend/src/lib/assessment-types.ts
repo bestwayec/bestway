@@ -4,25 +4,6 @@ export type AssessmentProgram = "IELTS_ACADEMIC" | "IELTS_GENERAL" | "MULTILEVEL
 export type AssessmentPolicy = "PRACTICE_AUTO_AI" | "FULL_MOCK_AI_WITH_REVIEW" | "MANUAL_ONLY";
 export type PronunciationEvidence = "UNAVAILABLE" | "ACOUSTIC";
 
-/** Internal classroom practice grade; the original rubric remains separately available. */
-export interface PracticeGrade {
-  policyId: string;
-  score: number;
-  scaleMax: number;
-  rangeMin: number;
-  rangeMax: number;
-  rawScore: number;
-  rawMax: number;
-  isOfficial: false;
-}
-
-export interface AssessmentGradingPolicy {
-  id: string;
-  scaleMax: number;
-  rangeMin: number;
-  rangeMax: number;
-}
-
 export interface AssessmentPartFeedback {
   taskCoverage: string;
   grammar: string;
@@ -42,7 +23,6 @@ export interface AssessmentPartFeedback {
 }
 
 export interface AssessmentResult {
-  practiceGrade?: PracticeGrade | null;
   parts: Array<{
     id: string;
     rawScore: number | null;
@@ -79,10 +59,6 @@ export interface AssessmentJobView {
   promptVersion: string;
   practiceMode?: "PARTIAL";
   rawMax?: number;
-  gradingPolicy?: AssessmentGradingPolicy | null;
-  aiPracticeGrade?: PracticeGrade | null;
-  teacherPracticeGrade?: PracticeGrade | null;
-  practiceGrade?: PracticeGrade | null;
   evaluation: { result: AssessmentResult } | null;
   approvedFeedback: AssessmentResult | null;
   finalResult?: AssessmentResult | null;

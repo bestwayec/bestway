@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.legacy_schema import models as m
 
 from .attendance import csv_cell
+from .mock_scoring import skipped_skills
 
 
 def rounded(value, places=0):
@@ -123,15 +124,18 @@ def group_results_csv(group_id):
                 '-',
                 '-',
                 '-',
-                "Topshirilmagan"
+                "Topshirilmagan",
+                0
             ])
             continue
         for att in s_atts:
             bands = att.section_bands or {}
-            l = bands.get('listening', '-')
-            r = bands.get('reading', '-')
-            w = bands.get('writing', '-')
-            sp = bands.get('speaking', '-')
+            # A section left entirely unanswered is shown as "-" and counted in its own column, not printed as a 0.
+            skipped = skipped_skills(getattr(att.exam, 'type', None), att.raw_scores, bands, att.standard_scores)
+            l = '-' if 'listening' in skipped else bands.get('listening', '-')
+            r = '-' if 'reading' in skipped else bands.get('reading', '-')
+            w = '-' if 'writing' in skipped else bands.get('writing', '-')
+            sp = '-' if 'speaking' in skipped else bands.get('speaking', '-')
             overall = att.overall_band if att.overall_band is not None else (att.overall_score if att.overall_score is not None else '-')
             cefr = att.cefr_level or '-'
             dt = att.finished_at or att.submitted_at or att.started_at
@@ -154,7 +158,8 @@ def group_results_csv(group_id):
                 str(overall),
                 str(cefr),
                 dt_str,
-                status_str
+                status_str,
+                len(skipped)
             ])
 
     headers = [
@@ -168,7 +173,8 @@ def group_results_csv(group_id):
         "Umumiy Ball / Band",
         "CEFR",
         "Sana",
-        "Holat"
+        "Holat",
+        "O'tkazilgan bo'limlar"
     ]
     return csv(headers, out)
 

@@ -4,7 +4,6 @@
  * Bu yerdagi nomlar backenddagi javob maydonlariga bir milimetr aniqlikda mos.
  */
 
-import type { PracticeGrade } from "./assessment-types";
 
 export type Role = "super_admin" | "admin" | "teacher" | "student" | "parent";
 export type AttendanceState = "present" | "absent" | "late" | "empty" | "blank";
@@ -852,7 +851,6 @@ export interface StartMockResult {
 export interface MockSectionScore {
   score: number;
   max: number;
-  practiceGrade?: PracticeGrade | null;
   skipped?: boolean;
   status?: string;
   answered?: number;
@@ -958,7 +956,6 @@ export interface MockAttemptSection {
   /** IELTS Listening/Reading under the lowest published raw mark: `band` is a 3.5 placeholder, show "below 4.0". */
   bandBelowRange?: boolean;
   standardScore?: number | null;
-  practiceGrade?: PracticeGrade | null;
   groups: MockAttemptGroup[];
 }
 

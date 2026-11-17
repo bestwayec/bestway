@@ -158,9 +158,9 @@ def verify_certificate(attempt_id, code):
     row = MockAttempt.objects.select_related('exam','student__user').filter(id=attempt_id).first()
     if row is None or not code or not hmac.compare_digest(str(code).upper(), verification_code(attempt_id)):
         return dict(valid=False)
-    from .assessment_quality import attempt_practice_grades
+    from .assessment_quality import manual_result_skills
     level = row.cefr_level
-    if row.exam.type != 'multilevel' or not attempt_practice_grades(row) or row.overall_score is None or level in (None, '', 'BELOW_B1'):
+    if row.exam.type != 'multilevel' or not manual_result_skills(row) or row.overall_score is None or level in (None, '', 'BELOW_B1'):
         return dict(valid=False)
     name = (row.student.user.name if row.student and row.student.user else '') or ''
     initials = ''.join(part[0].upper() + '.' for part in name.split() if part)
@@ -176,11 +176,9 @@ def certificate_data(actor,attempt_id):
     from .mock_practice import is_partial, scope
     is_part = is_partial(row)
     internal = {}
-    if not is_part:
-        from .assessment_quality import attempt_practice_grades
-        internal = attempt_practice_grades(row)
-        if internal and row.exam.type != 'multilevel':
-            fail('MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE','Internal classroom practice grades do not issue an overall exam or CEFR certificate')
+    if not is_part and row.exam.type == 'multilevel':
+        from .assessment_quality import manual_result_skills
+        internal = manual_result_skills(row)
     if row.status not in ('completed', 'submitted'):
         fail('MOCK_ATTEMPT_NOT_COMPLETED','Natija hali tayyor emas')
     # A completed attempt may have a later unresolved AI assessment. Only the
@@ -217,10 +215,6 @@ def certificate_data(actor,attempt_id):
         band = sec_bands.get(skill)
         std_val = std_scores.get(skill)
         standard_score = std_val.get('estimatedStandardScore') if isinstance(std_val, dict) else std_val
-        if skill in internal:
-            # The internal certificate shows the same internal grade as the result page.
-            standard_score = internal[skill].get('score')
-
         if score is None:
             score = standard_score if standard_score is not None else band
         if max_score is None:

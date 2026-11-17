@@ -86,6 +86,8 @@ export interface GroupAnalyticsData {
   averageBandScore: number | null;
   activeStudents: number;
   totalCompletedAttempts: number;
+  /** Sections left unanswered in finished attempts; they are not in any average. */
+  skippedSections: number;
   students: GroupStudentAnalyticsRow[];
 }
 
@@ -270,6 +272,10 @@ export function useGroupAnalytics(groupId?: string) {
             ? rawAnalytics.completedAttemptsCount
             : students.reduce((acc, s) => acc + s.completedExamsCount, 0);
 
+      const rawSkipped = rawAnalytics?.skippedSections as { total?: unknown } | number | undefined;
+      const skippedSections =
+        typeof rawSkipped === "number" ? rawSkipped : typeof rawSkipped?.total === "number" ? rawSkipped.total : 0;
+
       return {
         groupId: String(groupId),
         groupName: String(rawAnalytics?.groupName ?? groupDetail?.name ?? "Guruh"),
@@ -277,6 +283,7 @@ export function useGroupAnalytics(groupId?: string) {
         averageBandScore,
         activeStudents,
         totalCompletedAttempts,
+        skippedSections,
         students,
       };
     },

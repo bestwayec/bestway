@@ -22,8 +22,7 @@ export function groupGradeRows(writing: GroupAiRankingData, speaking: GroupAiRan
 
 export function finalGradeLabel(grade?: GroupSkillGrade): string {
   if (!grade || grade.row.finalScore == null) return "—";
-  return rankingScoreLabel(grade.row.finalPracticeGrade?.score ?? grade.row.finalScore,
-    grade.row.finalPracticeGrade?.scaleMax ?? grade.row.finalScoreScaleMax);
+  return rankingScoreLabel(grade.row.finalScore, grade.row.finalScoreScaleMax);
 }
 
 function scoreCell(value: number | null | undefined, maximum?: number | null): string {
@@ -68,8 +67,8 @@ export function groupLeaderboardExcelCsv(
   const students = groupGradeRows(writing, speaking);
 
   const rows = students.map((st) => {
-    const wScore = st.writing?.row.finalPracticeGrade?.score ?? st.writing?.row.finalScore ?? st.writing?.row.aiScore ?? null;
-    const sScore = st.speaking?.row.finalPracticeGrade?.score ?? st.speaking?.row.finalScore ?? st.speaking?.row.aiScore ?? null;
+    const wScore = st.writing?.row.finalScore ?? st.writing?.row.aiScore ?? null;
+    const sScore = st.speaking?.row.finalScore ?? st.speaking?.row.aiScore ?? null;
 
     let overallScore: number | null = null;
     if (wScore != null && sScore != null) {

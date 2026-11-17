@@ -125,27 +125,27 @@ describe("partial teacher result presentation", () => {
     expect(html).toContain("/mock/attempts/attempt-1/certificate");
     expect(html).toContain("Estimated Multilevel Result");
   });
-  it("shows the same persisted website practice grade in the result and breakdown", () => {
+  it("shows a partial teacher result as the raw marks, never an internal grade", () => {
     const value = attempt();
-    value.rawScores = { speaking: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } } };
+    value.rawScores = { speaking: { score: 4, max: 5 } };
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
-    expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
+    expect(html).toContain("4/5");
+    expect(html).not.toContain("47 /75");
     expect(html).not.toContain("35–50");
-    expect(html).not.toContain("75 /75");
-    expect(html).not.toContain("/certificate");
+    expect(html).toContain(en.mock.resultView.practiceReport);   // a section practice gets a practice report, not a certificate
   });
-  it("keeps new internal full-attempt grades separate from derived CEFR and certificates", () => {
+  it("shows a full Multilevel attempt with Writing/Speaking its real overall, level and the internal certificate", () => {
     const value = attempt(false);
     value.flowMode = "full_test";
-    value.overallScore = 75;
+    value.overallScore = 66;
     value.cefrLevel = "C1";
-    value.rawScores = { speaking: { score: 4, max: 5, practiceGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 4, rawMax: 5, isOfficial: false } } };
     const html = renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
-    expect(html).toContain("47 /75");
-    expect(html).not.toContain("Estimated Multilevel Result");
-    expect(html).not.toContain("75 /75");
-    expect(html).not.toContain("C1");
-    expect(html).not.toContain("/certificate");
+    expect(html).toContain("Estimated Multilevel Result");
+    expect(html).toContain("66");
+    expect(html).toContain("C1");
+    expect(html).toContain(en.mock.resultView.internalCertificate);
+    expect(html).toContain("/certificate");
+    expect(html).not.toContain("internal practice");
   });
 });
 

@@ -31,15 +31,11 @@ def ranking_ai_projection(job,evaluations,transcripts=None):
         return dict(empty,status='NEEDS_REVIEW')
     score=native['score'];raw=native['rawTotal'] if job.program=='MULTILEVEL' else score
     maximum=sum(p['max'] for p in input['parts']) if job.program=='MULTILEVEL' else 9
-    practice=value.get('practiceGrade')
-    if practice is not None:score=practice['score']
-    elif input.get('practiceMode')=='PARTIAL' and score is not None:score=round(75*raw/maximum,1)
-    if job.program == 'MULTILEVEL' and score is not None:
-        score = min(55.0, float(score))
+    if input.get('practiceMode')=='PARTIAL' and score is not None:score=round(75*raw/maximum,1)
     confidence=value['confidence']
     if type(job.confidence) in (int,float) and math.isfinite(job.confidence):confidence=min(confidence,job.confidence)
     from .assessment import threshold
     eligible=score is not None and confidence>=threshold() and job.failure_code in (None,'TEACHER_CONFIRMATION_REQUIRED')
     return dict(empty,score=score,rawScore=raw,rawMax=maximum,confidence=confidence,
         eligible=eligible,reviewRequired=job.status!='SUCCEEDED' or not eligible,
-        evaluationId=selected.id,provider=selected.provider,model=selected.model,practiceGrade=practice)
+        evaluationId=selected.id,provider=selected.provider,model=selected.model)

@@ -356,6 +356,28 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
     return result, projections
 
 
+def skipped_skills(exam_type, raw_scores, section_bands, standard_scores):
+    """Skills the candidate left entirely unanswered in a finished attempt, so a group average or a printed
+    table never counts them as a real 0: a full IELTS Listening/Reading section is stored as band 0 (a wrong
+    answer is at least 3.5), an IELTS Writing/Speaking with no band and no points, a Multilevel section as SKIPPED."""
+    skipped = set()
+    raw_scores, section_bands, standard_scores = raw_scores or {}, section_bands or {}, standard_scores or {}
+    if exam_type == 'multilevel':
+        for skill, item in standard_scores.items():
+            if isinstance(item, dict) and item.get('status') == 'SKIPPED':
+                skipped.add(skill)
+        return skipped
+    for skill, raw in raw_scores.items():
+        points = raw.get('score') if isinstance(raw, dict) else None
+        band = section_bands.get(skill)
+        if skill in ('listening', 'reading'):
+            if band == 0 and not points:
+                skipped.add(skill)
+        elif band is None and not points and isinstance(raw, dict) and raw.get('max'):
+            skipped.add(skill)
+    return skipped
+
+
 def partial_result(result):
     """A selected/incomplete practice is graded only on its observed work."""
     standards = (result.get('standardScores') or {}) if len(result.get('rawScores') or {}) <= 1 else {}

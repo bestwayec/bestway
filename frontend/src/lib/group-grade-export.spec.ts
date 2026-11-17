@@ -3,9 +3,8 @@ import type { GroupAiRankingData, GroupAiRankingRow } from "./ai-ranking-types";
 import { finalGradeLabel, groupGradeRows, groupGradesCsv, groupLeaderboardExcelCsv } from "./group-grade-export";
 
 const row: GroupAiRankingRow = { studentId: "student", name: "=unsafe;Name", attemptId: "writing-attempt", jobId: "j", aiScore: 44,
-  aiRawScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER", finalScoreScaleMax: 5, confidence: .9,
-  reviewRequired: false, eligible: true, rank: 1, status: "SUCCEEDED",
-  finalPracticeGrade: { policyId: "policy", score: 47, scaleMax: 75, rawScore: 4, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } };
+  aiRawScore: 3, teacherScore: 4, finalScore: 47, finalScoreSource: "TEACHER", finalScoreScaleMax: 75, confidence: .9,
+  reviewRequired: false, eligible: true, rank: 1, status: "SUCCEEDED" };
 function data(skill: "writing" | "speaking", rows: GroupAiRankingRow[]): GroupAiRankingData {
   return { group: { id: "g", name: "Group" }, skill, exams: [{ id: "e", title: "CEFR", type: "multilevel" }], selectedExamId: "e",
     cohorts: [{ id: skill + "-scope", label: skill + "-task", isPartial: true, rawMax: 5, scaleMax: 75, questionCount: 1,
@@ -30,10 +29,10 @@ describe("group Writing and Speaking export", () => {
     expect(csv).toContain("'" + row.name);
   });
   it("keeps unattempted learners, genuine zero and missing grades distinct", () => {
-    const writing = data("writing", [{ ...row, finalScore: 0, finalPracticeGrade: null, teacherScore: 0, aiScore: 0 }]);
+    const writing = data("writing", [{ ...row, finalScore: 0, finalScoreScaleMax: 5, teacherScore: 0, aiScore: 0 }]);
     const speaking = data("speaking", []);
     speaking.unranked.push({ ...row, studentId: "another", name: "Another", attemptId: null, jobId: null,
-      aiScore: null, aiRawScore: null, teacherScore: null, finalScore: null, finalPracticeGrade: null,
+      aiScore: null, aiRawScore: null, teacherScore: null, finalScore: null,
       finalScoreSource: null, finalScoreScaleMax: null, confidence: null, eligible: false, reviewRequired: false, rank: null, status: "NO_ATTEMPT" });
     const summary = groupGradeRows(writing, speaking);
     expect(summary).toHaveLength(2);
@@ -52,7 +51,7 @@ describe("group Writing and Speaking export", () => {
 
   it("exports formatted leaderboard CSV with ranks, student names, phones, all skills, overall and status, without a CEFR level", () => {
     const writing = data("writing", [row]);
-    const speaking = data("speaking", [{ ...row, finalScore: 50, finalPracticeGrade: { policyId: "policy", score: 50, scaleMax: 75, rawScore: 4, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } }]);
+    const speaking = data("speaking", [{ ...row, finalScore: 50 }]);
     const phoneMap = new Map([["student", "+998901234567"]]);
     const csv = groupLeaderboardExcelCsv(writing, speaking, phoneMap, t);
 

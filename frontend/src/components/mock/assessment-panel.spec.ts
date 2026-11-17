@@ -44,11 +44,9 @@ const render = (job: AssessmentJobView, isStaff = false) => renderToStaticMarkup
 
 describe("assessment feedback presentation", () => {
   it("keeps scores and teacher review usable without exposing calculation-policy banners", () => {
-    const grade = { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false as const };
-    const job = { ...speakingJob, practiceMode: "PARTIAL" as const, aiPracticeGrade: grade, gradingPolicy: { id: grade.policyId, scaleMax: 75, rangeMin: 35, rangeMax: 50 } };
+    const job = { ...speakingJob, practiceMode: "PARTIAL" as const, aiScore: 3 };
     const student = render(job);
-    expect(student).toContain("44 /75");
-    expect(student).toContain("3/5");
+    expect(student).toContain("3 /5 raw");
     expect(student).toContain("Teacher review required");
     expect(student).not.toContain("35–50");
     expect(student).not.toContain("Original rubric scores are retained");
@@ -145,19 +143,15 @@ describe("assessment feedback presentation", () => {
     expect(html).toContain('max="9"');
     expect(html).toContain('value="OVERRIDE"');
   });
-  it("shows the saved internal AI and teacher grades while retaining original rubric evidence", () => {
-    const aiPracticeGrade = { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 44, scaleMax: 75, rangeMin: 35, rangeMax: 50, rawScore: 3, rawMax: 5, isOfficial: false as const };
-    const teacherPracticeGrade = { ...aiPracticeGrade, score: 47, rawScore: 4 };
-    const html = render({ ...speakingJob, status: "SUCCEEDED", practiceMode: "PARTIAL", rawMax: 5, aiScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER", aiPracticeGrade, teacherPracticeGrade, practiceGrade: teacherPracticeGrade }, true);
-    expect(html).toContain("44 /75");
-    expect((html.match(/47 \/75/g) ?? []).length).toBe(2);
-    expect(html).toContain("3/5");
-    expect(html).toContain("4/5");
+  it("shows the saved AI and teacher scores as the real marks they are, with no internal grade", () => {
+    const html = render({ ...speakingJob, status: "SUCCEEDED", practiceMode: "PARTIAL", rawMax: 5, aiScore: 3, teacherScore: 4, finalScore: 4, finalScoreSource: "TEACHER" }, true);
+    expect(html).toContain("3 /5 raw");
+    expect((html.match(/4 \/5 raw/g) ?? []).length).toBe(2);
     expect(html).not.toContain("35–50");
     expect(html).not.toContain("75 /75");
   });
-  it("keeps intermediate provider scores pending until the new policy grade is validated", () => {
-    const html = render({ ...speakingJob, status: "PROCESSING", aiScore: 75, gradingPolicy: { id: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", scaleMax: 75, rangeMin: 35, rangeMax: 50 }, aiPracticeGrade: null, teacherPracticeGrade: null, practiceGrade: null });
+  it("keeps the scores of a job that is still being assessed pending", () => {
+    const html = render({ ...speakingJob, status: "PROCESSING", aiScore: 75 });
     expect(html).not.toContain("35–50");
     expect(html).not.toContain("75 /75");
     expect(html).toContain("Pending");

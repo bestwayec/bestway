@@ -189,6 +189,11 @@ export function GroupAnalyticsPanel({
                 </p>
               </div>
             </div>
+            {analytics.skippedSections > 0 && (
+              <p className="text-xs text-fg-muted">
+                O&apos;tkazib yuborilgan bo&apos;limlar: <strong className="tabular-nums text-fg">{analytics.skippedSections}</strong> — ular o&apos;rtacha ballga kirmaydi.
+              </p>
+            )}
 
             {/* Student Analytics Table */}
             <div className="overflow-x-auto rounded-lg border border-border">

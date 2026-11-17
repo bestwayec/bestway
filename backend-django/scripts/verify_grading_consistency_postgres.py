@@ -114,8 +114,8 @@ try:
         teacher=request('teacher','/v1/assessment/attempts/'+attempt.id)
         check(student==teacher,'teacher and student receive identical authorized final score projections')
         check({j['skill']:j['finalScore'] for j in student['assessments']}==dict(writing=12,speaking=4),'both assessment panels expose the saved teacher raw scores')
-        check({j['skill']:j['practiceGrade']['score'] for j in student['assessments']}==dict(writing=46.3,speaking=47),
-            'both panels expose the same explicit internal 35-50 policy with native raw marks retained')
+        check(all(key not in j for j in student['assessments'] for key in ('practiceGrade','aiPracticeGrade','teacherPracticeGrade','gradingPolicy')),
+            'both panels expose the saved raw marks as the result: no internal practice grade')
         request('teacher','/v1/mock/attempts/'+attempt.id+'/certificate',None,200)
         jobs['writing'].refresh_from_db();job=jobs['writing']
         approved=copy.deepcopy(job.final_result);approved['priorityImprovements']=['Develop each reason with an example.']
@@ -204,25 +204,25 @@ try:
         ai_attempt.refresh_from_db()
         check(ai_attempt.status=='completed' and all(j.final_score_source=='AI' and j.status=='SUCCEEDED' for j in ai_jobs.values()),'mocked providers finish scoped AI jobs through the real worker and answer projection')
         check(ai_attempt.raw_scores['writing']['score']==7.5 and ai_attempt.raw_scores['speaking']['score']==2.5,'native evidence scores remain distinct from displayed internal policy')
-        check(ai_attempt.raw_scores['writing']['practiceGrade']['score']==42 and ai_attempt.raw_scores['speaking']['practiceGrade']['score']==42.5,'student main result stores the same internal grade as the AI ledger')
+        check(all('practiceGrade' not in ai_attempt.raw_scores[skill] for skill in ('writing','speaking')),'student main result stores no internal grade, only the AI raw evidence')
         check(ai_attempt.overall_score is None and ai_attempt.cefr_level is None,'AI scoped practice never invents overall or CEFR certification')
         ai_student=request('student','/v1/assessment/attempts/'+ai_id)
         ai_teacher=request('teacher','/v1/assessment/attempts/'+ai_id)
-        check(ai_student==ai_teacher and all(j['aiPracticeGrade']==j['practiceGrade'] for j in ai_student['assessments']), 'teacher and student see identical persisted AI practice grades')
+        check(ai_student==ai_teacher, 'teacher and student see identical persisted AI results')
         check(MockAnswer.objects.get(attempt_id=ai_id,question_id=writing[0]).response==original,'AI grading preserves the original candidate response')
         ai_job=ai_jobs['writing'];review='/v1/assessment/jobs/'+ai_job.id+'/review'
         request('teacher',review,dict(action='OVERRIDE',expectedVersion=ai_job.version,reason='Teacher heard and reviewed the work',parts=[dict(id=p['id'],rawScore=4) for p in ai_job.input_snapshot['parts']]),201)
         ai_job.refresh_from_db();ai_attempt.refresh_from_db()
         final=request('student','/v1/assessment/attempts/'+ai_id)['assessments']
         writing_view=next(j for j in final if j['skill']=='writing')
-        check(writing_view['practiceGrade']['score']==46.3 and writing_view['teacherPracticeGrade']==writing_view['practiceGrade'] and writing_view['aiPracticeGrade']['score']==42,
-            'teacher native override updates final display policy while preserving the separate AI proposal')
-        check(ai_attempt.raw_scores['writing']['practiceGrade']==writing_view['practiceGrade'],'teacher override and student main result share exactly one persisted display grade')
+        check(writing_view['finalScore']==12 and writing_view['teacherScore']==12 and writing_view['aiScore']==7.5,
+            'teacher native override updates the final score while preserving the separate AI proposal')
+        check(ai_attempt.raw_scores['writing']['score']==12 and 'practiceGrade' not in ai_attempt.raw_scores['writing'],'teacher override and student main result share exactly one persisted score')
         request('teacher',review,dict(action='REGRADE',expectedVersion=ai_job.version,reason='Obtain an independent proposal without overwriting teacher work'),201)
         later=AssessmentJob.objects.filter(attempt_id=ai_id,skill='writing').order_by('-generation').first()
         run_fixture(later)
-        check(later.final_score_source=='TEACHER' and later.final_score==12 and later.final_result['practiceGrade']['score']==46.3,
-            'late AI regrade preserves teacher-approved native and practice grades')
+        check(later.final_score_source=='TEACHER' and later.final_score==12 and 'practiceGrade' not in later.final_result,
+            'late AI regrade preserves the teacher-approved native score')
         # A zero-amplitude decoded recording proves only that no speech was
         # captured. It cannot distinguish deliberate silence from mic failure.
         # An empty STT response is even weaker evidence. Neither is a grade.
