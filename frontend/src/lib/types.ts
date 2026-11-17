@@ -955,6 +955,8 @@ export interface MockAttemptSection {
   score: number | null;
   max: number | null;
   band: number | null;
+  /** IELTS Listening/Reading under the lowest published raw mark: `band` is a 3.5 placeholder, show "below 4.0". */
+  bandBelowRange?: boolean;
   standardScore?: number | null;
   practiceGrade?: PracticeGrade | null;
   groups: MockAttemptGroup[];

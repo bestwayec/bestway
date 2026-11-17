@@ -1575,6 +1575,7 @@
       "continueHere": "Continue here"
     },
     "levelBelowB1": "Below B1",
+    "bandBelowRange": "below 4.0",
     "accuracy": "Accuracy:",
     "gradeDraftKept": "Unsaved — kept on this device",
     "gradeKeyboardHint": "Alt+↓ / Alt+↑: next / previous grade",

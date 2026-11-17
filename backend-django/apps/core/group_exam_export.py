@@ -25,31 +25,58 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
+from .mock_scoring import MULTILEVEL_BELOW_B1, cefr_band, multilevel_level
+
 
 def fail(code: str, message: str, status: int = 400):
     raise ContractAPIException(code=code, message=message, status=status)
 
 
-def compute_cefr_level(score: Optional[float], existing_cefr: Optional[str] = None) -> str:
-    """Resolve CEFR level from existing value or calculated band / percentage score."""
+def compute_cefr_level(score: Optional[float], exam_type: Optional[str], existing_cefr: Optional[str] = None) -> str:
+    """CEFR level of a result. A level stored with the attempt wins; otherwise it is derived from the
+    score on the scale of the exam's own type: an IELTS band (C2 8.5, C1 7.0, B2 5.5, B1 4.0) or a
+    Multilevel standard score out of 75 (C1 65, B2 51, B1 38). Below the lowest level it is BELOW_B1.
+    The scale comes from `exam_type` only, never from how big the number looks."""
     if existing_cefr and str(existing_cefr).strip():
         return str(existing_cefr).strip().upper()
     if score is None:
         return "-"
     try:
-        val = float(score)
+        value = float(score)
     except (ValueError, TypeError):
         return "-"
-    # Multi-level standard scale (0 - 75 points) or IELTS band (0 - 9.0)
-    if val >= 70 or (val <= 9.0 and val >= 7.0):
-        return "C1"
-    if val >= 55 or (val <= 9.0 and val >= 5.5):
-        return "B2"
-    if val >= 40 or (val <= 9.0 and val >= 4.0):
-        return "B1"
-    if val >= 30 or (val <= 9.0 and val >= 3.0):
-        return "A2"
-    return "A1"
+    if exam_type in ("ielts_academic", "ielts_general"):
+        return cefr_band(value) if 0 <= value <= 9 else "-"
+    if exam_type == "multilevel":
+        try:
+            return multilevel_level(value)
+        except ValueError:
+            return "-"
+    return "-"
+
+
+# Levels shown in the group report, highest first. A2/A1 only appear for results stored before the
+# CEFR scales were aligned with the official ones.
+CEFR_REPORT_LEVELS = ("C2", "C1", "B2", "B1", MULTILEVEL_BELOW_B1)
+CEFR_LEGACY_LEVELS = ("A2", "A1")
+CEFR_SCALE_NOTES = {
+    "multilevel": "C1 65+, B2 51-64, B1 38-50 ball",
+    "ielts_academic": "C2 8.5+, C1 7.0-8.0, B2 5.5-6.5, B1 4.0-5.0 band",
+    "ielts_general": "C2 8.5+, C1 7.0-8.0, B2 5.5-6.5, B1 4.0-5.0 band",
+}
+
+
+def cefr_display(level: str, short: bool = False) -> str:
+    """Report text of a level code; BELOW_B1 is not a level, so it is written out ("<B1" in a narrow column)."""
+    if level == MULTILEVEL_BELOW_B1:
+        return "<B1" if short else "B1 dan quyi"
+    return level
+
+
+def cefr_distribution_text(distribution: Dict[str, int], separator: str = "   |   ") -> str:
+    levels = [level for level in CEFR_REPORT_LEVELS if level != "C2" or distribution.get("C2", 0)]
+    levels += [level for level in CEFR_LEGACY_LEVELS if distribution.get(level, 0)]
+    return separator.join(f"{cefr_display(level)}: {distribution.get(level, 0)} ta" for level in levels)
 
 
 def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict[str, Any]:
@@ -105,7 +132,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
     final_scores_list: List[float] = []
     writing_scores_list: List[float] = []
     speaking_scores_list: List[float] = []
-    cefr_counts: Dict[str, int] = {"C1": 0, "B2": 0, "B1": 0, "A2": 0, "A1": 0}
+    cefr_counts: Dict[str, int] = {level: 0 for level in (*CEFR_REPORT_LEVELS, *CEFR_LEGACY_LEVELS)}
 
     for idx, st in enumerate(roster, start=1):
         att = attempts_by_student.get(st.user_id)
@@ -173,7 +200,7 @@ def get_group_exam_export_data(actor: User, group_id: str, exam_id: str) -> Dict
                 final_scores_list.append(final_score)
 
             # CEFR Level
-            cefr = compute_cefr_level(final_score, att.cefr_level)
+            cefr = compute_cefr_level(final_score, exam.type, att.cefr_level)
             if cefr in cefr_counts:
                 cefr_counts[cefr] += 1
 
@@ -396,7 +423,7 @@ def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
             (fmt_num(st["ai_score"]), align_center, font_data),
             (fmt_num(st["teacher_score"]), align_center, font_data_bold),
             (fmt_num(st["final_score"]), align_center, Font(name="Calibri", size=10, bold=True, color=primary_emerald)),
-            (st["cefr_level"], align_center, Font(name="Calibri", size=10, bold=True, color=accent_emerald)),
+            (cefr_display(st["cefr_level"]), align_center, Font(name="Calibri", size=10, bold=True, color=accent_emerald)),
             (st["status"], align_center, font_data),
         ]
 
@@ -438,7 +465,7 @@ def generate_group_exam_excel(data: Dict[str, Any]) -> bytes:
     current_row += 2
     ws.cell(row=current_row, column=1, value="CEFR Taqsimoti:").font = font_meta_bold
     cefr_dist = data.get("cefrDistribution", {})
-    dist_str = f"C1: {cefr_dist.get('C1', 0)} ta   |   B2: {cefr_dist.get('B2', 0)} ta   |   B1: {cefr_dist.get('B1', 0)} ta   |   A2: {cefr_dist.get('A2', 0)} ta"
+    dist_str = cefr_distribution_text(cefr_dist)
     ws.merge_cells(start_row=current_row, start_column=2, end_row=current_row, end_column=6)
     cefr_cell = ws.cell(row=current_row, column=2, value=dist_str)
     cefr_cell.font = font_meta
@@ -549,7 +576,7 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
         draw_text(fv(st["ai_score"]), 368, y, 7.5, "Helvetica", slate_muted)
         draw_text(fv(st["teacher_score"]), 403, y, 7.5, "Helvetica-Bold", accent)
         draw_text(fv(st["final_score"]), 443, y, 8, "Helvetica-Bold", primary)
-        draw_text(st["cefr_level"], 488, y, 8, "Helvetica-Bold", accent)
+        draw_text(cefr_display(st["cefr_level"], short=True), 488, y, 8, "Helvetica-Bold", accent)
 
         st_label = st["status"][:10]
         st_color = "#16a34a" if "Tekshirildi" in st["status"] or "Ko'rib" in st["status"] else (
@@ -570,12 +597,10 @@ def generate_group_exam_pdf(data: Dict[str, Any]) -> bytes:
     y += 14
 
     cd = data.get("cefrDistribution", {})
-    cefr_summary_text = (
-        f"• C1 (70+ ball): {cd.get('C1', 0)} nafar    "
-        f"• B2 (55-69 ball): {cd.get('B2', 0)} nafar    "
-        f"• B1 (40-54 ball): {cd.get('B1', 0)} nafar    "
-        f"• A2: {cd.get('A2', 0)} nafar"
-    )
+    cefr_summary_text = "• " + cefr_distribution_text(cd, "    • ").replace(" ta", " nafar")
+    scale_note = CEFR_SCALE_NOTES.get(data["exam"]["type"])
+    if scale_note:
+        cefr_summary_text += f"    ({scale_note})"
     draw_text(cefr_summary_text, 50, y, 8, "Helvetica", slate_dark)
 
     y += 14

@@ -31,6 +31,7 @@ import { ExamFeedbackModal } from "./exam-feedback-modal";
 import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 import { criteriaScore, gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "@/lib/grade-draft";
 import { isEmptyAttempt } from "@/lib/empty-attempt";
+import { multilevelLevelText } from "@/lib/multilevel-scale";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
@@ -130,6 +131,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             max: s.max,
             standardScore: s.standardScore,
             band: s.band,
+            bandBelowRange: s.bandBelowRange,
           }))}
         />
       )}
@@ -183,7 +185,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               <>
                 <p className="text-xs tracking-wide text-fg-subtle uppercase">{attempt.specificationVersion ? 'Estimated Multilevel Result' : t('cefrLevel')}</p>
                 {attempt.specificationVersion && <p className="text-4xl font-bold text-brand tabular-nums">{attempt.overallScore ?? '—'} /75</p>}
-                <p className="text-5xl font-bold text-brand">{attempt.cefrLevel ?? "—"}</p>
+                <p className="text-5xl font-bold text-brand">{attempt.cefrLevel ? multilevelLevelText(attempt.cefrLevel, t("levelBelowB1")) : "—"}</p>
                 {attempt.specificationVersion && <p className="mt-2 text-xs text-fg-subtle">{attempt.specificationVersion} · {attempt.scoreMethod} · {attempt.scoreVersion}</p>}
               </>
             )}
@@ -246,7 +248,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                     </span>
                   ) : s.band != null && fullSection ? (
                     <span className="font-bold text-sm text-brand tabular-nums">
-                      Band {isIelts ? s.band.toFixed(1) : s.band}
+                      Band {s.bandBelowRange ? t("bandBelowRange") : isIelts ? s.band.toFixed(1) : s.band}
                     </span>
                   ) : s.score != null && s.max != null ? (
                     // Short / partial sets: raw result only, never a band or level (owner decision 2026-11-12).

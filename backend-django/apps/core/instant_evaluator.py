@@ -220,24 +220,6 @@ COMPLEX_STRUCTURES = [
 ]
 
 
-def _round_to_half(val: float) -> float:
-    """Round to nearest 0.5."""
-    return round(val * 2) / 2
-
-
-def _map_band_to_cefr(band: float) -> str:
-    """Convert IELTS/Multilevel band to CEFR level."""
-    if band >= 8.0:
-        return "C2"
-    if band >= 7.0:
-        return "C1"
-    if band >= 5.5:
-        return "B2"
-    if band >= 4.0:
-        return "B1"
-    return "A2"
-
-
 def _generate_c1_model_answer(prompt: str, user_text: str, skill: str = "writing") -> str:
     """Generate an authentic C1 academic model answer tailored to the topic."""
     # Detect theme from prompt or user text

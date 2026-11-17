@@ -7,6 +7,16 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 24-BLOK: Baholash auditi, 2-bosqich (egasi javoblari) — branch `claude/elegant-cerf-9zge8g` (2026-11-17)
+- **IELTS → CEFR** (`cefr_band`): ielts.org xaritasi — C2 ≥ 8.5, C1 ≥ 7.0, B2 ≥ 5.5, B1 ≥ 4.0; 4.0 dan past `BELOW_B1` (UI'da `mock.levelBelowB1`, PDF/Telegram/Excel'da yozma). Eski: C1 ≥ 8, B2 ≥ 6.5, B1 ≥ 5, A2 ≥ 4, A1. Frontend'da C2 belgisi qo'shildi.
+- **Guruh eksporti** (`compute_cefr_level(score, exam_type, existing_cefr)`): Multilevel — asosiy shkala (C1 ≥ 65, B2 ≥ 51, B1 ≥ 38, past `BELOW_B1`); IELTS — yuqoridagi xarita; ball turi qiymatdan taxmin qilinmaydi (`<9 = IELTS` olib tashlandi), `exam.type` dan olinadi; noma'lum tur yoki shkaladan tashqari ball → "-". Hisobot matnidagi eski chegaralar (70/55/40) olib tashlandi; taqsimotda C2 va `BELOW_B1`, eski A2/A1 faqat saqlangan natijalar bo'lsa.
+- **Multilevel AI prompti**: 55/75 cheklovi va uni yashirish buyrug'i olib tashlandi; `PROMPT_VERSION` → `..._V3`. **Kodda qolgan**: `GRADE_POLICY = ..._CAP55_V1` (`assessment_quality.practice_grade`: 35 + 15·raw/max, 35–50 oralig'ida "ichki amaliy ball") — prompt emas, server hisobi; o'zgartirilmadi.
+- **Rasmiy oraliqdan past ball** (Listening < 11, Academic < 10, General < 15): `sectionBands` da 3.5 (overall uchun), `bandBelowRange: true` — UI/PDF "4.0 dan past" ko'rsatadi, 3.5 emas. Admin jadvali bu qatorlarni o'zgartira olmaydi. Hech narsa javobsiz (40 savollik bo'lim) → band 0 (oldin `null`). Qisqa bo'lim — band yo'q.
+- **`check_band_tables`** (faqat o'qiydi): bazadagi 3 ta band jadvalini standart bilan solishtiradi (`DEFAULT` / `SAME_AS_DEFAULT` / `DIFFERENT` + har xom ball farqi / `INVALID_IGNORED`), `--json`.
+- **O'chirildi**: `instant_evaluator._round_to_half`, `_map_band_to_cefr` (ishlatilmasdi).
+- **Testlar**: `tests/test_cefr_and_band_floor.py`, frontend `mock-result-view.spec.ts`. Lokal: Postgres'siz testlar yashil; DB talab qiladigan testlar (64 ta) lokal ishga tushmadi — CI'da.
+- **Ochiq / ma'lumot**: eski saqlangan natijalar eski CEFR qiymati (A1/A2/…) bilan qoladi — qayta hisoblanmadi; `test_mock_scoring.py::test_reference_arithmetic_and_answers` Nest dist bilan solishtiradi (CI'da o'tkazib yuboriladi) — dist bo'lsa 3.5 farqi chiqadi; bw-tauri'ning o'z CEFR xaritasi (`ScorePredictionWidget`) o'zgartirilmadi.
+
 ### 23-BLOK: Baholash to'g'riligi auditi — branch `claude/elegant-cerf-9zge8g` (2026-11-17)
 - **Listening / Reading (Academic, General)**: `mock_scoring` jadvallari ielts.org indikativ jadvallariga rasmiy chop etilgan oraliqlarda (L ≥11, AR ≥10, GT ≥15) to'liq mos — o'zgartirilmadi. Undan pastki qatorlar rasmiy emas (savol egasiga).
 - **Overall**: `round_half` (.25 → .5, .75 → yuqori butun, .125 → pastga) to'g'ri; to'liq imtihon 4 ga bo'linadi.

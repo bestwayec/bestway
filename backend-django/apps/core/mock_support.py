@@ -17,6 +17,7 @@ from .mock_attempts import (
     summary,
 )
 from .mock_authoring import audit_event, new_id
+from .mock_scoring import band_is_below_range
 from .mock_catalog import access_for, student_title
 
 
@@ -230,6 +231,7 @@ def certificate_data(actor,attempt_id):
             score=score if score is not None else 0,
             max=max_score,
             band=band,
+            bandBelowRange=band_is_below_range(row.exam.type, skill, band, raw),
             standardScore=standard_score if standard_score is not None else score,
         ))
 

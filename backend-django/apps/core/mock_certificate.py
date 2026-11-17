@@ -90,7 +90,7 @@ def generate(data):
         text(row['skill'].capitalize(), 130, y, 11, 'Helvetica', '#334155')
         text(js_string(row['score']) + ' / ' + js_string(row['max']), 310, y, 11, 'Helvetica', '#334155')
         if data['isIelts']:
-            text(fixed(row['band']) if row.get('band') is not None else '—', 420, y, 11, 'Helvetica-Bold', '#0f172a')
+            text('below 4.0' if row.get('bandBelowRange') else fixed(row['band']) if row.get('band') is not None else '—', 420, y, 11, 'Helvetica-Bold', '#0f172a')
         elif data.get('specificationVersion') or data.get('isPartial'):
             val_to_show = row.get('standardScore') if row.get('standardScore') is not None else row.get('score')
             text(js_string(val_to_show) if val_to_show is not None else 'Pending', 420, y, 11, 'Helvetica-Bold', '#0f172a')
@@ -112,7 +112,7 @@ def generate(data):
         cefr = data.get('cefrLevel')
         if sc_val is not None and cefr:
             center('ESTIMATED SCORE: ' + js_string(sc_val) + ' / 75', y, 11, True, '#64748b')
-            center(cefr, y + 44, 42, True, accent)
+            center('Below B1' if cefr == 'BELOW_B1' else cefr, y + 44, 42, True, accent)
 
     if internal:
         # Owner decision B: the internal certificate states plainly what it is not (uz + en).

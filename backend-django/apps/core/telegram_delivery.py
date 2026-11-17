@@ -414,7 +414,7 @@ def notify_submission_result(job_or_attempt):
                 if score is not None:
                     score_items.append(f"{score:g} ball" if isinstance(score, float) else f"{score} ball")
                 if cefr:
-                    score_items.append(f"CEFR {cefr}")
+                    score_items.append("CEFR: B1 dan quyi" if cefr == "BELOW_B1" else f"CEFR {cefr}")
                 if score_items:
                     score_str = " / ".join(score_items)
 
