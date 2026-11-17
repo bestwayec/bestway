@@ -243,6 +243,7 @@ Owner decisions: (1) IELTS numbering restarts at 1 in every section, display onl
 | S5.2 Writing editor | DONE | #191 → 31f26f9 | Beside the word target (150 / 250, as before): paragraph count and time on the task (on screen and visible only, survives a reload; not the exam clock); IELTS Task 1 / 2 show the test's advice (~20 / 40 min). Before/after: docs/agent/screens/s5-writing/ |
 | S5.3 Today's plan + S5.4 keyboard shortcuts | DONE | #192 → 32735e8 | Today card renamed "Today's plan" (it already listed only real items: unfinished exam, teacher homework, unmastered words, latest result); exam window N / P / F / H / ? (never with a modifier, never while typing), list also under Info; Uzbek part tabs translated. Before/after: docs/agent/screens/s5-shortcuts/ (script drives the keys in a real browser) |
 | S5 next-level touches | DONE | #189 → c10c291, #191 → 31f26f9, #192 → 32735e8 | Speaking → Writing → Today's plan → shortcuts, each with before/after, all E2E and the roles crawl |
+| i18n: OCR upload + AI checker | DONE | branch claude/i18n-ocr-ai-checker | writing-image-ocr.tsx (student Writing photo upload) and InstantAiCheckerModal.tsx moved to keys (en/uz; the app has no ru locale), both in the guard (no Uzbek, no literal toasts). The checker no longer says "Real-Time" / "official result" (it says AI estimate, not an official result). InstantAiCheckerModal is not imported anywhere (dead code). Checks: vitest 823, tsc, CI |
 | S6 bw-tauri desktop UI | NOT STARTED | — | PR only, owner merges |
 
 Screenshots (synthetic accounts and exams, 1366×768 / 1440×900 / 390×844 / 360×640, light and dark): `docs/agent/screens/ielts-ui-s1/` (runner Reading, catalogue, result).
@@ -256,7 +257,8 @@ Migrations: S4 none (the reveal list is kept in the attempt's existing mediaStat
 
 ## NEXT STEP
 
-IELTS + UI PROGRAM: S6 bw-tauri desktop UI (PR only, owner merges). Open: writing-image-ocr.tsx and InstantAiCheckerModal.tsx are hard-coded Uzbek (separate migration).
+IELTS + UI PROGRAM: S6 bw-tauri desktop UI (PR only, owner merges) — NOT STARTED, waiting for the owner (owner 2026-11-17: stop before S6).
+Local checks from now on (owner 2026-11-17): per PR only the relevant suites; the full E2E set and the roles crawl are not run for every PR.
 Local E2E runner note: smoke step 14 calls manage.py itself, so the shell running the suites must have `/root/local.env` loaded (without it the step fails with "Command failed: seed_local_k1_attempt").
 
 Earlier:
