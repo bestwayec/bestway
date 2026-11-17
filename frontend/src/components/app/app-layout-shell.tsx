@@ -39,7 +39,7 @@ export function AppLayoutShell({
       <div className="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-bg">
         {/* Same side padding as normal pages: the runner's edge-to-edge header (-mx-4)
             relies on it, otherwise it overshoots both screen edges on phones. */}
-        <main className="h-full w-full overflow-y-auto px-4 sm:px-6">{children}</main>
+        <main className="h-full w-full overflow-y-auto bg-bg-subtle px-4 lg:px-5">{children}</main>
       </div>
     );
   }

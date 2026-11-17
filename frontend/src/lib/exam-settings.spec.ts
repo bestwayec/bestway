@@ -15,17 +15,20 @@ describe("exam settings", () => {
 
 describe("time warnings", () => {
   const min = 60_000;
-  it("flashes for ten seconds after 10:00 and after 5:00, only where the section warns", () => {
-    expect(timerAlert(10 * min + 1000, true)).toBe("none");
-    expect(timerAlert(10 * min, true)).toBe("ten");
-    expect(timerAlert(10 * min - 9_000, true)).toBe("ten");
-    expect(timerAlert(10 * min - 10_000, true)).toBe("none");
+  it("shows a notice for ten seconds after 5:00 and after 1:00, only where the section warns", () => {
+    expect(timerAlert(10 * min, true)).toBe("none");
+    expect(timerAlert(5 * min + 1000, true)).toBe("none");
     expect(timerAlert(5 * min, true)).toBe("five");
+    expect(timerAlert(5 * min - 9_000, true)).toBe("five");
     expect(timerAlert(5 * min - 10_000, true)).toBe("none");
-    expect(timerAlert(10 * min, false)).toBe("none");
+    expect(timerAlert(min, true)).toBe("one");
+    expect(timerAlert(min - 10_000, true)).toBe("none");
+    expect(timerAlert(5 * min, false)).toBe("none");
   });
-  it("uses the danger colour only in the last minute", () => {
-    expect(timerTone(61_000)).toBe("normal");
+  it("turns to the warning colour under 5 minutes and danger in the last minute", () => {
+    expect(timerTone(5 * min + 1000)).toBe("normal");
+    expect(timerTone(5 * min)).toBe("warning");
+    expect(timerTone(61_000)).toBe("warning");
     expect(timerTone(60_000)).toBe("danger");
     expect(timerTone(0)).toBe("danger");
   });

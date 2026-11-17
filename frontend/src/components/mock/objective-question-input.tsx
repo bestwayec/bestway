@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { answerRuleHint, isObjectiveChoice, MATCHING_TYPES, objectiveOptions, selectedObjectiveOptions, toggleObjectiveOption, type ObjectiveQuestion } from "@/lib/objective-question";
 
 /** Shared objective controls for active attempts and author student previews. */
-export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt }: {
+export function ObjectiveQuestionInput({ question: q, value, onChange, unavailableOptions = [], disabled = false, renderPrompt, headerAction }: {
   question: ObjectiveQuestion;
   value: string;
   onChange: (value: string) => void;
@@ -17,6 +17,8 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   disabled?: boolean;
   /** Lets the exam window make the question text highlightable (Listening). */
   renderPrompt?: (text: string) => React.ReactNode;
+  /** Beside the question number, at the end of the first row (the exam window's Flag). */
+  headerAction?: React.ReactNode;
 }) {
   const t = useTranslations("mock.runnerUx");
   const multiple = q.type === "multi_select";
@@ -27,15 +29,16 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
   const isShortOptions = options.length >= 4 && options.every((o) => o.trim().length <= 3);
 
   return (
-    <div className={cn("space-y-2 rounded-control border p-3 transition-colors", hasResponse ? "border-brand/30 bg-brand-subtle/20" : "border-border bg-surface")}>
-      <div className="flex items-start gap-2.5">
-        <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">{q.displayNumber ?? q.number}</span>
+    <div className={cn("space-y-2 rounded-card border p-3 transition-colors duration-fast sm:p-4", hasResponse ? "border-brand/35 bg-brand-subtle/30" : "border-border bg-surface")}>
+      <div className="flex items-start gap-3">
+        <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-field text-sm font-bold tabular-nums", hasResponse ? "bg-brand text-brand-fg" : "border border-border-strong bg-bg-subtle text-fg")}>{q.displayNumber ?? q.number}</span>
         {q.prompt && q.prompt.trim() ? (
-          renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line text-sm leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
-            : <p className="whitespace-pre-line text-sm leading-relaxed text-fg">{q.prompt}</p>
-        ) : null}
+          renderPrompt ? <div className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{renderPrompt(q.prompt)}</div>
+            : <p className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{q.prompt}</p>
+        ) : <span className="flex-1" />}
+        {headerAction}
       </div>
-      <div className={cn(q.prompt && q.prompt.trim() ? "pl-[34px]" : "pt-1")}>
+      <div className={cn(q.prompt && q.prompt.trim() ? "sm:pl-10" : "pt-1")}>
         {isObjectiveChoice(q) ? (
           <fieldset>
             <legend className="sr-only">{t("questionNumber", { number: q.displayNumber ?? q.number })}</legend>

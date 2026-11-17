@@ -830,7 +830,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       />
       <div
         className={cn(
-          "mx-auto max-w-7xl transition-colors",
+          "mx-auto max-w-[1680px] transition-colors",
           contrastClasses
         )}
         style={examSettings.textSize === "regular" ? undefined : { zoom: TEXT_ZOOM[examSettings.textSize] }}
@@ -844,11 +844,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         {/* Header: one 56px row. Everything else is one click away under Info. */}
         <header
           data-runner-header
-          className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-bg/95 px-3 backdrop-blur sm:mx-0 sm:gap-2 sm:rounded-b-card sm:px-4"
+          className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-surface/95 px-3 backdrop-blur sm:gap-2 sm:px-4 lg:-mx-5 lg:px-5"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             {isSingleSection && targetSkill && (
-              <span className="hidden shrink-0 whitespace-nowrap rounded-md bg-brand/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-brand-subtle-fg md:inline">
+              <span className="hidden shrink-0 whitespace-nowrap rounded-chip border border-brand/30 bg-brand-subtle px-2 py-0.5 text-sm font-semibold text-brand-subtle-fg md:inline">
                 {tr(attempt.mode === "practice" ? "practiceBadge" : "examBadge", { skill: t(`skills.${targetSkill}`) })}
               </span>
             )}
@@ -888,13 +888,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
               timeLeft={remaining != null ? formatClock(remaining) : null}
             />
           </RunnerTools>
-          {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn={section?.skill === "reading" || section?.skill === "writing"} />}
+          {remaining != null && <Timer ms={remaining} label={t("timeLeft")} warn />}
           {isFullTest && activeSection < exam.sections.length - 1 ? (
             <Button size="sm" variant="outline" className="hidden min-h-[40px] px-3 touch-manipulation md:inline-flex" loading={advance.isPending} onClick={() => (multilevelReview && missingWork ? setReview("advance") : setShowAdvanceConfirm(true))}>
               {tr("nextSection")}
             </Button>
           ) : null}
-          <Button size="sm" aria-label={t("submit")} className="min-h-[40px] px-2.5 font-semibold touch-manipulation bg-brand hover:bg-brand-hover text-brand-fg sm:px-4" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
+          <Button size="sm" aria-label={t("submit")} className="min-h-11 min-w-11 px-2.5 font-semibold touch-manipulation sm:px-4 md:min-h-10" loading={submit.isPending} onClick={() => (multilevelReview && missingWork ? setReview("submit") : doSubmit(false))}>
             <Send className="size-4 sm:mr-1.5" aria-hidden />
             <span className="hidden sm:inline">{t("submit")}</span>
           </Button>
@@ -1161,24 +1161,36 @@ function formatClock(ms: number) {
 function Timer({ ms, label, warn }: { ms: number; label: string; warn: boolean }) {
   const t = useTranslations("mock.examTools");
   const alert = timerAlert(ms, warn);
-  const danger = timerTone(ms) === "danger";
+  const tone = timerTone(ms);
+  const notice = alert === "five" ? t("timeWarning", { minutes: 5 }) : alert === "one" ? t("timeWarningOne") : "";
   return (
-    <>
+    <span className="relative inline-flex">
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums",
-          danger ? "bg-danger-bg text-danger" : alert !== "none" ? "bg-warning-bg text-warning ring-2 ring-warning motion-safe:animate-pulse" : "bg-bg-subtle text-fg",
+          "inline-flex h-9 items-center gap-1.5 rounded-control border px-2.5 text-base font-semibold tabular-nums transition-colors duration-base sm:px-3",
+          tone === "danger" ? "border-danger-border bg-danger-bg text-danger" : tone === "warning" ? "border-warning-border bg-warning-bg text-warning" : "border-border bg-surface text-fg",
         )}
         role="timer"
         aria-label={`${label}: ${formatClock(ms)}`}
         data-timer-alert={alert}
-        data-timer-tone={danger ? "danger" : "normal"}
+        data-timer-tone={tone}
       >
         <Clock className="size-4" aria-hidden />
         {formatClock(ms)}
       </span>
-      <span className="sr-only" aria-live="assertive">{alert === "ten" ? t("timeWarning", { minutes: 10 }) : alert === "five" ? t("timeWarning", { minutes: 5 }) : ""}</span>
-    </>
+      {/* A calm notice under the clock for ten seconds at 5:00 and 1:00; screen readers hear it once. */}
+      <span
+        aria-live="assertive"
+        data-timer-notice
+        className={cn(
+          "pointer-events-none absolute right-0 top-full z-30 mt-2 whitespace-nowrap rounded-control border px-3 py-1.5 text-sm font-medium shadow-e2",
+          tone === "danger" ? "border-danger-border bg-surface text-danger" : "border-warning-border bg-surface text-warning",
+          notice ? "anim-fade" : "sr-only",
+        )}
+      >
+        {notice}
+      </span>
+    </span>
   );
 }
 
@@ -1215,6 +1227,7 @@ export function GuidedMultilevelGroups({
   flaggedQuestions?: Set<string>;
   onToggleFlag?: (qid: string) => void;
 }) {
+  const tg = useTranslations("mock.runnerUx");
   const safeGroups = groups || [];
   const group = safeGroups[activeTask] ?? safeGroups[0];
   const sequence = skill === "speaking" && timed;
@@ -1264,8 +1277,8 @@ export function GuidedMultilevelGroups({
       partIndex={activeTask}
     />
     <div className="flex items-center justify-between gap-3">
-      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0 || sequence} onClick={() => selectTask(activeTask - 1)}>Previous</Button>
-      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === safeGroups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>Next</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === 0 || sequence} onClick={() => selectTask(activeTask - 1)}>{tg("previousTask")}</Button>
+      <Button type="button" variant="outline" className="min-h-[44px] min-w-[100px] px-4 touch-manipulation" disabled={activeTask === safeGroups.length - 1} onClick={() => setActiveTask(activeTask + 1)}>{tg("nextTask")}</Button>
     </div>
   </div>;
 }
@@ -1350,7 +1363,7 @@ function GroupBlock({
       {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
         // The recording is content (not chrome): it stays in view under the header while the questions scroll.
-        <div data-layout-content className="z-10 -mx-3 -mt-3 mb-3 rounded-t-card border-b border-border/80 bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:-mt-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14">
+        <div data-layout-content className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
           {group.questions[0]?.guidance && strict ? <MultilevelListening
             prepare={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/prepare`)}
             play={() => api.post<MediaPhase>(`/mock/attempts/${attemptId}/listening/${group.id}/play`)}
@@ -1363,7 +1376,7 @@ function GroupBlock({
             reviewAtEnd={reviewAtEnd}
             startSec={startSec}
             endSec={endSec}
-            partLabel={group.title || `Part ${partIndex + 1}`}
+            partLabel={group.title || tg("partN", { n: partIndex + 1 })}
             timestamps={audioTimestamps}
             schedule={listeningSchedule}
             startSchedule={group.hasAudio ? startListening : undefined}
@@ -1385,7 +1398,7 @@ function GroupBlock({
       {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
       {group.imageUrl && !isMapSplit && (
         <div className="mt-3">
-          <GroupImage groupId={group.id} alt={group.title ? `${group.title} — picture` : "Picture for this part"} />
+          <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
         </div>
       )}
       {group.instructions && (
@@ -1400,32 +1413,33 @@ function GroupBlock({
         <section className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-control border border-brand/20 bg-brand-subtle p-3">
           <div>
             {/* The part name is already the group heading when the two agree. */}
-            {multilevelTaskName(group.questions[0].guidance, "Speaking part") !== group.title && (
-              <p className="font-semibold text-fg">{multilevelTaskName(group.questions[0].guidance, "Speaking part")}</p>
+            {multilevelTaskName(group.questions[0].guidance, tg("speakingPart")) !== group.title && (
+              <p className="font-semibold text-fg">{multilevelTaskName(group.questions[0].guidance, tg("speakingPart"))}</p>
             )}
-            <p className="text-xs text-fg-muted">{group.questions.length} {group.questions.length === 1 ? "response" : "responses"}</p>
-            {group.questions.length > 1 && <p className="mt-1 text-xs text-fg-muted">Response timing: {group.questions.map((question) => question.guidance?.responseSeconds ? `${question.guidance.responseSeconds}s` : null).filter(Boolean).join(" · ")}</p>}
+            <p className="text-sm text-fg-muted">{tg("responsesCount", { count: group.questions.length })}</p>
+            {group.questions.length > 1 && <p className="mt-1 text-sm text-fg-muted">{tg("responseTiming")}: {group.questions.map((question) => question.guidance?.responseSeconds ? `${question.guidance.responseSeconds}s` : null).filter(Boolean).join(" · ")}</p>}
           </div>
           <MultilevelTaskMeta question={group.questions[0]} />
         </section>
       )}
       {skill === "writing" && sharedWritingStimulus && (
         <section className="mt-3 rounded-control border border-brand/20 bg-brand-subtle p-4" aria-label={tg("sharedSituation")}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-subtle-fg">Shared situation</p>
+          <p className="text-sm font-semibold text-brand-subtle-fg">{tg("sharedSituation")}</p>
           <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-fg">{sharedWritingStimulus}</p>
         </section>
       )}
 
       {/* Mobile Tab Switcher for Reading when passage exists */}
       {hasPassage && !hasGappedContent && (
-        <div className="mt-3 flex rounded-xl border border-border/60 bg-bg-subtle p-1 lg:hidden">
+        <div className="mt-3 flex rounded-control border border-border bg-bg-subtle p-1 lg:hidden" role="group" aria-label={tg("passageOrQuestions")}>
           <button
             type="button"
+            aria-pressed={readingMobileTab === "passage"}
             onClick={() => setReadingMobileTab("passage")}
             className={cn(
-              "flex-1 rounded-lg py-2 text-xs font-semibold transition-all touch-manipulation",
+              "min-h-10 flex-1 rounded-field text-sm font-semibold transition-colors duration-fast touch-manipulation",
               readingMobileTab === "passage"
-                ? "bg-brand text-bg shadow-sm"
+                ? "bg-surface text-fg shadow-e1"
                 : "text-fg-muted hover:text-fg"
             )}
           >
@@ -1433,11 +1447,12 @@ function GroupBlock({
           </button>
           <button
             type="button"
+            aria-pressed={readingMobileTab === "questions"}
             onClick={() => setReadingMobileTab("questions")}
             className={cn(
-              "flex-1 rounded-lg py-2 text-xs font-semibold transition-all touch-manipulation",
+              "min-h-10 flex-1 rounded-field text-sm font-semibold transition-colors duration-fast touch-manipulation",
               readingMobileTab === "questions"
-                ? "bg-brand text-bg shadow-sm"
+                ? "bg-surface text-fg shadow-e1"
                 : "text-fg-muted hover:text-fg"
             )}
           >
@@ -1461,15 +1476,15 @@ function GroupBlock({
           // map would cover the questions it belongs to.
           <div className="mb-3 rounded-xl border border-border bg-bg-subtle/50 p-3 shadow-inner flex flex-col items-center justify-center lg:mb-0 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto">
             <p className="text-xs font-semibold text-fg-muted mb-2 uppercase tracking-wider">
-              {group.title || "Map"}
+              {group.title || tg("map")}
             </p>
-            <GroupImage groupId={group.id} alt={group.title ? `${group.title} — map` : "Map for this part"} />
+            <GroupImage groupId={group.id} alt={group.title ? tg("mapFor", { title: group.title }) : tg("mapForPart")} />
           </div>
         )}
         {hasPassage && !hasGappedContent && (
           <div
             className={cn(
-              "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base sm:text-[17px] leading-relaxed text-fg max-w-[70ch] lg:max-w-none",
+              "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base leading-relaxed text-fg max-w-[70ch] sm:text-[17px] sm:leading-[1.75] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4",
               "lg:block lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
               readingMobileTab === "passage" ? "block mb-4 max-h-[70vh] overflow-y-auto" : "hidden"
             )}
@@ -1488,7 +1503,8 @@ function GroupBlock({
                 type="button"
                 size="sm"
                 className="w-full bg-brand text-bg font-semibold touch-manipulation"
-                onClick={() => setReadingMobileTab("questions")}
+                aria-pressed={readingMobileTab === "questions"}
+            onClick={() => setReadingMobileTab("questions")}
               >
                 {tg("goToQuestions")} →
               </Button>
@@ -1550,7 +1566,8 @@ function GroupBlock({
                 <span className="text-xs font-medium text-fg-muted">{tg("questionCount", { count: (group?.questions || []).length })}</span>
                 <button
                   type="button"
-                  onClick={() => setReadingMobileTab("passage")}
+                  aria-pressed={readingMobileTab === "passage"}
+            onClick={() => setReadingMobileTab("passage")}
                   className="text-xs font-semibold text-brand underline underline-offset-4 touch-manipulation"
                 >
                   ← {tg("backToPassage")}
@@ -1656,35 +1673,37 @@ export function EssayQuestionEditor({
       ) : header}
 
       {/* Writing input mode switcher: typing vs handwritten paper upload */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
-        <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-surface-subtle p-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 rounded-control border border-border bg-bg-subtle p-1" role="group" aria-label={tx("writingModeLabel")}>
           <button
             type="button"
+            aria-pressed={writingMode === "type"}
             onClick={() => setWritingMode("type")}
             className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+              "flex min-h-9 items-center gap-1.5 rounded-field px-3 text-sm font-medium transition-colors duration-fast",
               writingMode === "type"
-                ? "bg-brand text-brand-fg shadow-sm"
-                : "text-fg-muted hover:bg-surface hover:text-fg"
+                ? "bg-surface text-fg shadow-e1"
+                : "text-fg-muted hover:text-fg"
             )}
           >
             <Keyboard className="size-3.5" aria-hidden /> {tx("writingModeType")}
           </button>
           <button
             type="button"
+            aria-pressed={writingMode === "image"}
             onClick={() => setWritingMode("image")}
             className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+              "flex min-h-9 items-center gap-1.5 rounded-field px-3 text-sm font-medium transition-colors duration-fast",
               writingMode === "image"
-                ? "bg-brand text-brand-fg shadow-sm"
-                : "text-fg-muted hover:bg-surface hover:text-fg"
+                ? "bg-surface text-fg shadow-e1"
+                : "text-fg-muted hover:text-fg"
             )}
           >
             <Camera className="size-3.5" aria-hidden /> {tx("writingModeOcr")}
           </button>
         </div>
         {value.trim() && (
-          <span className="flex items-center gap-1 text-[11px] font-medium text-brand">
+          <span className="flex items-center gap-1 text-sm font-medium text-brand-subtle-fg">
             <CheckCircle2 className="size-3" aria-hidden /> {tx("writingDraftKept")}
           </span>
         )}
@@ -1728,7 +1747,7 @@ export function EssayQuestionEditor({
           <Textarea
             value={value}
             onChange={(e) => handleWritingChange(e.target.value)}
-            className="min-h-72 resize-y font-sans text-base leading-relaxed touch-manipulation focus-visible:border-brand"
+            className="min-h-72 resize-y font-sans text-base leading-relaxed touch-manipulation focus-visible:border-brand sm:text-[17px] lg:min-h-[max(18rem,calc(100dvh-26rem))]"
             aria-label={tx("writingResponseLabel", { number: q.displayNumber ?? q.number })}
             placeholder={tx("writingPlaceholder")}
             spellCheck={false}
@@ -1775,30 +1794,32 @@ function QuestionInput({
 }) {
   const tx = useTranslations("mock.runnerUx");
 
-  const header = (
-    <div className="flex items-start justify-between gap-2">
-      <div className="flex items-start gap-2">
-        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
-          {q.displayNumber ?? q.number}
-        </span>
-        <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
-      </div>
-      {onToggleFlag && (
-        <button
-          type="button"
-          onClick={onToggleFlag}
-          title={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
-            isFlagged
-              ? "border-warning-border bg-warning-bg text-warning"
-              : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
-          )}
-        >
-          <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
-          <span className="hidden sm:inline">{isFlagged ? tx("flaggedShort") : tx("flagAction")}</span>
-        </button>
+  // Flag sits beside the question number: one tap target (44 px on phones), state in aria-pressed.
+  const flagButton = onToggleFlag ? (
+    <button
+      type="button"
+      onClick={onToggleFlag}
+      aria-pressed={!!isFlagged}
+      aria-label={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
+      title={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
+      data-question-flag
+      className={cn(
+        "-my-1.5 -mr-1.5 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control px-2 text-sm font-medium transition-colors duration-fast md:min-h-9 md:min-w-9",
+        isFlagged ? "bg-warning-bg text-warning" : "text-fg-subtle hover:bg-surface-hover hover:text-fg",
       )}
+    >
+      <Flag className={cn("size-4", isFlagged && "fill-current")} aria-hidden />
+      <span className="hidden lg:inline">{isFlagged ? tx("flaggedShort") : tx("flagAction")}</span>
+    </button>
+  ) : null;
+
+  const header = (
+    <div className="flex items-start gap-3">
+      <span className="grid size-7 shrink-0 place-items-center rounded-field border border-border-strong bg-bg-subtle text-sm font-bold text-fg tabular-nums">
+        {q.displayNumber ?? q.number}
+      </span>
+      <p className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{q.prompt}</p>
+      {flagButton}
     </div>
   );
 
@@ -1830,29 +1851,12 @@ function QuestionInput({
 
   return (
     <div className="space-y-2">
-      {onToggleFlag && (
-        <div className="flex justify-end -mb-1">
-          <button
-            type="button"
-            onClick={onToggleFlag}
-            title={isFlagged ? tx("unflagTitle") : tx("flagActionTitle")}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
-              isFlagged
-                ? "border-warning-border bg-warning-bg text-warning"
-                : "border-transparent text-fg-muted hover:border-border hover:bg-surface-hover hover:text-fg"
-            )}
-          >
-            <Flag className={cn("size-3", isFlagged && "fill-warning text-warning")} />
-            <span>{isFlagged ? tx("flaggedShort") : tx("flagAction")}</span>
-          </button>
-        </div>
-      )}
       <ObjectiveQuestionInput
         question={q}
         value={value}
         onChange={onChange}
         unavailableOptions={unavailableOptions}
+        headerAction={flagButton}
         // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
         renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}
       />

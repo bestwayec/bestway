@@ -76,7 +76,7 @@ describe("Multilevel student UX", () => {
       { id: "three", passageText: "A publication request", instructions: null, questions: [{ id: "q3", number: 3, type: "essay_task2", prompt: "Write a publication.", points: 6, guidance: { taskKey: "publication", displayLabel: "Task 2 — Publication", wordMin: 180, wordMax: 200, rawMax: 6 } }] },
     ] as unknown as MockGroup[];
     const html = renderToStaticMarkup(h(GuidedMultilevelGroups, { skill: "writing", groups, activeTask: 1, setActiveTask: vi.fn(), strict: false, timed: false, attemptId: "attempt", answers: {}, audioSet: new Set<string>(), onAnswer: vi.fn() }));
-    expect(html).toContain("Shared situation");
+    expect(html).toContain("sharedSituation");
     expect(html).toContain("You have moved to a new neighbourhood.");
     expect(html).toContain("Formal Letter");
     expect(html).not.toContain("Formal Email");

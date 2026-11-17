@@ -216,3 +216,18 @@ describe("theme token contrast (WCAG AA)", () => {
     });
   }
 });
+
+describe("no undefined token names", () => {
+  it("surface-subtle is not a token (use bg-subtle)", () => {
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.tsx?$/.test(e.name) && !/\.spec\./.test(e.name) && /surface-subtle/.test(fs.readFileSync(p, "utf8"))) hits.push(p);
+      }
+    };
+    walk(path.resolve(__dirname));
+    expect(hits).toEqual([]);
+  });
+});

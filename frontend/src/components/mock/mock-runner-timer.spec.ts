@@ -50,26 +50,22 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); });
 
 describe('exam timer', () => {
-  it.each(['reading', 'writing'] as const)('%s: flashes and announces at 10:00 and 5:00, danger colour in the last minute', async (skill) => {
-    await mount(skill, 10 * 60 + 3);
+  it.each(['reading', 'writing', 'listening'] as const)('%s: calm notice at 5:00 and 1:00, warning colour under 5 minutes, danger in the last minute', async (skill) => {
+    await mount(skill, 5 * 60 + 3);
     expect(timer().getAttribute('data-timer-alert')).toBe('none');
+    expect(timer().getAttribute('data-timer-tone')).toBe('normal');
     await tick(3000);
-    expect(timer().getAttribute('data-timer-alert')).toBe('ten');
-    expect(host.textContent).toContain('timeWarning:{"minutes":10}');
+    expect(timer().getAttribute('data-timer-alert')).toBe('five');
+    expect(timer().getAttribute('data-timer-tone')).toBe('warning');
+    expect(host.textContent).toContain('timeWarning:{"minutes":5}');
     await tick(11_000);
     expect(timer().getAttribute('data-timer-alert')).toBe('none');
-    await tick((5 * 60 - 14) * 1000 + 3000);
-    expect(timer().getAttribute('data-timer-alert')).toBe('five');
-    await tick((4 * 60) * 1000);
+    await tick((4 * 60 - 14) * 1000 + 3000);
+    expect(timer().getAttribute('data-timer-alert')).toBe('one');
     expect(timer().getAttribute('data-timer-tone')).toBe('danger');
-  });
-
-  it('listening has no 10/5 minute flash but keeps the last-minute colour', async () => {
-    await mount('listening', 10 * 60 + 2);
-    await tick(3000);
-    expect(timer().getAttribute('data-timer-alert')).toBe('none');
-    await tick(9 * 60 * 1000 + 5000);
-    expect(timer().getAttribute('data-timer-tone')).toBe('danger');
+    expect(host.textContent).toContain('timeWarningOne');
+    // Nothing flashes.
+    expect(timer().className).not.toContain('animate-pulse');
   });
 
   it('time is counted from the server deadline: a reload does not give time back', async () => {
