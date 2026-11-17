@@ -1197,7 +1197,10 @@
       "readPromptStop": "O'qishni to'xtatish",
       "readPromptNote": "Brauzeringiz ovozi o'qiydi; yozuv boshlanganda to'xtaydi.",
       "inputLevel": "Mikrofon ovoz darajasi",
-      "speakingSteps": "Speaking javob bosqichlari"
+      "speakingSteps": "Speaking javob bosqichlari",
+      "paragraphCount": "{count} ta abzats",
+      "timeOnTask": "Bu topshiriqqa {minutes} daqiqa",
+      "timeOnTaskOf": "Bu topshiriqqa {minutes} daqiqa · tavsiya {suggested} daqiqa"
     },
     "title": "Mock imtihonlar",
     "partialPracticeResult": "Tanlangan topshiriqlar mashq natijasi",
