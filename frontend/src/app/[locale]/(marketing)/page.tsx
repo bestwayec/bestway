@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { ExpressPlacementTest } from "@/components/placement/ExpressPlacementTest";
-import { Play, Zap, Monitor, Sparkles } from "lucide-react";
+import Image from "next/image";
 import {
   ArrowRight,
   Award,
+  Check,
   BarChart3,
   CalendarCheck,
   FileCheck2,
@@ -20,12 +21,9 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { Card } from "@/components/ui/card";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { Reveal } from "@/components/marketing/reveal";
-import { CountUp } from "@/components/marketing/count-up";
-import { HeroShowcase } from "@/components/marketing/hero-showcase";
 import { TeachersCarousel } from "@/components/marketing/teachers-carousel";
 import type { TeacherProfile } from "@/components/marketing/teacher-card";
 import PixelCard from "@/components/ui/pixel-card-dynamic";
-import { HeroTitle } from "@/components/marketing/hero-title";
 import CenterMap from "@/components/marketing/center-map-dynamic";
 import { getSessionRole } from "@/lib/auth";
 import { MobileLandingGate } from "@/components/mobile/mobile-landing-gate";
@@ -46,11 +44,6 @@ const FEATURES = [
   { key: "payments", Icon: Wallet, tone: "brand" },
 ] as const;
 
-const STATS = [
-  { num: 500, suffix: "+", key: "statsStudents" },
-  { num: 7, suffix: "+", key: "statsTeachers" },
-  { num: 17, suffix: "+", key: "statsYears" },
-] as const;
 
 // TEACHERS section renders TeacherProfileCard carousel from gallery / teachers API data.
 
@@ -157,67 +150,40 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <MobileLandingGate locale={locale} isAuthenticated={isAuthenticated}>
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* ── Hero: what it is, the real exam window, two actions ─────────────── */}
       <section className="marketing-section relative border-b border-border bg-surface">
-        <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-brand/30 bg-brand/10 text-xs sm:text-sm font-semibold text-brand-subtle-fg mb-6">
-            <span className="size-2 rounded-full bg-brand animate-pulse" />
-            <span>{t("lmsBadge")}</span>
-          </div>
-
-          <h1 className="text-3xl font-black tracking-tight text-fg sm:text-5xl lg:text-6xl max-w-4xl mx-auto leading-[1.12] uppercase">
-            DO YOUR BEST{" "}
-            <span className="relative inline-block bg-gradient-to-r from-brand via-brand to-brand bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(16,185,129,0.45)]">
-              FORGET THE REST !
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-fg-muted leading-relaxed font-normal">
-            {t("heroSubtitle")}
-          </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto">
-            <a
-              href="#placement-test"
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-brand hover:bg-brand-hover px-7 text-base font-bold text-brand-fg transition-all duration-150 shadow-md active:scale-[0.98]"
-            >
-              <Zap className="size-5 fill-current" />
-              <span>{t("heroCta")}</span>
-            </a>
-            <Link
-              href={isAuthenticated ? "/dashboard" : "/login"}
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface hover:border-brand/50 hover:bg-surface-hover px-7 text-base font-semibold text-fg transition-all duration-150 active:scale-[0.98]"
-            >
-              {isAuthenticated ? "Dashboard" : t("heroLogin")}
-            </Link>
-          </div>
-
-          {/* 3 ta asosiy afzallik */}
-          <div className="mt-14 grid gap-5 sm:grid-cols-3 text-left">
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
-              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
-                <Monitor className="size-5" />
-              </div>
-              <h3 className="text-lg font-bold text-fg">{t("benefit1Title")}</h3>
-              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit1Desc")}</p>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12 lg:py-20">
+          <div>
+            <p className="text-sm font-semibold text-brand-subtle-fg">{t("heroEyebrow")}</p>
+            <h1 className="mt-3 text-[2rem] font-bold leading-[1.15] tracking-tight text-fg sm:text-[2.5rem]">
+              {t("heroTitle")}
+            </h1>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-fg-muted sm:text-lg">{t("heroSubtitle")}</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href="#placement-test" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+                {t("heroCta")}
+              </a>
+              <Link href={isAuthenticated ? "/dashboard" : "/login"} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}>
+                {isAuthenticated ? t("toDashboard") : t("heroLogin")}
+              </Link>
             </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
-              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
-                <Sparkles className="size-5" />
-              </div>
-              <h3 className="text-lg font-bold text-fg">{t("benefit2Title")}</h3>
-              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit2Desc")}</p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-surface p-5 transition-all duration-200 hover:border-brand/40 hover:shadow-lg">
-              <div className="size-10 rounded-xl border border-border bg-surface-hover flex items-center justify-center text-brand mb-3">
-                <Award className="size-5" />
-              </div>
-              <h3 className="text-lg font-bold text-fg">{t("benefit3Title")}</h3>
-              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{t("benefit3Desc")}</p>
-            </div>
+            <ul className="mt-8 space-y-2.5 text-sm text-fg-muted">
+              {(["heroPoint1", "heroPoint2", "heroPoint3"] as const).map((key) => (
+                <li key={key} className="flex gap-2.5">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <span>{t(key)}</span>
+                </li>
+              ))}
+            </ul>
           </div>
+          {/* A real screenshot of the exam window (seeded IELTS Academic mock, local stack). */}
+          <figure className="min-w-0">
+            <div className="overflow-hidden rounded-card border border-border bg-bg-subtle shadow-e3">
+              <Image src="/product/exam-light.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="block h-auto w-full dark:hidden" />
+              <Image src="/product/exam-dark.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="hidden h-auto w-full dark:block" />
+            </div>
+            <figcaption className="mt-3 text-sm text-fg-subtle">{t("productExamCaption")}</figcaption>
+          </figure>
         </div>
       </section>
       <section id="placement-test" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-20">
@@ -226,116 +192,36 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      {/* ── Ekotizim Vitrinasi & Social Proof ─────────────────────────── */}
-      <section className="marketing-section marketing-section--tint scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <Reveal>
-            <SectionHeading
-              title={t("ecosystem.title")}
-              subtitle={t("ecosystem.subtitle")}
-            />
-          </Reveal>
-
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Feature 1: video lessons */}
-            <Reveal delay={0} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
-                />
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
-                      <Play className="size-6 fill-current" />
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f1Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
-                    {t("ecosystem.f1Text")}
-                  </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-border/80">
-                  <Link
-                    href="/videos"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
-                  >
-                    <span>{t("toLessons")}</span>
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-              </div>
-            </Reveal>
-
-            {/* Feature 2: CDI & Multi-Level Simulator */}
-            <Reveal delay={100} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
-                />
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
-                      <Award className="size-6" />
-                    </span>
-                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
-                      Vision OCR
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f2Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
-                    {t("ecosystem.f2Text")}
-                  </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-border/80">
-                  <Link
-                    href="/mock"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
-                  >
-                    <span>{t("takeExam")}</span>
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-              </div>
-            </Reveal>
-
-            {/* Feature 3: Teacher Workspace */}
-            <Reveal delay={200} className="h-full">
-              <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-border/80 bg-surface p-6 shadow-xl transition-all duration-300 hover:border-brand/50 hover:shadow-2xl">
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-brand via-brand to-brand transition-transform duration-300 group-hover:scale-x-100"
-                />
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-subtle/60 border border-brand/30 text-brand transition-transform duration-300 group-hover:scale-110">
-                      <GraduationCap className="size-6" />
-                    </span>
-                    <span className="rounded-full border border-brand/30 bg-brand-subtle/50 px-3 py-1 text-xs font-semibold text-brand">
-                      Smart Analytics
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-fg">{t("ecosystem.f3Title")}</h3>
-                  <p className="mt-2.5 text-sm leading-relaxed text-fg-muted">
-                    {t("ecosystem.f3Text")}
-                  </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-border/80">
-                  <Link
-                    href="/login"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand transition"
-                  >
-                    <span>{t("toDashboard")}</span>
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-              </div>
-            </Reveal>
+      {/* ── What you get: three real parts of the product ───────────────────── */}
+      <section id="product" className="marketing-section border-b border-border bg-surface scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <SectionHeading title={t("productTitle")} subtitle={t("productSubtitle")} />
+          <div className="mt-10 grid gap-8 lg:grid-cols-3">
+            {([
+              { key: "exam", href: "/mock" },
+              { key: "result", href: "/mock" },
+              { key: "teacher", href: "/login" },
+            ] as const).map(({ key, href }, i) => (
+              <article key={key} className="flex flex-col">
+                <p className="text-sm font-semibold tabular-nums text-fg-subtle">0{i + 1}</p>
+                <h3 className="mt-1 text-lg font-semibold text-fg">{t(`product.${key}Title`)}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-fg-muted">{t(`product.${key}Text`)}</p>
+                <Link href={href} className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                  {t(`product.${key}Link`)} <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </article>
+            ))}
           </div>
+          {/* A sample result: synthetic student and exam on the local stack, labelled as such. */}
+          <figure className="mx-auto mt-12 max-w-3xl">
+            <div className="overflow-hidden rounded-card border border-border bg-surface shadow-e2">
+              <Image src="/product/result-light.webp" alt={t("productResultAlt")} width={766} height={203} sizes="(min-width: 768px) 768px, 100vw" className="block h-auto w-full dark:hidden" />
+              <Image src="/product/result-dark.webp" alt={t("productResultAlt")} width={766} height={203} sizes="(min-width: 768px) 768px, 100vw" className="hidden h-auto w-full dark:block" />
+            </div>
+            <figcaption className="mt-3 text-center text-sm text-fg-subtle">{t("productResultCaption")}</figcaption>
+          </figure>
         </div>
       </section>
-
 
       {/* ── Kurslar ──────────────────────────────────────────────────────── */}
       <section id="courses" className="marketing-section border-b border-border bg-surface scroll-mt-16">

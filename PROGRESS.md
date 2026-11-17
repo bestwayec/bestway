@@ -7,6 +7,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 33-BLOK: Redizayn, 6-bosqich — landing va kirish — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **Landing hero**: shior o'rniga aniq qiymat taklifi (en/uz), ikki tugma, uchta halol fakt va imtihon oynasining **haqiqiy skrinshoti** (seed qilingan IELTS Academic mock, yorug'/qorong'i, `public/product/*.webp`, `next/image`).
+- **"Nimalarga ega bo'lasiz"**: imtihon oynasi, natija, ustozlar — havolalar bilan; natija namunasi "demo ma'lumot (haqiqiy o'quvchi emas)" deb belgilangan. "Ekotizim" bloki (Vision OCR / Smart Analytics chiplari) olib tashlandi; ishlatilmagan `STATS` (500+ o'quvchi va h.k.) olib tashlandi.
+- **Header**: JellyNav va SpecularButton (neon-lime) o'rniga oddiy havolalar va design-system tugmalari; aria-label'lar tarjima qilindi.
+- **Kirish**: segmentli usul tanlagich ("Parol" / "Telegram kodi") bir qatorda, `aria-pressed`; karta telefonda yuqoridan boshlanadi; bezak bloblar va `text-slate-100` olib tashlandi; Telegram havolasi kontrasti tuzatildi (2.1:1 edi).
+- **Tekshiruv**: tsc, lint, vitest 832. Skrinshotlar: `docs/agent/screens/redesign-6/`.
+- **Keyingi**: yakuniy roles-crawl (axe) va E2E to'plami — 34-BLOK.
+
 ### 32-BLOK: Redizayn, 5-bosqich — o'qituvchi va admin — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **O'qituvchi kabineti** (`/teacher`, 4 fayl): butunlay qattiq yozilgan o'zbekcha → `teacherWorkspace` (en/uz); PageHeader + StatTile; guruh kartalari klaviatura bilan tanlanadi; formalar `Field` (label, xato); progress jadvali `Table` (sticky ustun, so'zli holatlar, emoji yo'q); baho katagi Enter/Esc. API va payload'lar o'zgarmadi. Fayllar `no-hardcoded-ui-text` guard'iga qo'shildi.
 - **O'qituvchi dashboard**: "New PIN exam" dublikati olib tashlandi; "📲 Ota-onalarga Digest" → en/uz "Ota-onalarga haftalik hisobot"; **baholash navbati** yon ustunda birinchi, 5 ta urinish to'g'ridan-to'g'ri havola bilan; KPI → StatTile.

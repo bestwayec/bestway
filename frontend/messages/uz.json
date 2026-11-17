@@ -791,8 +791,8 @@
     "welcomeBack": "Xush kelibsiz!",
     "telegramLogin": "Telegram orqali kirish",
     "telegramLoggingIn": "Telegram orqali kirilmoqda...",
-    "telegramOtpTab": "Telegram kod (OTP)",
-    "passwordTab": "Telefon va parol",
+    "telegramOtpTab": "Telegram kodi",
+    "passwordTab": "Parol",
     "telegramOtpTitle": "Telegram orqali 6 xonali kod bilan kirish",
     "telegramOtpHint": "Botdan 6 xonali kod oling va quyidagi maydonga kiriting",
     "getTelegramCode": "Botdan kod olish",
@@ -811,7 +811,8 @@
       "passwordShort": "Parol kamida 6 belgidan iborat bo'lsin",
       "nameShort": "Ism kamida 2 belgidan iborat bo'lsin",
       "roleRequired": "Rolni tanlang"
-    }
+    },
+    "methodLabel": "Kirish usuli"
   },
   "desktopAuth": {
     "title": "Desktop ilovaga kirish",
@@ -1829,8 +1830,8 @@
     "partOfQuestions": "{a}-qism, jami {b} savol"
   },
   "marketing": {
-    "heroTitle": "DO YOUR BEST FORGET THE REST !",
-    "heroSubtitle": "IELTS uslubidagi va Multi-Level (CEFR) imtihonlarga kompyuterda, o'qituvchi izohlari va natijalar tahlili bilan tayyorlaning.",
+    "heroTitle": "IELTS va Multi-Level imtihonlarini kompyuterda mashq qiling — va qayerda turganingizni aniq biling",
+    "heroSubtitle": "Sokin imtihon oynasida mock imtihonlar, Writing va Speaking ustozlar tomonidan rasmiy mezonlar bo'yicha baholanadi, natija esa keyingi qadamni ko'rsatadi.",
     "heroBadge": "Shofirkon, Buxoro · 2007-yildan beri",
     "navCourses": "Kurslar",
     "navTeachers": "O'qituvchilar",
@@ -2027,7 +2028,30 @@
       "speakingTitle": "Speaking topshirig'i",
       "speakingText": "Haqiqiy imtihonda javobingiz mikrofon orqali yozib olinadi.",
       "partLoadError": "{n}-qismni yuklab bo'lmadi"
-    }
+    },
+    "heroEyebrow": "BestWay Education · IELTS va Multi-Level (CEFR)",
+    "heroPoint1": "Vaqt serverda; imtihon rejimida Listening audiosi bir marta ijro etiladi.",
+    "heroPoint2": "Writing va Speaking mezonlar bo'yicha baholanadi (TA/TR, CC, LR, GRA · FC, LR, GRA, P).",
+    "heroPoint3": "Ko'nikmalar bo'yicha band, keyingi mashq uchun savol turlari va vaqt bo'yicha band.",
+    "productExamAlt": "BestWay imtihon oynasi: chapda Reading matni, o'ngda savollar, taymer va savollar navigatori.",
+    "productExamCaption": "Imtihon oynasi — Reading, IELTS Academic mock test.",
+    "productTitle": "Nimalarga ega bo'lasiz",
+    "productSubtitle": "Har hafta foydalanadigan platformaning uch qismi.",
+    "product": {
+      "examTitle": "Sokin imtihon oynasi",
+      "examText": "Matn va savollar yonma-yon, o'lchami o'zgaradigan bo'linma, belgilash va izohlar, flag va savollar navigatori. Listening, Reading, Writing va Speaking — haqiqiy imtihondagidek kompyuterda.",
+      "examLink": "Imtihonlarni ko'rish",
+      "resultTitle": "Amal qilsa bo'ladigan natija",
+      "resultText": "Umumiy band va CEFR darajasi, ko'nikmalar bo'yicha band, Writing va Speaking mezon ballari hamda keyingi mashq uchun savol turlari — o'z javoblaringizdan.",
+      "resultLink": "Mock imtihonni boshlash",
+      "teacherTitle": "Ustozlar jarayonda",
+      "teacherText": "Ustozlar Writing va Speaking'ni mezonlar bo'yicha baholaydi, AI taxminlarini tasdiqlaydi yoki tuzatadi, uy vazifasi beradi va guruhdagi har bir o'quvchini kuzatadi.",
+      "teacherLink": "Kirish"
+    },
+    "productResultAlt": "Natija namunasi: umumiy band 8.0, CEFR C1, Listening, Reading, Writing va Speaking uchun alohida bar.",
+    "productResultCaption": "Demo ma'lumotlar bilan natija namunasi (haqiqiy o'quvchi emas).",
+    "mainNav": "Asosiy navigatsiya",
+    "menu": "Menyu"
   },
   "errors": {
     "notFound": "Sahifa topilmadi",

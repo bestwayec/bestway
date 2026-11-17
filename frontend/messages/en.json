@@ -791,8 +791,8 @@
     "welcomeBack": "Welcome back!",
     "telegramLogin": "Continue with Telegram",
     "telegramLoggingIn": "Connecting with Telegram...",
-    "telegramOtpTab": "Telegram Code (OTP)",
-    "passwordTab": "Phone & Password",
+    "telegramOtpTab": "Telegram code",
+    "passwordTab": "Password",
     "telegramOtpTitle": "Sign in with 6-digit Telegram Code",
     "telegramOtpHint": "Get a 6-digit code from our Telegram bot and enter it below",
     "getTelegramCode": "Get Code from Bot",
@@ -811,7 +811,8 @@
       "passwordShort": "Password must be at least 6 characters",
       "nameShort": "Name must be at least 2 characters",
       "roleRequired": "Select a role"
-    }
+    },
+    "methodLabel": "How to sign in"
   },
   "desktopAuth": {
     "title": "Desktop app sign-in",
@@ -1829,8 +1830,8 @@
     "partOfQuestions": "Part {a} of {b, plural, one {# question} other {# questions}}"
   },
   "marketing": {
-    "heroTitle": "DO YOUR BEST FORGET THE REST !",
-    "heroSubtitle": "Prepare for IELTS-style and Multi-Level (CEFR) exams on the computer, with teacher feedback and progress tracking.",
+    "heroTitle": "Practise IELTS and Multi-Level exams on the computer — and see exactly where you stand",
+    "heroSubtitle": "Mock exams in a calm exam window, Writing and Speaking graded by your teachers on the official criteria, and a result you can act on.",
     "heroBadge": "Shofirkon, Bukhara · since 2007",
     "navCourses": "Courses",
     "navTeachers": "Teachers",
@@ -2027,7 +2028,30 @@
       "speakingTitle": "Speaking task",
       "speakingText": "In a real exam your answer is recorded with the microphone.",
       "partLoadError": "Part {n} could not be loaded"
-    }
+    },
+    "heroEyebrow": "BestWay Education · IELTS and Multi-Level (CEFR)",
+    "heroPoint1": "Timed by the server; in exam mode the Listening audio plays once.",
+    "heroPoint2": "Writing and Speaking marked by criteria (TA/TR, CC, LR, GRA · FC, LR, GRA, P).",
+    "heroPoint3": "Band by skill, the question types to practise next, and your band over time.",
+    "productExamAlt": "The BestWay exam window: a Reading passage on the left, questions on the right, the timer and the question navigator.",
+    "productExamCaption": "The exam window — Reading, IELTS Academic mock test.",
+    "productTitle": "What you get",
+    "productSubtitle": "Three parts of the platform you will use every week.",
+    "product": {
+      "examTitle": "A calm exam window",
+      "examText": "Passage and questions side by side, a resizable split, highlight and notes, flags and a question navigator. Listening, Reading, Writing and Speaking on the computer, like the real test.",
+      "examLink": "See the exams",
+      "resultTitle": "A result you can act on",
+      "resultText": "Overall band and CEFR level, band by skill, the criteria marks for Writing and Speaking, and the question types to practise next — from your own answers.",
+      "resultLink": "Start a mock exam",
+      "teacherTitle": "Teachers in the loop",
+      "teacherText": "Teachers grade Writing and Speaking on the criteria, confirm or correct AI estimates, set homework and follow every student in their group.",
+      "teacherLink": "Sign in"
+    },
+    "productResultAlt": "A sample result: overall band 8.0, CEFR C1, and a bar for each of Listening, Reading, Writing and Speaking.",
+    "productResultCaption": "Sample result with demo data (not a real student).",
+    "mainNav": "Main navigation",
+    "menu": "Menu"
   },
   "errors": {
     "notFound": "Page not found",

@@ -3,11 +3,10 @@
 import * as React from "react";
 import { Menu, MonitorDown, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { JellyNav } from "@/components/ui/jelly-nav";
-import { SpecularButton } from "@/components/ui/specular-button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/feedback";
@@ -43,7 +42,6 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
   const hiddenKey = hidden.join(",");
   const sections = React.useMemo(() => SECTIONS.filter((s) => !hiddenKey.split(",").includes(s.hash)), [hiddenKey]);
   const t = useTranslations("marketing");
-  const router = useRouter();
   const { data: me, isLoading: meLoading } = useMe();
   const isLoggedIn = !!me?.user;
   const [open, setOpen] = React.useState(false);
@@ -126,37 +124,39 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
       <div
         aria-hidden
         className={cn(
-          "absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand via-accent to-orange transition-opacity duration-300",
-          scrolled ? "opacity-80" : "opacity-30",
+          "absolute inset-x-0 bottom-0 h-px bg-border transition-opacity duration-300",
+          scrolled ? "opacity-100" : "opacity-0",
         )}
       />
       <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6 lg:gap-4">
         <Link
           href="/"
           aria-label="Best Way"
-          className="shrink-0 transition-transform hover:scale-[1.03]"
+          className="shrink-0"
         >
           <Brand size="md" />
         </Link>
 
-        {/* Desktop navigation — springy jelly selector. */}
-        {/* xl breakpoint keeps longer navigation labels from overlapping brand/actions. */}
-        <div className="hidden min-w-0 flex-1 justify-center overflow-hidden xl:flex">
-          <div className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <JellyNav
-              items={sections.map((section) => ({
-                value: section.hash,
-                label: t(section.key),
-              }))}
-              value={sections[activeIdx]?.hash ?? ""}
-              onChange={(hash, index) => {
-                setActiveIdx(index);
-                router.push(`/#${hash}`);
-              }}
-              ariaLabel="Main navigation"
-            />
-          </div>
-        </div>
+        {/* Desktop navigation: plain links, the current section underlined. */}
+        <nav aria-label={t("mainNav")} className="hidden min-w-0 flex-1 justify-center xl:flex">
+          <ul className="flex items-center gap-1">
+            {sections.map((section, i) => (
+              <li key={section.hash}>
+                <Link
+                  href={`/#${section.hash}`}
+                  onClick={() => setActiveIdx(i)}
+                  aria-current={i === activeIdx ? "true" : undefined}
+                  className={cn(
+                    "relative inline-flex min-h-10 items-center rounded-control px-3 text-sm font-medium transition-colors duration-fast hover:bg-surface-hover hover:text-fg",
+                    i === activeIdx ? "text-fg after:absolute after:inset-x-3 after:bottom-1 after:h-0.5 after:rounded-full after:bg-brand" : "text-fg-muted",
+                  )}
+                >
+                  {t(section.key)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <div className="flex shrink-0 items-center gap-1.5">
           <Button variant="ghost" size="icon-sm" asChild title={t("desktopApp")}>
@@ -179,39 +179,8 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
             </Link>
           ) : (
             <div className="hidden items-center gap-1.5 sm:flex">
-              <SpecularButton
-                size="sm"
-                radius={12}
-                tint="#ffffff"
-                tintOpacity={0}
-                textColor="var(--fg-muted)"
-                lineColor="#FFED29"
-                baseColor="#303321"
-                intensity={1}
-                shineSize={10}
-                shineFade={40}
-                thickness={1.2}
-                onClick={() => router.push("/login")}
-              >
-                {t("login")}
-              </SpecularButton>
-              <SpecularButton
-                size="sm"
-                radius={12}
-                tint="#89F336"
-                tintOpacity={1}
-                textColor="#101704"
-                lineColor="#FFED29"
-                baseColor="#4E9F1E"
-                intensity={1.2}
-                shineSize={10}
-                shineFade={40}
-                thickness={1.2}
-                onClick={() => router.push("/register")}
-                className="shadow-sm"
-              >
-                {t("heroCta")}
-              </SpecularButton>
+              <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>{t("login")}</Link>
+              <Link href="/register" className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
             </div>
           )}
 
@@ -220,7 +189,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
             variant="ghost"
             size="icon-sm"
             className="xl:hidden"
-            aria-label="Menu"
+            aria-label={t("menu")}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
@@ -271,44 +240,8 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
                   </Link>
                 ) : (
                   <>
-                    <SpecularButton
-                      size="sm"
-                      radius={12}
-                      tint="#ffffff"
-                      tintOpacity={0}
-                      textColor="var(--fg)"
-                      lineColor="#FFED29"
-                      baseColor="#303321"
-                      intensity={1}
-                      shineSize={10}
-                      shineFade={40}
-                      thickness={1.2}
-                      onClick={() => {
-                        setOpen(false);
-                        router.push("/login");
-                      }}
-                    >
-                      {t("login")}
-                    </SpecularButton>
-                    <SpecularButton
-                      size="sm"
-                      radius={12}
-                      tint="#89F336"
-                      tintOpacity={1}
-                      textColor="#101704"
-                      lineColor="#FFED29"
-                      baseColor="#4E9F1E"
-                      intensity={1.2}
-                      shineSize={10}
-                      shineFade={40}
-                      thickness={1.2}
-                      onClick={() => {
-                        setOpen(false);
-                        router.push("/register");
-                      }}
-                    >
-                      {t("heroCta")}
-                    </SpecularButton>
+                    <Link href="/login" onClick={() => setOpen(false)} className={buttonVariants({ variant: "outline", size: "sm" })}>{t("login")}</Link>
+                    <Link href="/register" onClick={() => setOpen(false)} className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
                   </>
                 )}
               </div>
