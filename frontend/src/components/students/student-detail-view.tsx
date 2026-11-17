@@ -173,7 +173,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
             <Button
               size="sm"
               variant="ghost"
-              className="border border-rose-800/60 bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 hover:text-rose-200"
+              className="border border-danger-border bg-danger-bg text-danger hover:bg-danger/15"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="size-4 shrink-0 text-rose-400" />
@@ -184,7 +184,7 @@ export function StudentDetailView({ studentId }: { studentId: string }) {
             <Button
               size="sm"
               variant="ghost"
-              className="text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              className="text-fg-muted hover:bg-surface-hover hover:text-fg"
               loading={deactivate.isPending}
               onClick={() => {
                 if (!confirm(tst("deactivateConfirm"))) return;

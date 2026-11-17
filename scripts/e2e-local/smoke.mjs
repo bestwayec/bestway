@@ -182,7 +182,7 @@ await step(s, "06-exam-catalogue", async () => {
   await Promise.race([toCefr.first().waitFor().catch(() => {}), s.getByText("Multi-Level CEFR CBT Mock 1").first().waitFor().catch(() => {})]);
   if (await toCefr.count()) {
     await toCefr.first().click();
-    await s.getByText(/Active track: Multi-Level/).first().waitFor();
+    await s.locator('[data-testid="exam-track-card-MULTILEVEL"][aria-current="true"]').first().waitFor();
     await s.reload({ waitUntil: "domcontentloaded" }); // persisted, not just optimistic
   }
   await s.getByText("Multi-Level CEFR CBT Mock 1").first().waitFor();
@@ -204,7 +204,7 @@ await step(s, "07-practice-exam-start", async () => {
     await d.waitFor();
     await d.getByRole("button").filter({ hasText: /reading/i }).first().click();
   } else {
-    await card.getByRole("button", { name: /^start$/i }).click();
+    await card.getByRole("button", { name: /^(start|start full exam)$/i }).click();
     const d = s.getByRole("dialog");
     await d.waitFor();
     await Promise.all([

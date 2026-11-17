@@ -188,7 +188,7 @@ try {
     if (await switchBtn.count()) { await switchBtn.click(); await student.waitForTimeout(2500); }
     const card = student.locator('[data-testid^="mock-card-"]').filter({ hasText: EXAM }).first();
     await card.waitFor();
-    await card.getByRole("button", { name: /^start$/i }).click();
+    await card.getByRole("button", { name: /^(start|start full exam)$/i }).click();
     const dialog = student.getByRole("dialog");
     await dialog.waitFor();
     const resp = student.waitForResponse((r) => r.url().includes("/start") && r.request().method() === "POST");

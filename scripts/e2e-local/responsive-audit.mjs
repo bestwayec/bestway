@@ -17,7 +17,7 @@ if (process.env.SECTIONS_URL) for (const skill of ["listening","reading","writin
   PAGES.push([`exam-runner-${skill}`,"+998900000011",`${process.env.SECTIONS_URL}?skill=${skill}`]);
 const ONLY=(process.env.BW_ONLY||"").split(",").filter(Boolean);
 const THEME=process.env.BW_THEME||"";
-const b=await chromium.launch(); const report={};
+const b=await chromium.launch({ ...(process.env.BW_CHROMIUM ? { executablePath: process.env.BW_CHROMIUM } : {}) }); const report={};
 const sessions={};
 async function ctxFor(phone,w,h){ const c=await b.newContext({viewport:{width:w,height:h},deviceScaleFactor:1});
   if(phone){ if(!sessions[phone]){ const p=await c.newPage(); await p.goto(WEB+"/en/login"); await p.locator('input[type="tel"], input[name="phone"]').first().fill(phone);

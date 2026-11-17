@@ -163,7 +163,7 @@ export function VideosView() {
         title={t("title")}
         actions={
           isOffice ? (
-            <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold">
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-brand hover:bg-brand-hover text-brand-fg font-bold">
               <Plus className="w-4 h-4 mr-1" />
               {t("create")}
             </Button>
@@ -172,17 +172,17 @@ export function VideosView() {
       />
 
       {/* Featured Curriculum Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-bg-subtle p-6 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-brand/30 bg-gradient-to-r from-brand-subtle/40 via-surface to-bg-subtle p-6 shadow-xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand border border-brand/20">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Gamified Video LMS &amp; Bamboozle Arena</span>
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-white">
+            <h2 className="text-xl md:text-2xl font-black text-fg">
               English Grammar Foundation: Nouns to Articles
             </h2>
-            <p className="text-xs md:text-sm text-slate-400 max-w-2xl">
+            <p className="text-xs md:text-sm text-fg-muted max-w-2xl">
               Ingliz tili grammatikasining asosiy darslari: yuqori sifatli video tahlil, anti-cheat pleyer va har bir dars yakunida jamoaviy Bamboozle bellashuvi.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function VideosView() {
             type="button"
             variant="outline"
             onClick={() => router.push("/bamboozle")}
-            className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 shrink-0 font-bold"
+            className="border-brand/40 text-brand hover:bg-brand-hover/10 shrink-0 font-bold"
           >
             <Gamepad2 className="w-4 h-4 mr-2" />
             <span>Bamboozle Maydoniga O&apos;tish</span>
@@ -236,9 +236,9 @@ export function VideosView() {
                 className="h-full"
               >
                 <TiltCard maxTilt={4} className="h-full rounded-2xl">
-                  <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-slate-800/80 bg-bg-subtle p-0 hover:border-emerald-500/50 hover:shadow-[0_12px_35px_rgba(16,185,129,0.18)] transition-all duration-300">
+                  <Card className="lift group flex h-full flex-col overflow-hidden rounded-2xl border-border/80 bg-bg-subtle p-0 hover:border-brand/50 hover:shadow-e2 transition-all duration-300">
                     {/* Muqova / Artwork Banner */}
-                    <div className="relative aspect-video overflow-hidden bg-slate-900 border-b border-slate-800/80">
+                    <div className="relative aspect-video overflow-hidden bg-surface border-b border-border/80">
                       <VideoCardImage src={v.thumbnailUrl} title={v.title} />
 
                       {/* Vignette Overlay */}
@@ -249,11 +249,11 @@ export function VideosView() {
                         {/* Status Badge */}
                         <div>
                           {isCompleted ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/95 text-slate-950 px-2.5 py-0.5 text-[11px] font-black shadow-[0_2px_8px_rgba(16,185,129,0.4)] backdrop-blur">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-brand/95 text-fg px-2.5 py-0.5 text-[11px] font-black shadow-[0_2px_8px_rgba(16,185,129,0.4)] backdrop-blur">
                               <CheckCircle2 className="size-3" /> Ko&apos;rilgan
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 text-slate-950 px-2.5 py-0.5 text-[11px] font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)] backdrop-blur">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-warning text-warning-fg px-2.5 py-0.5 text-xs font-bold">
                               <Sparkles className="size-3" /> Yangi
                             </span>
                           )}
@@ -262,11 +262,11 @@ export function VideosView() {
                         {/* Price Badge */}
                         <div>
                           {v.price === 0 ? (
-                            <span className="inline-flex items-center rounded-full bg-slate-950/80 border border-emerald-500/50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 shadow backdrop-blur">
+                            <span className="inline-flex items-center rounded-full bg-bg/80 border border-brand/50 px-2.5 py-0.5 text-[11px] font-bold text-brand shadow backdrop-blur">
                               {t("free")}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center rounded-full bg-slate-950/85 border border-slate-700 px-2.5 py-0.5 text-[11px] font-semibold text-white tabular-nums shadow backdrop-blur">
+                            <span className="inline-flex items-center rounded-full bg-bg/85 border border-border-strong px-2.5 py-0.5 text-[11px] font-semibold text-fg tabular-nums shadow backdrop-blur">
                               {formatMoney(v.price)} {tc("sum")}
                             </span>
                           )}
@@ -281,7 +281,7 @@ export function VideosView() {
                           aria-label={t("watch")}
                           className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 focus-visible:opacity-100 bg-black/40 backdrop-blur-[2px]"
                         >
-                          <span className="grid size-14 place-items-center rounded-full bg-emerald-500 text-slate-950 transition-transform duration-300 group-hover:scale-110">
+                          <span className="grid size-14 place-items-center rounded-full bg-brand text-brand-fg transition-transform duration-300 group-hover:scale-110">
                             <Play className="size-6 fill-current ml-0.5" />
                           </span>
                         </button>
@@ -294,24 +294,24 @@ export function VideosView() {
                     <div className="flex flex-1 flex-col gap-3 p-4">
                       <div>
                         {/* Meta qatori: Davomiylik & XP */}
-                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                          <span className="inline-flex items-center gap-1 font-mono text-slate-300">
-                            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                        <div className="flex items-center justify-between text-xs text-fg-muted mb-1.5">
+                          <span className="inline-flex items-center gap-1 font-mono text-fg-muted">
+                            <Clock className="w-3.5 h-3.5 text-brand" />
                             {duration}
                           </span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20 shadow-sm">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-bold text-brand border border-brand/20 shadow-sm">
                             <Sparkles className="w-3 h-3" />
                             +{xpReward} XP
                           </span>
                         </div>
 
                         {/* Dars sarlavhasi */}
-                        <h3 className="line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] font-black text-white text-sm sm:text-base leading-snug group-hover:text-emerald-400 transition-colors">
+                        <h3 className="line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] font-black text-fg text-sm sm:text-base leading-snug group-hover:text-brand transition-colors">
                           {v.title}
                         </h3>
 
                         {/* Tavsif */}
-                        <p className="line-clamp-2 min-h-[2.5rem] text-xs text-slate-400 mt-1 leading-relaxed">
+                        <p className="line-clamp-2 min-h-[2.5rem] text-xs text-fg-muted mt-1 leading-relaxed">
                           {v.description ?? ""}
                         </p>
                       </div>
@@ -323,7 +323,7 @@ export function VideosView() {
                             {/* 1. Watch Action */}
                             <Button
                               size="sm"
-                              className="flex-1 min-w-[75px] h-9 text-xs sm:text-sm bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-md"
+                              className="flex-1 min-w-[75px] h-9 text-xs sm:text-sm bg-brand hover:bg-brand-hover text-brand-fg font-bold shadow-md"
                               loading={stream.isPending}
                               onClick={() => onWatch(v)}
                             >
@@ -341,9 +341,9 @@ export function VideosView() {
                                     setQuizLesson(v);
                                     setQuizModalOpen(true);
                                   }}
-                                  className="h-9 px-2.5 sm:px-3 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 text-xs font-bold shadow-sm flex-shrink-0"
+                                  className="h-9 px-2.5 sm:px-3 border-brand/40 text-brand hover:bg-brand-hover/10 text-xs font-bold shadow-sm flex-shrink-0"
                                 >
-                                  <FileText className="w-3.5 h-3.5 mr-1 text-emerald-400 flex-shrink-0" />
+                                  <FileText className="w-3.5 h-3.5 mr-1 text-brand flex-shrink-0" />
                                   <span>Test</span>
                                 </Button>
                               ) : (
@@ -352,9 +352,9 @@ export function VideosView() {
                                   variant="outline"
                                   disabled
                                   title="Avval videoni ko'ring"
-                                  className="h-9 px-2.5 sm:px-3 opacity-40 cursor-not-allowed border-slate-800 text-slate-500 text-xs font-bold flex-shrink-0"
+                                  className="h-9 px-2.5 sm:px-3 opacity-40 cursor-not-allowed border-border text-fg-subtle text-xs font-bold flex-shrink-0"
                                 >
-                                  <Lock className="w-3.5 h-3.5 mr-1 text-slate-500 flex-shrink-0" />
+                                  <Lock className="w-3.5 h-3.5 mr-1 text-fg-subtle flex-shrink-0" />
                                   <span>Test</span>
                                 </Button>
                               )
@@ -367,9 +367,9 @@ export function VideosView() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => router.push(`/bamboozle?deck=${tiedDeckId}`)}
-                                  className="h-9 px-2 sm:px-2.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold shadow-sm flex-shrink-0"
+                                  className="h-9 px-2 sm:px-2.5 border-warning/40 text-warning hover:bg-warning/10 text-xs font-bold shadow-sm flex-shrink-0"
                                 >
-                                  <Gamepad2 className="w-3.5 h-3.5 mr-1 text-amber-400 flex-shrink-0" />
+                                  <Gamepad2 className="w-3.5 h-3.5 mr-1 text-warning flex-shrink-0" />
                                   <span>Arena</span>
                                 </Button>
                               ) : (
@@ -378,9 +378,9 @@ export function VideosView() {
                                   variant="outline"
                                   disabled
                                   title="Avval videoni ko'ring"
-                                  className="h-9 px-2 sm:px-2.5 opacity-40 cursor-not-allowed border-slate-800 text-slate-500 text-xs font-bold flex-shrink-0"
+                                  className="h-9 px-2 sm:px-2.5 opacity-40 cursor-not-allowed border-border text-fg-subtle text-xs font-bold flex-shrink-0"
                                 >
-                                  <Lock className="w-3.5 h-3.5 mr-1 text-slate-500 flex-shrink-0" />
+                                  <Lock className="w-3.5 h-3.5 mr-1 text-fg-subtle flex-shrink-0" />
                                   <span>Arena</span>
                                 </Button>
                               )
@@ -407,7 +407,7 @@ export function VideosView() {
                             variant="ghost"
                             onClick={() => onDelete(v.id)}
                             aria-label={t("delete")}
-                            className="text-slate-500 hover:text-red-400 p-2"
+                            className="text-fg-subtle hover:text-danger p-2"
                           >
                             <Trash2 className="size-4" />
                           </Button>
@@ -424,7 +424,7 @@ export function VideosView() {
 
       {/* Gamified Anti-Cheat Video Player Modal */}
       <Dialog open={Boolean(playing)} onOpenChange={(open) => !open && setPlaying(null)}>
-        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] overflow-hidden p-0 bg-bg-subtle border border-emerald-500/30 shadow-2xl rounded-2xl">
+        <DialogContent className="w-[96vw] max-w-4xl max-h-[92dvh] overflow-hidden p-0 bg-bg-subtle border border-brand/30 shadow-2xl rounded-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{playing?.title ?? t("watch")}</DialogTitle>
           </DialogHeader>
