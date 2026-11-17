@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/navigation";
 import { Skeleton } from "./feedback";
 
 /**
@@ -24,6 +25,7 @@ export function StatTile({
   trend?: { value: string; direction: "up" | "down" | "flat"; label?: string };
   icon?: React.ElementType;
   loading?: boolean;
+  /** Locale-free app path, e.g. "/mock/attempt/123". */
   href?: string;
   className?: string;
 }) {
@@ -59,9 +61,9 @@ export function StatTile({
   );
   const classes = cn("block rounded-card border border-border bg-surface p-4 sm:p-5", className);
   return href ? (
-    <a href={href} className={cn(classes, "transition-[border-color,box-shadow] duration-fast hover:border-border-strong hover:shadow-e1")}>
+    <Link href={href} className={cn(classes, "transition-[border-color,box-shadow] duration-fast hover:border-border-strong hover:shadow-e1")}>
       {body}
-    </a>
+    </Link>
   ) : (
     <div className={classes}>{body}</div>
   );

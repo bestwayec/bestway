@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { BookOpenCheck, ChevronRight, ClipboardList, Languages, PlayCircle, Trophy } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/feedback";
 import { api } from "@/lib/api-client";
@@ -55,7 +56,7 @@ export function TodayCard({ skipResume = false }: { skipResume?: boolean }) {
   return (
     <Card className="p-4 sm:p-5" aria-labelledby="today-title">
       <div className="mb-3 flex items-center gap-2">
-        <BookOpenCheck className="size-5 text-brand" aria-hidden />
+        <BookOpenCheck className="size-5 text-fg-subtle" aria-hidden />
         <h2 id="today-title" className="text-subtitle text-fg">{t("title")}</h2>
       </div>
       {loading ? (
@@ -71,21 +72,31 @@ export function TodayCard({ skipResume = false }: { skipResume?: boolean }) {
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="space-y-0.5">
           {items.map((item) => {
             const Icon = ICONS[item.kind];
             const { title, detail } = line(item);
             return (
               <li key={item.kind}>
-                <Link href={item.href} className="flex min-h-[56px] items-center gap-3 py-2.5 text-left hover:bg-surface-hover focus-visible:bg-surface-hover rounded-field px-1">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-brand-subtle-fg">
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex min-h-[56px] items-center gap-3 rounded-control px-2 py-2.5 text-left transition-colors duration-fast hover:bg-surface-hover focus-visible:bg-surface-hover",
+                    item.kind === "resume" && "my-1 border border-brand/35 bg-brand-subtle/50 hover:bg-brand-subtle",
+                  )}
+                >
+                  <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", item.kind === "resume" ? "bg-brand text-brand-fg" : "bg-bg-subtle text-fg-muted")}>
                     <Icon className="size-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold text-fg">{title}</span>
                     {detail ? <span className="block truncate text-sm text-fg-muted">{detail}</span> : null}
                   </span>
-                  <ChevronRight className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                  {item.kind === "resume" ? (
+                    <span className="hidden shrink-0 rounded-control bg-brand px-3 py-2 text-sm font-semibold text-brand-fg sm:inline-flex">{t("resumeAction")}</span>
+                  ) : (
+                    <ChevronRight className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                  )}
                 </Link>
               </li>
             );

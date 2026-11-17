@@ -309,7 +309,7 @@ async function student() {
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
     await card.waitFor();
-    await card.getByRole("button").filter({ hasText: /^(Start|Retake|Start again|Resume)$/ }).first().click();
+    await card.getByRole("button").filter({ hasText: /^(Start|Start full exam|Retake|Start again|Resume)$/ }).first().click();
     const dialog = page.getByRole("dialog"); await dialog.waitFor();
     await dialog.getByRole("button", { name: "Check my device" }).click();
     await dialog.getByText(/Connected · server replied/).waitFor({ timeout: 20000 });

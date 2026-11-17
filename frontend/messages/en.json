@@ -948,7 +948,9 @@
     "placementLinked": "Your Express Placement Test result is linked to your profile.",
     "sectionInProgress": "{skill} section in progress",
     "resumeWhereLeft": "Continue where you stopped",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "latestResult": "Latest result",
+    "noResultYet": "No full result yet"
   },
   "parent": {
     "children": "My children",
@@ -1494,7 +1496,10 @@
       "gradingLoadFailed": "Submissions could not be loaded.",
       "startSectionGroup": "Start one section",
       "startSection": "Start {skill} only",
-      "sectionNotReady": "This section is not ready yet"
+      "sectionNotReady": "This section is not ready yet",
+      "oneSectionLabel": "Or one section",
+      "startFullExam": "Start full exam",
+      "viewLastResult": "View last result"
     },
     "deviceCheck": {
       "intro": "Optional: check your connection, sound and microphone on this device before you start.",
@@ -2634,7 +2639,8 @@
     "resultPending": "Result awaiting teacher review",
     "resultReady": "Latest result is ready",
     "empty": "Nothing is due today.",
-    "emptyAction": "Browse exams"
+    "emptyAction": "Browse exams",
+    "resumeAction": "Continue"
   },
   "vocabulary": {
     "backToCatalog": "Back to vocabulary",

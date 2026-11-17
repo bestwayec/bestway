@@ -7,6 +7,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 31-BLOK: Redizayn, 4-bosqich — talaba dashboard va katalog — branch `claude/friendly-pascal-gsohro` (2026-11-17)
+- **Dashboard**: "Bugungi reja" birinchi (davom ettirish qatori ajratilgan + "Davom etish"), keyin 3 ta raqam, keyin tavsiya etilgan test. **Soxta "kunlik streak" olib tashlandi** (urinishlar sonidan 7 gacha o'ylab topilgan, localStorage'da) — o'rniga "Oxirgi natija" (faqat to'liq natija, unga havola). `ielts_academic` → "IELTS Academic".
+- **`StatTile`** `href` endi i18n `Link` (locale prefiksi to'g'ri).
+- **Katalog**: track almashtirgich va holat filtri bitta qatorda (telefonda o'raladi, yon tomonga aylanmaydi); karta: "Yoki bitta bo'lim" — 2×2, 44 px tugmalar; "To'liq imtihonni boshlash"; topshirilgan imtihonda "Oxirgi natijani ko'rish". E2E selektorlar (`ielts-full.mjs`, `multilevel-full.mjs`) yangi yozuvni qabul qiladi.
+- **Tekshiruv**: tsc, lint, vitest. Skrinshotlar: `docs/agent/screens/redesign-4/` (360 px ham).
+- **Ochiq**: `/mock/attempts/mine` oxirgi 20 tani qaytaradi — trend va "oxirgi natija" shu oyna ichida.
+- **Keyingi**: 5-bosqich — o'qituvchi va admin.
+
 ### 30-BLOK: Redizayn, 3-bosqich — natija va tahlil — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Hero**: overall band bir marta (ilgari 3 marta: infografika, karta, "IELTS BAND" qutisi), 48 px; "CEFR C1" nishoni + en/uz tavsif (ilgari faqat inglizcha qattiq yozilgan); Multilevel — standart ball /75 va daraja.
 - **Diagramma** `SkillBandChart` (`components/mock/result-overview.tsx`): ko'nikmalar bo'yicha bitta rangli gorizontal bar (IELTS — 9 dan band, Multilevel — 75 dan standart ball); kutilayotgan/4.0 dan past yozuv bilan; taxminiy (AI) ballar `*` va izoh bilan.
