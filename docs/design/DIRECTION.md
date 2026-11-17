@@ -222,3 +222,21 @@ looping animation in the exam window except the recording indicator.
 - All copy in `messages/en.json` and `messages/uz.json`.
 - axe: 0 serious / critical; keyboard reachable; focus visible; 44 px touch targets on phones.
 - Nothing breaks at 360 px.
+
+## 6. Status (2026-11-17)
+
+| Stage | PR | Screens |
+|---|---|---|
+| 0 Audit and direction | bestwayec/bestway#195 | `docs/agent/screens/redesign-0/` |
+| 1 Design system (tokens, primitives, `/dev/ui`) | bestwayec/bestway#196 | `redesign-1/` |
+| 2 Exam window | bestwayec/bestway#197 | `redesign-2/` |
+| 3 Result and analysis | bestwayec/bestway#198 | `redesign-3/` |
+| 4 Student dashboard and catalogue | bestwayec/bestway#199 | `redesign-4/` |
+| 5 Teacher and admin | bestwayec/bestway#200 | `redesign-5/` |
+| 6 Landing and sign-in | bestwayec/bestway#201 | `redesign-6/` |
+| Final roles crawl + E2E fixes | (this branch) | — |
+
+Open (not done in this programme): admin sidebar grouping (`lib/nav.ts` needs sections); a step-by-step
+Exam Builder flow (the builder keeps its current panels and preview); the Writing split view (task
+beside the editor); `CefrResultInfographic` on the Exam Track page still uses per-skill hues; the
+attempts list API returns the latest 20 attempts, which bounds the band trend.

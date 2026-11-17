@@ -170,7 +170,7 @@ export function CenterMap({
       */}
       <div className="absolute inset-x-3 top-3 z-10 sm:inset-x-auto sm:top-4 sm:left-4 sm:max-w-xs">
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface/90 p-2 pl-3 shadow-xl backdrop-blur-md sm:block sm:p-4">
-          <p className="hidden items-center gap-1.5 text-xs font-semibold tracking-wide text-brand uppercase sm:flex">
+          <p className="hidden items-center gap-1.5 text-xs font-semibold tracking-wide text-brand-subtle-fg uppercase sm:flex">
             <MapPin className="size-3.5" />
             {findUsLabel}
           </p>
@@ -183,7 +183,7 @@ export function CenterMap({
               target="_blank"
               rel="noopener noreferrer"
               aria-label={directionsLabel}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-[#101704] transition-transform duration-200 hover:scale-[1.03] active:scale-95 sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3.5 sm:text-sm sm:font-semibold"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-brand text-brand-fg transition-colors duration-fast hover:bg-brand-hover sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3.5 sm:text-sm sm:font-semibold"
             >
               <Navigation className="size-4" />
               <span className="hidden sm:inline">{directionsLabel}</span>

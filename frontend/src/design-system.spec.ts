@@ -77,6 +77,7 @@ const MIGRATED: Record<string, { neutralOnly?: boolean }> = {
   "src/components/teacher/TeacherWorkspaceView.tsx": {},
   "src/components/teacher/VocabularyBuilder.tsx": {},
   "src/components/teacher/VocabularyGroupReport.tsx": {},
+  "src/components/videos/videos-view.tsx": {},
   "src/components/exam-builder/visual-editor/QuestionChip.tsx": { neutralOnly: true },
 };
 

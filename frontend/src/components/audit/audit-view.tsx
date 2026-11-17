@@ -13,6 +13,12 @@ import { useAuditLogs } from "@/hooks/use-audit";
 import { useDebouncedValue } from "@/hooks/use-users";
 import type { AuditLogItem } from "@/lib/types";
 
+/** The stored action id ("mock.attempt.force_submit") as words: "Mock › attempt › force submit". */
+function actionLabel(action: string): string {
+  const words = action.split(".").map((part) => part.replace(/_/g, " "));
+  return words.length ? [words[0].charAt(0).toUpperCase() + words[0].slice(1), ...words.slice(1)].join(" › ") : action;
+}
+
 function tone(action: string): "success" | "danger" | "warning" | "info" | "neutral" {
   if (action.includes("create")) return "success";
   if (action.includes("delete") || action.includes("deactivate")) return "danger";
@@ -92,7 +98,7 @@ function AuditRow({
     <div className="px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Badge variant={tone(item.action)}>{item.action}</Badge>
+          <Badge variant={tone(item.action)} title={item.action}>{actionLabel(item.action)}</Badge>
           <span className="truncate text-sm text-fg-muted">
             {item.entity}
             {item.entityId ? ` · ${item.entityId.slice(0, 8)}` : ""}

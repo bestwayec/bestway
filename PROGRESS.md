@@ -7,6 +7,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 34-BLOK: Redizayn — yakuniy roles-crawl va E2E (2026-11-17)
+- **roles-crawl** (axe WCAG 2.0/2.1 A+AA; student, teacher, admin, parent, super_admin; en ikki tema + uz): 187/196 toza edi; topilmalar tuzatildi — `/videos` (tokenlarga o'tkazildi; yorug' temada oq sarlavha oq fonda edi, sariq nishon 4.0:1), `/audit` (amal id'si `mock.attempt.force_submit` so'z bilan ko'rsatiladi), `/students/:id` (rose va slate-400 → tokenlar), landing xarita tugmasi (#101704 brand ustida 3.65:1), xarita yorlig'i. Qayta tekshiruv (axe, ikki tema): hammasi toza. `videos-view.tsx` dizayn guard'iga qo'shildi.
+- **E2E (lokal, sintetik)**: smoke 16/16, ielts-full 10/10, exam-a11y 12/12, exam-workspace 20/20, exam-listening 16/16, exam-reading-split 20/20, exam-writing 6/6, exam-mode 8/8, practice-mode 5/5, exam-session 20/20, exam-tools 30/30, exam-window 12/12, runner-layout (telefonda kontent 74–81%), full-journey (barcha qadamlar), teacher-live 16/16, demo 15/15, responsive-audit (overflow yo'q). multilevel-full: 15/16 (telefon qadami — "Start full exam" selektori tuzatildi), qayta yugurishda speaking yuklash qadami bir marta 400 berdi (birinchi yugurishda o'tgan) — beqaror.
+- **Redizayndan oldin ham xuddi shunday yiqiladi** (bazaviy `3b46c08` da tekshirildi): vocab-battle 18/20 (+10 podium), mobile-listening 15/16 (record mock katalogda yo'q — lokal ma'lumot), drill (uz "Keyingi Savol" dialog tugmasi).
+- **E2E skriptlar**: "Start full exam" yozuvi (`smoke`, `full-journey`, `multilevel-full`), smoke track tekshiruvi `aria-current` bo'yicha, `responsive-audit` `BW_CHROMIUM` ni qabul qiladi.
+- **Muhit eslatmasi**: `exam-listening` — `BW_LONG_AUDIO` (60 s WAV), `exam-tools`/`full-journey` — `BW_AUDIO`, `demo` — `BW_PYTHON` + `DJANGO_SETTINGS_MODULE=config.settings.local`, `responsive-audit OUT_DIR`.
+- **Ochiq**: `docs/design/DIRECTION.md` §6.
+
 ### 33-BLOK: Redizayn, 6-bosqich — landing va kirish — branch `claude/friendly-pascal-gsohro` (2026-11-17)
 - **Landing hero**: shior o'rniga aniq qiymat taklifi (en/uz), ikki tugma, uchta halol fakt va imtihon oynasining **haqiqiy skrinshoti** (seed qilingan IELTS Academic mock, yorug'/qorong'i, `public/product/*.webp`, `next/image`).
 - **"Nimalarga ega bo'lasiz"**: imtihon oynasi, natija, ustozlar — havolalar bilan; natija namunasi "demo ma'lumot (haqiqiy o'quvchi emas)" deb belgilangan. "Ekotizim" bloki (Vision OCR / Smart Analytics chiplari) olib tashlandi; ishlatilmagan `STATS` (500+ o'quvchi va h.k.) olib tashlandi.

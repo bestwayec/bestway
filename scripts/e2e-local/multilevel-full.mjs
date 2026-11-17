@@ -550,7 +550,7 @@ async function mobile() {
     if (await toMultilevel.count()) { await toMultilevel.click(); await page.waitForTimeout(2500); }
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
     await card.waitFor();
-    await card.getByRole("button", { name: /^(start|resume)$/i }).click();
+    await card.getByRole("button", { name: /^(start|start full exam|resume)$/i }).click();
     const dialog = page.getByRole("dialog"); await dialog.waitFor();
     await dialog.getByRole("button", { name: /Start Reading/ }).click();
     await page.waitForURL(/\/mock\/attempt\//); await page.waitForLoadState("networkidle");
