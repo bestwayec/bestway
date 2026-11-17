@@ -63,8 +63,6 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
   const role = me?.user.role;
   const isStaff = role === "teacher" || role === "admin" || role === "super_admin";
   const grade = useGradeMock(attempt.id);
-  // Teacher-graded internal Multilevel result: a separate BestWay internal certificate, not an official one.
-  const internalGrades = Object.values((attempt.rawScores ?? {}) as Record<string, { practiceGrade?: unknown } | null>).some((raw) => !!raw?.practiceGrade);
   const [certModalOpen, setCertModalOpen] = React.useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false);
 
@@ -77,8 +75,8 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
     attempt.flowMode === "partial_practice" || attempt.flowMode === "single_skill" || attempt.scoreMethod === "PRACTICE_PARTIAL";
   // AI / teacher review only exists for Writing and Speaking answers.
   const hasManualSkill = attempt.sections.some((section) => MANUAL_SKILLS.has(section.skill));
-  const internalPractice = !isIelts && attempt.sections.some((section) =>
-    (section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade)?.policyId === "BESTWAY_INTERNAL_PRACTICE_35_50_V1");
+  // A Multilevel result with Writing/Speaking gets the BestWay internal result certificate (not an official one).
+  const internalCertificate = !isIelts && hasManualSkill;
   // IELTS: Overall Band faqat 4 bo'lim baholangach chiqadi — aks holda Pending.
   const gradedCount = attempt.sections.filter((s) => s.band != null).length;
   // An AI-scored Writing/Speaking result is an estimate until a teacher confirms it.
@@ -116,7 +114,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       )}
       {empty ? null : <>
 
-      {completed && !partialPractice && !internalPractice && (
+      {completed && !partialPractice && (
         <CefrResultInfographic
           className="mb-4"
           cefrLevel={attempt.cefrLevel}
@@ -172,7 +170,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
             </p>
           </div>
         )}
-        {completed && !partialPractice && !internalPractice && (
+        {completed && !partialPractice && (
           <div className="mt-4">
             {isIelts ? (
               <>
@@ -207,8 +205,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           {attempt.sections.map((s) => {
             const rawSkill = attempt.rawScores?.[s.skill];
             const isSkipped = rawSkill?.skipped || (rawSkill?.status === "SKIPPED") || (!s.score && !s.standardScore && !s.band && attempt.status === "completed" && !MANUAL_SKILLS.has(s.skill));
-            const practiceGrade = s.practiceGrade ?? rawSkill?.practiceGrade;
-            const pendingManual = MANUAL_SKILLS.has(s.skill) && !practiceGrade && !hasCompleteManualGrade(s);
+            const pendingManual = MANUAL_SKILLS.has(s.skill) && !hasCompleteManualGrade(s);
             const accuracy = s.max && s.max > 0 && s.score != null ? Math.round(((s.score ?? 0) / s.max) * 100) : null;
             const questionCount = (s.groups ?? []).reduce((sum, g) => sum + (g.questions?.length ?? 0), 0);
             // Practice (S4) is raw only: correct / asked, never a band, whatever its length.
@@ -221,9 +218,6 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-fg capitalize flex items-center gap-1.5">
                     {t(`skills.${s.skill}`)}
-                    {practiceGrade && (
-                      <span className="text-[10px] font-normal text-fg-subtle">({t("internalPracticeScore")})</span>
-                    )}
                     {MANUAL_SKILLS.has(s.skill) && !pendingManual && !isSkipped && provisionalSkills.has(s.skill) && (
                       <Badge variant="warning" className="text-[10px] font-medium normal-case" title={t("resultView.aiPending")}>
                         {t("resultView.provisional")}
@@ -238,10 +232,6 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
                     <Badge variant="warning" className="text-[11px]">
                       {t("awaitingGrade")}
                     </Badge>
-                  ) : practiceGrade ? (
-                    <span className="font-bold text-sm text-brand tabular-nums">
-                      {practiceGrade.score} /{practiceGrade.scaleMax}
-                    </span>
                   ) : !isIelts && s.standardScore != null && fullSection ? (
                     <span className="font-bold text-sm text-brand tabular-nums">
                       {s.standardScore} /75 <span className="text-xs font-normal text-fg-muted">({s.score}/{s.max})</span>
@@ -285,7 +275,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           })}
         </div>
 
-        {completed && !internalPractice && (
+        {completed && (
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 print:hidden">
             {hasManualSkill && (
             <button
@@ -304,7 +294,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-brand-fg shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:scale-[1.02]"
             >
               <Download className="size-4" />
-              {partialPractice ? t("resultView.practiceReport") : internalGrades ? t("resultView.internalCertificate") : `${t("certificate")} (PDF)`}
+              {partialPractice ? t("resultView.practiceReport") : internalCertificate ? t("resultView.internalCertificate") : `${t("certificate")} (PDF)`}
             </a>
             <button
               type="button"
@@ -387,12 +377,11 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
   return <section aria-labelledby="multilevel-score-breakdown" className="mt-6 space-y-4">
     <h2 id="multilevel-score-breakdown" className="text-sm font-semibold text-fg-muted">Multilevel score breakdown</h2>
     {manualSections.map((section) => {
-      const practiceGrade = section.practiceGrade ?? attempt.rawScores?.[section.skill]?.practiceGrade;
-      const pendingManual = !practiceGrade && !hasCompleteManualGrade(section);
+      const pendingManual = !hasCompleteManualGrade(section);
       return <Card key={section.id} className="p-4">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold text-fg">{t(`skills.${section.skill}`)}</h3>
-        {practiceGrade ? <Badge variant="info">{t("internalPracticeScore")} {practiceGrade.score} /{practiceGrade.scaleMax}</Badge> : !pendingManual && section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
+        {!pendingManual && section.standardScore != null && <Badge variant="info">Standardized {section.standardScore} /75</Badge>}
       </div>
       <div className="mt-3 space-y-2">
         {section.groups.map((group, index) => {
@@ -407,7 +396,7 @@ export function MultilevelResultBreakdown({ attempt }: { attempt: MockAttemptDet
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-fg-muted">
         <span>Raw <strong className="text-fg tabular-nums">{pendingManual ? "—" : section.score ?? "—"} / {section.max ?? "—"}</strong></span>
-        {!partialPractice && !practiceGrade && <span>Standardized <strong className="text-fg tabular-nums">{pendingManual ? "—" : section.standardScore ?? "—"} /75</strong></span>}
+        {!partialPractice && <span>Standardized <strong className="text-fg tabular-nums">{pendingManual ? "—" : section.standardScore ?? "—"} /75</strong></span>}
       </div>
     </Card>;})}
   </section>;

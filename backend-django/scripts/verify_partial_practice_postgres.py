@@ -7,7 +7,6 @@ import os
 import sys
 import wave
 from datetime import timedelta
-from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -236,10 +235,8 @@ try:
           {skill: {key: raw[key] for key in ('score', 'max')} for skill, raw in result['rawScores'].items()} ==
           {'writing': {'score': 12, 'max': 16}, 'speaking': {'score': 4, 'max': 5}},
           'Teacher grades complete only the selected tasks with the authored rubric maxima')
-    check(all(raw['practiceGrade']['score'] == float((Decimal(35) + Decimal(15) * Decimal(str(raw['score'])) / Decimal(str(raw['max']))).quantize(Decimal('.1'), rounding=ROUND_HALF_UP))
-              and raw['practiceGrade']['rawScore'] == raw['score'] and raw['practiceGrade']['rawMax'] == raw['max']
-              and raw['practiceGrade']['isOfficial'] is False for raw in result['rawScores'].values()),
-          'New internal practice grades preserve teacher raw evidence without an official level')
+    check(all('practiceGrade' not in raw and raw['score'] is not None for raw in result['rawScores'].values()),
+          'Teacher raw evidence is the only score kept: no internal practice grade is made')
     check(result['overallScore'] is None and result['cefrLevel'] is None and not result['standardScores'],
           'Partial practice never claims a full Multilevel estimate')
     jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))

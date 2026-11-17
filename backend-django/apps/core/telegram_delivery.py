@@ -369,7 +369,7 @@ def notify_submission_result(job_or_attempt):
                 res = getattr(obj, 'approved_feedback', None) or getattr(obj, 'final_result', None) or {}
                 if isinstance(res, dict):
                     if score_str == "—":
-                         fallback_sc = res.get('overall_band') or res.get('band') or res.get('score') or res.get('practiceGrade')
+                         fallback_sc = res.get('overall_band') or res.get('band') or res.get('score')
                          if fallback_sc is not None:
                              score_str = str(fallback_sc)
                     parts = res.get('parts') or []

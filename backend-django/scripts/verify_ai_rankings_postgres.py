@@ -69,7 +69,7 @@ def snapshot(question='w1', skill='writing', modern=True):
         promptVersion=quality.PROMPT_VERSION if modern else 'BESTWAY_ASSESSMENT_PROMPT_2026_V1',
         pronunciationEvidence='UNAVAILABLE', parts=[dict(id='1.1' if skill == 'speaking' else 'informal_email',
             max=5, task='Describe a helpful experience.', context='An authored task', responses=responses)])
-    if modern: value.update(evaluationPolicy=quality.EVIDENCE_POLICY, gradingPolicy=dict(id=quality.GRADE_POLICY))
+    if modern: value.update(evaluationPolicy=quality.EVIDENCE_POLICY)
     return value
 
 
@@ -161,17 +161,17 @@ with transaction.atomic():
     with CaptureQueriesContext(connection) as queries:
         data = request('teacher', query)
     check(len(queries) <= 6, 'Writing ranking uses at most six batched queries for eleven students')
-    cohorts = data['cohorts']; check(len(cohorts) == 3, 'different task scopes and historical grading policy have separate cohorts')
-    current = next(cohort for cohort in cohorts if cohort['gradingPolicyId'] == quality.GRADE_POLICY and cohort['parts'][0]['questionIds'] == [prefix + '-w1'])
+    cohorts = data['cohorts']; check(len(cohorts) == 3, 'different task scopes and historical prompt/policy versions have separate cohorts')
+    current = next(cohort for cohort in cohorts if cohort['evaluationPolicy'] == quality.EVIDENCE_POLICY and cohort['parts'][0]['questionIds'] == [prefix + '-w1'])
     rows = {row['studentId']: row for row in current['rows']}
-    check(rows[ids['a']]['aiScore'] == 47 and rows[ids['a']]['aiRawScore'] == 4, 'AI website grade uses real raw evidence mapped to 35–50 /75')
-    check(rows[ids['a']]['teacherScore'] == 3.5 and rows[ids['a']]['finalPracticeGrade']['score'] == 45.5, 'teacher/final provenance stays separate from AI rank')
+    check(rows[ids['a']]['aiScore'] == 60 and rows[ids['a']]['aiRawScore'] == 4, 'AI website grade is the real raw evidence on the 75 scale (4 of 5), no internal range or cap')
+    check(rows[ids['a']]['teacherScore'] == 3.5 and 'finalPracticeGrade' not in rows[ids['a']] and 'practiceGrade' not in rows[ids['a']], 'teacher/final provenance stays separate from AI rank and no internal grade is exposed')
     check([(rows[ids[student]]['rank']) for student in ('a', 'e', 'f')] == [1, 1, 3], 'equal AI grades have competition ranks 1,1,3')
     check(rows[ids['b']]['aiScore'] is None and rows[ids['b']]['rank'] is None and rows[ids['b']]['status'] == 'PENDING', 'latest pending generation never falls back to earlier successful AI')
     check(rows[ids['h']]['aiScore'] is None and rows[ids['h']]['rank'] is None, 'fabricated evidence is not ranked')
     check(rows[ids['i']]['rank'] is None and not rows[ids['i']]['eligible'], 'low confidence proposal is never ranked')
     check(any(row['studentId'] == ids['c'] and row['status'] == 'IN_PROGRESS' for row in data['unranked']), 'new in-progress attempt hides old completed attempt score')
-    check(rows[ids['j']]['attemptId'] == attempts['j'] and rows[ids['j']]['aiScore'] == 42.5,
+    check(rows[ids['j']]['attemptId'] == attempts['j'] and rows[ids['j']]['aiScore'] == 37.5,
         'new Speaking-only practice preserves latest relevant Writing assessment')
     check(any(row['studentId'] == ids['k'] and row['status'] == 'IN_PROGRESS' for row in data['unranked']),
         'latest Writing-only in-progress attempt remains unranked for Writing')
@@ -180,8 +180,8 @@ with transaction.atomic():
     with CaptureQueriesContext(connection) as queries:
         speech = request('teacher', query + '&skill=speaking')
     check(len(queries) <= 7, 'Speaking ranking batches persisted transcripts in at most seven queries')
-    check(speech['cohorts'][0]['rows'][0]['aiScore'] == 45.5 and speech['cohorts'][0]['rows'][0]['rank'] == 1, 'Speaking AI grade uses persisted validated transcript evidence')
-    check(any(row['studentId'] == ids['k'] and row['attemptId'] == attempts['k'] and row['aiScore'] == 42.5 for row in speech['cohorts'][0]['rows']),
+    check(speech['cohorts'][0]['rows'][0]['aiScore'] == 52.5 and speech['cohorts'][0]['rows'][0]['rank'] == 1, 'Speaking AI grade uses persisted validated transcript evidence')
+    check(any(row['studentId'] == ids['k'] and row['attemptId'] == attempts['k'] and row['aiScore'] == 37.5 for row in speech['cohorts'][0]['rows']),
         'new Writing-only practice preserves latest relevant Speaking assessment')
     check(any(row['studentId'] == ids['j'] and row['status'] == 'IN_PROGRESS' for row in speech['unranked']),
         'latest Speaking-only in-progress attempt remains unranked for Speaking')

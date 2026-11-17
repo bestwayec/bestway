@@ -16,7 +16,7 @@ def scope_fixture():
     job = SimpleNamespace(program='MULTILEVEL', skill='writing', rubric_version='rubric1', prompt_version='prompt2',
         input_snapshot=dict(program='MULTILEVEL', skill='writing', practiceMode='PARTIAL',
             specificationVersion='V2', rubricVersion='rubric1', promptVersion='prompt2',
-            gradingPolicy=dict(id='BESTWAY_INTERNAL_PRACTICE_35_50_V1'),
+            gradingPolicy=dict(id='LEGACY_POLICY'),
             parts=[dict(id='informal_email', max=5, responses=[dict(questionId='w1', originalResponse='Private work')])]))
     return attempt, job
 

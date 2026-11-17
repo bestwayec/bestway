@@ -7,7 +7,9 @@ from unittest.mock import patch
 from django.test import SimpleTestCase
 
 from apps.core import assessment_providers as providers
+from apps.core import assessment_results as results
 from apps.core.assessment_results import ProviderError
+from apps.core.mock_scoring import convert_expert
 from tests.test_assessment_quality import fixture
 
 
@@ -23,7 +25,7 @@ class XkiroAssessmentTests(SimpleTestCase):
             with self.subTest(skill=skill),patch.dict(os.environ,self.config,clear=True),patch.object(providers,'provider_json',return_value=response) as http:
                 output=providers.assess(input,'PRIMARY')
                 self.assertEqual((output['provider'],output['model']),('xkiro',self.config['XKIRO_MODEL']))
-                self.assertEqual(output['result']['practiceGrade']['score'], 28.0 if skill == 'writing' else 19.0)
+                self.assertNotIn('practiceGrade', output['result'])
                 args=http.call_args.args;body=json.loads(args[1])
                 self.assertEqual(args[0],'https://api.xkiro.com/v1/chat/completions')
                 self.assertEqual(body['response_format'],{'type':'json_object'})
@@ -124,7 +126,7 @@ class XkiroAssessmentTests(SimpleTestCase):
                 output=providers.assess(input,'PRIMARY')
                 self.assertEqual(output['provider'],'xkiro')
                 self.assertEqual(output['model'],'qwen/qwen3.8-max:free')
-                self.assertEqual(output['result']['practiceGrade']['score'], 19.0)
+                self.assertNotIn('practiceGrade', output['result'])
 
     def test_fallback_defaults_to_qwen38_free_when_xkiro_model_omitted(self):
         input,result=fixture('writing')
@@ -162,11 +164,10 @@ class XkiroAssessmentTests(SimpleTestCase):
         with patch.dict(os.environ,dual_config,clear=True),patch.object(providers,'provider_json',side_effect=fake_fallback_valid):
             output=providers.assess(input,'PRIMARY')
             self.assertEqual(output['provider'],'xkiro')
-            practice_grade=output['result']['practiceGrade']
-            self.assertEqual(practice_grade['scaleMax'],75)
-            self.assertEqual(practice_grade['rangeMax'],55)
-            self.assertLessEqual(practice_grade['score'],55.0)
-            self.assertEqual(practice_grade['score'],28.0)
+            # No internal grade and no 55 cap: the score is the plain conversion of the rubric raw score.
+            self.assertNotIn('practiceGrade',output['result'])
+            native=results.score(input,output['result'])
+            self.assertEqual(native['score'],convert_expert(input['skill'],native['rawTotal']) if input.get('practiceMode')!='PARTIAL' else native['rawTotal'])
             # Verify 0.5 increments
             for part in output['result']['parts']:
                 self.assertEqual(part['rawScore']*2, int(part['rawScore']*2))

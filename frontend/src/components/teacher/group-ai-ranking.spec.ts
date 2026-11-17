@@ -39,25 +39,22 @@ describe("teacher AI ranking", () => {
     expect(rankingStatusKey(review)).toBe("reviewRequired");
     expect(renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [review], cohort, t }))).toContain("proposalOnly");
   });
-  it("uses persisted final internal policy grade without changing teacher raw score", () => {
-    const final: GroupAiRankingRow = { ...row, finalPracticeGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 47, scaleMax: 75, rawScore: 4, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } };
+  it("shows the final score as saved: no internal policy grade replaces it", () => {
+    const final: GroupAiRankingRow = { ...row, finalScore: 47, finalScoreScaleMax: 75 };
     const html = renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [final], cohort, t }));
-    expect(html).toContain("47 / 75"); expect(html).toContain("4 / 5"); expect(html).toContain("44 / 75");
+    expect(html).toContain("47 / 75"); expect(html).toContain("4 / 75"); expect(html).toContain("44 / 75");
   });
   it("keeps a retained Speaking proposal out of the final score cell", () => {
     const review: GroupAiRankingRow = { ...row, aiScore: 41, aiRawScore: 2, teacherScore: null,
       finalScore: null, finalScoreSource: null, status: "NEEDS_REVIEW", eligible: false,
-      rank: null, reviewRequired: true,
-      finalPracticeGrade: { policyId: "BESTWAY_INTERNAL_PRACTICE_35_50_V1", score: 41,
-        scaleMax: 75, rawScore: 2, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false } };
+      rank: null, reviewRequired: true };
     const html = renderToStaticMarkup(React.createElement(GroupAiRankingTable, { rows: [review], cohort, t }));
     expect(html.match(/41 \/ 75/g)).toHaveLength(1);
     expect(html).toContain("proposalOnly");
   });
   it("shows both skills together without promoting an unapproved Speaking proposal", () => {
     const speaking = { ...row, aiScore: 41, aiRawScore: 2, finalScore: null, finalScoreSource: null,
-      teacherScore: null, eligible: false, reviewRequired: true, status: "NEEDS_REVIEW",
-      finalPracticeGrade: { policyId: "policy", score: 41, scaleMax: 75, rawScore: 2, rawMax: 5, rangeMin: 35, rangeMax: 50, isOfficial: false as const } };
+      teacherScore: null, eligible: false, reviewRequired: true, status: "NEEDS_REVIEW" };
     const html = renderToStaticMarkup(React.createElement(GroupAllGradesTable, { t, rows: [{ studentId: row.studentId,
       name: row.name, writing: { row, cohort }, speaking: { row: speaking, cohort } }] }));
     expect(html).toContain("writing"); expect(html).toContain("speaking");

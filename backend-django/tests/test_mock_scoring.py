@@ -14,6 +14,35 @@ from common.api.exceptions import ContractAPIException
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def nest_band(skill, exam, raw, maximum):
+    """What the unchanged NestJS reference answers: the plain table row, with no "below 4.0" rule.
+
+    Owner decision 2026-11-17: below the lowest raw mark ielts.org gives a band for (Listening 11, Academic
+    Reading 10, General Training Reading 15 of 40) the Python scorer returns 3.5 (shown as "below 4.0") instead
+    of the table's 3.5/3/2.5/2 rows. That is the only place it differs from Nest, so the Nest comparison below
+    is made against this function, and test_python_differs_from_nest_only_below_the_published_range pins the
+    divergence without needing the Nest build."""
+    key = score.band_table_key(skill, exam)
+    table = dict(listening=score.LISTENING, readingAcademic=score.ACADEMIC, readingGeneral=score.GENERAL)[key]
+    scaled = score.scaled_raw(raw, maximum)
+    return next((band for minimum, band in table if scaled >= minimum), 0)
+
+
+def test_python_differs_from_nest_only_below_the_published_range():
+    differing = 0
+    for exam in ('ielts_academic', 'ielts_general'):
+        for skill in ('reading', 'listening'):
+            for maximum in (1, 7, 35, 40):
+                for raw in range(maximum + 1):
+                    ours, nest = score.band_from_raw(skill, exam, raw, maximum), nest_band(skill, exam, raw, maximum)
+                    if score.below_official_range(skill, exam, raw, maximum):
+                        assert ours == 3.5
+                        differing += ours != nest
+                    else:
+                        assert ours == nest, (skill, exam, raw, maximum)
+    assert differing > 0      # the rule is not a no-op: Nest's table gives 3 / 2.5 / 2 down there
+
+
 def test_reference_arithmetic_and_answers():
     cases, expected = [], []
     def add(function, args, value, module='mock-scoring'):
@@ -22,7 +51,7 @@ def test_reference_arithmetic_and_answers():
         for skill in ('reading','listening'):
             for maximum in (1,7,35,40):
                 for raw in range(maximum+1):
-                    add('bandFromRaw',[skill,exam,raw,maximum],score.band_from_raw(skill,exam,raw,maximum))
+                    add('bandFromRaw',[skill,exam,raw,maximum],nest_band(skill,exam,raw,maximum))
             add('bandFromRaw',[skill,exam,0,40,None,False],0)
     for value in (0, .25, .75, 6.25,6.625,6.75,9):
         add('roundHalfBand',[value],score.round_half(value))

@@ -27,8 +27,7 @@ from tests.test_assessment import fixture as legacy_fixture
 
 def fixture(skill='writing',raw=3,source='I enjoy studying English because it helps me communicate with people.'):
     input,result=legacy_fixture('MULTILEVEL',skill)
-    input.update(promptVersion=quality.PROMPT_VERSION,evaluationPolicy=quality.EVIDENCE_POLICY,practiceMode='PARTIAL',
-        gradingPolicy=dict(id=quality.GRADE_POLICY,scaleMax=75,rangeMax=55))
+    input.update(promptVersion=quality.PROMPT_VERSION,evaluationPolicy=quality.EVIDENCE_POLICY,practiceMode='PARTIAL')
     part=input['parts'][0];part.update(id='informal_email' if skill=='writing' else '1.1')
     response=part['responses'][0];response['originalResponse']=source
     if skill=='speaking':response.update(originalResponse='',transcript=source,transcriptConfidence=.95,audioDurationMs=12000)
@@ -57,14 +56,18 @@ def ledger(input,result,role='PRIMARY',status='NEEDS_REVIEW'):
 
 
 class EvidenceGradeTests(SimpleTestCase):
-    def test_native_grade_and_server_internal_range_are_distinct(self):
-        for native,display in ((.5,10.0),(2.5,25.0),(5,37.0)):
+    def test_the_native_rubric_score_is_the_score_no_internal_grade_is_made(self):
+        for native in (.5,2.5,5):
             input,result=fixture(raw=native)
-            grade=results.validate(result,input)['practiceGrade']
-            self.assertEqual(grade['score'],display)
-            self.assertEqual((grade['rawScore'],grade['rawMax'],grade['scaleMax']),(native,5,75))
-            self.assertFalse(grade['isOfficial'])
-            self.assertIsNone(results.score(input,result)['level'])
+            self.assertNotIn('practiceGrade',results.validate(result,input))
+            scored=results.score(input,result)
+            self.assertEqual(scored['score'],native)
+            self.assertIsNone(scored['level'])
+
+    def test_a_result_saved_with_the_removed_practice_grade_is_still_accepted_but_never_produced(self):
+        input,result=fixture(raw=2.5)
+        legacy=dict(result,practiceGrade=dict(policyId='OLD',score=25.0))
+        self.assertNotIn('practiceGrade',results.validate(legacy,input))
 
     def test_fabricated_excerpt_cannot_support_a_grade(self):
         input,result=fixture();result['parts'][0]['evidenceQuotes'][0]['quote']='An entirely invented excellent paragraph.'
@@ -76,7 +79,7 @@ class EvidenceGradeTests(SimpleTestCase):
 
     def test_short_fragment_has_low_grade_and_cannot_get_maximum(self):
         input,result=fixture(raw=1,source='I good')
-        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],14.0)
+        self.assertEqual(results.score(input,result)['score'],1)
         result['parts'][0].update(rawScore=5,criteria={k:5 for k in results.keys(input)})
         with self.assertRaisesRegex(results.ProviderError,'RESULT_INSUFFICIENT_RESPONSE_EVIDENCE'):results.validate(result,input)
 
@@ -88,7 +91,8 @@ class EvidenceGradeTests(SimpleTestCase):
         input,result=fixture(raw=4);rated=result['parts'][0];rated['criteria']['taskCoverage']=0
         with self.assertRaisesRegex(results.ProviderError,'RESULT_SCORE_EVIDENCE_CONFLICT'):results.validate(result,input)
         rated['rawScore']=.5
-        self.assertEqual(results.validate(result,input)['practiceGrade']['score'],10.0)
+        results.validate(result,input)
+        self.assertEqual(results.score(input,result)['score'],.5)
 
     def test_missing_or_empty_speech_is_review_not_a_fake_minimum(self):
         for source in ('','   ','...'):
@@ -109,14 +113,12 @@ class EvidenceGradeTests(SimpleTestCase):
         input,result=fixture(raw=4)
         approved=results.teacher_result(input,results.validate(result,input),[dict(id='informal_email',rawScore=2.5)])
         self.assertEqual(results.score(input,approved)['score'],2.5)
-        self.assertEqual(approved['practiceGrade']['score'],25.0)
-        edited=copy.deepcopy(approved);edited['practiceGrade']['score']=75
-        with self.assertRaises(results.ProviderError):results.feedback_edit(edited,approved)
+        self.assertNotIn('practiceGrade',approved)
 
     def test_historical_snapshots_and_ielts_have_no_new_display_policy(self):
         input,result=legacy_fixture('MULTILEVEL')
         self.assertNotIn('practiceGrade',results.validate(result,input))
-        input,result=legacy_fixture();input.update(evaluationPolicy=quality.EVIDENCE_POLICY,gradingPolicy=dict(id=quality.GRADE_POLICY))
+        input,result=legacy_fixture();input.update(evaluationPolicy=quality.EVIDENCE_POLICY,gradingPolicy=dict(id='LEGACY_POLICY'))
         result['parts'][0]['evidenceQuotes']=[dict(criterion=k,responseIndex=0,quote='Original essay') for k in results.keys(input)]
         self.assertNotIn('practiceGrade',results.validate(result,input))
         self.assertEqual(results.score(input,result)['score'],6)
@@ -134,7 +136,8 @@ class EvidenceRankingTests(SimpleTestCase):
         input,result=fixture(raw=2.5);job,evaluations,transcripts=ledger(input,result)
         job.ai_score=75;job.teacher_score=5;job.final_score=5
         value=ranking_ai_projection(job,evaluations,transcripts)
-        self.assertTrue(value['eligible']);self.assertEqual(value['score'],25.0)
+        # Partial practice: the real raw score on the 75 scale (2.5 of 5), never an internal 35-50 grade or a 55 cap.
+        self.assertTrue(value['eligible']);self.assertEqual(value['score'],37.5);self.assertNotIn('practiceGrade',value)
         self.assertEqual((value['rawScore'],value['rawMax'],value['scaleMax']),(2.5,5,75))
         self.assertTrue(value['reviewRequired'])
 
@@ -157,15 +160,6 @@ class EvidenceRankingTests(SimpleTestCase):
         value=ranking_ai_projection(job,evaluations,transcripts)
         self.assertFalse(value['eligible']);self.assertEqual(value['confidence'],.3)
 
-    def test_student_native_raw_projection_gets_only_final_persisted_grade(self):
-        grade=dict(policyId=quality.GRADE_POLICY,score=25.0,rawScore=2.5,rawMax=5)
-        job=SimpleNamespace(skill='writing',final_score=2.5,final_result=dict(practiceGrade=grade))
-        result=dict(rawScores=dict(writing=dict(score=2.5,max=5)))
-        with patch.object(mock_grading.AssessmentJob,'objects') as jobs:
-            jobs.filter.return_value.order_by.return_value=[job]
-            mock_grading.annotate_practice_grades(SimpleNamespace(id='attempt',exam=SimpleNamespace(type='multilevel')),result)
-        self.assertEqual(result['rawScores']['writing'],dict(score=2.5,max=5,practiceGrade=grade))
-
 
 class DeepSeekV2Tests(SimpleTestCase):
     def test_official_deepseek_uses_documented_chat_json_mode_no_private_identifiers(self):
@@ -181,7 +175,7 @@ class DeepSeekV2Tests(SimpleTestCase):
         for private in ('private-id','private/key','private-hash','test-only-key'):
             self.assertNotIn(private,body['messages'][1]['content'])
         self.assertEqual((value['inputTokens'],value['outputTokens']),(12,13))
-        self.assertEqual(value['result']['practiceGrade']['score'],25.0)
+        self.assertNotIn('practiceGrade',value['result'])
 
     def test_truncated_chat_result_never_becomes_a_grade(self):
         input,_=fixture()
@@ -204,7 +198,7 @@ class ScopedAiPolicyTests(SimpleTestCase):
     def test_new_partial_snapshot_has_frozen_range_and_real_word_limit(self):
         attempt=SimpleNamespace(flow_mode='partial_practice',specification_version=CURRENT_SPEC,speaking_profile_version=None,media_state={})
         value=build_input(SimpleNamespace(type='multilevel'),attempt,'writing',[self.group()],{'q':dict(response='A real response')},Mock())
-        self.assertEqual(value['gradingPolicy']['id'],quality.GRADE_POLICY)
+        self.assertNotIn('gradingPolicy',value)
         self.assertEqual(value['evaluationPolicy'],quality.EVIDENCE_POLICY)
         self.assertEqual(value['parts'][0]['responses'][0]['wordMin'],50)
         self.assertIsNone(blueprint_failure(value))
@@ -229,12 +223,12 @@ class ScopedAiPolicyTests(SimpleTestCase):
 
 class InternalGradeDeliveryTests(SimpleTestCase):
     def attempt(self,internal=True):
-        grade=dict(policyId=quality.GRADE_POLICY,score=45,scaleMax=75,rangeMax=55,rawScore=12,rawMax=16,isOfficial=False)
-        raw=dict(score=12,max=16)
-        if internal:raw['practiceGrade']=grade
+        # A Multilevel attempt with a Writing result is the internal-result kind; one without is a historical one.
+        raw_scores=dict(writing=dict(score=12,max=16)) if internal else dict(reading=dict(score=35,max=35))
+        standards=dict(writing=dict(estimatedStandardScore=61)) if internal else {}
         return SimpleNamespace(id='attempt',student_id='student',status='completed',flow_mode='full_test',
             exam=SimpleNamespace(title='Authored full mock',type='multilevel',level='C1'),specification_version=CURRENT_SPEC,
-            raw_scores=dict(writing=raw),section_bands={},standard_scores={},overall_band=None,overall_score=75,
+            raw_scores=raw_scores,section_bands={},standard_scores=standards,overall_band=None,overall_score=75,
             cefr_level='C1',finished_at=datetime(2026,1,1,tzinfo=UTC),student=SimpleNamespace(user=SimpleNamespace(name='Student')))
 
     def _internal(self,row,jobs_list):
@@ -256,7 +250,7 @@ class InternalGradeDeliveryTests(SimpleTestCase):
         data=self._internal(row,[self.job('TEACHER')])
         self.assertEqual((data['certificateType'],data['isOfficial'],data['overallScore'],data['cefrLevel']),('BESTWAY_INTERNAL_MOCK',False,61.1,'B2'))
         self.assertRegex(data['verificationCode'],r'^BW-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$')
-        self.assertEqual(next(s for s in data['sections'] if s['skill']=='writing')['standardScore'],45)
+        self.assertEqual(next(s for s in data['sections'] if s['skill']=='writing')['standardScore'],61)   # the real estimate, not an internal grade
         from apps.core.mock_certificate import generate
         pdf=generate(data)
         self.assertTrue(pdf.startswith(b'%PDF'))
@@ -268,11 +262,6 @@ class InternalGradeDeliveryTests(SimpleTestCase):
         row=self.attempt();row.overall_score=37.5;row.cefr_level='BELOW_B1'
         with self.assertRaises(ContractAPIException) as error:self._internal(row,[self.job('TEACHER')])
         self.assertEqual(error.exception.contract_code,'MULTILEVEL_BELOW_B1_NO_CERTIFICATE')
-
-    def test_internal_certificate_ielts_policy_unchanged(self):
-        row=self.attempt();row.exam.type='ielts_academic'
-        with self.assertRaises(ContractAPIException) as error:self._internal(row,[self.job('TEACHER')])
-        self.assertEqual(error.exception.contract_code,'MOCK_INTERNAL_PRACTICE_NO_CERTIFICATE')
 
     def test_printed_code_verifies_without_the_full_name(self):
         row=self.attempt();row.overall_score=61.1;row.cefr_level='B2';row.student=SimpleNamespace(user=SimpleNamespace(name='Ali Karimov'))

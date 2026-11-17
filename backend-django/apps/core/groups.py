@@ -18,6 +18,7 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
+from .mock_scoring import skipped_skills
 from .system_settings import audit
 
 
@@ -71,6 +72,10 @@ def _round1(val):
     return round(float(val), 1)
 
 
+def _skipped_totals():
+    return {'listening': 0, 'reading': 0, 'writing': 0, 'speaking': 0, 'total': 0}
+
+
 def _compute_student_and_group_analytics(student_ids):
     per_student = {
         sid: {
@@ -80,6 +85,7 @@ def _compute_student_and_group_analytics(student_ids):
             'writingScore': None,
             'speakingScore': None,
             'overallBand': None,
+            'skippedSections': 0,
             'lastAttemptAt': None,
         }
         for sid in student_ids
@@ -89,6 +95,7 @@ def _compute_student_and_group_analytics(student_ids):
             'averageBandScore': None,
             'totalCompletedAttempts': 0,
             'activeStudentsCount': 0,
+            'skippedSections': _skipped_totals(),
         }
 
     try:
@@ -117,6 +124,7 @@ def _compute_student_and_group_analytics(student_ids):
         legacy_by_student.setdefault(att.student_id, []).append(att)
 
     all_overall_bands = []
+    skipped_total = _skipped_totals()
     total_completed = 0
     active_students = 0
 
@@ -131,6 +139,7 @@ def _compute_student_and_group_analytics(student_ids):
             active_students += 1
 
         l_scores, r_scores, w_scores, sp_scores, ov_scores = [], [], [], [], []
+        student_skipped = 0
         last_dt = None
 
         for a in completed_mocks or s_mocks:
@@ -140,8 +149,16 @@ def _compute_student_and_group_analytics(student_ids):
             bands = getattr(a, 'section_bands', None) or {}
             std_scores = getattr(a, 'standard_scores', None) or {}
             raw_scores = getattr(a, 'raw_scores', None) or {}
+            skipped = skipped_skills(getattr(getattr(a, 'exam', None), 'type', None), raw_scores, bands, std_scores)
+            for skill in skipped:
+                skipped_total[skill] = skipped_total.get(skill, 0) + 1
+                skipped_total['total'] += 1
+                student_skipped += 1
 
             def _extract_skill(skill):
+                # An unanswered section is counted as skipped, never as a score of 0.
+                if skill in skipped:
+                    return None
                 if isinstance(bands, dict) and bands.get(skill) is not None:
                     return bands.get(skill)
                 if isinstance(std_scores, dict):
@@ -193,6 +210,7 @@ def _compute_student_and_group_analytics(student_ids):
             'writingScore': _round1(w_scores[0]) if w_scores else None,
             'speakingScore': _round1(sp_scores[0]) if sp_scores else None,
             'overallBand': overall_val,
+            'skippedSections': student_skipped,
             'lastAttemptAt': last_dt,
         }
 
@@ -201,6 +219,7 @@ def _compute_student_and_group_analytics(student_ids):
         'averageBandScore': avg_band,
         'totalCompletedAttempts': total_completed,
         'activeStudentsCount': active_students,
+        'skippedSections': skipped_total,
     }
 
 
@@ -234,6 +253,7 @@ def detail(actor, group_id):
             writingScore=stats.get('writingScore'),
             speakingScore=stats.get('speakingScore'),
             overallBand=stats.get('overallBand'),
+            skippedSections=stats.get('skippedSections', 0),
             lastAttemptAt=stats.get('lastAttemptAt'),
         )
         student_rows.append(row)
@@ -436,6 +456,7 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
         cell.border = cell_border
 
     l_vals, r_vals, w_vals, sp_vals, ov_vals = [], [], [], [], []
+    skipped_counts = _skipped_totals()
 
     def _num(val, bucket):
         if isinstance(val, (int, float)) and math.isfinite(val):
@@ -464,12 +485,18 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
             continue
 
         for att in s_atts:
-            bands = getattr(att, 'section_bands', None) or {}
+            bands = dict(getattr(att, 'section_bands', None) or {})
+            # An unanswered section is shown as skipped and counted apart; it never enters an average as a 0.
+            skipped = skipped_skills(getattr(getattr(att, 'exam', None), 'type', None), getattr(att, 'raw_scores', None), bands, getattr(att, 'standard_scores', None))
+            for skill in skipped:
+                bands.pop(skill, None)
+                skipped_counts[skill] += 1
+                skipped_counts['total'] += 1
             exam_title = att.exam.title if getattr(att, 'exam', None) else getattr(att, 'exam_type', 'IELTS Mock')
-            l_v = _num(bands.get('listening'), l_vals)
-            r_v = _num(bands.get('reading'), r_vals)
-            w_v = _num(bands.get('writing'), w_vals)
-            sp_v = _num(bands.get('speaking'), sp_vals)
+            l_v = _num(bands.get('listening'), l_vals) if 'listening' not in skipped else "Skipped"
+            r_v = _num(bands.get('reading'), r_vals) if 'reading' not in skipped else "Skipped"
+            w_v = _num(bands.get('writing'), w_vals) if 'writing' not in skipped else "Skipped"
+            sp_v = _num(bands.get('speaking'), sp_vals) if 'speaking' not in skipped else "Skipped"
             raw_ov = getattr(att, 'overall_band', None)
             if raw_ov is None:
                 raw_ov = getattr(att, 'overall_score', None)
@@ -514,14 +541,29 @@ def export_group_xlsx(actor, group_id) -> tuple[bytes, str]:
         "Group Summary",
     ]
     ws.append(footer_row)
-    footer_idx = ws.max_row
+    # Sections left unanswered are not in the averages above; their count is a separate row.
+    ws.append([
+        "SKIPPED SECTIONS",
+        f"{skipped_counts['total']} in total",
+        group.name,
+        "Not in the averages",
+        skipped_counts['listening'],
+        skipped_counts['reading'],
+        skipped_counts['writing'],
+        skipped_counts['speaking'],
+        "-",
+        "-",
+        timezone.now().strftime("%Y-%m-%d"),
+        "Group Summary",
+    ])
     footer_fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
     footer_font = Font(bold=True, color="065F46")
-    for col_idx in range(1, len(headers) + 1):
-        c = ws.cell(row=footer_idx, column=col_idx)
-        c.fill = footer_fill
-        c.font = footer_font
-        c.border = cell_border
+    for footer_idx in (ws.max_row - 1, ws.max_row):
+        for col_idx in range(1, len(headers) + 1):
+            c = ws.cell(row=footer_idx, column=col_idx)
+            c.fill = footer_fill
+            c.font = footer_font
+            c.border = cell_border
 
     # Auto-adjust column widths
     for col_idx in range(1, len(headers) + 1):

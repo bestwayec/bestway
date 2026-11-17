@@ -265,7 +265,6 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
   // The worker records why speech could not be transcribed; STT_NOT_CONFIGURED is a server setup gap, not a missing answer.
   const scoringUnavailable = job.skill === "speaking" && job.failureCode === "STT_NOT_CONFIGURED";
   const pronunciationUnavailable = job.skill === "speaking" && result?.pronunciationEvidence !== "ACOUSTIC";
-  const internalPolicy = job.gradingPolicy?.id === "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
   return (
     <Card className="overflow-hidden">
       <div className="space-y-3 border-b border-border p-5">
@@ -275,11 +274,11 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
         </div>
         <dl className="grid gap-2 sm:grid-cols-3">
           {(["aiScore", "teacherScore", "finalScore"] as const).map((key) => {
-            const practiceGrade = key === "aiScore" ? job.aiPracticeGrade : key === "teacherScore" ? job.teacherPracticeGrade : job.practiceGrade;
+            // A score on a job that is still being assessed is intermediate: never shown as a result.
+            const value = active ? null : job[key];
             return <div key={key} className="rounded-[8px] bg-bg-subtle p-3">
             <dt className="text-xs text-fg-muted">{t(key)}</dt>
-            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{practiceGrade ? `${practiceGrade.score} /${practiceGrade.scaleMax}` : internalPolicy ? t("pending") : <>{job[key] ?? t("pending")}{job[key] != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : job[key] != null && job.program === "MULTILEVEL" ? " /75" : ""}</>}</dd>
-            {practiceGrade && <p className="mt-1 text-xs text-fg-subtle">{t("rubricRawScore")}: {practiceGrade.rawScore}/{practiceGrade.rawMax}</p>}
+            <dd className="mt-1 text-lg font-semibold text-fg tabular-nums">{value ?? t("pending")}{value != null && partial ? ` /${job.rawMax ?? job.parts.reduce((sum, part) => sum + part.max, 0)} raw` : value != null && job.program === "MULTILEVEL" ? " /75" : ""}</dd>
           </div>;})}
         </dl>
         <div className="flex flex-wrap gap-2 text-xs text-fg-muted">

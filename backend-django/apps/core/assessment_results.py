@@ -41,6 +41,7 @@ def validate(value,input):
     from . import assessment_quality as quality
     if isinstance(value, dict) and 'diagnostic_feedback' in value:
         value = {k: v for k, v in value.items() if k != 'diagnostic_feedback'}
+    # Results saved before the internal practice grade was removed still carry a 'practiceGrade' key: accepted, never produced.
     required=RESULT+(['practiceGrade'] if quality.enabled(input) and isinstance(value,dict) and 'practiceGrade' in value else [])
     row=exact(value,required)
     if row['pronunciationEvidence']!=input['pronunciationEvidence']:invalid()

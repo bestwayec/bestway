@@ -157,9 +157,7 @@ def rankings(actor, group_id, exam_id=None, skill='writing'):
             confidence=projection.get('confidence'), status=projection['status'],
             reviewRequired=projection.get('reviewRequired', False), eligible=projection.get('eligible', False),
             evaluationId=projection.get('evaluationId'), provider=projection.get('provider'), model=projection.get('model'),
-            practiceGrade=projection.get('practiceGrade'),
             teacherScore=job.teacher_score, finalScore=job.final_score, finalScoreSource=job.final_score_source,
-            finalPracticeGrade=(job.final_result or {}).get('practiceGrade') if isinstance(job.final_result, dict) else None,
             finalScoreScaleMax=descriptor['rawMax'] if descriptor['isPartial'] else 75)
         cohort = cohorts.setdefault(descriptor['id'], dict(descriptor, rows=[]))
         cohort['rows'].append(row)

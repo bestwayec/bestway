@@ -1,5 +1,3 @@
-import type { PracticeGrade } from "./assessment-types";
-
 export type AiRankingSkill = "writing" | "speaking";
 
 export interface GroupAiRankingRow {
@@ -13,8 +11,6 @@ export interface GroupAiRankingRow {
   finalScore: number | null;
   finalScoreSource: string | null;
   finalScoreScaleMax: number | null;
-  finalPracticeGrade?: PracticeGrade | null;
-  practiceGrade?: PracticeGrade | null;
   confidence: number | null;
   reviewRequired: boolean;
   eligible: boolean;

@@ -101,10 +101,7 @@ export function GroupAiRankingTable({
                 {rankingScoreLabel(row.teacherScore, row.finalScoreScaleMax)}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-fg">
-                {rankingScoreLabel(
-                  row.finalScore == null ? null : row.finalPracticeGrade?.score ?? row.finalScore,
-                  row.finalPracticeGrade?.scaleMax ?? row.finalScoreScaleMax
-                )}
+                {rankingScoreLabel(row.finalScore, row.finalScoreScaleMax)}
                 {row.finalScoreSource && (
                   <span className="block text-xs text-fg-muted">
                     {t(

@@ -15,7 +15,7 @@ from apps.legacy_schema.models import (
 )
 from common.api.exceptions import ContractAPIException
 
-from .assessment_quality import EVIDENCE_POLICY, GRADE_POLICY, PROMPT_VERSION
+from .assessment_quality import EVIDENCE_POLICY, PROMPT_VERSION
 from .mock_authoring import new_id
 from .mock_catalog import shape_exam, student_title
 from .mock_import_validate import canonical_checksum
@@ -81,7 +81,6 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
     result=dict(program=program,skill=skill,specificationVersion=attempt.specification_version,
         speakingProfileVersion=attempt.speaking_profile_version, rubricVersion=f"{'MULTILEVEL' if program=='MULTILEVEL' else 'IELTS'}_{skill.upper()}_RUBRIC_V1",
         promptVersion=PROMPT_VERSION,evaluationPolicy=EVIDENCE_POLICY,pronunciationEvidence='UNAVAILABLE',parts=parts)
-    if program=='MULTILEVEL':result['gradingPolicy']=dict(id=GRADE_POLICY,scaleMax=75,rangeMax=55)
     if is_partial(attempt):result['practiceMode']='PARTIAL'
     return result
 
@@ -166,8 +165,8 @@ def notify(attempt, channel=True):
     def number(value):
         return '—' if value is None else format(value,'.15g')
     if attempt.exam.type == 'multilevel':
-        from .assessment_quality import attempt_practice_grades
-        grades=attempt_practice_grades(attempt)
+        from .assessment_quality import manual_result_skills
+        grades=manual_result_skills(attempt)
         if grades:
             skills_label=' va '.join(skill.title() for skill in grades)
             title = student_title(attempt.exam.title)

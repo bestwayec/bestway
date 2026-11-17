@@ -65,12 +65,6 @@ def for_attempt(actor,identifier):
         value.update(teacherReviewed=job.status=='SUCCEEDED' and (job.final_score_source=='TEACHER' or job.id in reviewed_ids),
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
-        if input.get('gradingPolicy'):
-            from .assessment_ranking_scores import ranking_ai_projection
-            ai=ranking_ai_projection(job,evaluations,transcripts)
-            final=job.final_result.get('practiceGrade') if job.final_result and job.final_score is not None else None
-            value.update(gradingPolicy=input['gradingPolicy'],aiPracticeGrade=ai.get('practiceGrade'),practiceGrade=final,
-                teacherPracticeGrade=final if job.final_score_source=='TEACHER' and job.teacher_score is not None else None)
         if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
         active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
         if active_res:
@@ -278,7 +272,7 @@ def project(job,result,actor_id):
                 create_defaults=dict(values,id=str(uuid4()),response=r['originalResponse'],audio_key=r.get('audioKey')))
 
 def feedback_only(next,previous):
-    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],practiceGrade=value.get('practiceGrade'),parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')}|({'evidenceQuotes':p['evidenceQuotes']} if 'evidenceQuotes' in p else {}) for p in value['parts']],key=lambda p:p['id']))
+    def facts(value):return dict(confidence=value['confidence'],pronunciationEvidence=value['pronunciationEvidence'],parts=sorted([{k:p[k] for k in ('id','rawScore','criteria','evidence')}|({'evidenceQuotes':p['evidenceQuotes']} if 'evidenceQuotes' in p else {}) for p in value['parts']],key=lambda p:p['id']))
     from .mock_import_validate import canonical_checksum
     return canonical_checksum(facts(next))==canonical_checksum(facts(previous))
 

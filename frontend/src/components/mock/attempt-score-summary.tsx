@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { multilevelLevelText } from "@/lib/multilevel-scale";
 import type { MockAttemptSummary, MockPracticeSkill } from "@/lib/types";
 
-const INTERNAL_POLICY = "BESTWAY_INTERNAL_PRACTICE_35_50_V1";
 const ALL_SKILLS: MockPracticeSkill[] = ["listening", "reading", "writing", "speaking"];
 type ScoreSummary = Pick<
   MockAttemptSummary,
@@ -18,11 +17,6 @@ type ScoreSummary = Pick<
 /** Histories show persisted skill grades, clearly distinguishing Single Section vs Full Mock. */
 export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
   const t = useTranslations("mock");
-  const internal =
-    attempt.examType === "multilevel" &&
-    ALL_SKILLS.some(
-      (skill) => attempt.rawScores?.[skill]?.practiceGrade?.policyId === INTERNAL_POLICY
-    );
   const partial = attempt.flowMode === "partial_practice";
   const scopeSkills = attempt.practiceScope?.skills ?? [];
   const isSingle =
@@ -32,7 +26,7 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
   const singleSkillName =
     attempt.singleSection || (scopeSkills.length === 1 ? scopeSkills[0] : null);
 
-  if (internal || partial) {
+  if (partial) {
     const skills = ALL_SKILLS.filter(
       (skill) => scopeSkills.includes(skill) || attempt.rawScores?.[skill] != null
     );
@@ -40,7 +34,7 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
     return (
       <span
         className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-sm tabular-nums"
-        aria-label={t(internal ? "internalPracticeScore" : "partialPracticeResult")}
+        aria-label={t("partialPracticeResult")}
       >
         <span className="rounded-md bg-brand-subtle px-2 py-0.5 text-xs font-semibold text-brand-subtle-fg">
           {isSingle && singleSkillName
@@ -57,18 +51,12 @@ export function AttemptScoreSummary({ attempt }: { attempt: ScoreSummary }) {
         ) : (
           skills.map((skill) => {
             const raw = attempt.rawScores?.[skill];
-            const grade = raw?.practiceGrade;
-            const internalGrade = grade?.policyId === INTERNAL_POLICY ? grade : null;
             const historicalRaw = attempt.status === "completed" && raw != null && raw.max > 0;
             return (
               <span key={skill} className="text-fg-muted">
                 {t(`skills.${skill}`)}:{" "}
                 <strong className="font-semibold text-brand">
-                  {internalGrade
-                    ? `${internalGrade.score} /${internalGrade.scaleMax}`
-                    : historicalRaw
-                    ? `${raw.score} /${raw.max}`
-                    : t("awaitingGrade")}
+                  {historicalRaw ? `${raw.score} /${raw.max}` : t("awaitingGrade")}
                 </strong>
               </span>
             );

@@ -99,14 +99,7 @@ export function ExamTrackDashboard() {
     (a) => matches(a.examType) && a.status === "completed",
   );
   const latestCompleted = completedAttempts[0];
-  const isInternalPractice = latestCompleted && (
-    latestCompleted.flowMode === "partial_practice" ||
-    (["writing", "speaking"] as MockSkill[]).some(
-      (s) =>
-        latestCompleted.rawScores?.[s]?.practiceGrade?.policyId ===
-        "BESTWAY_INTERNAL_PRACTICE_35_50_V1",
-    )
-  );
+  const isInternalPractice = latestCompleted && latestCompleted.flowMode === "partial_practice";
 
   return (
     <div className="my-6 space-y-6">

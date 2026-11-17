@@ -1,20 +1,20 @@
-"""Versioned evidence checks and the explicitly internal practice grade."""
+"""Versioned evidence checks for AI Writing/Speaking assessment."""
 import copy
 import re
 
 PROMPT_VERSION = 'BESTWAY_ASSESSMENT_PROMPT_2026_V3'
 EVIDENCE_POLICY = 'EVIDENCE_V2'
-GRADE_POLICY = 'BESTWAY_MULTILEVEL_PRACTICE_75_CAP55_V1'
 
 
 def enabled(input):
     return input.get('evaluationPolicy') == EVIDENCE_POLICY
 
 
-def attempt_practice_grades(attempt):
-    return {skill:grade for skill,raw in (getattr(attempt,'raw_scores',None) or {}).items()
-        if isinstance(raw,dict) and isinstance(grade:=raw.get('practiceGrade'),dict)
-        and grade.get('policyId')==GRADE_POLICY}
+def manual_result_skills(attempt):
+    """Writing/Speaking sections of a Multilevel attempt that carry a result (these get the internal result
+    certificate, and only once a teacher has confirmed them). The score is always the AI's or teacher's own."""
+    return {skill:raw for skill,raw in (getattr(attempt,'raw_scores',None) or {}).items()
+        if skill in ('writing','speaking') and isinstance(raw,dict)}
 
 
 def normalized(value):
@@ -83,29 +83,6 @@ def check(input, part, rated):
                     raise ProviderError('RESULT_INSUFFICIENT_RESPONSE_EVIDENCE')
 
 
-def practice_grade(input, result):
-    if input['program']!='MULTILEVEL' or (input.get('gradingPolicy') or {}).get('id') != GRADE_POLICY:
-        return None
-    from .assessment_results import score
-    from decimal import Decimal, ROUND_HALF_UP
-    from .mock_scoring import convert_expert, js_round
-    value = score(input, result)
-    if value['score'] is None:
-        return None
-    raw = value['rawTotal'] if input['program'] == 'MULTILEVEL' else value['score']
-    maximum = sum(part['max'] for part in input['parts']) if input['program'] == 'MULTILEVEL' else 9
-    if maximum <= 0:
-        return None
-    if input.get('specificationVersion'):
-        calc = float((Decimal(35) + Decimal(15) * Decimal(str(raw)) / Decimal(str(maximum))).quantize(Decimal('.1'), rounding=ROUND_HALF_UP))
-        return dict(policyId=GRADE_POLICY, score=calc, scaleMax=75,
-            rangeMax=55, rawScore=raw, rawMax=maximum, isOfficial=False)
-    standard = convert_expert(input['skill'], raw)
-    calibrated_score = min(55.0, float(standard))
-    return dict(policyId=GRADE_POLICY, score=js_round(calibrated_score * 10) / 10, scaleMax=75,
-        rangeMax=55, rawScore=raw, rawMax=maximum, isOfficial=False)
-
-
 def attach_grade(input, result):
     if enabled(input):
         result=copy.deepcopy(result)
@@ -115,6 +92,4 @@ def attach_grade(input, result):
             from math import isfinite
             if any(type(value) not in (int,float) or not isfinite(value) or not 0<=value<=1 for value in confidences):result['confidence']=min(result['confidence'],.79)
             else:result['confidence']=min(result['confidence'],*confidences)
-    if enabled(input) and input['program']=='MULTILEVEL':
-        result['practiceGrade'] = practice_grade(input, result)
     return result
