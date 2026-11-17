@@ -399,7 +399,7 @@ export function ScorePredictionCard({
                   </div>
                   <p className="mt-1 text-[11px] text-fg-muted">
                     {ti("currentAverage")}: <strong>{fmtBand(ielts.currentBand)}</strong> · CEFR:{" "}
-                    <strong>{hasEvidence ? ielts.cefrLevel || "—" : "—"}</strong>
+                    <strong>{hasEvidence ? multilevelLevelText(ielts.cefrLevel, tm("levelBelowB1")) || "—" : "—"}</strong>
                   </p>
                 </div>
               </div>

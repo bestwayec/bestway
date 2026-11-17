@@ -235,4 +235,41 @@ describe("attempt with no answers", () => {
     expect(confirmed).not.toContain(">Provisional<");
     expect(confirmed).toContain(en.mock.resultView.teacherReviewed);
   });
+
+  describe("IELTS band below the published range and CEFR text", () => {
+    const ielts = (band: number | null, below: boolean, cefr: string, overall: number) => {
+      const value = attempt(false);
+      value.examType = "ielts_academic";
+      value.specificationVersion = undefined as unknown as string;
+      value.scoreMethod = "ESTIMATED";
+      value.overallScore = null;
+      value.overallBand = overall;
+      value.cefrLevel = cefr;
+      const questions = Array.from({ length: 40 }, (_, i) => ({ id: `q${i}`, number: i + 1, type: "short_answer", prompt: "p", options: null, points: 1, wordLimit: null,
+        response: "x", hasAudio: false, audioUrl: null, score: 0, isCorrect: false, isGraded: true, feedback: null }));
+      value.sections = [{ ...value.sections[0], id: "listening", skill: "listening", score: 5, max: 40, standardScore: null, band, bandBelowRange: below,
+        groups: [{ id: "g", title: null, instructions: null, passageText: null, hasAudio: false, questions }] }] as typeof value.sections;
+      return renderToStaticMarkup(React.createElement(MockResultView, { attempt: value }));
+    };
+
+    it("shows 'below 4.0' for the 3.5 placeholder, never the 3.5 itself", () => {
+      const html = ielts(3.5, true, "BELOW_B1", 3.5);
+      expect(html).toContain("Band below 4.0");
+      expect(html).not.toContain("Band 3.5");
+    });
+
+    it("still shows a real band, and a genuine 3.5 above the floor is not relabelled", () => {
+      expect(ielts(4, false, "B1", 4)).toContain("Band 4.0");
+      expect(ielts(3.5, false, "BELOW_B1", 3.5)).toContain("Band 3.5");
+    });
+
+    it("writes BELOW_B1 out through the translation and knows C2", () => {
+      const below = ielts(3.5, true, "BELOW_B1", 3.5);
+      expect(below).toContain(en.mock.levelBelowB1);
+      expect(below).not.toContain("BELOW_B1");
+      const top = ielts(9, false, "C2", 8.5);
+      expect(top).toContain("C2");
+      expect(top).toContain("Mastery");
+    });
+  });
 });

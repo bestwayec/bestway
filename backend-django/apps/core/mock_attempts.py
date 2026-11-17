@@ -27,6 +27,7 @@ from common.api.exceptions import ContractAPIException
 
 from . import attempt_signature, exam_programs, mock_catalog
 from .mock_authoring import _exam_tree, multilevel_readiness, new_id
+from .mock_scoring import band_is_below_range
 from .mock_practice import (
     PRACTICE_SKILLS,
     SCOPE_KEY,
@@ -892,9 +893,11 @@ def detail(actor, attempt_id):
     sections = []
     for section in section_rows:
         raw = (attempt.raw_scores or {}).get(section.skill, {})
+        band = (attempt.section_bands or {}).get(section.skill)
         shaped = dict(id=section.id, skill=section.skill, title=section.title,
             durationMinutes=section.duration_minutes, instructions=section.instructions,
-            score=raw.get('score'), max=raw.get('max'), band=(attempt.section_bands or {}).get(section.skill),
+            score=raw.get('score'), max=raw.get('max'), band=band,
+            bandBelowRange=band_is_below_range(attempt.exam.type, section.skill, band, raw),
             standardScore=(attempt.standard_scores or {}).get(section.skill, {}).get('estimatedStandardScore'), groups=[])
         for gi, group in enumerate(groups_by_section.get(section.id, [])):
             shaped_group = dict(id=group.id, title=group.title, instructions=group.instructions,

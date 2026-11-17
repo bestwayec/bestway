@@ -5,6 +5,7 @@ import * as React from "react";
 import { Award, Download, Printer, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MockAttemptDetail } from "@/lib/types";
+import { multilevelLevelText } from "@/lib/multilevel-scale";
 
 interface CertificateModalProps {
   attempt: MockAttemptDetail;
@@ -14,6 +15,7 @@ interface CertificateModalProps {
 
 export function CertificateModal({ attempt, open, onClose }: CertificateModalProps) {
   const tu = useTranslations("uiText");
+  const tm = useTranslations("mock");
   if (!open) return null;
 
   const isIelts = attempt.examType !== "multilevel";
@@ -21,7 +23,7 @@ export function CertificateModal({ attempt, open, onClose }: CertificateModalPro
   const singleSec = attempt.sections[0];
   const displayScore = attempt.overallScore ?? (singleSec?.standardScore ?? singleSec?.score);
   // The level comes only from the server (full mock, blueprint thresholds); never guessed here.
-  const displayCefr = attempt.cefrLevel ?? "—";
+  const displayCefr = attempt.cefrLevel ? multilevelLevelText(attempt.cefrLevel, tm("levelBelowB1")) : "—";
   const finishedDate = attempt.finishedAt ? new Date(attempt.finishedAt).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",

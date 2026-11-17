@@ -33,6 +33,7 @@ import {
   useStudentScorePrediction,
 } from "@/hooks/use-mock";
 import type { MockAttemptSummary, StudentSelfProfile } from "@/lib/types";
+import { multilevelLevelText } from "@/lib/multilevel-scale";
 
 function calculateStreak(attempts?: MockAttemptSummary[]): number {
   if (typeof window === "undefined") return 1;
@@ -126,16 +127,16 @@ export function StudentDashboard() {
   }, [attempts]);
 
   const estimatedLevel = React.useMemo(() => {
-    if (prediction?.ielts?.cefrLevel) return prediction.ielts.cefrLevel;
-    if (prediction?.multilevel?.cefrLevel) return prediction.multilevel.cefrLevel;
+    if (prediction?.ielts?.cefrLevel) return multilevelLevelText(prediction.ielts.cefrLevel, tm("levelBelowB1"));
+    if (prediction?.multilevel?.cefrLevel) return multilevelLevelText(prediction.multilevel.cefrLevel, tm("levelBelowB1"));
     if (prediction?.ielts?.currentBand) return `Band ${prediction.ielts.currentBand}`;
     if (attempts && attempts.length > 0) {
       const scored = attempts.find((a) => a.cefrLevel || a.overallBand);
-      if (scored?.cefrLevel) return scored.cefrLevel;
+      if (scored?.cefrLevel) return multilevelLevelText(scored.cefrLevel, tm("levelBelowB1"));
       if (scored?.overallBand) return `Band ${scored.overallBand}`;
     }
     return "—";
-  }, [prediction, attempts]);
+  }, [prediction, attempts, tm]);
 
   const streakDays = React.useMemo(() => calculateStreak(attempts), [attempts]);
 

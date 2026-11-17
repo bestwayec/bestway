@@ -170,12 +170,43 @@ def is_full_objective_section(exam_family, question_count):
     return question_count == OFFICIAL_OBJECTIVE_QUESTIONS.get(exam_family)
 
 
+# ielts.org's indicative tables start at band 4.0: Listening 11, Academic Reading 10, General Training
+# Reading 15 correct (out of 40). Below that no band is published, so none is shown ("below 4.0"); the
+# overall average uses 3.5 for that skill. Nothing answered at all is band 0.
+OFFICIAL_BAND_FLOOR = {'listening': 11, 'readingAcademic': 10, 'readingGeneral': 15}
+BELOW_RANGE_BAND = 3.5
+
+
+def band_table_key(skill, exam_type):
+    return 'listening' if skill=='listening' else 'readingGeneral' if exam_type=='ielts_general' else 'readingAcademic'
+
+
+def scaled_raw(score, maximum):
+    return js_round(max(0,min(score,maximum))/maximum*40)
+
+
+def below_official_range(skill, exam_type, score, maximum, attempted=True):
+    """True when an answered Listening/Reading section is under the lowest raw mark that has a published band."""
+    if maximum<=0 or not attempted: return False
+    return scaled_raw(score, maximum) < OFFICIAL_BAND_FLOOR[band_table_key(skill, exam_type)]
+
+
+def band_is_below_range(exam_type, skill, band, raw):
+    """A stored section band that stands for "below 4.0": the 3.5 placeholder of an answered Listening/Reading
+    section whose raw score is under the lowest published mark. Shown as "below 4.0", never as 3.5."""
+    if exam_type not in ('ielts_academic','ielts_general') or skill not in ('listening','reading') or band != BELOW_RANGE_BAND:
+        return False
+    raw = raw or {}
+    score, maximum = raw.get('score'), raw.get('max')
+    return type(score) in (int,float) and type(maximum) in (int,float) and below_official_range(skill, exam_type, score, maximum)
+
+
 def band_from_raw(skill, exam_type, score, maximum, tables=None, attempted=True):
     if maximum<=0 or not attempted: return 0
-    key = 'listening' if skill=='listening' else 'readingGeneral' if exam_type=='ielts_general' else 'readingAcademic'
+    if below_official_range(skill, exam_type, score, maximum): return BELOW_RANGE_BAND
+    key = band_table_key(skill, exam_type)
     table = (tables or {}).get(key, LISTENING if key=='listening' else GENERAL if key=='readingGeneral' else ACADEMIC)
-    scaled = js_round(max(0,min(score,maximum))/maximum*40)
-    return next((band for minimum,band in table if scaled>=minimum),0)
+    return next((band for minimum,band in table if scaled_raw(score, maximum)>=minimum),0)
 
 
 def estimate_objective(raw, maximum):
@@ -221,8 +252,14 @@ def multilevel_overall_score(scores):
     return round(sum(scores) / len(scores), 1)
 
 
+# IELTS overall band -> CEFR, as published by IELTS (ielts.org, "IELTS and the CEFR"):
+# C2 8.5-9.0, C1 7.0-8.0, B2 5.5-6.5, B1 4.0-5.0. IELTS publishes no level under 4.0, so that is
+# BELOW_B1 (the same code the Multilevel scale uses; the UI shows it through a translation key).
+IELTS_CEFR_FLOORS = ((8.5, 'C2'), (7.0, 'C1'), (5.5, 'B2'), (4.0, 'B1'))
+
+
 def cefr_band(band):
-    return 'C1' if band>=8 else 'B2' if band>=6.5 else 'B1' if band>=5 else 'A2' if band>=4 else 'A1'
+    return next((level for floor, level in IELTS_CEFR_FLOORS if band >= floor), MULTILEVEL_BELOW_B1)
 
 
 def cefr_percent(percent):
@@ -272,7 +309,8 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
             if not a['max']: continue
             skill = a['skill']
             if a['answered'] == 0 and not a['score']:
-                bands[skill] = None
+                # Nothing answered: band 0 for a full Listening/Reading section, no band otherwise.
+                bands[skill] = 0 if skill in ('listening','reading') and is_full_objective_section('ielts', a['count']) else None
                 continue
             if skill in ('listening','reading'):
                 bands[skill] = (band_from_raw(skill,exam_type,a['score'],a['max'],tables,a['answered']>0)

@@ -172,13 +172,15 @@ class GroupExamExportServiceTests(SimpleTestCase):
         )
 
     def test_compute_cefr_level(self):
-        self.assertEqual(group_exam_export.compute_cefr_level(75), "C1")
-        self.assertEqual(group_exam_export.compute_cefr_level(62), "B2")
-        self.assertEqual(group_exam_export.compute_cefr_level(45), "B1")
-        self.assertEqual(group_exam_export.compute_cefr_level(35), "A2")
-        self.assertEqual(group_exam_export.compute_cefr_level(7.5), "C1")
-        self.assertEqual(group_exam_export.compute_cefr_level(None), "-")
-        self.assertEqual(group_exam_export.compute_cefr_level(None, existing_cefr="b2"), "B2")
+        # The scale comes from the exam type; see tests/test_cefr_and_band_floor.py for the boundaries.
+        self.assertEqual(group_exam_export.compute_cefr_level(75, "multilevel"), "C1")
+        self.assertEqual(group_exam_export.compute_cefr_level(62, "multilevel"), "B2")
+        self.assertEqual(group_exam_export.compute_cefr_level(45, "multilevel"), "B1")
+        self.assertEqual(group_exam_export.compute_cefr_level(35, "multilevel"), "BELOW_B1")
+        self.assertEqual(group_exam_export.compute_cefr_level(7.5, "ielts_academic"), "C1")
+        self.assertEqual(group_exam_export.compute_cefr_level(7.5, "multilevel"), "BELOW_B1")
+        self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel"), "-")
+        self.assertEqual(group_exam_export.compute_cefr_level(None, "multilevel", existing_cefr="b2"), "B2")
 
     @patch("apps.core.group_exam_export.AssessmentJob.objects")
     @patch("apps.core.group_exam_export.MockAttempt.objects")

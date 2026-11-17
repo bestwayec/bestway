@@ -421,7 +421,7 @@ def text_for(user,key):
                     section_info=[]
                     speaking_audio_lines=[]
                     if ma.status=='completed':
-                        if ma.cefr_level:score_info.append(f"CEFR: <b>{escape(ma.cefr_level)}</b>")
+                        if ma.cefr_level:score_info.append(f"CEFR: <b>{'B1 dan quyi' if ma.cefr_level == 'BELOW_B1' else escape(ma.cefr_level)}</b>")
                         if ma.overall_band is not None:score_info.append(f"Band: <b>{ma.overall_band}</b>")
                         elif ma.overall_score is not None:score_info.append(f"Ball: <b>{format(ma.overall_score,'g')}</b>")
 

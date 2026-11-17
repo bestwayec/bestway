@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Award, BookOpenText, CheckCircle2, ChevronRight, Headphones, Mic, PenLine, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { MockSkill } from "@/lib/types";
-import { MULTILEVEL_CEFR_BANDS, multilevelBandFor } from "@/lib/multilevel-scale";
+import { MULTILEVEL_CEFR_BANDS, multilevelBandFor, multilevelLevelText } from "@/lib/multilevel-scale";
 
 export interface SkillScoreData {
   skill: MockSkill;
@@ -14,6 +15,7 @@ export interface SkillScoreData {
   max?: number | null;
   standardScore?: number | null;
   band?: number | null;
+  bandBelowRange?: boolean;
 }
 
 export interface CefrResultInfographicProps {
@@ -41,8 +43,18 @@ const SKILL_COLORS: Record<MockSkill, { bar: string; text: string; bg: string }>
   speaking: { bar: "bg-amber-500", text: "text-amber-500", bg: "bg-amber-500/10" },
 };
 
-export function getCefrMeta(level?: string | null) {
+export function getCefrMeta(level?: string | null, belowB1Label = "Below B1") {
   const norm = (level ?? "").trim().toUpperCase();
+  if (norm.includes("C2")) {
+    return {
+      label: "C2 — Mastery / Proficient User",
+      color: "from-violet-600 to-fuchsia-500",
+      badge: "border-violet-500/40 bg-violet-500/15 text-violet-400",
+      bandMin: multilevelBandFor("C1").min,
+      bandMax: multilevelBandFor("C1").max,
+      desc: "Can express themselves spontaneously, very fluently and precisely, differentiating finer shades of meaning.",
+    };
+  }
   if (norm.includes("C1")) {
     return {
       label: "C1 — Effective Operational Proficiency",
@@ -74,7 +86,7 @@ export function getCefrMeta(level?: string | null) {
     };
   }
   return {
-    label: "Below B1",
+    label: belowB1Label,
     color: "from-fg-subtle to-fg-subtle",
     badge: "border-border-strong/40 bg-fg-subtle/15 text-fg-muted",
     bandMin: MULTILEVEL_CEFR_BANDS[0].min,
@@ -96,7 +108,12 @@ export function CefrResultInfographic({
   // A single-section practice has no overall score or level: never dress it
   // up as "A2 / Below B1" or draw a level bar for a score that does not exist.
   const hasOverall = isIelts ? overallBand != null : overallScore != null && Boolean(cefrLevel);
-  const meta = getCefrMeta(cefrLevel);
+  const t = useTranslations("mock");
+  const belowB1 = t("levelBelowB1");
+  const meta = getCefrMeta(cefrLevel, belowB1);
+  const levelText = multilevelLevelText(cefrLevel, belowB1);
+  const bandText = (section: SkillScoreData) =>
+    section.band == null ? null : `Band ${section.bandBelowRange ? t("bandBelowRange") : section.band.toFixed(1)}`;
   const totalScore = overallScore ?? 0;
   const scorePercent = Math.min(Math.round((totalScore / 75) * 100), 100);
 
@@ -121,12 +138,12 @@ export function CefrResultInfographic({
                 ? "Bo'lim natijasi"
                 : isIelts
                 ? `Overall Band: ${overallBand?.toFixed(1) ?? "—"}`
-                : `CEFR Level: ${cefrLevel === "BELOW_B1" ? meta.label : cefrLevel}`}
+                : `CEFR Level: ${levelText}`}
             </h2>
             {hasOverall && (
               <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.badge}`}>
                 <Award className="size-3.5" aria-hidden />
-                {cefrLevel === "BELOW_B1" ? meta.label : cefrLevel || "CEFR"}
+                {levelText || "CEFR"}
               </span>
             )}
           </div>
@@ -220,7 +237,7 @@ export function CefrResultInfographic({
                 </div>
                 {section.band != null && (
                   <Badge variant="neutral" className="tabular-nums">
-                    Band {section.band.toFixed(1)}
+                    {bandText(section)}
                   </Badge>
                 )}
               </div>
@@ -236,7 +253,7 @@ export function CefrResultInfographic({
                         <span className="ml-1 text-[10px] text-fg-muted font-normal">({rawScore}/{maxScore})</span>
                       </>
                     ) : section.band != null ? (
-                      `Band ${section.band.toFixed(1)}`
+                      bandText(section)
                     ) : section.score != null ? (
                       `${section.score} / ${maxScore}`
                     ) : (

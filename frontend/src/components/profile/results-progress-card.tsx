@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/feedback";
 import type { MockAttemptSummary } from "@/lib/types";
 import { MAX_POINTS, MOCK_SCALE, resultsProgress, type MockFamily } from "@/lib/results-progress";
 import { cn } from "@/lib/utils";
+import { multilevelLevelText } from "@/lib/multilevel-scale";
 
 interface ChartPoint {
   id: string;
@@ -160,11 +161,12 @@ const MOCK_TICKS: Record<MockFamily, number[]> = { ielts: [0, 3, 6, 9], multilev
 /** Results page progress: counts and charts from the student's own submitted attempts only. */
 export function ResultsProgressCard({ attempts, loading }: { attempts: MockAttemptSummary[]; loading: boolean }) {
   const t = useTranslations("profile.progress");
+  const tMock = useTranslations("mock");
   const data = React.useMemo(() => resultsProgress(attempts), [attempts]);
   const hasCharts = data.mocks.ielts.length + data.mocks.multilevel.length + data.practice.length > 0;
 
   const mockText = (family: MockFamily, value: number, cefr: string | null) =>
-    `${family === "ielts" ? t("band", { value: value.toFixed(1) }) : t("score", { value })}${cefr ? ` · ${cefr}` : ""}`;
+    `${family === "ielts" ? t("band", { value: value.toFixed(1) }) : t("score", { value })}${cefr ? ` · ${multilevelLevelText(cefr, tMock("levelBelowB1"))}` : ""}`;
 
   return (
     <Card className="rounded-[12px] border border-border bg-surface p-5 sm:p-6">
