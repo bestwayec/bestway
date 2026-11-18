@@ -83,7 +83,16 @@ await step("01-login-mobile", async () => {
 });
 
 let attemptId = null;
+// The catalogue lists the student's active track only; the Record Mock is a Multi-Level exam.
+// Remember the track to put it back at the end (other local runs use this student on IELTS).
+let previousProgram = null;
 await step("02-catalog-durations-and-practice-scope", async () => {
+  const mine = await (await ctx.request.get(`${WEB}/api/backend/exam-programs/mine`)).json().catch(() => ({}));
+  previousProgram = mine?.data?.activeProgram ?? null;
+  if (previousProgram !== "MULTILEVEL") {
+    const set = await ctx.request.patch(`${WEB}/api/backend/exam-programs/mine`, { data: { program: "MULTILEVEL" } });
+    if (!set.ok()) throw new Error(`switching to Multi-Level: HTTP ${set.status()}`);
+  }
   const list = await (await ctx.request.get(`${WEB}/api/backend/mock/exams`)).json();
   const exam = (list.data || []).find((e) => e.id === EXAM);
   if (!exam) throw new Error("record mock not in catalogue");
@@ -417,6 +426,7 @@ await step("10-microphone-check-refused-then-allowed", async () => {
   return "refused: help in the page language + Try again + continue without (buttons free); allowed (fake mic): 5 s test passes";
 });
 
+if (previousProgram && previousProgram !== "MULTILEVEL") await ctx.request.patch(`${WEB}/api/backend/exam-programs/mine`, { data: { program: previousProgram } }).catch(() => {});
 await browser.close();
 writeFileSync(join(OUT, "report.json"), JSON.stringify({ web: WEB, results }, null, 2));
 const failed = results.filter((r) => !r.ok).length;

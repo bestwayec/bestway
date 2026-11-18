@@ -379,7 +379,7 @@ export function WeakPointsTargetDrillModal({
                     onClick={() => void handleCheckAnswer()}
                     className="rounded-xl bg-brand px-6 font-bold text-brand-fg hover:bg-brand-hover disabled:opacity-40"
                   >
-                    Tekshirish
+                    {tu("drill.check")}
                   </Button>
                 ) : (
                   <Button

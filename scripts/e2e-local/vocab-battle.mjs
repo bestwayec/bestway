@@ -98,7 +98,14 @@ async function run(name, teacherOpt, studentOpt) {
   }
   await tp.getByText(T.vocabBattle.host.podiumTitle).waitFor({ timeout: 15000 });
   await sp.getByText(S.vocabBattle.player.finishedTitle).waitFor({ timeout: 15000 });
-  const fmt = (tpl, v) => tpl.replace(/\{(\w+)\}/g, (_, k) => v[k]);
+  // Enough ICU for these messages: {n, plural, one {# x} other {# xs}} and {name}.
+  const fmt = (tpl, v) => tpl
+    .replace(/\{(\w+), plural, ((?:[^{}]|\{[^{}]*\})*)\}/g, (_, k, body) => {
+      const forms = Object.fromEntries([...body.matchAll(/(=\d+|\w+) \{([^{}]*)\}/g)].map((m) => [m[1], m[2]]));
+      const n = Number(v[k]);
+      return (forms[`=${n}`] ?? (n === 1 ? forms.one : undefined) ?? forms.other ?? "").replace(/#/g, String(n));
+    })
+    .replace(/\{(\w+)\}/g, (_, k) => v[k]);
   const hostText = await tp.evaluate(() => document.body.innerText), playerText = await sp.evaluate(() => document.body.innerText);
   ok(hostText.includes(fmt(T.vocabBattle.pointsAwarded, { points: 10 })), `${name}: host podium shows the +10 the server recorded`);
   ok(!/\+7|\+5/.test(hostText), `${name}: host shows no award for places nobody took`);

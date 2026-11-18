@@ -51,21 +51,22 @@ async function run(name, { phone, role, locale, dark, width, height, path, expec
   const launch = p.getByRole("button", { name: T.insights?.workOnMistakes ?? "x" }).first();
   await launch.waitFor({ timeout: 30000 }); await launch.click();
   const dialog = p.getByRole("dialog");
-  await dialog.getByRole("button", { name: "Tekshirish" }).waitFor({ timeout: 20000 });
+  const D = T.uiText.drill;
+  await dialog.getByRole("button", { name: D.check }).waitFor({ timeout: 20000 });
   ok(startBodies.length > 0 && startBodies.every((b) => !/correctAnswer|explanation/.test(b)), `${name}: drill start response carries no key or explanation`);
   if (name === "A") { await p.screenshot({ path: `${OUT}/drill-${name}-question-${locale}-${dark ? "dark" : "light"}-${width}.png` }); }
   for (let i = 0; i < 10; i++) {
     await dialog.locator("div.space-y-2\\.5 > button").first().click();
-    const [resp] = await Promise.all([p.waitForResponse((r) => r.url().includes("targeted-practice/answer")), dialog.getByRole("button", { name: "Tekshirish" }).click()]);
+    const [resp] = await Promise.all([p.waitForResponse((r) => r.url().includes("targeted-practice/answer")), dialog.getByRole("button", { name: D.check }).click()]);
     const body = (await resp.json()); const data = body.data ?? body;
     if (i === 0) {
       ok(typeof data.correctAnswer === "string" && data.explanation, `${name}: key and explanation arrive only with the answer check`);
       await p.waitForTimeout(400);
       await p.screenshot({ path: `${OUT}/drill-${name}-checked-${locale}-${dark ? "dark" : "light"}-${width}.png` });
     }
-    await dialog.getByRole("button", { name: i < 9 ? "Keyingi Savol" : "Natijani Ko'rish" }).click();
+    await dialog.getByRole("button", { name: i < 9 ? D.next : D.seeResult, exact: true }).click();
   }
-  await dialog.getByText("Aniqlik").waitFor({ timeout: 15000 }); await p.waitForTimeout(1200);
+  await dialog.getByText(D.accuracy).first().waitFor({ timeout: 15000 }); await p.waitForTimeout(1200);
   const text = await dialog.innerText();
   const after = await pts(student);
   if (expectPoints) {
