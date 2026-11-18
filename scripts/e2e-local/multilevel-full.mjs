@@ -399,7 +399,11 @@ async function student() {
     const mic = page.getByRole("button", { name: "Start the test (5 seconds)" });
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
-    page.on("response", (r) => { if (r.request().method() === "POST" && /\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) uploads.push(r.status()); });
+    page.on("response", async (r) => {
+      if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
+      // A rejected upload is reported with its error code (the take must never be lost).
+      uploads.push(r.status() < 400 ? r.status() : `${r.status()} ${(await r.json().catch(() => ({})))?.error?.code ?? (await r.text().catch(() => "")).slice(0, 80)}`);
+    });
     await page.getByRole("button", { name: "Test microphone" }).first().click();
     await page.locator('meter[aria-label="Microphone input level"]').first().waitFor();
     await page.getByRole("button", { name: "Start response" }).first().click();

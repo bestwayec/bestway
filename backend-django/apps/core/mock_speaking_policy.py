@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS, measure_duration
+from .mock_speaking_duration import POLICY, duration_accepted, duration_bounds, measure_duration
 from .multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC, task_guidance
 
 
@@ -90,10 +90,11 @@ def verify_stored(attempt, question, key, *, submission=False):
         fail('SPEAKING_RESPONSE_INCOMPLETE', 'The saved recording is unavailable')
     valid = phase.get('timingPolicy') == POLICY and phase.get('durationVerifiedKey') == key and phase.get('durationVerifiedHash') == checksum
     duration = phase.get('audioDurationMs')
-    if not valid or type(duration) not in (int, float) or abs(duration/1000-seconds) > TOLERANCE_SECONDS:
+    if not valid or type(duration) not in (int, float) or not duration_accepted(seconds, duration/1000):
         duration = measure_duration(path, seconds)
-    phase.update(timingPolicy=POLICY, responseSeconds=seconds, minDurationMs=round((seconds-TOLERANCE_SECONDS)*1000),
-        maxDurationMs=round((seconds+TOLERANCE_SECONDS)*1000), audioDurationMs=duration,
+    low, high = duration_bounds(seconds)
+    phase.update(timingPolicy=POLICY, responseSeconds=seconds, minDurationMs=round(low*1000),
+        maxDurationMs=round(high*1000), audioDurationMs=duration,
         durationVerifiedKey=key, durationVerifiedHash=checksum)
     state = dict(attempt.media_state or {})
     state[question.id] = phase
