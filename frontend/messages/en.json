@@ -3034,7 +3034,8 @@
       "correctLabel": "Correct",
       "accuracy": "Accuracy",
       "seeResult": "See the result",
-      "next": "Next question"
+      "next": "Next question",
+      "check": "Check answer"
     },
     "placement": {
       "loadFailed": "The questions could not be loaded",

@@ -3034,7 +3034,8 @@
       "correctLabel": "To'g'ri",
       "accuracy": "Aniqlik",
       "seeResult": "Natijani ko'rish",
-      "next": "Keyingi savol"
+      "next": "Keyingi savol",
+      "check": "Tekshirish"
     },
     "placement": {
       "loadFailed": "Savollarni yuklab bo'lmadi",

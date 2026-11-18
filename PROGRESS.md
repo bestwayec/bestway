@@ -7,6 +7,12 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 36-BLOK: E2E barqarorligi — multilevel 3×, vocab-battle, mobile-listening, drill (2026-11-18)
+- **multilevel-full ketma-ket 3 marta: 16/16, 16/16, 16/16** (#204 dan keyin; Speaking har safar 8/8×201, tarmoq uzilishidan keyin bitta qayta yuklash).
+- **vocab-battle 18/20 → 20/20**: skript ICU plural xabarni (`+{points, plural, …} added`) oddiy almashtirish bilan formatlardi — eskirgan; skriptga minimal ICU plural formatlovchi qo'shildi. Mahsulot to'g'ri edi.
+- **mobile-listening 15/16 → 16/16**: katalog talabaning faol yo'nalishini ko'rsatadi; Record Mock — Multi-Level, sintetik talaba esa IELTS'da edi. Skript yo'nalishni Multi-Level'ga o'tkazadi va oxirida qaytaradi. Mahsulot to'g'ri edi.
+- **drill (yiqilardi) → 24/24**: **mahsulot xatosi** — drill modalidagi "Tekshirish" tugmasi qattiq yozilgan o'zbekcha edi (en sahifada ham); endi `uiText.drill.check` (en "Check answer"). Skript eskirgan katta-kichik harfli yorliqlar o'rniga katalog yorliqlarini ishlatadi.
+
 ### 35-BLOK: Speaking yuklash 400 — talaba javobi yo'qolishi (2026-11-18)
 - **Sabab (dalil bilan)**: qabul qilingan Multilevel yozuvlari javob oynasidan doim **60–240 ms qisqa** dekodlanadi (lokal bazadagi 19 ta yozuv: 30 s → −60…−120 ms, 120 s → −60…−240 ms) — MediaRecorder `start()` dan keyin kechikib yozishni boshlaydi. Chegara esa simmetrik ±0.25 s edi: sal kechroq start (sekin qurilma, band CPU) → `SPEAKING_AUDIO_DURATION_INVALID` (400), va **mijoz yozuvni o'chirib yuborardi**; boshqa 400/5xx xatolarda avtomatik qayta urinish yo'q edi → timed Speaking ketma-ketligi to'xtab qolardi (E2E: "stalled at 76/81; uploads 201,201,201,400").
 - **Server**: javob 1 s gacha qisqa yoki 0.5 s gacha uzun bo'lishi mumkin (`duration_bounds`), yozuv ichidagi bo'shliq 0.5 s gacha, dekod timeout 30 s; faza `minDurationMs/maxDurationMs` shu chegaralarda. Baholash mantiqi o'zgarmadi.
