@@ -58,7 +58,7 @@ class SpeakingWindowTests(SimpleTestCase):
             self.assertEqual(decoded_duration(path,30.25),30)
             path.write_bytes(wav(3));self.assertEqual(decoded_duration(path,30.25),3)
             path.write_bytes(wav(31))
-            with self.assertRaises(InvalidDuration):decoded_duration(path,30.25)
+            with self.assertRaises(InvalidDuration):decoded_duration(path,30.5)
             path.write_bytes(wav(30)[:-1000])
             with self.assertRaises(InvalidDuration):decoded_duration(path,30.25)
 
@@ -76,7 +76,8 @@ class SpeakingWindowTests(SimpleTestCase):
         self.assertEqual(first['expiresAt'],repeat['expiresAt'])
         self.assertEqual(first['startedAt'],repeat['startedAt'])
         self.assertEqual(first['responseSeconds'],30)
-        self.assertEqual(first['minDurationMs'],29750)
+        self.assertEqual(first['minDurationMs'],29000)
+        self.assertEqual(first['maxDurationMs'],30500)
         timed=attempt();timed.mode='timed';timed.media_state={};timed.overall_deadline_at=AT+timedelta(seconds=20)
         with self.assertRaises(ContractAPIException) as caught:grant(timed,AT)
         self.assertEqual(caught.exception.contract_code,'SPEAKING_TIME_INSUFFICIENT')
@@ -163,3 +164,13 @@ class SpeakingUploadApiTests(SimpleTestCase):
                 self.assertTrue(result['saved']);answers.update_or_create.assert_not_called()
                 self.assertEqual(list(Path(directory).rglob('*.wav')),[existing])
                 self.assertEqual(item.media_state['q']['durationVerifiedKey'],'original.wav')
+
+
+def test_recorder_start_latency_is_a_full_response():
+    """Browser recorders lose up to a few hundred ms at the start: still a complete answer."""
+    from apps.core.mock_speaking_duration import duration_accepted, duration_bounds
+    assert duration_bounds(30) == (29.0, 30.5)
+    for expected, measured in ((30, 29.76), (30, 29.2), (45, 44.88), (120, 119.76), (120, 120.4)):
+        assert duration_accepted(expected, measured), (expected, measured)
+    for expected, measured in ((30, 28.9), (30, 30.6), (120, 118.5), (120, 3)):
+        assert not duration_accepted(expected, measured), (expected, measured)

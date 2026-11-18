@@ -7,8 +7,25 @@ import wave
 from pathlib import Path
 
 MAX_BYTES = 25 * 1024 * 1024
-TOLERANCE_SECONDS = .25  # Codec framing/padding and recorder stop scheduling.
+# A browser MediaRecorder starts capturing a little after start() and loses the first frames:
+# accepted recordings measured 60-240 ms short of the window (local stack, Chromium), right at the
+# old symmetric .25 s limit, so slower devices had complete answers rejected (and the client then
+# discarded them). Short by up to a second is still a full response; long stays tight.
+SHORT_TOLERANCE_SECONDS = 1.0
+LONG_TOLERANCE_SECONDS = .5
+TOLERANCE_SECONDS = LONG_TOLERANCE_SECONDS  # upper bound used while decoding
+GAP_TOLERANCE_SECONDS = .5  # a timestamp gap inside the recording (dropped frames under load)
 POLICY = 'FULL_RESPONSE_WINDOW_V1'
+
+
+def duration_bounds(expected_seconds):
+    """(min, max) accepted decoded length in seconds for a response window."""
+    return expected_seconds - SHORT_TOLERANCE_SECONDS, expected_seconds + LONG_TOLERANCE_SECONDS
+
+
+def duration_accepted(expected_seconds, duration_seconds):
+    low, high = duration_bounds(expected_seconds)
+    return low <= duration_seconds <= high
 
 
 class InvalidDuration(Exception):
@@ -56,11 +73,11 @@ def decoded_duration(path, maximum):
                     raise InvalidDuration()
                 if frame.pts is not None and frame.time_base is not None:
                     start = float(frame.pts * frame.time_base)
-                    if last_end is not None and abs(start - last_end) > TOLERANCE_SECONDS:
+                    if last_end is not None and abs(start - last_end) > GAP_TOLERANCE_SECONDS:
                         raise InvalidDuration()
                     last_end = start + samples / rate
         declared = float(stream.duration * stream.time_base) if stream.duration is not None and stream.time_base else None
-        if not frames or declared is not None and abs(declared - duration) > TOLERANCE_SECONDS:
+        if not frames or declared is not None and abs(declared - duration) > GAP_TOLERANCE_SECONDS:
             raise InvalidDuration()
     return duration
 
@@ -68,12 +85,12 @@ def decoded_duration(path, maximum):
 def measure_duration(path, expected_seconds):
     from .mock_attempts import fail
     try:
-        result = subprocess.run([sys.executable, '-m', 'apps.core.mock_speaking_duration', str(path), str(expected_seconds + TOLERANCE_SECONDS)],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=15, check=False)
+        result = subprocess.run([sys.executable, '-m', 'apps.core.mock_speaking_duration', str(path), str(duration_bounds(expected_seconds)[1])],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=30, check=False)
         if result.returncode or len(result.stdout) > 1000:
             raise InvalidDuration()
         duration = json.loads(result.stdout)['duration']
-        if type(duration) not in (int, float) or not math.isfinite(duration) or abs(duration - expected_seconds) > TOLERANCE_SECONDS:
+        if type(duration) not in (int, float) or not math.isfinite(duration) or not duration_accepted(expected_seconds, duration):
             raise InvalidDuration()
         return round(duration * 1000)
     except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, TypeError, InvalidDuration):

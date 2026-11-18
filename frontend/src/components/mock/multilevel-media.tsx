@@ -7,8 +7,8 @@ import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, OPTI
 import { CheckCircle2, Circle, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ApiError } from '@/lib/api-client';
 import { SPEAKING_AUTOSTART_EVENT, takeSpeakingAutoStart } from '@/lib/speaking-sequence';
+import { uploadFailurePlan } from '@/lib/speaking-upload';
 import { CountdownRing, InputLevelBars, ReadPromptButton } from './speaking-visuals';
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
@@ -173,6 +173,8 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   useEffect(() => { onUploadedRef.current = onUploaded; }, [onUploaded]);
   const retainedRef = useRef<Blob | null>(null);
   const uploading = useRef(false);
+  const retryCount = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const busy = useRef(false);
   const aliveRef = useRef(true);
   const captureGeneration = useRef(0);
@@ -208,13 +210,27 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   }, [closeMeter]);
   async function send(blob: Blob) {
     if (uploading.current) return;
+    if (retryTimer.current) { clearTimeout(retryTimer.current); retryTimer.current = null; }
     uploading.current = true; stage('uploading'); setError(null);
-    try { const saved = await uploadRef.current(blob); await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); const audioDurationMs = saved && typeof saved === 'object' && 'audioDurationMs' in saved && typeof saved.audioDurationMs === 'number' && saved.audioDurationMs > 0 ? saved.audioDurationMs : undefined; if (audioDurationMs != null) setRecordedSeconds(Math.round(audioDurationMs / 100) / 10); setAudioVersion((version) => version + 1); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId, ...(audioDurationMs != null ? { audioDurationMs } : {}) } })); }
+    try { const saved = await uploadRef.current(blob); retryCount.current = 0; await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); const audioDurationMs = saved && typeof saved === 'object' && 'audioDurationMs' in saved && typeof saved.audioDurationMs === 'number' && saved.audioDurationMs > 0 ? saved.audioDurationMs : undefined; if (audioDurationMs != null) setRecordedSeconds(Math.round(audioDurationMs / 100) / 10); setAudioVersion((version) => version + 1); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId, ...(audioDurationMs != null ? { audioDurationMs } : {}) } })); }
     catch (failure) {
-      if (failure instanceof ApiError && failure.code === 'SPEAKING_AUDIO_DURATION_INVALID') {
-        try { await releaseRecording(key); retainedRef.current = null; setPending(null); stage('idle'); setError(t('recTooShort')); }
-        catch { stage('retry'); setError(t('recClearFailed')); }
-      } else { stage('retry'); setError(t('recUploadFailed')); }
+      // Never discard the take on a failed upload: it stays retained on the device until the server
+      // acknowledges it. Transient failures retry by themselves (the server keeps the first accepted
+      // recording, so a repeat is safe); a final answer keeps the take and shows why.
+      const plan = uploadFailurePlan(failure, retryCount.current);
+      stage('retry');
+      if (plan.kind === 'transient') {
+        retryCount.current += 1;
+        setError(t('recUploadFailed'));
+        retryTimer.current = setTimeout(() => { retryTimer.current = null; if (aliveRef.current && retainedRef.current) void sendRef.current(retainedRef.current); }, plan.delayMs);
+      } else if (plan.code === 'SPEAKING_AUDIO_DURATION_INVALID') {
+        // Not a complete response: let the student record a fresh take. The rejected take stays in
+        // device storage (a new take replaces it), it is never deleted here.
+        retryCount.current = 0; retainedRef.current = null; setPending(null); stage('idle'); setError(t('recTooShort'));
+      } else {
+        retryCount.current = 0;
+        setError(t('recUploadFailedRetry'));
+      }
     }
     finally { uploading.current = false; }
   }
@@ -226,7 +242,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     void recoverRecording(key).then((blob) => { if (alive && blob) { retainedRef.current = blob; setPending(blob); setStatus('retry'); } }).catch(() => { if (alive) setError(t('recRecoveryUnavailable')); });
     const retry = () => { if (retainedRef.current) void sendRef.current(retainedRef.current); };
     window.addEventListener('online', retry);
-    return () => { alive = false; aliveRef.current = false; invalidateCapture(); clearCaptureTimers(); window.removeEventListener('online', retry); if (recorder.current?.state === 'recording') { if (captureWindow.current) captureWindow.current.interrupted = true; recorder.current.stop(); } markActiveRecording(key, false); closeMicrophone(); };
+    return () => { alive = false; aliveRef.current = false; if (retryTimer.current) { clearTimeout(retryTimer.current); retryTimer.current = null; } invalidateCapture(); clearCaptureTimers(); window.removeEventListener('online', retry); if (recorder.current?.state === 'recording') { if (captureWindow.current) captureWindow.current.interrupted = true; recorder.current.stop(); } markActiveRecording(key, false); closeMicrophone(); };
   }, [key, stage, closeMicrophone, invalidateCapture, clearCaptureTimers]);
   useEffect(() => {
     if (!phase) return;

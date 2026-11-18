@@ -155,15 +155,24 @@ describe('legacy speaking recording lifecycle', () => {
 });
 
 describe('Multilevel microphone preflight and server timing', () => {
-  it('keeps a completed take on transport failure but permits a fresh take after verified duration rejection', async () => {
+  it('keeps a completed take on transport failure and, after a verified duration rejection, permits a fresh take without deleting the old one', async () => {
     services.upload.mockRejectedValueOnce(new Error('offline'));
     await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
     expect(services.release).not.toHaveBeenCalled(); expect(host.textContent).toContain('preserved');
     services.upload.mockRejectedValueOnce(new ApiError('SPEAKING_AUDIO_DURATION_INVALID', 'Invalid decoded duration', 400));
     await click('Retry upload');
-    expect(services.release).toHaveBeenCalledTimes(1); expect(host.textContent).toContain('Start a new response');
+    expect(services.release).not.toHaveBeenCalled(); expect(host.textContent).toContain('Start a new response');
     expect(host.textContent).not.toContain('Retry upload of saved recording');
     expect(host.textContent).toContain('Test microphone'); expect(host.querySelector('audio')).toBeNull();
+  });
+  it('retries a failed upload by itself after a short delay and keeps the take until the server acknowledges it', async () => {
+    services.upload.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new ApiError('INTERNAL', 'Bad gateway', 502));
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
+    expect(services.upload).toHaveBeenCalledTimes(1); expect(services.release).not.toHaveBeenCalled();
+    await finishResponse(2000);
+    expect(services.upload).toHaveBeenCalledTimes(2); expect(services.release).not.toHaveBeenCalled();
+    await finishResponse(4000);
+    expect(services.upload).toHaveBeenCalledTimes(3); expect(services.release).toHaveBeenCalledTimes(1);
   });
   it.each([30, 45, 120])('captures the full %ss practice response and offers no early stop/upload shortcut', async (duration) => {
     startPhase.mockResolvedValue({ ...await startPhase(), responseSeconds: duration, timingPolicy: 'FULL_RESPONSE_WINDOW_V1', expiresAt: new Date(Date.now() + duration * 1000).toISOString() });

@@ -710,7 +710,7 @@ def advance(actor, attempt_id):
 
 
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
-    from .mock_speaking_duration import POLICY, TOLERANCE_SECONDS
+    from .mock_speaking_duration import POLICY, duration_bounds
     from .mock_speaking_policy import strict, upload_window_closed
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
@@ -782,7 +782,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
             phase = dict(startedAt=iso(at), prepEndsAt=iso(at+timedelta(seconds=prep)), expiresAt=iso(at+timedelta(seconds=prep+duration)), plays=0)
             if strict_speaking:
                 phase.update(timingPolicy=POLICY, responseSeconds=duration,
-                    minDurationMs=round((duration-TOLERANCE_SECONDS)*1000), maxDurationMs=round((duration+TOLERANCE_SECONDS)*1000))
+                    minDurationMs=round(duration_bounds(duration)[0]*1000), maxDurationMs=round(duration_bounds(duration)[1]*1000))
         if kind == 'listening' and play:
             if at < parse_datetime(phase['prepEndsAt']) or (phase['plays'] > 0 and at < parse_datetime(phase['expiresAt'])):
                 fail('PREVIEW_ACTIVE', 'Wait for the preview/current playback to finish', 403)

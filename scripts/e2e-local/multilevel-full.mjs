@@ -71,7 +71,12 @@ async function session(phone, viewport = { width: 1440, height: 900 }) {
   const ctx = await browser.newContext({ viewport, permissions: ["microphone"] });
   const page = await ctx.newPage();
   page.setDefaultTimeout(30000);
-  page.on("pageerror", (e) => { results.push({ step: "pageerror", ok: false, note: e.message.slice(0, 200) }); console.log(`PAGEERROR ${e.message.slice(0, 200)}`); });
+  page.on("pageerror", (e) => {
+    // Google Identity Services fails in its own code when the sandbox blocks accounts.google.com;
+    // that is third-party and environmental, not an error of this app.
+    if (/accounts\.google\.com|gstatic\.com|\bgis is not defined\b/.test(`${e.message}\n${e.stack ?? ""}`)) { console.log(`THIRD-PARTY ${e.message.slice(0, 120)}`); return; }
+    results.push({ step: "pageerror", ok: false, note: e.message.slice(0, 200) }); console.log(`PAGEERROR ${e.message.slice(0, 200)}`);
+  });
   await page.addInitScript(() => { try { sessionStorage.setItem("bw_fullscreen_notice_seen", "1"); } catch { /* ignore */ } });
   // The exam window shows a one-time full-screen notice a moment after it opens; accept it whenever it appears.
   // "Open somewhere else" (each test browser is a new device) sits above it; always answer the top one first.
@@ -399,7 +404,11 @@ async function student() {
     const mic = page.getByRole("button", { name: "Start the test (5 seconds)" });
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
-    page.on("response", (r) => { if (r.request().method() === "POST" && /\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) uploads.push(r.status()); });
+    page.on("response", async (r) => {
+      if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
+      // A rejected upload is reported with its error code (the take must never be lost).
+      uploads.push(r.status() < 400 ? r.status() : `${r.status()} ${(await r.json().catch(() => ({})))?.error?.code ?? (await r.text().catch(() => "")).slice(0, 80)}`);
+    });
     await page.getByRole("button", { name: "Test microphone" }).first().click();
     await page.locator('meter[aria-label="Microphone input level"]').first().waitFor();
     await page.getByRole("button", { name: "Start response" }).first().click();
