@@ -20,6 +20,7 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.core.auth_service import fetch_user, issue_tokens
 from apps.legacy_schema.models import Group, ParentStudent, User
 from common.auth.jwt import issue_access
 
@@ -30,7 +31,11 @@ def actor(role):
         id=uid, name=f"Local {role}", phone=uid, role=role, password_hash="unused",
         is_active=True, created_at=timezone.now(), updated_at=timezone.now(),
     )
-    return uid, APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {issue_access(uid, role)}")
+    return uid, bearer(issue_access(uid, role))
+
+
+def bearer(access_token):
+    return APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {access_token}")
 
 
 @transaction.atomic
@@ -79,11 +84,27 @@ def verify():
         expired = issue_access(teacher_id, "teacher")
     invalid_claim = issue_access(peer_id, "arbitrary-role")
     for credential in (expired, invalid_claim):
-        client = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {credential}")
-        assert client.get(path + "/export/excel").status_code in (401, 403)
+        assert bearer(credential).get(path + "/export/excel").status_code in (401, 403)
+
+    user = fetch_user(user_id=teacher_id)
+    first, second = issue_tokens(user), issue_tokens(user)
+    first_device, second_device = (bearer(tokens["accessToken"]) for tokens in (first, second))
+    assert first_device.get(path).status_code == second_device.get(path).status_code == 200
+    refreshed = first_device.post("/v1/auth/refresh", {"refreshToken": first["refreshToken"]}, format="json")
+    assert refreshed.status_code == 200
+    assert first_device.get(path).status_code == 200
+    successor = bearer(refreshed.json()["data"]["accessToken"])
+    assert first_device.post("/v1/auth/logout-refresh", {"refreshToken": first["refreshToken"]}, format="json").status_code == 200
+    for revoked in (first_device, successor):
+        assert revoked.get(path).status_code == revoked.get(path + "/export/excel").status_code == 401
+    assert second_device.get(path).status_code == 200
+    # A still-valid pre-upgrade access token remains usable until its JWT expires.
+    assert teacher.get(path).status_code == 200
+    assert second_device.post("/v1/auth/logout", {}, format="json").status_code == 200
+    assert second_device.get(path).status_code == 401
     User.objects.filter(id=teacher_id).update(is_active=False)
     assert teacher.get(path).status_code == 401
-    print("PASS Group contract, teacher ownership, admin access, scoped student/parent rows and exports, role escalation, inactive and expired sessions")
+    print("PASS Group contract, scoped roles and exports, expired and inactive users, family rotation, immediate access revocation and independent device sessions")
     transaction.set_rollback(True)
 
 

@@ -121,11 +121,12 @@ def audit(cursor, actor_id: str | None, action: str, entity: str, entity_id: str
 
 def issue_tokens(user, *, family_id: str | None = None):
     refresh = new_refresh()
+    family_id = family_id or new_family()
     expires = timezone.now() + timedelta(days=max(settings.JWT_REFRESH_TTL_DAYS, 1))
     with connection.cursor() as cursor:
-        cursor.execute('INSERT INTO "RefreshToken" ("id","userId","tokenHash","familyId","expiresAt","createdAt") VALUES (%s,%s,%s,%s,%s,NOW())', [str(uuid.uuid4()), user[0], token_hash(refresh), family_id or new_family(), expires])
+        cursor.execute('INSERT INTO "RefreshToken" ("id","userId","tokenHash","familyId","expiresAt","createdAt") VALUES (%s,%s,%s,%s,%s,NOW())', [str(uuid.uuid4()), user[0], token_hash(refresh), family_id, expires])
         cursor.execute('DELETE FROM "RefreshToken" WHERE "userId"=%s AND "expiresAt"<NOW()', [user[0]])
-    return {"accessToken": issue_access(user[0], user[3]), "refreshToken": refresh}
+    return {"accessToken": issue_access(user[0], user[3], family_id=family_id), "refreshToken": refresh}
 
 
 def login(phone: str, password: str):
