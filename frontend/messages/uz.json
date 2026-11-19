@@ -1,4 +1,15 @@
 {
+  "classroomAssignments": {
+    "heading": "Guruh vazifalari",
+    "title": "Vazifa nomi",
+    "deadline": "Muddat (ixtiyoriy)",
+    "saving": "Saqlanmoqda…",
+    "assign": "Vazifa berish",
+    "failed": "So‘rov bajarilmadi.",
+    "loading": "Vazifalar yuklanmoqda…",
+    "retry": "Qayta urinish",
+    "empty": "Hozircha vazifalar yo‘q."
+  },
   "assessment": {
     "title": "Writing va Speaking tahlili",
     "refresh": "Baholashni yangilash",

@@ -27,9 +27,15 @@ Bestway changes add the shared Group OpenAPI subset and generated DTOs, deny unk
 
 Fresh checks include the real PostgreSQL Group contract across both route prefixes, 49 focused Django tests and 26 subtests, TypeScript in both clients, and Chromium against the actual Django group create API. The failed-network test used an intercepted request. Canonical role normalization across all domains and fully shared API contracts remain open.
 
-## Stage 02 — NOT STARTED
+## Stage 02 — PARTIAL
 
-Depends on the shared authorization and Group contract.
+Stage 01 Bestway commits are `2431ebd04cc9acf9f871a3933ed8759d287a5b38` and `da8bde3`. The second commit corrected an existing roster-test query regression.
+
+Bestway adds the Django-owned nullable unique Cohort link. The bridge is created lazily when assigning homework. Linked classrooms derive membership, name and owner from the legacy Group and StudentProfile, with no mirror membership rows. Independent Cohorts and existing invitation workflows retain their data. Attendance requires existing enrollment and no longer changes membership. The web and desktop group screens both assign and list the same tasks.
+
+Desktop companion commit `dc73fbac1a0b54bf6163fd0b0cbe93deb4c988c3` adds roster search and writes, name edits, date-based attendance and task creation. The real PostgreSQL `scripts/verify_classroom_postgres.py` journey passed through grading, removal and history retention. Chromium passed desktop creation, enrollment, attendance and task creation, then web reading and publishing and desktop rereading and removal. The browser exercises the desktop React frontend. It does not run the native window.
+
+Schedule editing in desktop, archive, bulk assignment, one unified workspace navigation structure, and comprehensive student profile parity remain incomplete. Notes and excused attendance are not provided by the current attendance schema.
 
 ## Stage 03 — NOT STARTED
 

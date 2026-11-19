@@ -357,6 +357,10 @@ class UserLessonProgress(models.Model):
 
 class Cohort(models.Model):
     id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    classroom = models.OneToOneField(
+        Group, null=True, blank=True, on_delete=models.PROTECT, db_constraint=False,
+        related_name="homework_cohort",
+    )
     teacher = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

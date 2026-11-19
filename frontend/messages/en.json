@@ -1,4 +1,15 @@
 {
+  "classroomAssignments": {
+    "heading": "Classroom assignments",
+    "title": "Task title",
+    "deadline": "Deadline (optional)",
+    "saving": "Saving…",
+    "assign": "Assign task",
+    "failed": "Could not complete the request.",
+    "loading": "Loading assignments…",
+    "retry": "Retry",
+    "empty": "No assignments yet."
+  },
   "assessment": {
     "title": "Writing & Speaking feedback",
     "refresh": "Refresh assessment",

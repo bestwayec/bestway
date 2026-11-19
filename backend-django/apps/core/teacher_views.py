@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import random
 import string
+from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
@@ -19,6 +20,7 @@ from apps.core.models import (
     UserLessonProgress,
 )
 from apps.legacy_schema.models import MockExam, User
+from . import classrooms
 
 
 def success(data: object, status: int = 200) -> Response:
@@ -67,6 +69,8 @@ def teacher_cohorts_view(request):
 
         cohorts_list = []
         for cohort in qs:
+            if classrooms.is_linked(cohort):
+                continue
             active_students = cohort.memberships.filter(status="active").count()
             assignment_count = cohort.assignments.count()
             cohorts_list.append({
@@ -132,6 +136,8 @@ def cohort_analytics_view(request, cohort_id: str):
     except Cohort.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
+    if classrooms.is_linked(cohort):
+        raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
     user_role = getattr(request.user, "role", "teacher")
     if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizni ko'ra olasiz", 403)
@@ -236,10 +242,16 @@ def teacher_assignments_view(request):
     except Cohort.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
+    if classrooms.is_linked(cohort):
+        raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
     user_role = getattr(request.user, "role", "teacher")
     if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizga vazifa biriktira olasiz", 403)
 
+    return success(create_assignment(cohort, data, title), 201)
+
+
+def create_assignment(cohort, data, title):
     lesson_id = data.get("lesson_id")
     lesson = None
     if lesson_id:
@@ -274,10 +286,15 @@ def teacher_assignments_view(request):
         min_pass_percent=min_pass,
     )
 
-    return success({
+    return assignment_payload(assignment)
+
+
+def assignment_payload(assignment):
+    cohort = assignment.cohort
+    return {
         "id": assignment.id,
         "cohort_id": cohort.id,
-        "cohort_name": cohort.name,
+        "cohort_name": classrooms.name(cohort),
         "title": assignment.title,
         "lesson_id": assignment.lesson_id,
         "lesson_title": assignment.lesson.title if assignment.lesson else None,
@@ -286,7 +303,40 @@ def teacher_assignments_view(request):
         "deadline": assignment.deadline.isoformat(),
         "min_pass_percent": assignment.min_pass_percent,
         "created_at": assignment.created_at.isoformat(),
-    }, 201)
+    }
+
+
+@api_view(["GET", "POST"])
+@transaction.atomic
+def classroom_assignments_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "GET":
+        cohort = classrooms.homework_cohort(actor, group_id)
+        assignments = cohort.assignments.select_related("lesson", "exam") if cohort else []
+        return success([assignment_payload(assignment) for assignment in assignments])
+
+    from .domain_contracts import invalid, payload
+    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id"})
+    title = data.get("title")
+    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 255:
+        invalid("Vazifa nomi 1–255 belgi bo‘lishi kerak")
+    deadline = data.get("deadline")
+    if deadline is not None:
+        try:
+            parsed = parse_datetime(deadline) if isinstance(deadline, str) else None
+        except ValueError:
+            parsed = None
+        if parsed is None or timezone.is_naive(parsed):
+            invalid("Muddat vaqt mintaqasi bilan ISO 8601 formatida bo‘lishi kerak")
+    score = data.get("min_pass_percent", 80)
+    if type(score) is not int or not 0 <= score <= 100:
+        invalid("Minimal ball 0–100 oralig‘ida bo‘lishi kerak")
+    for key, model in (("lesson_id", Lesson), ("exam_id", MockExam)):
+        if key in data and (not isinstance(data[key], str) or not model.objects.filter(id=data[key]).exists()):
+            invalid(f"{key} topilmadi")
+    cohort = classrooms.homework_cohort(actor, group_id, create=True)
+    return success(create_assignment(cohort, data, title.strip()), 201)
 
 
 @api_view(["POST"])
@@ -303,7 +353,7 @@ def student_join_cohort_view(request):
         raise ContractAPIException("VALIDATION_ERROR", "Taklif kodi kiritilmadi", 400)
 
     cohort = Cohort.objects.filter(invite_code__iexact=code).select_related("teacher").first()
-    if not cohort:
+    if not cohort or classrooms.is_linked(cohort):
         raise ContractAPIException("NOT_FOUND", "Bunday taklif kodli guruh topilmadi", 404)
 
     membership, created = CohortMembership.objects.update_or_create(
@@ -331,14 +381,9 @@ def student_my_assignments_view(request):
     """
     require_authenticated(request)
 
-    memberships = CohortMembership.objects.filter(
-        student_id=request.user.id,
-        status="active",
-    ).values_list("cohort_id", flat=True)
-
     assignments_qs = HomeworkAssignment.objects.filter(
-        cohort_id__in=memberships,
-    ).select_related("cohort", "cohort__teacher", "lesson", "exam").order_by("deadline")
+        classrooms.student_homework_scope(request.user.id),
+    ).select_related("cohort__teacher", "cohort__classroom__teacher", "lesson", "exam").order_by("deadline")
 
     submissions = {
         str(s.assignment_id): s
@@ -377,8 +422,8 @@ def student_my_assignments_view(request):
         results.append({
             "id": a.id,
             "cohort_id": a.cohort.id,
-            "cohort_name": a.cohort.name,
-            "teacher_name": getattr(a.cohort.teacher, "name", "") if a.cohort.teacher else "",
+            "cohort_name": classrooms.name(a.cohort),
+            "teacher_name": getattr(classrooms.teacher(a.cohort), "name", ""),
             "title": a.title,
             "lesson_id": a.lesson_id,
             "lesson_title": a.lesson.title if a.lesson else None,
@@ -412,11 +457,7 @@ def student_submit_assignment_view(request, assignment_id: str):
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
 
     # Check student is active member of cohort
-    is_member = CohortMembership.objects.filter(
-        cohort=assignment.cohort,
-        student_id=request.user.id,
-        status="active",
-    ).exists()
+    is_member = classrooms.is_member(assignment.cohort, request.user.id)
     if not is_member:
         raise ContractAPIException("FORBIDDEN", "Siz ushbu guruhga a'zo emassiz", 403)
 
@@ -445,14 +486,14 @@ def teacher_grade_assignment_view(request, assignment_id: str):
         assignment = HomeworkAssignment.objects.select_related("cohort").get(id=assignment_id)
     except HomeworkAssignment.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
-    if getattr(request.user, "role", "") in ("teacher", "instructor") and str(assignment.cohort.teacher_id) != str(request.user.id):
+    if getattr(request.user, "role", "") in ("teacher", "instructor") and classrooms.teacher_id(assignment.cohort) != request.user.id:
         raise ContractAPIException("FORBIDDEN", "Bu guruh sizga tegishli emas", 403)
     data = request.data or {}
     student_id = str(data.get("student_id") or "").strip()
     score = data.get("score_percent")
     if not student_id or isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
         raise ContractAPIException("VALIDATION_ERROR", "student_id va 0–100 oralig'idagi butun score_percent kerak", 400)
-    if not CohortMembership.objects.filter(cohort=assignment.cohort, student_id=student_id, status="active").exists():
+    if not classrooms.is_member(assignment.cohort, student_id):
         raise ContractAPIException("STUDENT_NOT_IN_COHORT", "O'quvchi bu guruhda emas", 400)
     from . import homework_scoring as scoring
     return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))

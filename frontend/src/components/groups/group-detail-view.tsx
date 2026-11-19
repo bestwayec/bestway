@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
 import {
@@ -361,6 +362,8 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {canSeePhones && me && <ClassroomAssignments key={groupId} groupId={groupId} userId={me.user.id} />}
 
       <GroupFormDialog open={editOpen} group={group} onClose={() => setEditOpen(false)} />
       <GroupFormDialog open={createOpen} group={null} onClose={() => setCreateOpen(false)} />

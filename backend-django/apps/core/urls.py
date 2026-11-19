@@ -139,6 +139,7 @@ urlpatterns = [
     path('groups/<str:group_id>/export/excel/', groups.export_group_excel_view),
     path('groups/<str:group_id>/students', groups.add_student_view),
     path('groups/<str:group_id>/students/<str:student_id>', groups.remove_student_view),
+    path('groups/<str:group_id>/assignments', teacher_views.classroom_assignments_view),
     path('assessment/groups', groups.groups_view),
     path('assessment/groups/', groups.groups_view),
     path('assessment/groups/<str:group_id>', groups.group_view),
