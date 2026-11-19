@@ -878,6 +878,30 @@
                 "csv"
               ]
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ]
       }
@@ -1896,6 +1920,246 @@
           }
         ]
       }
+    },
+    "/vocabulary/sets/{setId}": {
+      "parameters": [
+        {
+          "name": "setId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyCollection"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularyCollectionEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-confirmed response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyCollection"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/assignments/{assignmentId}/vocabulary/flashcards": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyFlashcards"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularyFlashcardChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-confirmed response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyFlashcards"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vocabulary/srs/history": {
+      "get": {
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyReviewHistory"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/vocabulary/history": {
+      "get": {
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyLearnerHistory"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2391,6 +2655,24 @@
                 "type": "null"
               }
             ]
+          },
+          "definition": {
+            "type": "string"
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "level": {
+            "type": "string"
+          },
+          "pronunciation": {
+            "type": "string"
+          },
+          "audioUrl": {
+            "type": "string"
           }
         }
       },
@@ -2550,7 +2832,10 @@
           "completedCount",
           "students",
           "missedWords",
-          "overdueCount"
+          "overdueCount",
+          "page",
+          "hasNext",
+          "overdueStudents"
         ],
         "properties": {
           "assignedCount": {
@@ -2569,7 +2854,8 @@
                 "score",
                 "totalWords",
                 "percentage",
-                "isPassed"
+                "isPassed",
+                "currentlyEnrolled"
               ],
               "properties": {
                 "studentId": {
@@ -2588,6 +2874,9 @@
                   "type": "number"
                 },
                 "isPassed": {
+                  "type": "boolean"
+                },
+                "currentlyEnrolled": {
                   "type": "boolean"
                 }
               }
@@ -2613,6 +2902,34 @@
           },
           "overdueCount": {
             "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "overdueStudents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "studentId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "currentlyEnrolled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "studentId",
+                "name",
+                "currentlyEnrolled"
+              ]
+            }
           }
         }
       },
@@ -3182,6 +3499,299 @@
           "mockExams",
           "tests",
           "feedback"
+        ]
+      },
+      "VocabularyCollectionWordInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "english": {
+            "type": "string"
+          },
+          "uzbek": {
+            "type": "string"
+          },
+          "contextSentence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partOfSpeech": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "definition": {
+            "type": "string"
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "level": {
+            "type": "string"
+          },
+          "pronunciation": {
+            "type": "string"
+          },
+          "audioUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "english",
+          "uzbek"
+        ]
+      },
+      "VocabularyCollection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "level": {
+            "type": "string"
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyCard"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "title",
+          "description",
+          "isPublic",
+          "level",
+          "words"
+        ]
+      },
+      "VocabularyCollectionEdit": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "level": {
+            "type": "string"
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyCollectionWordInput"
+            }
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "VocabularyFlashcards": {
+        "type": "object",
+        "properties": {
+          "lastWordId": {
+            "type": "string"
+          },
+          "familiarity": {
+            "type": "object",
+            "additionalProperties": {
+              "enum": [
+                "known",
+                "practice"
+              ]
+            }
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastStudiedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lastWordId",
+          "familiarity",
+          "order",
+          "lastStudiedAt"
+        ]
+      },
+      "VocabularyFlashcardChange": {
+        "type": "object",
+        "properties": {
+          "lastWordId": {
+            "type": "string"
+          },
+          "wordId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "known",
+              "practice"
+            ]
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": []
+      },
+      "VocabularyReviewHistory": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "review__word__english": {
+                  "type": "string"
+                },
+                "reviewed_at": {
+                  "type": "string"
+                },
+                "next_review_at": {
+                  "type": "string"
+                },
+                "correct": {
+                  "type": "boolean"
+                },
+                "interval_days": {
+                  "type": "number"
+                },
+                "mastered": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "review__word__english",
+                "reviewed_at",
+                "next_review_at",
+                "correct",
+                "interval_days",
+                "mastered"
+              ]
+            }
+          }
+        },
+        "required": [
+          "page",
+          "hasNext",
+          "entries"
+        ]
+      },
+      "VocabularyLearnerHistory": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "assignment_id": {
+                  "type": "string"
+                },
+                "assignment__title": {
+                  "type": "string"
+                },
+                "score_percent": {
+                  "type": "number"
+                },
+                "completed_at": {
+                  "type": "string"
+                },
+                "is_passed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "assignment_id",
+                "assignment__title",
+                "score_percent",
+                "completed_at",
+                "is_passed"
+              ]
+            }
+          }
+        },
+        "required": [
+          "page",
+          "hasNext",
+          "entries"
         ]
       }
     }

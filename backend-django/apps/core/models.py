@@ -48,6 +48,7 @@ class VocabularySet(models.Model):
         default=VocabularyLevel.B1,
     )
     is_public = models.BooleanField(default=True)
+    revision = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -70,6 +71,12 @@ class VocabularyWord(models.Model):
     uzbek = models.CharField(max_length=255)
     context_sentence = models.TextField(null=True, blank=True)
     part_of_speech = models.CharField(max_length=50, null=True, blank=True)
+    definition = models.TextField(blank=True, default="")
+    synonyms = models.JSONField(default=list, blank=True)
+    level = models.CharField(max_length=20, choices=VocabularyLevel.choices, blank=True, default="")
+    pronunciation = models.CharField(max_length=255, blank=True, default="")
+    audio_url = models.URLField(max_length=500, blank=True, default="")
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -142,6 +149,18 @@ class UserWeakWord(models.Model):
 
     def __str__(self):
         return f"{self.student_id} - {self.word_id} (mistakes: {self.mistake_count})"
+
+
+class VocabularyReviewEvent(models.Model):
+    review = models.ForeignKey(UserWeakWord, on_delete=models.CASCADE)
+    reviewed_at = models.DateTimeField()
+    next_review_at = models.DateTimeField()
+    correct = models.BooleanField()
+    interval_days = models.PositiveIntegerField()
+    mastered = models.BooleanField()
+
+    class Meta:
+        indexes = [models.Index(fields=["review", "-reviewed_at"], name="vocab_review_event_history")]
 
 
 class ParentTelegramLink(models.Model):
@@ -461,6 +480,7 @@ class HomeworkAssignment(models.Model):
         VocabularySet, null=True, blank=True, on_delete=models.PROTECT,
         related_name="homework_assignments",
     )
+    vocabulary_revision = models.JSONField(null=True, blank=True)
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -522,6 +542,20 @@ class VocabularyPracticeSession(models.Model):
         indexes = [
             models.Index(fields=["student", "vocabulary_set", "mode", "legacy", "expires_at"],
                          name="vocab_practice_lookup"),
+        ]
+
+
+class VocabularyFlashcardProgress(models.Model):
+    assignment = models.ForeignKey(HomeworkAssignment, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    familiarity = models.JSONField(default=dict)
+    word_order = models.JSONField(default=list)
+    last_word_id = models.CharField(max_length=255, blank=True, default="")
+    last_studied_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["assignment", "student"], name="unique_vocabulary_flashcard_progress"),
         ]
 
 

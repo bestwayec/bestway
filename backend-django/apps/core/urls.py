@@ -577,6 +577,8 @@ urlpatterns = [
     path('v1/vocabulary/srs/submit', vocabulary.srs_submit_view),
     path('v1/vocabulary/srs/submit/', vocabulary.srs_submit_view),
 
+    path('vocabulary/srs/history', vocabulary.review_history_view),
+    path('student/vocabulary/history', vocabulary_homework.learner_history_view),
     path('vocabulary/srs/stats', vocabulary.srs_stats_view),
     path('vocabulary/srs/stats/', vocabulary.srs_stats_view),
     path('v1/vocabulary/srs/stats', vocabulary.srs_stats_view),
@@ -766,6 +768,7 @@ urlpatterns = [
     path('v1/student/my-assignments/', teacher_views.student_my_assignments_view),
     path('student/assignments/<str:assignment_id>/vocabulary', vocabulary_homework.start_view),
     path('student/assignments/<str:assignment_id>/vocabulary/words', vocabulary_homework.words_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/flashcards', vocabulary_homework.flashcards_view),
     path('student/assignments/<str:assignment_id>/vocabulary/submit', vocabulary_homework.submit_view),
     path('student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
     path('student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),

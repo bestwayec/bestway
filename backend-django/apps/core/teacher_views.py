@@ -22,7 +22,7 @@ from apps.core.models import (
     VocabularySet,
 )
 from apps.legacy_schema.models import MockExam, User
-from . import classrooms
+from . import classrooms, vocabulary_collections
 
 
 def success(data: object, status: int = 200) -> Response:
@@ -285,6 +285,7 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None):
         lesson=lesson,
         exam=exam,
         vocabulary_set=vocabulary_set,
+        vocabulary_revision=vocabulary_collections.snapshot(vocabulary_set) if vocabulary_set else None,
         deadline=deadline,
         min_pass_percent=min_pass,
     )
@@ -349,9 +350,10 @@ def classroom_assignments_view(request, group_id):
         from .vocabulary_views import managed_set
 
         vocab_set = managed_set(request, data["vocabulary_set_id"])
+        vocab_set = VocabularySet.objects.select_for_update().get(id=vocab_set.id)
         if vocab_set.group_id and vocab_set.group_id != group_id:
             invalid("Lug‘at boshqa guruhga tegishli")
-        if not vocab_set.words.exists():
+        if not vocab_set.words.filter(is_archived=False).exists():
             invalid("To‘plamda so‘zlar yo‘q")
     return success(create_assignment(cohort, data, title.strip(), vocabulary_set=vocab_set), 201)
 
@@ -385,7 +387,7 @@ def classroom_vocabulary_view(request, group_id):
     sets = VocabularySet.objects.filter(Q(group_id__isnull=True) | Q(group_id=group_id))
     if actor.role == "teacher":
         sets = sets.filter(Q(created_by_id=actor.id) | Q(group_id=group_id))
-    sets = sets.annotate(wordCount=Count("words")).filter(wordCount__gt=0)
+    sets = sets.annotate(wordCount=Count("words", filter=Q(words__is_archived=False))).filter(wordCount__gt=0)
     return success(list(sets.order_by("title", "id").values("id", "title", "wordCount")))
 
 

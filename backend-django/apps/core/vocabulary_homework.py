@@ -1,17 +1,19 @@
 """Issue and score a single server-owned vocabulary practice session per assignment."""
 import csv
+from types import SimpleNamespace
 
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
-from apps.legacy_schema.models import StudentProfile
+from apps.legacy_schema.models import StudentProfile, User
 from common.api.exceptions import ContractAPIException
 
-from . import classrooms, vocabulary_service
+from . import classrooms, vocabulary_collections, vocabulary_service
 from .domain_contracts import invalid, payload
-from .models import HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyHomeworkSession
+from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyFlashcardProgress, VocabularyHomeworkSession
 from .teacher_views import require_authenticated, require_role, success
 
 
@@ -40,8 +42,14 @@ def issue(assignment, student_id, mode):
     existing = VocabularyHomeworkSession.objects.filter(assignment=assignment, student_id=student_id).first()
     if existing:
         return existing
-    quiz = vocabulary_service.generate_quiz_for_set(assignment.vocabulary_set_id, mode, student_id)
-    questions = snapshot_questions(assignment.vocabulary_set, quiz)
+    revision = vocabulary_collections.assignment_revision(assignment)
+    pinned_words = [SimpleNamespace(
+        id=word["id"], english=word["english"], uzbek=word["uzbek"],
+        context_sentence=word["contextSentence"], part_of_speech=word["partOfSpeech"],
+    ) for word in revision["words"]]
+    collection = SimpleNamespace(id=assignment.vocabulary_set_id, title=revision["title"], level=revision["level"])
+    quiz = vocabulary_service.quiz_from_words(collection, pinned_words, mode)
+    questions = snapshot_questions(assignment.vocabulary_set, quiz, pinned_words)
     return VocabularyHomeworkSession.objects.create(
         assignment=assignment, student_id=student_id, questions=questions, mode=mode,
     )
@@ -67,14 +75,11 @@ def words_view(request, assignment_id):
     actor = require_authenticated(request)
     require_role(request, "student")
     assignment = assignment_for_student(actor.id, assignment_id)
-    return success([{
-        "id": word.id, "english": word.english, "uzbek": word.uzbek,
-        "contextSentence": word.context_sentence, "partOfSpeech": word.part_of_speech,
-    } for word in assignment.vocabulary_set.words.all()])
+    return success(vocabulary_collections.assignment_revision(assignment)["words"])
 
 
-def snapshot_questions(vocab_set, quiz):
-    words = {word.id: word for word in vocab_set.words.all()}
+def snapshot_questions(vocab_set, quiz, pinned_words=None):
+    words = {word.id: word for word in (pinned_words if pinned_words is not None else vocab_set.words.filter(is_archived=False))}
     questions = []
     for question in quiz["questions"]:
         word = words.get(question["wordId"])
@@ -180,21 +185,35 @@ def results_view(request, group_id, assignment_id):
     if assignment is None:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
 
-    roster = dict(StudentProfile.objects.filter(group_id=group_id).values_list("user_id", "user__name"))
-    sessions = VocabularyHomeworkSession.objects.filter(assignment=assignment, student_id__in=roster, result__isnull=False)
+    current = set(StudentProfile.objects.filter(group_id=group_id).values_list("user_id", flat=True))
+    periods = ClassroomEnrollment.objects.filter(group_id=group_id).filter(
+        Q(ended_at__gte=assignment.created_at) | Q(ended_at__isnull=True),
+        Q(started_at__lte=assignment.deadline) | Q(started_at__isnull=True),
+    ).values_list("student_id", flat=True)
+    sessions = list(VocabularyHomeworkSession.objects.filter(assignment=assignment, result__isnull=False))
+    audience = current | set(periods) | {session.student_id for session in sessions}
+    roster = dict(User.objects.filter(id__in=audience).values_list("id", "name"))
     misses = {}
     students = []
     for session in sessions:
         for row in session.result["wrongAnswers"]:
             misses[row["english"]] = misses.get(row["english"], 0) + 1
+        if session.student_id not in roster:
+            continue
         students.append({
             "studentId": session.student_id, "name": roster[session.student_id],
+            "currentlyEnrolled": session.student_id in current,
             "score": session.result["score"], "totalWords": session.result["totalWords"],
             "percentage": session.result["percentage"], "isPassed": session.result["isPassed"],
         })
     ranked_misses = sorted(misses.items(), key=lambda row: (-row[1], row[0]))
     students.sort(key=lambda row: (row["name"], row["studentId"]))
-    overdue = len(roster) - len(students) if assignment.deadline < timezone.now() else 0
+    completed = {student["studentId"] for student in students}
+    overdue_ids = set(roster) - completed if assignment.deadline < timezone.now() else set()
+    overdue_rows = sorted(
+        ({"studentId": pk, "name": roster[pk], "currentlyEnrolled": pk in current} for pk in overdue_ids),
+        key=lambda row: (row["name"], row["studentId"]),
+    )
     if request.query_params.get("download") == "csv":
         response = HttpResponse(content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = 'attachment; filename="vocabulary-results.csv"'
@@ -207,12 +226,71 @@ def results_view(request, group_id, assignment_id):
         writer.writerow(["Commonly missed word", "Count"])
         writer.writerows((safe_spreadsheet_text(word), count) for word, count in ranked_misses)
         return response
+    from .domain_contracts import pagination
+
+    query = pagination(request, {"search"})
+    term = (query.get("search") or "").strip().casefold()
+    filtered = [row for row in students if term in row["name"].casefold()]
+    offset = (query["page"] - 1) * query["limit"]
     return success({
         "assignedCount": len(roster), "completedCount": len(students),
-        "overdueCount": overdue, "students": students,
+        "overdueCount": len(overdue_rows), "overdueStudents": overdue_rows[:100],
+        "students": filtered[offset:offset + query["limit"]], "page": query["page"],
+        "hasNext": len(filtered) > offset + query["limit"],
         "missedWords": [{"english": word, "count": count} for word, count in ranked_misses],
     })
 
 
 def safe_spreadsheet_text(text):
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+
+
+@api_view(["GET", "PATCH"])
+@transaction.atomic
+def flashcards_view(request, assignment_id):
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = assignment_for_student(actor.id, assignment_id)
+    progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
+    if request.method == "PATCH":
+        data = payload(request, {"lastWordId", "wordId", "status", "order"})
+        if not data or (("wordId" in data) != ("status" in data)):
+            invalid("Select a word or shuffle order")
+        allowed = {word["id"] for word in vocabulary_collections.assignment_revision(assignment)["words"]}
+        for key in ("lastWordId", "wordId"):
+            if key in data and (not isinstance(data[key], str) or data[key] not in allowed):
+                invalid("Word does not belong to the assignment")
+        if "status" in data and data["status"] not in ("known", "practice"):
+            invalid("Invalid flashcard status")
+        if "order" in data:
+            order = data["order"]
+            if not isinstance(order, list) or len(order) != len(allowed) or not all(isinstance(word, str) for word in order) or set(order) != allowed:
+                invalid("Shuffle order must contain every assigned word once")
+        progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
+        if "lastWordId" in data:
+            progress.last_word_id = data["lastWordId"]
+        if "status" in data:
+            progress.familiarity[data["wordId"]] = data["status"]
+        if "order" in data:
+            progress.word_order = data["order"]
+        progress.save()
+    return success({
+        "lastWordId": progress.last_word_id if progress else "",
+        "familiarity": progress.familiarity if progress else {},
+        "order": progress.word_order if progress else [],
+        "lastStudiedAt": progress.last_studied_at if progress else None,
+    })
+
+
+@api_view(["GET"])
+def learner_history_view(request):
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    from .domain_contracts import pagination
+
+    query = pagination(request)
+    offset = (query["page"] - 1) * query["limit"]
+    rows = HomeworkSubmission.objects.filter(student_id=actor.id, source="vocabulary_attempt").order_by("-completed_at", "-pk")
+    entries = list(rows.values("assignment_id", "assignment__title", "score_percent", "completed_at", "is_passed")
+                   [offset:offset + query["limit"] + 1])
+    return success({"entries": entries[:query["limit"]], "page": query["page"], "hasNext": len(entries) > query["limit"]})

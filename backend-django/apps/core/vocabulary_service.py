@@ -110,13 +110,18 @@ def create_vocabulary_set(
     description: str | None = None,
     is_public: bool = True,
 ) -> VocabularySet:
-    if not title or not title.strip():
-        raise ContractAPIException("VALIDATION_ERROR", "Sarlavha bo'sh bo'lishi mumkin emas", 400)
-    if not words:
-        raise ContractAPIException("VALIDATION_ERROR", "To'plamda kamida bitta so'z bo'lishi shart", 400)
+    from .vocabulary_collections import clean_words, text
 
+    title = text(title, "title", 255, True)
+    description = text(description if description is not None else "", "description", 4000)
     if level not in VocabularyLevel.values:
         level = VocabularyLevel.B1
+    aliases = {"context_sentence": "contextSentence", "part_of_speech": "partOfSpeech", "audio_url": "audioUrl"}
+    if isinstance(words, list):
+        words = [{aliases.get(key, key): value for key, value in row.items()} if isinstance(row, dict) else row for row in words]
+    clean = clean_words(words)
+    if any(identifier is not None for identifier, _ in clean):
+        raise ContractAPIException("VALIDATION_ERROR", "New words cannot include IDs", 400)
 
     with transaction.atomic():
         vocab_set = VocabularySet.objects.create(
@@ -128,18 +133,7 @@ def create_vocabulary_set(
             is_public=is_public,
         )
 
-        word_instances = [
-            VocabularyWord(
-                set=vocab_set,
-                english=w["english"].strip(),
-                uzbek=w["uzbek"].strip(),
-                context_sentence=w.get("context_sentence", "").strip() or None,
-                part_of_speech=w.get("part_of_speech", "").strip() or None,
-            )
-            for w in words
-            if w.get("english", "").strip() and w.get("uzbek", "").strip()
-        ]
-        VocabularyWord.objects.bulk_create(word_instances)
+        VocabularyWord.objects.bulk_create([VocabularyWord(set=vocab_set, **row) for _, row in clean])
 
     return vocab_set
 
@@ -149,7 +143,11 @@ def generate_quiz_for_set(set_id: str, mode: str = "mixed", student_id: str | No
     if not vocab_set:
         raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
 
-    words = list(VocabularyWord.objects.filter(set_id=set_id)[:MAX_PRACTICE_WORDS + 1])
+    words = list(VocabularyWord.objects.filter(set_id=set_id, is_archived=False)[:MAX_PRACTICE_WORDS + 1])
+    return quiz_from_words(vocab_set, words, mode)
+
+
+def quiz_from_words(vocab_set, words, mode):
     if len(words) > MAX_PRACTICE_WORDS:
         raise ContractAPIException("SET_TOO_LARGE", "Mashq 500 so‘zdan oshmasligi kerak", 400)
     if not words:
@@ -489,7 +487,7 @@ def export_vocabulary_set_excel(set_id: str) -> bytes:
     ws["A1"].alignment = align_center
 
     group_name = vocab_set.group.name if vocab_set.group else "Umumiy / Ochiq"
-    words_count = vocab_set.words.count()
+    words_count = vocab_set.words.filter(is_archived=False).count()
     ws.merge_cells("A2:J2")
     ws["A2"] = f"To'plam: {vocab_set.title}   |   Daraja: {vocab_set.level}   |   Guruh: {group_name}   |   Jami so'zlar: {words_count}"
     ws["A2"].font = font_subtitle
@@ -629,7 +627,7 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
             "wrongCount": len(a.wrong_answers or []),
         })
 
-    total_words = vocab_set.words.count()
+    total_words = vocab_set.words.filter(is_archived=False).count()
     total_attempts = len(student_roster)
     average_percentage = (
         round(sum(r["percentage"] for r in student_roster) / total_attempts, 1)
@@ -682,7 +680,7 @@ def lookup_word(word: str) -> dict[str, Any]:
         raise ContractAPIException("INVALID_WORD", "So'z kiritilmadi", 400)
 
     # 1. Database word check
-    vw = VocabularyWord.objects.filter(english__iexact=cleaned).first()
+    vw = VocabularyWord.objects.filter(english__iexact=cleaned, is_archived=False, set__is_public=True, set__group_id__isnull=True).first()
     if vw:
         return {
             "word": vw.english,

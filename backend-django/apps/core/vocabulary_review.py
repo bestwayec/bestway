@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.db.models import Q
 
-from .models import UserWeakWord
+from .models import UserWeakWord, VocabularyReviewEvent
 
 
 INTERVALS = (1, 3, 7, 14, 30)
@@ -42,3 +42,7 @@ def update_review(row, correct, now):
         "review_count", "correct_streak", "is_mastered", "interval_days",
         "mistake_count", "lapses", "next_review_at", "last_reviewed",
     ])
+    VocabularyReviewEvent.objects.create(
+        review=row, reviewed_at=now, next_review_at=row.next_review_at,
+        correct=correct, interval_days=row.interval_days, mastered=row.is_mastered,
+    )

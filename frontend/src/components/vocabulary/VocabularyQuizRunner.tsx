@@ -252,6 +252,7 @@ export function VocabularyQuizRunner({
         onFinish(result);
       }
     } catch (err: any) {
+      if (err?.status === 409) retryAnswers.current = null;
       setErrorMsg(err.message || t("saveFailed"));
     } finally {
       setIsSubmitting(false);

@@ -12,6 +12,7 @@ import type { ClassroomAssignment, ClassroomAssignmentInput, ClassroomVocabulary
 export function ClassroomAssignments({ groupId, userId }: { groupId: string; userId: string }) {
   const t = useTranslations("classroomAssignments");
   const tv = useTranslations("vocabularyAssignment");
+  const tm = useTranslations("classroomManagement");
   const queryClient = useQueryClient();
   const queryKey = ["classroom-assignments", userId, groupId] as const;
   const path = `/groups/${encodeURIComponent(groupId)}/assignments`;
@@ -28,9 +29,11 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
   const [setId, setSetId] = useState("");
   const [minimum, setMinimum] = useState("80");
   const [report, setReport] = useState("");
+  const [page, setPage] = useState(1);
+  const [reportSearch, setReportSearch] = useState("");
   const results = useQuery({
-    queryKey: ["classroom-vocabulary-results", userId, groupId, report],
-    queryFn: () => api.get<VocabularyAssignmentReports>(`${path}/${encodeURIComponent(report)}/vocabulary-results`),
+    queryKey: ["classroom-vocabulary-results", userId, groupId, report, page, reportSearch],
+    queryFn: () => api.get<VocabularyAssignmentReports>(`${path}/${encodeURIComponent(report)}/vocabulary-results`, { page, search: reportSearch }),
     enabled: Boolean(report),
   });
   const [title, setTitle] = useState("");
@@ -103,7 +106,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
             {tasks.data.map(task => (
               <li className="flex flex-wrap justify-between gap-2 py-2" key={task.id}>
                 <span>{task.title}</span>
-                {task.vocabulary_set_id && <Button variant="outline" size="sm" aria-expanded={report === task.id} onClick={() => setReport(report === task.id ? "" : task.id)}>{tv("results")}</Button>}
+                {task.vocabulary_set_id && <Button variant="outline" size="sm" aria-expanded={report === task.id} onClick={() => { setReport(report === task.id ? "" : task.id); setPage(1); setReportSearch(""); }}>{tv("results")}</Button>}
                 <time className="text-fg-muted" dateTime={task.deadline}>{new Date(task.deadline).toLocaleString()}</time>
               </li>
             ))}
@@ -117,7 +120,15 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
           <Button asChild size="sm" variant="outline">
             <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=csv`} download>CSV</a>
           </Button>
-          <ul>{results.data.students.map(student => <li key={student.studentId}>{student.name} · {student.percentage}%</li>)}</ul>
+          <label className="grid gap-1">{tm("searchStudents")}
+            <Input value={reportSearch} onChange={event => { setReportSearch(event.target.value); setPage(1); }} />
+          </label>
+          <ul>{results.data.students.map(student => <li key={student.studentId}>{student.name} · {student.percentage}%{!student.currentlyEnrolled && ` · ${tm("former")}`}</li>)}</ul>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>{tm("previous")}</Button>
+            <Button type="button" variant="outline" disabled={!results.data.hasNext} onClick={() => setPage(page + 1)}>{tm("next")}</Button>
+          </div>
+          {results.data.overdueStudents.length > 0 && <ul>{results.data.overdueStudents.map(student => <li key={student.studentId}>{student.name}</li>)}</ul>}
           {results.data.missedWords.length > 0 && <div><h3>{tv("missed")}</h3>
             <ul>{results.data.missedWords.map(word => <li key={word.english}>{word.english} · {word.count}</li>)}</ul>
           </div>}

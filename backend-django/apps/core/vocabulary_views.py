@@ -10,19 +10,24 @@ from rest_framework.response import Response
 
 from common.api.exceptions import ContractAPIException
 
-from .models import UserWeakWord, VocabularyAttempt, VocabularySet, VocabularyWord
+from .models import UserWeakWord, VocabularyAttempt, VocabularyReviewEvent, VocabularySet, VocabularyWord
 from .views import require_authenticated, require_role, success
 from . import vocabulary_service as service
-from . import vocabulary_review
+from . import vocabulary_collections, vocabulary_review
+
+
+def can_manage_set(user, vocab_set):
+    role = getattr(user, "role", None)
+    if role in ("admin", "super_admin"):
+        return True
+    if role != "teacher":
+        return False
+    group_teacher = getattr(vocab_set.group, "teacher_id", None) if vocab_set.group_id else None
+    return user.id in (vocab_set.created_by_id, group_teacher)
 
 
 def assert_manages_set(user, vocab_set):
-    """Admins manage every set; a teacher only sets they created or that belong to
-    a group they teach. Checked before any delete or student-result read."""
-    if getattr(user, "role", None) in ("admin", "super_admin"):
-        return
-    group_teacher = getattr(vocab_set.group, "teacher_id", None) if vocab_set.group_id else None
-    if user.id not in (vocab_set.created_by_id, group_teacher):
+    if not can_manage_set(user, vocab_set):
         raise ContractAPIException("FORBIDDEN", "Bu lug'at to'plami sizga tegishli emas", 403)
 
 
@@ -91,6 +96,9 @@ def vocabulary_sets_view(request):
 
         if group_id:
             qs = qs.filter(group_id=group_id)
+        if request.query_params.get("owned") == "true":
+            require_role(request, "teacher", "admin", "super_admin")
+            qs = qs.filter(created_by_id=request.user.id)
         if level:
             qs = qs.filter(level=level)
 
@@ -113,7 +121,8 @@ def vocabulary_sets_view(request):
                 "groupName": s.group.name if s.group else None,
                 "createdById": s.created_by_id,
                 "createdByName": getattr(s.created_by, "name", "") if s.created_by else "",
-                "wordCount": s.words.count(),
+                "canEdit": can_manage_set(request.user, s),
+                "wordCount": s.words.filter(is_archived=False).count(),
                 "createdAt": s.created_at.isoformat(),
                 "myAttempt": {
                     "score": att.score,
@@ -180,9 +189,17 @@ def parse_text_preview_view(request):
     })
 
 
-@api_view(["GET", "DELETE"])
+@api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([AllowAny])
 def vocabulary_set_detail_view(request, set_id):
+    if request.method == "PATCH":
+        from .domain_contracts import payload
+
+        editable = managed_set(request, set_id)
+        fields = payload(request, {"title", "description", "level", "isPublic", "revision", "words"})
+        updated = vocabulary_collections.edit_collection(editable, fields)
+        view = vocabulary_collections.snapshot(updated)
+        return success({"id": updated.id, **view, "description": updated.description, "isPublic": updated.is_public})
     vocab_set = visible_set(request, set_id)
 
     if request.method == "DELETE":
@@ -193,16 +210,7 @@ def vocabulary_set_detail_view(request, set_id):
         vocab_set.delete()
         return success({"deleted": True})
 
-    words = [
-        {
-            "id": w.id,
-            "english": w.english,
-            "uzbek": w.uzbek,
-            "contextSentence": w.context_sentence,
-            "partOfSpeech": w.part_of_speech,
-        }
-        for w in vocab_set.words.all()
-    ]
+    words = vocabulary_collections.snapshot(vocab_set)["words"]
 
     # Student's attempt history on this set
     attempts = [
@@ -221,6 +229,9 @@ def vocabulary_set_detail_view(request, set_id):
     return success({
         "id": vocab_set.id,
         "title": vocab_set.title,
+        "revision": vocab_set.revision,
+        "isPublic": vocab_set.is_public,
+        "canEdit": can_manage_set(request.user, vocab_set),
         "description": vocab_set.description,
         "level": vocab_set.level,
         "groupId": vocab_set.group_id,
@@ -380,6 +391,22 @@ def srs_stats_view(request):
         ),
         "totalMasteredWords": total_mastered,
         "weakWords": words,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def review_history_view(request):
+    require_authenticated(request)
+    from .domain_contracts import pagination
+
+    query = pagination(request)
+    start = (query["page"] - 1) * query["limit"]
+    rows = VocabularyReviewEvent.objects.filter(review__student_id=request.user.id).order_by("-reviewed_at", "-pk")
+    page = list(rows.values("id", "review__word__english", "reviewed_at", "next_review_at", "correct", "interval_days", "mastered")
+                [start:start + query["limit"] + 1])
+    return success({
+        "entries": page[:query["limit"]], "page": query["page"], "hasNext": len(page) > query["limit"],
     })
 
 

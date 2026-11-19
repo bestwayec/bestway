@@ -47,12 +47,41 @@ def verify():
     path = f"/v1/student/assignments/{assignment_id}/vocabulary"
     assert stranger.get(path + "/words").status_code == 403
     cards = student.get(path + "/words").json()["data"]
+    studio_url = f"/v1/vocabulary/sets/{set_id}"
+    collection = teacher.get(studio_url).json()["data"]
+    assert collection["revision"] == 1 and len(collection["words"]) == 30
+    first, second = cards[:2]
+    reverse = [word["id"] for word in reversed(cards)]
+    progress = path + "/flashcards"
+    state = student.patch(progress, {
+        "wordId": second["id"], "lastWordId": second["id"], "status": "known", "order": reverse,
+    }, format="json")
+    assert state.status_code == 200 and state.json()["data"]["lastStudiedAt"]
+    from verify_group_contract_postgres import issue_access
+    from rest_framework.test import APIClient
+
+    second_device = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {issue_access(student_id, 'student')}")
+    assert second_device.get(progress).json()["data"] == state.json()["data"]
+    assert stranger.get(progress).status_code == 403
+    assert not VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).exists()
     answer_map = {card["id"]: (card["uzbek"], card["english"]) for card in cards}
     assert len(answer_map) == 30
     session = student.post(path, {"mode": "mixed"}, format="json").json()["data"]
     assert {item["type"] for item in session["questions"]} == {"spelling", "eng_uzb", "uzb_eng"}
     assert student.post(path, {"mode": "spelling"}, format="json").json()["data"]["sessionId"] == session["sessionId"]
-    missed = session["questions"][0]["wordId"]
+    revised_words = [{**word} for word in collection["words"] if word["id"] != first["id"]]
+    revised_words[0].update({"definition": "A corrected definition", "synonyms": ["Example"], "level": "A2", "uzbek": "new translation"})
+    revised_words.append({"english": "new word", "uzbek": "yangi so‘z", "pronunciation": "word"})
+    fields = {"revision": collection["revision"], "title": "Updated practice", "words": revised_words}
+    assert other.patch(studio_url, fields, format="json").status_code == 403
+    updated = teacher.patch(studio_url, fields, format="json")
+    assert updated.status_code == 200, updated.data
+    assert updated.json()["data"]["revision"] == 2
+    assert teacher.patch(studio_url, fields, format="json").status_code == 409
+    assert student.get(path + "/words").json()["data"] == cards
+    assert student.get(progress).json()["data"] == state.json()["data"]
+    edited = {first["id"], revised_words[0]["id"]}
+    missed = next(question["wordId"] for question in session["questions"] if question["wordId"] not in edited)
     request = {"sessionId": session["sessionId"], "answers": answers_for(session["questions"], answer_map, missed)}
     assert student.post(path + "/submit", {**request, "score": 100}, format="json").status_code == 400
     assert student.post(path + "/submit", {**request, "answers": request["answers"] * 2}, format="json").status_code == 400
@@ -87,7 +116,15 @@ def verify():
     assert student.post("/v1/vocabulary/srs/submit", submission, format="json").status_code == 409
     row.refresh_from_db()
     assert row.review_count == 2 and row.interval_days == 1 and row.next_review_at > timezone.now()
-    print("PASS 30-word assignment, translation and spelling, single score, scoped results, due boundary and review replay protection")
+    history = student.get("/v1/vocabulary/srs/history").json()["data"]
+    assert any(item["review__word__english"] == row.word.english for item in history["entries"])
+    assert teacher.delete(group_path + "/students/" + student_id).status_code == 200
+    assert student.get(path + "/words").status_code == 403
+    persisted = student.get("/v1/student/vocabulary/history").json()["data"]["entries"]
+    assert persisted[0]["assignment_id"] == assignment_id and persisted[0]["score_percent"] == 97
+    transferred = teacher.get(report_path).json()["data"]["students"][0]
+    assert not transferred["currentlyEnrolled"] and transferred["percentage"] == 96.7
+    print("PASS 30 words, edits preserving issued revision, flashcard sync, scoped history, scoring, review and retention after transfer")
     transaction.set_rollback(True)
 
 

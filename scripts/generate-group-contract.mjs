@@ -8,6 +8,7 @@ function render(schema) {
   if (schema.enum) return schema.enum.map(value => JSON.stringify(value)).join(" | ");
   if (schema.anyOf) return schema.anyOf.map(render).join(" | ");
   if (schema.type === "array") return `Array<${render(schema.items)}>`;
+  if (schema.additionalProperties) return `Record<string, ${render(schema.additionalProperties)}>`;
   if (schema.type === "object") {
     const fields = Object.entries(schema.properties).map(([name, value]) =>
       `  ${name}${schema.required.includes(name) ? "" : "?"}: ${render(value)};`);
