@@ -16,6 +16,7 @@ import django
 
 django.setup()
 from django.db import transaction
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -46,6 +47,8 @@ def verify():
     assert APIClient(HTTP_HOST="localhost").get("/v1/groups").status_code == 401
     assert student.post("/v1/groups", payload, format="json").status_code == 403
     assert teacher.post("/v1/groups", {**payload, "teacherId": other_id}, format="json").status_code == 403
+    assert teacher.patch(f"/v1/users/{teacher_id}", {"role": "admin"}, format="json").status_code == 403
+    assert User.objects.get(id=teacher_id).role == "teacher"
     assert teacher.post("/v1/groups", {"name": "x"}, format="json").status_code == 400
     created = teacher.post("/v1/groups", payload, format="json")
     assert created.status_code == 201, created.data
@@ -72,7 +75,15 @@ def verify():
     assert teacher.get(path + "/export/excel").status_code == 200
     assert teacher.get("/v1/groups").json() == teacher.get("/api/v1/groups").json()
     assert teacher.get(path).json() == teacher.get(path.replace("/v1", "/api/v1", 1)).json()
-    print("PASS Group list/create/detail across both prefixes, teacher ownership, admin access, scoped student/parent rows and exports")
+    with override_settings(JWT_ACCESS_TTL_MINUTES=-1):
+        expired = issue_access(teacher_id, "teacher")
+    invalid_claim = issue_access(peer_id, "arbitrary-role")
+    for credential in (expired, invalid_claim):
+        client = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {credential}")
+        assert client.get(path + "/export/excel").status_code in (401, 403)
+    User.objects.filter(id=teacher_id).update(is_active=False)
+    assert teacher.get(path).status_code == 401
+    print("PASS Group contract, teacher ownership, admin access, scoped student/parent rows and exports, role escalation, inactive and expired sessions")
     transaction.set_rollback(True)
 
 
