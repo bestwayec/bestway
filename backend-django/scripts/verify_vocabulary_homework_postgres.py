@@ -75,17 +75,6 @@ def verify():
     second_device = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {issue_access(student_id, 'student')}")
     assert second_device.get(progress).json()["data"] == state.json()["data"]
     assert stranger.get(progress).status_code == 403
-
-    # Verify offline batch sync and durable mutation acknowledgement
-    sync_resp = student.post(progress + "/sync", {
-        "lastWordId": first["id"],
-        "mutations": [{"opId": "op-batch-1", "wordId": first["id"], "status": "known"}],
-    }, format="json")
-    assert sync_resp.status_code == 200
-    assert sync_resp.json()["data"]["acknowledgedOpIds"] == ["op-batch-1"]
-    assert sync_resp.json()["data"]["familiarity"][first["id"]] == "known"
-    assert stranger.post(progress + "/sync", {}, format="json").status_code == 403
-    assert second_device.get(progress).json()["data"]["familiarity"][first["id"]] == "known"
     assert not VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).exists()
     answer_map = {card["id"]: (card["uzbek"], card["english"]) for card in cards}
     assert len(answer_map) == 30
@@ -115,6 +104,17 @@ def verify():
     assert HomeworkSubmission.objects.filter(assignment_id=assignment_id, student_id=student_id).count() == 1
     assert VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).count() == 1
     assert student.post(path, {}, format="json").json()["data"]["result"] == result
+
+    # Verify offline batch sync and durable mutation acknowledgement
+    sync_resp = student.post(progress + "/sync", {
+        "lastWordId": first["id"],
+        "mutations": [{"opId": "op-batch-1", "wordId": first["id"], "status": "known"}],
+    }, format="json")
+    assert sync_resp.status_code == 200
+    assert sync_resp.json()["data"]["acknowledgedOpIds"] == ["op-batch-1"]
+    assert sync_resp.json()["data"]["familiarity"][first["id"]] == "known"
+    assert stranger.post(progress + "/sync", {}, format="json").status_code == 403
+    assert second_device.get(progress).json()["data"]["familiarity"][first["id"]] == "known"
 
     report_path = f"{group_path}/assignments/{assignment_id}/vocabulary-results"
     assert other.get(report_path).status_code == 403
