@@ -240,17 +240,17 @@ def _compute_student_and_group_analytics(student_ids):
 
 def detail(actor, group_id):
     group = get_group(group_id)
-    roster = StudentProfile.objects.filter(group_id=group_id)
+    scope = {'group_id': group_id}
     show_phones = actor.role in ('teacher', 'admin', 'super_admin')
     if show_phones:
         assert_manages_group(actor, group)
     elif actor.role == 'student':
-        roster = roster.filter(user_id=actor.id)
+        scope['user_id'] = actor.id
     elif actor.role == 'parent':
-        roster = roster.filter(user_id__in=child_ids(actor))
+        scope['user_id__in'] = child_ids(actor)
     else:
         fail('FORBIDDEN', 'Ruxsat berilmagan')
-    students = list(roster.select_related('user').order_by('user__name'))
+    students = list(StudentProfile.objects.filter(**scope).select_related('user').order_by('user__name'))
     if not show_phones and not students:
         fail('FORBIDDEN', "Bu guruhga ruxsat berilmagan")
 
