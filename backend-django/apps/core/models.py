@@ -130,6 +130,10 @@ class UserWeakWord(models.Model):
     correct_streak = models.IntegerField(default=0)
     is_mastered = models.BooleanField(default=False)
     last_reviewed = models.DateTimeField(auto_now=True)
+    next_review_at = models.DateTimeField(null=True, blank=True)
+    review_count = models.PositiveIntegerField(default=0)
+    interval_days = models.PositiveIntegerField(default=0)
+    lapses = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "UserWeakWord"
@@ -433,6 +437,10 @@ class HomeworkAssignment(models.Model):
         db_constraint=False,
         related_name="homework_assignments",
     )
+    vocabulary_set = models.ForeignKey(
+        VocabularySet, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="homework_assignments",
+    )
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -478,6 +486,21 @@ class HomeworkSubmission(models.Model):
     def __str__(self):
         status = "PASSED" if self.is_passed else "FAILED"
         return f"{self.student_id} - {self.assignment.title}: {self.score_percent}% ({status})"
+
+
+class VocabularyHomeworkSession(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    assignment = models.ForeignKey(HomeworkAssignment, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    questions = models.JSONField()
+    mode = models.CharField(max_length=20, choices=QuizMode.choices)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = "VocabularyHomeworkSession"
+        constraints = [
+            models.UniqueConstraint(fields=("assignment", "student"), name="unique_vocabulary_homework_session"),
+        ]
 
 
 class PlacementTestResult(models.Model):

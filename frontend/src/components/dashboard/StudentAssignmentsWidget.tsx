@@ -37,6 +37,7 @@ export interface StudentAssignmentItem {
   lesson_order?: number | null;
   exam_id?: string | null;
   exam_title?: string | null;
+  vocabulary_set_id?: string | null;
   deadline: string;
   min_pass_percent: number;
   is_submitted: boolean;
@@ -161,7 +162,9 @@ export function StudentAssignmentsWidget() {
             const isSoon = !a.is_submitted && deadlineDate.getTime() - Date.now() < 86400000 * 2;
 
             let actionUrl = "/en/videos";
-            if (a.lesson_order) {
+            if (a.vocabulary_set_id) {
+              actionUrl = `/vocabulary/assignment/${encodeURIComponent(a.id)}`;
+            } else if (a.lesson_order) {
               actionUrl = `/en/videos?lesson=lesson-grammar-${a.lesson_order}`;
             } else if (a.exam_id) {
               actionUrl = `/en/mock/${a.exam_id}`;

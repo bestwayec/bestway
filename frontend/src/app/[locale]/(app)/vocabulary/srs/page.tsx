@@ -29,6 +29,7 @@ export interface SrsWordItem {
 
 export interface SrsStatsResponse {
   totalWeakWords: number;
+  totalDueWords: number;
   totalMasteredWords: number;
   weakWords: SrsWordItem[];
 }
@@ -117,7 +118,7 @@ export default function VocabularySrsPage() {
 
             <Button
               type="button"
-              disabled={!stats || stats.totalWeakWords === 0}
+              disabled={!stats || stats.totalDueWords === 0}
               onClick={() => setIsQuizActive(true)}
               className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md"
             >

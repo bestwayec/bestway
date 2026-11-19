@@ -393,10 +393,12 @@ def submit_quiz_attempt(
 
 def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, Any]:
     """Generate personalized spaced repetition quiz for user's weak words."""
+    from django.core import signing
+    from .vocabulary_review import due
+
     weak_records = list(
-        UserWeakWord.objects.filter(student_id=student_id, is_mastered=False)
-        .select_related("word", "word__set")
-        .order_by("-mistake_count", "-last_reviewed")[:limit]
+        due(student_id, timezone.now()).select_related("word")
+        .order_by("-mistake_count", "-last_reviewed", "word_id")[:limit]
     )
 
     if not weak_records:
@@ -447,7 +449,13 @@ def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, An
             "firstLetter": word.english[0].upper() if word.english else "",
         })
 
+    review_versions = {row.word_id: row.review_count for row in weak_records}
+    session = signing.dumps({
+        "owner": student_id,
+        "words": [[q["wordId"], q["type"], review_versions[q["wordId"]]] for q in questions],
+    }, salt="bestway-vocabulary-review")
     return {
+        "sessionId": session,
         "title": "Zaif So'zlar Banki (SRS Mashqi)",
         "mode": "srs_mixed",
         "totalQuestions": len(questions),
@@ -906,6 +914,7 @@ def lookup_word(word: str) -> dict[str, Any]:
     }
 
 
+@transaction.atomic
 def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict[str, Any]:
     """Add or upsert a word into student's personal SRS Weak Words bank."""
     cleaned_en = english.strip()
@@ -917,29 +926,33 @@ def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict
         lookup_res = lookup_word(cleaned_en)
         uzbek = lookup_res.get("uzbek") or cleaned_en
 
-    # Ensure a VocabularyWord exists
-    word_obj = VocabularyWord.objects.filter(english__iexact=cleaned_en).first()
+    if len(cleaned_en) > 255 or len(uzbek) > 255:
+        raise ContractAPIException("VALIDATION_ERROR", "So‘z va tarjima 255 belgidan oshmasligi kerak", 400)
+
+    # Add and look up words only in this account's personal collection.
+    User.objects.select_for_update().only("id").get(id=student_id)
+    default_set = VocabularySet.objects.filter(
+        created_by_id=student_id, title="Shaxsiy Lug'at Banki (Personal)", is_public=False,
+    ).first()
+    if not default_set:
+        default_set = VocabularySet.objects.create(
+            title="Shaxsiy Lug'at Banki (Personal)",
+            description="Matndan tanlab qo'shilgan so'zlar",
+            level="B1",
+            is_public=False,
+            created_by_id=student_id,
+        )
+    word_obj = default_set.words.filter(english__iexact=cleaned_en).first()
     if not word_obj:
-        # Find or create a default set for personal words
-        default_set = VocabularySet.objects.filter(title="Shaxsiy Lug'at Banki (Personal)").first()
-        if not default_set:
-            first_user = User.objects.first()
-            default_set = VocabularySet.objects.create(
-                title="Shaxsiy Lug'at Banki (Personal)",
-                description="Matndan tanlab qo'shilgan so'zlar",
-                level="B1",
-                is_public=True,
-                created_by=first_user,
-            )
         word_obj = VocabularyWord.objects.create(
             set=default_set,
-            english=cleaned_en.capitalize(),
+            english=cleaned_en,
             uzbek=uzbek,
             part_of_speech="noun",
         )
 
     # Upsert UserWeakWord
-    user_weak, created = UserWeakWord.objects.get_or_create(
+    _, created = UserWeakWord.objects.get_or_create(
         student_id=student_id,
         word=word_obj,
         defaults={
@@ -948,11 +961,6 @@ def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict
             "is_mastered": False,
         },
     )
-    if not created:
-        user_weak.is_mastered = False
-        user_weak.mistake_count += 1
-        user_weak.save(update_fields=["is_mastered", "mistake_count", "last_reviewed"])
-
     return {
         "success": True,
         "wordId": word_obj.id,

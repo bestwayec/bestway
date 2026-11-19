@@ -382,6 +382,7 @@ class VocabularyAPITests(SimpleTestCase):
             correct_streak=0,
             is_mastered=False,
             last_reviewed=datetime.now(dt_timezone.utc),
+            next_review_at=None, review_count=0, interval_days=0, lapses=0,
         )
         w2 = SimpleNamespace(
             word=SimpleNamespace(id="w2", english="meticulous", uzbek="sinchkov"),
@@ -389,6 +390,7 @@ class VocabularyAPITests(SimpleTestCase):
             correct_streak=2,
             is_mastered=True,
             last_reviewed=datetime.now(dt_timezone.utc),
+            next_review_at=None, review_count=0, interval_days=0, lapses=0,
         )
         mock_qs.select_related.return_value.order_by.return_value = [w1, w2]
         mock_weak_filter.return_value = mock_qs

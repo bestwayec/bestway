@@ -29,7 +29,7 @@ Fresh checks include the real PostgreSQL Group contract across both route prefix
 
 ## Stage 02 — PARTIAL
 
-Stage 01 Bestway commits are `2431ebd04cc9acf9f871a3933ed8759d287a5b38` and `da8bde3`. The second commit corrected an existing roster-test query regression.
+Stage 01 Bestway commits are `2431ebd04cc9acf9f871a3933ed8759d287a5b38` and `da8bde352a713d460c8ae4d215851765c54f10e4`. The second commit corrected an existing roster-test query regression.
 
 Bestway adds the Django-owned nullable unique Cohort link. The bridge is created lazily when assigning homework. Linked classrooms derive membership, name and owner from the legacy Group and StudentProfile, with no mirror membership rows. Independent Cohorts and existing invitation workflows retain their data. Attendance requires existing enrollment and no longer changes membership. The web and desktop group screens both assign and list the same tasks.
 
@@ -37,6 +37,12 @@ Desktop companion commit `dc73fbac1a0b54bf6163fd0b0cbe93deb4c988c3` adds roster 
 
 Schedule editing in desktop, archive, bulk assignment, one unified workspace navigation structure, and comprehensive student profile parity remain incomplete. Notes and excused attendance are not provided by the current attendance schema.
 
-## Stage 03 — NOT STARTED
+## Stage 03 — PARTIAL
 
-Depends on a verified classroom-to-homework flow.
+Stage 02 Bestway commit is `df0180791f1acd235ac19afac2d3efdd0ff13988`. Stage 03 desktop companion is `467bb3772404698d6919c7ef438be86b7b9b8311`.
+
+Classroom assignments can reference an existing vocabulary set. One persisted student session snapshots the issued words and directions and produces one server-graded HomeworkSubmission and VocabularyAttempt. Teacher reports and CSV exports use the current classroom scope. Standalone practice remains compatible with the older vocabulary workflow and does not create graded homework. Private catalog visibility and personal review bank ownership are enforced. Daily review uses signed, short-lived batches and atomic progress updates with a deterministic schedule.
+
+On local PostgreSQL the integration script passed with a private 30-word set, mixed translation and spelling, duplicate-submit protection, teacher reports and CSV, schedule boundary checks and replay protection. The browser journey passed with a real website and Django backend, including 30-word Smart Paste and publish, classroom assignment, desktop frontend flashcards and 30/30 submission, identical teacher reports, daily review, reload, logout/login and concurrent review rejection.
+
+Native Linux boot and WebKit rendering passed. The interactive vocabulary journey was exercised in Chromium against the desktop React app. Interactive native vocabulary, Windows/Android and low-memory checks remain unverified. Full studio editing and richer metadata, cross-device flashcard state and comprehensive analytics remain incomplete. See the final report for verification commands and backlog.

@@ -26,6 +26,7 @@ from . import statistics_views as statistics
 from . import system_views as system
 from . import telegram_views as telegram
 from . import video_views as videos
+from . import vocabulary_homework
 from . import vocabulary_views as vocabulary
 from . import parent_views as parents
 from . import vocab_battle_views as vocab_battle
@@ -140,6 +141,8 @@ urlpatterns = [
     path('groups/<str:group_id>/students', groups.add_student_view),
     path('groups/<str:group_id>/students/<str:student_id>', groups.remove_student_view),
     path('groups/<str:group_id>/assignments', teacher_views.classroom_assignments_view),
+    path('groups/<str:group_id>/vocabulary-collections', teacher_views.classroom_vocabulary_view),
+    path('groups/<str:group_id>/assignments/<str:assignment_id>/vocabulary-results', vocabulary_homework.results_view),
     path('assessment/groups', groups.groups_view),
     path('assessment/groups/', groups.groups_view),
     path('assessment/groups/<str:group_id>', groups.group_view),
@@ -756,6 +759,9 @@ urlpatterns = [
     path('student/my-assignments/', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments/', teacher_views.student_my_assignments_view),
+    path('student/assignments/<str:assignment_id>/vocabulary', vocabulary_homework.start_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/words', vocabulary_homework.words_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/submit', vocabulary_homework.submit_view),
     path('student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
     path('student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
     path('v1/student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),

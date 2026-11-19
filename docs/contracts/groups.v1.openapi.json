@@ -399,6 +399,559 @@
           }
         }
       }
+    },
+    "/student/assignments/{assignmentId}/vocabulary": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularySession"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "$ref": "#/components/schemas/VocabularyMode"
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/assignments/{assignmentId}/vocabulary/words": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VocabularyCard"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/assignments/{assignmentId}/vocabulary/submit": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularySubmission"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups/{groupId}/assignments/{assignmentId}/vocabulary-results": {
+      "parameters": [
+        {
+          "name": "groupId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyAssignmentReports"
+                    }
+                  }
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "download",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "csv"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/vocabulary/srs/quiz": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyReview"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vocabulary/srs/submit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularySubmission"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups/{groupId}/vocabulary-collections": {
+      "parameters": [
+        {
+          "name": "groupId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ClassroomVocabularyCollection"
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -742,7 +1295,8 @@
           "lesson_id",
           "lesson_title",
           "exam_id",
-          "exam_title"
+          "exam_title",
+          "vocabulary_set_id"
         ],
         "properties": {
           "id": {
@@ -805,6 +1359,16 @@
                 "type": "null"
               }
             ]
+          },
+          "vocabulary_set_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -828,8 +1392,331 @@
           },
           "exam_id": {
             "type": "string"
+          },
+          "vocabulary_set_id": {
+            "type": "string"
           }
         }
+      },
+      "VocabularyMode": {
+        "enum": [
+          "mixed",
+          "spelling",
+          "eng_uzb",
+          "uzb_eng"
+        ]
+      },
+      "VocabularyCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "english",
+          "uzbek",
+          "contextSentence",
+          "partOfSpeech"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "english": {
+            "type": "string"
+          },
+          "uzbek": {
+            "type": "string"
+          },
+          "contextSentence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partOfSpeech": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "VocabularyQuestion": {
+        "type": "object",
+        "required": [
+          "id",
+          "wordId",
+          "prompt",
+          "type",
+          "options"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "wordId": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "spelling",
+              "eng_uzb",
+              "uzb_eng"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "VocabularyResult": {
+        "type": "object",
+        "required": [
+          "score",
+          "totalWords",
+          "percentage",
+          "pointsAwarded",
+          "mode",
+          "wrongAnswers"
+        ],
+        "properties": {
+          "score": {
+            "type": "number"
+          },
+          "totalWords": {
+            "type": "number"
+          },
+          "percentage": {
+            "type": "number"
+          },
+          "pointsAwarded": {
+            "type": "number"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "wrongAnswers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "wordId",
+                "english",
+                "uzbek",
+                "userAnswer",
+                "correctAnswer"
+              ],
+              "properties": {
+                "wordId": {
+                  "type": "string"
+                },
+                "english": {
+                  "type": "string"
+                },
+                "uzbek": {
+                  "type": "string"
+                },
+                "userAnswer": {
+                  "type": "string"
+                },
+                "correctAnswer": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "isPassed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VocabularySession": {
+        "type": "object",
+        "required": [
+          "sessionId",
+          "mode",
+          "result",
+          "questions"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/VocabularyMode"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VocabularyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyQuestion"
+            }
+          }
+        }
+      },
+      "VocabularyReview": {
+        "type": "object",
+        "required": [
+          "totalQuestions",
+          "questions"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "totalQuestions": {
+            "type": "number"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyQuestion"
+            }
+          }
+        }
+      },
+      "VocabularyAssignmentReports": {
+        "type": "object",
+        "required": [
+          "assignedCount",
+          "completedCount",
+          "students",
+          "missedWords",
+          "overdueCount"
+        ],
+        "properties": {
+          "assignedCount": {
+            "type": "number"
+          },
+          "completedCount": {
+            "type": "number"
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "studentId",
+                "name",
+                "score",
+                "totalWords",
+                "percentage",
+                "isPassed"
+              ],
+              "properties": {
+                "studentId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                },
+                "totalWords": {
+                  "type": "number"
+                },
+                "percentage": {
+                  "type": "number"
+                },
+                "isPassed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "missedWords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "english",
+                "count"
+              ],
+              "properties": {
+                "english": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "overdueCount": {
+            "type": "number"
+          }
+        }
+      },
+      "ClassroomVocabularyCollection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "wordCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "wordCount"
+        ]
+      },
+      "VocabularySubmission": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "wordId": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "wordId",
+                "answer"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "answers"
+        ]
       }
     }
   }

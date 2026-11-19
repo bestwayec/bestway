@@ -4,6 +4,7 @@ from __future__ import annotations
 import random
 import string
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
@@ -18,6 +19,7 @@ from apps.core.models import (
     HomeworkSubmission,
     Lesson,
     UserLessonProgress,
+    VocabularySet,
 )
 from apps.legacy_schema.models import MockExam, User
 from . import classrooms
@@ -251,7 +253,7 @@ def teacher_assignments_view(request):
     return success(create_assignment(cohort, data, title), 201)
 
 
-def create_assignment(cohort, data, title):
+def create_assignment(cohort, data, title, *, vocabulary_set=None):
     lesson_id = data.get("lesson_id")
     lesson = None
     if lesson_id:
@@ -282,6 +284,7 @@ def create_assignment(cohort, data, title):
         title=title,
         lesson=lesson,
         exam=exam,
+        vocabulary_set=vocabulary_set,
         deadline=deadline,
         min_pass_percent=min_pass,
     )
@@ -300,6 +303,7 @@ def assignment_payload(assignment):
         "lesson_title": assignment.lesson.title if assignment.lesson else None,
         "exam_id": assignment.exam_id,
         "exam_title": assignment.exam.title if assignment.exam else None,
+        "vocabulary_set_id": assignment.vocabulary_set_id,
         "deadline": assignment.deadline.isoformat(),
         "min_pass_percent": assignment.min_pass_percent,
         "created_at": assignment.created_at.isoformat(),
@@ -316,8 +320,9 @@ def classroom_assignments_view(request, group_id):
         assignments = cohort.assignments.select_related("lesson", "exam") if cohort else []
         return success([assignment_payload(assignment) for assignment in assignments])
 
+    cohort = classrooms.homework_cohort(actor, group_id, create=True)
     from .domain_contracts import invalid, payload
-    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id"})
+    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id", "vocabulary_set_id"})
     title = data.get("title")
     if not isinstance(title, str) or not 1 <= len(title.strip()) <= 255:
         invalid("Vazifa nomi 1–255 belgi bo‘lishi kerak")
@@ -335,8 +340,32 @@ def classroom_assignments_view(request, group_id):
     for key, model in (("lesson_id", Lesson), ("exam_id", MockExam)):
         if key in data and (not isinstance(data[key], str) or not model.objects.filter(id=data[key]).exists()):
             invalid(f"{key} topilmadi")
-    cohort = classrooms.homework_cohort(actor, group_id, create=True)
-    return success(create_assignment(cohort, data, title.strip()), 201)
+    vocab_set = None
+    if "vocabulary_set_id" in data:
+        if "lesson_id" in data or "exam_id" in data or not isinstance(data["vocabulary_set_id"], str):
+            invalid("Vazifa faqat bitta lug‘at to‘plamiga bog‘lanishi mumkin")
+        from .vocabulary_views import managed_set
+
+        vocab_set = managed_set(request, data["vocabulary_set_id"])
+        if vocab_set.group_id and vocab_set.group_id != group_id:
+            invalid("Lug‘at boshqa guruhga tegishli")
+        if not vocab_set.words.exists():
+            invalid("To‘plamda so‘zlar yo‘q")
+    return success(create_assignment(cohort, data, title.strip(), vocabulary_set=vocab_set), 201)
+
+
+@api_view(["GET"])
+def classroom_vocabulary_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    from . import groups
+
+    groups.assert_manages_group(actor, groups.get_group(group_id))
+    sets = VocabularySet.objects.filter(Q(group_id__isnull=True) | Q(group_id=group_id))
+    if actor.role == "teacher":
+        sets = sets.filter(Q(created_by_id=actor.id) | Q(group_id=group_id))
+    sets = sets.annotate(wordCount=Count("words")).filter(wordCount__gt=0)
+    return success(list(sets.order_by("title", "id").values("id", "title", "wordCount")))
 
 
 @api_view(["POST"])
@@ -430,6 +459,7 @@ def student_my_assignments_view(request):
             "lesson_order": a.lesson.order_index if a.lesson else None,
             "exam_id": a.exam_id,
             "exam_title": a.exam.title if a.exam else None,
+            "vocabulary_set_id": getattr(a, "vocabulary_set_id", None),
             "deadline": a.deadline.isoformat(),
             "min_pass_percent": a.min_pass_percent,
             "is_submitted": is_submitted,
@@ -460,6 +490,8 @@ def student_submit_assignment_view(request, assignment_id: str):
     is_member = classrooms.is_member(assignment.cohort, request.user.id)
     if not is_member:
         raise ContractAPIException("FORBIDDEN", "Siz ushbu guruhga a'zo emassiz", 403)
+    if isinstance(getattr(assignment, "vocabulary_set_id", None), str):
+        raise ContractAPIException("VOCABULARY_SESSION_REQUIRED", "Vazifani lug‘at mashqidan yakunlang", 400)
 
     # The client never supplies a score (an empty POST used to record 100% passed).
     from . import homework_scoring as scoring
@@ -495,5 +527,7 @@ def teacher_grade_assignment_view(request, assignment_id: str):
         raise ContractAPIException("VALIDATION_ERROR", "student_id va 0–100 oralig'idagi butun score_percent kerak", 400)
     if not classrooms.is_member(assignment.cohort, student_id):
         raise ContractAPIException("STUDENT_NOT_IN_COHORT", "O'quvchi bu guruhda emas", 400)
+    if isinstance(getattr(assignment, "vocabulary_set_id", None), str):
+        raise ContractAPIException("VOCABULARY_SERVER_GRADED", "Lug‘at natijasini server hisoblaydi", 400)
     from . import homework_scoring as scoring
     return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))
