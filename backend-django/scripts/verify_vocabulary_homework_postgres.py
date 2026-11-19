@@ -69,6 +69,13 @@ def verify():
     assert snap_resp.json()["data"]["revision"] == 1 and len(snap_resp.json()["data"]["words"]) == 30
     assert stranger.get(path + "/snapshot").status_code == 403
 
+    from verify_group_contract_postgres import issue_access
+    from rest_framework.test import APIClient
+
+    second_device = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {issue_access(student_id, 'student')}")
+    assert second_device.get(progress).json()["data"] == state.json()["data"]
+    assert stranger.get(progress).status_code == 403
+
     # Verify offline batch sync and durable mutation acknowledgement
     sync_resp = student.post(progress + "/sync", {
         "lastWordId": first["id"],
@@ -78,13 +85,7 @@ def verify():
     assert sync_resp.json()["data"]["acknowledgedOpIds"] == ["op-batch-1"]
     assert sync_resp.json()["data"]["familiarity"][first["id"]] == "known"
     assert stranger.post(progress + "/sync", {}, format="json").status_code == 403
-
-    from verify_group_contract_postgres import issue_access
-    from rest_framework.test import APIClient
-
-    second_device = APIClient(HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Bearer {issue_access(student_id, 'student')}")
-    assert second_device.get(progress).json()["data"] == state.json()["data"]
-    assert stranger.get(progress).status_code == 403
+    assert second_device.get(progress).json()["data"]["familiarity"][first["id"]] == "known"
     assert not VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).exists()
     answer_map = {card["id"]: (card["uzbek"], card["english"]) for card in cards}
     assert len(answer_map) == 30
