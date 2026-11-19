@@ -171,3 +171,7 @@ Stage 04 can use the Group identifier, Django-owned homework link and shared con
 ## G. Verdict
 
 Stage 00 passed. Stages 01–03 are partial. The teacher-to-student vocabulary workflow passed in Chromium against real Django and PostgreSQL, with the same score on the website and desktop frontend. Native boot and renderer checks passed. Full native parity, complete scope and production readiness remain unverified. Grandec was untouched.
+
+## Continuation on the existing feature branches
+
+The completion report records the follow-up from the baseline above. It covers server-issued practice and atomic rewards, real account switching, classroom enrollment history, revisioned vocabulary editing, synchronized study and review, and native and browser verification. It also records the continuing Prisma and GitHub proxy blockers with the exact branch tips and manual Compare links. [Read the completion report](BESTWAY_NEXT_COMPLETION_REPORT.md)
