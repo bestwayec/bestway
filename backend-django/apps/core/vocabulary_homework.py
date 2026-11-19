@@ -1,11 +1,12 @@
 """Issue and score a single server-owned vocabulary practice session per assignment."""
 import csv
-from io import BytesIO
+from itertools import chain
+from tempfile import SpooledTemporaryFile
 from types import SimpleNamespace
 
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import FileResponse, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
@@ -186,26 +187,28 @@ def results_view(request, group_id, assignment_id):
     if assignment is None:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
 
-    current = set(StudentProfile.objects.filter(group_id=group_id).values_list("user_id", flat=True))
+    current_members = StudentProfile.objects.filter(group_id=group_id).values_list("user_id", flat=True)
+    current = set(current_members)
     periods = ClassroomEnrollment.objects.filter(group_id=group_id).filter(
         Q(ended_at__gte=assignment.created_at) | Q(ended_at__isnull=True),
         Q(started_at__lte=assignment.deadline) | Q(started_at__isnull=True),
     ).values_list("student_id", flat=True)
-    sessions = list(VocabularyHomeworkSession.objects.filter(assignment=assignment, result__isnull=False))
-    audience = current | set(periods) | {session.student_id for session in sessions}
-    roster = dict(User.objects.filter(id__in=audience).values_list("id", "name"))
+    sessions = VocabularyHomeworkSession.objects.filter(assignment=assignment, result__isnull=False)
+    roster = dict(User.objects.filter(
+        Q(id__in=current_members) | Q(id__in=periods) | Q(id__in=sessions.values("student_id")),
+    ).values_list("id", "name"))
     misses = {}
     students = []
-    for session in sessions:
-        for row in session.result["wrongAnswers"]:
+    for student_id, result in sessions.values_list("student_id", "result").iterator(chunk_size=100):
+        for row in result["wrongAnswers"]:
             misses[row["english"]] = misses.get(row["english"], 0) + 1
-        if session.student_id not in roster:
+        if student_id not in roster:
             continue
         students.append({
-            "studentId": session.student_id, "name": roster[session.student_id],
-            "currentlyEnrolled": session.student_id in current,
-            "score": session.result["score"], "totalWords": session.result["totalWords"],
-            "percentage": session.result["percentage"], "isPassed": session.result["isPassed"],
+            "studentId": student_id, "name": roster[student_id],
+            "currentlyEnrolled": student_id in current,
+            "score": result["score"], "totalWords": result["totalWords"],
+            "percentage": result["percentage"], "isPassed": result["isPassed"],
         })
     ranked_misses = sorted(misses.items(), key=lambda row: (-row[1], row[0]))
     students.sort(key=lambda row: (row["name"], row["studentId"]))
@@ -237,12 +240,17 @@ def safe_spreadsheet_text(text):
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
+class CSVLine:
+    def write(self, value):
+        return value
+
+
 def export_results(extension, students, missed):
     headers = ("Student", "Correct", "Total", "Percentage", "Passed")
-    scores = [(safe_spreadsheet_text(row["name"]), row["score"], row["totalWords"],
-               row["percentage"], row["isPassed"]) for row in students]
+    scores = ((safe_spreadsheet_text(row["name"]), row["score"], row["totalWords"],
+               row["percentage"], row["isPassed"]) for row in students)
     missed_headers = ("Commonly missed word", "Count")
-    missed_rows = [(safe_spreadsheet_text(word), count) for word, count in missed]
+    missed_rows = ((safe_spreadsheet_text(word), count) for word, count in missed)
     if extension == "xlsx":
         from openpyxl import Workbook
 
@@ -255,12 +263,18 @@ def export_results(extension, students, missed):
         difficult_words.append(missed_headers)
         for row in missed_rows:
             difficult_words.append(row)
-        content = BytesIO()
-        workbook.save(content)
-        response = HttpResponse(content.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        content = SpooledTemporaryFile(max_size=512 * 1024, mode="w+b")
+        try:
+            workbook.save(content)
+            content.seek(0)
+        except Exception:
+            content.close()
+            raise
+        response = FileResponse(content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        response = HttpResponse("\ufeff", content_type="text/csv; charset=utf-8")
-        csv.writer(response).writerows([headers, *scores, (), missed_headers, *missed_rows])
+        writer = csv.writer(CSVLine())
+        rows = chain((headers,), scores, ((), missed_headers), missed_rows)
+        response = StreamingHttpResponse(chain(("\ufeff",), map(writer.writerow, rows)), content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="vocabulary-results.{extension}"'
     return response
 

@@ -8,8 +8,9 @@ from verify_group_contract_postgres import actor, transaction
 
 from django.utils import timezone
 
-from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyAttempt
+from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyAttempt, VocabularyHomeworkSession
 from apps.core.vocabulary_review import due
+from apps.legacy_schema.models import User
 
 
 def answers_for(questions, answer_map, miss_id=None):
@@ -100,11 +101,11 @@ def verify():
     assert other.get(report_path).status_code == 403
     export = teacher.get(report_path + "?download=csv")
     assert export.status_code == 200 and "text/csv" in export.headers["Content-Type"]
-    assert str(96.7).encode() in export.content
+    assert str(96.7).encode() in b"".join(export.streaming_content)
     assert other.get(report_path + "?download=csv").status_code == 403
     workbook_response = teacher.get(report_path + "?download=xlsx")
     assert workbook_response.status_code == 200 and workbook_response.headers["Content-Disposition"].endswith('.xlsx"')
-    workbook = load_workbook(BytesIO(workbook_response.content), read_only=True)
+    workbook = load_workbook(BytesIO(b"".join(workbook_response.streaming_content)), read_only=True)
     assert list(workbook["Results"].values)[1][1:] == (29, 30, 96.7, True)
     assert list(workbook["Difficult words"].values)[1][1] == 1
     workbook.close()
@@ -135,6 +136,27 @@ def verify():
     transferred = teacher.get(report_path).json()["data"]["students"][0]
     assert not transferred["currentlyEnrolled"] and transferred["percentage"] == 96.7
     print("PASS 30 words, edits preserving issued revision, flashcard sync, scoped history, scoring, review and retention after transfer")
+
+    synthetic_results = []
+    for index in range(125):
+        classmate, _ = actor("student")
+        User.objects.filter(id=classmate).update(name=f"Pagination learner {index:03d}")
+        synthetic_results.append(VocabularyHomeworkSession(
+            assignment_id=assignment_id, student_id=classmate, mode="mixed", questions=[], result=result,
+        ))
+    VocabularyHomeworkSession.objects.bulk_create(synthetic_results)
+    pages = [teacher.get(report_path, {"limit": 50, "page": page}).json()["data"] for page in range(1, 4)]
+    assert [len(page["students"]) for page in pages] == [50, 50, 26]
+    assert [page["hasNext"] for page in pages] == [True, True, False]
+    assert len({row["studentId"] for page in pages for row in page["students"]}) == 126
+    assert all(page["assignedCount"] == page["completedCount"] == 126 for page in pages)
+    search = teacher.get(report_path, {"search": "learner 124"}).json()["data"]
+    assert [row["name"] for row in search["students"]] == ["Pagination learner 124"]
+    for extension in ("csv", "xlsx"):
+        response = teacher.get(report_path, {"download": extension})
+        assert response.status_code == 200 and response.streaming
+        assert sum(map(len, response.streaming_content)) > 1000
+    print("PASS stable report pagination, search and streamed export with 126 completed learners")
     transaction.set_rollback(True)
 
 

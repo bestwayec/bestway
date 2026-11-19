@@ -3474,6 +3474,9 @@
                 "approved_feedback": {
                   "description": "Approved assessment feedback"
                 },
+                "feedback_text": {
+                  "type": "string"
+                },
                 "final_score": {
                   "anyOf": [
                     {

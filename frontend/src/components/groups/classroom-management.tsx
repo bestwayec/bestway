@@ -115,7 +115,10 @@ export function ClassroomManagement({ group, userId }: { group: GroupDetail; use
               {detail.data.mockExams.map(exam => <li key={exam.id}>{exam.exam__title} · {exam.overall_band ?? exam.overall_score ?? "—"}</li>)}
             </ul>
             {detail.data.feedback.length > 0 && <><h5>{t("feedback")}</h5><ul>
-              {detail.data.feedback.map((row, index) => <li key={index}>{row.skill} · {row.final_score ?? "—"}{typeof row.approved_feedback === "string" && ` · ${row.approved_feedback}`}</li>)}
+              {detail.data.feedback.map((row, index) => <li key={index}>
+                {row.skill} · {row.final_score ?? "—"}
+                <p className="whitespace-pre-wrap">{row.feedback_text ?? (typeof row.approved_feedback === "string" ? row.approved_feedback : "")}</p>
+              </li>)}
             </ul></>}
           </div>}
         </section>

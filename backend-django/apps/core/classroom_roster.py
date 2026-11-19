@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.legacy_schema.models import AssessmentJob, Attendance, MockAttempt, StudentProfile, TestAttempt, User
+from apps.legacy_schema.models import AssessmentJob, AssessmentJobStatus, Attendance, MockAttempt, StudentProfile, TestAttempt, User
 
 from . import groups
 from .models import ClassroomArchive, ClassroomEnrollment, HomeworkSubmission
@@ -28,6 +28,17 @@ def record_enrollment(student_id, old_group, new_group):
         ClassroomEnrollment.objects.create(student_id=student_id, group_id=old_group, ended_at=now)
     if new_group:
         ClassroomEnrollment.objects.create(student_id=student_id, group_id=new_group, started_at=now)
+
+
+def feedback_text(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for key in ("feedback", "overallFeedback", "summary"):
+            text = value.get(key)
+            if isinstance(text, str) and text.strip():
+                return text
+    return ""
 
 
 @transaction.atomic
@@ -81,7 +92,7 @@ def history(actor, group_id, student_id):
     tests = list(TestAttempt.objects.filter(in_group, student_id=student_id, status="completed")
                  .order_by("-started_at").values("id", "test__title", "started_at", "total_score")[:50])
     feedback = AssessmentJob.objects.filter(
-        attempt_id__in=[row["id"] for row in mocks], skill__in=["writing", "speaking"], status="approved",
+        attempt_id__in=[row["id"] for row in mocks], skill__in=["writing", "speaking"], status=AssessmentJobStatus.SUCCEEDED,
     ).exclude(approved_feedback=None).order_by("-completed_at").values(
         "attempt_id", "skill", "approved_feedback", "final_score",
     )[:100]
@@ -103,7 +114,7 @@ def history(actor, group_id, student_id):
         )[:100]),
         "mockExams": mocks,
         "tests": tests,
-        "feedback": list(feedback),
+        "feedback": [{**row, "feedback_text": feedback_text(row["approved_feedback"])} for row in feedback],
     }
 
 
