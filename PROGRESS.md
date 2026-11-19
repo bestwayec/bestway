@@ -7,6 +7,27 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 38-BLOK: BESTWAY NEXT — Stage 04: Unified Workspaces, Easy Classroom & Student Deep Linking (2026-11-19) — #206 & #38, branch `feat/bestway-next-00-03`
+- **Student Workspace & Dashboard (Phase 04.1)**:
+  - Talaba Dashboard'iga jonli dars va sinf sharhi (`StudentClassroomWidget`), topshiriqlar ro'yxati (`StudentAssignmentsWidget`), davomat ko'rsatkichi (`StudentAttendanceWidget`), va oflayn lug'at kesh holati (`StudentOfflineVocabWidget`) to'liq ulandi.
+  - O'quvchi taklif kodi orqali guruhga qo'shilish modali (`POST /v1/student/join-cohort`) integratsiya qilindi.
+  - Vazifalar ro'yxati (`GET /v1/student/my-assignments`) muddatlar, o'tish ballari, holat nishonlari (`pending`, `overdue`, `awaiting_review`, `passed`, `failed`) bilan dinamik ishlaydi.
+- **Teacher Command Center (Phase 04.2)**:
+  - Desktop va Web uchun yagona `TeacherDashboard` boshqaruv paneli yaratildi: faol sinflar, o'quvchilar soni, baholash navbatidagi ishlar va Vocabulary Studio holati real vaqtda ko'rsatiladi.
+  - Sidebar navigatsiya shartnomasi (`[0] -> proctoring`, `[1] -> grading`, `[2] -> groups`, `[3] -> exams`) 100% buzilmagan holda saqlanib, dashboard va vocabulary bo'limlari kengaytirildi.
+- **Classroom Workspace & Unified Student Profile (Phase 04.3 & 04.4)**:
+  - `UnifiedStudentProfileModal` komponenti yaratildi: `GET /v1/groups/<id>/member-history/<student_id>` orqali o'quvchi ma'lumotlari, davomat darajasi, uy vazifalari topshirig'i, barcha imtihon natijalari (L/R/W/S/Overall Band) va tasdiqlangan o'qituvchi/AI diagnostik xulosalari ko'rsatiladi.
+  - `ClassroomWorkspace.tsx` va `GroupsResults.tsx` da talaba ismlari bosilganda to'g'ridan-to'g'ri to'liq profil ochiladi.
+- **Exams & Assignments Deep Linking (Phase 04.5)**:
+  - Talaba topshiriqlaridan "Lug'atni o'rganish" to'g'ridan-to'g'ri lug'at trenajyoriga, "Imtihonni boshlash" esa mos test yoki mock imtihoniga yo'naltiradi (`onStartExamById`).
+  - Jarayondagi imtihonlarni saqlangan holatdan davom ettirish (resume) funksiyasi kafolatlandi.
+  - `bestway/frontend/src/components/dashboard/StudentAssignmentsWidget.tsx` da qattiq yozilgan `/en` prefiksi olib tashlanib, ko'p tilli (uz/ru/en) yo'naltirish to'liq to'g'rilandi.
+- **Sifat va Testlar**:
+  - `bw-tauri`: 56 ta test fayli, 462 ta vitest testi (100% PASS); `cargo check` (100% PASS); `npm run build` (100% PASS).
+  - `bestway/frontend`: 125+ test fayli, 757+ vitest testi (100% PASS); `npm run lint` (0 xato); `next build` (88/88 statik sahifalar, 100% PASS).
+  - `backend-django`: `tests.test_vocabulary_offline_sync` (6/6 PASS).
+  - Hosted CI: barcha CI quvurlari 100% yashil.
+
 ### 37-BLOK: BESTWAY NEXT — Stage 03 Offline Vocabulary Sync & Handoff (2026-11-19) — #206, branch `feat/bestway-next-00-03`
 - **Oflayn Lug'at va Fleshkarta API**:
   - `GET /v1/student/assignments/<id>/vocabulary/snapshot`: ruxsat etilgan talabalar uchun to'liq so'zlar to'plami va versiyasini (revision) qaytaradi.

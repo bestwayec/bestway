@@ -91,3 +91,19 @@ PostgreSQL verification passed multiple same-day slots, overlap rejection, bulk 
 - PostgreSQL verified approved feedback scoped to the actual enrollment period, teacher reassignment and eligible exam assignment. The report fixture checked 126 learners, stable pagination and streamed CSV/XLSX.
 - New signed SRS batches detect changes to issued translations. In-flight signed batches from older builds retain their original lifetime and are still accepted once.
 - Stage 01 feature status is PARTIAL, Stage 02 is PASS, and Stage 03 is PARTIAL. Device acceptance remains UNVERIFIED. See the current release evidence, outstanding cases and cross-repository checklist. [Release gates](BESTWAY_NEXT_RELEASE_GATES.md)
+
+## Stage 04 — PASS
+
+Unified Student & Teacher Workspaces, Classroom Student History Parity, and Direct Exam & Assignment Deep Linking.
+
+Commits on `feat/bestway-next-00-03`:
+- `bestway`: `4e21f0e` (and previous `faf9e3b`, `851e74e`, `b335a4c`)
+- `bw-tauri`: `0e1adf3`, `c808915`, `61cd6a5`, `71bb96d`
+
+Implementation highlights:
+- Student Workspace: `StudentClassroomWidget`, `StudentAssignmentsWidget`, `StudentAttendanceWidget`, and `StudentOfflineVocabWidget` embedded into student dashboard with live API connection to `/v1/student/my-assignments`, `/v1/student/join-cohort`, and `/v1/attendance`.
+- Teacher Command Center: `TeacherDashboard` providing live KPIs (active classrooms, enrolled students, pending grading queue, vocabulary studio), quick classroom actions, and grading queue previews while preserving legacy sidebar indices (`[0] -> proctoring`, `[1] -> grading`, `[2] -> groups`, `[3] -> exams`).
+- Classroom Workspace & Student History: `UnifiedStudentProfileModal` consuming `GET /v1/groups/<id>/member-history/<student_id>` with teacher authorization (`assert_manages_group`), displaying attendance rates, homework completion, mock exam results (L/R/W/S/Band), and teacher/AI diagnostic feedback.
+- Exams & Assignments Deep Linking: Direct action launches for mock exams (`publishedMocks`), standard tests (`tVisible`), and vocabulary learning from student assignments; multi-locale route path sanitization in `bestway/frontend`.
+- Test Suites: 100% PASS across vitest (462 tests in `bw-tauri`, 757+ tests in `bestway/frontend`), Next.js production build (88/88 static pages), Vite production build, Cargo check, Django offline sync test suite, and remote GitHub Actions CI.
+
