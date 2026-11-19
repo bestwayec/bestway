@@ -7,6 +7,20 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 37-BLOK: BESTWAY NEXT — Stage 03 Offline Vocabulary Sync & Handoff (2026-11-19) — #206, branch `feat/bestway-next-00-03`
+- **Oflayn Lug'at va Fleshkarta API**:
+  - `GET /v1/student/assignments/<id>/vocabulary/snapshot`: ruxsat etilgan talabalar uchun to'liq so'zlar to'plami va versiyasini (revision) qaytaradi.
+  - `POST /v1/student/assignments/<id>/vocabulary/flashcards/sync`: turg'un `opId` lar bilan idempotent paketli familiarity o'zgarishlarini qabul qiladi va `acknowledgedOpIds` bilan tasdiqlaydi.
+  - `PATCH /v1/student/assignments/<id>/vocabulary/flashcards`: mavjud yagona so'zli yangilanishlar bilan to'liq orqaga mos (backward-compatible) saqlandi.
+  - OpenAPI spec (`docs/contracts/groups.v1.openapi.json`) va frontend DTOlar yangilandi.
+- **PostgreSQL va Regressiya Testlari**:
+  - `backend-django/tests/test_vocabulary_offline_sync.py`: 6/6 ta unit test muvaffaqiyatli o'tdi (0.032s).
+  - `backend-django/scripts/verify_vocabulary_homework_postgres.py`: sinxronizatsiyani tekshirish tartibi dars topshirig'i topshirilganidan keyingi nuqtaga ko'chirildi, barcha PostgreSQL tekshiruvlari 100% o'tdi.
+- **Hosted CI**:
+  - GitHub Actions run `44557947516`: `frontend` (2m31s, PASS), `django` (3m11s, PASS) — 100% muvaffaqiyatli yakunlandi.
+- **Hujjatlar**:
+  - `docs/BESTWAY_NEXT_STAGE03_OFFLINE_REPORT.md` va `docs/BESTWAY_NEXT_AGENT_HANDOFF.md` yaratildi.
+
 ### 36-BLOK: E2E barqarorligi — multilevel 3×, vocab-battle, mobile-listening, drill (2026-11-18)
 - **multilevel-full ketma-ket 3 marta: 16/16, 16/16, 16/16** (#204 dan keyin; Speaking har safar 8/8×201, tarmoq uzilishidan keyin bitta qayta yuklash).
 - **vocab-battle 18/20 → 20/20**: skript ICU plural xabarni (`+{points, plural, …} added`) oddiy almashtirish bilan formatlardi — eskirgan; skriptga minimal ICU plural formatlovchi qo'shildi. Mahsulot to'g'ri edi.
