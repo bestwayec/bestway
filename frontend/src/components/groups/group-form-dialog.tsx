@@ -23,8 +23,7 @@ import {
 import { useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import { useTeachers } from "@/hooks/use-users";
 import { useMe } from "@/hooks/use-me";
-import type { GroupDetail, GroupListItem, WeekDay } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { GroupDetail, GroupListItem, ScheduleItem, WeekDay } from "@/lib/types";
 
 const DAYS: WeekDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -91,30 +90,15 @@ function GroupFormFields({
   const sched = group?.schedule ?? [];
   const [name, setName] = React.useState(group?.name ?? "");
   const [teacherId, setTeacherId] = React.useState(group?.teacherId ?? "none");
-  const [days, setDays] = React.useState<Set<string>>(new Set(sched.map((s) => s.day?.toLowerCase())));
-  const [start, setStart] = React.useState(sched[0]?.startTime ?? (sched[0] as any)?.time ?? "");
-  const [end, setEnd] = React.useState(sched[0]?.endTime ?? (sched[0] as any)?.time ?? "");
-
-  function toggleDay(d: string) {
-    setDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(d)) next.delete(d);
-      else next.add(d);
-      return next;
-    });
+  const tm = useTranslations("classroomManagement");
+  const [schedule, setSchedule] = React.useState<ScheduleItem[]>(sched);
+  function editSlot(index: number, slot: Partial<ScheduleItem>) {
+    setSchedule(previous => previous.map((current, item) => item === index ? { ...current, ...slot } : current));
   }
 
   function submit() {
     const trimmed = name.trim();
-    if (trimmed.length < 2) return;
-    const schedule =
-      start && end
-        ? [...days].map((day) => ({
-            day: day as WeekDay,
-            startTime: start.slice(0, 5),
-            endTime: end.slice(0, 5),
-          }))
-        : (group?.schedule ?? []);
+    if (trimmed.length < 2 || schedule.some(slot => !slot.startTime || !slot.endTime || slot.startTime > slot.endTime)) return;
 
     const onSettled = {
       onSuccess: () => {
@@ -183,41 +167,32 @@ function GroupFormFields({
           </Field>
         )}
 
-        <Field label={t("schedule")}>
-          <div className="flex flex-wrap gap-1.5">
-            {DAYS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => toggleDay(d)}
-                aria-pressed={days.has(d)}
-                className={cn(
-                  "size-9 rounded-field border text-xs font-medium capitalize transition-colors",
-                  days.has(d)
-                    ? "border-brand bg-brand-subtle text-brand-subtle-fg"
-                    : "border-border bg-surface text-fg-muted hover:bg-surface-hover",
-                )}
-              >
-                {tw(d)}
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label={t("startTime")} htmlFor="gstart">
-            <Input id="gstart" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          </Field>
-          <Field label={t("endTime")} htmlFor="gend">
-            <Input id="gend" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
-          </Field>
-        </div>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">{t("schedule")}</legend>
+          {schedule.map((slot, index) => (
+            <div className="flex flex-wrap items-end gap-2" key={index}>
+              <label className="grid gap-1 text-sm">{tm("day")}
+                <select className="rounded-field border border-border bg-surface p-2" value={slot.day} onChange={event => editSlot(index, { day: event.target.value as WeekDay })}>
+                  {DAYS.map(day => <option value={day} key={day}>{tw(day)}</option>)}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">{t("startTime")}
+                <Input type="time" value={slot.startTime} onChange={event => editSlot(index, { startTime: event.target.value })} />
+              </label>
+              <label className="grid gap-1 text-sm">{t("endTime")}
+                <Input type="time" value={slot.endTime} onChange={event => editSlot(index, { endTime: event.target.value })} />
+              </label>
+              <Button type="button" variant="outline" onClick={() => setSchedule(previous => previous.filter((_, item) => item !== index))}>{tm("removeSlot")}</Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" disabled={schedule.length >= 28} onClick={() => setSchedule(previous => [...previous, { day: "mon", startTime: "09:00", endTime: "10:00" }])}>{tm("addSlot")}</Button>
+        </fieldset>
       </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>
           {tc("cancel")}
         </Button>
-        <Button onClick={submit} loading={pending} disabled={name.trim().length < 2}>
+        <Button onClick={submit} loading={pending} disabled={name.trim().length < 2 || schedule.some(slot => !slot.startTime || !slot.endTime || slot.startTime > slot.endTime)}>
           {tc("save")}
         </Button>
       </DialogFooter>

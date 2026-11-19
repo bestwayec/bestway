@@ -65,3 +65,9 @@ Prisma 5.22.0 expects engine revision 605197351a3c8bdd595af2d2a9bc3025bca48ea2 f
 ### Stage 01 continuation
 
 Extended the generated contract to Group updates, roster writes, attendance and standalone practice. Both clients share the persisted role type. Other tabs clear cached website state when the browser's authentication changes. Desktop account or role changes clear cached queries and visible exam state before rendering the new session. Focused desktop login, session and navigation tests passed (29 tests), and the PostgreSQL Group and assigned vocabulary contracts passed. Stage 01 remains PARTIAL until cross-tab and cross-account behavior is fully exercised and the broader authorization review is complete.
+
+### Stage 02 continuation
+
+Implemented multi-slot scheduling, overlap validation, scoped exam selection, group search and archive filters, archive and restore, atomic bulk enrollment changes, and a paginated member-history lookup. The historical view preserves attendance and graded homework after removal, and includes exam scores and approved feedback only when their attempts fall inside a known enrollment interval. Older unknown start dates remain unknown. Legacy Prisma Group and Attendance schema were left intact. Both clients expose schedule, lifecycle, bulk and history tools.
+
+PostgreSQL verification passed multiple same-day slots, overlap rejection, bulk rollback, enrollment, attendance, homework, archive/restore, and authorized history. Focused attendance, classroom and homework tests passed (42 tests, 16 subtests). Stage 02 remains PARTIAL until cross-client browser coverage and remaining attendance/profile details are resolved.

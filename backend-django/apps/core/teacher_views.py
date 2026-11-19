@@ -337,8 +337,10 @@ def classroom_assignments_view(request, group_id):
     score = data.get("min_pass_percent", 80)
     if type(score) is not int or not 0 <= score <= 100:
         invalid("Minimal ball 0–100 oralig‘ida bo‘lishi kerak")
-    for key, model in (("lesson_id", Lesson), ("exam_id", MockExam)):
-        if key in data and (not isinstance(data[key], str) or not model.objects.filter(id=data[key]).exists()):
+    if sum(key in data for key in ("lesson_id", "exam_id", "vocabulary_set_id")) > 1:
+        invalid("Vazifa faqat bitta manbaga bog‘lanishi mumkin")
+    for key, collection in (("lesson_id", Lesson.objects.all()), ("exam_id", assignable_exams())):
+        if key in data and (not isinstance(data[key], str) or not collection.filter(id=data[key]).exists()):
             invalid(f"{key} topilmadi")
     vocab_set = None
     if "vocabulary_set_id" in data:
@@ -352,6 +354,25 @@ def classroom_assignments_view(request, group_id):
         if not vocab_set.words.exists():
             invalid("To‘plamda so‘zlar yo‘q")
     return success(create_assignment(cohort, data, title.strip(), vocabulary_set=vocab_set), 201)
+
+
+def assignable_exams():
+    return MockExam.objects.filter(is_published=True).filter(Q(price=0) | Q(is_demo=True))
+
+
+@api_view(["GET"])
+def classroom_exams_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    from . import groups
+
+    groups.assert_manages_group(actor, groups.get_group(group_id))
+    search = request.query_params.get("search", "").strip()
+    if len(search) > 100:
+        from .domain_contracts import invalid
+
+        invalid("Search must not exceed 100 characters")
+    return success(list(assignable_exams().filter(title__icontains=search).order_by("title", "id").values("id", "title")[:100]))
 
 
 @api_view(["GET"])

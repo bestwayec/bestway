@@ -43,7 +43,10 @@ def assert_teacher(teacher_id):
         fail('TEACHER_NOT_FOUND', "Bunday o'qituvchi topilmadi", 400)
 
 
-def list_groups(actor):
+def list_groups(actor, *, archived=False, search=""):
+    from django.db.models import Exists, OuterRef
+    from .models import ClassroomArchive
+
     rows = Group.objects.select_related('teacher')
     if actor.role == 'teacher':
         rows = rows.filter(teacher_id=actor.id)
@@ -53,10 +56,17 @@ def list_groups(actor):
         rows = rows.filter(studentprofile__user_id__in=child_ids(actor)).distinct()
     elif actor.role not in ('admin', 'super_admin'):
         fail('FORBIDDEN', 'Ruxsat berilmagan')
+    if archived and actor.role not in ('teacher', 'admin', 'super_admin'):
+        fail('FORBIDDEN', 'Ruxsat berilmagan')
+    rows = rows.annotate(is_archived=Exists(ClassroomArchive.objects.filter(group_id=OuterRef('pk'))))
+    rows = rows.filter(is_archived=archived)
+    if search:
+        rows = rows.filter(name__icontains=search)
     # Count the entire roster, not just the matched student/parent join.
     return [
         dict(
             id=g.id,
+            archived=g.is_archived,
             name=g.name,
             teacherId=g.teacher_id,
             teacherName=g.teacher.name if g.teacher_id and getattr(g, 'teacher', None) else None,
@@ -338,6 +348,9 @@ def create(actor, data=None):
 def update(actor, group_id, data):
     group = get_group(group_id, True)
     assert_manages_group(actor, group)
+    from .classroom_roster import assert_active
+
+    assert_active(group_id)
     if actor.role == 'teacher' and 'teacherId' in data and data['teacherId'] != actor.id:
         fail('FORBIDDEN', 'Guruhni boshqa o‘qituvchiga biriktirishga ruxsat berilmagan')
     if data.get('teacherId'):
@@ -368,6 +381,9 @@ def update(actor, group_id, data):
 def add_student(actor, group_id, student_id):
     group = get_group(group_id, True)
     assert_manages_group(actor, group)
+    from .classroom_roster import assert_active
+
+    assert_active(group_id)
     user = User.objects.select_for_update().filter(id=student_id).first()
     if user is None:
         fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
@@ -375,6 +391,8 @@ def add_student(actor, group_id, student_id):
         fail('NOT_A_STUDENT', "Foydalanuvchi o'quvchi emas", 400)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
     if profile is None:
+        from .auth_service import unique_link_code
+
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -383,7 +401,7 @@ def add_student(actor, group_id, student_id):
                      "availablePrograms", "activeProgram", "gameQualified", "createdAt")
                 VALUES (%s, %s, true, 0, %s, %s::"ExamProgram"[], 'IELTS', false, NOW())
                 """,
-                [student_id, group_id, student_id[:8], ['IELTS', 'MULTILEVEL']],
+                [student_id, group_id, unique_link_code(cursor), ['IELTS', 'MULTILEVEL']],
             )
         old = None
     else:
@@ -395,6 +413,9 @@ def add_student(actor, group_id, student_id):
             return dict(groupId=group_id, studentId=student_id, added=True)
         profile.group_id = group_id
         profile.save(update_fields=['group_id'])
+    from .classroom_roster import record_enrollment
+
+    record_enrollment(student_id, old, group_id)
     audit(actor, 'group.add_student', 'studentProfile', student_id, old=dict(groupId=old), new=dict(groupId=group_id))
     return dict(groupId=group_id, studentId=student_id, added=True)
 
@@ -403,11 +424,17 @@ def add_student(actor, group_id, student_id):
 def remove_student(actor, group_id, student_id):
     group = get_group(group_id, True)
     assert_manages_group(actor, group)
+    from .classroom_roster import assert_active
+
+    assert_active(group_id)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
     if profile is None or profile.group_id != group_id:
         fail('STUDENT_NOT_IN_GROUP', "O'quvchi bu guruhda emas", 404)
     profile.group_id = None
     profile.save(update_fields=['group_id'])
+    from .classroom_roster import record_enrollment
+
+    record_enrollment(student_id, group_id, None)
     audit(actor, 'group.remove_student', 'studentProfile', student_id, old=dict(groupId=group_id), new=dict(groupId=None))
     return dict(removed=True)
 

@@ -20,6 +20,11 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
     queryKey: ["classroom-vocabulary-collections", userId, groupId],
     queryFn: () => api.get<ClassroomVocabularyCollection[]>(`/groups/${encodeURIComponent(groupId)}/vocabulary-collections`),
   });
+  const exams = useQuery({
+    queryKey: ["classroom-assignable-exams", userId, groupId],
+    queryFn: () => api.get<Array<{ id: string; title: string }>>(`/groups/${encodeURIComponent(groupId)}/assignable-exams`),
+  });
+  const [examId, setExamId] = useState("");
   const [setId, setSetId] = useState("");
   const [minimum, setMinimum] = useState("80");
   const [report, setReport] = useState("");
@@ -37,6 +42,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
       setTitle("");
       setDeadline("");
       setSetId("");
+      setExamId("");
       await queryClient.invalidateQueries({ queryKey });
     },
   });
@@ -48,6 +54,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
       title: title.trim(),
       ...(deadline ? { deadline: new Date(deadline).toISOString() } : {}),
       ...(setId ? { vocabulary_set_id: setId, min_pass_percent: Number(minimum) } : {}),
+      ...(examId ? { exam_id: examId, min_pass_percent: Number(minimum) } : {}),
     });
   }
 
@@ -66,12 +73,19 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
           </label>
           <label className="grid gap-1 text-sm">
             {tv("set")}
-            <select className="rounded-md border border-border bg-surface p-2" value={setId} onChange={event => setSetId(event.target.value)}>
+            <select className="rounded-md border border-border bg-surface p-2" value={setId} onChange={event => { setSetId(event.target.value); if (event.target.value) setExamId(""); }}>
               <option value="">{tv("none")}</option>
               {collections.data?.map(set => <option key={set.id} value={set.id}>{set.title} ({set.wordCount})</option>)}
             </select>
           </label>
-          {setId && <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-sm">
+            {t("exam")}
+            <select className="rounded-md border border-border bg-surface p-2" value={examId} onChange={event => { setExamId(event.target.value); if (event.target.value) setSetId(""); }}>
+              <option value="">{t("noExam")}</option>
+              {exams.data?.map(exam => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
+            </select>
+          </label>
+          {(setId || examId) && <label className="grid gap-1 text-sm">
             {tv("minimum")}
             <Input type="number" min={0} max={100} required value={minimum} onChange={event => setMinimum(event.target.value)} />
           </label>}
@@ -79,6 +93,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
             {create.isPending ? t("saving") : t("assign")}
           </Button>
         </form>
+        {exams.isError && <p role="alert">{t("failed")} <Button size="sm" onClick={() => void exams.refetch()}>{t("retry")}</Button></p>}
         {collections.isError && <p role="alert">{tv("failed")} <Button size="sm" onClick={() => void collections.refetch()}>{tv("retry")}</Button></p>}
         {create.isError && <p role="alert">{create.error instanceof Error ? create.error.message : t("failed")}</p>}
         {tasks.isPending && <p role="status">{t("loading")}</p>}

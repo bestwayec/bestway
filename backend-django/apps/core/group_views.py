@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 
 from common.auth.permissions import Authenticated
 
-from . import groups as service
+from . import classroom_roster, groups as service
 from .domain_contracts import invalid, payload
 from .mock_attempt_views import success
 from .views import require_role
@@ -20,6 +20,7 @@ def validate(data, create=False):
     schedule = data.get('schedule')
     if schedule is not None:
         if not isinstance(schedule, list): invalid('schedule must be an array')
+        if len(schedule) > 28: invalid('schedule supports up to 28 weekly slots')
         cleaned_schedule = []
         for item in schedule:
             if not isinstance(item, dict): invalid('each value in nested property schedule must be either object or array')
@@ -49,6 +50,12 @@ def validate(data, create=False):
                     invalid("Vaqt HH:MM formatida bo'lsin")
                 if key == 'startTime': start = val
                 else: end = val
+            if start > end:
+                invalid("Dars boshlanishi tugashidan oldin bo‘lishi kerak")
+            if any(slot['day'] == day and (slot['startTime'], slot['endTime']) == (start, end)
+                   or slot['day'] == day and start < slot['endTime'] and end > slot['startTime']
+                   for slot in cleaned_schedule):
+                invalid("Dars jadvali takrorlangan yoki ustma-ust tushgan")
             cleaned_schedule.append({'day': day, 'startTime': start, 'endTime': end})
         data['schedule'] = cleaned_schedule
     return data
@@ -58,7 +65,11 @@ def validate(data, create=False):
 @permission_classes([Authenticated])
 def groups_view(request):
     if request.method == 'GET':
-        return success(service.list_groups(request.user))
+        archive = request.query_params.get("archived", "false")
+        search = request.query_params.get("search", "").strip()
+        if archive not in ("true", "false") or len(search) > 100:
+            invalid("Guruh filtri yaroqsiz")
+        return success(service.list_groups(request.user, archived=archive == "true", search=search))
     require_role(request, 'teacher', 'admin', 'super_admin')
     raw = payload(request, {'name', 'teacherId', 'schedule', 'description'})
     clean = {k: v for k, v in raw.items() if k in ('name', 'teacherId', 'schedule')}
@@ -77,7 +88,7 @@ def group_view(request, group_id):
             service.fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
         allowed = {'name', 'schedule', 'teacherId', 'description', 'groupId', 'id'}
         data = payload(request, allowed)
-        clean_data = {k: v for k, v in data.items() if k in ('name', 'schedule')}
+        clean_data = {k: v for k, v in data.items() if k in ('name', 'schedule', 'teacherId')}
         return success(service.update(actor, group_id, validate(clean_data)))
     require_role(request, 'admin', 'super_admin')
     allowed = {'name', 'teacherId', 'schedule', 'description', 'groupId', 'id'}
@@ -142,3 +153,48 @@ def remove_student_view(request, group_id, student_id):
     require_role(request, 'teacher', 'admin', 'super_admin')
     return success(service.remove_student(request.user, group_id, student_id))
 
+
+
+@api_view(["GET", "PUT"])
+@permission_classes([Authenticated])
+def classroom_archive_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "GET":
+        return success(classroom_roster.archive_status(request.user, group_id))
+    data = payload(request, {"archived"})
+    if type(data.get("archived")) is not bool:
+        invalid("archived must be boolean")
+    return success(classroom_roster.archive(request.user, group_id, data["archived"]))
+
+
+@api_view(["POST"])
+@permission_classes([Authenticated])
+def bulk_classroom_membership_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    data = payload(request, {"action", "studentIds"})
+    identifiers, action = data.get("studentIds"), data.get("action")
+    if action not in ("add", "remove") or not isinstance(identifiers, list) or not 1 <= len(identifiers) <= 100:
+        invalid("Select 1–100 students and a supported action")
+    if any(not isinstance(value, str) or not 1 <= len(value) <= 255 for value in identifiers):
+        invalid("Invalid student ID")
+    if len(set(identifiers)) != len(identifiers):
+        invalid("Student IDs must be unique")
+    return success(classroom_roster.bulk_membership(request.user, group_id, identifiers, action))
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def classroom_student_history_view(request, group_id, student_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    return success(classroom_roster.history(request.user, group_id, student_id))
+
+
+@api_view(["GET"])
+@permission_classes([Authenticated])
+def classroom_member_history_view(request, group_id):
+    require_role(request, "teacher", "admin", "super_admin")
+    search = request.query_params.get("search", "").strip()
+    page = request.query_params.get("page", "1")
+    if len(search) > 100 or not re.fullmatch(r"[1-9][0-9]{0,3}", page):
+        invalid("Invalid history filter")
+    return success(classroom_roster.member_history(request.user, group_id, search, int(page)))

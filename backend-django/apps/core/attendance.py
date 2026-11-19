@@ -93,7 +93,10 @@ def listing(actor, query):
 
 
 def bulk(actor, data):
+    from .classroom_roster import assert_active
+
     manage_group(actor, data['groupId'])
+    assert_active(data['groupId'])
     day = reference_date(data['date'])
     members = {p.user_id: p for p in StudentProfile.objects.filter(group_id=data['groupId']).select_related('user')}
     

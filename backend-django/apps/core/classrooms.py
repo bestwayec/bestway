@@ -7,6 +7,7 @@ from apps.legacy_schema.models import StudentProfile
 from common.api.exceptions import ContractAPIException
 
 from . import groups
+from .classroom_roster import assert_active
 from .models import Cohort, CohortMembership
 
 
@@ -15,6 +16,7 @@ def homework_cohort(actor, group_id, *, create=False):
     groups.assert_manages_group(actor, group)
     if not create:
         return Cohort.objects.filter(classroom_id=group_id).first()
+    assert_active(group_id)
     if not group.teacher_id:
         raise ContractAPIException("CLASSROOM_TEACHER_REQUIRED", "Avval o‘qituvchi biriktiring", 400)
     cohort, _ = Cohort.objects.get_or_create(

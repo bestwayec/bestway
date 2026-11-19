@@ -5,10 +5,10 @@ import { api } from "@/lib/api-client";
 import type { GroupDetail, GroupInput, GroupListItem } from "@/lib/types";
 
 /** GET /groups — rolga qarab foydalanuvchining guruhlari */
-export function useGroups() {
+export function useGroups(filters?: { archived: boolean; search: string }) {
   return useQuery({
-    queryKey: ["groups"],
-    queryFn: () => api.get<GroupListItem[]>("/groups"),
+    queryKey: filters ? ["groups", filters] : ["groups"],
+    queryFn: () => api.get<GroupListItem[]>("/groups", filters),
   });
 }
 

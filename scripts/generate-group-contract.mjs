@@ -13,7 +13,7 @@ function render(schema) {
       `  ${name}${schema.required.includes(name) ? "" : "?"}: ${render(value)};`);
     return `{\n${fields.join("\n")}\n}`;
   }
-  return schema.type;
+  return schema.type ?? "unknown";
 }
 
 const generated = [

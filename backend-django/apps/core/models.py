@@ -359,6 +359,26 @@ class UserLessonProgress(models.Model):
 # TEACHER WORKSPACE: COHORTS & HOMEWORK ASSIGNMENTS
 # ============================================================================
 
+class ClassroomArchive(models.Model):
+    group = models.OneToOneField(Group, primary_key=True, on_delete=models.CASCADE, db_constraint=False)
+    archived_at = models.DateTimeField(auto_now_add=True)
+
+
+class ClassroomEnrollment(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.DO_NOTHING, db_constraint=False)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["group", "student", "ended_at"], name="classroom_enroll_history")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_enrollment",
+            ),
+        ]
+
+
 class Cohort(models.Model):
     id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
     classroom = models.OneToOneField(
