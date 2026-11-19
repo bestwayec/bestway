@@ -6,9 +6,10 @@ from openpyxl import load_workbook
 
 from verify_group_contract_postgres import actor, transaction
 
+from django.core import signing
 from django.utils import timezone
 
-from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyAttempt, VocabularyHomeworkSession
+from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyAttempt, VocabularyHomeworkSession, VocabularyWord
 from apps.core.vocabulary_review import due
 from apps.legacy_schema.models import User
 
@@ -123,12 +124,23 @@ def verify():
     assert review["totalQuestions"] == 1
     submission = {"sessionId": review["sessionId"], "answers": answers_for(review["questions"], answer_map)}
     assert stranger.post("/v1/vocabulary/srs/submit", submission, format="json").status_code == 403
+    original_translation = row.word.uzbek
+    VocabularyWord.objects.filter(pk=missed).update(uzbek="Changed after the review was issued")
+    assert student.post("/v1/vocabulary/srs/submit", submission, format="json").status_code == 409
+    VocabularyWord.objects.filter(pk=missed).update(uzbek=original_translation)
     assert student.post("/v1/vocabulary/srs/submit", submission, format="json").json()["data"]["score"] == 1
     assert student.post("/v1/vocabulary/srs/submit", submission, format="json").status_code == 409
     row.refresh_from_db()
     assert row.review_count == 2 and row.interval_days == 1 and row.next_review_at > timezone.now()
     history = student.get("/v1/vocabulary/srs/history").json()["data"]
     assert any(item["review__word__english"] == row.word.english for item in history["entries"])
+    UserWeakWord.objects.filter(pk=row.pk).update(next_review_at=timezone.now() - timedelta(seconds=1))
+    review = student.get("/v1/vocabulary/srs/quiz").json()["data"]
+    salt = "bestway-vocabulary-review"
+    signed = signing.loads(review["sessionId"], salt=salt)
+    signed["words"] = [entry[:3] for entry in signed["words"]]
+    legacy = {"sessionId": signing.dumps(signed, salt=salt), "answers": answers_for(review["questions"], answer_map)}
+    assert student.post("/v1/vocabulary/srs/submit", legacy, format="json").json()["data"]["score"] == 1
     assert teacher.delete(group_path + "/students/" + student_id).status_code == 200
     assert student.get(path + "/words").status_code == 403
     persisted = student.get("/v1/student/vocabulary/history").json()["data"]["entries"]

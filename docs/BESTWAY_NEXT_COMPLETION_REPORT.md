@@ -1,5 +1,13 @@
 # BESTWAY NEXT stages 01–03 completion report
 
+## PR closure and current status
+
+The two existing PRs are open as drafts. The closure phase added immediate revocation for session-bound access tokens, desktop revalidation on focus, scoped approved feedback, and streamed vocabulary exports. It also verified the populated schema upgrade through the hosted CI job. The local Prisma checksum proxy still returns HTTP 403. The native release checks and the remaining offline decisions are tracked independently from functional outcomes.
+
+[Bestway PR #206](https://github.com/bestwayec/bestway/pull/206) · [Desktop PR #38](https://github.com/bestwayec/bw-tauri/pull/38) · [Current release gates](BESTWAY_NEXT_RELEASE_GATES.md)
+
+The remainder of this report records the implementation pass before the draft PRs existed.
+
 ## Repository state
 
 The existing feature branches were fetched and verified before changes. The implementation and delivery evidence below is for the continuation from the previous feature tips.

@@ -318,7 +318,9 @@ def srs_submit_view(request):
         invalid("Takrorlash sessiyasi yaroqsiz yoki muddati tugagan")
     if session["owner"] != request.user.id:
         raise ContractAPIException("FORBIDDEN", "Sessiya bu foydalanuvchiga tegishli emas", 403)
-    questions = {word_id: (kind, version) for word_id, kind, version in session["words"]}
+    # In-flight batches issued before the revision field remain valid for their signed lifetime.
+    questions = {word_id: (kind, version, revision[0] if revision else None)
+                 for word_id, kind, version, *revision in session["words"]}
     answers = answer_by_word(request.data.get("answers"), questions)
     rows = UserWeakWord.objects.select_for_update(of=("self",)).select_related("word").filter(
         student_id=request.user.id, word_id__in=questions,
@@ -327,6 +329,8 @@ def srs_submit_view(request):
     now = timezone.now()
     if len(rows) != len(questions) or any(
         row.review_count != questions[row.word_id][1]
+        or (questions[row.word_id][2] is not None and
+            questions[row.word_id][2] != vocabulary_review.word_revision(row.word))
         or (row.next_review_at is not None and row.next_review_at > now)
         for row in rows
     ):

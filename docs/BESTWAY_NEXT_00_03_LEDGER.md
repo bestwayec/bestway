@@ -82,3 +82,12 @@ PostgreSQL verification passed multiple same-day slots, overlap rejection, bulk 
 - Both repos retain `feat/bestway-next-00-03`. The pushed implementation heads were Bestway `121b06043559bcc0bf4c64a99d60ef8fbea9b900` and desktop `8697fd492506daa5aa4500fa2ba9ff35289386c4`. Both GitHub GraphQL and authenticated REST draft creation requests were blocked by the Envoy HTTP 403. See the completion report for verified delivery state, exact commands and manual Compare links.
 
 [Completion report](BESTWAY_NEXT_COMPLETION_REPORT.md)
+
+## Draft PR closure
+
+- Verified both incoming PR refs and pushed the fixes to those same branches. GitHub's public Checks pages supplied job-level conclusions despite the API proxy returning 403.
+- The hosted Django run passed clean Prisma deployment, the authoritative Prisma ledger check, Django migration verification and a separate populated upgrade. The local engine download remains blocked by the checksum proxy.
+- Session-bound access tokens are rejected when their refresh family is revoked. PostgreSQL verified rotation, independent device families, scope and the pre-upgrade token transition. Chromium exercised session revocation on focus and a real website account switch across tabs.
+- PostgreSQL verified approved feedback scoped to the actual enrollment period, teacher reassignment and eligible exam assignment. The report fixture checked 126 learners, stable pagination and streamed CSV/XLSX.
+- New signed SRS batches detect changes to issued translations. In-flight signed batches from older builds retain their original lifetime and are still accepted once.
+- Stage 01 feature status is PARTIAL, Stage 02 is PASS, and Stage 03 is PARTIAL. Device acceptance remains UNVERIFIED. See the current release evidence, outstanding cases and cross-repository checklist. [Release gates](BESTWAY_NEXT_RELEASE_GATES.md)

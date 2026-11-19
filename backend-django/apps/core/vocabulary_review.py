@@ -1,12 +1,18 @@
 """Deterministic review scheduling and ownership-bound review batches."""
+import json
 from datetime import timedelta
 
 from django.db.models import Q
+from django.utils.crypto import salted_hmac
 
 from .models import UserWeakWord, VocabularyReviewEvent
 
 
 INTERVALS = (1, 3, 7, 14, 30)
+
+
+def word_revision(word):
+    return salted_hmac("bestway-review-word", json.dumps([word.english, word.uzbek]), algorithm="sha256").hexdigest()
 
 
 def due(student_id, now):

@@ -373,7 +373,7 @@ def submit_quiz_attempt(student, set_id, mode, answers, session_id=None):
 def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, Any]:
     """Generate personalized spaced repetition quiz for user's weak words."""
     from django.core import signing
-    from .vocabulary_review import due
+    from .vocabulary_review import due, word_revision
 
     weak_records = list(
         due(student_id, timezone.now()).select_related("word")
@@ -428,10 +428,10 @@ def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, An
             "firstLetter": word.english[0].upper() if word.english else "",
         })
 
-    review_versions = {row.word_id: row.review_count for row in weak_records}
     session = signing.dumps({
         "owner": student_id,
-        "words": [[q["wordId"], q["type"], review_versions[q["wordId"]]] for q in questions],
+        "words": [[q["wordId"], q["type"], row.review_count, word_revision(row.word)]
+                  for q, row in zip(questions, weak_records, strict=True)],
     }, salt="bestway-vocabulary-review")
     return {
         "sessionId": session,
