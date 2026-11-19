@@ -3,7 +3,7 @@ from verify_group_contract_postgres import actor, transaction
 
 from django.utils import timezone
 
-from apps.core.models import Cohort, HomeworkSubmission
+from apps.core.models import ClassroomEnrollment, Cohort, HomeworkSubmission
 from apps.legacy_schema.models import Attendance
 
 
@@ -11,6 +11,7 @@ from apps.legacy_schema.models import Attendance
 def verify():
     _, teacher = actor("teacher")
     _, other = actor("teacher")
+    _, admin = actor("admin")
     student_id, student = actor("student")
     second_id, _ = actor("student")
     assert teacher.post("/v1/groups", {"name": "Classroom journey"}, format="json").status_code == 201
@@ -69,12 +70,19 @@ def verify():
     assert teacher.get("/v1/groups").json()["data"] == []
     assert teacher.get("/v1/groups", {"archived": "true"}).json()["data"][0]["id"] == group_id
     assert teacher.post(member_url, {"studentId": student_id}, format="json").status_code == 409
+    student_url = f"/v1/users/{student_id}"
+    assert admin.patch(student_url, {"groupId": group_id}, format="json").status_code == 409
     assert teacher.post(task_url, {"title": "Closed"}, format="json").status_code == 409
     former = teacher.get(f"{history}/{student_id}").json()["data"]
     assert not former["currentlyEnrolled"] and former["membership"][0]["endedAt"]
     assert former["attendance"][0]["state"] == "late"
     assert former["homework"][0]["score_percent"] == 90
     assert len(teacher.get(history).json()["data"]["members"]) == 2
+    destination = admin.post("/v1/groups", {"name": "Admin transfer destination"}, format="json").json()["data"]["id"]
+    assert admin.patch(student_url, {"groupId": destination}, format="json").status_code == 200
+    assert ClassroomEnrollment.objects.filter(group_id=destination, student_id=student_id, ended_at__isnull=True).exists()
+    assert admin.patch(student_url, {"groupId": None}, format="json").status_code == 200
+    assert ClassroomEnrollment.objects.filter(group_id=destination, student_id=student_id, ended_at__isnull=False).exists()
     assert not teacher.put(archive, {"archived": False}, format="json").json()["data"]["archived"]
     assert teacher.get("/v1/groups").json()["data"][0]["id"] == group_id
     print("PASS multiple slots, overlap rejection, bulk rollback, enrollment, attendance, homework, archive/restore and retained history")
