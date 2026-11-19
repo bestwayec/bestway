@@ -4,7 +4,7 @@ import re
 from io import BytesIO
 from uuid import uuid4
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.utils import timezone
 
 from apps.legacy_schema.models import (
@@ -51,6 +51,8 @@ def list_groups(actor):
         rows = rows.filter(studentprofile__user_id=actor.id)
     elif actor.role == 'parent':
         rows = rows.filter(studentprofile__user_id__in=child_ids(actor)).distinct()
+    elif actor.role not in ('admin', 'super_admin'):
+        fail('FORBIDDEN', 'Ruxsat berilmagan')
     # Count the entire roster, not just the matched student/parent join.
     return [
         dict(
@@ -238,14 +240,19 @@ def _compute_student_and_group_analytics(student_ids):
 
 def detail(actor, group_id):
     group = get_group(group_id)
-    students = list(StudentProfile.objects.filter(group_id=group_id).select_related('user').order_by('user__name'))
-    if actor.role == 'teacher' and group.teacher_id != actor.id:
-        fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan')
-    if actor.role == 'student' and not any(s.user_id == actor.id for s in students):
-        fail('FORBIDDEN', "Siz bu guruh a'zosi emassiz")
-    if actor.role == 'parent' and not any(s.user_id in set(child_ids(actor)) for s in students):
-        fail('FORBIDDEN', "Farzandingiz bu guruhda o'qimaydi")
-    show_phones = actor.role not in ('student', 'parent')
+    roster = StudentProfile.objects.filter(group_id=group_id)
+    show_phones = actor.role in ('teacher', 'admin', 'super_admin')
+    if show_phones:
+        assert_manages_group(actor, group)
+    elif actor.role == 'student':
+        roster = roster.filter(user_id=actor.id)
+    elif actor.role == 'parent':
+        roster = roster.filter(user_id__in=child_ids(actor))
+    else:
+        fail('FORBIDDEN', 'Ruxsat berilmagan')
+    students = list(roster.select_related('user').order_by('user__name'))
+    if not show_phones and not students:
+        fail('FORBIDDEN', "Bu guruhga ruxsat berilmagan")
 
     student_ids = [s.user_id for s in students]
     per_student, group_analytics = _compute_student_and_group_analytics(student_ids)
@@ -292,12 +299,21 @@ def detail(actor, group_id):
     )
 
 
+def assert_manages_group(actor, group):
+    if actor.role == 'teacher' and group.teacher_id == actor.id:
+        return
+    if actor.role not in ('admin', 'super_admin'):
+        fail('FORBIDDEN', 'Bu guruhni boshqarishga ruxsat berilmagan')
+
+
 def create(actor, data=None):
     # Support both create(actor, data) and create(payload, actor=...) signatures
     if isinstance(actor, dict) and (data is None or hasattr(data, 'role')):
         actor, data = data, actor
     data = dict(data or {})
     teacher_id = data.get('teacherId')
+    if actor is not None and actor.role == 'teacher' and teacher_id and teacher_id != actor.id:
+        fail('FORBIDDEN', 'Guruhni boshqa o‘qituvchiga biriktirishga ruxsat berilmagan')
     if not teacher_id and actor is not None and getattr(actor, 'role', None) == 'teacher':
         teacher_id = actor.id
         data['teacherId'] = teacher_id
@@ -321,6 +337,9 @@ def create(actor, data=None):
 @transaction.atomic
 def update(actor, group_id, data):
     group = get_group(group_id, True)
+    assert_manages_group(actor, group)
+    if actor.role == 'teacher' and 'teacherId' in data and data['teacherId'] != actor.id:
+        fail('FORBIDDEN', 'Guruhni boshqa o‘qituvchiga biriktirishga ruxsat berilmagan')
     if data.get('teacherId'):
         assert_teacher(data['teacherId'])
     old = dict(name=group.name, teacherId=group.teacher_id)
@@ -348,29 +367,32 @@ def update(actor, group_id, data):
 @transaction.atomic
 def add_student(actor, group_id, student_id):
     group = get_group(group_id, True)
-    if actor.role == 'teacher' and group.teacher_id != actor.id:
-        fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
-    user = User.objects.filter(id=student_id).first()
+    assert_manages_group(actor, group)
+    user = User.objects.select_for_update().filter(id=student_id).first()
     if user is None:
         fail('STUDENT_NOT_FOUND', "O'quvchi topilmadi", 404)
     if user.role != 'student':
         fail('NOT_A_STUDENT', "Foydalanuvchi o'quvchi emas", 400)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
     if profile is None:
-        profile = StudentProfile.objects.create(
-            user_id=student_id,
-            group_id=group_id,
-            is_approved=True,
-            current_points=0,
-            link_code=student_id[:8],
-            available_programs=['IELTS', 'MULTILEVEL'],
-            active_program='IELTS',
-            game_qualified=False,
-            created_at=timezone.now(),
-        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO "StudentProfile"
+                    ("userId", "groupId", "isApproved", "currentPoints", "linkCode",
+                     "availablePrograms", "activeProgram", "gameQualified", "createdAt")
+                VALUES (%s, %s, true, 0, %s, %s::"ExamProgram"[], 'IELTS', false, NOW())
+                """,
+                [student_id, group_id, student_id[:8], ['IELTS', 'MULTILEVEL']],
+            )
         old = None
     else:
         old = profile.group_id
+        if actor.role == 'teacher' and old and old != group_id:
+            if not Group.objects.filter(id=old, teacher_id=actor.id).exists():
+                fail('FORBIDDEN', 'O‘quvchini boshqa o‘qituvchi guruhidan ko‘chirishga ruxsat berilmagan')
+        if old == group_id:
+            return dict(groupId=group_id, studentId=student_id, added=True)
         profile.group_id = group_id
         profile.save(update_fields=['group_id'])
     audit(actor, 'group.add_student', 'studentProfile', student_id, old=dict(groupId=old), new=dict(groupId=group_id))
@@ -380,8 +402,7 @@ def add_student(actor, group_id, student_id):
 @transaction.atomic
 def remove_student(actor, group_id, student_id):
     group = get_group(group_id, True)
-    if actor.role == 'teacher' and group.teacher_id != actor.id:
-        fail('FORBIDDEN', 'Bu guruh sizga biriktirilmagan', 403)
+    assert_manages_group(actor, group)
     profile = StudentProfile.objects.select_for_update().filter(user_id=student_id).first()
     if profile is None or profile.group_id != group_id:
         fail('STUDENT_NOT_IN_GROUP', "O'quvchi bu guruhda emas", 404)

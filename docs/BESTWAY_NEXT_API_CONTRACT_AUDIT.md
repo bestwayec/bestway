@@ -12,3 +12,9 @@ Django mounts core routes at `/v1/` and `/api/v1/`. Next.js uses its own authent
 | Vocabulary | `/vocabulary/sets`, set quiz/submit/report, SRS quiz/submit/stats | Existing access and scoring code in `vocabulary_views.py` and `vocabulary_service.py`. Verify practice-session binding, duplicate submissions and private visibility before awarding assignment credit. |
 
 Most JSON routes return success/data or success/error. Some list endpoints paginate in a nested results object. Capture response shape per operation and test both mounted prefixes. Prefer one checked-in schema and generated types over hand-maintained parallel DTOs. Keep offline, malformed responses, HTTP failures and server-confirmed writes distinct.
+
+## Implemented Group contract
+
+`docs/contracts/groups.v1.openapi.json` defines the Group list, detail and create operations. Run `node scripts/generate-group-contract.mjs ../bw-tauri/src/lib/group-contract.generated.ts` with sibling checkouts to regenerate both clients. Append `--check` to verify generated files. Other domains retain their existing contracts.
+
+`backend-django/scripts/verify_group_contract_postgres.py` checks the real Django routes with signed JWTs and rolls back its local PostgreSQL fixtures. The desktop companion `scripts/verify-group-ui.mjs` uses a running Vite client and local Django API. Provide `BW_TEACHER_PHONE`, `BW_TEACHER_PASSWORD`, and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for synthetic test accounts. Its network-failure exercise is simulated. Its successful create is a real database write.

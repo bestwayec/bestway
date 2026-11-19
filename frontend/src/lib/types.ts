@@ -120,42 +120,14 @@ export interface UserListItem {
   } | null;
 }
 
-export type WeekDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
-
-export interface ScheduleItem {
-  day: WeekDay;
-  startTime: string;
-  endTime: string;
-}
-
-export interface GroupListItem {
-  id: string;
-  name: string;
-  teacherId: string | null;
-  teacherName: string | null;
-  schedule: ScheduleItem[] | null;
-  studentsCount: number;
-  createdAt: string;
-}
-
-export interface GroupStudent {
-  studentId: string;
-  name: string;
-  phone: string;
-  isActive: boolean;
-  isApproved: boolean;
-  currentPoints: number;
-}
-
-export interface GroupDetail {
-  id: string;
-  name: string;
-  teacherId: string | null;
-  teacherName: string | null;
-  schedule: ScheduleItem[] | null;
-  createdAt: string;
-  students: GroupStudent[];
-}
+export type {
+  GroupDetail,
+  GroupInput,
+  GroupListItem,
+  GroupStudent,
+  ScheduleItem,
+  WeekDay,
+} from "./group-contract.generated";
 
 /* ── Attendance ──────────────────────────────────────────────────────────── */
 
@@ -429,12 +401,6 @@ export interface UpdateUserInput {
 }
 
 /* ── Groups (management) ─────────────────────────────────────────────────── */
-
-export interface GroupInput {
-  name: string;
-  teacherId?: string | null;
-  schedule?: ScheduleItem[];
-}
 
 /* ── Audit ───────────────────────────────────────────────────────────────── */
 

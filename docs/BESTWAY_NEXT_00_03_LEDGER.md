@@ -9,7 +9,7 @@ Branch in both repositories is `feat/bestway-next-00-03`.
 
 ## Stage 00 — PASS
 
-Inspected both checkouts and documented architecture, ownership, API contracts and permissions in the four companion audit documents. Stage 00 changed documentation in Bestway only. The Tauri baseline commit above is the audited companion revision.
+Inspected both checkouts and documented architecture, ownership, API contracts and permissions in the four companion audit documents. Stage 00 changed documentation in Bestway only in 4b7031d1202e7fbc9680247ab4c9931104ec7632. The Tauri baseline commit above is the audited companion revision.
 
 Fresh baseline checks on the branch bases:
 
@@ -19,9 +19,13 @@ Fresh baseline checks on the branch bases:
 
 Environment onboarding had separately validated production builds, native WebKit launch and the existing web smoke journey on these bases. The local database was initialized from checked-in SQL because the Prisma checksum host returned HTTP 403. Standard Prisma deployment and the ledger check are separate gates.
 
-## Stage 01 — NOT STARTED
+## Stage 01 — PARTIAL
 
-First repair desktop group writes and align the shared Group contract. Verify server ownership and frontend error behavior before advancing to dependent classroom work.
+Desktop companion commit `5e99992eeed9c9c685f530b31dd899803cb80661` replaces fabricated groups and analytics with authenticated Group requests and scoped query keys. Failed writes retain the name and schedule. Exports request server reports.
+
+Bestway changes add the shared Group OpenAPI subset and generated DTOs, deny unknown Group roles and foreign teacher mutations, scope group results to the student or linked child, and use the required PostgreSQL enum type when enrolling a student without a profile.
+
+Fresh checks include the real PostgreSQL Group contract across both route prefixes, 49 focused Django tests and 26 subtests, TypeScript in both clients, and Chromium against the actual Django group create API. The failed-network test used an intercepted request. Canonical role normalization across all domains and fully shared API contracts remain open.
 
 ## Stage 02 — NOT STARTED
 

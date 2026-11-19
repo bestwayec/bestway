@@ -314,7 +314,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
                     <Avatar name={s.name} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-fg">{s.name}</p>
-                      {canSeePhones && (
+                      {canSeePhones && s.phone && (
                         <p className="truncate text-xs text-fg-muted">{formatPhone(s.phone)}</p>
                       )}
                     </div>
