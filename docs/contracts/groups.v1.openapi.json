@@ -824,6 +824,12 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           },
@@ -875,7 +881,8 @@
             "required": false,
             "schema": {
               "enum": [
-                "csv"
+                "csv",
+                "xlsx"
               ]
             }
           },

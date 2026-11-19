@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api-client";
@@ -16,6 +16,8 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
   const [mode, setMode] = useState<VocabularyMode>();
   const [revealed, setRevealed] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [audioErrorFor, setAudioErrorFor] = useState<string>();
+  const audio = useRef<HTMLAudioElement>(null);
   const { data: me } = useMe();
   const enabled = me?.user.role === "student";
   const client = useQueryClient();
@@ -39,6 +41,7 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
   const order = progress.data?.order.length ? progress.data.order : cards.data?.map(card => card.id) ?? [];
   const index = Math.max(0, order.indexOf(progress.data?.lastWordId ?? ""));
   const card = cards.data?.find(item => item.id === order[index]);
+  const canSpeak = typeof window !== "undefined" && !!window.speechSynthesis && !!window.SpeechSynthesisUtterance;
 
   if (mode) {
     return <VocabularyQuizRunner assignmentId={assignmentId} mode={mode} onExit={() => setMode(undefined)} />;
@@ -60,10 +63,28 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
     setRevealed(false);
   }
 
-  function pronounce() {
-    if (!card || muted || !("speechSynthesis" in window)) return;
+  async function pronounce() {
+    if (!card || muted) return;
+    setAudioErrorFor(undefined);
+    const recording = audio.current;
+    if (recording) {
+      try {
+        if (recording.readyState) recording.currentTime = 0;
+        await recording.play();
+        return;
+      } catch (error) {
+        if (recording !== audio.current || recording.muted || (error instanceof DOMException && error.name === "AbortError")) return;
+      }
+    }
+    if (!canSpeak) {
+      setAudioErrorFor(card.id);
+      return;
+    }
     const speech = new SpeechSynthesisUtterance(card.english);
     speech.lang = "en-US";
+    speech.onerror = event => {
+      if (event.error !== "canceled" && event.error !== "interrupted") setAudioErrorFor(card.id);
+    };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(speech);
   }
@@ -102,14 +123,19 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
                 <Button key={status} variant="outline" disabled={save.isPending} aria-pressed={progress.data.familiarity[card.id] === status}
                   onClick={() => save.mutate({ lastWordId: card.id, wordId: card.id, status })}>{te(status)}</Button>
               ))}
-              {typeof window !== "undefined" && "speechSynthesis" in window && <>
-                <Button variant="outline" disabled={muted} onClick={pronounce}>{te("pronounce")}</Button>
-                <Button variant="outline" aria-pressed={muted} onClick={() => { window.speechSynthesis.cancel(); setMuted(value => !value); }}>
+              {(card.audioUrl || canSpeak) && <>
+                <Button variant="outline" disabled={muted} onClick={() => void pronounce()}>{te("pronounce")}</Button>
+                <Button variant="outline" aria-pressed={muted} onClick={() => {
+                  audio.current?.pause();
+                  window.speechSynthesis?.cancel();
+                  setMuted(value => !value);
+                }}>
                   {te(muted ? "unmute" : "mute")}
                 </Button>
               </>}
             </div>
-            {card.audioUrl && <audio key={card.id} controls preload="none" src={card.audioUrl} aria-label={te("audio")} />}
+            {card.audioUrl && <audio key={card.id} ref={audio} muted={muted} preload="none" src={card.audioUrl} />}
+            {audioErrorFor === card.id && <p role="status">{te("audioUnavailable")}</p>}
             {save.isPending && <p role="status">{te("sync")}</p>}
             {save.isSuccess && <p role="status">{te("saved")}</p>}
             {save.isError && <p role="alert">{save.error instanceof Error ? save.error.message : t("failed")}</p>}

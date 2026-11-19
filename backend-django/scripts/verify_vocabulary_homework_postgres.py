@@ -1,5 +1,8 @@
 """Verify 30-word assignment, server scoring, reports and review persistence."""
 from datetime import timedelta
+from io import BytesIO
+
+from openpyxl import load_workbook
 
 from verify_group_contract_postgres import actor, transaction
 
@@ -99,6 +102,13 @@ def verify():
     assert export.status_code == 200 and "text/csv" in export.headers["Content-Type"]
     assert str(96.7).encode() in export.content
     assert other.get(report_path + "?download=csv").status_code == 403
+    workbook_response = teacher.get(report_path + "?download=xlsx")
+    assert workbook_response.status_code == 200 and workbook_response.headers["Content-Disposition"].endswith('.xlsx"')
+    workbook = load_workbook(BytesIO(workbook_response.content), read_only=True)
+    assert list(workbook["Results"].values)[1][1:] == (29, 30, 96.7, True)
+    assert list(workbook["Difficult words"].values)[1][1] == 1
+    workbook.close()
+    assert other.get(report_path + "?download=xlsx").status_code == 403
     report = teacher.get(report_path).json()["data"]
     assert report["assignedCount"] == report["completedCount"] == 1
     assert report["students"][0]["percentage"] == 96.7 and report["missedWords"][0]["count"] == 1

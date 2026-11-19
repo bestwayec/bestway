@@ -119,6 +119,7 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
           <p>{tv("overdue", { count: results.data.overdueCount })}</p>
           <Button asChild size="sm" variant="outline">
             <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=csv`} download>CSV</a>
+            <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=xlsx`} download>XLSX</a>
           </Button>
           <label className="grid gap-1">{tm("searchStudents")}
             <Input value={reportSearch} onChange={event => { setReportSearch(event.target.value); setPage(1); }} />

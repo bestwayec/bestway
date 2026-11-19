@@ -35,6 +35,7 @@
     "saved": "O‘quv holati saqlandi",
     "sync": "O‘quv holati saqlanmoqda…",
     "pronounce": "Talaffuz qilish",
+    "audioUnavailable": "Talaffuz audiosi mavjud emas.",
     "mute": "Ovozni o‘chirish",
     "unmute": "Ovozni yoqish"
   },

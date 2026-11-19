@@ -1,5 +1,6 @@
 """Issue and score a single server-owned vocabulary practice session per assignment."""
 import csv
+from io import BytesIO
 from types import SimpleNamespace
 
 from django.db import transaction
@@ -214,18 +215,9 @@ def results_view(request, group_id, assignment_id):
         ({"studentId": pk, "name": roster[pk], "currentlyEnrolled": pk in current} for pk in overdue_ids),
         key=lambda row: (row["name"], row["studentId"]),
     )
-    if request.query_params.get("download") == "csv":
-        response = HttpResponse(content_type="text/csv; charset=utf-8")
-        response["Content-Disposition"] = 'attachment; filename="vocabulary-results.csv"'
-        response.write("\ufeff")
-        writer = csv.writer(response)
-        writer.writerow(["Student", "Correct", "Total", "Percentage", "Passed"])
-        for row in students:
-            writer.writerow([safe_spreadsheet_text(row["name"]), row["score"], row["totalWords"], row["percentage"], row["isPassed"]])
-        writer.writerow([])
-        writer.writerow(["Commonly missed word", "Count"])
-        writer.writerows((safe_spreadsheet_text(word), count) for word, count in ranked_misses)
-        return response
+    download = request.query_params.get("download")
+    if download in ("csv", "xlsx"):
+        return export_results(download, students, ranked_misses)
     from .domain_contracts import pagination
 
     query = pagination(request, {"search"})
@@ -243,6 +235,34 @@ def results_view(request, group_id, assignment_id):
 
 def safe_spreadsheet_text(text):
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+
+
+def export_results(extension, students, missed):
+    headers = ("Student", "Correct", "Total", "Percentage", "Passed")
+    scores = [(safe_spreadsheet_text(row["name"]), row["score"], row["totalWords"],
+               row["percentage"], row["isPassed"]) for row in students]
+    missed_headers = ("Commonly missed word", "Count")
+    missed_rows = [(safe_spreadsheet_text(word), count) for word, count in missed]
+    if extension == "xlsx":
+        from openpyxl import Workbook
+
+        workbook = Workbook(write_only=True)
+        results = workbook.create_sheet("Results")
+        results.append(headers)
+        for row in scores:
+            results.append(row)
+        difficult_words = workbook.create_sheet("Difficult words")
+        difficult_words.append(missed_headers)
+        for row in missed_rows:
+            difficult_words.append(row)
+        content = BytesIO()
+        workbook.save(content)
+        response = HttpResponse(content.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    else:
+        response = HttpResponse("\ufeff", content_type="text/csv; charset=utf-8")
+        csv.writer(response).writerows([headers, *scores, (), missed_headers, *missed_rows])
+    response["Content-Disposition"] = f'attachment; filename="vocabulary-results.{extension}"'
+    return response
 
 
 @api_view(["GET", "PATCH"])
