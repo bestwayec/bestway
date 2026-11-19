@@ -1,3 +1,4 @@
+import { publishAuthContextChange } from "./auth-context";
 import type { ApiResponse, PageMeta } from "./types";
 
 /** Backend qaytargan xatolik — `code` bo'yicha UI qaror qabul qiladi */
@@ -281,6 +282,7 @@ export const authApi = {
       const error = json && "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telefon raqam yoki parol noto'g'ri", res.status);
     }
+    publishAuthContextChange();
     return json.data.user;
   },
 
@@ -300,6 +302,7 @@ export const authApi = {
       const error = json && "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram orqali kirishda xatolik", res.status);
     }
+    if (!json.data.deepLink) publishAuthContextChange();
     return json.data.deepLink ? { ...json.data.user, deepLink: json.data.deepLink } : json.data.user;
   },
 
@@ -319,6 +322,7 @@ export const authApi = {
       const error = json && "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Telegram kod noto'g'ri yoki eskirgan", res.status);
     }
+    publishAuthContextChange();
     return json.data.user;
   },
 
@@ -333,6 +337,7 @@ export const authApi = {
       const error = "error" in json ? json.error : undefined;
       throw new ApiError(error?.code ?? "UNKNOWN", error?.message ?? "Google orqali kirishda xatolik", res.status);
     }
+    publishAuthContextChange();
     return json.data.user;
   },
 
@@ -351,11 +356,13 @@ export const authApi = {
         res.status,
       );
     }
+    publishAuthContextChange();
     return json.data.user;
   },
 
   async logout() {
     const response = await fetch("/api/auth/logout", { method: "POST" });
+    publishAuthContextChange();
     if (!response.ok) {
       throw new ApiError("LOGOUT_UNCONFIRMED", "Server-side logout could not be confirmed", response.status);
     }

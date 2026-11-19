@@ -5,7 +5,9 @@
  */
 
 
-export type Role = "super_admin" | "admin" | "teacher" | "student" | "parent";
+import type { BestwayRole } from "./group-contract.generated";
+
+export type Role = BestwayRole;
 export type AttendanceState = "present" | "absent" | "late" | "empty" | "blank";
 /**
  * To'lov holati. `empty` — client-only: DB da Payment yozuvi yo'q

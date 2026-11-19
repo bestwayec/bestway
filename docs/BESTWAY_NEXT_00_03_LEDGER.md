@@ -61,3 +61,7 @@ Standalone practice issues authenticated, expiring question snapshots. Grading, 
 Verified the focused vocabulary suite (23 passed) and verify_vocabulary_practice_postgres.py against local PostgreSQL, including two simultaneous submissions to one session, ten independent concurrent sessions, missing profile, injected rollback, cross-account denial, input validation and legacy replay.
 
 Prisma 5.22.0 expects engine revision 605197351a3c8bdd595af2d2a9bc3025bca48ea2 for debian-openssl-3.0.x. Both the CLI and a direct checksum request received HTTP 403 from the environment proxy, and inspection found no local compatible binary. No ledger was created from SQL or synthesized.
+
+### Stage 01 continuation
+
+Extended the generated contract to Group updates, roster writes, attendance and standalone practice. Both clients share the persisted role type. Other tabs clear cached website state when the browser's authentication changes. Desktop account or role changes clear cached queries and visible exam state before rendering the new session. Focused desktop login, session and navigation tests passed (29 tests), and the PostgreSQL Group and assigned vocabulary contracts passed. Stage 01 remains PARTIAL until cross-tab and cross-account behavior is fully exercised and the broader authorization review is complete.

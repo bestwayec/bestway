@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/i18n/navigation";
 
-import type { VocabularySession, VocabularyReview } from "@/lib/group-contract.generated";
+import type { StandaloneVocabularyQuiz, VocabularySession, VocabularyReview } from "@/lib/group-contract.generated";
 
 export interface QuizQuestion {
   id: string;
@@ -142,12 +142,7 @@ export function VocabularyQuizRunner({
         // The server title is always Uzbek ("Zaif So'zlar Banki ..."); the SRS quiz has a fixed, translated name.
         setQuizTitle(t("srsBank"));
       } else if (setId) {
-        const res = await api.get<{
-          sessionId: string;
-          setTitle: string;
-          totalQuestions: number;
-          questions: QuizQuestion[];
-        }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}&session=explicit`);
+        const res = await api.get<StandaloneVocabularyQuiz>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}&session=explicit`);
         if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
         setSessionId(res.sessionId);
