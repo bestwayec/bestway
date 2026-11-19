@@ -488,6 +488,23 @@ class HomeworkSubmission(models.Model):
         return f"{self.student_id} - {self.assignment.title}: {self.score_percent}% ({status})"
 
 
+class VocabularyPracticeSession(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    vocabulary_set = models.ForeignKey(VocabularySet, on_delete=models.CASCADE)
+    mode = models.CharField(max_length=20, choices=QuizMode.choices)
+    questions = models.JSONField()
+    expires_at = models.DateTimeField()
+    legacy = models.BooleanField(default=False)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["student", "vocabulary_set", "mode", "legacy", "expires_at"],
+                         name="vocab_practice_lookup"),
+        ]
+
+
 class VocabularyHomeworkSession(models.Model):
     id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
     assignment = models.ForeignKey(HomeworkAssignment, on_delete=models.CASCADE)

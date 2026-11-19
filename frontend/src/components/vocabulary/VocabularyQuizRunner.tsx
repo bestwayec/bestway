@@ -143,12 +143,14 @@ export function VocabularyQuizRunner({
         setQuizTitle(t("srsBank"));
       } else if (setId) {
         const res = await api.get<{
+          sessionId: string;
           setTitle: string;
           totalQuestions: number;
           questions: QuizQuestion[];
-        }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}`);
+        }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}&session=explicit`);
         if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
+        setSessionId(res.sessionId);
         setQuizTitle(res.setTitle || t("defaultTitle"));
       }
       setCurrentIndex(0);
@@ -244,6 +246,7 @@ export function VocabularyQuizRunner({
         });
       } else {
         result = await api.post<QuizResult>(`/v1/vocabulary/sets/${setId}/submit`, {
+          sessionId,
           mode,
           answers: finalAnswers,
         });

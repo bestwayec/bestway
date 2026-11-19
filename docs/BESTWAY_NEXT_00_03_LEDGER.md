@@ -53,3 +53,11 @@ Native Linux boot and WebKit rendering passed. The interactive vocabulary journe
 - Both development branches pushed. GitHub draft pull request creation returned HTTP 403 for both repositories.
 - Final suites recorded 1,470 Django tests passed, four legacy skips and 268 passing subtests, 837 web unit tests, 450 desktop unit tests, three mock-backed browser tests, 33 Rust tests and 16 existing web smoke checks. Production builds and Linux native boot passed.
 - Remaining blocking environment issue is the Prisma checksum host and authoritative migration ledger. Interactive native acceptance, low-end Windows and Android are unverified. See BESTWAY_NEXT_00_03_FINAL_REPORT.md for exact commands, file inventory and ordered backlog.
+
+## Completion pass — P0 integrity
+
+Standalone practice issues authenticated, expiring question snapshots. Grading, progress, attempts, profile bootstrap and rewards commit together under a lock on the existing User row. An explicit session ID supports independent attempts and replay. Existing clients can omit the ID after fetching a legacy quiz. The legacy mode reuses the same quiz and result for its one-hour validity window. Existing attempts remain unchanged.
+
+Verified the focused vocabulary suite (23 passed) and verify_vocabulary_practice_postgres.py against local PostgreSQL, including two simultaneous submissions to one session, ten independent concurrent sessions, missing profile, injected rollback, cross-account denial, input validation and legacy replay.
+
+Prisma 5.22.0 expects engine revision 605197351a3c8bdd595af2d2a9bc3025bca48ea2 for debian-openssl-3.0.x. Both the CLI and a direct checksum request received HTTP 403 from the environment proxy, and inspection found no local compatible binary. No ledger was created from SQL or synthesized.

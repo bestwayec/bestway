@@ -234,26 +234,30 @@ def vocabulary_set_detail_view(request, set_id):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def vocabulary_quiz_view(request, set_id):
-    visible_set(request, set_id)
+    vocab_set = visible_set(request, set_id)
     mode = request.query_params.get("mode", "mixed")
-    quiz = service.generate_quiz_for_set(set_id, mode=mode, student_id=request.user.id)
-    return success(quiz)
+    return success(service.issue_practice(
+        request.user, vocab_set, mode, explicit=request.query_params.get("session") == "explicit",
+    ))
 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def vocabulary_submit_view(request, set_id):
-    visible_set(request, set_id)
-    answers = request.data.get("answers", [])
-    mode = request.data.get("mode", "mixed")
+    from .domain_contracts import invalid, payload
 
-    result = service.submit_quiz_attempt(
+    visible_set(request, set_id)
+    data = payload(request, {"mode", "answers", "sessionId"})
+    session_id = data.get("sessionId")
+    if "sessionId" in data and (not isinstance(session_id, str) or not 1 <= len(session_id) <= 255):
+        invalid("Mashq sessiyasi yaroqsiz")
+    return success(service.submit_quiz_attempt(
         student=request.user,
         set_id=set_id,
-        mode=mode,
-        answers=answers,
-    )
-    return success(result)
+        mode=data.get("mode", None if session_id else "mixed"),
+        answers=data.get("answers"),
+        session_id=session_id,
+    ))
 
 
 @api_view(["GET"])

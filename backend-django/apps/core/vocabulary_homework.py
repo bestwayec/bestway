@@ -41,18 +41,7 @@ def issue(assignment, student_id, mode):
     if existing:
         return existing
     quiz = vocabulary_service.generate_quiz_for_set(assignment.vocabulary_set_id, mode, student_id)
-    words = {word.id: word for word in assignment.vocabulary_set.words.all()}
-    questions = []
-    for question in quiz["questions"]:
-        word = words.get(question["wordId"])
-        if word is None:
-            raise ContractAPIException("VOCABULARY_CHANGED", "To‘plam yangilandi. Qayta urinib ko‘ring", 409)
-        questions.append({
-            "question": question,
-            "english": word.english,
-            "uzbek": word.uzbek,
-            "expected": word.uzbek if question["type"] == QuizMode.ENG_UZB else word.english,
-        })
+    questions = snapshot_questions(assignment.vocabulary_set, quiz)
     return VocabularyHomeworkSession.objects.create(
         assignment=assignment, student_id=student_id, questions=questions, mode=mode,
     )
@@ -84,6 +73,22 @@ def words_view(request, assignment_id):
     } for word in assignment.vocabulary_set.words.all()])
 
 
+def snapshot_questions(vocab_set, quiz):
+    words = {word.id: word for word in vocab_set.words.all()}
+    questions = []
+    for question in quiz["questions"]:
+        word = words.get(question["wordId"])
+        if word is None:
+            raise ContractAPIException("VOCABULARY_CHANGED", "To‘plam yangilandi. Qayta urinib ko‘ring", 409)
+        questions.append({
+            "question": question,
+            "english": word.english,
+            "uzbek": word.uzbek,
+            "expected": word.uzbek if question["type"] == QuizMode.ENG_UZB else word.english,
+        })
+    return questions
+
+
 def answer_by_word(answers, allowed):
     if not isinstance(answers, list) or len(answers) != len(allowed):
         invalid("Har bir so‘zga bittadan javob kerak")
@@ -96,12 +101,31 @@ def answer_by_word(answers, allowed):
             invalid("Javobda sessiyaga tegishli noyob so‘z kerak")
         if not isinstance(answer, str) or len(answer) > 500:
             invalid("Javob 500 belgidan oshmasligi kerak")
+        if "type" in item and isinstance(allowed[word_id], dict):
+            if item["type"] != allowed[word_id]["question"]["type"]:
+                invalid("Javob yo‘nalishi sessiyaga mos kelmadi")
         result[word_id] = answer.strip()
     return result
 
 
 def normalize(answer):
     return " ".join(answer.casefold().split())
+
+
+def score_snapshot(snapshot, submitted):
+    questions = {row["question"]["wordId"]: row for row in snapshot}
+    answers = answer_by_word(submitted, questions)
+    wrong = []
+    for word_id, row in questions.items():
+        if normalize(answers[word_id]) != normalize(row["expected"]):
+            wrong.append({
+                "wordId": word_id, "english": row["english"], "uzbek": row["uzbek"],
+                "userAnswer": answers[word_id], "correctAnswer": row["expected"], "type": row["question"]["type"],
+            })
+    total = len(questions)
+    correct = total - len(wrong)
+    percent = round(100 * correct / total, 1)
+    return questions, wrong, correct, total, percent
 
 
 @api_view(["POST"])
@@ -122,18 +146,7 @@ def submit_view(request, assignment_id):
     if session.result is not None:
         return success(session.result)
 
-    questions = {row["question"]["wordId"]: row for row in session.questions}
-    answers = answer_by_word(data.get("answers"), questions)
-    wrong = []
-    for word_id, row in questions.items():
-        if normalize(answers[word_id]) != normalize(row["expected"]):
-            wrong.append({
-                "wordId": word_id, "english": row["english"], "uzbek": row["uzbek"],
-                "userAnswer": answers[word_id], "correctAnswer": row["expected"], "type": row["question"]["type"],
-            })
-    total = len(questions)
-    correct = total - len(wrong)
-    percent = round(100 * correct / total, 1)
+    questions, wrong, correct, total, percent = score_snapshot(session.questions, data.get("answers"))
     now = timezone.now()
     attempt = VocabularyAttempt.objects.create(
         student_id=actor.id, set_id=assignment.vocabulary_set_id, mode=session.mode,
