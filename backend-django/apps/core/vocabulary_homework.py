@@ -279,18 +279,52 @@ def export_results(extension, students, missed):
     return response
 
 
+@api_view(["GET"])
+def snapshot_view(request, assignment_id):
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = assignment_for_student(actor.id, assignment_id)
+    return success(vocabulary_collections.assignment_revision(assignment))
+
+
 @api_view(["GET", "PATCH"])
 @transaction.atomic
 def flashcards_view(request, assignment_id):
     actor = require_authenticated(request)
     require_role(request, "student")
     assignment = assignment_for_student(actor.id, assignment_id)
+    rev = vocabulary_collections.assignment_revision(assignment)
+    allowed = {word["id"] for word in rev["words"]}
     progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
+    acknowledged = []
+
     if request.method == "PATCH":
-        data = payload(request, {"lastWordId", "wordId", "status", "order"})
-        if not data or (("wordId" in data) != ("status" in data)):
+        data = payload(request, {"lastWordId", "wordId", "status", "order", "mutations", "clientRevision"})
+        if not data:
+            invalid("Payload required")
+
+        progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
+
+        if "mutations" in data:
+            mutations = data["mutations"]
+            if not isinstance(mutations, list) or len(mutations) > 100:
+                invalid("Mutations must be a list of at most 100 items")
+            for op in mutations:
+                if not isinstance(op, dict):
+                    continue
+                op_id = op.get("opId")
+                if not op_id or not isinstance(op_id, str):
+                    continue
+                word_id = op.get("wordId")
+                status = op.get("status")
+                if word_id and word_id in allowed and status in ("known", "practice"):
+                    progress.familiarity[word_id] = status
+                if "lastWordId" in op and isinstance(op["lastWordId"], str) and op["lastWordId"] in allowed:
+                    progress.last_word_id = op["lastWordId"]
+                acknowledged.append(op_id)
+        elif ("wordId" in data) != ("status" in data):
             invalid("Select a word or shuffle order")
-        allowed = {word["id"] for word in vocabulary_collections.assignment_revision(assignment)["words"]}
+
         for key in ("lastWordId", "wordId"):
             if key in data and (not isinstance(data[key], str) or data[key] not in allowed):
                 invalid("Word does not belong to the assignment")
@@ -300,19 +334,78 @@ def flashcards_view(request, assignment_id):
             order = data["order"]
             if not isinstance(order, list) or len(order) != len(allowed) or not all(isinstance(word, str) for word in order) or set(order) != allowed:
                 invalid("Shuffle order must contain every assigned word once")
-        progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
+            progress.word_order = order
+
         if "lastWordId" in data:
             progress.last_word_id = data["lastWordId"]
         if "status" in data:
             progress.familiarity[data["wordId"]] = data["status"]
-        if "order" in data:
-            progress.word_order = data["order"]
+
         progress.save()
-    return success({
+
+    res = {
         "lastWordId": progress.last_word_id if progress else "",
         "familiarity": progress.familiarity if progress else {},
         "order": progress.word_order if progress else [],
         "lastStudiedAt": progress.last_studied_at if progress else None,
+        "serverRevision": rev.get("revision", 1),
+    }
+    if acknowledged:
+        res["acknowledgedOpIds"] = acknowledged
+    return success(res)
+
+
+@api_view(["POST"])
+@transaction.atomic
+def flashcards_sync_view(request, assignment_id):
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = assignment_for_student(actor.id, assignment_id)
+    rev = vocabulary_collections.assignment_revision(assignment)
+    allowed = {word["id"] for word in rev["words"]}
+
+    data = payload(request, {"mutations", "lastWordId", "order", "clientRevision"})
+    if not isinstance(data, dict):
+        invalid("Invalid sync payload")
+
+    mutations = data.get("mutations") or []
+    if not isinstance(mutations, list) or len(mutations) > 100:
+        invalid("Mutations must be a list of at most 100 items")
+
+    progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
+    progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
+    acknowledged = []
+
+    for op in mutations:
+        if not isinstance(op, dict):
+            continue
+        op_id = op.get("opId")
+        if not op_id or not isinstance(op_id, str):
+            continue
+        word_id = op.get("wordId")
+        status = op.get("status")
+        if word_id and word_id in allowed and status in ("known", "practice"):
+            progress.familiarity[word_id] = status
+        if "lastWordId" in op and isinstance(op["lastWordId"], str) and op["lastWordId"] in allowed:
+            progress.last_word_id = op["lastWordId"]
+        acknowledged.append(op_id)
+
+    if "lastWordId" in data and isinstance(data["lastWordId"], str) and data["lastWordId"] in allowed:
+        progress.last_word_id = data["lastWordId"]
+    if "order" in data:
+        order = data["order"]
+        if isinstance(order, list) and len(order) == len(allowed) and set(order) == allowed:
+            progress.word_order = order
+
+    progress.save()
+
+    return success({
+        "lastWordId": progress.last_word_id,
+        "familiarity": progress.familiarity,
+        "order": progress.word_order,
+        "lastStudiedAt": progress.last_studied_at,
+        "acknowledgedOpIds": acknowledged,
+        "serverRevision": rev.get("revision", 1),
     })
 
 

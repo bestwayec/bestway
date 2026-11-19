@@ -62,6 +62,23 @@ def verify():
         "wordId": second["id"], "lastWordId": second["id"], "status": "known", "order": reverse,
     }, format="json")
     assert state.status_code == 200 and state.json()["data"]["lastStudiedAt"]
+
+    # Verify authorized offline snapshot
+    snap_resp = student.get(path + "/snapshot")
+    assert snap_resp.status_code == 200
+    assert snap_resp.json()["data"]["revision"] == 1 and len(snap_resp.json()["data"]["words"]) == 30
+    assert stranger.get(path + "/snapshot").status_code == 403
+
+    # Verify offline batch sync and durable mutation acknowledgement
+    sync_resp = student.post(progress + "/sync", {
+        "lastWordId": first["id"],
+        "mutations": [{"opId": "op-batch-1", "wordId": first["id"], "status": "known"}],
+    }, format="json")
+    assert sync_resp.status_code == 200
+    assert sync_resp.json()["data"]["acknowledgedOpIds"] == ["op-batch-1"]
+    assert sync_resp.json()["data"]["familiarity"][first["id"]] == "known"
+    assert stranger.post(progress + "/sync", {}, format="json").status_code == 403
+
     from verify_group_contract_postgres import issue_access
     from rest_framework.test import APIClient
 

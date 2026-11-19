@@ -2076,6 +2076,92 @@
         }
       }
     },
+    "/student/assignments/{assignmentId}/vocabulary/flashcards/sync": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VocabularyFlashcardChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-confirmed sync response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyFlashcards"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/assignments/{assignmentId}/vocabulary/snapshot": {
+      "parameters": [
+        {
+          "name": "assignmentId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Server-confirmed vocabulary collection snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VocabularyCollectionSnapshot"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/vocabulary/srs/history": {
       "get": {
         "parameters": [
@@ -3703,6 +3789,31 @@
           }
         },
         "required": []
+      },
+      "VocabularyCollectionSnapshot": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VocabularyCard"
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "title",
+          "words"
+        ]
       },
       "VocabularyReviewHistory": {
         "type": "object",
