@@ -46,3 +46,10 @@ Classroom assignments can reference an existing vocabulary set. One persisted st
 On local PostgreSQL the integration script passed with a private 30-word set, mixed translation and spelling, duplicate-submit protection, teacher reports and CSV, schedule boundary checks and replay protection. The browser journey passed with a real website and Django backend, including 30-word Smart Paste and publish, classroom assignment, desktop frontend flashcards and 30/30 submission, identical teacher reports, daily review, reload, logout/login and concurrent review rejection.
 
 Native Linux boot and WebKit rendering passed. The interactive vocabulary journey was exercised in Chromium against the desktop React app. Interactive native vocabulary, Windows/Android and low-memory checks remain unverified. Full studio editing and richer metadata, cross-device flashcard state and comprehensive analytics remain incomplete. See the final report for verification commands and backlog.
+
+## Delivery evidence
+
+- Bestway Stage 03 implementation `e08a5a1b85b5ce609c440b907c7dbd3f0fa3423b`. Tauri Stage 03 implementation `467bb3772404698d6919c7ef438be86b7b9b8311`.
+- Both development branches pushed. GitHub draft pull request creation returned HTTP 403 for both repositories.
+- Final suites recorded 1,470 Django tests passed, four legacy skips and 268 passing subtests, 837 web unit tests, 450 desktop unit tests, three mock-backed browser tests, 33 Rust tests and 16 existing web smoke checks. Production builds and Linux native boot passed.
+- Remaining blocking environment issue is the Prisma checksum host and authoritative migration ledger. Interactive native acceptance, low-end Windows and Android are unverified. See BESTWAY_NEXT_00_03_FINAL_REPORT.md for exact commands, file inventory and ordered backlog.
