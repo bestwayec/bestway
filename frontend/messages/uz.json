@@ -34,6 +34,7 @@
     "shuffle": "Kartochkalarni aralashtirish",
     "saved": "O‘quv holati saqlandi",
     "sync": "O‘quv holati saqlanmoqda…",
+    "pendingOffline": "Internet aloqasi yo‘q. Ulanganda sinxronlash uchun sahifani ochiq qoldiring.",
     "pronounce": "Talaffuz qilish",
     "audioUnavailable": "Talaffuz audiosi mavjud emas.",
     "mute": "Ovozni o‘chirish",

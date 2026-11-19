@@ -136,7 +136,7 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
             </div>
             {card.audioUrl && <audio key={card.id} ref={audio} muted={muted} preload="none" src={card.audioUrl} />}
             {audioErrorFor === card.id && <p role="status">{te("audioUnavailable")}</p>}
-            {save.isPending && <p role="status">{te("sync")}</p>}
+            {save.isPending && <p role="status">{te(save.isPaused ? "pendingOffline" : "sync")}</p>}
             {save.isSuccess && <p role="status">{te("saved")}</p>}
             {save.isError && <p role="alert">{save.error instanceof Error ? save.error.message : t("failed")}</p>}
           </>

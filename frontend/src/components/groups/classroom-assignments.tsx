@@ -117,10 +117,13 @@ export function ClassroomAssignments({ groupId, userId }: { groupId: string; use
         {report && results.data && !results.isError && <div className="space-y-2 rounded-md border border-border p-3">
           <p>{tv("completed", { completed: results.data.completedCount, assigned: results.data.assignedCount })}</p>
           <p>{tv("overdue", { count: results.data.overdueCount })}</p>
-          <Button asChild size="sm" variant="outline">
-            <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=csv`} download>CSV</a>
-            <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=xlsx`} download>XLSX</a>
-          </Button>
+          <div className="flex gap-2">
+            {(["csv", "xlsx"] as const).map(format => (
+              <Button asChild key={format} size="sm" variant="outline">
+                <a href={`/api/backend${path}/${encodeURIComponent(report)}/vocabulary-results?download=${format}`} download>{format.toUpperCase()}</a>
+              </Button>
+            ))}
+          </div>
           <label className="grid gap-1">{tm("searchStudents")}
             <Input value={reportSearch} onChange={event => { setReportSearch(event.target.value); setPage(1); }} />
           </label>

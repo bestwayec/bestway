@@ -34,6 +34,7 @@
     "shuffle": "Shuffle cards",
     "saved": "Study progress saved",
     "sync": "Saving study progress…",
+    "pendingOffline": "Offline. Keep this page open to sync when connected.",
     "pronounce": "Pronounce",
     "audioUnavailable": "Pronunciation audio is unavailable.",
     "mute": "Mute",
