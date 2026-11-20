@@ -7,6 +7,35 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 39-BLOK: BESTWAY NEXT — Stage 05 Continuation & Delivery (2026-11-20) — #207 & #39, branch `feat/bestway-next-stage05-completion`
+- **Design System & Primitives (Stage 05.1)**:
+  - Desktop va veb uchun tokenlar pariteti o'rnatildi (`--brand`, `--surface-elevated`, `--border`, `--fg-muted`).
+  - `bw-tauri/src/components/common/` da qayta ishlatiluvchi dizayn primitivlari yaratildi (`StatCard`, `EmptyState`, `StatusBadge`, `WorkspaceTable`).
+  - Yangi primitivlar uchun to'liq birlik testlari (`ui-primitives.test.tsx`) yozildi va o'tkazildi.
+- **Student Dashboard & Assignments (Stage 05.2)**:
+  - `Dashboard.tsx` (desktop) va `StudentAssignmentsWidget.tsx` (web & desktop) takomillashtirildi.
+  - Faol, Barchasi va Tugallangan vazifalar uchun filtr tablari hamda jonli hisoblagich nishonlari qo'shildi.
+  - O'qituvchi ma'lumoti, o'quvchilar soni va dars jadvali ko'rsatkichlari dinamik ulandi.
+  - Server xatoliklarida 0 ko'rsatmasdan qayta urinish (retry) tugmalari kafolatlandi.
+- **Teacher Command Center & Classroom Management (Stage 05.3 & 05.4)**:
+  - `TeacherDashboard.tsx` da haqiqiy KPI ko'rsatkichlari, retry boshqaruvi va bo'sh guruhlar holati to'g'rilandi.
+  - `ClassroomWorkspace.tsx` va `group-detail-view.tsx` da o'quvchilarni faol guruhlar orasida ko'chirish (student transfer dialog) integratsiya qilindi (`POST /groups/<targetId>/students`).
+  - O'quvchi boshqa guruhga o'tkazilganda oldingi imtihon natijalari, ballari va tasdiqlangan baholari xavfsiz saqlanadi.
+  - Guruhlarni arxivlash va arxivdan qaytarish imkoniyati sinxronlashtirildi.
+- **Vocabulary Studio & Reports (Stage 05.5)**:
+  - `VocabularyStudio.tsx` da guruh topshiriqlari hisoboti uchun CSV va Excel (.xlsx) eksport imkoniyati qo'shildi.
+- **Lokalizatsiya va Xavfsizlik (Stage 05.8)**:
+  - `messages/en.json` va `messages/uz.json` da barcha yangi topshiriq filtrlari va holat matnlari to'liq kiritildi.
+  - `i18n/messages-parity.spec.ts` (100% PASS) va `i18n/no-hardcoded-ui-text.spec.ts` (73/73 PASS) tasdiqlandi.
+- **Testlar va Yetkazib Berish (Stage 05.10)**:
+  - `bestway/frontend`: 126 test fayli, 837 vitest testi (100% PASS); `tsc --noEmit` 0 xato.
+  - `bw-tauri`: 60 test fayli, 481 vitest testi (100% PASS); `tsc && vite build` 0 xato (13.89s).
+  - `backend-django`: 1,452 pytest testi, 268 subtest (100% PASS).
+  - Git branch `feat/bestway-next-stage05-completion` ikkala repoga push qilindi.
+  - GitHub Draft PRlar yaratildi:
+    - `bestway`: PR #207 (https://github.com/bestwayec/bestway/pull/207)
+    - `bw-tauri`: PR #39 (https://github.com/bestwayec/bw-tauri/pull/39)
+
 ### 38-BLOK: BESTWAY NEXT — Stage 04: Unified Workspaces, Easy Classroom & Student Deep Linking (2026-11-19) — #206 & #38, branch `feat/bestway-next-00-03`
 - **Student Workspace & Dashboard (Phase 04.1)**:
   - Talaba Dashboard'iga jonli dars va sinf sharhi (`StudentClassroomWidget`), topshiriqlar ro'yxati (`StudentAssignmentsWidget`), davomat ko'rsatkichi (`StudentAttendanceWidget`), va oflayn lug'at kesh holati (`StudentOfflineVocabWidget`) to'liq ulandi.
