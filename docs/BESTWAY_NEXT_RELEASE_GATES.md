@@ -6,7 +6,7 @@
 |---|---|---|
 | STAGE 04 FEATURES | PARTIAL | Finish protected assessment review and end-to-end assigned-exam acceptance. |
 | SECURITY | PARTIAL | Complete final-client account lifecycle, shared-profile storage and revocation acceptance. |
-| NATIVE ACCEPTANCE | PARTIAL | Complete package interaction in Linux and physical Windows/Android acceptance. |
+| NATIVE ACCEPTANCE | PARTIAL | Linux development-mode login passed. Complete packaged Linux interaction and physical Windows/Android acceptance. |
 | PRODUCTION READINESS | BLOCKED | Close the release-critical gates, including exact-head Prisma and Django migration evidence and packaged Linux login and recovery. |
 
 The local Prisma engine checksum request returned HTTP 403. Genuine Prisma deploy, Django migration and the staged upgrade passed on a hosted run for the first repair commit. Check the workflow on the exact latest backend PR head. Keep both PRs in draft pending final acceptance. [Independent Stage 04 audit and remediation](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md) · [Backend PR checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop PR checks](https://github.com/bestwayec/bw-tauri/pull/38/checks)
