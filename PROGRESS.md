@@ -22,11 +22,16 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
   - Talaba topshiriqlaridan "Lug'atni o'rganish" to'g'ridan-to'g'ri lug'at trenajyoriga, "Imtihonni boshlash" esa mos test yoki mock imtihoniga yo'naltiradi (`onStartExamById`).
   - Jarayondagi imtihonlarni saqlangan holatdan davom ettirish (resume) funksiyasi kafolatlandi.
   - `bestway/frontend/src/components/dashboard/StudentAssignmentsWidget.tsx` da qattiq yozilgan `/en` prefiksi olib tashlanib, ko'p tilli (uz/ru/en) yo'naltirish to'liq to'g'rilandi.
+- **Stage 04 Yakuniy Integratsiya & Handoff (Phase 04.A - 04.K)**:
+  - `backend-django/apps/core/teacher_views.py`: O'qituvchilar uchun ajratilgan topshiriqlar va baholash navbati API'si (`GET /v1/teacher/submissions` va `POST /v1/teacher/submissions/<id>/grade`) yaratildi. Ruxsat faqat o'qituvchining o'z guruhlari o'quvchilari uchun beriladi (`student__group__teacher_id=actor.id`). Pagination (offset/limit) qo'llab-quvvatlanadi.
+  - `backend-django/tests/test_teacher_submissions.py`: 4/4 ta avtorizatsiya va izolyatsiya testi yozildi (100% PASS, 0.007s).
+  - `frontend/scripts/tokenize-colors.mjs` va `tokenize-shape.mjs`: ESM hashbang masalasi tuzatilib, barcha 74 ta dizayn tizimi testi (`src/design-system.spec.ts`) to'liq o'tdi.
+  - `docs/BESTWAY_NEXT_STAGE04_FINAL_REPORT.md` tayyorlandi.
 - **Sifat va Testlar**:
-  - `bw-tauri`: 56 ta test fayli, 462 ta vitest testi (100% PASS); `cargo check` (100% PASS); `npm run build` (100% PASS).
-  - `bestway/frontend`: 125+ test fayli, 757+ vitest testi (100% PASS); `npm run lint` (0 xato); `next build` (88/88 statik sahifalar, 100% PASS).
-  - `backend-django`: `tests.test_vocabulary_offline_sync` (6/6 PASS).
-  - Hosted CI: barcha CI quvurlari 100% yashil.
+  - `bw-tauri`: 59 ta test fayli, 471 ta vitest testi (100% PASS); `cargo check` (100% PASS); `npm run build` (100% PASS).
+  - `bestway/frontend`: 126 test fayli, 837 ta vitest testi (100% PASS); `npm run lint` (0 xato); `next build` (88/88 statik sahifalar, 100% PASS).
+  - `backend-django`: `tests.test_teacher_submissions` va `tests.test_vocabulary_offline_sync` (10/10 PASS).
+  - Hosted CI: barcha CI quvurlari ishga tushirildi va yashil. Push tasdiqlandi: `191b73f70b6e3678549799cc610fa74793dda0b1` (PR #206).
 
 ### 37-BLOK: BESTWAY NEXT — Stage 03 Offline Vocabulary Sync & Handoff (2026-11-19) — #206, branch `feat/bestway-next-00-03`
 - **Oflayn Lug'at va Fleshkarta API**:
