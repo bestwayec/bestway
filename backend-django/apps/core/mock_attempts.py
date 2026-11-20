@@ -796,7 +796,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         return dict(public_phase, serverTime=iso(timezone.now()), playLimit=2)
 
 
-def assert_view(actor, student_id):
+def assert_view(actor, student_id, *, started_at=None):
     if actor.role in ('admin', 'super_admin') or actor.id == student_id:
         return
     with connection.cursor() as cursor:
@@ -807,6 +807,9 @@ def assert_view(actor, student_id):
         else:
             fail('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
         if cursor.fetchone():
+            from .classroom_roster import assert_teacher_attempt_period
+
+            assert_teacher_attempt_period(actor, student_id, started_at)
             return
     fail('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
 
@@ -875,7 +878,7 @@ def detail(actor, attempt_id):
     attempt = MockAttempt.objects.select_related('exam', 'student__user').filter(id=attempt_id).first()
     if not attempt:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id)
+    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
     staff = mock_catalog.is_staff(actor)
     show = staff or attempt.status == 'completed'
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}

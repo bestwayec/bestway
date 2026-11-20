@@ -1,6 +1,8 @@
 """Django-owned classroom lifecycle and historical enrollment over Prisma Group IDs."""
+from datetime import UTC
+
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from apps.legacy_schema.models import AssessmentJob, AssessmentJobStatus, Attendance, MockAttempt, StudentProfile, TestAttempt, User
@@ -12,6 +14,29 @@ from .models import ClassroomArchive, ClassroomEnrollment, HomeworkSubmission
 def assert_active(group_id):
     if ClassroomArchive.objects.filter(group_id=group_id).exists():
         groups.fail("GROUP_ARCHIVED", "Guruh arxivlangan", 409)
+
+
+def current_teacher_attempts(attempts, actor):
+    """Keep legacy current-roster access while excluding work before a dated transfer."""
+    if actor.role != "teacher":
+        return attempts
+    newer_membership = ClassroomEnrollment.objects.filter(
+        student_id=OuterRef("student_id"), group_id=OuterRef("student__group_id"),
+        ended_at__isnull=True, started_at__gt=OuterRef("started_at"),
+    )
+    return attempts.filter(student__group__teacher_id=actor.id).exclude(Exists(newer_membership))
+
+
+def assert_teacher_attempt_period(actor, student_id, started_at):
+    if actor.role != "teacher" or started_at is None:
+        return
+    if timezone.is_naive(started_at):
+        started_at = timezone.make_aware(started_at, UTC)
+    group = StudentProfile.objects.filter(pk=student_id).values("group_id")
+    if ClassroomEnrollment.objects.filter(
+        student_id=student_id, group_id__in=group, ended_at__isnull=True, started_at__gt=started_at,
+    ).exists():
+        groups.fail("FORBIDDEN", "Bu urinish sizning o‘quv davringizga tegishli emas", 403)
 
 
 def record_enrollment(student_id, old_group, new_group):

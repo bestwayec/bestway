@@ -168,6 +168,7 @@ class ForAttemptOverviewTests(SimpleTestCase):
         teacher = SimpleNamespace(id="teacher-1", name="Teacher Komil", role="teacher")
         attempt = SimpleNamespace(
             id="attempt-456",
+            started_at=None,
             student_id="student-1",
             overall_band=7.0,
             status="completed",

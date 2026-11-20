@@ -1,6 +1,7 @@
 import math
 import re
 
+from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, permission_classes
 
@@ -39,6 +40,7 @@ def validate_review(data):
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def attempt(request,attempt_id):
+    result = assessment.for_attempt(request.user, attempt_id)
     try:
         from apps.legacy_schema.models import AssessmentJob
         pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
@@ -48,7 +50,7 @@ def attempt(request,attempt_id):
             start_thread(assessment_worker.tick, name='bestway-assessment-tick')
     except Exception:
         pass
-    return success(assessment.for_attempt(request.user,attempt_id))
+    return success(result)
 
 
 @api_view(['POST'])
@@ -78,7 +80,14 @@ def instant_evaluate_view(request):
 
 @api_view(['POST'])
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
+@transaction.atomic
 def teacher_grade(request, attempt_id):
+    from apps.legacy_schema.models import MockAttempt
+
+    attempt = MockAttempt.objects.select_for_update().filter(pk=attempt_id).first()
+    if attempt is None:
+        assessment.fail("MOCK_ATTEMPT_NOT_FOUND", "Attempt not found", 404)
+    assessment.assert_can_view(request.user, attempt.student_id, started_at=attempt.started_at)
     return success(assessment.teacher_grade_attempt(request.user, attempt_id, request.data or {}), 200)
 
 @api_view(['POST'])
@@ -147,10 +156,12 @@ def live_monitoring(request, group_id):
     cutoff = timezone.now() - timedelta(hours=24)
     students_data = []
 
+    from .classroom_roster import current_teacher_attempts
+    classroom_attempts = current_teacher_attempts(MockAttempt.objects.all(), request.user)
     for s in students:
-        active = MockAttempt.objects.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
+        active = classroom_attempts.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
         if not active:
-            active = MockAttempt.objects.filter(student_id=s.user_id, status='completed', finished_at__gte=cutoff).select_related('exam').order_by('-finished_at').first()
+            active = classroom_attempts.filter(student_id=s.user_id, status='completed', finished_at__gte=cutoff).select_related('exam').order_by('-finished_at').first()
 
         active_attempt_data = None
         if active:

@@ -35,7 +35,7 @@ def get(identifier):
     if job is None:fail('ASSESSMENT_NOT_FOUND','Assessment not found',404)
     return job
 def authorize(actor,job):
-    assert_can_view(actor,job.student_id)
+    assert_can_view(actor, job.student_id, started_at=job.attempt.started_at if actor.role == "teacher" else None)
     if actor.role=='student':assert_program(actor,job.attempt)
 
 def assert_program(actor,attempt):
@@ -47,7 +47,7 @@ def assert_program(actor,attempt):
 def for_attempt(actor,identifier):
     attempt=MockAttempt.objects.filter(id=identifier).select_related('exam').first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Attempt not found',404)
-    assert_can_view(actor,attempt.student_id)
+    assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
     if actor.role=='student':assert_program(actor,attempt)
     answers_map = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=identifier)}
     rows=list(AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at'))
@@ -283,6 +283,7 @@ def review(actor,identifier,data):
     with transaction.atomic():
         attempt=MockAttempt.objects.select_for_update().get(id=before.attempt_id)
         job=AssessmentJob.objects.select_for_update().get(id=identifier)
+        assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
         if job.version!=data['expectedVersion']:fail('ASSESSMENT_STALE_VERSION','Assessment changed; refresh before reviewing',409)
         if attempt.status=='in_progress':fail('MOCK_ATTEMPT_NOT_SUBMITTED','Attempt has been reopened',409)
         latest=AssessmentJob.objects.filter(attempt_id=job.attempt_id,skill=job.skill).order_by('-generation','-created_at').first()

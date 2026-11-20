@@ -141,6 +141,9 @@ def main():
         assert not data(teacher.get(root)) and not data(other.get(root))
         path = root + "/" + speaking["id"] + "/grade"
         data(other.post(path, {"questionId": questions[2], "score": 4}, format="json"), 404)
+        overview = "/v1/assessment/attempts/" + attempts[0]
+        data(other.get(overview), 403)
+        data(other.post(overview + "/teacher-grade", {"final_score": 9}, format="json"), 403)
         print("PASS: PostgreSQL grading evidence, pagination, role and enrollment scope, embargoed fields, review isolation and concurrent replay")
     finally:
         with transaction.atomic():

@@ -15,10 +15,14 @@ from .notifications import safe_notify, safe_notify_parents
 from .system_settings import audit
 
 
-def assert_can_view(actor, student_id):
+def assert_can_view(actor, student_id, *, started_at=None):
     if actor.role in ('admin', 'super_admin') or (actor.role == 'student' and actor.id == student_id): return
     if actor.role == 'parent' and ParentStudent.objects.filter(parent_user_id=actor.id, student_id=student_id).exists(): return
-    if actor.role == 'teacher' and StudentProfile.objects.filter(user_id=student_id, group__teacher_id=actor.id).exists(): return
+    if actor.role == 'teacher' and StudentProfile.objects.filter(user_id=student_id, group__teacher_id=actor.id).exists():
+        from .classroom_roster import assert_teacher_attempt_period
+
+        assert_teacher_attempt_period(actor, student_id, started_at)
+        return
     raise ContractAPIException('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
 
 

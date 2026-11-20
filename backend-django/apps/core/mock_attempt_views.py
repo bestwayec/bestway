@@ -406,7 +406,7 @@ def speaking_audio_view(request, attempt_id, question_id):
     attempt = MockAttempt.objects.filter(id=attempt_id).first()
     if attempt is None:
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    engine.assert_view(request.user, attempt.student_id)
+    engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at if request.user.role == "teacher" else None)
     answer = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
     if answer is None or not answer.audio_key or not resolve_key(answer.audio_key).is_file():
         engine.fail('FILE_NOT_FOUND', 'Audio topilmadi', 404)
