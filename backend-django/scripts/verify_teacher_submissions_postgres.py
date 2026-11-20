@@ -1,17 +1,25 @@
 """Verify the authorized grading queue against disposable PostgreSQL with signed sessions."""
+import base64
+import os
+import wave
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from threading import Barrier
+from unittest.mock import patch
 from uuid import uuid4
 
 from verify_group_contract_postgres import actor, bearer
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections, connection, transaction
+from rest_framework.test import APIClient
 from django.utils import timezone
 
 from apps.core.models import ClassroomEnrollment
 from apps.legacy_schema.models import (
-    AuditLog, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup,
+    AssessmentJob, AuditLog, Group, MockAnswer, MockAttempt, MockExam, MockQuestion, MockQuestionGroup,
     MockSection, StudentProfile, User,
 )
 from common.auth.jwt import issue_access
@@ -24,6 +32,122 @@ def identifier():
 def data(response, expected=200):
     assert response.status_code == expected, (response.status_code, response.content)
     return response.json().get("data")
+
+
+def verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now):
+    attempt = MockAttempt.objects.create(
+        id=identifier(), exam_id=exam_id, student_id=student_id, status="in_progress",
+        mode="practice", flow_mode="full_test", started_at=now, anti_cheat_count=0,
+    )
+    attempts.append(attempt.pk)
+    root = f"/v1/mock/attempts/{attempt.pk}"
+    overview = f"/v1/assessment/attempts/{attempt.pk}"
+    writing, _, speaking, _ = questions
+    upload = f"{root}/writing/{writing}/ocr"
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRfcAAAAASUVORK5CYII=")
+
+    def paper(path=upload, client=student):
+        return client.post(path, {"images": [SimpleUploadedFile("paper.png", png, "image/png")]}, format="multipart")
+
+    with TemporaryDirectory() as directory, patch.dict(os.environ, {"STORAGE_DIR": directory}):
+        with patch("apps.core.writing_ocr.extract_text_from_images", return_value={"ocrText": "", "pages": []}):
+            data(paper(client=other), 404)
+            data(paper(f"{root}/writing/{speaking}/ocr"), 400)
+            saved = data(paper())
+        image_key, = saved["imageKeys"]
+        assert image_key.startswith("private/writing-ocr/"), image_key
+        page = "/v1/" + saved["imageUrls"][0].removeprefix("/api/backend/")
+        audio_key = f"private/speaking_submissions/{attempt.pk}.wav"
+        wav = Path(directory) / audio_key
+        wav.parent.mkdir(parents=True)
+        with wave.open(str(wav), "wb") as tone:
+            tone.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
+            tone.writeframes(b"\x01\x00" * 8000)
+        MockAnswer.objects.create(
+            id=identifier(), attempt=attempt, question_id=speaking, response="", audio_key=audio_key,
+            is_graded=False, updated_at=now,
+        )
+        assert data(student.post(root + "/submit", {}, format="json"), 201)["status"] == "grading"
+        from apps.core import mock_submission_snapshots
+        mock_submission_snapshots.enqueue(MockAttempt.objects.select_related("exam").get(pk=attempt.pk))
+        jobs = {job.skill: job for job in AssessmentJob.objects.filter(attempt=attempt)}
+        assert jobs["writing"].failure_code == "ASSESSMENT_HANDWRITING_REVIEW_REQUIRED"
+        writing_row = MockAnswer.objects.get(attempt=attempt, question_id=writing)
+        assert writing_row.response == "" and not writing_row.is_graded
+        data(paper(), 400)
+        # Historical keys still resolve through the protected route, and both
+        # legacy and current storage paths are blocked on the public media route.
+        legacy_key = image_key.removeprefix("private/")
+        legacy_file = Path(directory) / legacy_key
+        legacy_file.parent.mkdir(parents=True)
+        legacy_file.write_bytes(png)
+        writing_row.rubric_scores["imageKeys"].append(legacy_key)
+        writing_row.save(update_fields=["rubric_scores"])
+        anon = APIClient(HTTP_HOST="localhost")
+        data(anon.get(page), 401)
+        data(other.get(page), 403)
+        data(teacher.get(page.replace(f"/{writing}/", f"/{speaking}/")), 404)
+        for key in (image_key, legacy_key):
+            assert anon.get("/media/" + key).status_code == 404
+        for url in (page, page.removesuffix("/0") + "/1"):
+            response = teacher.get(url)
+            assert (response.status_code, response["Cache-Control"], b"".join(response.streaming_content)) == (200, "private, no-store", png)
+
+        speaking_job = jobs["speaking"]
+        audio = f"/v1/assessment/jobs/{speaking_job.pk}/audio/{speaking}"
+        data(other.get(audio), 403)
+        data(teacher.get(audio.removesuffix(speaking) + writing), 404)
+        for header, expected in (("bytes=0-43", wav.read_bytes()[:44]), ("bytes=-8", wav.read_bytes()[-8:])):
+            response = teacher.get(audio, HTTP_RANGE=header)
+            assert response.status_code == 206 and response["Cache-Control"] == "private, no-store"
+            assert b"".join(response.streaming_content) == expected
+        assert teacher.get(audio, HTTP_RANGE="invalid").status_code == 416
+
+        data(teacher.post(overview + "/teacher-grade", {"writing_score": 4}, format="json"), 409)
+        barrier = Barrier(2)
+
+        def review(job, keys, value, *, competing=False):
+            if competing:
+                barrier.wait(timeout=10)
+            reviewer = bearer(issue_access(teacher_id, "teacher"))
+            return reviewer.post(f"/v1/assessment/jobs/{job.pk}/review", {
+                "action": "OVERRIDE", "reason": "Verified submitted evidence", "expectedVersion": job.version,
+                "parts": [{"id": part["id"], "criteria": dict.fromkeys(keys, value)} for part in job.input_snapshot["parts"]],
+            }, format="json")
+
+        from apps.core.assessment_results import keys as rubric_keys
+        speaking_keys = rubric_keys(speaking_job.input_snapshot)
+
+        def concurrent(_):
+            close_old_connections()
+            try:
+                return review(speaking_job, speaking_keys, 6, competing=True).status_code
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            assert sorted(pool.map(concurrent, range(2))) == [201, 409]
+        data(review(speaking_job, speaking_keys, 8), 409)
+        assert MockAnswer.objects.get(attempt=attempt, question_id=speaking).score == 6
+        assert not MockAnswer.objects.get(attempt=attempt, question_id=writing).is_graded
+        assert data(student.get(overview))["status"] != "completed"
+        data(review(jobs["writing"], rubric_keys(jobs["writing"].input_snapshot), 7), 201)
+        writing_row.refresh_from_db()
+        assert writing_row.score == 7 and len(writing_row.rubric_scores["imageKeys"]) == 2
+        assert data(student.get(overview))["status"] == "completed"
+
+        writing_job = jobs["writing"]
+        writing_job.refresh_from_db()
+        feedback = writing_job.approved_feedback
+        feedback["overallStrengths"] = ["The teacher approved the handwritten response."]
+        data(teacher.post(f"/v1/assessment/jobs/{writing_job.pk}/review", {
+            "action": "EDIT_FEEDBACK", "expectedVersion": writing_job.version,
+            "reason": "Approve feedback after reviewing both pages", "feedback": feedback,
+        }, format="json"), 201)
+        visible = next(job for job in data(student.get(overview))["assessments"] if job["skill"] == "writing")
+        assert visible["approvedFeedback"]["overallStrengths"] == feedback["overallStrengths"]
+        assert visible["finalScore"] == 7
+        print("PASS: protected Writing upload, legacy and current access, Speaking ranges, concurrent review, skill scores and approved feedback")
 
 
 def main():
@@ -57,7 +181,7 @@ def main():
             MockExam.objects.create(
                 id=exam_id, title="Grading queue fixture", type="ielts_academic", profile="full_mock",
                 is_published=True, is_demo=True, price=0, is_free_for_approved=True, content_version=1,
-                created_by_id=admin_id, created_at=now, updated_at=now,
+                created_by_id=admin_id, assessment_policy="MANUAL_ONLY", created_at=now, updated_at=now,
             )
             for i, skill in enumerate(("writing", "writing", "speaking", "reading")):
                 section = MockSection.objects.create(
@@ -135,6 +259,8 @@ def main():
         assert saved["submissionStatus"] == "graded" and saved["status"] == "grading"
         assert len(data(teacher.get(root, {"status": "graded", "skill": "writing"}))) == 1
 
+        verify_protected_review(teacher, other, student, teacher_id, exam_id, student_id, questions, attempts, now)
+
         StudentProfile.objects.filter(pk=student_id).update(group_id=groups[1])
         ClassroomEnrollment.objects.filter(student_id=student_id, ended_at__isnull=True).update(ended_at=now)
         ClassroomEnrollment.objects.create(student_id=student_id, group_id=groups[1], started_at=now)
@@ -148,6 +274,7 @@ def main():
     finally:
         with transaction.atomic():
             AuditLog.objects.filter(user_id__in=users).delete()
+            AssessmentJob.objects.filter(attempt_id__in=attempts).delete()
             MockAnswer.objects.filter(attempt_id__in=attempts).delete()
             MockAttempt.objects.filter(pk__in=attempts).delete()
             MockQuestion.objects.filter(pk__in=questions).delete()

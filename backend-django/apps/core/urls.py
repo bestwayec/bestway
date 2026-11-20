@@ -56,7 +56,7 @@ from .mock_attempt_views import (
     start_view,
     submit_view,
     telemetry_view,
-    writing_ocr_view,
+    writing_ocr_view, writing_page_view,
 )
 from .mock_import_views import (
     commit_import_view,
@@ -235,6 +235,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/session', session_view),
     path('mock/attempts/<str:attempt_id>/session/release', session_release_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>', speaking_upload_view),
+    path('mock/attempts/<str:attempt_id>/writing-pages/<str:question_id>/<int:page>', writing_page_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr/', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing/ocr', writing_ocr_view),

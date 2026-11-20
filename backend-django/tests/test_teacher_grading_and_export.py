@@ -71,7 +71,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
             teacher_score=None,
             final_score=None,
             final_score_source="AI",
-            status="PROCESSING",
+            status="SUCCEEDED",
             approved_feedback={},
             final_result={},
         )
@@ -82,7 +82,7 @@ class TeacherGradingOverrideTests(SimpleTestCase):
             teacher_score=None,
             final_score=None,
             final_score_source="AI",
-            status="PROCESSING",
+            status="SUCCEEDED",
             approved_feedback={},
             final_result={},
         )

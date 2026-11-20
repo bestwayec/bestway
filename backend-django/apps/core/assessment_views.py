@@ -99,11 +99,20 @@ def review(request,job_id):return success(assessment.review(request.user,job_id,
 def audio(request,job_id,question_id):
     key=assessment.audio(request.user,job_id,question_id);path=storage_path(key);size=path.stat().st_size;start=0;end=size-1;status=200
     mime={'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(path.suffix.lower(),'audio/mpeg')
-    if request.headers.get('Range'):
-        match=re.search(r'bytes=([0-9]*)-([0-9]*)',request.headers['Range']);start=int(match[1]) if match and match[1] else 0;end=int(match[2]) if match and match[2] else size-1
-        if start>=size or end>=size or start>end:
-            response=HttpResponse(status=416);response['Content-Range']=f'bytes */{size}';return response
-        status=206
+    range_header = request.headers.get('Range')
+    if range_header:
+        match = re.fullmatch(r'bytes=([0-9]{0,19})-([0-9]{0,19})', range_header)
+        if match and any(match.groups()):
+            first, last = match.groups()
+            if first:
+                start, end = int(first), min(size - 1, int(last)) if last else size - 1
+            else:
+                start, end = max(0, size - int(last)), size - 1
+        if not match or not any(match.groups()) or start >= size or start > end:
+            response = HttpResponse(status=416)
+            response['Content-Range'] = f'bytes */{size}'
+            return response
+        status = 206
     def chunks():
         with path.open('rb') as source:
             source.seek(start);left=end-start+1
@@ -112,6 +121,7 @@ def audio(request,job_id,question_id):
                 if not chunk:break
                 left-=len(chunk);yield chunk
     response=StreamingHttpResponse(chunks(),status=status,content_type=mime);response['Content-Length']=end-start+1;response['Accept-Ranges']='bytes'
+    response['Cache-Control'] = 'private, no-store'
     if status==206:response['Content-Range']=f'bytes {start}-{end}/{size}'
     return response
 

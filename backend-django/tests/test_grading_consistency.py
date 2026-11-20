@@ -27,7 +27,7 @@ class TeacherProjectionTests(SimpleTestCase):
                 patch.object(mock_grading,'band_tables',return_value={}),patch.object(mock_grading,'save_projection') as save,\
                 patch('apps.core.mock_submission_snapshots.notify'):
             attempts.select_related.return_value.filter.return_value.first.return_value=attempt
-            rows.filter.return_value=[SimpleNamespace(question_id=q,response='Original response',is_graded=True,score=s) for q,s in answers.items()]
+            rows.filter.return_value=[SimpleNamespace(question_id=q,response='Original response',audio_key=None,rubric_scores=None,is_graded=True,score=s) for q,s in answers.items()]
             result=mock_grading.recompute('a')
             save.assert_called_once_with(attempt,result)
             return result
@@ -48,7 +48,7 @@ class TeacherProjectionTests(SimpleTestCase):
         sections=[part('writing','w')]
         attempt=SimpleNamespace(id='a',exam=SimpleNamespace(type='multilevel'),specification_version=None,
             flow_mode='single_skill',status='grading')
-        answer=SimpleNamespace(question_id='w',response='Original response',is_graded=True,score=4)
+        answer=SimpleNamespace(question_id='w',response='Original response',audio_key=None,rubric_scores=None,is_graded=True,score=4)
         with patch.object(mock_grading.MockAttempt,'objects') as attempts,patch.object(mock_grading.MockAnswer,'objects') as rows,\
                 patch.object(mock_grading,'shape_exam',return_value=dict(sections=sections)),\
                 patch.object(mock_grading,'band_tables',return_value={}),patch.object(mock_grading,'save_projection'),\

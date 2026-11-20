@@ -11,6 +11,7 @@ from apps.legacy_schema.models import (
 )
 
 from . import mock_scoring as scoring
+from .handwriting import handwriting_fields
 from .mock_attempts import fail, versioned
 from .mock_authoring import new_id
 from .mock_catalog import shape_exam
@@ -26,13 +27,18 @@ def save_projection(attempt,result):
     attempt.finished_at=timezone.now() if result['status']=='completed' else None
     attempt.save(update_fields=[*names,'finished_at'])
 
+def scoring_answer(answer):
+    return dict(response=answer.response, isGraded=answer.is_graded, score=answer.score,
+                audioKey=answer.audio_key, hasImages=bool(handwriting_fields(answer.rubric_scores).get('imageKeys')))
+
+
 def recompute(attempt_id):
     attempt=MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Urinish topilmadi',404)
     sections=scope_sections(attempt,shape_exam(attempt.exam,True)['sections']);answers={a.question_id:a for a in MockAnswer.objects.filter(attempt_id=attempt.id)}
     # Submission and teacher/AI reviews must use the same per-section pending
     # rules. A global pending flag used to hide already graded later sections.
-    values={identifier:dict(response=a.response,isGraded=a.is_graded,score=a.score) for identifier,a in answers.items()}
+    values={identifier:scoring_answer(a) for identifier,a in answers.items()}
     result,_=scoring.calculate(attempt.exam.type,sections,values,versioned=versioned(attempt),
         full_test=attempt.flow_mode=='full_test',tables=band_tables())
     if is_partial(attempt):result=scoring.partial_result(result)
@@ -73,11 +79,14 @@ def grade(actor,attempt_id,data):
     if final is not None and not 0<=final<=maximum:fail('SCORE_OUT_OF_RANGE',f"Ball 0 dan {maximum} gacha bo'lishi kerak")
     if versioned(attempt) and (type(final) not in (int,float) or not math.isfinite(final) or final*2!=scoring.js_round(final*2)):fail('SCORE_OUT_OF_RANGE','Use half-point raw scores')
     before=MockAnswer.objects.filter(attempt_id=attempt_id,question_id=question.id).first()
+    evidence = handwriting_fields(before.rubric_scores) if before else {}
+    if evidence:
+        rubrics = {**evidence, **(rubrics or {})}
     values=dict(score=final,is_graded=True,graded_by_id=actor.id,feedback=data.get('feedback'),rubric_scores=rubrics,updated_at=timezone.now())
     MockAnswer.objects.update_or_create(attempt_id=attempt_id,question_id=question.id,defaults=values,
         create_defaults=dict(values,id=new_id(),response=''))
     with transaction.atomic():
-        rows=list(MockAnswer.objects.filter(attempt_id=attempt_id));answers={a.question_id:dict(response=a.response,isGraded=a.is_graded,score=a.score) for a in rows}
+        rows=list(MockAnswer.objects.filter(attempt_id=attempt_id));answers={a.question_id:scoring_answer(a) for a in rows}
         result,projections=scoring.calculate(attempt.exam.type,scope_sections(attempt,shape_exam(attempt.exam,True)['sections']),answers,versioned=versioned(attempt),full_test=attempt.flow_mode=='full_test',tables=band_tables())
         if is_partial(attempt):result=scoring.partial_result(result)
         for row in rows:

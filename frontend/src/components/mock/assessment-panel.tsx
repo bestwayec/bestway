@@ -242,7 +242,7 @@ export function AssessmentPanel({ attemptId, isStaff }: { attemptId: string; isS
         <h2 id="assessment-feedback-title" className="font-semibold text-fg">{t("title")}</h2>
         <Button variant="outline" size="sm" loading={query.isFetching} onClick={() => query.refresh()}>{t("refresh")}</Button>
       </div>
-      {isStaff && <TeacherAttemptOverrideCard attemptId={attemptId} data={query.data} />}
+      {isStaff && query.data?.assessments.length === 0 && <TeacherAttemptOverrideCard attemptId={attemptId} data={query.data} />}
       {query.isLoading && <p role="status" className="text-sm text-fg-muted">{t("loading")}</p>}
       {query.isError && <Card role="alert" className="p-4 text-sm text-fg-muted">{t("loadError")}</Card>}
       {!query.isLoading && !query.isError && query.data?.assessments.length === 0 && (
@@ -340,7 +340,7 @@ export function AssessmentCard({ job, attemptId, isStaff }: { job: AssessmentJob
                 </div>
               )}
               {submission.audioUrl && <audio controls preload="none" className="w-full max-w-md" aria-label={t("originalAudio")}
-                src={assessmentAudioPath(attemptId, submission.questionId)}><track kind="captions" /></audio>}
+                src={assessmentAudioPath(job.id, submission.questionId)}><track kind="captions" /></audio>}
               {!submission.originalResponse && !submission.audioUrl && (!submission.imageUrls || submission.imageUrls.length === 0) && <p className="text-sm text-fg-muted">{scoringUnavailable ? t("scoringUnavailable") : t("noResponse")}</p>}
               {job.skill === "speaking" && <div className="rounded-field bg-bg-subtle p-3">
                 <h5 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">{t("transcript")}</h5>

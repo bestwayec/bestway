@@ -890,6 +890,7 @@ def detail(actor, attempt_id):
     questions_by_group = {}
     for question in MockQuestion.objects.filter(group_id__in=[g.id for gs in groups_by_section.values() for g in gs]).order_by('sort_order'):
         questions_by_group.setdefault(question.group_id, []).append(question)
+    from .handwriting import handwriting_fields, page_urls
     from . import review_evidence
     from .practice_mode import revealed as practice_revealed
     shown_in_practice = set(practice_revealed(attempt))
@@ -925,8 +926,12 @@ def detail(actor, attempt_id):
                     response=a.response if a else None, hasAudio=bool(a and a.audio_key),
                     audioUrl=answer_audio_url(attempt_id, q.id) if a and a.audio_key else None,
                     score=a.score if a else None, isCorrect=a.is_correct if a else None,
-                    isGraded=a.is_graded if a else False, feedback=a.feedback if a else None,
+                    isGraded=a.is_graded if a else False, feedback=a.feedback if a and (staff or a.is_graded) else None,
                     rubricScores=a.rubric_scores if a else None)
+                if a and section.skill == 'writing':
+                    keys = handwriting_fields(a.rubric_scores).get('imageKeys') or []
+                    if keys:
+                        item['rubricScores'] = {**a.rubric_scores, 'imageUrls': page_urls(attempt_id, q.id, keys)}
                 verified = (attempt.media_state or {}).get(q.id) or {}
                 if a and a.audio_key and verified.get('durationVerifiedKey') == a.audio_key:
                     item['audioDurationMs'] = verified.get('audioDurationMs')

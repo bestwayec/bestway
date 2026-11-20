@@ -24,8 +24,11 @@ def serve_media(request, path):
     clean = path.replace("\\", "/")
     if clean.startswith("/") or ".." in Path(clean).parts:
         raise Http404("Media file not found")
-    private_roots = [path.resolve() for path in (root / "private", root / "speaking_submissions",
-                     root / "media" / "private", root / "media" / "speaking_submissions")]
+    private_roots = [
+        (base / folder).resolve()
+        for base in (root, root / "media")
+        for folder in ("private", "speaking_submissions", "writing-ocr")
+    ]
     variants = [clean]
     if clean.startswith("media/"):
         variants.append(clean[len("media/"):])

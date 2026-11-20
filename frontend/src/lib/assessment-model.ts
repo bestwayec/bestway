@@ -48,8 +48,8 @@ export function overrideParts(job: AssessmentJobView, values: Record<string, Rec
 }
 
 /** Always use the authorized same-origin media proxy, never an arbitrary provider URL. */
-export function assessmentAudioPath(attemptId: string, questionId: string): string {
-  return `/api/backend/mock/attempts/${encodeURIComponent(attemptId)}/answers/${encodeURIComponent(questionId)}/audio`;
+export function assessmentAudioPath(jobId: string, questionId: string): string {
+  return `/api/backend/assessment/jobs/${encodeURIComponent(jobId)}/audio/${encodeURIComponent(questionId)}`;
 }
 
 export function splitFeedbackLines(text: string): string[] {

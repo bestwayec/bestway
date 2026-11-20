@@ -58,7 +58,7 @@ describe("teacher review score boundary", () => {
 
 describe("assessment presentation safety", () => {
   it("builds audio access through the protected same-origin proxy with escaped identities", () => {
-    expect(assessmentAudioPath("a/b", "q?x=1")).toBe("/api/backend/mock/attempts/a%2Fb/answers/q%3Fx%3D1/audio");
+    expect(assessmentAudioPath("a/b", "q?x=1")).toBe("/api/backend/assessment/jobs/a%2Fb/audio/q%3Fx%3D1");
   });
   it("retains feedback line order and removes empty rows", () => {
     expect(splitFeedbackLines("First\r\n\n Second ")).toEqual(["First", "Second"]);

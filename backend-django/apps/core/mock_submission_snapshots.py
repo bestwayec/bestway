@@ -35,6 +35,8 @@ def build_input(exam, attempt, skill, groups, answers, hash_audio):
                 originalResponse=answer.get('response') or '', partNumber=group['partNumber'] if group['partNumber'] is not None else index+1)
             guidance=question.get('guidance') or {}
             if skill=='writing':
+                if answer.get('hasImages'):
+                    response['hasHandwriting'] = True
                 response.update({k:guidance[k] for k in ('wordMin','wordMax') if k in guidance})
             key = answer.get('audioKey')
             if key:
@@ -97,6 +99,11 @@ def blueprint_failure(value):
         else:invalid=len(parts)!=len(spec) or any(p['id']!=s[0] or len(p['responses'])!=s[1] or p['max']!=s[3] for p,s in zip(parts,spec))
         if invalid:
             return 'ASSESSMENT_INCOMPLETE_BLUEPRINT'
+    if value['skill'] == 'writing' and any(
+        response.get('hasHandwriting') and not response['originalResponse'].strip()
+        for part in parts for response in part['responses']
+    ):
+        return 'ASSESSMENT_HANDWRITING_REVIEW_REQUIRED'
     if value['skill']=='speaking' and any(not r.get('audioKey') or not r.get('audioHash') for p in parts for r in p['responses']):
         has_any_audio = any(bool(r.get('audioKey') and r.get('audioHash') and r.get('audioHash') != 'UNAVAILABLE') for p in parts for r in p['responses'])
         if not has_any_audio:

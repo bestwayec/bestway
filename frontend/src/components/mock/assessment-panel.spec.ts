@@ -76,7 +76,7 @@ describe("assessment feedback presentation", () => {
     expect(html).not.toContain("<script>");
     expect(html).not.toContain("<img src=x");
     expect(html).not.toContain("untrusted.invalid");
-    expect(html).toContain("/api/backend/mock/attempts/attempt-1/answers/q-1/audio");
+    expect(html).toContain("/api/backend/assessment/jobs/assessment-1/audio/q-1");
   });
   it("displays pronunciation limitations and separates original, transcript, feedback and example", () => {
     const html = render(speakingJob);
@@ -164,7 +164,7 @@ describe("assessment status resilience", () => {
     expect(html).toContain("Failed — manual review pending");
     expect(html).toContain("Teacher review can complete this assessment");
     expect(html).toContain("No transcript");
-    expect(html).toContain("/answers/q-1/audio");
+    expect(html).toContain("/audio/q-1");
   });
   it("shows a saved-submission fallback when status loading fails", () => {
     hookState.error = true; hookState.data = undefined;
