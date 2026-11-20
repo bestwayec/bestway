@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   ArrowLeft,
+  ArrowRightLeft,
   CalendarClock,
   Download,
   Pencil,
@@ -16,16 +17,19 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClassroomManagement } from "@/components/groups/classroom-management";
 import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
+import { api } from "@/lib/api-client";
 import {
   useAddStudentToGroup,
   useGroupDetail,
@@ -63,6 +67,11 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const [attendanceOpen, setAttendanceOpen] = React.useState(false);
   const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const [transferTarget, setTransferTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const [targetGroupId, setTargetGroupId] = React.useState<string>("");
+  const [transferBusy, setTransferBusy] = React.useState(false);
+  const queryClient = useQueryClient();
+  const otherGroups = React.useMemo(() => (allGroups ?? []).filter((g) => g.id !== groupId), [allGroups, groupId]);
   const [search, setSearch] = React.useState("");
   const [rosterSearch, setRosterSearch] = React.useState("");
   const [rosterLimit, setRosterLimit] = React.useState(20);
@@ -105,6 +114,30 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
       onSuccess: () => toast.success(t("studentRemoved")),
       onError: () => toast.error(tc("unknownError")),
     });
+  }
+
+  async function handleTransferStudent() {
+    if (!transferTarget || !targetGroupId) return;
+    setTransferBusy(true);
+    try {
+      await api.post(`/groups/${encodeURIComponent(targetGroupId)}/students`, {
+        studentId: transferTarget.id,
+      });
+      toast.success("O'quvchi boshqa guruhga muvaffaqiyatli ko'chirildi");
+      setTransferTarget(null);
+      setTargetGroupId("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["group", groupId] }),
+        queryClient.invalidateQueries({ queryKey: ["group", targetGroupId] }),
+        queryClient.invalidateQueries({ queryKey: ["groups"] }),
+        queryClient.invalidateQueries({ queryKey: ["classroom-management"] }),
+      ]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : tc("unknownError");
+      toast.error(msg);
+    } finally {
+      setTransferBusy(false);
+    }
   }
 
   if (isError) {
@@ -367,6 +400,20 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
                       >
                         <Sparkles className="text-brand" />
                       </Button>
+                      {canSeePhones && otherGroups.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="O'quvchini ko'chirish"
+                          title="Boshqa guruhga ko'chirish"
+                          onClick={() => {
+                            setTransferTarget({ id: s.studentId, name: s.name });
+                            setTargetGroupId(otherGroups[0]?.id ?? "");
+                          }}
+                        >
+                          <ArrowRightLeft className="size-3.5 text-fg-muted hover:text-brand" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -401,6 +448,43 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         studentName={pointsTarget?.name ?? ""}
         limit={teacherLimit}
       />
+      <Dialog open={!!transferTarget} onOpenChange={(open) => !open && setTransferTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="size-5 text-brand" />
+              O'quvchini boshqa guruhga ko'chirish
+            </DialogTitle>
+            <DialogDescription>
+              {transferTarget?.name} ni boshqa faol guruhga o'tkazish. O'quvchining barcha oldingi natijalari va baholari saqlanadi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-fg-muted">Yangi guruhni tanlang</label>
+              <select
+                value={targetGroupId}
+                onChange={(e) => setTargetGroupId(e.target.value)}
+                className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-2 focus-visible:outline-brand"
+              >
+                {otherGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name} ({g.studentsCount ?? 0} o'quvchi)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setTransferTarget(null)} disabled={transferBusy}>
+                {tc("cancel")}
+              </Button>
+              <Button size="sm" onClick={handleTransferStudent} disabled={transferBusy || !targetGroupId}>
+                {transferBusy ? tc("loading") : "Ko'chirish"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

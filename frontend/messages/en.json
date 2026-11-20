@@ -3113,7 +3113,13 @@
       "pending": "{count, plural, one {# assignment waiting} other {# assignments waiting}}",
       "allDone": "All assignments are done",
       "retry": "{percent}% — try again",
-      "withTeacher": "With the teacher"
+      "withTeacher": "With the teacher",
+      "filterActive": "Active",
+      "filterAll": "All",
+      "filterCompleted": "Completed",
+      "noFilteredAssignments": "No assignments in this view.",
+      "awaitingResult": "Calculating result",
+      "statusPending": "Pending"
     },
     "certificateModal": {
       "print": "Print / PDF",

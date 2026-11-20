@@ -3113,7 +3113,13 @@
       "pending": "{count} ta kutilayotgan topshiriq",
       "allDone": "Barcha topshiriqlar bajarilgan",
       "retry": "{percent}% — qayta topshiring",
-      "withTeacher": "Ustoz tekshiruvida"
+      "withTeacher": "Ustoz tekshiruvida",
+      "filterActive": "Faol",
+      "filterAll": "Barchasi",
+      "filterCompleted": "Tugallangan",
+      "noFilteredAssignments": "Ushbu ko'rinishda vazifalar yo'q.",
+      "awaitingResult": "Natija hisoblanmoqda",
+      "statusPending": "Kutilmoqda"
     },
     "certificateModal": {
       "print": "Chop etish / PDF",

@@ -121,6 +121,8 @@ export function StudentAssignmentsWidget() {
     }
   };
 
+  const [filter, setFilter] = React.useState<"active" | "all" | "completed">("active");
+
   if (isLoading) {
     return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
@@ -128,6 +130,8 @@ export function StudentAssignmentsWidget() {
   // Active / pending assignments first
   const pendingAssignments = assignments.filter((a) => !a.is_submitted);
   const completedAssignments = assignments.filter((a) => a.is_submitted);
+  const displayedAssignments =
+    filter === "active" ? pendingAssignments : filter === "completed" ? completedAssignments : assignments;
 
   return (
     <div className="space-y-4">
@@ -158,6 +162,39 @@ export function StudentAssignmentsWidget() {
         </Button>
       </div>
 
+      {/* Filter Tabs */}
+      {!loadFailed && assignments.length > 0 && (
+        <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "active" ? "primary" : "ghost"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("active")}
+          >
+            {tu("assignments.filterActive")} ({pendingAssignments.length})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "all" ? "primary" : "ghost"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("all")}
+          >
+            {tu("assignments.filterAll")} ({assignments.length})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "completed" ? "primary" : "ghost"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("completed")}
+          >
+            {tu("assignments.filterCompleted")} ({completedAssignments.length})
+          </Button>
+        </div>
+      )}
+
       {/* Assignment List */}
       {loadFailed ? (
         <div role="alert" className="text-sm text-fg-muted">
@@ -182,9 +219,13 @@ export function StudentAssignmentsWidget() {
             {tu("assignments.enterCode")}
           </Button>
         </Card>
+      ) : displayedAssignments.length === 0 ? (
+        <Card className="p-4 text-center border-dashed border-border/60 bg-surface/30">
+          <p className="text-xs text-fg-muted">{tu("assignments.noFilteredAssignments")}</p>
+        </Card>
       ) : (
         <div className="space-y-2.5">
-          {assignments.slice(0, 4).map((a) => {
+          {displayedAssignments.slice(0, 6).map((a) => {
             const deadlineDate = new Date(a.deadline);
             const isSoon = !a.is_submitted && deadlineDate.getTime() - Date.now() < 86400000 * 2;
 
@@ -219,7 +260,7 @@ export function StudentAssignmentsWidget() {
                       <span className="text-xs font-semibold text-fg-muted">{tu("assignments.withTeacher")}</span>
                     )}
                     {a.status === "awaiting_result" && (
-                      <span className="text-xs font-semibold text-fg-muted">Natija hisoblanmoqda</span>
+                      <span className="text-xs font-semibold text-fg-muted">{tu("assignments.awaitingResult")}</span>
                     )}
                     {a.status === "overdue" && (
                       <Badge className="bg-danger/20 text-danger border border-danger/30 text-[10px] px-1.5 py-0">
@@ -228,7 +269,7 @@ export function StudentAssignmentsWidget() {
                     )}
                     {a.status === "pending" && (
                       <Badge className="bg-info/10 text-info border border-info/20 text-[10px] px-1.5 py-0">
-                        Kutilmoqda ⏳
+                        {tu("assignments.statusPending")} ⏳
                       </Badge>
                     )}
                   </div>
