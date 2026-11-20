@@ -88,3 +88,9 @@ def group_day_summary_view(request, group_id):
     if 'date' in data and not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', data['date']):
         invalid("date formati YYYY-MM-DD bo'lsin")
     return success(service.group_day_summary(request.user, group_id, data.get('date')))
+
+
+@api_view(['GET'])
+@permission_classes([roles('teacher')])
+def teacher_day_totals_view(request):
+    return success(service.teacher_day_totals(request.user))

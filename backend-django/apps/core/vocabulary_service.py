@@ -1,4 +1,5 @@
 """Vocabulary engine service: raw text parsing, quiz generation, gamified scoring, SRS, and Excel export."""
+from datetime import timedelta
 from io import BytesIO
 import logging
 import random
@@ -6,7 +7,7 @@ import re
 from typing import Any
 from uuid import uuid4
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import F, Sum
 from django.utils import timezone
 import openpyxl
@@ -23,6 +24,7 @@ from .models import (
     UserWeakWord,
     VocabularyAttempt,
     VocabularyLevel,
+    VocabularyPracticeSession,
     VocabularySet,
     VocabularyWord,
 )
@@ -108,13 +110,18 @@ def create_vocabulary_set(
     description: str | None = None,
     is_public: bool = True,
 ) -> VocabularySet:
-    if not title or not title.strip():
-        raise ContractAPIException("VALIDATION_ERROR", "Sarlavha bo'sh bo'lishi mumkin emas", 400)
-    if not words:
-        raise ContractAPIException("VALIDATION_ERROR", "To'plamda kamida bitta so'z bo'lishi shart", 400)
+    from .vocabulary_collections import clean_words, text
 
+    title = text(title, "title", 255, True)
+    description = text(description if description is not None else "", "description", 4000)
     if level not in VocabularyLevel.values:
         level = VocabularyLevel.B1
+    aliases = {"context_sentence": "contextSentence", "part_of_speech": "partOfSpeech", "audio_url": "audioUrl"}
+    if isinstance(words, list):
+        words = [{aliases.get(key, key): value for key, value in row.items()} if isinstance(row, dict) else row for row in words]
+    clean = clean_words(words)
+    if any(identifier is not None for identifier, _ in clean):
+        raise ContractAPIException("VALIDATION_ERROR", "New words cannot include IDs", 400)
 
     with transaction.atomic():
         vocab_set = VocabularySet.objects.create(
@@ -126,18 +133,7 @@ def create_vocabulary_set(
             is_public=is_public,
         )
 
-        word_instances = [
-            VocabularyWord(
-                set=vocab_set,
-                english=w["english"].strip(),
-                uzbek=w["uzbek"].strip(),
-                context_sentence=w.get("context_sentence", "").strip() or None,
-                part_of_speech=w.get("part_of_speech", "").strip() or None,
-            )
-            for w in words
-            if w.get("english", "").strip() and w.get("uzbek", "").strip()
-        ]
-        VocabularyWord.objects.bulk_create(word_instances)
+        VocabularyWord.objects.bulk_create([VocabularyWord(set=vocab_set, **row) for _, row in clean])
 
     return vocab_set
 
@@ -147,7 +143,13 @@ def generate_quiz_for_set(set_id: str, mode: str = "mixed", student_id: str | No
     if not vocab_set:
         raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
 
-    words = list(VocabularyWord.objects.filter(set_id=set_id))
+    words = list(VocabularyWord.objects.filter(set_id=set_id, is_archived=False)[:MAX_PRACTICE_WORDS + 1])
+    return quiz_from_words(vocab_set, words, mode)
+
+
+def quiz_from_words(vocab_set, words, mode):
+    if len(words) > MAX_PRACTICE_WORDS:
+        raise ContractAPIException("SET_TOO_LARGE", "Mashq 500 so‘zdan oshmasligi kerak", 400)
     if not words:
         raise ContractAPIException("EMPTY_VOCABULARY_SET", "Ushbu to'plamda savollar yo'q", 400)
 
@@ -232,171 +234,150 @@ def calculate_points_for_percentage(percentage: float) -> int:
     return 0
 
 
+PRACTICE_LIFETIME = timedelta(hours=1)
+MAX_PRACTICE_WORDS = 500
+
+
 def points_already_awarded(student_id: str, set_id: str) -> int:
-    """Points this set already gave the student. Locks the student's profile row so
-    concurrent submissions of the same quiz cannot both award points."""
-    list(StudentProfile.objects.select_for_update().filter(user_id=student_id).values_list("user_id", flat=True))
+    """Read total rewards while the caller holds the user's row lock."""
     return VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).aggregate(
         total=Sum("points_awarded"))["total"] or 0
 
 
-def submit_quiz_attempt(
-    student: User,
-    set_id: str,
-    mode: str,
-    answers: list[dict[str, Any]],
-) -> dict[str, Any]:
-    vocab_set = VocabularySet.objects.filter(id=set_id).first()
-    if not vocab_set:
-        raise ContractAPIException("VOCABULARY_SET_NOT_FOUND", "Lug'at to'plami topilmadi", 404)
+def practice_mode(mode):
+    if mode not in QuizMode.values:
+        raise ContractAPIException("VALIDATION_ERROR", "Mashq turi yaroqsiz", 400)
+    return mode
 
-    if not answers:
-        raise ContractAPIException("EMPTY_ANSWERS", "Javoblar kiritilmadi", 400)
 
-    # Only this set's words count, each at most once: repeating one correct answer
-    # or sending words from another set must not raise the score.
-    word_map = {w.id: w for w in VocabularyWord.objects.filter(set_id=vocab_set.id)}
-    answered: set[str] = set()
+def lock_practice_actor(actor):
+    # User exists regardless of whether its optional StudentProfile exists.
+    user = User.objects.select_for_update().filter(id=actor.id, is_active=True).first()
+    if user is None or user.role not in ("student", "teacher", "admin", "super_admin"):
+        raise ContractAPIException("FORBIDDEN", "Mashqqa ruxsat berilmagan", 403)
+    return user
 
-    score = 0
-    wrong_answers = []
 
-    for ans in answers:
-        if not isinstance(ans, dict):
-            continue
-        wid = ans.get("wordId") or ans.get("id")
-        user_val = str(ans.get("answer") or "").strip()
-        q_type = ans.get("type", "eng_uzb")
-        word = word_map.get(wid)
-        if not word or wid in answered:
-            continue
-        answered.add(wid)
+def legacy_session(student_id, set_id, mode, now):
+    return VocabularyPracticeSession.objects.filter(
+        student_id=student_id, vocabulary_set_id=set_id, mode=mode,
+        legacy=True, expires_at__gt=now,
+    ).order_by("-expires_at", "-id").first()
 
-        is_correct = False
-        if q_type == "eng_uzb":
-            is_correct = user_val.lower() == word.uzbek.strip().lower()
-            expected = word.uzbek
-        elif q_type == "uzb_eng":
-            is_correct = user_val.lower() == word.english.strip().lower()
-            expected = word.english
-        else:  # spelling
-            clean_user = re.sub(r"\s+", " ", user_val).lower()
-            clean_target = re.sub(r"\s+", " ", word.english.strip()).lower()
-            is_correct = clean_user == clean_target
-            expected = word.english
 
-        if is_correct:
-            score += 1
-            # SRS update for correct answer
-            weak = UserWeakWord.objects.filter(student_id=student.id, word_id=word.id).first()
-            if weak:
-                weak.correct_streak += 1
-                if weak.correct_streak >= 2:
-                    weak.is_mastered = True
-                weak.save(update_fields=["correct_streak", "is_mastered", "last_reviewed"])
-        else:
-            wrong_answers.append({
-                "wordId": word.id,
-                "english": word.english,
-                "uzbek": word.uzbek,
-                "userAnswer": user_val,
-                "correctAnswer": expected,
-                "type": q_type,
-            })
-            # SRS update for mistake
-            weak, created = UserWeakWord.objects.get_or_create(
-                student_id=student.id,
-                word_id=word.id,
-                defaults={"mistake_count": 1, "correct_streak": 0, "is_mastered": False},
-            )
-            if not created:
-                weak.mistake_count += 1
-                weak.correct_streak = 0
-                weak.is_mastered = False
-                weak.save(update_fields=["mistake_count", "correct_streak", "is_mastered", "last_reviewed"])
+@transaction.atomic
+def issue_practice(actor, vocab_set, mode, *, explicit):
+    from .vocabulary_homework import snapshot_questions
 
-    # The quiz covers every word of the set; unanswered words count as not known.
-    total_words = len(word_map)
-    percentage = round((score / total_words) * 100, 1) if total_words > 0 else 0.0
-    earned = calculate_points_for_percentage(percentage)
-    is_student = getattr(student, "role", None) == "student"
-
-    with transaction.atomic():
-        # Points are awarded once per set: a retry only adds the improvement over
-        # what this set already gave. Staff accounts never receive student points.
-        already = points_already_awarded(student.id, vocab_set.id) if is_student and earned else 0
-        points_awarded = max(0, earned - already) if is_student else 0
-        attempt = VocabularyAttempt.objects.create(
-            student_id=student.id,
-            set=vocab_set,
-            score=score,
-            total_words=total_words,
-            percentage=percentage,
-            points_awarded=points_awarded,
-            mode=mode,
-            wrong_answers=wrong_answers,
+    practice_mode(mode)
+    user = lock_practice_actor(actor)
+    now = timezone.now()
+    session = None if explicit else legacy_session(user.id, vocab_set.id, mode, now)
+    if session is None:
+        quiz = generate_quiz_for_set(vocab_set.id, mode=mode, student_id=user.id)
+        session = VocabularyPracticeSession.objects.create(
+            student_id=user.id, vocabulary_set=vocab_set, mode=mode, legacy=not explicit,
+            questions=snapshot_questions(vocab_set, quiz), expires_at=now + PRACTICE_LIFETIME,
         )
-
-        # Award points to StudentProfile if bonus earned
-        if points_awarded > 0:
-            profile = StudentProfile.objects.filter(user_id=student.id).first()
-            if not profile:
-                profile = StudentProfile.objects.create(
-                    user_id=student.id,
-                    available_programs=["IELTS", "MULTILEVEL"],
-                    active_program="IELTS",
-                    is_approved=True,
-                    current_points=0,
-                    link_code=student.id[:8],
-                    game_qualified=False,
-                    created_at=timezone.now(),
-                )
-
-            StudentProfile.objects.filter(user_id=student.id).update(
-                current_points=F("current_points") + points_awarded
-            )
-            PointsLog.objects.create(
-                id=str(uuid4()),
-                student_id=student.id,
-                change=points_awarded,
-                reason=f"Lug'at testi: {vocab_set.title} ({int(percentage)}%)",
-                by_user_id=student.id,
-                created_at=timezone.now(),
-            )
-
-    try:
-        from apps.core.parent_bot_service import notify_parent_exam_result
-        score_text = f"{score}/{total_words} ({int(percentage)}%)"
-        if points_awarded > 0:
-            score_text += f", +{points_awarded} ball"
-        notify_parent_exam_result(student.id, vocab_set.title, score_text, skill="Lug'at")
-    except Exception as e:
-        logger.warning("Failed to notify parent on quiz submit: %s", e)
-
     return {
-        "attemptId": attempt.id,
-        "setId": vocab_set.id,
-        "setTitle": vocab_set.title,
-        "score": score,
-        "totalWords": total_words,
-        "percentage": percentage,
-        "pointsAwarded": points_awarded,
-        # Lets the client explain a zero honestly: earned by this result vs already paid for this set.
-        "pointsEarned": earned if is_student else 0,
-        "pointsAlreadyAwarded": already,
-        "mode": mode,
-        "wrongAnswers": wrong_answers,
-        "completedAt": attempt.completed_at.isoformat(),
-        "isMasteredSRS": len(wrong_answers) == 0,
+        "sessionId": session.id, "setId": vocab_set.id, "mode": mode,
+        "setTitle": vocab_set.title, "level": vocab_set.level,
+        "totalQuestions": len(session.questions),
+        "questions": [row["question"] for row in session.questions],
     }
+
+
+def add_practice_reward(student_id, amount, title, percentage):
+    from .auth_service import unique_link_code
+
+    if not StudentProfile.objects.filter(user_id=student_id).exists():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO "StudentProfile" ("userId", "linkCode", "createdAt")
+                VALUES (%s, %s, NOW()) ON CONFLICT ("userId") DO NOTHING
+                """,
+                [student_id, unique_link_code(cursor)],
+            )
+    StudentProfile.objects.filter(user_id=student_id).update(current_points=F("current_points") + amount)
+    PointsLog.objects.create(
+        id=str(uuid4()), student_id=student_id, change=amount, by_user_id=student_id,
+        reason=f"Lug'at testi: {title} ({int(percentage)}%)", created_at=timezone.now(),
+    )
+
+
+def notify_practice_result(student_id, title, score, total, percentage, points):
+    try:
+        from .parent_bot_service import notify_parent_exam_result
+
+        score_text = f"{score}/{total} ({int(percentage)}%)"
+        if points:
+            score_text += f", +{points} ball"
+        notify_parent_exam_result(student_id, title, score_text, skill="Lug'at")
+    except Exception:
+        logger.warning("Failed to notify parent on quiz submit", exc_info=True)
+
+
+@transaction.atomic
+def submit_quiz_attempt(student, set_id, mode, answers, session_id=None):
+    from .vocabulary_homework import score_snapshot
+    from .vocabulary_review import record_answer
+
+    user = lock_practice_actor(student)
+    now = timezone.now()
+    if session_id is None:
+        session = legacy_session(user.id, set_id, practice_mode(mode), now)
+    else:
+        session = VocabularyPracticeSession.objects.filter(
+            pk=session_id, student_id=user.id, vocabulary_set_id=set_id,
+        ).first()
+    if session is None:
+        raise ContractAPIException("PRACTICE_SESSION_REQUIRED", "Mashqni qayta oching", 409)
+    if mode is not None and mode != session.mode:
+        raise ContractAPIException("VALIDATION_ERROR", "Mashq turi sessiyaga mos kelmadi", 400)
+    if session.result is None and session.expires_at <= now:
+        raise ContractAPIException("PRACTICE_SESSION_EXPIRED", "Mashqni qayta oching", 409)
+
+    questions, wrong, score, total, percentage = score_snapshot(session.questions, answers)
+    if session.result is not None:
+        return session.result
+
+    is_student = user.role == "student"
+    earned = calculate_points_for_percentage(percentage) if is_student else 0
+    already = points_already_awarded(user.id, set_id) if earned else 0
+    award = max(0, earned - already)
+    attempt = VocabularyAttempt.objects.create(
+        student_id=user.id, set_id=set_id, score=score, total_words=total,
+        percentage=percentage, points_awarded=award, mode=session.mode, wrong_answers=wrong,
+    )
+    title = session.vocabulary_set.title
+    if is_student:
+        missed = {row["wordId"] for row in wrong}
+        for word in VocabularyWord.objects.filter(set_id=set_id, id__in=questions).order_by("id"):
+            record_answer(user.id, word, word.id not in missed, now)
+        if award:
+            add_practice_reward(user.id, award, title, percentage)
+        transaction.on_commit(lambda: notify_practice_result(user.id, title, score, total, percentage, award))
+
+    session.result = {
+        "attemptId": attempt.id, "setId": set_id, "setTitle": title,
+        "score": score, "totalWords": total, "percentage": percentage,
+        "pointsAwarded": award, "pointsEarned": earned, "pointsAlreadyAwarded": already,
+        "mode": session.mode, "wrongAnswers": wrong,
+        "completedAt": attempt.completed_at.isoformat(), "isMasteredSRS": not wrong,
+    }
+    session.save(update_fields=["result"])
+    return session.result
 
 
 def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, Any]:
     """Generate personalized spaced repetition quiz for user's weak words."""
+    from django.core import signing
+    from .vocabulary_review import due, word_revision
+
     weak_records = list(
-        UserWeakWord.objects.filter(student_id=student_id, is_mastered=False)
-        .select_related("word", "word__set")
-        .order_by("-mistake_count", "-last_reviewed")[:limit]
+        due(student_id, timezone.now()).select_related("word")
+        .order_by("-mistake_count", "-last_reviewed", "word_id")[:limit]
     )
 
     if not weak_records:
@@ -447,7 +428,13 @@ def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, An
             "firstLetter": word.english[0].upper() if word.english else "",
         })
 
+    session = signing.dumps({
+        "owner": student_id,
+        "words": [[q["wordId"], q["type"], row.review_count, word_revision(row.word)]
+                  for q, row in zip(questions, weak_records, strict=True)],
+    }, salt="bestway-vocabulary-review")
     return {
+        "sessionId": session,
         "title": "Zaif So'zlar Banki (SRS Mashqi)",
         "mode": "srs_mixed",
         "totalQuestions": len(questions),
@@ -500,7 +487,7 @@ def export_vocabulary_set_excel(set_id: str) -> bytes:
     ws["A1"].alignment = align_center
 
     group_name = vocab_set.group.name if vocab_set.group else "Umumiy / Ochiq"
-    words_count = vocab_set.words.count()
+    words_count = vocab_set.words.filter(is_archived=False).count()
     ws.merge_cells("A2:J2")
     ws["A2"] = f"To'plam: {vocab_set.title}   |   Daraja: {vocab_set.level}   |   Guruh: {group_name}   |   Jami so'zlar: {words_count}"
     ws["A2"].font = font_subtitle
@@ -640,7 +627,7 @@ def get_vocabulary_set_report(set_id: str) -> dict[str, Any]:
             "wrongCount": len(a.wrong_answers or []),
         })
 
-    total_words = vocab_set.words.count()
+    total_words = vocab_set.words.filter(is_archived=False).count()
     total_attempts = len(student_roster)
     average_percentage = (
         round(sum(r["percentage"] for r in student_roster) / total_attempts, 1)
@@ -693,7 +680,7 @@ def lookup_word(word: str) -> dict[str, Any]:
         raise ContractAPIException("INVALID_WORD", "So'z kiritilmadi", 400)
 
     # 1. Database word check
-    vw = VocabularyWord.objects.filter(english__iexact=cleaned).first()
+    vw = VocabularyWord.objects.filter(english__iexact=cleaned, is_archived=False, set__is_public=True, set__group_id__isnull=True).first()
     if vw:
         return {
             "word": vw.english,
@@ -906,6 +893,7 @@ def lookup_word(word: str) -> dict[str, Any]:
     }
 
 
+@transaction.atomic
 def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict[str, Any]:
     """Add or upsert a word into student's personal SRS Weak Words bank."""
     cleaned_en = english.strip()
@@ -917,29 +905,33 @@ def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict
         lookup_res = lookup_word(cleaned_en)
         uzbek = lookup_res.get("uzbek") or cleaned_en
 
-    # Ensure a VocabularyWord exists
-    word_obj = VocabularyWord.objects.filter(english__iexact=cleaned_en).first()
+    if len(cleaned_en) > 255 or len(uzbek) > 255:
+        raise ContractAPIException("VALIDATION_ERROR", "So‘z va tarjima 255 belgidan oshmasligi kerak", 400)
+
+    # Add and look up words only in this account's personal collection.
+    User.objects.select_for_update().only("id").get(id=student_id)
+    default_set = VocabularySet.objects.filter(
+        created_by_id=student_id, title="Shaxsiy Lug'at Banki (Personal)", is_public=False,
+    ).first()
+    if not default_set:
+        default_set = VocabularySet.objects.create(
+            title="Shaxsiy Lug'at Banki (Personal)",
+            description="Matndan tanlab qo'shilgan so'zlar",
+            level="B1",
+            is_public=False,
+            created_by_id=student_id,
+        )
+    word_obj = default_set.words.filter(english__iexact=cleaned_en).first()
     if not word_obj:
-        # Find or create a default set for personal words
-        default_set = VocabularySet.objects.filter(title="Shaxsiy Lug'at Banki (Personal)").first()
-        if not default_set:
-            first_user = User.objects.first()
-            default_set = VocabularySet.objects.create(
-                title="Shaxsiy Lug'at Banki (Personal)",
-                description="Matndan tanlab qo'shilgan so'zlar",
-                level="B1",
-                is_public=True,
-                created_by=first_user,
-            )
         word_obj = VocabularyWord.objects.create(
             set=default_set,
-            english=cleaned_en.capitalize(),
+            english=cleaned_en,
             uzbek=uzbek,
             part_of_speech="noun",
         )
 
     # Upsert UserWeakWord
-    user_weak, created = UserWeakWord.objects.get_or_create(
+    _, created = UserWeakWord.objects.get_or_create(
         student_id=student_id,
         word=word_obj,
         defaults={
@@ -948,11 +940,6 @@ def add_word_to_user_srs(student_id: str, english: str, uzbek: str = "") -> dict
             "is_mastered": False,
         },
     )
-    if not created:
-        user_weak.is_mastered = False
-        user_weak.mistake_count += 1
-        user_weak.save(update_fields=["is_mastered", "mistake_count", "last_reviewed"])
-
     return {
         "success": True,
         "wordId": word_obj.id,

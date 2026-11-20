@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
   CheckCircle2,
@@ -41,6 +42,7 @@ export function SmartAttendanceDialog({
   onOpenChange,
   onSuccess,
 }: SmartAttendanceDialogProps) {
+  const queryClient = useQueryClient();
   // Normalize today's date to strict YYYY-MM-DD ISO format
   const todayStr = React.useMemo(() => {
     const d = new Date();
@@ -162,6 +164,7 @@ export function SmartAttendanceDialog({
       });
 
       refetch();
+      void queryClient.invalidateQueries({ queryKey: ["attendance", "teacher-today"] });
       if (onSuccess) onSuccess();
       onOpenChange(false);
     } catch (err: any) {

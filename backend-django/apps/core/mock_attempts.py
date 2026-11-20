@@ -796,7 +796,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
         return dict(public_phase, serverTime=iso(timezone.now()), playLimit=2)
 
 
-def assert_view(actor, student_id):
+def assert_view(actor, student_id, *, started_at=None):
     if actor.role in ('admin', 'super_admin') or actor.id == student_id:
         return
     with connection.cursor() as cursor:
@@ -807,6 +807,9 @@ def assert_view(actor, student_id):
         else:
             fail('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
         if cursor.fetchone():
+            from .classroom_roster import assert_teacher_attempt_period
+
+            assert_teacher_attempt_period(actor, student_id, started_at)
             return
     fail('FORBIDDEN', "Bu ma'lumotni ko'rish huquqingiz yo'q", 403)
 
@@ -875,7 +878,7 @@ def detail(actor, attempt_id):
     attempt = MockAttempt.objects.select_related('exam', 'student__user').filter(id=attempt_id).first()
     if not attempt:
         fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id)
+    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
     staff = mock_catalog.is_staff(actor)
     show = staff or attempt.status == 'completed'
     answers = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=attempt_id)}
@@ -887,6 +890,7 @@ def detail(actor, attempt_id):
     questions_by_group = {}
     for question in MockQuestion.objects.filter(group_id__in=[g.id for gs in groups_by_section.values() for g in gs]).order_by('sort_order'):
         questions_by_group.setdefault(question.group_id, []).append(question)
+    from .handwriting import handwriting_fields, page_urls
     from . import review_evidence
     from .practice_mode import revealed as practice_revealed
     shown_in_practice = set(practice_revealed(attempt))
@@ -922,8 +926,12 @@ def detail(actor, attempt_id):
                     response=a.response if a else None, hasAudio=bool(a and a.audio_key),
                     audioUrl=answer_audio_url(attempt_id, q.id) if a and a.audio_key else None,
                     score=a.score if a else None, isCorrect=a.is_correct if a else None,
-                    isGraded=a.is_graded if a else False, feedback=a.feedback if a else None,
+                    isGraded=a.is_graded if a else False, feedback=a.feedback if a and (staff or a.is_graded) else None,
                     rubricScores=a.rubric_scores if a else None)
+                if a and section.skill == 'writing':
+                    keys = handwriting_fields(a.rubric_scores).get('imageKeys') or []
+                    if keys:
+                        item['rubricScores'] = {**a.rubric_scores, 'imageUrls': page_urls(attempt_id, q.id, keys)}
                 verified = (attempt.media_state or {}).get(q.id) or {}
                 if a and a.audio_key and verified.get('durationVerifiedKey') == a.audio_key:
                     item['audioDurationMs'] = verified.get('audioDurationMs')

@@ -266,7 +266,10 @@ export function GroupsView() {
   const t = useTranslations("groups");
   const tc = useTranslations("common");
   const tw = useTranslations("weekdaysShort");
-  const { data, isLoading, isError, refetch } = useGroups();
+  const tm = useTranslations("classroomManagement");
+  const [archived, setArchived] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const { data, isLoading, isError, refetch } = useGroups({ archived, search });
 
   const [dialog, setDialog] = React.useState<{ open: boolean; group: GroupListItem | null }>({
     open: false,
@@ -293,6 +296,16 @@ export function GroupsView() {
           </Button>
         }
       />
+
+      <div className="my-3 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2">{tm("search")}
+          <input className="rounded-field border border-border bg-surface px-3 py-2" type="search" maxLength={100} value={search} onChange={event => setSearch(event.target.value)} />
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={archived} onChange={event => setArchived(event.target.checked)} />
+          {tm("archived")}
+        </label>
+      </div>
 
       {isError ? (
         <ErrorState

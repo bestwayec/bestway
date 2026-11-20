@@ -7,6 +7,7 @@ from functools import lru_cache
 from uuid import uuid4
 
 from django.db import connection, transaction
+from django.db.models import Count, Q
 from django.db.models.functions import Collate
 from django.utils import timezone
 
@@ -14,6 +15,7 @@ from apps.legacy_schema.models import Attendance, StudentProfile
 from common.api.exceptions import ContractAPIException
 
 from .groups import child_ids, get_group
+from .models import ClassroomArchive
 from .notifications import notify_parents
 from .system_settings import audit
 
@@ -93,23 +95,13 @@ def listing(actor, query):
 
 
 def bulk(actor, data):
+    from .classroom_roster import assert_active
+
     manage_group(actor, data['groupId'])
+    assert_active(data['groupId'])
     day = reference_date(data['date'])
     members = {p.user_id: p for p in StudentProfile.objects.filter(group_id=data['groupId']).select_related('user')}
     
-    # Safe fallback if student profile is not yet provisioned for user in this group
-    missing_ids = [r['studentId'] for r in data['records'] if r['studentId'] not in members]
-    if missing_ids:
-        from apps.legacy_schema.models import User
-        fallback_users = list(User.objects.filter(id__in=missing_ids))
-        for u in fallback_users:
-            profile, _ = StudentProfile.objects.get_or_create(user_id=u.id, defaults={'group_id': data['groupId'], 'link_code': u.id[:8]})
-            if profile.group_id != data['groupId']:
-                profile.group_id = data['groupId']
-                profile.save(update_fields=['group_id'])
-            profile.user = u
-            members[u.id] = profile
-
     if any(r['studentId'] not in members for r in data['records']):
         raise ContractAPIException('STUDENT_NOT_IN_GROUP', "Ro'yxatda guruhga tegishli bo'lmagan o'quvchi bor", 400)
     if any(not getattr(getattr(members[r['studentId']], 'user', None), 'is_active', True) for r in data['records']):
@@ -251,3 +243,13 @@ def group_day_summary(actor, group_id, day_value=None):
             for r in rows
         ],
     }
+
+
+def teacher_day_totals(actor):
+    marks = Attendance.objects.filter(date=timezone.localdate(), group__teacher_id=actor.id)
+    marks = marks.exclude(group_id__in=ClassroomArchive.objects.values("group_id"))
+    return marks.aggregate(
+        presentCount=Count("pk", filter=Q(state="present")),
+        lateCount=Count("pk", filter=Q(state="late")),
+        absentCount=Count("pk", filter=Q(state="absent")),
+    )

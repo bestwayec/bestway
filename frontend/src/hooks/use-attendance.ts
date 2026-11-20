@@ -67,6 +67,7 @@ export function useSaveAttendanceCell(groupId: string, month: string) {
     // Server haqiqati bilan sinxronlash (masalan, tozalangan katak keshda qolib ketmasin)
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: key });
+      void qc.invalidateQueries({ queryKey: ["attendance", "teacher-today"] });
     },
   });
 }

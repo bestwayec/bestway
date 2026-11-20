@@ -144,100 +144,6 @@ class VocabularyServiceLogicTests(SimpleTestCase):
         for q in quiz["questions"]:
             self.assertIn(q["type"], ["eng_uzb", "uzb_eng", "spelling"])
 
-    @patch("apps.core.vocabulary_service.points_already_awarded", return_value=0)
-    @patch("apps.core.vocabulary_service.UserWeakWord.objects.filter")
-    @patch("apps.core.vocabulary_service.transaction.atomic")
-    @patch("apps.core.vocabulary_service.PointsLog.objects.create")
-    @patch("apps.core.vocabulary_service.StudentProfile.objects")
-    @patch("apps.core.vocabulary_service.VocabularyAttempt.objects.create")
-    @patch("apps.core.vocabulary_service.VocabularyWord.objects.filter")
-    @patch("apps.core.vocabulary_service.VocabularySet.objects.filter")
-    def test_submit_quiz_100_percent_awards_5_points(
-        self, mock_set_filter, mock_word_filter, mock_attempt_create, mock_profile_objects, mock_points_log_create, mock_atomic, mock_weak_filter
-    , mock_already):
-        student = SimpleNamespace(id="student-1", name="Ali Valiyev", role="student")
-        vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
-        mock_set_filter.return_value.first.return_value = vocab_set
-
-        w1 = VocabularyWord(id="w1", set=vocab_set, english="apple", uzbek="olma")
-        w2 = VocabularyWord(id="w2", set=vocab_set, english="banana", uzbek="banan")
-        mock_word_filter.return_value = [w1, w2]
-        mock_weak_filter.return_value.first.return_value = None
-
-        mock_profile = SimpleNamespace(current_points=10)
-        mock_profile_objects.filter.return_value.first.return_value = mock_profile
-
-        answers = [
-            {"wordId": "w1", "answer": "olma", "type": "eng_uzb"},
-            {"wordId": "w2", "answer": "banan", "type": "eng_uzb"},
-        ]
-
-        result = service.submit_quiz_attempt(
-            student=student,
-            set_id="vset-1",
-            mode="eng_uzb",
-            answers=answers,
-        )
-
-        self.assertEqual(result["score"], 2)
-        self.assertEqual(result["totalWords"], 2)
-        self.assertEqual(result["percentage"], 100.0)
-        self.assertEqual(result["pointsAwarded"], 5)
-        self.assertEqual(len(result["wrongAnswers"]), 0)
-        mock_points_log_create.assert_called_once()
-        mock_attempt_create.assert_called_once()
-
-    @patch("apps.core.vocabulary_service.points_already_awarded", return_value=0)
-    @patch("apps.core.vocabulary_service.PointsLog.objects.create")
-    @patch("apps.core.vocabulary_service.UserWeakWord.objects.filter")
-    @patch("apps.core.vocabulary_service.transaction.atomic")
-    @patch("apps.core.vocabulary_service.UserWeakWord.objects.get_or_create")
-    @patch("apps.core.vocabulary_service.StudentProfile.objects")
-    @patch("apps.core.vocabulary_service.VocabularyAttempt.objects.create")
-    @patch("apps.core.vocabulary_service.VocabularyWord.objects.filter")
-    @patch("apps.core.vocabulary_service.VocabularySet.objects.filter")
-    def test_submit_quiz_partial_awards_3_points_and_creates_weak_word(
-        self, mock_set_filter, mock_word_filter, mock_attempt_create, mock_profile_objects, mock_weak_word_get_or_create, mock_atomic, mock_weak_filter, mock_points_log_create
-    , mock_already):
-        student = SimpleNamespace(id="student-1", name="Ali Valiyev", role="student")
-        vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
-        mock_set_filter.return_value.first.return_value = vocab_set
-
-        words = [
-            VocabularyWord(id=f"w{i}", set=vocab_set, english=f"eng{i}", uzbek=f"uzb{i}")
-            for i in range(1, 6)
-        ]
-        mock_word_filter.return_value = words
-        mock_weak_filter.return_value.first.return_value = None
-
-        mock_profile = SimpleNamespace(current_points=10)
-        mock_profile_objects.filter.return_value.first.return_value = mock_profile
-        mock_weak_word_get_or_create.return_value = (MagicMock(), True)
-
-        # 4 correct, 1 wrong = 80% -> 3 points
-        answers = [
-            {"wordId": "w1", "answer": "uzb1", "type": "eng_uzb"},
-            {"wordId": "w2", "answer": "uzb2", "type": "eng_uzb"},
-            {"wordId": "w3", "answer": "uzb3", "type": "eng_uzb"},
-            {"wordId": "w4", "answer": "uzb4", "type": "eng_uzb"},
-            {"wordId": "w5", "answer": "wrong", "type": "eng_uzb"},
-        ]
-
-        result = service.submit_quiz_attempt(
-            student=student,
-            set_id="vset-1",
-            mode="eng_uzb",
-            answers=answers,
-        )
-
-        self.assertEqual(result["score"], 4)
-        self.assertEqual(result["totalWords"], 5)
-        self.assertEqual(result["percentage"], 80.0)
-        self.assertEqual(result["pointsAwarded"], 3)
-        self.assertEqual(len(result["wrongAnswers"]), 1)
-        self.assertEqual(result["wrongAnswers"][0]["wordId"], "w5")
-        mock_weak_word_get_or_create.assert_called_once()
-
     @patch("apps.core.vocabulary_service.VocabularyAttempt.objects")
     @patch("apps.core.vocabulary_service.VocabularySet.objects")
     def test_excel_export_structure(self, mock_set_objects, mock_attempt_objects):
@@ -332,7 +238,7 @@ class VocabularyAPITests(SimpleTestCase):
         self.assertEqual(res.data["data"]["wordCount"], 3)
 
     @patch("apps.core.vocabulary_views.visible_set")
-    @patch("apps.core.vocabulary_views.service.generate_quiz_for_set")
+    @patch("apps.core.vocabulary_views.service.issue_practice")
     def test_student_fetches_quiz(self, mock_gen, _visible):
         mock_gen.return_value = {
             "setId": "vset-1",
@@ -382,6 +288,7 @@ class VocabularyAPITests(SimpleTestCase):
             correct_streak=0,
             is_mastered=False,
             last_reviewed=datetime.now(dt_timezone.utc),
+            next_review_at=None, review_count=0, interval_days=0, lapses=0,
         )
         w2 = SimpleNamespace(
             word=SimpleNamespace(id="w2", english="meticulous", uzbek="sinchkov"),
@@ -389,6 +296,7 @@ class VocabularyAPITests(SimpleTestCase):
             correct_streak=2,
             is_mastered=True,
             last_reviewed=datetime.now(dt_timezone.utc),
+            next_review_at=None, review_count=0, interval_days=0, lapses=0,
         )
         mock_qs.select_related.return_value.order_by.return_value = [w1, w2]
         mock_weak_filter.return_value = mock_qs
@@ -406,49 +314,72 @@ class VocabularyQuizIntegrityTests(SimpleTestCase):
     """Score only this set's words once each; points once per set; no staff points."""
 
     def submit(self, answers, *, role="student", already=0):
-        vocab_set = VocabularySet(id="vset-1", title="Unit 1", level="B1")
-        words = [VocabularyWord(id=f"w{i}", set=vocab_set, english=f"eng{i}", uzbek=f"uzb{i}") for i in range(1, 6)]
-        with patch("apps.core.vocabulary_service.VocabularySet.objects.filter") as sets, \
-             patch("apps.core.vocabulary_service.VocabularyWord.objects.filter", return_value=words) as word_query, \
-             patch("apps.core.vocabulary_service.UserWeakWord.objects.filter") as weak, \
-             patch("apps.core.vocabulary_service.UserWeakWord.objects.get_or_create", return_value=(MagicMock(), True)), \
-             patch("apps.core.vocabulary_service.transaction.atomic"), \
-             patch("apps.core.vocabulary_service.VocabularyAttempt.objects.create") as attempt, \
-             patch("apps.core.vocabulary_service.StudentProfile.objects") as profiles, \
-             patch("apps.core.vocabulary_service.PointsLog.objects.create") as log, \
-             patch("apps.core.vocabulary_service.points_already_awarded", return_value=already) as prior:
-            sets.return_value.first.return_value = vocab_set
-            weak.return_value.first.return_value = None
-            result = service.submit_quiz_attempt(SimpleNamespace(id="u1", name="A", role=role), "vset-1", "eng_uzb", answers)
-        word_query.assert_called_once_with(set_id="vset-1")
-        return result, attempt, profiles, log, prior
+        from django.utils import timezone
+
+        user = SimpleNamespace(id="u1", role=role)
+        words = [VocabularyWord(id=f"w{i}", english=f"eng{i}", uzbek=f"uzb{i}") for i in range(1, 6)]
+        session = MagicMock(mode="eng_uzb", result=None, expires_at=timezone.now() + timezone.timedelta(hours=1))
+        session.questions = [
+            {"question": {"wordId": word.id, "type": "eng_uzb"},
+             "english": word.english, "uzbek": word.uzbek, "expected": word.uzbek}
+            for word in words
+        ]
+        with patch.object(service, "lock_practice_actor", return_value=user), \
+             patch.object(service, "legacy_session", return_value=session), \
+             patch.object(service.VocabularyWord.objects, "filter") as word_query, \
+             patch("apps.core.vocabulary_review.record_answer") as progress, \
+             patch.object(service.transaction, "on_commit"), \
+             patch.object(service.VocabularyAttempt.objects, "create") as attempt, \
+             patch.object(service, "add_practice_reward") as reward, \
+             patch.object(service, "points_already_awarded", return_value=already) as prior:
+            word_query.return_value.order_by.return_value = words
+            result = service.submit_quiz_attempt.__wrapped__(user, "vset-1", "eng_uzb", answers)
+        session.save.assert_called_once_with(update_fields=["result"])
+        return result, attempt, progress, reward, prior
+
+    def answers(self):
+        return [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
+
+    def test_submit_quiz_100_percent_awards_5_points(self):
+        result, attempt, progress, reward, _ = self.submit(self.answers())
+        self.assertEqual((result["score"], result["percentage"], result["pointsAwarded"]), (5, 100.0, 5))
+        self.assertEqual(progress.call_count, 5)
+        reward.assert_called_once()
+        attempt.assert_called_once()
+
+    def test_submit_quiz_partial_awards_3_points_and_updates_weak_word(self):
+        answers = self.answers()
+        answers[-1]["answer"] = "wrong"
+        result, _, progress, reward, _ = self.submit(answers)
+        self.assertEqual((result["score"], result["percentage"], result["pointsAwarded"]), (4, 80.0, 3))
+        self.assertEqual(result["wrongAnswers"][0]["wordId"], "w5")
+        self.assertFalse(progress.call_args.args[2])
+        reward.assert_called_once()
 
     def test_repeating_one_correct_answer_does_not_score_the_set(self):
-        result, *_ , log, _prior = self.submit([{"wordId": "w1", "answer": "uzb1"}] * 10)
-        self.assertEqual((result["score"], result["totalWords"], result["percentage"]), (1, 5, 20.0))
-        self.assertEqual(result["pointsAwarded"], 0)
-        log.assert_not_called()
+        answers = self.answers()
+        answers[-1] = answers[0]
+        with self.assertRaises(ContractAPIException):
+            self.submit(answers)
 
-    def test_words_from_another_set_are_ignored(self):
-        result, *_ = self.submit([{"wordId": "foreign", "answer": "x"}, {"wordId": "w1", "answer": "uzb1"}])
-        self.assertEqual((result["score"], result["totalWords"]), (1, 5))
+    def test_words_from_another_set_are_rejected(self):
+        answers = self.answers()
+        answers[-1]["wordId"] = "foreign"
+        with self.assertRaises(ContractAPIException):
+            self.submit(answers)
 
     def test_retry_awards_only_the_improvement_once(self):
-        perfect = [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
-        result, *_ = self.submit(perfect, already=5)
-        self.assertEqual(result["pointsAwarded"], 0)
-        # The client can tell "already paid for this set" from "score too low".
-        self.assertEqual((result["pointsEarned"], result["pointsAlreadyAwarded"]), (5, 5))
-        result, _a, _p, log, _prior = self.submit(perfect, already=3)
+        result, *_ = self.submit(self.answers(), already=5)
+        self.assertEqual((result["pointsAwarded"], result["pointsEarned"], result["pointsAlreadyAwarded"]), (0, 5, 5))
+        result, _, _, reward, _ = self.submit(self.answers(), already=3)
         self.assertEqual(result["pointsAwarded"], 2)
-        self.assertEqual(log.call_args.kwargs["change"], 2)
+        self.assertEqual(reward.call_args.args[1], 2)
 
     def test_staff_never_receive_student_points_or_profiles(self):
-        perfect = [{"wordId": f"w{i}", "answer": f"uzb{i}"} for i in range(1, 6)]
-        result, _a, profiles, log, prior = self.submit(perfect, role="teacher")
+        result, _, progress, reward, prior = self.submit(self.answers(), role="teacher")
         self.assertEqual((result["percentage"], result["pointsAwarded"]), (100.0, 0))
-        profiles.create.assert_not_called()
-        log.assert_not_called()
+        progress.assert_not_called()
+        reward.assert_not_called()
         prior.assert_not_called()
 
 

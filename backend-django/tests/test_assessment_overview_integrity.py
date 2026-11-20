@@ -1,5 +1,6 @@
 """The overview must not invent assessment evidence or promote stale results."""
 from contextlib import ExitStack
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -27,7 +28,7 @@ def transcript(audio_hash='current-hash', text='Verified words', confidence=None
 
 class AssessmentOverviewIntegrityTests(SimpleTestCase):
     def overview(self, jobs, transcripts=(), reviewed=(), overall=None):
-        attempt = SimpleNamespace(student_id='s1', status='completed', overall_band=overall,
+        attempt = SimpleNamespace(student_id='s1', started_at=datetime(2026, 1, 1, tzinfo=UTC), status='completed', overall_band=overall,
             media_state={'transcripts': {'q1': 'unverified'}, 'speech_diagnostics': {'q1': {'fluency_score': 10}}})
         answer = SimpleNamespace(question_id='q1', response='unverified answer', score=None, graded_by_id=None,
             feedback=None, rubric_scores={'transcript': 'unverified answer', 'speech_diagnostics': {'fluency_score': 10}})

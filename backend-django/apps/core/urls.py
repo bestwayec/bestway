@@ -26,6 +26,7 @@ from . import statistics_views as statistics
 from . import system_views as system
 from . import telegram_views as telegram
 from . import video_views as videos
+from . import vocabulary_homework
 from . import vocabulary_views as vocabulary
 from . import parent_views as parents
 from . import vocab_battle_views as vocab_battle
@@ -55,7 +56,7 @@ from .mock_attempt_views import (
     start_view,
     submit_view,
     telemetry_view,
-    writing_ocr_view,
+    writing_ocr_view, writing_page_view,
 )
 from .mock_import_views import (
     commit_import_view,
@@ -138,7 +139,15 @@ urlpatterns = [
     path('groups/<str:group_id>/export/excel', groups.export_group_excel_view),
     path('groups/<str:group_id>/export/excel/', groups.export_group_excel_view),
     path('groups/<str:group_id>/students', groups.add_student_view),
+    path('groups/<str:group_id>/archive', groups.classroom_archive_view),
+    path('groups/<str:group_id>/students/bulk', groups.bulk_classroom_membership_view),
+    path('groups/<str:group_id>/member-history', groups.classroom_member_history_view),
+    path('groups/<str:group_id>/member-history/<str:student_id>', groups.classroom_student_history_view),
     path('groups/<str:group_id>/students/<str:student_id>', groups.remove_student_view),
+    path('groups/<str:group_id>/assignments', teacher_views.classroom_assignments_view),
+    path('groups/<str:group_id>/assignable-exams', teacher_views.classroom_exams_view),
+    path('groups/<str:group_id>/vocabulary-collections', teacher_views.classroom_vocabulary_view),
+    path('groups/<str:group_id>/assignments/<str:assignment_id>/vocabulary-results', vocabulary_homework.results_view),
     path('assessment/groups', groups.groups_view),
     path('assessment/groups/', groups.groups_view),
     path('assessment/groups/<str:group_id>', groups.group_view),
@@ -226,6 +235,7 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/session', session_view),
     path('mock/attempts/<str:attempt_id>/session/release', session_release_view),
     path('mock/attempts/<str:attempt_id>/speaking/<str:question_id>', speaking_upload_view),
+    path('mock/attempts/<str:attempt_id>/writing-pages/<str:question_id>/<int:page>', writing_page_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing-ocr/', writing_ocr_view),
     path('mock/attempts/<str:attempt_id>/writing/ocr', writing_ocr_view),
@@ -473,6 +483,8 @@ urlpatterns = [
     path("mock/live-rooms/<str:room_pin>/action/", exam_mode_views.live_room_proctor_action_view),
 
     path('attendance/group-summary', attendance.group_summary_view),
+    path('attendance/teacher-today', attendance.teacher_day_totals_view),
+    path('v1/attendance/teacher-today', attendance.teacher_day_totals_view),
     path('attendance/group-summary/', attendance.group_summary_view),
     path('v1/attendance/group-summary', attendance.group_summary_view),
     path('v1/attendance/group-summary/', attendance.group_summary_view),
@@ -568,6 +580,8 @@ urlpatterns = [
     path('v1/vocabulary/srs/submit', vocabulary.srs_submit_view),
     path('v1/vocabulary/srs/submit/', vocabulary.srs_submit_view),
 
+    path('vocabulary/srs/history', vocabulary.review_history_view),
+    path('student/vocabulary/history', vocabulary_homework.learner_history_view),
     path('vocabulary/srs/stats', vocabulary.srs_stats_view),
     path('vocabulary/srs/stats/', vocabulary.srs_stats_view),
     path('v1/vocabulary/srs/stats', vocabulary.srs_stats_view),
@@ -751,10 +765,26 @@ urlpatterns = [
     path('v1/student/join-cohort/', teacher_views.student_join_cohort_view),
     path('teacher/assignments/<str:assignment_id>/grade', teacher_views.teacher_grade_assignment_view),
     path('teacher/assignments/<str:assignment_id>/grade/', teacher_views.teacher_grade_assignment_view),
+    path('teacher/submissions', teacher_views.teacher_submissions_view),
+    path('teacher/submissions/', teacher_views.teacher_submissions_view),
+    path('v1/teacher/submissions', teacher_views.teacher_submissions_view),
+    path('v1/teacher/submissions/', teacher_views.teacher_submissions_view),
+    path('teacher/submissions/<str:submission_id>/grade', teacher_views.teacher_grade_submission_view),
+    path('teacher/submissions/<str:submission_id>/grade/', teacher_views.teacher_grade_submission_view),
+    path('v1/teacher/submissions/<str:submission_id>/grade', teacher_views.teacher_grade_submission_view),
+    path('v1/teacher/submissions/<str:submission_id>/grade/', teacher_views.teacher_grade_submission_view),
+    path('student/assignments/<str:assignment_id>/exam', teacher_views.student_assignment_exam_view),
+    path('v1/student/assignments/<str:assignment_id>/exam', teacher_views.student_assignment_exam_view),
     path('student/my-assignments', teacher_views.student_my_assignments_view),
     path('student/my-assignments/', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments/', teacher_views.student_my_assignments_view),
+    path('student/assignments/<str:assignment_id>/vocabulary', vocabulary_homework.start_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/words', vocabulary_homework.words_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/snapshot', vocabulary_homework.snapshot_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/flashcards', vocabulary_homework.flashcards_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/flashcards/sync', vocabulary_homework.flashcards_sync_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/submit', vocabulary_homework.submit_view),
     path('student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),
     path('student/assignments/<str:assignment_id>/submit/', teacher_views.student_submit_assignment_view),
     path('v1/student/assignments/<str:assignment_id>/submit', teacher_views.student_submit_assignment_view),

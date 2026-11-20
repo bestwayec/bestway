@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/i18n/navigation";
 
+import type { StandaloneVocabularyQuiz, VocabularySession, VocabularyReview } from "@/lib/group-contract.generated";
+
 export interface QuizQuestion {
   id: string;
   wordId: string;
@@ -56,6 +58,7 @@ export interface QuizResult {
 
 export interface VocabularyQuizRunnerProps {
   setId?: string;
+  assignmentId?: string;
   isSrs?: boolean;
   mode?: "mixed" | "eng_uzb" | "uzb_eng" | "spelling";
   onFinish?: (result: QuizResult) => void;
@@ -64,12 +67,14 @@ export interface VocabularyQuizRunnerProps {
 
 export function VocabularyQuizRunner({
   setId,
+  assignmentId,
   isSrs = false,
   mode = "mixed",
   onFinish,
   onExit,
 }: VocabularyQuizRunnerProps) {
   const t = useTranslations("vocabQuiz");
+  const [sessionId, setSessionId] = React.useState<string>();
   const [questions, setQuestions] = React.useState<QuizQuestion[]>([]);
   const [quizTitle, setQuizTitle] = React.useState<string>("");
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -115,29 +120,32 @@ export function VocabularyQuizRunner({
   // the questions under a student who had already answered, so the answer was
   // scored against another word.
   const loadSeq = React.useRef(0);
+  const retryAnswers = React.useRef<typeof answers | null>(null);
   const loadQuiz = React.useCallback(async () => {
     const seq = ++loadSeq.current;
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      if (isSrs) {
-        const res = await api.get<{
-          title: string;
-          totalQuestions: number;
-          questions: QuizQuestion[];
-        }>("/v1/vocabulary/srs/quiz");
+      let completed: QuizResult | null = null;
+      if (assignmentId) {
+        const res = await api.post<VocabularySession>(`/student/assignments/${encodeURIComponent(assignmentId)}/vocabulary`, { mode });
         if (seq !== loadSeq.current) return;
+        setSessionId(res.sessionId);
+        setQuestions(res.questions);
+        setQuizTitle(t("defaultTitle"));
+        completed = res.result;
+      } else if (isSrs) {
+        const res = await api.get<VocabularyReview>("/v1/vocabulary/srs/quiz");
+        if (seq !== loadSeq.current) return;
+        setSessionId(res.sessionId);
         setQuestions(res.questions || []);
         // The server title is always Uzbek ("Zaif So'zlar Banki ..."); the SRS quiz has a fixed, translated name.
         setQuizTitle(t("srsBank"));
       } else if (setId) {
-        const res = await api.get<{
-          setTitle: string;
-          totalQuestions: number;
-          questions: QuizQuestion[];
-        }>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}`);
+        const res = await api.get<StandaloneVocabularyQuiz>(`/v1/vocabulary/sets/${setId}/quiz?mode=${mode}&session=explicit`);
         if (seq !== loadSeq.current) return;
         setQuestions(res.questions || []);
+        setSessionId(res.sessionId);
         setQuizTitle(res.setTitle || t("defaultTitle"));
       }
       setCurrentIndex(0);
@@ -146,14 +154,15 @@ export function VocabularyQuizRunner({
       setSpellingText("");
       setIsAnswered(false);
       setIsCorrectCurrent(null);
-      setQuizResult(null);
+      retryAnswers.current = null;
+      setQuizResult(completed);
     } catch (err: any) {
       if (seq !== loadSeq.current) return;
       setErrorMsg(err.message || t("loadFailed"));
     } finally {
       if (seq === loadSeq.current) setIsLoading(false);
     }
-  }, [setId, isSrs, mode]);
+  }, [setId, assignmentId, isSrs, mode, t]);
 
   React.useEffect(() => {
     loadQuiz();
@@ -218,24 +227,32 @@ export function VocabularyQuizRunner({
 
   const submitAttempt = async (finalAnswers: typeof answers) => {
     setIsSubmitting(true);
+    setErrorMsg(null);
+    retryAnswers.current = finalAnswers;
     try {
       let result: QuizResult;
-      if (isSrs) {
-        result = await api.post<QuizResult>("/v1/vocabulary/srs/submit", {
-          mode,
-          answers: finalAnswers,
+      if (assignmentId || isSrs) {
+        const path = assignmentId
+          ? `/student/assignments/${encodeURIComponent(assignmentId)}/vocabulary/submit`
+          : "/v1/vocabulary/srs/submit";
+        result = await api.post<QuizResult>(path, {
+          sessionId,
+          answers: finalAnswers.map(({ wordId, answer }) => ({ wordId, answer })),
         });
       } else {
         result = await api.post<QuizResult>(`/v1/vocabulary/sets/${setId}/submit`, {
+          sessionId,
           mode,
           answers: finalAnswers,
         });
       }
+      retryAnswers.current = null;
       setQuizResult(result);
       if (onFinish) {
         onFinish(result);
       }
     } catch (err: any) {
+      if (err?.status === 409) retryAnswers.current = null;
       setErrorMsg(err.message || t("saveFailed"));
     } finally {
       setIsSubmitting(false);
@@ -268,7 +285,7 @@ export function VocabularyQuizRunner({
         <AlertCircle className="h-8 w-8 text-danger mx-auto" />
         <p className="font-medium">{errorMsg}</p>
         <div className="flex justify-center gap-3">
-          <Button variant="outline" onClick={loadQuiz}>
+          <Button variant="outline" onClick={() => retryAnswers.current ? void submitAttempt(retryAnswers.current) : void loadQuiz()}>
             {t("retry")}
           </Button>
           {onExit && (
@@ -281,7 +298,7 @@ export function VocabularyQuizRunner({
     );
   }
 
-  if (questions.length === 0) {
+  if (!quizResult && questions.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-surface/90 backdrop-blur-xl p-12 text-center text-fg-muted space-y-4">
         <CheckCircle2 className="h-12 w-12 text-brand mx-auto" />
@@ -391,7 +408,7 @@ export function VocabularyQuizRunner({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <Button
+          {!assignmentId && <Button
             type="button"
             variant="outline"
             onClick={loadQuiz}
@@ -399,7 +416,7 @@ export function VocabularyQuizRunner({
           >
             <RotateCcw className="mr-2 h-4 w-4" />
             {t("retake")}
-          </Button>
+          </Button>}
 
           <div className="flex items-center gap-2">
             <Link href="/vocabulary/srs">

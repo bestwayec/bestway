@@ -116,6 +116,19 @@ jobs:
         run: python manage.py check_legacy_schema --settings=config.settings.production
       - name: Verify authoritative Prisma migration manifest
         run: python -m common.schema_validation ../backend/prisma/migrations
+      - name: Verify the Next upgrade and authenticated classroom and vocabulary contracts
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bestway_upgrade_local?schema=public
+          PGPASSWORD: postgres
+          ALLOWED_HOSTS: testserver,localhost,127.0.0.1
+        run: |
+          createdb --host=localhost --username=postgres bestway_upgrade_local
+          python scripts/verify_next_migration_upgrade.py
+          python scripts/verify_group_contract_postgres.py
+          python scripts/verify_classroom_postgres.py
+          python scripts/verify_vocabulary_practice_postgres.py
+          python scripts/verify_vocabulary_homework_postgres.py
+          python scripts/verify_teacher_submissions_postgres.py
       - name: Check production security configuration
         run: python manage.py check --deploy --fail-level WARNING --settings=config.settings.production
       - name: Check shared cache

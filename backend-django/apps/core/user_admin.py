@@ -1,4 +1,4 @@
-"""User administration with source DTOs and exact non-atomic update boundaries."""
+"""User administration with source DTOs and classroom enrollment tracking."""
 import re
 from uuid import uuid4
 
@@ -19,6 +19,7 @@ from common.auth.passwords import hash_password
 from common.auth.permissions import Authenticated
 
 from .auth_service import unique_link_code
+from .classroom_roster import assert_active, record_enrollment
 from .domain_contracts import invalid, js_length, paginated, pagination, payload
 from .mock_attempt_views import success
 from .system_settings import audit, numeric_settings
@@ -48,36 +49,44 @@ def detail(actor, identifier):
     with connection.cursor() as cursor: return wire(_user_detail(cursor,actor,identifier))
 
 
-def group_exists(identifier):
-    if identifier and not Group.objects.filter(id=identifier).exists(): raise ContractAPIException('GROUP_NOT_FOUND','Guruh topilmadi',404)
+def lock_group(identifier):
+    if identifier and Group.objects.select_for_update().filter(id=identifier).first() is None:
+        raise ContractAPIException('GROUP_NOT_FOUND','Guruh topilmadi',404)
 
 
 def create(actor,data):
     if data['role']=='super_admin': raise ContractAPIException('FORBIDDEN',"Super admin yaratib bo'lmaydi",403)
     if data['role']=='admin' and actor.role!='super_admin': raise ContractAPIException('FORBIDDEN',"Admin qo'shish huquqi faqat super adminda",403)
     if User.objects.filter(phone=data['phone']).exists(): raise ContractAPIException('PHONE_TAKEN',"Bu telefon raqam allaqachon ro'yxatdan o'tgan",409)
-    group_exists(data.get('groupId'))
     hashed=hash_password(data['password'])
     initial=numeric_settings().get('initialPoints') or 100
     if not initial or initial <= 0:
         initial = 100
     identifier=str(uuid4())
+    group_id = data.get('groupId')
     with transaction.atomic():
+        lock_group(group_id)
+        if group_id and data['role'] == 'student':
+            assert_active(group_id)
         User.objects.create(id=identifier,name=data['name'],phone=data['phone'],password_hash=hashed,role=data['role'],is_active=True,created_at=timezone.now(),updated_at=timezone.now())
         if data['role']=='student':
             with connection.cursor() as cursor: code=unique_link_code(cursor)
             with connection.cursor() as cursor:
                 cursor.execute('''INSERT INTO "StudentProfile" ("userId","groupId","currentPoints","linkCode","availablePrograms","activeProgram")
-                    VALUES (%s,%s,%s,%s,ARRAY['IELTS']::"ExamProgram"[],'IELTS'::"ExamProgram")''',[identifier,data.get('groupId'),initial,code])
+                    VALUES (%s,%s,%s,%s,ARRAY['IELTS']::"ExamProgram"[],'IELTS'::"ExamProgram")''',[identifier,group_id,initial,code])
+            record_enrollment(identifier, None, group_id)
             PointsLog.objects.create(id=str(uuid4()),student_id=identifier,change=initial,reason="Boshlang'ich ball",created_at=timezone.now())
     audit(actor,'user.create','user',identifier,new={k:data[k] for k in ('name','phone','role')})
     return detail(actor,identifier)
 
 
+@transaction.atomic
 def update(actor,identifier,data):
-    user=User.objects.filter(id=identifier).first()
+    group_id = data.get('groupId')
+    lock_group(group_id)
+    user=User.objects.select_for_update().filter(id=identifier).first()
     if user is None: raise ContractAPIException('USER_NOT_FOUND','Foydalanuvchi topilmadi',404)
-    student=StudentProfile.objects.filter(user_id=identifier).first()
+    student=StudentProfile.objects.select_for_update().filter(user_id=identifier).first()
     if user.role=='super_admin' and actor.role!='super_admin': raise ContractAPIException('FORBIDDEN','Super adminni faqat super admin tahrirlaydi',403)
     if 'role' in data and actor.role!='super_admin': raise ContractAPIException('FORBIDDEN',"Rolni faqat super admin o'zgartira oladi",403)
     if data.get('role')=='super_admin': raise ContractAPIException('FORBIDDEN','super_admin rolini berish mumkin emas',403)
@@ -86,9 +95,12 @@ def update(actor,identifier,data):
     if student: old.update(isApproved=student.is_approved,groupId=student.group_id)
     if 'isApproved' in data or 'groupId' in data:
         if student is None: raise ContractAPIException('NOT_A_STUDENT',"Bu foydalanuvchi o'quvchi emas",400)
-        group_exists(data.get('groupId'))
+        if group_id and student.group_id != group_id:
+            assert_active(group_id)
         values={column:data[key] for key,column in [('isApproved','is_approved'),('groupId','group_id')] if key in data}
         StudentProfile.objects.filter(user_id=identifier).update(**values)
+        if 'groupId' in data:
+            record_enrollment(identifier, student.group_id, group_id)
     values={column:data[key] for key,column in [('name','name'),('phone','phone'),('role','role'),('isActive','is_active'),('telegramChatId','telegram_chat_id')] if key in data}
     if data.get('password'): values['password_hash']=hash_password(data['password'])
     if values: User.objects.filter(id=identifier).update(**values,updated_at=timezone.now())

@@ -1,5 +1,6 @@
 """Unit test suite for Standalone Writing & Speaking Exams, OCR Extraction, and Teacher Override."""
 from __future__ import annotations
+from contextlib import nullcontext
 
 import json
 from types import SimpleNamespace
@@ -120,6 +121,7 @@ class TeacherOverrideServiceTests(SimpleTestCase):
     def test_teacher_grade_attempt_success(self, mock_att_filter, mock_job_filter, mock_ans_filter):
         mock_att_filter.return_value.select_related.return_value.first.return_value = self.fake_attempt
         
+        self.fake_job_w.status = self.fake_job_s.status = "SUCCEEDED"
         mock_job_qs = MagicMock()
         mock_job_qs.__iter__.return_value = [self.fake_job_w, self.fake_job_s]
         mock_job_filter.return_value = mock_job_qs
@@ -168,6 +170,7 @@ class ForAttemptOverviewTests(SimpleTestCase):
         teacher = SimpleNamespace(id="teacher-1", name="Teacher Komil", role="teacher")
         attempt = SimpleNamespace(
             id="attempt-456",
+            started_at=None,
             student_id="student-1",
             overall_band=7.0,
             status="completed",
@@ -234,7 +237,7 @@ class ForAttemptOverviewTests(SimpleTestCase):
 
         sub = overview["assessments"][0]["submissions"][0]
         self.assertEqual(sub["imageKeys"], ["writing-ocr/p1.jpg"])
-        self.assertEqual(sub["imageUrls"], ["/media/writing-ocr/p1.jpg"])
+        self.assertEqual(sub["imageUrls"], ["/api/backend/mock/attempts/attempt-456/writing-pages/q-w-1/0"])
         self.assertEqual(sub["ocrText"], "Student essay text")
 
 
@@ -243,13 +246,16 @@ class WritingOcrViewTests(SimpleTestCase):
     @patch("apps.legacy_schema.models.MockAnswer.objects.filter")
     @patch("apps.core.content_media.storage_path")
     @patch("apps.core.writing_ocr.extract_text_from_images")
-    @patch("apps.legacy_schema.models.MockAttempt.objects.filter")
+    @patch("apps.core.mock_attempt_views.attempt_signature.verify_request", new=lambda *_: None)
+    @patch("apps.core.mock_attempt_views.exam_session.guard", new=lambda *_: None)
+    @patch("apps.core.mock_attempt_views.transaction.atomic", new=nullcontext)
+    @patch("apps.core.mock_attempt_views.writable_handwriting")
     def test_writing_ocr_view_flow(
         self, mock_att_filter, mock_ocr, mock_storage, mock_ans_filter, mock_update_or_create
     ):
         student = SimpleNamespace(id="student-1", role="student", is_authenticated=True)
         attempt = SimpleNamespace(id="attempt-789", student_id="student-1", exam_id="exam-1")
-        mock_att_filter.return_value.first.return_value = attempt
+        mock_att_filter.return_value = attempt
         mock_ans_filter.return_value.first.return_value = None
 
         mock_target = MagicMock()

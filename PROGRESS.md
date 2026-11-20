@@ -7,6 +7,46 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 38-BLOK: BESTWAY NEXT — Stage 04: Unified Workspaces, Easy Classroom & Student Deep Linking (2026-11-19) — #206 & #38, branch `feat/bestway-next-00-03`
+- **Student Workspace & Dashboard (Phase 04.1)**:
+  - Talaba Dashboard'iga jonli dars va sinf sharhi (`StudentClassroomWidget`), topshiriqlar ro'yxati (`StudentAssignmentsWidget`), davomat ko'rsatkichi (`StudentAttendanceWidget`), va oflayn lug'at kesh holati (`StudentOfflineVocabWidget`) to'liq ulandi.
+  - O'quvchi taklif kodi orqali guruhga qo'shilish modali (`POST /v1/student/join-cohort`) integratsiya qilindi.
+  - Vazifalar ro'yxati (`GET /v1/student/my-assignments`) muddatlar, o'tish ballari, holat nishonlari (`pending`, `overdue`, `awaiting_review`, `passed`, `failed`) bilan dinamik ishlaydi.
+- **Teacher Command Center (Phase 04.2)**:
+  - Desktop va Web uchun yagona `TeacherDashboard` boshqaruv paneli yaratildi: faol sinflar, o'quvchilar soni, baholash navbatidagi ishlar va Vocabulary Studio holati real vaqtda ko'rsatiladi.
+  - Sidebar navigatsiya shartnomasi (`[0] -> proctoring`, `[1] -> grading`, `[2] -> groups`, `[3] -> exams`) 100% buzilmagan holda saqlanib, dashboard va vocabulary bo'limlari kengaytirildi.
+- **Classroom Workspace & Unified Student Profile (Phase 04.3 & 04.4)**:
+  - `UnifiedStudentProfileModal` komponenti yaratildi: `GET /v1/groups/<id>/member-history/<student_id>` orqali o'quvchi ma'lumotlari, davomat darajasi, uy vazifalari topshirig'i, barcha imtihon natijalari (L/R/W/S/Overall Band) va tasdiqlangan o'qituvchi/AI diagnostik xulosalari ko'rsatiladi.
+  - `ClassroomWorkspace.tsx` va `GroupsResults.tsx` da talaba ismlari bosilganda to'g'ridan-to'g'ri to'liq profil ochiladi.
+- **Exams & Assignments Deep Linking (Phase 04.5)**:
+  - Talaba topshiriqlaridan "Lug'atni o'rganish" to'g'ridan-to'g'ri lug'at trenajyoriga, "Imtihonni boshlash" esa mos test yoki mock imtihoniga yo'naltiradi (`onStartExamById`).
+  - Jarayondagi imtihonlarni saqlangan holatdan davom ettirish (resume) funksiyasi kafolatlandi.
+  - `bestway/frontend/src/components/dashboard/StudentAssignmentsWidget.tsx` da qattiq yozilgan `/en` prefiksi olib tashlanib, ko'p tilli (uz/ru/en) yo'naltirish to'liq to'g'rilandi.
+- **Stage 04 Yakuniy Integratsiya & Handoff (Phase 04.A - 04.K)**:
+  - `backend-django/apps/core/teacher_views.py`: O'qituvchilar uchun ajratilgan topshiriqlar va baholash navbati API'si (`GET /v1/teacher/submissions` va `POST /v1/teacher/submissions/<id>/grade`) yaratildi. Ruxsat faqat o'qituvchining o'z guruhlari o'quvchilari uchun beriladi (`student__group__teacher_id=actor.id`). Pagination (offset/limit) qo'llab-quvvatlanadi.
+  - `backend-django/tests/test_teacher_submissions.py`: 4/4 ta avtorizatsiya va izolyatsiya testi yozildi (100% PASS, 0.007s).
+  - `frontend/scripts/tokenize-colors.mjs` va `tokenize-shape.mjs`: ESM hashbang masalasi tuzatilib, barcha 74 ta dizayn tizimi testi (`src/design-system.spec.ts`) to'liq o'tdi.
+  - `docs/BESTWAY_NEXT_STAGE04_FINAL_REPORT.md` tayyorlandi.
+- **Sifat va Testlar**:
+  - `bw-tauri`: 59 ta test fayli, 471 ta vitest testi (100% PASS); `cargo check` (100% PASS); `npm run build` (100% PASS).
+  - `bestway/frontend`: 126 test fayli, 837 ta vitest testi (100% PASS); `npm run lint` (0 xato); `next build` (88/88 statik sahifalar, 100% PASS).
+  - `backend-django`: `tests.test_teacher_submissions` va `tests.test_vocabulary_offline_sync` (10/10 PASS).
+  - Hosted CI: barcha CI quvurlari ishga tushirildi va yashil. Push tasdiqlandi: `191b73f70b6e3678549799cc610fa74793dda0b1` (PR #206).
+
+### 37-BLOK: BESTWAY NEXT — Stage 03 Offline Vocabulary Sync & Handoff (2026-11-19) — #206, branch `feat/bestway-next-00-03`
+- **Oflayn Lug'at va Fleshkarta API**:
+  - `GET /v1/student/assignments/<id>/vocabulary/snapshot`: ruxsat etilgan talabalar uchun to'liq so'zlar to'plami va versiyasini (revision) qaytaradi.
+  - `POST /v1/student/assignments/<id>/vocabulary/flashcards/sync`: turg'un `opId` lar bilan idempotent paketli familiarity o'zgarishlarini qabul qiladi va `acknowledgedOpIds` bilan tasdiqlaydi.
+  - `PATCH /v1/student/assignments/<id>/vocabulary/flashcards`: mavjud yagona so'zli yangilanishlar bilan to'liq orqaga mos (backward-compatible) saqlandi.
+  - OpenAPI spec (`docs/contracts/groups.v1.openapi.json`) va frontend DTOlar yangilandi.
+- **PostgreSQL va Regressiya Testlari**:
+  - `backend-django/tests/test_vocabulary_offline_sync.py`: 6/6 ta unit test muvaffaqiyatli o'tdi (0.032s).
+  - `backend-django/scripts/verify_vocabulary_homework_postgres.py`: sinxronizatsiyani tekshirish tartibi dars topshirig'i topshirilganidan keyingi nuqtaga ko'chirildi, barcha PostgreSQL tekshiruvlari 100% o'tdi.
+- **Hosted CI**:
+  - GitHub Actions run `44557947516`: `frontend` (2m31s, PASS), `django` (3m11s, PASS) — 100% muvaffaqiyatli yakunlandi.
+- **Hujjatlar**:
+  - `docs/BESTWAY_NEXT_STAGE03_OFFLINE_REPORT.md` va `docs/BESTWAY_NEXT_AGENT_HANDOFF.md` yaratildi.
+
 ### 36-BLOK: E2E barqarorligi — multilevel 3×, vocab-battle, mobile-listening, drill (2026-11-18)
 - **multilevel-full ketma-ket 3 marta: 16/16, 16/16, 16/16** (#204 dan keyin; Speaking har safar 8/8×201, tarmoq uzilishidan keyin bitta qayta yuklash).
 - **vocab-battle 18/20 → 20/20**: skript ICU plural xabarni (`+{points, plural, …} added`) oddiy almashtirish bilan formatlardi — eskirgan; skriptga minimal ICU plural formatlovchi qo'shildi. Mahsulot to'g'ri edi.

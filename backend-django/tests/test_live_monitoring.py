@@ -86,7 +86,7 @@ class LiveMonitoringTests(SimpleTestCase):
                     query.select_related.return_value.order_by.return_value.first.return_value = None
                 return query
 
-            attempts.filter.side_effect = attempt_filter
+            attempts.all.return_value.filter.return_value.exclude.return_value.filter.side_effect = attempt_filter
             cheat_model.filter.return_value.order_by.return_value = cheat_events
 
             response = self.client.get('/v1/assessment/groups/g1/live-monitoring')

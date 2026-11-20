@@ -20,6 +20,7 @@ from apps.legacy_schema.models import (
 
 from . import assessment_results as results
 from .content_media import storage_path
+from .handwriting import handwriting_fields, page_urls
 from .mock_attempts import aware, fail
 from .points import assert_can_view
 
@@ -35,7 +36,7 @@ def get(identifier):
     if job is None:fail('ASSESSMENT_NOT_FOUND','Assessment not found',404)
     return job
 def authorize(actor,job):
-    assert_can_view(actor,job.student_id)
+    assert_can_view(actor, job.student_id, started_at=job.attempt.started_at if actor.role == "teacher" else None)
     if actor.role=='student':assert_program(actor,job.attempt)
 
 def assert_program(actor,attempt):
@@ -47,12 +48,13 @@ def assert_program(actor,attempt):
 def for_attempt(actor,identifier):
     attempt=MockAttempt.objects.filter(id=identifier).select_related('exam').first()
     if attempt is None:fail('MOCK_ATTEMPT_NOT_FOUND','Attempt not found',404)
-    assert_can_view(actor,attempt.student_id)
+    assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
     if actor.role=='student':assert_program(actor,attempt)
     answers_map = {a.question_id: a for a in MockAnswer.objects.filter(attempt_id=identifier)}
     rows=list(AssessmentJob.objects.filter(attempt_id=identifier).order_by('-generation','-created_at'))
     reviewed_ids=set(AuditLog.objects.filter(entity='AssessmentJob', entity_id__in=[j.id for j in rows],
         action__in=('assessment.accept', 'assessment.override')).values_list('entity_id', flat=True)) if rows else set()
+    staff = actor.role in ('teacher', 'admin', 'super_admin')
     seen=set();values=[];latest=[]
     for job in rows:
         if job.skill in seen:continue
@@ -60,13 +62,19 @@ def for_attempt(actor,identifier):
         evaluations=list(AssessmentEvaluation.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         transcripts=list(SpeechTranscript.objects.filter(job_id=job.id,status='SUCCEEDED').order_by('-completed_at'))
         evaluation=next((e for e in evaluations if e.id==job.selected_evaluation_id),evaluations[0] if evaluations else None)
+        visible_result = staff or job.status == 'SUCCEEDED'
+        if not staff:
+            evaluation = None
         value={key:getattr(job,attr) for key,attr in dict(id='id',skill='skill',program='program',status='status',policyMode='policy_mode',version='version',aiScore='ai_score',teacherScore='teacher_score',finalScore='final_score',finalScoreSource='final_score_source',confidence='confidence',rubricVersion='rubric_version',promptVersion='prompt_version',failureCode='failure_code',finalResult='final_result',approvedFeedback='approved_feedback').items()}
+        if not visible_result:
+            for field in ('aiScore', 'teacherScore', 'finalScore', 'finalScoreSource', 'confidence', 'finalResult', 'approvedFeedback'):
+                value[field] = None
         value['failureCode']=job.failure_code
         value.update(teacherReviewed=job.status=='SUCCEEDED' and (job.final_score_source=='TEACHER' or job.id in reviewed_ids),
             evaluation=dict(result=evaluation.result,provider=evaluation.provider,model=evaluation.model) if evaluation and evaluation.result else None,
             parts=[{k:p[k] for k in ('id','max','task','context')} for p in input['parts']],submissions=[])
         if input.get('practiceMode')=='PARTIAL':value.update(practiceMode='PARTIAL',rawMax=sum(p['max'] for p in input['parts']))
-        active_res = job.approved_feedback or job.final_result or (evaluation.result if evaluation else None)
+        active_res = value['approvedFeedback'] or value['finalResult'] or (evaluation.result if evaluation else None)
         if active_res:
             value['diagnosticFeedback'] = results.format_diagnostic_feedback(active_res, input)
         for part in input['parts']:
@@ -83,7 +91,7 @@ def for_attempt(actor,identifier):
                         ocr_text = ans.rubric_scores['ocrText']
                 elif isinstance(r.get('rubricScores'), dict):
                     img_keys = list(r['rubricScores'].get('imageKeys') or [])
-                img_urls = [f"/media/{k}" for k in img_keys]
+                img_urls = page_urls(identifier, r["questionId"], img_keys)
                 audio_link = None
                 if r.get('audioKey'):
                     qid_quoted = quote(r['questionId'], safe="~()*!.'-")
@@ -108,8 +116,8 @@ def for_attempt(actor,identifier):
                     originalResponse=r['originalResponse'],wordCount=len(r['originalResponse'].split()),
                     imageKeys=img_keys,imageUrls=img_urls,ocrText=ocr_text,
                     audioUrl=audio_link,
-                    teacherScore=ans.score if (ans and ans.graded_by_id) else None,
-                    teacherFeedback=ans.feedback if ans else None,
+                    teacherScore=ans.score if (visible_result and ans and ans.graded_by_id) else None,
+                    teacherFeedback=ans.feedback if visible_result and ans else None,
                     transcript=t_dict,
                     speechDiagnostics=speech_diag))
         value['speechDiagnostics'] = {submission['questionId']: submission['speechDiagnostics']
@@ -136,23 +144,23 @@ def for_attempt(actor,identifier):
         top_status = 'needs_review'
     elif any(j.status == 'FAILED' for j in latest):
         top_status = 'failed'
-    elif latest and all(j.status == 'SUCCEEDED' for j in latest):
+    elif attempt.status == 'completed' and latest and all(j.status == 'SUCCEEDED' for j in latest):
         top_status = 'completed'
 
     overall_band = None
-    if attempt.overall_band is not None and all(j.status == 'SUCCEEDED' for j in latest):
+    if attempt.status == 'completed' and attempt.overall_band is not None and all(j.status == 'SUCCEEDED' for j in latest):
         try: overall_band = float(attempt.overall_band)
         except (ValueError, TypeError): pass
 
     conf = None
-    for j in latest:
-        if j.confidence is not None:
+    for result in values:
+        if result['confidence'] is not None:
             try:
-                conf = float(j.confidence)
+                conf = float(result['confidence'])
                 break
             except (ValueError, TypeError): pass
 
-    teacher_confirmed = bool(latest) and all(j.status == 'SUCCEEDED' and (j.final_score_source == 'TEACHER' or j.id in reviewed_ids) for j in latest)
+    teacher_confirmed = attempt.status == 'completed' and bool(latest) and all(j.status == 'SUCCEEDED' and (j.final_score_source == 'TEACHER' or j.id in reviewed_ids) for j in latest)
 
     criteria_scores = {}
     criteria_by_part = {}
@@ -216,12 +224,12 @@ def for_attempt(actor,identifier):
     next_action = next_actions[0] if next_actions else ("Review detailed feedback and focus on weaker areas." if top_status == 'completed' else "Exam assessment is underway.")
 
     teacher_comment = None
-    for j in rows:
-        fb = j.approved_feedback or {}
+    for result in values:
+        fb = result["approvedFeedback"] or {}
         if isinstance(fb, dict) and (fb.get('teacherComment') or fb.get('teacher_comment')):
             teacher_comment = fb.get('teacherComment') or fb.get('teacher_comment')
             break
-    if not teacher_comment and attempt.media_state and isinstance(attempt.media_state, dict):
+    if not teacher_comment and (staff or attempt.status == "completed") and isinstance(attempt.media_state, dict):
         teacher_comment = attempt.media_state.get('teacher_comment')
 
     is_reviewed = teacher_confirmed or bool(not latest and attempt.media_state and isinstance(attempt.media_state, dict) and attempt.media_state.get('is_teacher_reviewed'))
@@ -263,11 +271,15 @@ def update(job,**values):
 
 def project(job,result,actor_id):
     score=results.score(job.input_snapshot,result)
+    existing = {
+        answer.question_id: answer.rubric_scores
+        for answer in MockAnswer.objects.filter(attempt_id=job.attempt_id)
+    }
     for part in job.input_snapshot['parts']:
         rated=next(p for p in result['parts'] if p['id']==part['id']);value=next(p['score'] for p in score['parts'] if p['id']==part['id'])
         if value is None:results.fail('Incomplete rubric cannot be finalized')
         for r in part['responses']:
-            values=dict(score=value,is_graded=True,graded_by_id=actor_id,rubric_scores=rated['criteria'],updated_at=timezone.now())
+            values=dict(score=value,is_graded=True,graded_by_id=actor_id,rubric_scores=dict(handwriting_fields(existing.get(r['questionId'])), **rated['criteria']),updated_at=timezone.now())
             MockAnswer.objects.update_or_create(attempt_id=job.attempt_id,question_id=r['questionId'],defaults=values,
                 create_defaults=dict(values,id=str(uuid4()),response=r['originalResponse'],audio_key=r.get('audioKey')))
 
@@ -283,6 +295,7 @@ def review(actor,identifier,data):
     with transaction.atomic():
         attempt=MockAttempt.objects.select_for_update().get(id=before.attempt_id)
         job=AssessmentJob.objects.select_for_update().get(id=identifier)
+        assert_can_view(actor, attempt.student_id, started_at=attempt.started_at if actor.role == "teacher" else None)
         if job.version!=data['expectedVersion']:fail('ASSESSMENT_STALE_VERSION','Assessment changed; refresh before reviewing',409)
         if attempt.status=='in_progress':fail('MOCK_ATTEMPT_NOT_SUBMITTED','Attempt has been reopened',409)
         latest=AssessmentJob.objects.filter(attempt_id=job.attempt_id,skill=job.skill).order_by('-generation','-created_at').first()
@@ -486,6 +499,8 @@ def teacher_grade_attempt(actor, attempt_id: str, data: dict) -> dict:
 
     now = timezone.now()
     jobs = list(AssessmentJob.objects.filter(attempt_id=attempt_id))
+    if any(job.status != 'SUCCEEDED' for job in jobs):
+        fail('ASSESSMENT_SKILL_REVIEW_REQUIRED', 'Review the pending Writing and Speaking skills separately', 409)
     for job in jobs:
         score_to_apply = None
         if job.skill == 'writing':

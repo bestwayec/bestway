@@ -1,5 +1,6 @@
 """Tests for v0.7.0 Writing Vision OCR, 3-Tier Gemini Fallback, Teacher Groups/Analytics, Excel Export, and Superadmin."""
 from __future__ import annotations
+from contextlib import nullcontext
 
 import json
 import os
@@ -123,7 +124,10 @@ class WritingOcrAndGeminiFallbackTests(SimpleTestCase):
 
         with TemporaryDirectory() as tmp_dir, \
              patch.dict(os.environ, {"STORAGE_DIR": tmp_dir}), \
-             patch("apps.legacy_schema.models.MockAttempt.objects.filter") as mock_att_filter, \
+             patch("apps.core.mock_attempt_views.writable_handwriting") as authorized, \
+             patch("apps.core.mock_attempt_views.transaction.atomic", new=nullcontext), \
+             patch("apps.core.mock_attempt_views.attempt_signature.verify_request"), \
+             patch("apps.core.mock_attempt_views.exam_session.guard"), \
              patch("apps.legacy_schema.models.MockAnswer.objects.filter") as mock_ans_filter, \
              patch("apps.legacy_schema.models.MockAnswer.objects.update_or_create") as mock_upsert, \
              patch.object(writing_ocr, "extract_text_from_images", return_value={
@@ -132,7 +136,7 @@ class WritingOcrAndGeminiFallbackTests(SimpleTestCase):
                  "wordCount": 6,
                  "provider": "gemini",
              }):
-            mock_att_filter.return_value.first.return_value = attempt
+            authorized.return_value = attempt
             mock_ans_filter.return_value.first.return_value = None
 
             response = self.client.post(

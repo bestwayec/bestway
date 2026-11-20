@@ -359,7 +359,7 @@ def review_audio_view(request, attempt_id, group_id):
     attempt = MockAttempt.objects.select_related('exam').filter(id=attempt_id).first()
     if attempt is None:
         raise ContractAPIException('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    assert_view(actor, attempt.student_id)
+    assert_view(actor, attempt.student_id, started_at=attempt.started_at)
     group = _group_or_throw(group_id)
     if group.section.exam_id != attempt.exam_id or group.section.skill != 'listening':
         raise ContractAPIException('FILE_NOT_FOUND', 'Fayl topilmadi', 404)

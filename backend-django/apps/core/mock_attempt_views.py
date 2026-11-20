@@ -3,6 +3,8 @@ import json
 import math
 from datetime import datetime
 
+from django.db import transaction
+from django.http import FileResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -406,7 +408,7 @@ def speaking_audio_view(request, attempt_id, question_id):
     attempt = MockAttempt.objects.filter(id=attempt_id).first()
     if attempt is None:
         engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    engine.assert_view(request.user, attempt.student_id)
+    engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at if request.user.role == "teacher" else None)
     answer = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
     if answer is None or not answer.audio_key or not resolve_key(answer.audio_key).is_file():
         engine.fail('FILE_NOT_FOUND', 'Audio topilmadi', 404)
@@ -490,122 +492,113 @@ def _extract_uploaded_images(request, max_size=10 * 1024 * 1024):
     return extracted
 
 
+def writable_handwriting(actor, attempt_id, question_id, *, lock=False):
+    attempt = engine.own(actor, attempt_id, lock=lock)
+    engine.assert_in_progress(attempt)
+    engine.assert_time(attempt)
+    engine.assert_program(actor, attempt)
+    question = engine.assert_question(attempt, question_id)
+    if question.group.section.skill != 'writing' or (
+        attempt.current_skill and attempt.current_skill != 'writing'
+    ):
+        engine.fail('QUESTION_NOT_IN_EXAM', 'Bu savol yozish bo‘limiga tegishli emas')
+    return attempt
+
+
+@api_view(['GET'])
+def writing_page_view(request, attempt_id, question_id, page):
+    from apps.legacy_schema.models import MockAnswer, MockAttempt
+    from .handwriting import page_file
+
+    require_authenticated(request)
+    attempt = MockAttempt.objects.filter(id=attempt_id).first()
+    if attempt is None:
+        engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
+    engine.assert_view(request.user, attempt.student_id, started_at=attempt.started_at)
+    scope = engine.scope(attempt)
+    if scope and question_id not in scope['questionIds']:
+        engine.fail('FILE_NOT_FOUND', 'Rasm topilmadi', 404)
+    answer = MockAnswer.objects.filter(
+        attempt_id=attempt_id, question_id=question_id,
+        question__group__section__exam_id=attempt.exam_id,
+        question__group__section__skill='writing',
+    ).first()
+    rubric = answer.rubric_scores if answer and isinstance(answer.rubric_scores, dict) else {}
+    keys = rubric.get('imageKeys')
+    file = page_file(attempt_id, keys[page]) if isinstance(keys, list) and page < len(keys) else None
+    if file is None:
+        engine.fail('FILE_NOT_FOUND', 'Rasm topilmadi', 404)
+    path, content_type = file
+    response = FileResponse(path.open('rb'), content_type=content_type)
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def writing_ocr_view(request, attempt_id, question_id=None):
     from uuid import uuid4
-
     from django.utils import timezone
-
-    from apps.legacy_schema.models import MockAnswer, MockAttempt, MockQuestion
-
+    from apps.legacy_schema.models import MockAnswer
     from . import writing_ocr
     from .content_media import storage_path
+    from .handwriting import page_urls
 
     require_authenticated(request)
     if request.user.role not in ('student', 'teacher', 'admin', 'super_admin'):
         engine.fail('FORBIDDEN', 'Ruxsat berilmagan', 403)
 
-    if not question_id and isinstance(getattr(request, 'data', None), dict):
-        question_id = request.data.get('questionId') or request.data.get('question_id')
-    if not question_id:
-        question_id = request.query_params.get('questionId') or request.query_params.get('question_id')
-
-    attempt = MockAttempt.objects.filter(id=attempt_id).first()
-    if attempt is None:
-        engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-    if request.user.role == 'student' and attempt.student_id != request.user.id:
-        engine.fail('MOCK_ATTEMPT_NOT_FOUND', 'Urinish topilmadi', 404)
-
-    if not question_id:
-        first_q = MockQuestion.objects.filter(
-            group__section__exam_id=attempt.exam_id,
-            group__section__skill='writing',
-        ).order_by('sort_order', 'number').first()
-        if first_q:
-            question_id = first_q.id
-        else:
-            engine.fail('VALIDATION_ERROR', 'questionId should not be empty', 400)
+    question_id = (
+        question_id or request.data.get('questionId') or request.data.get('question_id')
+        or request.query_params.get('questionId') or request.query_params.get('question_id')
+    )
+    if not isinstance(question_id, str) or not question_id:
+        engine.fail('VALIDATION_ERROR', 'questionId should not be empty')
+    writable_handwriting(request.user, attempt_id, question_id)
+    attempt_signature.verify_request(request, attempt_id)
+    exam_session.guard(request, attempt_id)
 
     uploaded_items = _extract_uploaded_images(request)
-    image_keys = []
-    image_urls = []
-    ocr_inputs = []
-
-    for raw_bytes, mime, ext in uploaded_items:
-        key = f"writing-ocr/{attempt_id}/{uuid4()}{ext}"
-        target = storage_path(key)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(raw_bytes)
-        image_keys.append(key)
-        image_urls.append(f"/media/{key}")
-        ocr_inputs.append((raw_bytes, mime))
-
-    ocr_result = writing_ocr.extract_text_from_images(ocr_inputs)
+    ocr_result = writing_ocr.extract_text_from_images([(raw, mime) for raw, mime, _ in uploaded_items])
     ocr_text = ocr_result.get('ocrText', '')
-
-    existing = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
-    existing_rubric = dict(existing.rubric_scores) if (existing and isinstance(existing.rubric_scores, dict)) else {}
-    prev_keys = list(existing_rubric.get('imageKeys') or [])
-    merged_keys = prev_keys + [k for k in image_keys if k not in prev_keys]
-
-    append_flag = False
-    if isinstance(getattr(request, 'data', None), dict):
-        append_flag = str(request.data.get('append', '')).lower() in ('1', 'true', 'yes')
-    if not append_flag:
-        append_flag = str(request.query_params.get('append', '')).lower() in ('1', 'true', 'yes')
-
-    if append_flag and existing and existing.response and existing.response.strip():
-        final_text = f"{existing.response.strip()}\n\n{ocr_text}".strip()
-    else:
-        final_text = ocr_text
-
-    word_count = writing_ocr._count_words(final_text)
-    rubric_payload = {
-        **existing_rubric,
-        'imageKeys': merged_keys,
-        'ocrText': final_text,
-        'wordCount': word_count,
-    }
-    now = timezone.now()
-    MockAnswer.objects.update_or_create(
-        attempt_id=attempt_id,
-        question_id=question_id,
-        defaults=dict(
-            response=final_text,
-            rubric_scores=rubric_payload,
-            updated_at=now,
-        ),
-        create_defaults=dict(
-            id=str(uuid4()),
-            response=final_text,
-            rubric_scores=rubric_payload,
-            is_graded=False,
-            updated_at=now,
-        ),
-    )
-
+    append = str(request.data.get('append') or request.query_params.get('append', '')).lower() in ('1', 'true', 'yes')
+    written = []
     try:
-        m_state = attempt.media_state if isinstance(attempt.media_state, dict) else {}
-        m_images = list(m_state.get('writing_images') or [])
-        for k in merged_keys:
-            u = f"/media/{k}"
-            if u not in m_images:
-                m_images.append(u)
-        m_state['writing_images'] = m_images
-        MockAttempt.objects.filter(id=attempt.id).update(media_state=m_state)
+        with transaction.atomic():
+            writable_handwriting(request.user, attempt_id, question_id, lock=True)
+            existing = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
+            rubric = dict(existing.rubric_scores) if existing and isinstance(existing.rubric_scores, dict) else {}
+            keys = list(rubric.get('imageKeys') or [])
+            for raw, _, ext in uploaded_items:
+                key = f"private/writing-ocr/{attempt_id}/{uuid4()}{ext}"
+                target = storage_path(key)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                written.append(target)
+                target.write_bytes(raw)
+                keys.append(key)
+            prior = existing.response.strip() if existing and existing.response else ''
+            final_text = f"{prior}\n\n{ocr_text}".strip() if append and prior else ocr_text
+            word_count = writing_ocr._count_words(final_text)
+            rubric.update(imageKeys=keys, ocrText=final_text, wordCount=word_count)
+            urls = page_urls(attempt_id, question_id, keys)
+            MockAnswer.objects.update_or_create(
+                attempt_id=attempt_id, question_id=question_id,
+                defaults=dict(response=final_text, rubric_scores=rubric, updated_at=timezone.now()),
+                create_defaults=dict(id=str(uuid4()), response=final_text, rubric_scores=rubric,
+                                     is_graded=False, updated_at=timezone.now()),
+            )
     except Exception:
-        pass
+        for path in written:
+            path.unlink(missing_ok=True)
+        raise
 
-    return success({
-        'ocrText': final_text,
-        'pages': ocr_result.get('pages', []),
-        'imageKeys': merged_keys,
-        'imageUrls': [f"/media/{k}" for k in merged_keys],
-        'wordCount': word_count,
-        'questionId': question_id,
-        'provider': ocr_result.get('provider', 'gemini'),
-    }, 200)
+    return success(dict(
+        ocrText=final_text, pages=ocr_result.get('pages', []), imageKeys=keys,
+        imageUrls=urls, wordCount=word_count, questionId=question_id,
+        provider=ocr_result.get('provider', 'gemini'),
+    ))
+
 
 
 @api_view(['POST'])

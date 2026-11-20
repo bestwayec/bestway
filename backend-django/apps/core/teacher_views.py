@@ -1,8 +1,11 @@
 """Teacher workspace: Cohorts, assignments, and student monitoring views."""
 from __future__ import annotations
 
+import math
 import random
 import string
+from django.db import transaction
+from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
@@ -17,8 +20,10 @@ from apps.core.models import (
     HomeworkSubmission,
     Lesson,
     UserLessonProgress,
+    VocabularySet,
 )
 from apps.legacy_schema.models import MockExam, User
+from . import classrooms, vocabulary_collections
 
 
 def success(data: object, status: int = 200) -> Response:
@@ -67,6 +72,8 @@ def teacher_cohorts_view(request):
 
         cohorts_list = []
         for cohort in qs:
+            if classrooms.is_linked(cohort):
+                continue
             active_students = cohort.memberships.filter(status="active").count()
             assignment_count = cohort.assignments.count()
             cohorts_list.append({
@@ -132,6 +139,8 @@ def cohort_analytics_view(request, cohort_id: str):
     except Cohort.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
+    if classrooms.is_linked(cohort):
+        raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
     user_role = getattr(request.user, "role", "teacher")
     if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizni ko'ra olasiz", 403)
@@ -236,10 +245,16 @@ def teacher_assignments_view(request):
     except Cohort.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
 
+    if classrooms.is_linked(cohort):
+        raise ContractAPIException("NOT_FOUND", "Guruh topilmadi", 404)
     user_role = getattr(request.user, "role", "teacher")
     if user_role in ("teacher", "instructor") and str(cohort.teacher_id) != str(request.user.id):
         raise ContractAPIException("FORBIDDEN", "Siz faqat o'zingizning guruhingizga vazifa biriktira olasiz", 403)
 
+    return success(create_assignment(cohort, data, title), 201)
+
+
+def create_assignment(cohort, data, title, *, vocabulary_set=None):
     lesson_id = data.get("lesson_id")
     lesson = None
     if lesson_id:
@@ -270,23 +285,111 @@ def teacher_assignments_view(request):
         title=title,
         lesson=lesson,
         exam=exam,
+        vocabulary_set=vocabulary_set,
+        vocabulary_revision=vocabulary_collections.snapshot(vocabulary_set) if vocabulary_set else None,
         deadline=deadline,
         min_pass_percent=min_pass,
     )
 
-    return success({
+    return assignment_payload(assignment)
+
+
+def assignment_payload(assignment):
+    cohort = assignment.cohort
+    return {
         "id": assignment.id,
         "cohort_id": cohort.id,
-        "cohort_name": cohort.name,
+        "cohort_name": classrooms.name(cohort),
         "title": assignment.title,
         "lesson_id": assignment.lesson_id,
         "lesson_title": assignment.lesson.title if assignment.lesson else None,
         "exam_id": assignment.exam_id,
         "exam_title": assignment.exam.title if assignment.exam else None,
+        "vocabulary_set_id": assignment.vocabulary_set_id,
         "deadline": assignment.deadline.isoformat(),
         "min_pass_percent": assignment.min_pass_percent,
         "created_at": assignment.created_at.isoformat(),
-    }, 201)
+    }
+
+
+@api_view(["GET", "POST"])
+@transaction.atomic
+def classroom_assignments_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    if request.method == "GET":
+        cohort = classrooms.homework_cohort(actor, group_id)
+        assignments = cohort.assignments.select_related("lesson", "exam") if cohort else []
+        return success([assignment_payload(assignment) for assignment in assignments])
+
+    cohort = classrooms.homework_cohort(actor, group_id, create=True)
+    from .domain_contracts import invalid, payload
+    data = payload(request, {"title", "deadline", "min_pass_percent", "lesson_id", "exam_id", "vocabulary_set_id"})
+    title = data.get("title")
+    if not isinstance(title, str) or not 1 <= len(title.strip()) <= 255:
+        invalid("Vazifa nomi 1–255 belgi bo‘lishi kerak")
+    deadline = data.get("deadline")
+    if deadline is not None:
+        try:
+            parsed = parse_datetime(deadline) if isinstance(deadline, str) else None
+        except ValueError:
+            parsed = None
+        if parsed is None or timezone.is_naive(parsed):
+            invalid("Muddat vaqt mintaqasi bilan ISO 8601 formatida bo‘lishi kerak")
+    score = data.get("min_pass_percent", 80)
+    if type(score) is not int or not 0 <= score <= 100:
+        invalid("Minimal ball 0–100 oralig‘ida bo‘lishi kerak")
+    if sum(key in data for key in ("lesson_id", "exam_id", "vocabulary_set_id")) > 1:
+        invalid("Vazifa faqat bitta manbaga bog‘lanishi mumkin")
+    for key, collection in (("lesson_id", Lesson.objects.all()), ("exam_id", assignable_exams())):
+        if key in data and (not isinstance(data[key], str) or not collection.filter(id=data[key]).exists()):
+            invalid(f"{key} topilmadi")
+    vocab_set = None
+    if "vocabulary_set_id" in data:
+        if "lesson_id" in data or "exam_id" in data or not isinstance(data["vocabulary_set_id"], str):
+            invalid("Vazifa faqat bitta lug‘at to‘plamiga bog‘lanishi mumkin")
+        from .vocabulary_views import managed_set
+
+        vocab_set = managed_set(request, data["vocabulary_set_id"])
+        vocab_set = VocabularySet.objects.select_for_update().get(id=vocab_set.id)
+        if vocab_set.group_id and vocab_set.group_id != group_id:
+            invalid("Lug‘at boshqa guruhga tegishli")
+        if not vocab_set.words.filter(is_archived=False).exists():
+            invalid("To‘plamda so‘zlar yo‘q")
+    return success(create_assignment(cohort, data, title.strip(), vocabulary_set=vocab_set), 201)
+
+
+def assignable_exams():
+    return MockExam.objects.filter(is_published=True).filter(Q(price=0) | Q(is_demo=True))
+
+
+@api_view(["GET"])
+def classroom_exams_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    from . import groups
+
+    groups.assert_manages_group(actor, groups.get_group(group_id))
+    search = request.query_params.get("search", "").strip()
+    if len(search) > 100:
+        from .domain_contracts import invalid
+
+        invalid("Search must not exceed 100 characters")
+    return success(list(assignable_exams().filter(title__icontains=search).order_by("title", "id").values("id", "title")[:100]))
+
+
+@api_view(["GET"])
+def classroom_vocabulary_view(request, group_id):
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "admin", "super_admin")
+    from . import groups
+
+    groups.assert_manages_group(actor, groups.get_group(group_id))
+    sets = VocabularySet.objects.filter(Q(group_id__isnull=True) | Q(group_id=group_id))
+    if actor.role == "teacher":
+        sets = sets.filter(Q(created_by_id=actor.id) | Q(group_id=group_id))
+    sets = sets.annotate(wordCount=Count("words", filter=Q(words__is_archived=False))).filter(wordCount__gt=0)
+    return success(list(sets.order_by("title", "id").values("id", "title", "wordCount")))
 
 
 @api_view(["POST"])
@@ -303,7 +406,7 @@ def student_join_cohort_view(request):
         raise ContractAPIException("VALIDATION_ERROR", "Taklif kodi kiritilmadi", 400)
 
     cohort = Cohort.objects.filter(invite_code__iexact=code).select_related("teacher").first()
-    if not cohort:
+    if not cohort or classrooms.is_linked(cohort):
         raise ContractAPIException("NOT_FOUND", "Bunday taklif kodli guruh topilmadi", 404)
 
     membership, created = CohortMembership.objects.update_or_create(
@@ -330,15 +433,11 @@ def student_my_assignments_view(request):
     List all active/overdue assignments from the cohorts the student belongs to.
     """
     require_authenticated(request)
-
-    memberships = CohortMembership.objects.filter(
-        student_id=request.user.id,
-        status="active",
-    ).values_list("cohort_id", flat=True)
+    require_role(request, "student")
 
     assignments_qs = HomeworkAssignment.objects.filter(
-        cohort_id__in=memberships,
-    ).select_related("cohort", "cohort__teacher", "lesson", "exam").order_by("deadline")
+        classrooms.student_homework_scope(request.user.id),
+    ).select_related("cohort__teacher", "cohort__classroom__teacher", "lesson", "exam").order_by("deadline")
 
     submissions = {
         str(s.assignment_id): s
@@ -377,14 +476,17 @@ def student_my_assignments_view(request):
         results.append({
             "id": a.id,
             "cohort_id": a.cohort.id,
-            "cohort_name": a.cohort.name,
-            "teacher_name": getattr(a.cohort.teacher, "name", "") if a.cohort.teacher else "",
+            "cohort_name": classrooms.name(a.cohort),
+            "teacher_name": getattr(classrooms.teacher(a.cohort), "name", ""),
             "title": a.title,
             "lesson_id": a.lesson_id,
             "lesson_title": a.lesson.title if a.lesson else None,
             "lesson_order": a.lesson.order_index if a.lesson else None,
             "exam_id": a.exam_id,
             "exam_title": a.exam.title if a.exam else None,
+            "can_launch_exam": bool(a.exam and a.exam.is_published and a.deadline >= now and not is_submitted),
+            "exam_attempt_id": sub.attempt_id if a.exam_id and sub and sub.source == "exam_attempt" else None,
+            "vocabulary_set_id": getattr(a, "vocabulary_set_id", None),
             "deadline": a.deadline.isoformat(),
             "min_pass_percent": a.min_pass_percent,
             "is_submitted": is_submitted,
@@ -396,6 +498,24 @@ def student_my_assignments_view(request):
         })
 
     return success(results)
+
+
+@api_view(["GET"])
+def student_assignment_exam_view(request, assignment_id: str):
+    from . import mock_catalog
+
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = HomeworkAssignment.objects.filter(
+        classrooms.student_homework_scope(actor.id), pk=assignment_id, exam__is_published=True,
+    ).select_related("exam").first()
+    if assignment is None or mock_catalog.access_for(actor, assignment.exam) != "granted":
+        raise ContractAPIException("NOT_FOUND", "Imtihon topshirig‘i topilmadi", 404)
+    if assignment.deadline < timezone.now():
+        raise ContractAPIException("ASSIGNMENT_EXPIRED", "Topshiriq muddati o‘tgan", 409)
+    if HomeworkSubmission.objects.filter(assignment=assignment, student_id=actor.id).exists():
+        raise ContractAPIException("ASSIGNMENT_ALREADY_SUBMITTED", "Topshiriq topshirilgan", 409)
+    return success({"id": assignment.exam_id, "type": assignment.exam.type})
 
 
 @api_view(["POST"])
@@ -412,13 +532,11 @@ def student_submit_assignment_view(request, assignment_id: str):
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
 
     # Check student is active member of cohort
-    is_member = CohortMembership.objects.filter(
-        cohort=assignment.cohort,
-        student_id=request.user.id,
-        status="active",
-    ).exists()
+    is_member = classrooms.is_member(assignment.cohort, request.user.id)
     if not is_member:
         raise ContractAPIException("FORBIDDEN", "Siz ushbu guruhga a'zo emassiz", 403)
+    if isinstance(getattr(assignment, "vocabulary_set_id", None), str):
+        raise ContractAPIException("VOCABULARY_SESSION_REQUIRED", "Vazifani lug‘at mashqidan yakunlang", 400)
 
     # The client never supplies a score (an empty POST used to record 100% passed).
     from . import homework_scoring as scoring
@@ -445,14 +563,194 @@ def teacher_grade_assignment_view(request, assignment_id: str):
         assignment = HomeworkAssignment.objects.select_related("cohort").get(id=assignment_id)
     except HomeworkAssignment.DoesNotExist:
         raise ContractAPIException("NOT_FOUND", "Vazifa topilmadi", 404)
-    if getattr(request.user, "role", "") in ("teacher", "instructor") and str(assignment.cohort.teacher_id) != str(request.user.id):
+    if getattr(request.user, "role", "") in ("teacher", "instructor") and classrooms.teacher_id(assignment.cohort) != request.user.id:
         raise ContractAPIException("FORBIDDEN", "Bu guruh sizga tegishli emas", 403)
     data = request.data or {}
     student_id = str(data.get("student_id") or "").strip()
     score = data.get("score_percent")
     if not student_id or isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
         raise ContractAPIException("VALIDATION_ERROR", "student_id va 0–100 oralig'idagi butun score_percent kerak", 400)
-    if not CohortMembership.objects.filter(cohort=assignment.cohort, student_id=student_id, status="active").exists():
+    if not classrooms.is_member(assignment.cohort, student_id):
         raise ContractAPIException("STUDENT_NOT_IN_COHORT", "O'quvchi bu guruhda emas", 400)
+    if isinstance(getattr(assignment, "vocabulary_set_id", None), str):
+        raise ContractAPIException("VOCABULARY_SERVER_GRADED", "Lug‘at natijasini server hisoblaydi", 400)
     from . import homework_scoring as scoring
     return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))
+
+
+_MANUAL_SKILL = "question__group__section__skill"
+_MANUAL_SKILLS = ("writing", "speaking")
+
+
+def _grading_attempts(actor):
+    from apps.legacy_schema.models import MockAttempt
+    from .models import ClassroomEnrollment
+
+    attempts = MockAttempt.objects.filter(status__in=("grading", "completed"))
+    if actor.role in ("teacher", "instructor"):
+        # The classroom history contract treats an undated legacy membership
+        # as unknown. A class-owned assignment supplies scope for those rows.
+        enrolled = ClassroomEnrollment.objects.filter(
+            student_id=OuterRef("student_id"),
+            group_id=OuterRef("student__group_id"),
+            ended_at__isnull=True,
+            started_at__isnull=False,
+        )
+        assigned = HomeworkAssignment.objects.filter(
+            cohort__classroom_id=OuterRef("student__group_id"),
+            exam_id=OuterRef("exam_id"), created_at__lte=OuterRef("started_at"),
+        )
+        attempts = attempts.filter(student__group__teacher_id=actor.id).filter(
+            Exists(enrolled.filter(started_at__lte=OuterRef("started_at"))) | (~Exists(enrolled) & Exists(assigned))
+        )
+    return attempts
+
+
+def _grading_evidence():
+    from apps.legacy_schema.models import MockAnswer
+
+    return (
+        MockAnswer.objects.filter(
+            question__group__section__exam_id=F("attempt__exam_id"),
+            **{f"{_MANUAL_SKILL}__in": _MANUAL_SKILLS},
+        )
+        .filter(
+            Q(response__regex=r"\S")
+            | ~Q(audio_key="") & Q(audio_key__isnull=False)
+            | Q(rubric_scores__imageKeys__gt=[])
+            | Q(rubric_scores__imageUrls__gt=[])
+        )
+    )
+
+
+def _page_number(params, name, default, minimum, maximum):
+    try:
+        return min(max(int(params.get(name, default)), minimum), maximum)
+    except (ValueError, TypeError):
+        return default
+
+
+@api_view(["GET"])
+def teacher_submissions_view(request):
+    from .mock_attempts import versioned
+
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
+    status = request.query_params.get("status", "pending")
+    skill = request.query_params.get("skill")
+    if status not in ("pending", "graded") or (skill and skill not in _MANUAL_SKILLS):
+        raise ContractAPIException("VALIDATION_ERROR", "Noto‘g‘ri mahorat yoki holat", 400)
+
+    evidence = _grading_evidence()
+    same_skill = evidence.filter(attempt_id=OuterRef("attempt_id"), **{_MANUAL_SKILL: OuterRef(_MANUAL_SKILL)})
+    pending = same_skill.filter(is_graded=False)
+    rows = evidence.filter(attempt__in=_grading_attempts(actor))
+    if skill:
+        rows = rows.filter(**{_MANUAL_SKILL: skill})
+    if status == "pending":
+        rows = rows.filter(is_graded=False, pk=Subquery(pending.order_by("question_id", "pk").values("pk")[:1]))
+    else:
+        rows = rows.filter(
+            ~Exists(pending), pk=Subquery(same_skill.order_by("question_id", "pk").values("pk")[:1]),
+        )
+
+    params = request.query_params
+    offset = _page_number(params, "offset", 0, 0, 2**31 - 1)
+    limit = _page_number(params, "limit", 50, 1, 100)
+    with_total = params.get("withTotal") == "1"
+    summary = params.get("summary") == "1"
+    total = rows.count() if with_total else None
+    page = rows.select_related(
+        "attempt__exam", "attempt__student__user", "question__group__section",
+    ).order_by(F("attempt__submitted_at").desc(nulls_last=True), "attempt_id", _MANUAL_SKILL)
+    items = []
+    for answer in page[offset:offset + limit]:
+        attempt = answer.attempt
+        question = answer.question
+        current_skill = question.group.section.skill
+        overview = {
+            "id": f"{attempt.pk}_{current_skill}",
+            "attemptId": attempt.pk,
+            "studentName": attempt.student.user.name,
+            "examTitle": attempt.exam.title,
+            "skill": current_skill,
+            "submittedAt": (attempt.submitted_at or attempt.started_at).isoformat(),
+            "status": status,
+        }
+        if summary:
+            items.append(overview)
+            continue
+        raw_score = versioned(attempt)
+        maximum = question.group.max_score if raw_score and question.group.max_score is not None else question.points
+        rubric = answer.rubric_scores if isinstance(answer.rubric_scores, dict) else {}
+        items.append({
+            **overview,
+            "questionId": question.pk,
+            "examType": "MULTILEVEL" if "multilevel" in attempt.exam.type.lower() else "IELTS",
+            "subType": f"Task ({current_skill.title()})",
+            "prompt": question.prompt,
+            "responseText": answer.response,
+            "hasRecording": bool(answer.audio_key),
+            "hasHandwriting": bool(rubric.get("imageKeys") or rubric.get("imageUrls")),
+            "rawScore": raw_score,
+            "maxScore": maximum,
+            "criteriaScores": dict(c1=0, c2=0, c3=0, c4=0),
+            "overallBand": answer.score,
+        })
+    return success({"items": items, "total": total} if with_total else items)
+
+
+@api_view(["POST"])
+@transaction.atomic
+def teacher_grade_submission_view(request, submission_id: str):
+    from . import mock_grading
+
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
+    attempt_id, separator, skill = submission_id.rpartition("_")
+    if not separator or not attempt_id or skill not in _MANUAL_SKILLS:
+        raise ContractAPIException("INVALID_SUBMISSION_ID", "Topshiriq identifikatori noto‘g‘ri", 400)
+    # The canonical review, grading and worker paths acquire the same attempt lock.
+    attempt = _grading_attempts(actor).select_for_update(of=("self",)).filter(pk=attempt_id).first()
+    if attempt is None:
+        raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+    if actor.role in ("teacher", "instructor"):
+        from apps.legacy_schema.models import StudentProfile
+
+        StudentProfile.objects.select_for_update().only("pk").get(pk=attempt.student_id)
+        if not _grading_attempts(actor).filter(pk=attempt.pk).exists():
+            raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+
+    if not isinstance(request.data, dict):
+        raise ContractAPIException("VALIDATION_ERROR", "Baholash ma’lumotlari kerak", 400)
+    question_id = request.data.get("questionId")
+    if not isinstance(question_id, str) or not question_id:
+        raise ContractAPIException("VALIDATION_ERROR", "Savol identifikatori kerak", 400)
+    skill_answers = _grading_evidence().filter(attempt_id=attempt.pk, **{_MANUAL_SKILL: skill})
+    answer = skill_answers.filter(question_id=question_id).first()
+    if answer is None:
+        raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+    if answer.is_graded:
+        raise ContractAPIException("ALREADY_GRADED", "Bu javob baholangan", 409)
+
+    # This queue renders text. Recordings and handwriting require the protected
+    # evidence reader in the established assessment review workflow.
+    rubric = answer.rubric_scores if isinstance(answer.rubric_scores, dict) else {}
+    if answer.audio_key or rubric.get("imageKeys") or rubric.get("imageUrls"):
+        raise ContractAPIException("REVIEW_REQUIRED", "Himoyalangan javobni tahlil oynasida tekshiring", 409)
+    score = request.data.get("score", request.data.get("overallBand"))
+    feedback = request.data.get("feedback")
+    if type(score) not in (int, float) or not 0 <= score <= 100 or not math.isfinite(score) or score * 2 % 1:
+        raise ContractAPIException("VALIDATION_ERROR", "Ball noto‘g‘ri", 400)
+    if feedback is not None and (not isinstance(feedback, str) or len(feedback) > 10000):
+        raise ContractAPIException("VALIDATION_ERROR", "Izoh noto‘g‘ri", 400)
+
+    grade = {"questionId": question_id, "score": score, "feedback": feedback}
+    criteria = request.data.get("criteriaScores")
+    if criteria is not None and not mock_grading.versioned(attempt):
+        names = ("ta", "cc", "lr", "gra") if skill == "writing" else ("fluency", "lexical", "grammar", "pronunciation")
+        if not isinstance(criteria, dict) or any(f"c{i}" not in criteria for i in range(1, 5)):
+            raise ContractAPIException("VALIDATION_ERROR", "Mezon ballari noto‘g‘ri", 400)
+        grade["rubricScores"] = {name: criteria[f"c{i}"] for i, name in enumerate(names, 1)}
+    result = mock_grading.grade(actor, attempt.pk, grade)
+    return success({**result, "submissionStatus": "pending" if skill_answers.filter(is_graded=False).exists() else "graded"})

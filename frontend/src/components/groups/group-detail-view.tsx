@@ -22,6 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { ClassroomManagement } from "@/components/groups/classroom-management";
+import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
 import { AdjustPointsDialog } from "@/components/students/adjust-points-dialog";
 import {
@@ -48,6 +50,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const t = useTranslations("groups");
   const tc = useTranslations("common");
   const tw = useTranslations("weekdaysShort");
+  const ws = useTranslations("workspace");
   const router = useRouter();
   const { data: group, isLoading, isError, refetch } = useGroupDetail(groupId);
   const { data: allGroups } = useGroups();
@@ -61,8 +64,11 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = React.useState("");
+  const [rosterSearch, setRosterSearch] = React.useState("");
+  const [rosterLimit, setRosterLimit] = React.useState(20);
+  const [showAnalytics, setShowAnalytics] = React.useState(false);
   const debounced = useDebouncedValue(search);
-  const picker = useStudents(debounced);
+  const picker = useStudents(debounced.trim(), debounced.trim().length >= 2);
 
   const isOffice = me?.user.role === "admin" || me?.user.role === "super_admin";
   const canSeePhones =
@@ -70,7 +76,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const teacherLimit = me?.user.role === "teacher" ? settingsQ.data?.teacherPointLimit : undefined;
 
   const memberIds = new Set((group?.students ?? []).map((s) => s.studentId));
-  const candidates = (picker.data ?? []).filter((u) => !memberIds.has(u.id)).slice(0, 6);
+  const candidates = (picker.isPlaceholderData ? [] : picker.data ?? []).filter((u) => !memberIds.has(u.id)).slice(0, 6);
 
   async function handleDownloadExcel() {
     setExcelBusy(true);
@@ -128,6 +134,10 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
 
   const days = [...new Set((group.schedule ?? []).map((s) => s.day))].map((d) => tw(d)).join(", ");
   const time = group.schedule?.[0] ? `${group.schedule[0].startTime}–${group.schedule[0].endTime}` : "";
+
+  const matchingStudents = group.students.filter((student) =>
+    student.name.toLocaleLowerCase().includes(rosterSearch.trim().toLocaleLowerCase()),
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -208,8 +218,15 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         </div>
       </Card>
 
-      {canSeePhones && (
-        <>
+      {canSeePhones && <nav aria-label={ws("classroomSections")} className="mb-4 flex flex-wrap gap-2">
+        <Button asChild variant="outline"><a href="#classroom-roster">{t("students")}</a></Button>
+        <Button asChild variant="outline"><a href="#classroom-assignments">{ws("assignments")}</a></Button>
+        <Button variant="outline" aria-expanded={showAnalytics} aria-controls={showAnalytics ? "classroom-results" : undefined}
+          onClick={() => setShowAnalytics(!showAnalytics)}>{ws("results")}</Button>
+      </nav>}
+
+      {canSeePhones && showAnalytics && (
+        <section id="classroom-results" aria-label={ws("results")}>
           <LiveExamRoomPanel defaultGroupId={groupId} />
           <GroupAnalyticsPanel
             groups={allGroups}
@@ -224,7 +241,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           <GroupAnalyticsDashboard groupId={groupId} groupName={group.name} className="mb-4" />
           <GroupLiveMonitoring groupId={groupId} />
           <GroupAiRanking groupId={groupId} />
-        </>
+        </section>
       )}
 
       {/* Aqlli Davomat Olish Modali */}
@@ -297,24 +314,29 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
       </Card>
 
       {/* Guruh o'quvchilari */}
-      <Card>
+      <Card id="classroom-roster" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-sm">
             {t("students")} · {group.students.length}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {group.students.length === 0 ? (
-            <EmptyState title={t("noStudents")} className="border-0 py-6" />
+          {group.students.length > 0 && <label className="mb-3 block">
+            <span className="sr-only">{ws("searchStudents")}</span>
+            <input type="search" className="min-h-11 w-full rounded-control border border-border bg-surface px-3 focus-visible:outline-2 focus-visible:outline-brand"
+              value={rosterSearch} placeholder={ws("searchStudents")} onChange={(event) => { setRosterSearch(event.target.value); setRosterLimit(20); }} />
+          </label>}
+          {matchingStudents.length === 0 ? (
+            <EmptyState title={rosterSearch.trim() ? ws("noMatches") : t("noStudents")} className="border-0 py-6" />
           ) : (
             <div className="divide-y divide-border">
-              {group.students.map((s) => {
+              {matchingStudents.slice(0, rosterLimit).map((s) => {
                 const info = (
                   <>
                     <Avatar name={s.name} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-fg">{s.name}</p>
-                      {canSeePhones && (
+                      {canSeePhones && s.phone && (
                         <p className="truncate text-xs text-fg-muted">{formatPhone(s.phone)}</p>
                       )}
                     </div>
@@ -359,8 +381,16 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               })}
             </div>
           )}
+          {matchingStudents.length > rosterLimit && <Button className="mt-3" variant="outline" onClick={() => setRosterLimit(rosterLimit + 20)}>
+            {ws("showMore")} · {rosterLimit} / {matchingStudents.length}
+          </Button>}
         </CardContent>
       </Card>
+
+      {canSeePhones && me && <ClassroomManagement key={groupId} group={group} userId={me.user.id} />}
+      {canSeePhones && me && <section id="classroom-assignments" className="scroll-mt-20" aria-label={ws("assignments")}>
+        <ClassroomAssignments key={groupId} groupId={groupId} userId={me.user.id} />
+      </section>}
 
       <GroupFormDialog open={editOpen} group={group} onClose={() => setEditOpen(false)} />
       <GroupFormDialog open={createOpen} group={null} onClose={() => setCreateOpen(false)} />

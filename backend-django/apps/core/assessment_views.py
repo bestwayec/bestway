@@ -1,6 +1,7 @@
 import math
 import re
 
+from django.db import transaction
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, permission_classes
 
@@ -39,6 +40,7 @@ def validate_review(data):
 @api_view(['GET'])
 @permission_classes([Authenticated])
 def attempt(request,attempt_id):
+    result = assessment.for_attempt(request.user, attempt_id)
     try:
         from apps.legacy_schema.models import AssessmentJob
         pending_jobs = AssessmentJob.objects.filter(attempt_id=attempt_id, status__in=['PENDING', 'RETRY'])
@@ -48,7 +50,7 @@ def attempt(request,attempt_id):
             start_thread(assessment_worker.tick, name='bestway-assessment-tick')
     except Exception:
         pass
-    return success(assessment.for_attempt(request.user,attempt_id))
+    return success(result)
 
 
 @api_view(['POST'])
@@ -78,7 +80,14 @@ def instant_evaluate_view(request):
 
 @api_view(['POST'])
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
+@transaction.atomic
 def teacher_grade(request, attempt_id):
+    from apps.legacy_schema.models import MockAttempt
+
+    attempt = MockAttempt.objects.select_for_update().filter(pk=attempt_id).first()
+    if attempt is None:
+        assessment.fail("MOCK_ATTEMPT_NOT_FOUND", "Attempt not found", 404)
+    assessment.assert_can_view(request.user, attempt.student_id, started_at=attempt.started_at)
     return success(assessment.teacher_grade_attempt(request.user, attempt_id, request.data or {}), 200)
 
 @api_view(['POST'])
@@ -90,11 +99,20 @@ def review(request,job_id):return success(assessment.review(request.user,job_id,
 def audio(request,job_id,question_id):
     key=assessment.audio(request.user,job_id,question_id);path=storage_path(key);size=path.stat().st_size;start=0;end=size-1;status=200
     mime={'.m4a':'audio/mp4','.mp4':'audio/mp4','.ogg':'audio/ogg','.wav':'audio/wav','.aac':'audio/aac','.webm':'audio/webm'}.get(path.suffix.lower(),'audio/mpeg')
-    if request.headers.get('Range'):
-        match=re.search(r'bytes=([0-9]*)-([0-9]*)',request.headers['Range']);start=int(match[1]) if match and match[1] else 0;end=int(match[2]) if match and match[2] else size-1
-        if start>=size or end>=size or start>end:
-            response=HttpResponse(status=416);response['Content-Range']=f'bytes */{size}';return response
-        status=206
+    range_header = request.headers.get('Range')
+    if range_header:
+        match = re.fullmatch(r'bytes=([0-9]{0,19})-([0-9]{0,19})', range_header)
+        if match and any(match.groups()):
+            first, last = match.groups()
+            if first:
+                start, end = int(first), min(size - 1, int(last)) if last else size - 1
+            else:
+                start, end = max(0, size - int(last)), size - 1
+        if not match or not any(match.groups()) or start >= size or start > end:
+            response = HttpResponse(status=416)
+            response['Content-Range'] = f'bytes */{size}'
+            return response
+        status = 206
     def chunks():
         with path.open('rb') as source:
             source.seek(start);left=end-start+1
@@ -103,6 +121,7 @@ def audio(request,job_id,question_id):
                 if not chunk:break
                 left-=len(chunk);yield chunk
     response=StreamingHttpResponse(chunks(),status=status,content_type=mime);response['Content-Length']=end-start+1;response['Accept-Ranges']='bytes'
+    response['Cache-Control'] = 'private, no-store'
     if status==206:response['Content-Range']=f'bytes {start}-{end}/{size}'
     return response
 
@@ -147,10 +166,12 @@ def live_monitoring(request, group_id):
     cutoff = timezone.now() - timedelta(hours=24)
     students_data = []
 
+    from .classroom_roster import current_teacher_attempts
+    classroom_attempts = current_teacher_attempts(MockAttempt.objects.all(), request.user)
     for s in students:
-        active = MockAttempt.objects.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
+        active = classroom_attempts.filter(student_id=s.user_id, status__in=['in_progress', 'grading']).select_related('exam').order_by('-started_at').first()
         if not active:
-            active = MockAttempt.objects.filter(student_id=s.user_id, status='completed', finished_at__gte=cutoff).select_related('exam').order_by('-finished_at').first()
+            active = classroom_attempts.filter(student_id=s.user_id, status='completed', finished_at__gte=cutoff).select_related('exam').order_by('-finished_at').first()
 
         active_attempt_data = None
         if active:

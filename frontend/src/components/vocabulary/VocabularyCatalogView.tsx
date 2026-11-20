@@ -20,6 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/i18n/navigation";
+import { useQuery } from "@tanstack/react-query";
+import type { VocabularyCollection } from "@/lib/group-contract.generated";
+import { VocabularyHistory } from "./VocabularyHistory";
 import { VocabularyBuilder } from "@/components/teacher/VocabularyBuilder";
 import { VocabularyGroupReport } from "@/components/teacher/VocabularyGroupReport";
 import { VocabBattleHost } from "@/components/vocabulary/VocabBattleHost";
@@ -34,6 +37,7 @@ export interface VocabularySetSummary {
   groupId?: string | null;
   groupName?: string | null;
   createdById?: string;
+  canEdit?: boolean;
   createdByName?: string;
   wordCount: number;
   createdAt: string;
@@ -61,7 +65,15 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   // Modal states
+  const te = useTranslations("vocabularyEditor");
   const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
+  const [editSetId, setEditSetId] = React.useState("");
+  const editable = useQuery({
+    queryKey: ["vocabulary-edit", editSetId],
+    queryFn: () => api.get<VocabularyCollection>(`/v1/vocabulary/sets/${encodeURIComponent(editSetId)}`),
+    enabled: Boolean(editSetId),
+    staleTime: 0,
+  });
   const [reportSetId, setReportSetId] = React.useState<string | null>(null);
   const [battleSetId, setBattleSetId] = React.useState<string | null>(null);
   const [isPlayerBattleOpen, setIsPlayerBattleOpen] = React.useState(false);
@@ -239,14 +251,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {/* Filters and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Level Pills */}
-        <div role="group" aria-label={tc("levelFilter")} className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
+        <div role="group" aria-label={tc("levelFilter")} className="flex w-full flex-wrap items-center gap-1.5">
           {LEVELS.map((lvl) => (
             <button
               key={lvl}
               type="button"
               aria-pressed={selectedLevel === lvl}
               onClick={() => setSelectedLevel(lvl)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`min-h-11 rounded-control px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
                 selectedLevel === lvl
                   ? "bg-brand text-brand-fg shadow-md"
                   : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
@@ -259,14 +271,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" aria-hidden />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={tc("searchPlaceholder")}
             aria-label={tc("searchLabel")}
             type="search"
-            className="pl-9 h-9 text-xs bg-surface"
+            className="min-h-11 pl-9 text-sm bg-surface"
           />
         </div>
       </div>
@@ -356,6 +368,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                           </Button>
                         </Link>
 
+                        {isTeacherOrAdmin && s.canEdit && <Button type="button" variant="outline" onClick={() => setEditSetId(s.id)}>{te("edit")}</Button>}
                         {isTeacherOrAdmin && (
                           <>
                             <Button
@@ -390,6 +403,8 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         </>
       )}
 
+      {userRole === "student" && <VocabularyHistory />}
+
       {/* Teacher Vocabulary Builder Modal */}
       {isBuilderOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
@@ -406,6 +421,17 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       )}
 
       
+      {editSetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 overflow-y-auto">
+          <div className="w-full max-w-3xl bg-surface">
+            {editable.isPending && <p className="p-4" role="status">{te("loading")}</p>}
+            {editable.isError && <p className="p-4" role="alert">{te("failed")} <Button onClick={() => setEditSetId("")}>{te("cancel")}</Button></p>}
+            {editable.data && !editable.isError && <VocabularyBuilder key={editSetId} collection={editable.data}
+              onSuccess={() => { setEditSetId(""); void fetchData(); }} onCancel={() => setEditSetId("")} />}
+          </div>
+        </div>
+      )}
+
       {/* Live Vocab Battle Host Modal */}
       {battleSetId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">

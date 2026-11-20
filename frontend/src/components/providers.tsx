@@ -4,6 +4,7 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import { AUTH_CONTEXT_STORAGE } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api-client";
 
 function makeQueryClient() {
@@ -34,6 +35,15 @@ function getQueryClient() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
+  React.useEffect(() => {
+    function sessionChanged(event: StorageEvent) {
+      if (event.key !== AUTH_CONTEXT_STORAGE || !event.newValue) return;
+      queryClient.clear();
+      window.location.reload();
+    }
+    window.addEventListener("storage", sessionChanged);
+    return () => window.removeEventListener("storage", sessionChanged);
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

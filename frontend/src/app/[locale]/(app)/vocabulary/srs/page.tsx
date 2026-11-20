@@ -15,6 +15,7 @@ import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
+import { VocabularyHistory } from "@/components/vocabulary/VocabularyHistory";
 import { VocabularyQuizRunner } from "@/components/vocabulary/VocabularyQuizRunner";
 
 export interface SrsWordItem {
@@ -25,10 +26,13 @@ export interface SrsWordItem {
   correctStreak: number;
   isMastered: boolean;
   lastReviewed: string;
+  nextReviewAt?: string | null;
+  intervalDays?: number;
 }
 
 export interface SrsStatsResponse {
   totalWeakWords: number;
+  totalDueWords: number;
   totalMasteredWords: number;
   weakWords: SrsWordItem[];
 }
@@ -36,6 +40,7 @@ export interface SrsStatsResponse {
 export default function VocabularySrsPage() {
   const t = useTranslations("vocabulary");
   const ts = useTranslations("vocabulary.srs");
+  const th = useTranslations("vocabularyHistory");
   const [stats, setStats] = React.useState<SrsStatsResponse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -117,7 +122,7 @@ export default function VocabularySrsPage() {
 
             <Button
               type="button"
-              disabled={!stats || stats.totalWeakWords === 0}
+              disabled={!stats || stats.totalDueWords === 0}
               onClick={() => setIsQuizActive(true)}
               className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md"
             >
@@ -211,6 +216,7 @@ export default function VocabularySrsPage() {
                     <th className="py-2.5 px-4 font-semibold text-center">{ts("colMistakes")}</th>
                     <th className="py-2.5 px-4 font-semibold text-center">{ts("colStreak")}</th>
                     <th className="py-2.5 px-4 font-semibold text-right">{ts("colStatus")}</th>
+                    <th className="py-2.5 px-4 font-semibold">{th("nextDue")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -227,7 +233,7 @@ export default function VocabularySrsPage() {
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-center font-mono text-xs">
-                        {w.correctStreak} / 2
+                        {w.correctStreak}
                       </td>
                       <td className="py-2.5 px-4 text-right">
                         {w.isMastered ? (
@@ -240,6 +246,10 @@ export default function VocabularySrsPage() {
                           </Badge>
                         )}
                       </td>
+                      <td className="py-2.5 px-4">
+                        {w.nextReviewAt ? new Date(w.nextReviewAt).toLocaleString() : w.isMastered ? "—" : th("due")}
+                        {w.intervalDays ? ` · ${th("interval", { days: w.intervalDays })}` : ""}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -248,6 +258,7 @@ export default function VocabularySrsPage() {
           )}
         </div>
       )}
+      <VocabularyHistory review />
     </div>
   );
 }

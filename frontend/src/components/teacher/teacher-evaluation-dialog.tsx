@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { AssessmentPanel } from "@/components/mock/assessment-panel";
 import { useAttemptAssessments, useTeacherGradeAttempt } from "@/hooks/use-assessment";
 import { useMockAttempt } from "@/hooks/use-mock";
 import { cn } from "@/lib/utils";
@@ -164,9 +165,9 @@ export function TeacherEvaluationDialog({
 
   // Extract handwriting images if present
   const mediaState = (attempt?.mediaState || {}) as Record<string, unknown>;
-  const handwritingImages: string[] = Array.isArray(mediaState.writing_images)
-    ? (mediaState.writing_images as string[])
-    : [];
+  const handwritingImages = assessmentData?.assessments
+    .filter(job => job.skill === "writing")
+    .flatMap(job => job.submissions.flatMap(submission => submission.imageUrls ?? [])) ?? [];
 
   return (
     <>
@@ -454,8 +455,12 @@ export function TeacherEvaluationDialog({
             </div>
           </div>
 
-          {/* BOTTOM FORM: Teacher Score Override */}
-          <form onSubmit={handleSubmit} className="border-t border-slate-800 bg-slate-900/80 p-5 space-y-3">
+          {attemptId && Boolean(assessmentData?.assessments.length) && (
+            <div className="max-h-[45vh] overflow-y-auto px-5 pb-4">
+              <AssessmentPanel attemptId={attemptId} isStaff />
+            </div>
+          )}
+          {assessmentData?.assessments.length === 0 && <form onSubmit={handleSubmit} className="border-t border-slate-800 bg-slate-900/80 p-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                 <PenTool className="size-3.5" />
@@ -543,7 +548,7 @@ export function TeacherEvaluationDialog({
                 <span>Yakuniy Bahoni Tasdiqlash</span>
               </Button>
             </DialogFooter>
-          </form>
+          </form>}
         </DialogContent>
       </Dialog>
 

@@ -127,8 +127,7 @@ class GroupReportKpiTests(SimpleTestCase):
         mock_set.group.name = "Morning IELTS"
 
         w1 = MagicMock(id="w1", english="pamper", uzbek="erkalamoq")
-        mock_set.words.count.return_value = 25
-        mock_set.words.filter.return_value = [w1]
+        mock_set.words.filter.side_effect = lambda **filters: MagicMock(count=lambda: 25) if filters == {'is_archived': False} else [w1]
         mock_set_rel.return_value.filter.return_value.first.return_value = mock_set
 
         att1 = MagicMock(

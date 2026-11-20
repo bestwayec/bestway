@@ -48,6 +48,7 @@ class VocabularySet(models.Model):
         default=VocabularyLevel.B1,
     )
     is_public = models.BooleanField(default=True)
+    revision = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -70,6 +71,12 @@ class VocabularyWord(models.Model):
     uzbek = models.CharField(max_length=255)
     context_sentence = models.TextField(null=True, blank=True)
     part_of_speech = models.CharField(max_length=50, null=True, blank=True)
+    definition = models.TextField(blank=True, default="")
+    synonyms = models.JSONField(default=list, blank=True)
+    level = models.CharField(max_length=20, choices=VocabularyLevel.choices, blank=True, default="")
+    pronunciation = models.CharField(max_length=255, blank=True, default="")
+    audio_url = models.URLField(max_length=500, blank=True, default="")
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -130,6 +137,10 @@ class UserWeakWord(models.Model):
     correct_streak = models.IntegerField(default=0)
     is_mastered = models.BooleanField(default=False)
     last_reviewed = models.DateTimeField(auto_now=True)
+    next_review_at = models.DateTimeField(null=True, blank=True)
+    review_count = models.PositiveIntegerField(default=0)
+    interval_days = models.PositiveIntegerField(default=0)
+    lapses = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "UserWeakWord"
@@ -138,6 +149,18 @@ class UserWeakWord(models.Model):
 
     def __str__(self):
         return f"{self.student_id} - {self.word_id} (mistakes: {self.mistake_count})"
+
+
+class VocabularyReviewEvent(models.Model):
+    review = models.ForeignKey(UserWeakWord, on_delete=models.CASCADE)
+    reviewed_at = models.DateTimeField()
+    next_review_at = models.DateTimeField()
+    correct = models.BooleanField()
+    interval_days = models.PositiveIntegerField()
+    mastered = models.BooleanField()
+
+    class Meta:
+        indexes = [models.Index(fields=["review", "-reviewed_at"], name="vocab_review_event_history")]
 
 
 class ParentTelegramLink(models.Model):
@@ -355,8 +378,32 @@ class UserLessonProgress(models.Model):
 # TEACHER WORKSPACE: COHORTS & HOMEWORK ASSIGNMENTS
 # ============================================================================
 
+class ClassroomArchive(models.Model):
+    group = models.OneToOneField(Group, primary_key=True, on_delete=models.CASCADE, db_constraint=False)
+    archived_at = models.DateTimeField(auto_now_add=True)
+
+
+class ClassroomEnrollment(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.DO_NOTHING, db_constraint=False)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["group", "student", "ended_at"], name="classroom_enroll_history")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student"], condition=models.Q(ended_at__isnull=True), name="unique_open_classroom_enrollment",
+            ),
+        ]
+
+
 class Cohort(models.Model):
     id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    classroom = models.OneToOneField(
+        Group, null=True, blank=True, on_delete=models.PROTECT, db_constraint=False,
+        related_name="homework_cohort",
+    )
     teacher = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -429,6 +476,11 @@ class HomeworkAssignment(models.Model):
         db_constraint=False,
         related_name="homework_assignments",
     )
+    vocabulary_set = models.ForeignKey(
+        VocabularySet, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="homework_assignments",
+    )
+    vocabulary_revision = models.JSONField(null=True, blank=True)
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -474,6 +526,64 @@ class HomeworkSubmission(models.Model):
     def __str__(self):
         status = "PASSED" if self.is_passed else "FAILED"
         return f"{self.student_id} - {self.assignment.title}: {self.score_percent}% ({status})"
+
+
+class VocabularyPracticeSession(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    vocabulary_set = models.ForeignKey(VocabularySet, on_delete=models.CASCADE)
+    mode = models.CharField(max_length=20, choices=QuizMode.choices)
+    questions = models.JSONField()
+    expires_at = models.DateTimeField()
+    legacy = models.BooleanField(default=False)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["student", "vocabulary_set", "mode", "legacy", "expires_at"],
+                         name="vocab_practice_lookup"),
+        ]
+
+
+class VocabularyFlashcardProgress(models.Model):
+    assignment = models.ForeignKey(HomeworkAssignment, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    familiarity = models.JSONField(default=dict)
+    word_order = models.JSONField(default=list)
+    last_word_id = models.CharField(max_length=255, blank=True, default="")
+    last_studied_at = models.DateTimeField(auto_now=True)
+    sync_revision = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["assignment", "student"], name="unique_vocabulary_flashcard_progress"),
+        ]
+
+
+class VocabularyFlashcardReceipt(models.Model):
+    progress = models.ForeignKey(VocabularyFlashcardProgress, on_delete=models.CASCADE)
+    op_id = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["progress", "op_id"], name="unique_vocabulary_flashcard_receipt"),
+        ]
+
+
+class VocabularyHomeworkSession(models.Model):
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    assignment = models.ForeignKey(HomeworkAssignment, on_delete=models.CASCADE)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False)
+    questions = models.JSONField()
+    mode = models.CharField(max_length=20, choices=QuizMode.choices)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = "VocabularyHomeworkSession"
+        constraints = [
+            models.UniqueConstraint(fields=("assignment", "student"), name="unique_vocabulary_homework_session"),
+        ]
 
 
 class PlacementTestResult(models.Model):

@@ -13,34 +13,35 @@ import {
   Upload,
   AlertCircle,
 } from "lucide-react";
+import type { VocabularyCollection, VocabularyCollectionWordInput } from "@/lib/group-contract.generated";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-export interface WordItem {
-  id?: string;
-  english: string;
-  uzbek: string;
+export interface WordItem extends VocabularyCollectionWordInput {
   part_of_speech?: string;
   context_sentence?: string;
 }
 
 export interface VocabularyBuilderProps {
   groupId?: string;
+  collection?: VocabularyCollection;
   onSuccess?: (createdSet: any) => void;
   onCancel?: () => void;
 }
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "IELTS", "MULTILEVEL"];
 
-export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBuilderProps) {
+export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: VocabularyBuilderProps) {
   const t = useTranslations("vocabularyBuilder");
-  const [title, setTitle] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [level, setLevel] = React.useState("B1");
-  const [isPublic, setIsPublic] = React.useState(true);
-  const [words, setWords] = React.useState<WordItem[]>([]);
+  const te = useTranslations("vocabularyEditor");
+  const [editWord, setEditWord] = React.useState<number | null>(null);
+  const [title, setTitle] = React.useState(collection?.title ?? "");
+  const [description, setDescription] = React.useState(collection?.description ?? "");
+  const [level, setLevel] = React.useState(collection?.level ?? "B1");
+  const [isPublic, setIsPublic] = React.useState(collection?.isPublic ?? true);
+  const [words, setWords] = React.useState<WordItem[]>(collection?.words ?? []);
 
   // Single word inputs
   const [engInput, setEngInput] = React.useState("");
@@ -128,9 +129,19 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
         level,
         groupId: groupId || undefined,
         isPublic,
-        words,
+        words: words.map(word => ({ ...word, synonyms: word.synonyms?.map(item => item.trim()).filter(Boolean) })),
       };
-      const res = await api.post<any>("/v1/vocabulary/sets", payload);
+      const res = collection
+        ? await api.patch<VocabularyCollection>(`/v1/vocabulary/sets/${encodeURIComponent(collection.id)}`, {
+            revision: collection.revision,
+            title: payload.title, description: description.trim(), level, isPublic,
+            words: payload.words.map(({ part_of_speech, context_sentence, ...word }) => ({
+              ...word,
+              partOfSpeech: word.partOfSpeech ?? part_of_speech,
+              contextSentence: word.contextSentence ?? context_sentence,
+            })),
+          })
+        : await api.post<VocabularyCollection>("/v1/vocabulary/sets", payload);
       if (onSuccess) {
         onSuccess(res);
       }
@@ -140,6 +151,10 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
       setIsSubmitting(false);
     }
   };
+
+  function updateWord(index: number, patch: Partial<WordItem>) {
+    setWords(current => current.map((word, i) => i === index ? { ...word, ...patch } : word));
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-6">
@@ -313,18 +328,21 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
               </thead>
               <tbody className="divide-y divide-border">
                 {words.map((w, idx) => (
+                  <React.Fragment key={w.id ?? idx}>
                   <tr key={idx} className="hover:bg-bg-subtle/50 transition-colors">
                     <td className="py-2.5 px-4 text-fg-muted font-mono text-xs">{idx + 1}</td>
                     <td className="py-2.5 px-4 font-medium text-fg">{w.english}</td>
                     <td className="py-2.5 px-4 text-brand font-medium">{w.uzbek}</td>
-                    <td className="py-2.5 px-4 text-xs text-fg-muted">{w.part_of_speech || "—"}</td>
+                    <td className="py-2.5 px-4 text-xs text-fg-muted">{w.partOfSpeech || w.part_of_speech || "—"}</td>
                     <td className="py-2.5 px-4 text-xs text-fg-muted max-w-xs truncate">
-                      {w.context_sentence || "—"}
+                      {w.contextSentence || w.context_sentence || "—"}
                     </td>
                     <td className="py-2.5 px-4 text-right">
+                      <button type="button" className="mr-2 underline" aria-expanded={editWord === idx}
+                        onClick={() => setEditWord(editWord === idx ? null : idx)}>{te("editWord")}</button>
                       <button
                         type="button"
-                        onClick={() => handleRemoveWord(idx)}
+                        onClick={() => { handleRemoveWord(idx); setEditWord(null); }}
                         className="text-fg-muted hover:text-danger transition-colors p-1"
                         aria-label={t("removeWord", { word: w.english })}
                       >
@@ -332,6 +350,30 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
                       </button>
                     </td>
                   </tr>
+                  {editWord === idx && <tr><td colSpan={6} className="p-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {([
+                        ["english", t("colEnglish")], ["uzbek", t("colUzbek")],
+                        ["definition", te("definition")], ["contextSentence", t("colContext")],
+                        ["partOfSpeech", t("colPos")], ["pronunciation", te("pronunciation")],
+                        ["audioUrl", te("audio")],
+                      ] as const).map(([key, label]) => (
+                        <label className="grid gap-1" key={key}>{label}
+                          <Input value={w[key] ?? (key === "contextSentence" ? w.context_sentence : key === "partOfSpeech" ? w.part_of_speech : "") ?? ""}
+                            onChange={event => updateWord(idx, { [key]: event.target.value })} />
+                        </label>
+                      ))}
+                      <label className="grid gap-1">{te("synonyms")}
+                        <Input value={(w.synonyms ?? []).join(",")} onChange={event => updateWord(idx, { synonyms: event.target.value.split(",") })} />
+                      </label>
+                      <label className="grid gap-1">{te("wordLevel")}
+                        <select className="rounded-field border border-border bg-surface p-2" value={w.level ?? ""} onChange={event => updateWord(idx, { level: event.target.value })}>
+                          <option value="">{te("inherit")}</option>{LEVELS.map(level => <option key={level}>{level}</option>)}
+                        </select>
+                      </label>
+                    </div>
+                  </td></tr>}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -356,7 +398,7 @@ export function VocabularyBuilder({ groupId, onSuccess, onCancel }: VocabularyBu
           disabled={isSubmitting || words.length === 0}
           className="bg-brand hover:bg-brand-hover text-brand-fg px-6 font-semibold shadow-lg"
         >
-          {isSubmitting ? t("saving") : t("publish")}
+          {isSubmitting ? t("saving") : collection ? te("save") : t("publish")}
         </Button>
       </div>
 

@@ -191,6 +191,10 @@ try:
               'low-confidence AI does not project graded answers')
         view=request('student','/v1/assessment/attempts/'+low_id)
         check(view['overall_band'] is None, 'unapproved AI score is not exposed as overall band')
+        student_proposal = view['assessments'][0]
+        check(all(student_proposal[field] is None for field in (
+            'evaluation', 'aiScore', 'confidence', 'finalScore', 'finalResult', 'approvedFeedback',
+        )) and 'diagnosticFeedback' not in student_proposal, 'unapproved AI diagnostics and scores stay private')
         MockAttempt.objects.filter(id=low_id).update(status='completed')
         request('student','/v1/mock/attempts/'+low_id+'/certificate',None,409)
         low_review='/v1/assessment/jobs/'+low_job.id+'/review'
@@ -208,7 +212,13 @@ try:
         check(ai_attempt.overall_score is None and ai_attempt.cefr_level is None,'AI scoped practice never invents overall or CEFR certification')
         ai_student=request('student','/v1/assessment/attempts/'+ai_id)
         ai_teacher=request('teacher','/v1/assessment/attempts/'+ai_id)
-        check(ai_student==ai_teacher, 'teacher and student see identical persisted AI results')
+        check(all(job['evaluation'] for job in ai_teacher['assessments']), 'teacher can review provider evaluations')
+        check(all(job['evaluation'] is None for job in ai_student['assessments']), 'provider evaluations stay private after results publish')
+        published_teacher = {
+            **ai_teacher,
+            'assessments': [{**job, 'evaluation': None} for job in ai_teacher['assessments']],
+        }
+        check(ai_student==published_teacher, 'teacher and student see the same published AI results')
         check(MockAnswer.objects.get(attempt_id=ai_id,question_id=writing[0]).response==original,'AI grading preserves the original candidate response')
         ai_job=ai_jobs['writing'];review='/v1/assessment/jobs/'+ai_job.id+'/review'
         request('teacher',review,dict(action='OVERRIDE',expectedVersion=ai_job.version,reason='Teacher heard and reviewed the work',parts=[dict(id=p['id'],rawScore=4) for p in ai_job.input_snapshot['parts']]),201)

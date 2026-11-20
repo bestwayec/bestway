@@ -331,7 +331,7 @@ export function GroupAiRanking({ groupId }: { groupId: string }) {
   const [skill, setSkill] = React.useState<AiRankingSkill>("writing");
   const options = useGroupAiRanking(groupId);
   const groupQ = useGroupDetail(groupId);
-  const phoneMap = new Map((groupQ.data?.students ?? []).map((s) => [s.studentId, s.phone]));
+  const phoneMap = new Map((groupQ.data?.students ?? []).map((s) => [s.studentId, s.phone ?? ""]));
   const groupName = groupQ.data?.name ?? options.data?.group?.name ?? "group";
   const exams = options.data?.exams ?? [];
   const selectedExamId = exams.some((exam) => exam.id === chosenExamId) ? chosenExamId : exams[0]?.id;

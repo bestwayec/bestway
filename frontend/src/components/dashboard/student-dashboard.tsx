@@ -5,11 +5,13 @@ import {
   AlertCircle,
   ArrowRight,
   Award,
+  BookOpen,
   Check,
   CheckCircle2,
   Copy,
   Play,
   Trophy,
+  Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -41,8 +43,8 @@ export function StudentDashboard() {
   const tm = useTranslations("mock");
 
   const { data: me, isLoading: meLoading, refetch } = useMe();
-  const { data: attempts, isLoading: attemptsLoading } = useMyMockAttempts();
-  const { data: mockExams, isLoading: examsLoading } = useMockExams();
+  const { data: attempts, isError: attemptsFailed } = useMyMockAttempts();
+  const { data: mockExams, isPending: examsLoading, isError: examsFailed, refetch: refetchExams } = useMockExams();
   const { data: prediction } = useStudentScorePrediction();
 
   const [copied, setCopied] = React.useState(false);
@@ -94,8 +96,8 @@ export function StudentDashboard() {
   }, [mockExams]);
 
   const completedCount = React.useMemo(() => {
-    if (!attempts) return 0;
-    return attempts.filter((a) => a.status === "completed" || a.status === "grading").length;
+    if (!attempts) return "—";
+    return attempts.filter((a) => a.status === "completed").length;
   }, [attempts]);
 
   const estimatedLevel = React.useMemo(() => {
@@ -121,7 +123,7 @@ export function StudentDashboard() {
       : latestResult.overallBand != null ? latestResult.overallBand.toFixed(1) : "—"
     : "—";
 
-  if (meLoading || attemptsLoading || examsLoading) {
+  if (meLoading) {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         <PageHeader title={t("greeting", { name: firstName || "..." })} />
@@ -154,7 +156,11 @@ export function StudentDashboard() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {/* 1. Yuqorida "Salom, {ism}" */}
-      <PageHeader title={t("greeting", { name: firstName })} />
+      <PageHeader title={t("greeting", { name: firstName })} description={profile.groupName ?? ts("noGroup")}
+        actions={<Button asChild variant="outline" className="min-h-11">
+          <Link href="/vocabulary"><BookOpen aria-hidden />{tn("vocabulary")}</Link>
+        </Button>}
+      />
 
       {!profile.isApproved && (
         <div className="flex items-start gap-3 rounded-card border border-warning-border bg-warning-bg/40 px-4 py-3 text-sm">
@@ -166,7 +172,12 @@ export function StudentDashboard() {
       <NamePromptCard />
 
       {/* 2. Today's plan first: continue the open exam, homework, words to review, latest result */}
-      <TodayCard />
+      <div className="grid min-w-0 gap-4 lg:grid-cols-5">
+        <div className="min-w-0 lg:col-span-3"><TodayCard /></div>
+        <div id="assignments" className="min-w-0 scroll-mt-20 lg:col-span-2">
+          <StudentAssignmentsWidget />
+        </div>
+      </div>
 
       {/* Three real numbers: latest result, estimated level, completed tests */}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -178,10 +189,13 @@ export function StudentDashboard() {
           icon={Trophy}
         />
         <StatTile label={ts("estimatedLevel")} value={estimatedLevel} icon={Award} />
-        <StatTile label={ts("completedTests")} value={completedCount} icon={CheckCircle2} />
+        <StatTile label={ts("completedTests")} value={attemptsFailed ? "—" : completedCount}
+          hint={attemptsFailed ? tc("unknownError") : undefined} icon={CheckCircle2} />
       </div>
 
-      {recommendedExam ? (
+      {examsLoading ? <Skeleton className="h-32 rounded-card" /> : examsFailed ? (
+        <ErrorState title={tc("unknownError")} action={<Button variant="outline" onClick={() => void refetchExams()}>{tc("retry")}</Button>} />
+      ) : recommendedExam ? (
         <Card className="p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
@@ -241,11 +255,6 @@ export function StudentDashboard() {
         {/* Live Exam Room PIN */}
         <LiveExamPinCard />
 
-        {/* O'qituvchi topshiriqlari */}
-        <div id="assignments" className="scroll-mt-20">
-        <StudentAssignmentsWidget />
-      </div>
-
         {/* Guruh, ballar va ota-ona bog'lash kodi */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Bog'lash kodi */}
@@ -276,7 +285,7 @@ export function StudentDashboard() {
           <Card className="rounded-card border border-border bg-surface p-5">
             <div className="flex flex-col justify-between h-full gap-3">
               <div>
-                <p className="text-sm font-medium text-fg">{tc("group")}</p>
+                <p className="flex items-center gap-2 text-sm font-medium text-fg"><Users className="size-4" aria-hidden />{tc("group")}</p>
                 <p className="mt-1 text-sm text-fg-muted">
                   {profile.groupName ?? ts("noGroup")}
                 </p>
