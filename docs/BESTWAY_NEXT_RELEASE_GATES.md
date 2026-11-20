@@ -1,4 +1,17 @@
-# BESTWAY NEXT release gates for Stages 01–03
+# BESTWAY NEXT release gates
+
+## Current decision · 2026-11-20
+
+| Gate | Status | Acceptance requirement |
+|---|---|---|
+| STAGE 04 FEATURES | PARTIAL | Finish protected assessment review and end-to-end assigned-exam acceptance. |
+| SECURITY | PARTIAL | Complete final-client account lifecycle, shared-profile storage and revocation acceptance. |
+| NATIVE ACCEPTANCE | PARTIAL | Complete package interaction in Linux and physical Windows/Android acceptance. |
+| PRODUCTION READINESS | BLOCKED | Close the release-critical gates, including exact-head Prisma and Django migration evidence and packaged Linux login and recovery. |
+
+The local Prisma engine checksum request returned HTTP 403. Genuine Prisma deploy, Django migration and the staged upgrade passed on a hosted run for the first repair commit. Check the workflow on the exact latest backend PR head. Keep both PRs in draft pending final acceptance. [Independent Stage 04 audit and remediation](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md) · [Backend PR checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop PR checks](https://github.com/bestwayec/bw-tauri/pull/38/checks)
+
+## Historical Stage 01–03 verification
 
 This record covers the existing draft PRs on `feat/bestway-next-00-03`. The backend and website entered closure at `8d80732705f83c4c5347b7c5d1d2f6ba702521b6` and the desktop at `8697fd492506daa5aa4500fa2ba9ff35289386c4`. Closure implementation commits are `b264d57` and `f0eb740` on Bestway and `a80df09` on desktop. The closing commit adds signed-review revision checking and documentation. The Checks pages show results for the selected commit. [Bestway PR #206](https://github.com/bestwayec/bestway/pull/206) · [Desktop PR #38](https://github.com/bestwayec/bw-tauri/pull/38)
 
