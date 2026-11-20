@@ -552,10 +552,22 @@ class VocabularyFlashcardProgress(models.Model):
     word_order = models.JSONField(default=list)
     last_word_id = models.CharField(max_length=255, blank=True, default="")
     last_studied_at = models.DateTimeField(auto_now=True)
+    sync_revision = models.PositiveBigIntegerField(default=0)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["assignment", "student"], name="unique_vocabulary_flashcard_progress"),
+        ]
+
+
+class VocabularyFlashcardReceipt(models.Model):
+    progress = models.ForeignKey(VocabularyFlashcardProgress, on_delete=models.CASCADE)
+    op_id = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["progress", "op_id"], name="unique_vocabulary_flashcard_receipt"),
         ]
 
 

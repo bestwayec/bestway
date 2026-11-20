@@ -3081,6 +3081,7 @@
       "doTasks": "O'ng tomondagi topshiriqlarni bajaring."
     },
     "assignments": {
+      "examUnavailable": "Biriktirilgan imtihon hozir mavjud emas.",
       "codeRequired": "Taklif kodini kiriting",
       "joined": "“{name}” guruhiga a'zo bo'ldingiz.",
       "codeInvalid": "Taklif kodi noto'g'ri yoki topilmadi",

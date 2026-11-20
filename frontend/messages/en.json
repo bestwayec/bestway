@@ -3081,6 +3081,7 @@
       "doTasks": "Complete the tasks on the right."
     },
     "assignments": {
+      "examUnavailable": "This assigned exam is unavailable.",
       "codeRequired": "Enter the invite code",
       "joined": "You joined “{name}”.",
       "codeInvalid": "The invite code is wrong or was not found",

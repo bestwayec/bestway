@@ -18,7 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,6 +37,8 @@ export interface StudentAssignmentItem {
   lesson_order?: number | null;
   exam_id?: string | null;
   exam_title?: string | null;
+  can_launch_exam?: boolean;
+  exam_attempt_id?: string | null;
   vocabulary_set_id?: string | null;
   deadline: string;
   min_pass_percent: number;
@@ -51,8 +53,26 @@ export interface StudentAssignmentItem {
 
 export function StudentAssignmentsWidget() {
   const tu = useTranslations("uiText");
+  const router = useRouter();
+  const [openingId, setOpeningId] = React.useState<string | null>(null);
+
+  async function openAssignedExam(assignment: StudentAssignmentItem) {
+    setOpeningId(assignment.id);
+    try {
+      const exam = await apiClient.get<{ id: string }>(`/student/assignments/${encodeURIComponent(assignment.id)}/exam`);
+      if (exam.id !== assignment.exam_id) throw new Error("Assignment changed");
+      router.push(`/mock/${encodeURIComponent(exam.id)}`);
+    } catch {
+      toast.error(tu("assignments.examUnavailable"));
+      void fetchAssignments();
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
   const [assignments, setAssignments] = React.useState<StudentAssignmentItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [loadFailed, setLoadFailed] = React.useState(false);
   const [joinModalOpen, setJoinModalOpen] = React.useState(false);
   const [inviteCode, setInviteCode] = React.useState("");
   const [isJoining, setIsJoining] = React.useState(false);
@@ -60,10 +80,12 @@ export function StudentAssignmentsWidget() {
   const fetchAssignments = React.useCallback(async () => {
     try {
       setIsLoading(true);
+      setLoadFailed(false);
       const res = await apiClient.get<StudentAssignmentItem[]>("/student/my-assignments");
-      setAssignments(res || []);
+      if (!Array.isArray(res)) throw new Error("Invalid assignment list");
+      setAssignments(res);
     } catch {
-      // Gracefully handle unauthenticated or empty states
+      setLoadFailed(true);
       setAssignments([]);
     } finally {
       setIsLoading(false);
@@ -120,7 +142,7 @@ export function StudentAssignmentsWidget() {
             <p className="text-[11px] text-fg-muted">
               {pendingAssignments.length > 0
                 ? tu("assignments.pending", { count: pendingAssignments.length })
-                : tu("assignments.allDone")}
+                : loadFailed ? null : tu("assignments.allDone")}
             </p>
           </div>
         </div>
@@ -137,7 +159,12 @@ export function StudentAssignmentsWidget() {
       </div>
 
       {/* Assignment List */}
-      {assignments.length === 0 ? (
+      {loadFailed ? (
+        <div role="alert" className="text-sm text-fg-muted">
+          {tu("assignments.loadFailed")}{" "}
+          <Button variant="ghost" onClick={() => void fetchAssignments()}>{tu("assignments.reload")}</Button>
+        </div>
+      ) : assignments.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
           <GraduationCap className="h-8 w-8 text-brand/80 mb-2" />
           <p className="text-xs font-medium text-fg">
@@ -166,8 +193,8 @@ export function StudentAssignmentsWidget() {
               actionUrl = `/vocabulary/assignment/${encodeURIComponent(a.id)}`;
             } else if (a.lesson_order) {
               actionUrl = `/videos?lesson=lesson-grammar-${a.lesson_order}`;
-            } else if (a.exam_id) {
-              actionUrl = `/mock/${a.exam_id}`;
+            } else if (a.exam_attempt_id) {
+              actionUrl = `/mock/attempt/${encodeURIComponent(a.exam_attempt_id)}`;
             }
 
             return (
@@ -218,29 +245,19 @@ export function StudentAssignmentsWidget() {
                   </div>
                 </div>
 
-                {/* Direct Action Button */}
-                <Link href={actionUrl}>
-                  <Button
-                    size="sm"
-                    className={`text-xs h-7 gap-1 font-medium ${
-                      a.is_submitted
-                        ? "bg-surface-hover hover:bg-surface text-fg-muted"
-                        : "bg-brand hover:bg-brand-hover text-brand-fg"
-                    }`}
-                  >
-                    {a.is_submitted ? (
-                      <>
-                        <CheckCircle2 className="h-3 w-3 text-brand" />
-                        {tu("assignments.review")}
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3 w-3 fill-current" />
-                        {tu("assignments.start")}
-                      </>
-                    )}
+                {a.exam_id && (a.can_launch_exam ?? (!a.is_overdue && !a.is_submitted)) ? (
+                  <Button size="sm" disabled={openingId !== null} onClick={() => void openAssignedExam(a)}>
+                    <Play className="h-3 w-3" />
+                    {tu("assignments.start")}
                   </Button>
-                </Link>
+                ) : (!a.exam_id || a.exam_attempt_id) && (
+                  <Button asChild size="sm" variant={a.is_submitted ? "outline" : "primary"}>
+                    <Link href={actionUrl}>
+                      {a.is_submitted ? <CheckCircle2 className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                      {tu(a.is_submitted ? "assignments.review" : "assignments.start")}
+                    </Link>
+                  </Button>
+                )}
               </div>
             );
           })}

@@ -1,10 +1,11 @@
 """Teacher workspace: Cohorts, assignments, and student monitoring views."""
 from __future__ import annotations
 
+import math
 import random
 import string
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, F, OuterRef, Q, Subquery
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework.decorators import api_view, permission_classes
@@ -432,6 +433,7 @@ def student_my_assignments_view(request):
     List all active/overdue assignments from the cohorts the student belongs to.
     """
     require_authenticated(request)
+    require_role(request, "student")
 
     assignments_qs = HomeworkAssignment.objects.filter(
         classrooms.student_homework_scope(request.user.id),
@@ -482,6 +484,8 @@ def student_my_assignments_view(request):
             "lesson_order": a.lesson.order_index if a.lesson else None,
             "exam_id": a.exam_id,
             "exam_title": a.exam.title if a.exam else None,
+            "can_launch_exam": bool(a.exam and a.exam.is_published and a.deadline >= now and not is_submitted),
+            "exam_attempt_id": sub.attempt_id if a.exam_id and sub and sub.source == "exam_attempt" else None,
             "vocabulary_set_id": getattr(a, "vocabulary_set_id", None),
             "deadline": a.deadline.isoformat(),
             "min_pass_percent": a.min_pass_percent,
@@ -494,6 +498,24 @@ def student_my_assignments_view(request):
         })
 
     return success(results)
+
+
+@api_view(["GET"])
+def student_assignment_exam_view(request, assignment_id: str):
+    from . import mock_catalog
+
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = HomeworkAssignment.objects.filter(
+        classrooms.student_homework_scope(actor.id), pk=assignment_id, exam__is_published=True,
+    ).select_related("exam").first()
+    if assignment is None or mock_catalog.access_for(actor, assignment.exam) != "granted":
+        raise ContractAPIException("NOT_FOUND", "Imtihon topshirig‘i topilmadi", 404)
+    if assignment.deadline < timezone.now():
+        raise ContractAPIException("ASSIGNMENT_EXPIRED", "Topshiriq muddati o‘tgan", 409)
+    if HomeworkSubmission.objects.filter(assignment=assignment, student_id=actor.id).exists():
+        raise ContractAPIException("ASSIGNMENT_ALREADY_SUBMITTED", "Topshiriq topshirilgan", 409)
+    return success({"id": assignment.exam_id, "type": assignment.exam.type})
 
 
 @api_view(["POST"])
@@ -556,105 +578,171 @@ def teacher_grade_assignment_view(request, assignment_id: str):
     return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))
 
 
+_MANUAL_SKILL = "question__group__section__skill"
+_MANUAL_SKILLS = ("writing", "speaking")
+
+
+def _grading_attempts(actor):
+    from apps.legacy_schema.models import MockAttempt
+    from .models import ClassroomEnrollment
+
+    attempts = MockAttempt.objects.filter(status__in=("grading", "completed"))
+    if actor.role in ("teacher", "instructor"):
+        # The classroom history contract treats an undated legacy membership
+        # as unknown. A class-owned assignment supplies scope for those rows.
+        enrolled = ClassroomEnrollment.objects.filter(
+            student_id=OuterRef("student_id"),
+            group_id=OuterRef("student__group_id"),
+            ended_at__isnull=True,
+            started_at__isnull=False,
+        )
+        assigned = HomeworkAssignment.objects.filter(
+            cohort__classroom_id=OuterRef("student__group_id"),
+            exam_id=OuterRef("exam_id"), created_at__lte=OuterRef("started_at"),
+        )
+        attempts = attempts.filter(student__group__teacher_id=actor.id).filter(
+            Exists(enrolled.filter(started_at__lte=OuterRef("started_at"))) | (~Exists(enrolled) & Exists(assigned))
+        )
+    return attempts
+
+
+def _grading_evidence():
+    from apps.legacy_schema.models import MockAnswer
+
+    return (
+        MockAnswer.objects.filter(
+            question__group__section__exam_id=F("attempt__exam_id"),
+            **{f"{_MANUAL_SKILL}__in": _MANUAL_SKILLS},
+        )
+        .filter(
+            Q(response__regex=r"\S")
+            | ~Q(audio_key="") & Q(audio_key__isnull=False)
+            | Q(rubric_scores__imageKeys__gt=[])
+            | Q(rubric_scores__imageUrls__gt=[])
+        )
+    )
+
+
+def _page_number(params, name, default, minimum, maximum):
+    try:
+        return min(max(int(params.get(name, default)), minimum), maximum)
+    except (ValueError, TypeError):
+        return default
+
+
 @api_view(["GET"])
 def teacher_submissions_view(request):
-    """
-    GET /api/v1/teacher/submissions
-    Returns the pending (and recently graded) submissions awaiting assessment for this teacher's students.
-    Strictly enforces authorization: teachers only see attempts of students enrolled in their managed groups.
-    """
+    from .mock_attempts import versioned
+
     actor = require_authenticated(request)
     require_role(request, "teacher", "instructor", "admin", "super_admin")
+    status = request.query_params.get("status", "pending")
+    skill = request.query_params.get("skill")
+    if status not in ("pending", "graded") or (skill and skill not in _MANUAL_SKILLS):
+        raise ContractAPIException("VALIDATION_ERROR", "Noto‘g‘ri mahorat yoki holat", 400)
 
-    from apps.legacy_schema.models import MockAttempt, MockAnswer
+    evidence = _grading_evidence()
+    same_skill = evidence.filter(attempt_id=OuterRef("attempt_id"), **{_MANUAL_SKILL: OuterRef(_MANUAL_SKILL)})
+    pending = same_skill.filter(is_graded=False)
+    rows = evidence.filter(attempt__in=_grading_attempts(actor))
+    if skill:
+        rows = rows.filter(**{_MANUAL_SKILL: skill})
+    if status == "pending":
+        rows = rows.filter(is_graded=False, pk=Subquery(pending.order_by("question_id", "pk").values("pk")[:1]))
+    else:
+        rows = rows.filter(
+            ~Exists(pending), pk=Subquery(same_skill.order_by("question_id", "pk").values("pk")[:1]),
+        )
 
-    attempts_qs = MockAttempt.objects.select_related("exam", "student__user", "student__group").order_by("-submitted_at")
-
-    # Filter by teacher's groups unless admin/super_admin
-    if getattr(actor, "role", "") in ("teacher", "instructor"):
-        attempts_qs = attempts_qs.filter(student__group__teacher_id=actor.id)
-
-    status_filter = request.query_params.get("status", "pending")
-    if status_filter == "pending":
-        attempts_qs = attempts_qs.filter(status="grading")
-    elif status_filter == "graded":
-        attempts_qs = attempts_qs.filter(status="completed")
-
-    skill_filter = request.query_params.get("skill")
-
-    try:
-        offset = max(int(request.query_params.get("offset", 0)), 0)
-    except (ValueError, TypeError):
-        offset = 0
-
-    try:
-        limit = min(max(int(request.query_params.get("limit", 50)), 1), 100)
-    except (ValueError, TypeError):
-        limit = 50
-
-    attempts = list(attempts_qs[offset : offset + limit])
-
-    results = []
-    for att in attempts:
-        user = getattr(att.student, "user", None) if att.student else None
-        student_name = getattr(user, "name", "") or getattr(att.student, "full_name", "") or "O‘quvchi"
-        student_phone = getattr(user, "phone", "") or getattr(user, "phone_number", "") or ""
-        exam_title = getattr(att.exam, "title", "") or "Imtihon"
-        raw_type = getattr(att.exam, "type", "ielts")
-        exam_type = "MULTILEVEL" if "multilevel" in str(raw_type).lower() else "IELTS"
-
-        answers = list(MockAnswer.objects.filter(attempt_id=att.id).select_related("question"))
-        writing_answers = [ans for ans in answers if getattr(ans.question, "section_type", "") == "writing" or getattr(ans.question, "skill", "") == "writing"]
-        speaking_answers = [ans for ans in answers if getattr(ans.question, "section_type", "") == "speaking" or getattr(ans.question, "skill", "") == "speaking" or ans.audio_key]
-
-        skills_to_add = []
-        if not skill_filter or skill_filter == "writing":
-            if writing_answers or "writing" in (att.submitted_sections or []):
-                skills_to_add.append("writing")
-        if not skill_filter or skill_filter == "speaking":
-            if speaking_answers or "speaking" in (att.submitted_sections or []):
-                skills_to_add.append("speaking")
-        if not skills_to_add:
-            skills_to_add = ["writing"]
-
-        for sk in skills_to_add:
-            ans = (writing_answers[0] if writing_answers else None) if sk == "writing" else (speaking_answers[0] if speaking_answers else None)
-            rubric = ans.rubric_scores if (ans and isinstance(ans.rubric_scores, dict)) else {}
-            results.append({
-                "id": att.id if len(skills_to_add) == 1 else f"{att.id}_{sk}",
-                "studentName": student_name,
-                "studentPhone": student_phone,
-                "examTitle": exam_title,
-                "examType": exam_type,
-                "skill": sk,
-                "subType": f"Task ({sk.title()})",
-                "submittedAt": att.submitted_at.isoformat() if att.submitted_at else (att.started_at.isoformat() if att.started_at else ""),
-                "status": "pending" if att.status == "grading" else "graded",
-                "prompt": getattr(ans.question, "prompt", "") if ans and ans.question else "",
-                "responseText": ans.response if ans else "",
-                "audioUrl": ans.audio_key if ans else "",
-                "criteriaScores": {
-                    "c1": rubric.get("c1", rubric.get("TR", rubric.get("FC", 0))),
-                    "c2": rubric.get("c2", rubric.get("CC", rubric.get("LR", 0))),
-                    "c3": rubric.get("c3", rubric.get("LR", rubric.get("GRA", 0))),
-                    "c4": rubric.get("c4", rubric.get("GRA", rubric.get("PR", 0))),
-                },
-                "overallBand": att.overall_band,
-                "teacherFeedback": ans.feedback if (ans and ans.feedback) else "",
-            })
-
-    return success(results)
+    params = request.query_params
+    offset = _page_number(params, "offset", 0, 0, 2**31 - 1)
+    limit = _page_number(params, "limit", 50, 1, 100)
+    with_total = params.get("withTotal") == "1"
+    total = rows.count() if with_total else None
+    page = rows.select_related(
+        "attempt__exam", "attempt__student__user", "question__group__section",
+    ).order_by(F("attempt__submitted_at").desc(nulls_last=True), "attempt_id", _MANUAL_SKILL)
+    items = []
+    for answer in page[offset:offset + limit]:
+        attempt = answer.attempt
+        question = answer.question
+        current_skill = question.group.section.skill
+        raw_score = versioned(attempt)
+        maximum = question.group.max_score if raw_score and question.group.max_score is not None else question.points
+        rubric = answer.rubric_scores if isinstance(answer.rubric_scores, dict) else {}
+        items.append({
+            "id": f"{attempt.pk}_{current_skill}",
+            "questionId": question.pk,
+            "studentName": attempt.student.user.name,
+            "examTitle": attempt.exam.title,
+            "examType": "MULTILEVEL" if "multilevel" in attempt.exam.type.lower() else "IELTS",
+            "skill": current_skill,
+            "subType": f"Task ({current_skill.title()})",
+            "submittedAt": (attempt.submitted_at or attempt.started_at).isoformat(),
+            "status": status,
+            "prompt": question.prompt,
+            "responseText": answer.response,
+            "hasRecording": bool(answer.audio_key),
+            "hasHandwriting": bool(rubric.get("imageKeys") or rubric.get("imageUrls")),
+            "rawScore": raw_score,
+            "maxScore": maximum,
+            "criteriaScores": dict(c1=0, c2=0, c3=0, c4=0),
+            "overallBand": answer.score,
+        })
+    return success({"items": items, "total": total} if with_total else items)
 
 
 @api_view(["POST"])
+@transaction.atomic
 def teacher_grade_submission_view(request, submission_id: str):
-    """
-    POST /api/v1/teacher/submissions/<submission_id>/grade
-    Grades an attempt submission or homework submission.
-    """
-    require_authenticated(request)
-    require_role(request, "teacher", "instructor", "admin", "super_admin")
+    from . import mock_grading
 
-    actual_attempt_id = submission_id.split("_")[0]
-    from . import assessment_views
-    return assessment_views.teacher_grade(request, actual_attempt_id)
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
+    attempt_id, separator, skill = submission_id.rpartition("_")
+    if not separator or not attempt_id or skill not in _MANUAL_SKILLS:
+        raise ContractAPIException("INVALID_SUBMISSION_ID", "Topshiriq identifikatori noto‘g‘ri", 400)
+    # The canonical review, grading and worker paths acquire the same attempt lock.
+    attempt = _grading_attempts(actor).select_for_update(of=("self",)).filter(pk=attempt_id).first()
+    if attempt is None:
+        raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+    if actor.role in ("teacher", "instructor"):
+        from apps.legacy_schema.models import StudentProfile
+
+        StudentProfile.objects.select_for_update().only("pk").get(pk=attempt.student_id)
+        if not _grading_attempts(actor).filter(pk=attempt.pk).exists():
+            raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+
+    if not isinstance(request.data, dict):
+        raise ContractAPIException("VALIDATION_ERROR", "Baholash ma’lumotlari kerak", 400)
+    question_id = request.data.get("questionId")
+    if not isinstance(question_id, str) or not question_id:
+        raise ContractAPIException("VALIDATION_ERROR", "Savol identifikatori kerak", 400)
+    skill_answers = _grading_evidence().filter(attempt_id=attempt.pk, **{_MANUAL_SKILL: skill})
+    answer = skill_answers.filter(question_id=question_id).first()
+    if answer is None:
+        raise ContractAPIException("NOT_FOUND", "Topshiriq topilmadi", 404)
+    if answer.is_graded:
+        raise ContractAPIException("ALREADY_GRADED", "Bu javob baholangan", 409)
+
+    # This queue renders text. Recordings and handwriting require the protected
+    # evidence reader in the established assessment review workflow.
+    rubric = answer.rubric_scores if isinstance(answer.rubric_scores, dict) else {}
+    if answer.audio_key or rubric.get("imageKeys") or rubric.get("imageUrls"):
+        raise ContractAPIException("REVIEW_REQUIRED", "Himoyalangan javobni tahlil oynasida tekshiring", 409)
+    score = request.data.get("score", request.data.get("overallBand"))
+    feedback = request.data.get("feedback")
+    if type(score) not in (int, float) or not 0 <= score <= 100 or not math.isfinite(score) or score * 2 % 1:
+        raise ContractAPIException("VALIDATION_ERROR", "Ball noto‘g‘ri", 400)
+    if feedback is not None and (not isinstance(feedback, str) or len(feedback) > 10000):
+        raise ContractAPIException("VALIDATION_ERROR", "Izoh noto‘g‘ri", 400)
+
+    grade = {"questionId": question_id, "score": score, "feedback": feedback}
+    criteria = request.data.get("criteriaScores")
+    if criteria is not None and not mock_grading.versioned(attempt):
+        names = ("ta", "cc", "lr", "gra") if skill == "writing" else ("fluency", "lexical", "grammar", "pronunciation")
+        if not isinstance(criteria, dict) or any(f"c{i}" not in criteria for i in range(1, 5)):
+            raise ContractAPIException("VALIDATION_ERROR", "Mezon ballari noto‘g‘ri", 400)
+        grade["rubricScores"] = {name: criteria[f"c{i}"] for i, name in enumerate(names, 1)}
+    result = mock_grading.grade(actor, attempt.pk, grade)
+    return success({**result, "submissionStatus": "pending" if skill_answers.filter(is_graded=False).exists() else "graded"})

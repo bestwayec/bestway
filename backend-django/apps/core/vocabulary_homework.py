@@ -1,5 +1,7 @@
 """Issue and score a single server-owned vocabulary practice session per assignment."""
 import csv
+import hashlib
+import json
 from itertools import chain
 from tempfile import SpooledTemporaryFile
 from types import SimpleNamespace
@@ -15,7 +17,7 @@ from common.api.exceptions import ContractAPIException
 
 from . import classrooms, vocabulary_collections, vocabulary_service
 from .domain_contracts import invalid, payload
-from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyFlashcardProgress, VocabularyHomeworkSession
+from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyFlashcardProgress, VocabularyFlashcardReceipt, VocabularyHomeworkSession
 from .teacher_views import require_authenticated, require_role, success
 
 
@@ -280,6 +282,7 @@ def export_results(extension, students, missed):
 
 
 @api_view(["GET"])
+@transaction.atomic
 def snapshot_view(request, assignment_id):
     actor = require_authenticated(request)
     require_role(request, "student")
@@ -287,126 +290,113 @@ def snapshot_view(request, assignment_id):
     return success(vocabulary_collections.assignment_revision(assignment))
 
 
-@api_view(["GET", "PATCH"])
-@transaction.atomic
-def flashcards_view(request, assignment_id):
-    actor = require_authenticated(request)
-    require_role(request, "student")
-    assignment = assignment_for_student(actor.id, assignment_id)
-    rev = vocabulary_collections.assignment_revision(assignment)
-    allowed = {word["id"] for word in rev["words"]}
-    progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
-    acknowledged = []
+_FLASHCARD_FIELDS = {"lastWordId", "wordId", "status", "order"}
+_FLASHCARD_BATCH = _FLASHCARD_FIELDS | {"mutations", "clientRevision"}
 
-    if request.method == "PATCH":
-        data = payload(request, {"lastWordId", "wordId", "status", "order", "mutations", "clientRevision"})
-        if not data:
-            invalid("Payload required")
 
-        progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
-
-        if "mutations" in data:
-            mutations = data["mutations"]
-            if not isinstance(mutations, list) or len(mutations) > 100:
-                invalid("Mutations must be a list of at most 100 items")
-            for op in mutations:
-                if not isinstance(op, dict):
-                    continue
-                op_id = op.get("opId")
-                if not op_id or not isinstance(op_id, str):
-                    continue
-                word_id = op.get("wordId")
-                status = op.get("status")
-                if word_id and word_id in allowed and status in ("known", "practice"):
-                    progress.familiarity[word_id] = status
-                if "lastWordId" in op and isinstance(op["lastWordId"], str) and op["lastWordId"] in allowed:
-                    progress.last_word_id = op["lastWordId"]
-                acknowledged.append(op_id)
-        elif ("wordId" in data) != ("status" in data):
-            invalid("Select a word or shuffle order")
-
-        for key in ("lastWordId", "wordId"):
-            if key in data and (not isinstance(data[key], str) or data[key] not in allowed):
-                invalid("Word does not belong to the assignment")
-        if "status" in data and data["status"] not in ("known", "practice"):
-            invalid("Invalid flashcard status")
-        if "order" in data:
-            order = data["order"]
-            if not isinstance(order, list) or len(order) != len(allowed) or not all(isinstance(word, str) for word in order) or set(order) != allowed:
-                invalid("Shuffle order must contain every assigned word once")
-            progress.word_order = order
-
-        if "lastWordId" in data:
-            progress.last_word_id = data["lastWordId"]
-        if "status" in data:
-            progress.familiarity[data["wordId"]] = data["status"]
-
-        progress.save()
-
-    res = {
+def _flashcard_state(progress, acknowledged=None):
+    result = {
         "lastWordId": progress.last_word_id if progress else "",
         "familiarity": progress.familiarity if progress else {},
         "order": progress.word_order if progress else [],
         "lastStudiedAt": progress.last_studied_at if progress else None,
-        "serverRevision": rev.get("revision", 1),
+        "serverRevision": progress.sync_revision if progress else 0,
     }
-    if acknowledged:
-        res["acknowledgedOpIds"] = acknowledged
-    return success(res)
+    if acknowledged is not None:
+        result["acknowledgedOpIds"] = acknowledged
+    return success(result)
+
+
+def _apply_flashcard_change(progress, change, allowed):
+    if not _FLASHCARD_FIELDS.intersection(change) or ("wordId" in change) != ("status" in change):
+        invalid("Select a word, study position or shuffle order")
+    for key in ("lastWordId", "wordId"):
+        if key in change and (not isinstance(change[key], str) or change[key] not in allowed):
+            invalid("Word does not belong to the assignment")
+    if "status" in change and change["status"] not in ("known", "practice"):
+        invalid("Invalid flashcard status")
+    if "order" in change:
+        order = change["order"]
+        if not isinstance(order, list) or len(order) != len(allowed) or not all(isinstance(word, str) for word in order) or set(order) != allowed:
+            invalid("Shuffle order must contain every assigned word once")
+        progress.word_order = order
+    if "lastWordId" in change:
+        progress.last_word_id = change["lastWordId"]
+    if "status" in change:
+        progress.familiarity[change["wordId"]] = change["status"]
+
+
+def _apply_flashcard_batch(progress, mutations, allowed):
+    if not isinstance(mutations, list) or not 1 <= len(mutations) <= 100:
+        invalid("Mutations must be a list of 1 to 100 items")
+    if progress.pk is None:
+        progress.save()
+    existing = {
+        receipt.op_id: receipt.fingerprint
+        for receipt in VocabularyFlashcardReceipt.objects.filter(progress=progress)
+        .filter(op_id__in=[
+            op["opId"] for op in mutations if isinstance(op, dict) and isinstance(op.get("opId"), str)
+        ])
+    }
+    acknowledged = {}
+    new_receipts = []
+    for op in mutations:
+        if not isinstance(op, dict) or op.keys() - (_FLASHCARD_FIELDS | {"opId", "timestamp"}):
+            invalid("Invalid flashcard mutation")
+        op_id = op.get("opId")
+        if not isinstance(op_id, str) or not 1 <= len(op_id) <= 100 or not op_id.strip():
+            invalid("Invalid flashcard operation identifier")
+        fields = {key: op[key] for key in _FLASHCARD_FIELDS if key in op}
+        fingerprint = hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
+        if op_id in existing:
+            if fingerprint != existing[op_id]:
+                raise ContractAPIException("OPERATION_CONFLICT", "Operation identifier has already been used", 409)
+        else:
+            _apply_flashcard_change(progress, fields, allowed)
+            new_receipts.append(VocabularyFlashcardReceipt(progress=progress, op_id=op_id, fingerprint=fingerprint))
+            existing[op_id] = fingerprint
+        acknowledged[op_id] = None
+    if new_receipts:
+        VocabularyFlashcardReceipt.objects.bulk_create(new_receipts)
+        progress.sync_revision += len(new_receipts)
+        progress.save()
+    return list(acknowledged)
+
+
+def _flashcards(request, assignment_id):
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    # The assignment lookup locks the student profile, covering the first write,
+    # the legacy PATCH path and concurrent writes from separate devices.
+    assignment = assignment_for_student(actor.id, assignment_id)
+    progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
+    if request.method == "GET":
+        return _flashcard_state(progress)
+
+    data = payload(request, _FLASHCARD_BATCH)
+    allowed = {word["id"] for word in vocabulary_collections.assignment_revision(assignment)["words"]}
+    progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
+    if "mutations" in data or request.method == "POST":
+        # Earlier clients also sent a top-level position/order copied from the
+        # whole local queue. Only the operations in this batch can be committed.
+        return _flashcard_state(progress, _apply_flashcard_batch(progress, data.get("mutations"), allowed))
+
+    _apply_flashcard_change(progress, data, allowed)
+    progress.sync_revision += 1
+    progress.save()
+    return _flashcard_state(progress)
+
+
+@api_view(["GET", "PATCH"])
+@transaction.atomic
+def flashcards_view(request, assignment_id):
+    return _flashcards(request, assignment_id)
 
 
 @api_view(["POST"])
 @transaction.atomic
 def flashcards_sync_view(request, assignment_id):
-    actor = require_authenticated(request)
-    require_role(request, "student")
-    assignment = assignment_for_student(actor.id, assignment_id)
-    rev = vocabulary_collections.assignment_revision(assignment)
-    allowed = {word["id"] for word in rev["words"]}
-
-    data = payload(request, {"mutations", "lastWordId", "order", "clientRevision"})
-    if not isinstance(data, dict):
-        invalid("Invalid sync payload")
-
-    mutations = data.get("mutations") or []
-    if not isinstance(mutations, list) or len(mutations) > 100:
-        invalid("Mutations must be a list of at most 100 items")
-
-    progress = VocabularyFlashcardProgress.objects.filter(assignment=assignment, student_id=actor.id).first()
-    progress = progress or VocabularyFlashcardProgress(assignment=assignment, student_id=actor.id)
-    acknowledged = []
-
-    for op in mutations:
-        if not isinstance(op, dict):
-            continue
-        op_id = op.get("opId")
-        if not op_id or not isinstance(op_id, str):
-            continue
-        word_id = op.get("wordId")
-        status = op.get("status")
-        if word_id and word_id in allowed and status in ("known", "practice"):
-            progress.familiarity[word_id] = status
-        if "lastWordId" in op and isinstance(op["lastWordId"], str) and op["lastWordId"] in allowed:
-            progress.last_word_id = op["lastWordId"]
-        acknowledged.append(op_id)
-
-    if "lastWordId" in data and isinstance(data["lastWordId"], str) and data["lastWordId"] in allowed:
-        progress.last_word_id = data["lastWordId"]
-    if "order" in data:
-        order = data["order"]
-        if isinstance(order, list) and len(order) == len(allowed) and set(order) == allowed:
-            progress.word_order = order
-
-    progress.save()
-
-    return success({
-        "lastWordId": progress.last_word_id,
-        "familiarity": progress.familiarity,
-        "order": progress.word_order,
-        "lastStudiedAt": progress.last_studied_at,
-        "acknowledgedOpIds": acknowledged,
-        "serverRevision": rev.get("revision", 1),
-    })
+    return _flashcards(request, assignment_id)
 
 
 @api_view(["GET"])

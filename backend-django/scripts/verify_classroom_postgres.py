@@ -6,7 +6,7 @@ from verify_group_contract_postgres import actor, transaction
 
 from django.utils import timezone
 
-from apps.core.models import ClassroomEnrollment, Cohort, HomeworkSubmission
+from apps.core.models import HomeworkAssignment, ClassroomEnrollment, Cohort, HomeworkSubmission
 from apps.legacy_schema.models import AssessmentJob, Attendance, MockAttempt, MockExam
 
 
@@ -16,7 +16,7 @@ def verify():
     other_id, other = actor("teacher")
     _, admin = actor("admin")
     student_id, student = actor("student")
-    second_id, _ = actor("student")
+    second_id, second_client = actor("student")
     assert teacher.post("/v1/groups", {"name": "Classroom journey"}, format="json").status_code == 201
     group_id = teacher.get("/v1/groups").json()["data"][0]["id"]
     group_url = f"/v1/groups/{group_id}"
@@ -76,6 +76,28 @@ def verify():
     assert [row["id"] for row in teacher.get(exam_choices, {"search": "History fixture"}).json()["data"]] == [exams[0].id]
     for exam, expected in zip(exams, (201, 400, 400), strict=True):
         assert teacher.post(task_url, {"title": exam.title, "exam_id": exam.id}, format="json").status_code == expected
+
+    duplicate_title = MockExam.objects.create(
+        id=str(uuid4()), title=exams[0].title, type="multilevel", profile="practice",
+        content_version=1, is_published=True, price=0, is_demo=False,
+        is_free_for_approved=False, created_at=now, updated_at=now,
+    )
+    for assigned in (exams[0], duplicate_title):
+        existing = HomeworkAssignment.objects.filter(exam=assigned).first()
+        if existing is None:
+            response = teacher.post(task_url, {"title": assigned.title, "exam_id": assigned.pk}, format="json")
+            assert response.status_code == 201, response.data
+            existing = HomeworkAssignment.objects.get(pk=response.json()["data"]["id"])
+        exam_path = f"/v1/student/assignments/{existing.pk}/exam"
+        assert student.get(exam_path).json()["data"] == {"id": assigned.pk, "type": assigned.type}
+        assert second_client.get(exam_path).status_code == 404
+        assert teacher.get(exam_path).status_code == 403
+        MockExam.objects.filter(pk=assigned.pk).update(is_published=False)
+        assert student.get(exam_path).status_code == 404
+        MockExam.objects.filter(pk=assigned.pk).update(is_published=True)
+        HomeworkAssignment.objects.filter(pk=existing.pk).update(deadline=now - timedelta(minutes=1))
+        assert student.get(exam_path).status_code == 409
+        HomeworkAssignment.objects.filter(pk=existing.pk).update(deadline=now + timedelta(days=1))
 
     attempts = [MockAttempt.objects.create(
         id=str(uuid4()), exam=exams[0], student_id=student_id, status="completed",

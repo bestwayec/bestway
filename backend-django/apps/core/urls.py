@@ -770,6 +770,8 @@ urlpatterns = [
     path('teacher/submissions/<str:submission_id>/grade/', teacher_views.teacher_grade_submission_view),
     path('v1/teacher/submissions/<str:submission_id>/grade', teacher_views.teacher_grade_submission_view),
     path('v1/teacher/submissions/<str:submission_id>/grade/', teacher_views.teacher_grade_submission_view),
+    path('student/assignments/<str:assignment_id>/exam', teacher_views.student_assignment_exam_view),
+    path('v1/student/assignments/<str:assignment_id>/exam', teacher_views.student_assignment_exam_view),
     path('student/my-assignments', teacher_views.student_my_assignments_view),
     path('student/my-assignments/', teacher_views.student_my_assignments_view),
     path('v1/student/my-assignments', teacher_views.student_my_assignments_view),

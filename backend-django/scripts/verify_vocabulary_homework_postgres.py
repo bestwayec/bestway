@@ -105,16 +105,31 @@ def verify():
     assert VocabularyAttempt.objects.filter(student_id=student_id, set_id=set_id).count() == 1
     assert student.post(path, {}, format="json").json()["data"]["result"] == result
 
-    # Verify offline batch sync and durable mutation acknowledgement
-    sync_resp = student.post(progress + "/sync", {
-        "lastWordId": first["id"],
-        "mutations": [{"opId": "op-batch-1", "wordId": first["id"], "status": "known"}],
+    # Commit, simulate loss of the first acknowledgement, then retry from an
+    # older client after a separate device has saved newer progress.
+    operation = {"opId": "op-batch-1", "wordId": first["id"], "status": "known",
+                 "lastWordId": first["id"], "order": reverse}
+    batch = {"lastWordId": second["id"], "mutations": [operation]}
+    sync_resp = student.post(progress + "/sync", batch, format="json")
+    assert sync_resp.status_code == 200, sync_resp.data
+    first_sync = sync_resp.json()["data"]
+    assert first_sync["acknowledgedOpIds"] == ["op-batch-1"]
+    assert first_sync["lastWordId"] == first["id"] and first_sync["order"] == reverse
+    assert first_sync["familiarity"][first["id"]] == "known"
+    assert stranger.post(progress + "/sync", batch, format="json").status_code == 403
+    later = second_device.patch(progress, {"wordId": first["id"], "status": "practice"}, format="json").json()["data"]
+    retry = student.post(progress + "/sync", batch, format="json").json()["data"]
+    assert retry == {**later, "acknowledgedOpIds": ["op-batch-1"]}
+    reused = student.post(progress + "/sync", {
+        "mutations": [{**operation, "status": "practice"}],
     }, format="json")
-    assert sync_resp.status_code == 200
-    assert sync_resp.json()["data"]["acknowledgedOpIds"] == ["op-batch-1"]
-    assert sync_resp.json()["data"]["familiarity"][first["id"]] == "known"
-    assert stranger.post(progress + "/sync", {}, format="json").status_code == 403
-    assert second_device.get(progress).json()["data"]["familiarity"][first["id"]] == "known"
+    assert reused.status_code == 409, reused.data
+    invalid_batch = student.post(progress + "/sync", {"mutations": [
+        {"opId": "rolled-back", "lastWordId": second["id"]},
+        {"opId": "invalid", "lastWordId": "unassigned-word"},
+    ]}, format="json")
+    assert invalid_batch.status_code == 400, invalid_batch.data
+    assert second_device.get(progress).json()["data"] == later
 
     report_path = f"{group_path}/assignments/{assignment_id}/vocabulary-results"
     assert other.get(report_path).status_code == 403
