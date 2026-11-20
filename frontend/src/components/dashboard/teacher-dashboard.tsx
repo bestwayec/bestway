@@ -12,9 +12,10 @@ import {
   Users,
   Wallet,
   Send,
+  Search,
   type LucideIcon,
 } from "lucide-react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -25,7 +26,6 @@ import { PageHeader } from "@/components/app/page-header";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
 import { printGroupAnalyticsPdf, useGroupAnalytics } from "@/hooks/use-groups";
-import { useMockAttempts } from "@/hooks/use-mock";
 import { useDebtors, usePayments } from "@/hooks/use-payments";
 import { api, ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -240,8 +240,11 @@ export function TeacherDashboard() {
   const td = useTranslations("teacherDash");
   const ta = useTranslations("attendance");
   const tc = useTranslations("common");
+  const ws = useTranslations("workspace");
   const { data: me, isLoading, refetch } = useMe();
   const [isSendingDigest, setIsSendingDigest] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [groupLimit, setGroupLimit] = React.useState(6);
   const pinRef = React.useRef<HTMLDivElement>(null);
 
   const handleSendParentDigest = async () => {
@@ -261,8 +264,18 @@ export function TeacherDashboard() {
   const groups = React.useMemo(() => profile?.groups ?? [], [profile]);
   const totalStudents = groups.reduce((sum, g) => sum + g.studentsCount, 0);
 
-  const gradingQ = useMockAttempts("grading");
-  const pending = gradingQ.data?.length ?? 0;
+  const gradingQ = useQuery({
+    queryKey: ["teacher-dashboard-review", me?.user.id],
+    enabled: Boolean(profile),
+    queryFn: () => api.get<{ total: number; items: Array<{
+      id: string; attemptId?: string; studentName: string; examTitle: string; skill: "writing" | "speaking";
+    }> }>("/teacher/submissions", { limit: 5, withTotal: 1, status: "pending", summary: 1 }),
+    staleTime: 30_000,
+  });
+  const pending = gradingQ.data?.total;
+  const filteredGroups = groups.filter((group) =>
+    group.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
 
   const attendanceQs = useQueries({
     queries: groups.map((g) => ({
@@ -312,7 +325,7 @@ export function TeacherDashboard() {
         <KpiCard
           icon={ClipboardCheck}
           label={td("kpiReview")}
-          value={gradingQ.isError ? "—" : pending}
+          value={gradingQ.isError ? "—" : pending ?? "—"}
           hint={gradingQ.isError ? tc("unknownError") : td("kpiReviewHint")}
           loading={gradingQ.isLoading}
           tone="warning"
@@ -345,17 +358,26 @@ export function TeacherDashboard() {
         {/* Groups performance */}
         <section className="space-y-3 lg:col-span-2">
           <h2 className="text-sm font-semibold text-fg-muted">{td("groupPerformance")}</h2>
+          {groups.length > 0 && <label className="flex items-center gap-2 rounded-control border border-border bg-surface px-3 focus-within:ring-2 focus-within:ring-brand">
+            <Search className="size-4 text-fg-muted" aria-hidden />
+            <span className="sr-only">{ws("searchGroups")}</span>
+            <input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setGroupLimit(6); }}
+              placeholder={ws("searchGroups")} className="min-h-11 w-full min-w-0 bg-transparent text-fg outline-none" />
+          </label>}
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, i) => (
                 <Skeleton key={i} className="h-36" />
               ))}
             </div>
-          ) : groups.length === 0 ? (
-            <EmptyState icon={BookOpen} title={ta("noGroups")} />
+          ) : filteredGroups.length === 0 ? (
+            <EmptyState icon={BookOpen} title={search.trim() ? ws("noMatches") : ta("noGroups")} />
           ) : (
-            groups.map((g) => <GroupPerformanceCard key={g.id} group={g} />)
+            filteredGroups.slice(0, groupLimit).map((g) => <GroupPerformanceCard key={g.id} group={g} />)
           )}
+          {filteredGroups.length > groupLimit && <Button variant="outline" onClick={() => setGroupLimit(groupLimit + 6)}>
+            {tc("next")} · {groupLimit} / {filteredGroups.length}
+          </Button>}
         </section>
 
         {/* Right column */}
@@ -363,19 +385,21 @@ export function TeacherDashboard() {
           <section className={cn(GLASS, "p-4")} aria-labelledby="review-queue-title">
             <h2 id="review-queue-title" className="flex items-center justify-between gap-2 text-base font-semibold text-fg">
               <span className="flex items-center gap-2"><ClipboardCheck className="size-4 text-fg-subtle" aria-hidden />{td("reviewQueue")}</span>
-              {pending > 0 && <span className="rounded-full bg-warning-bg px-2 text-sm font-semibold tabular-nums text-warning">{pending}</span>}
+              {!gradingQ.isError && Boolean(pending) && <span className="rounded-full bg-warning-bg px-2 text-sm font-semibold tabular-nums text-warning">{pending}</span>}
             </h2>
             {gradingQ.isLoading ? (
               <div className="mt-3 space-y-2"><Skeleton className="h-12" /><Skeleton className="h-12" /></div>
             ) : gradingQ.isError ? (
-              <p className="mt-3 text-sm text-danger" role="alert">{tc("unknownError")}</p>
-            ) : pending === 0 ? (
+              <p className="mt-3 text-sm text-danger" role="alert">{tc("unknownError")}{" "}
+                <button type="button" className="min-h-11 underline" onClick={() => void gradingQ.refetch()}>{tc("retry")}</button>
+              </p>
+            ) : !pending ? (
               <p className="mt-3 text-sm text-fg-muted">{td("reviewEmpty")}</p>
             ) : (
               <ul className="mt-3 space-y-1">
-                {(gradingQ.data ?? []).slice(0, 5).map((a) => (
+                {(gradingQ.data?.items ?? []).map((a) => (
                   <li key={a.id}>
-                    <Link href={`/mock/attempt/${a.id}`} className="flex min-h-12 items-center gap-2 rounded-control px-2 py-1.5 transition-colors hover:bg-surface-hover">
+                    <Link href={`/mock/attempt/${a.attemptId ?? a.id.slice(0, a.id.lastIndexOf("_"))}`} className="flex min-h-12 items-center gap-2 rounded-control px-2 py-1.5 transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-fg">{a.studentName ?? "—"}</span>
                         <span className="block truncate text-sm text-fg-muted">{a.examTitle}</span>

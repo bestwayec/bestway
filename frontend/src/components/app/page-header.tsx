@@ -16,7 +16,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        "mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
@@ -26,11 +26,11 @@ export function PageHeader({
           className="mt-1 h-6 w-1 shrink-0 rounded-[2px] bg-brand sm:mt-1.5 sm:h-7"
         />
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-fg">{title}</h1>
+          <h1 className="break-words text-2xl font-bold tracking-tight text-fg sm:text-3xl">{title}</h1>
           {description && <p className="mt-1 text-sm text-pretty text-fg-muted">{description}</p>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
+      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">{actions}</div>}
     </div>
   );
 }

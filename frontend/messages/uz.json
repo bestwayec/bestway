@@ -1,4 +1,13 @@
 {
+  "workspace": {
+    "classroomSections": "Guruh bo‘limlari",
+    "searchGroups": "Guruhlarni qidirish",
+    "searchStudents": "Guruhdagi o‘quvchilarni qidirish",
+    "assignments": "Vazifalar",
+    "results": "Natijalar va tahlil",
+    "showMore": "Ko‘proq ko‘rsatish",
+    "noMatches": "Mos natija topilmadi"
+  },
   "vocabularyHistory": {
     "reviews": "Takrorlash tarixi",
     "results": "Lug‘at natijalari tarixi",

@@ -16,7 +16,7 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
 }
 
 /** GET /users?role=&search= */
-export function useUsersList(role: Role | undefined, search = "", groupId?: string) {
+export function useUsersList(role: Role | undefined, search = "", groupId?: string, enabled = true) {
   return useQuery({
     queryKey: ["users", role ?? "all", search, groupId ?? null],
     queryFn: () =>
@@ -27,11 +27,12 @@ export function useUsersList(role: Role | undefined, search = "", groupId?: stri
         limit: 100,
       }),
     placeholderData: (prev) => prev,
+    enabled,
   });
 }
 
-export function useStudents(search: string) {
-  return useUsersList("student", search);
+export function useStudents(search: string, enabled = true) {
+  return useUsersList("student", search, undefined, enabled);
 }
 
 /** O'qituvchilar ro'yxati (guruhga biriktirish uchun) */

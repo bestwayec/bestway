@@ -251,14 +251,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {/* Filters and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Level Pills */}
-        <div role="group" aria-label={tc("levelFilter")} className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 scrollbar-none">
+        <div role="group" aria-label={tc("levelFilter")} className="flex w-full flex-wrap items-center gap-1.5">
           {LEVELS.map((lvl) => (
             <button
               key={lvl}
               type="button"
               aria-pressed={selectedLevel === lvl}
               onClick={() => setSelectedLevel(lvl)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`min-h-11 rounded-control px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
                 selectedLevel === lvl
                   ? "bg-brand text-brand-fg shadow-md"
                   : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
@@ -271,14 +271,14 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted" aria-hidden />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={tc("searchPlaceholder")}
             aria-label={tc("searchLabel")}
             type="search"
-            className="pl-9 h-9 text-xs bg-surface"
+            className="min-h-11 pl-9 text-sm bg-surface"
           />
         </div>
       </div>

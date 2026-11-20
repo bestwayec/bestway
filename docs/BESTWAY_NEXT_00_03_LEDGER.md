@@ -110,3 +110,7 @@ The 2026-11-20 independent audit supersedes the previous Stage 04 completion cla
 - Hosted checks installed and opened Windows NSIS and Android emulator builds. Physical Windows and Android and optimized Linux release-candidate acceptance remain UNVERIFIED. Shared Windows profiles do not provide encrypted offline vocabulary. Both PRs remain draft and production readiness remains BLOCKED.
 
 [Remediation evidence](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md#final-release-blocker-remediation) · [Current release gates](BESTWAY_NEXT_RELEASE_GATES.md) · [Owner device checklist](https://github.com/bestwayec/bw-tauri/blob/b0443fd1b98f9f7fee28e8c4b508fea07ed13034/docs/BESTWAY_NEXT_NATIVE_ACCEPTANCE.md)
+
+## Stage 05 — PARTIAL
+
+Resumed with backend `67accb6` and desktop `b0443fd`. The recovered Kotlin OAuth repair passed direct JVM tests and consumed a genuine Django desktop exchange response. Its commit is `ae725fa`. Stage 05 adds a shared visual baseline, workspace shortcuts, exact classroom selection, bounded lists and compact grading previews. Existing authorization, migrations and the secure exam runner remain subject to final branch checks. [Owner review report](BESTWAY_NEXT_STAGE05_FINAL_REPORT.md)

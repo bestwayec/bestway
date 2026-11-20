@@ -1,4 +1,13 @@
 {
+  "workspace": {
+    "classroomSections": "Classroom sections",
+    "searchGroups": "Search groups",
+    "searchStudents": "Search enrolled students",
+    "assignments": "Assignments",
+    "results": "Results and analytics",
+    "showMore": "Show more",
+    "noMatches": "No matches"
+  },
   "vocabularyHistory": {
     "reviews": "Review history",
     "results": "Vocabulary results history",

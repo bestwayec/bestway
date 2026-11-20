@@ -1,5 +1,9 @@
 # BESTWAY NEXT release gates
 
+## Stage 05 owner review
+
+Stage 05 is PARTIAL. The delivered workspace, classroom search and roster, compact review queue, Vocabulary controls, and accessibility changes are ready for owner inspection. Complete the open product and device acceptance cases before removing the draft status. Production release remains BLOCKED on signed and physical Windows/Android acceptance and the shared Windows profile policy. [Owner review report](BESTWAY_NEXT_STAGE05_FINAL_REPORT.md) · [Test matrix](BESTWAY_NEXT_STAGE05_TEST_MATRIX.md)
+
 ## Current decision · 2026-11-20
 
 | Gate | Status | Acceptance requirement |

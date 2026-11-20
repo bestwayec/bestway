@@ -658,6 +658,7 @@ def teacher_submissions_view(request):
     offset = _page_number(params, "offset", 0, 0, 2**31 - 1)
     limit = _page_number(params, "limit", 50, 1, 100)
     with_total = params.get("withTotal") == "1"
+    summary = params.get("summary") == "1"
     total = rows.count() if with_total else None
     page = rows.select_related(
         "attempt__exam", "attempt__student__user", "question__group__section",
@@ -667,19 +668,26 @@ def teacher_submissions_view(request):
         attempt = answer.attempt
         question = answer.question
         current_skill = question.group.section.skill
+        overview = {
+            "id": f"{attempt.pk}_{current_skill}",
+            "attemptId": attempt.pk,
+            "studentName": attempt.student.user.name,
+            "examTitle": attempt.exam.title,
+            "skill": current_skill,
+            "submittedAt": (attempt.submitted_at or attempt.started_at).isoformat(),
+            "status": status,
+        }
+        if summary:
+            items.append(overview)
+            continue
         raw_score = versioned(attempt)
         maximum = question.group.max_score if raw_score and question.group.max_score is not None else question.points
         rubric = answer.rubric_scores if isinstance(answer.rubric_scores, dict) else {}
         items.append({
-            "id": f"{attempt.pk}_{current_skill}",
+            **overview,
             "questionId": question.pk,
-            "studentName": attempt.student.user.name,
-            "examTitle": attempt.exam.title,
             "examType": "MULTILEVEL" if "multilevel" in attempt.exam.type.lower() else "IELTS",
-            "skill": current_skill,
             "subType": f"Task ({current_skill.title()})",
-            "submittedAt": (attempt.submitted_at or attempt.started_at).isoformat(),
-            "status": status,
             "prompt": question.prompt,
             "responseText": answer.response,
             "hasRecording": bool(answer.audio_key),

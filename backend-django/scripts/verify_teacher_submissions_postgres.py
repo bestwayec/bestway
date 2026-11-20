@@ -217,6 +217,10 @@ def main():
             )
         page = data(teacher.get(root, {"withTotal": 1, "limit": 1}))
         assert page["total"] == 2 and len(page["items"]) == 1, page
+        summary = data(teacher.get(root, {"withTotal": 1, "limit": 1, "summary": 1}))
+        assert summary["total"] == page["total"] and len(summary["items"]) == 1
+        assert summary["items"][0]["attemptId"] == attempts[0]
+        assert set(summary["items"][0]) == {"id", "attemptId", "studentName", "examTitle", "skill", "submittedAt", "status"}
         assert not data(other.get(root))
         assert data(admin.get(root, {"limit": 100})), "global admin scope"
         data(student.get(root), 403)
