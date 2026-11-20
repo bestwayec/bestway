@@ -15,12 +15,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 - **Student Dashboard & Assignments (Stage 05.2)**:
   - `Dashboard.tsx` (desktop) va `StudentAssignmentsWidget.tsx` (web & desktop) takomillashtirildi.
   - Faol, Barchasi va Tugallangan vazifalar uchun filtr tablari hamda jonli hisoblagich nishonlari qo'shildi.
-  - O'qituvchi ma'lumoti, o'quvchilar soni va dars jadvali ko'rsatkichlari dinamik ulandi.
+  - To'g'ridan-to'g'ri lug'at topshirig'i fleshkartalarini ochish deep link'i ulandi (`initialAssignmentId`).
+  - `bw-tauri/src/components/StudentAssignmentsWidget.test.tsx` (4 ta test) yozildi va 100% o'tdi.
   - Server xatoliklarida 0 ko'rsatmasdan qayta urinish (retry) tugmalari kafolatlandi.
 - **Teacher Command Center & Classroom Management (Stage 05.3 & 05.4)**:
-  - `TeacherDashboard.tsx` da haqiqiy KPI ko'rsatkichlari, retry boshqaruvi va bo'sh guruhlar holati to'g'rilandi.
+  - `TeacherDashboard.tsx` da haqiqiy KPI ko'rsatkichlari, retry boshqaruvi, bo'sh guruhlar holati va har bir sinf kartasida tezkor amallar ("Davomat / Attendance", "Vazifalar / Tasks") qo'shildi.
+  - `GroupsResults.tsx` da `initialSection` orqali to'g'ridan-to'g'ri kerakli bo'limga silliq o'tish (`scrollIntoView`) ta'minlandi.
   - `ClassroomWorkspace.tsx` va `group-detail-view.tsx` da o'quvchilarni faol guruhlar orasida ko'chirish (student transfer dialog) integratsiya qilindi (`POST /groups/<targetId>/students`).
-  - O'quvchi boshqa guruhga o'tkazilganda oldingi imtihon natijalari, ballari va tasdiqlangan baholari xavfsiz saqlanadi.
+  - `backend-django/tests/test_classroom_transfer_and_history.py` (9 ta test, 100% PASS) qo'shildi: o'quvchi boshqa guruhga ko'chirilganda eski guruhdagi ishlari, imtihonlari va ballari to'liq saqlanadi, a'zolik intervallari (`ClassroomEnrollment`) yuritiladi va boshqa o'qituvchining o'quvchisini ruxsatsiz o'zlashtirish qat'iy taqiqlanadi (403 Forbidden).
   - Guruhlarni arxivlash va arxivdan qaytarish imkoniyati sinxronlashtirildi.
 - **Vocabulary Studio & Reports (Stage 05.5)**:
   - `VocabularyStudio.tsx` da guruh topshiriqlari hisoboti uchun CSV va Excel (.xlsx) eksport imkoniyati qo'shildi.
@@ -29,10 +31,10 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
   - `i18n/messages-parity.spec.ts` (100% PASS) va `i18n/no-hardcoded-ui-text.spec.ts` (73/73 PASS) tasdiqlandi.
 - **Testlar va Yetkazib Berish (Stage 05.10)**:
   - `bestway/frontend`: 126 test fayli, 837 vitest testi (100% PASS); `tsc --noEmit` 0 xato.
-  - `bw-tauri`: 60 test fayli, 481 vitest testi (100% PASS); `tsc && vite build` 0 xato (13.89s).
-  - `backend-django`: 1,452 pytest testi, 268 subtest (100% PASS).
+  - `bw-tauri`: 61 test fayli, 485 vitest testi (100% PASS); 6 ta release/windows unit testi (100% PASS); Windows installer validation CI (run `44788090274`, 6m51s, 100% PASS).
+  - `backend-django`: 1,489 ta to'plangan test, 114 test fayli (Linux CI muhitida 1,476 ta pass, Windows mahalliy muhitida ixtiyoriy platforma modullariga ko'ra 1,452 ta pass).
   - Git branch `feat/bestway-next-stage05-completion` ikkala repoga push qilindi.
-  - GitHub Draft PRlar yaratildi:
+  - GitHub Draft PRlar:
     - `bestway`: PR #207 (https://github.com/bestwayec/bestway/pull/207)
     - `bw-tauri`: PR #39 (https://github.com/bestwayec/bw-tauri/pull/39)
 
