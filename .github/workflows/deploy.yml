@@ -57,7 +57,7 @@ jobs:
             --jq '.workflow_runs[].head_sha' | grep -Fx "$DEPLOY_SHA" >/dev/null \
             || { echo "No successful main CI run for this commit; deployment blocked"; exit 1; }
       - name: Prepare cached images on VPS
-        uses: appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0 # v1.2.4
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           VPS_PATH: ${{ secrets.VPS_PATH }}
           DEPLOY_SHA: ${{ github.sha }}
@@ -80,7 +80,7 @@ jobs:
             flock -u 8
             bash scripts/deploy-release.sh prepare "$DEPLOY_SHA"
       - name: Activate and verify release
-        uses: appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0 # v1.2.4
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           VPS_PATH: ${{ secrets.VPS_PATH }}
           DEPLOY_SHA: ${{ github.sha }}

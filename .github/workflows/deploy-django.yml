@@ -53,7 +53,7 @@ jobs:
             | grep -Fx "$DEPLOY_SHA" >/dev/null \
             || { echo "This release has no successful CI; cutover blocked"; exit 1; }
       - name: Back up, migrate and cut over on VPS
-        uses: appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0 # v1.2.4
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           VPS_PATH: ${{ secrets.VPS_PATH }}
           DEPLOY_SHA: ${{ inputs.commit }}
