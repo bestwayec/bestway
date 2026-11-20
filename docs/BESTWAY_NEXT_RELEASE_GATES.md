@@ -4,18 +4,19 @@
 
 | Gate | Status | Acceptance requirement |
 |---|---|---|
-| STAGE 04 FEATURES | PARTIAL | Finish protected assessment review and end-to-end assigned-exam acceptance. |
-| SECURITY | PARTIAL | Complete final-client account lifecycle, shared-profile storage and revocation acceptance. |
-| NATIVE ACCEPTANCE | PARTIAL | Linux development-mode login passed. Complete packaged Linux interaction and physical Windows/Android acceptance. |
-| PRODUCTION READINESS | BLOCKED | Close the release-critical gates, including exact-head Prisma and Django migration evidence and packaged Linux login and recovery. |
+| Protected Speaking and Writing | PASS · VERIFIED | Real PostgreSQL and browser review passed for submitted handwriting and Speaking audio, scoped access, version conflicts, and final scores and feedback. |
+| Packaged Linux offline vocabulary | PASS · VERIFIED | The installed Debian package used a production frontend bundle and a debug Rust build. HTTPS login, system keyring restore, download, offline write, restart and reconnect sync passed. |
+| Windows and Android device acceptance | PARTIAL · UNVERIFIED | Hosted NSIS and Android emulator installation and launch passed. Complete the signed-in workflows and device measurements in the owner checklist. |
+| Offline privacy on a shared Windows profile | PARTIAL · UNVERIFIED | In-app account namespaces and logout purge are implemented. Use separate Windows users for shared PCs, and resolve any requirement for protection within one Windows profile before enabling offline use there. |
+| Production readiness | BLOCKED | Complete physical and release-candidate validation, confirm the shared-profile policy, and require the Prisma/Django migration steps to pass on the final backend revision. |
 
-The local Prisma engine checksum request returned HTTP 403. Genuine Prisma deploy, Django migration and the staged upgrade passed on a hosted run for the first repair commit. Check the workflow on the exact latest backend PR head. Keep both PRs in draft pending final acceptance. [Independent Stage 04 audit and remediation](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md) · [Backend PR checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop PR checks](https://github.com/bestwayec/bw-tauri/pull/38/checks)
+The exact incoming backend commit `3565af26b158039b387e618f065f722aebdf50f4` passed the hosted Prisma deploy, Django migration and populated upgrade. Use the PR Checks page for the remediation revision. Both PRs remain draft pending device acceptance. [Stage 04 remediation evidence](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md#final-release-blocker-remediation) · [Backend PR checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop PR checks](https://github.com/bestwayec/bw-tauri/pull/38/checks) · [Owner device checklist](https://github.com/bestwayec/bw-tauri/blob/b0443fd1b98f9f7fee28e8c4b508fea07ed13034/docs/BESTWAY_NEXT_NATIVE_ACCEPTANCE.md)
 
 ## Historical Stage 01–03 verification
 
 This record covers the existing draft PRs on `feat/bestway-next-00-03`. The backend and website entered closure at `8d80732705f83c4c5347b7c5d1d2f6ba702521b6` and the desktop at `8697fd492506daa5aa4500fa2ba9ff35289386c4`. Closure implementation commits are `b264d57` and `f0eb740` on Bestway and `a80df09` on desktop. The closing commit adds signed-review revision checking and documentation. The Checks pages show results for the selected commit. [Bestway PR #206](https://github.com/bestwayec/bestway/pull/206) · [Desktop PR #38](https://github.com/bestwayec/bw-tauri/pull/38)
 
-## Decision
+## Stage 01–03 decision at closure
 
 Feature status reflects the implementation and tested behavior. Release status reflects whether the release gate has run successfully in the required environment.
 
@@ -29,7 +30,7 @@ Feature status reflects the implementation and tested behavior. Release status r
 
 Keep both PRs in draft while release-critical native and compatibility evidence remains incomplete. Stage 04 planning can use the validated classroom and vocabulary API. Stage 04 implementation should wait for native sign-off and a decision about durable offline recovery.
 
-## Hosted CI
+## Stage 01–03 hosted CI
 
 The GitHub REST and GraphQL endpoints returned HTTP 403 from this environment. The PR Checks pages and individual job pages provided run IDs, conclusions, and specific step outcomes. Neither the Windows installer job nor the Android build job exercised a physical device.
 
@@ -43,7 +44,7 @@ The GitHub REST and GraphQL endpoints returned HTTP 403 from this environment. T
 | Current PR tips | [Bestway checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop checks](https://github.com/bestwayec/bw-tauri/pull/38/checks) |
 | Workflows without PR evidence | Physical Windows and Android interaction, emulator interaction and low-resource device validation have no executed PR job. Production deployment and release workflows were outside the acceptance run. |
 
-## Verification results
+## Stage 01–03 verification results
 
 - **Database.** Local Prisma 5.22.0 download attempts received HTTP 403 from `binaries.prisma.sh` for pinned engine revision `605197351a3c8bdd595af2d2a9bc3025bca48ea2` and target `debian-openssl-3.0.x`. The hosted workflow genuinely deploys the engine and does not bypass its checksums. The populated upgrade first applies the checked-in Prisma baseline, writes synthetic users, a classroom, roster points and attendance, and deploys the remaining Prisma migrations. It then applies Django through 0012, writes a grade, an issued quiz and an SRS review row, upgrades to the latest Django migration, and asserts their preservation. The production schema compatibility command checks the authoritative Prisma ledger.
 - **Authorization and compatibility.** PostgreSQL verified teacher, student, admin and linked parent scope, foreign-classroom denial, scoped downloads, expired and deactivated sessions, refresh rotation and revocation of old and rotated access tokens. A separate device family remained active. The desktop retries an expired access token once during profile revalidation, clears its workspace after a definitive revocation on focus, and leaves active exams to the existing exam-recovery flow. Chromium exercised shared-cookie website tabs and separate desktop sessions. Pre-upgrade access tokens without a session claim retain expiry behavior. Existing clients refresh into the family-bound token automatically. Signed SRS tests verified cross-account denial, stale batch rejection, conflict when issued translations change, signed in-flight compatibility, and a single persisted review update. An unsigned older SRS client remains outside the supported write contract.
@@ -51,7 +52,7 @@ The GitHub REST and GraphQL endpoints returned HTTP 403 from this environment. T
 - **Vocabulary and resource use.** The report processed 126 persisted learners over three pages, with unique stable ordering, name filtering, and scoped CSV/XLSX. JSON results are read in chunks. CSV rows stream, and XLSX uses a write-only workbook and a spool that spills above 512 KiB. This validates the export path and pagination. The report still scans the class to calculate aggregates, and production-scale performance remains unmeasured. Browser coverage exercises issuance, edit, exact scoring, cross-device study state, paused sync and reconnection, signed SRS and both report downloads.
 - **Offline decision.** A study change may wait while its current view stays open. A durable queue across logout or process death needs an account-bound idempotency key, revision policy for changed assignments, conflict resolution across devices, and user-visible handling of permanently rejected writes. This closure retains the existing in-view contract until those requirements are defined.
 
-## Native matrix
+## Stage 01–03 native matrix
 
 | Platform | Verified | Unverified |
 | --- | --- | --- |

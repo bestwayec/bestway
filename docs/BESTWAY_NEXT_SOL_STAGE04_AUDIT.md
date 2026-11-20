@@ -68,3 +68,35 @@ A downloaded collection lives in ordinary WebView storage and in the operating-s
 6. **P3 · Documentation and replication.** Record the exact workflow run links and keep the native checklist tied to the tested build.
 
 The PRs remain drafts. Stage 04 retains completed classroom, vocabulary and assessment functionality, with the above release gates open.
+
+## Final release blocker remediation
+
+The existing branches entered remediation at backend `3565af26b158039b387e618f065f722aebdf50f4` and desktop `d6dceea1e7ba8483ab4c304237d31222dfc0c74e`. The fixes are backend `0bb341de7809cfad17ec7c8cfefd6451c3429680` and desktop `0bf52760dd76504bfc73d0c511ca5fd7683bc6fc`. This section supersedes the earlier open items for protected grading and the packaged Linux splash. [Backend PR checks](https://github.com/bestwayec/bestway/pull/206/checks) · [Desktop PR checks](https://github.com/bestwayec/bw-tauri/pull/38/checks)
+
+### Installed Linux
+
+An installed baseline Debian bundle configured with `http://localhost:3104/v1` reproduced the splash hang. Production API-origin validation threw while JavaScript modules loaded, before React could mount. The packager now validates the same configuration before bundling. An early startup handler also renders a reload screen if the frontend fails to initialize. The invalid bundle configuration was rejected after the fix.
+
+An installed 1.0.12 Debian bundle with production Vite assets and a debug Rust build ran in an isolated WebKitGTK desktop session. The disposable Django and PostgreSQL fixture used a trusted test CA and HTTPS on port 443. Student login, assigned vocabulary download, an edit with backend access cut, process termination, Secret Service session restoration, reopening the download with one pending edit, and manual retry after reconnection all passed. Django returned HTTP 200 for the sync and the UI cleared the pending edit. The restarted app had no session fallback file. Optimized signed build acceptance, native audible pronunciation, updater, and the complete native exam journey remain UNVERIFIED.
+
+### Protected assessments
+
+Handwriting originals, including legacy page keys, now require authenticated attempt, question and page authorization. New uploads also verify that the student owns the open Writing attempt and that the question belongs to its Writing section. Speaking playback resolves the recording attached to the exact review job and supports browser HTTP ranges. Private responses disable shared caching. The legacy whole-attempt grading path cannot bypass unfinished skill review jobs. Canonical review records retain the original media links and publish approved feedback.
+
+The Django PostgreSQL fixture submitted a handwritten page and a playable WAV and checked owner and foreign access, legacy media denial, exact question and attempt scope, and versioned review. Two concurrent reviews produced one successful write and one conflict. Replays conflicted. Speaking scored 6 while Writing remained pending. The authorized Writing review scored 7 and finalized the result with approved feedback. Chromium decoded the protected image, advanced audio playback using HTTP 206, submitted both teacher review forms, and checked the student result. An external OCR provider was simulated with an empty result to exercise the manual review path.
+
+Django passed 1,476 tests and 268 subtests, with four legacy NestJS differential checks skipped because the compiled distribution was unavailable. Website TypeScript and lint passed, and Vitest passed 837 tests across 126 files. Desktop Vitest passed 476 tests. See the PR checks for hosted builds and migration evidence.
+
+### Native device and data-at-rest sign-off
+
+| Platform | Verified | Unverified |
+|---|---|---|
+| Linux WebKitGTK | Installed Debian package, HTTPS login, Secret Service restore, download, offline edit, restart, reconnect and server acknowledgement. | Optimized signed release distribution, audible pronunciation, native exam recovery and updater. |
+| Windows x64 | Hosted NSIS build and checksum, clean install, launch, WebView2 child process and startup working-set measurement. | Physical Windows 10/11 session restore, offline vocabulary, audio and mute, exam recovery, signed updater, and sustained memory measurements on a 4 GB device. |
+| Android | Hosted build and offline emulator installation and launch. | Signed-in device workflows, Android secure storage, offline progress across process death, audio, exam recovery and physical hardware. |
+
+Offline vocabulary, progress and pending edits are ordinary WebView IndexedDB records with a LocalStorage fallback, scoped to the Bestway account. The application applies no encryption to either store. Sign-out purges the account’s data through the application. That deletion does not guarantee forensic erasure. Separate Windows users receive OS profile isolation. People sharing one Windows account can access the same WebView profile, and the OS credential store for authentication is separate from the vocabulary cache. The session component can fall back to a profile-local JSON file when its platform store fails. Hosted Windows and Android launch evidence does not establish secure storage for a real interactive account.
+
+Use separate Windows profiles for shared PCs. If the owner requires data-at-rest isolation among people sharing a profile, hold offline deployment on those profiles until an implementation meets that requirement. A design would use a randomly generated key per Bestway account, authenticated encryption for snapshots and queues, OS-protected key wrapping on Windows, and an independent per-person unlock or an OS account boundary. Credential Manager or DPAPI under a common Windows user alone does not establish the per-person boundary. Verify unlock after a disconnected restart, denial from another Bestway account and ordinary processes on the same profile, logout and revocation behavior, rotation, and recovery of unsynced data before enabling it. No such vault is implemented. [Native acceptance checklist](https://github.com/bestwayec/bw-tauri/blob/b0443fd1b98f9f7fee28e8c4b508fea07ed13034/docs/BESTWAY_NEXT_NATIVE_ACCEPTANCE.md) · [Hosted Windows installation](https://github.com/bestwayec/bw-tauri/actions/runs/44673585076/job/136080019555) · [Hosted Android installation](https://github.com/bestwayec/bw-tauri/actions/runs/44673584883/job/136080019778)
+
+Stage 04 remains PARTIAL and production readiness remains BLOCKED pending the physical and release-candidate checks and the shared-profile policy. [Current release gates](BESTWAY_NEXT_RELEASE_GATES.md)

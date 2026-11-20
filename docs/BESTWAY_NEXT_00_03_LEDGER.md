@@ -102,3 +102,11 @@ The 2026-11-20 independent audit supersedes the previous Stage 04 completion cla
 - **PRODUCTION READINESS · BLOCKED**
 
 [Independent Stage 04 audit](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md) · [Release gates](BESTWAY_NEXT_RELEASE_GATES.md)
+
+### Final release blocker remediation
+
+- The installed Debian bundle reproduced the splash when a released frontend included an invalid HTTP API origin. Desktop `0bf5276` rejects that configuration at build time and renders an actionable retry screen for module startup failures. The HTTPS package passed login, offline download, a pending edit across process restart with Secret Service restoration, and reconnect sync.
+- Backend and website `0bb341d` placed handwritten originals behind attempt authorization and tied versioned Speaking and Writing reviews to each skill. PostgreSQL and Chromium verified real media, foreign-teacher denial, concurrent and repeated review, separate scores and approved feedback.
+- Hosted checks installed and opened Windows NSIS and Android emulator builds. Physical Windows and Android and optimized Linux release-candidate acceptance remain UNVERIFIED. Shared Windows profiles do not provide encrypted offline vocabulary. Both PRs remain draft and production readiness remains BLOCKED.
+
+[Remediation evidence](BESTWAY_NEXT_SOL_STAGE04_AUDIT.md#final-release-blocker-remediation) · [Current release gates](BESTWAY_NEXT_RELEASE_GATES.md) · [Owner device checklist](https://github.com/bestwayec/bw-tauri/blob/b0443fd1b98f9f7fee28e8c4b508fea07ed13034/docs/BESTWAY_NEXT_NATIVE_ACCEPTANCE.md)
