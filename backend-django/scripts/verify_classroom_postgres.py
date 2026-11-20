@@ -48,6 +48,10 @@ def verify():
     assert teacher.put("/v1/attendance/bulk", attendance, format="json").status_code == 200
     assert teacher.put("/v1/attendance/bulk", attendance, format="json").status_code == 200
     assert Attendance.objects.filter(group_id=group_id, student_id=student_id, date=day, state="late").count() == 1
+    totals = "/v1/attendance/teacher-today"
+    assert teacher.get(totals).json()["data"] == {"presentCount": 0, "lateCount": 1, "absentCount": 0}
+    assert other.get(totals).json()["data"] == {"presentCount": 0, "lateCount": 0, "absentCount": 0}
+    assert student.get(totals).status_code == 403
     items = student.get("/v1/attendance", {"month": day.strftime("%Y-%m")}).json()["data"]
     assert any(row["state"] == "late" for row in items)
 
@@ -120,6 +124,7 @@ def verify():
     history = group_url + "/member-history"
     assert other.get(f"{history}/{student_id}").status_code == 403
     assert teacher.put(archive, {"archived": True}, format="json").json()["data"]["archived"]
+    assert teacher.get(totals).json()["data"] == {"presentCount": 0, "lateCount": 0, "absentCount": 0}
     assert teacher.get("/v1/groups").json()["data"] == []
     assert teacher.get("/v1/groups", {"archived": "true"}).json()["data"][0]["id"] == group_id
     assert teacher.post(member_url, {"studentId": student_id}, format="json").status_code == 409

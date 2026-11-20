@@ -20,7 +20,7 @@ Offline vocabulary uses account-scoped IndexedDB, with LocalStorage as a fallbac
 | Exam and results | PARTIAL | Add clear study and resume shortcuts and pressed track states. Existing secure timers, authorization and recovery remain in place. Broader exam analytics presentation is open. |
 | Responsiveness and accessibility | PARTIAL | Focus styling, target sizes, text wrapping and reduced motion in touched screens. Full assistive technology and mobile-device testing is open. |
 | Localization | PARTIAL | New website workspace strings are in English and Uzbek. Desktop additions use existing preference or bilingual labels. Older English and Uzbek fragments remain. |
-| Performance | PARTIAL | Compact five-row previews, bounded roster rendering, on-demand analytics and fewer decorative route animations. Validate cold startup, vocabulary latency and sustained memory on a representative 4 GB Windows PC. |
+| Performance | PARTIAL | Compact five-row previews, bounded roster rendering, on-demand analytics and fewer decorative route animations. The website teacher fixture with 35 groups went from 57 to 23 distinct browser API paths during dashboard navigation and viewport checks. One scoped attendance aggregate replaces per-classroom requests. This is a request-count comparison in Chromium development mode. Validate production cold startup, vocabulary latency and sustained memory on a representative 4 GB Windows PC. |
 | Visual consistency | PARTIAL | Common semantic color, heading, control, and status choices established. Older desktop and website screens remain on legacy patterns. |
 
 ## Owner checklist

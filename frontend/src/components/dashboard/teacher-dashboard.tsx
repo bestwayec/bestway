@@ -15,7 +15,7 @@ import {
   Search,
   type LucideIcon,
 } from "lucide-react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -261,7 +261,13 @@ export function TeacherDashboard() {
 
   const firstName = me?.user.name.split(" ")[0] ?? "";
   const profile = me?.profile && "groups" in me.profile ? (me.profile as TeacherSelfProfile) : null;
-  const groups = React.useMemo(() => profile?.groups ?? [], [profile]);
+  const groupsQ = useQuery({
+    queryKey: ["teacher-dashboard-active-groups", me?.user.id],
+    enabled: Boolean(profile),
+    queryFn: () => api.get<TeacherGroupSummary[]>("/groups", { archived: false }),
+    staleTime: 30_000,
+  });
+  const groups = groupsQ.data ?? [];
   const totalStudents = groups.reduce((sum, g) => sum + g.studentsCount, 0);
 
   const gradingQ = useQuery({
@@ -277,24 +283,16 @@ export function TeacherDashboard() {
     group.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
   );
 
-  const attendanceQs = useQueries({
-    queries: groups.map((g) => ({
-      queryKey: ["group-attendance-summary", g.id, "today"],
-      queryFn: () => api.get<GroupAttendanceSummaryResponse>(`/attendance/group-summary/${g.id}`),
-      retry: false,
-      staleTime: 60_000,
-    })),
+  const attendanceQ = useQuery({
+    queryKey: ["attendance", "teacher-today", me?.user.id],
+    enabled: Boolean(profile),
+    queryFn: () => api.get<Pick<GroupAttendanceSummaryResponse, "presentCount" | "lateCount" | "absentCount">>("/attendance/teacher-today"),
+    retry: false,
+    staleTime: 30_000,
   });
-  const attendanceLoading = groups.length > 0 && attendanceQs.some((q) => q.isLoading);
-  const marked = attendanceQs.reduce((sum, q) => {
-    const d = q.data;
-    return d ? sum + d.presentCount + d.lateCount + d.absentCount : sum;
-  }, 0);
-  const attended = attendanceQs.reduce((sum, q) => {
-    const d = q.data;
-    return d ? sum + d.presentCount + d.lateCount : sum;
-  }, 0);
-  const attendanceFailed = attendanceQs.some((q) => q.isError);
+  const attended = (attendanceQ.data?.presentCount ?? 0) + (attendanceQ.data?.lateCount ?? 0);
+  const marked = attended + (attendanceQ.data?.absentCount ?? 0);
+  const attendanceFailed = attendanceQ.isError;
   const attendancePct = !attendanceFailed && marked > 0 ? Math.round((attended / marked) * 100) : null;
 
   if (!isLoading && !profile) {
@@ -312,14 +310,14 @@ export function TeacherDashboard() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard icon={BookOpen} label={td("kpiGroups")} value={groups.length} loading={isLoading} />
-        <KpiCard icon={Users} label={td("kpiStudents")} value={totalStudents} loading={isLoading} tone="info" />
+        <KpiCard icon={BookOpen} label={td("kpiGroups")} value={groupsQ.isSuccess ? groups.length : "—"} loading={isLoading || groupsQ.isLoading} />
+        <KpiCard icon={Users} label={td("kpiStudents")} value={groupsQ.isSuccess ? totalStudents : "—"} loading={isLoading || groupsQ.isLoading} tone="info" />
         <KpiCard
           icon={CalendarCheck}
           label={td("kpiAttendance")}
           value={attendancePct === null ? "—" : `${attendancePct}%`}
           hint={attendanceFailed ? tc("unknownError") : attendancePct === null ? td("kpiAttendanceEmpty") : `${attended} / ${marked}`}
-          loading={isLoading || attendanceLoading}
+          loading={isLoading || attendanceQ.isLoading}
           tone="success"
         />
         <KpiCard
@@ -364,7 +362,8 @@ export function TeacherDashboard() {
             <input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setGroupLimit(6); }}
               placeholder={ws("searchGroups")} className="min-h-11 w-full min-w-0 bg-transparent text-fg outline-none" />
           </label>}
-          {isLoading ? (
+          {groupsQ.isError ? <ErrorState title={tc("unknownError")}
+            action={<Button variant="outline" onClick={() => void groupsQ.refetch()}>{tc("retry")}</Button>} /> : isLoading || groupsQ.isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, i) => (
                 <Skeleton key={i} className="h-36" />

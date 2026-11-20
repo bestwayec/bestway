@@ -7,6 +7,7 @@ from functools import lru_cache
 from uuid import uuid4
 
 from django.db import connection, transaction
+from django.db.models import Count, Q
 from django.db.models.functions import Collate
 from django.utils import timezone
 
@@ -14,6 +15,7 @@ from apps.legacy_schema.models import Attendance, StudentProfile
 from common.api.exceptions import ContractAPIException
 
 from .groups import child_ids, get_group
+from .models import ClassroomArchive
 from .notifications import notify_parents
 from .system_settings import audit
 
@@ -241,3 +243,13 @@ def group_day_summary(actor, group_id, day_value=None):
             for r in rows
         ],
     }
+
+
+def teacher_day_totals(actor):
+    marks = Attendance.objects.filter(date=timezone.localdate(), group__teacher_id=actor.id)
+    marks = marks.exclude(group_id__in=ClassroomArchive.objects.values("group_id"))
+    return marks.aggregate(
+        presentCount=Count("pk", filter=Q(state="present")),
+        lateCount=Count("pk", filter=Q(state="late")),
+        absentCount=Count("pk", filter=Q(state="absent")),
+    )

@@ -483,6 +483,8 @@ urlpatterns = [
     path("mock/live-rooms/<str:room_pin>/action/", exam_mode_views.live_room_proctor_action_view),
 
     path('attendance/group-summary', attendance.group_summary_view),
+    path('attendance/teacher-today', attendance.teacher_day_totals_view),
+    path('v1/attendance/teacher-today', attendance.teacher_day_totals_view),
     path('attendance/group-summary/', attendance.group_summary_view),
     path('v1/attendance/group-summary', attendance.group_summary_view),
     path('v1/attendance/group-summary/', attendance.group_summary_view),
