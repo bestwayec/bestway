@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// #!/usr/bin/env node
 // Rewrites hard-coded shape values to the design tokens in src/app/globals.css
 // (docs/design/DIRECTION.md §3.4–3.5):
 //   rounded-[6px]  → rounded-chip      rounded-[8px]  → rounded-field    rounded-[10px] → rounded-control

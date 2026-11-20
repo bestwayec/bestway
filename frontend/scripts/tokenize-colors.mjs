@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+// #!/usr/bin/env node
 // Rewrites raw Tailwind palette classes (bg-slate-900, text-emerald-400, border-red-200, ...) to the
 // semantic design tokens defined in src/app/globals.css (bg-surface, text-brand, border-danger-border, ...).
 //

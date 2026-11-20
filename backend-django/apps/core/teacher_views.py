@@ -554,3 +554,107 @@ def teacher_grade_assignment_view(request, assignment_id: str):
         raise ContractAPIException("VOCABULARY_SERVER_GRADED", "Lug‘at natijasini server hisoblaydi", 400)
     from . import homework_scoring as scoring
     return success(scoring.payload(scoring.teacher_grade(assignment, student_id, score, request.user.id)))
+
+
+@api_view(["GET"])
+def teacher_submissions_view(request):
+    """
+    GET /api/v1/teacher/submissions
+    Returns the pending (and recently graded) submissions awaiting assessment for this teacher's students.
+    Strictly enforces authorization: teachers only see attempts of students enrolled in their managed groups.
+    """
+    actor = require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
+
+    from apps.legacy_schema.models import MockAttempt, MockAnswer
+
+    attempts_qs = MockAttempt.objects.select_related("exam", "student__user", "student__group").order_by("-submitted_at")
+
+    # Filter by teacher's groups unless admin/super_admin
+    if getattr(actor, "role", "") in ("teacher", "instructor"):
+        attempts_qs = attempts_qs.filter(student__group__teacher_id=actor.id)
+
+    status_filter = request.query_params.get("status", "pending")
+    if status_filter == "pending":
+        attempts_qs = attempts_qs.filter(status="grading")
+    elif status_filter == "graded":
+        attempts_qs = attempts_qs.filter(status="completed")
+
+    skill_filter = request.query_params.get("skill")
+
+    try:
+        offset = max(int(request.query_params.get("offset", 0)), 0)
+    except (ValueError, TypeError):
+        offset = 0
+
+    try:
+        limit = min(max(int(request.query_params.get("limit", 50)), 1), 100)
+    except (ValueError, TypeError):
+        limit = 50
+
+    attempts = list(attempts_qs[offset : offset + limit])
+
+    results = []
+    for att in attempts:
+        user = getattr(att.student, "user", None) if att.student else None
+        student_name = getattr(user, "name", "") or getattr(att.student, "full_name", "") or "O‘quvchi"
+        student_phone = getattr(user, "phone", "") or getattr(user, "phone_number", "") or ""
+        exam_title = getattr(att.exam, "title", "") or "Imtihon"
+        raw_type = getattr(att.exam, "type", "ielts")
+        exam_type = "MULTILEVEL" if "multilevel" in str(raw_type).lower() else "IELTS"
+
+        answers = list(MockAnswer.objects.filter(attempt_id=att.id).select_related("question"))
+        writing_answers = [ans for ans in answers if getattr(ans.question, "section_type", "") == "writing" or getattr(ans.question, "skill", "") == "writing"]
+        speaking_answers = [ans for ans in answers if getattr(ans.question, "section_type", "") == "speaking" or getattr(ans.question, "skill", "") == "speaking" or ans.audio_key]
+
+        skills_to_add = []
+        if not skill_filter or skill_filter == "writing":
+            if writing_answers or "writing" in (att.submitted_sections or []):
+                skills_to_add.append("writing")
+        if not skill_filter or skill_filter == "speaking":
+            if speaking_answers or "speaking" in (att.submitted_sections or []):
+                skills_to_add.append("speaking")
+        if not skills_to_add:
+            skills_to_add = ["writing"]
+
+        for sk in skills_to_add:
+            ans = (writing_answers[0] if writing_answers else None) if sk == "writing" else (speaking_answers[0] if speaking_answers else None)
+            rubric = ans.rubric_scores if (ans and isinstance(ans.rubric_scores, dict)) else {}
+            results.append({
+                "id": att.id if len(skills_to_add) == 1 else f"{att.id}_{sk}",
+                "studentName": student_name,
+                "studentPhone": student_phone,
+                "examTitle": exam_title,
+                "examType": exam_type,
+                "skill": sk,
+                "subType": f"Task ({sk.title()})",
+                "submittedAt": att.submitted_at.isoformat() if att.submitted_at else (att.started_at.isoformat() if att.started_at else ""),
+                "status": "pending" if att.status == "grading" else "graded",
+                "prompt": getattr(ans.question, "prompt", "") if ans and ans.question else "",
+                "responseText": ans.response if ans else "",
+                "audioUrl": ans.audio_key if ans else "",
+                "criteriaScores": {
+                    "c1": rubric.get("c1", rubric.get("TR", rubric.get("FC", 0))),
+                    "c2": rubric.get("c2", rubric.get("CC", rubric.get("LR", 0))),
+                    "c3": rubric.get("c3", rubric.get("LR", rubric.get("GRA", 0))),
+                    "c4": rubric.get("c4", rubric.get("GRA", rubric.get("PR", 0))),
+                },
+                "overallBand": att.overall_band,
+                "teacherFeedback": ans.feedback if (ans and ans.feedback) else "",
+            })
+
+    return success(results)
+
+
+@api_view(["POST"])
+def teacher_grade_submission_view(request, submission_id: str):
+    """
+    POST /api/v1/teacher/submissions/<submission_id>/grade
+    Grades an attempt submission or homework submission.
+    """
+    require_authenticated(request)
+    require_role(request, "teacher", "instructor", "admin", "super_admin")
+
+    actual_attempt_id = submission_id.split("_")[0]
+    from . import assessment_views
+    return assessment_views.teacher_grade(request, actual_attempt_id)
