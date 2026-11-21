@@ -2895,6 +2895,8 @@
       "title": "Mening xatolar bankim",
       "intro": "Lug'at testlarida adashgan so'zlaringiz shu yerda to'planadi. So'zga 2 marta ketma-ket to'g'ri javob bersangiz, u o'zlashtirilgan hisoblanadi.",
       "start": "Xatolar mashqini boshlash",
+      "statDue": "Hozir takrorlash kerak",
+      "noneDue": "Hozircha takrorlash kerak emas. Xato qilgan so'zlaringiz o'z vaqtida shu yerda qaytadi.",
       "statLearning": "O'rganilayotgan",
       "statMastered": "O'zlashtirilgan",
       "statTotal": "Jami kuzatilayotgan",

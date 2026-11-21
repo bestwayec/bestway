@@ -2895,6 +2895,8 @@
       "title": "My mistakes bank",
       "intro": "Words you got wrong in vocabulary tests are collected here. Answer a word correctly twice in a row and it counts as mastered.",
       "start": "Start mistakes practice",
+      "statDue": "Due now",
+      "noneDue": "Nothing is due right now. Words you got wrong come back here at their review time.",
       "statLearning": "Being learned",
       "statMastered": "Mastered",
       "statTotal": "Total tracked",
