@@ -874,7 +874,14 @@
     "expandSidebar": "Yon panelni ochish",
     "profile": "Profil",
     "more": "Yana",
-    "results": "Natijalar"
+    "results": "Natijalar",
+    "sections": {
+      "learning": "O'qish",
+      "exams": "Imtihonlar",
+      "users": "Foydalanuvchilar",
+      "reports": "Hisobotlar",
+      "settings": "Sozlamalar"
+    }
   },
   "brand": {
     "best": "Best",

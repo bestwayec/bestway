@@ -874,7 +874,14 @@
     "expandSidebar": "Expand sidebar",
     "profile": "Profile",
     "more": "More",
-    "results": "Results"
+    "results": "Results",
+    "sections": {
+      "learning": "Learning",
+      "exams": "Exams",
+      "users": "Users",
+      "reports": "Reports",
+      "settings": "Settings"
+    }
   },
   "brand": {
     "best": "Best",
