@@ -46,3 +46,25 @@ restart re-delivery, unlinked/student/deactivated/teacher identities, no auto-pr
 | Bot token never logged | PASS | delivery logs only the method name / exception type |
 | Mini App for very long exams | NOT BUILT | see release notes |
 | Real-Telegram staging test | UNVERIFIED | no authorised test bot in this environment |
+
+## Independent final audit (2026-11-21) — findings and fixes
+
+| # | Severity | Finding | Fix | Regression evidence |
+|---|---|---|---|---|
+| A1 | P1 | `/start <token>` (and contact sharing) in a **group chat** linked the *group* to the student account; `/tests` in that group then listed the student's tests and notifications went to the whole group. | `telegram_links` links only positive (private) chat ids; `/tests` in a group answers "private only". | `verify_telegram_engine_postgres.py` (group link refused, token still usable; group `/tests` shows nothing) |
+| A2 | P2 | One-time link token was check-then-act: concurrent `/start` with the same token could link several chats. | Conditional `UPDATE … WHERE used_at IS NULL` inside a transaction; only the winner links. | 6 parallel consumers → exactly 1 linked chat (fails on the old code) |
+| A3 | P1 | Class quiz with `maxAttempts > 1`: the review after attempt 1 showed every **correct answer and explanation**, so attempt 2 could be copied from the key. | `keys_visible_to_student()`: keys only after the last attempt or once the assignment is closed/past its deadline; staff views unchanged; Telegram shows "shown after your last attempt". | `verify_class_quiz_postgres.py` (+4), `tests/test_telegram_quiz.py` (+2) |
+| A4 | P1 | Outbox: one tick can outlive the 90 s lease (25 × 20 s timeout); a second worker could re-claim rows still queued in the first worker's list → **duplicate sends**. | Per-row lease fencing (`_renew_lease`) right before each row is processed. | `verify_notifications_teacher_postgres.py`: stale worker sends nothing (fails on the old code) |
+| A5 | P1 (ops) | `telegram-outbox` was in the shared `workers` compose profile of `docker-compose.django.yml`: `--profile workers up -d` would start live delivery. | Own `telegram-outbox` profile in both compose files — delivery is strictly opt-in. | compose config |
+| A6 | P2 | Pending appeals / vocabulary reports filtered in Python after a capped global page (500/200) — another group's backlog could hide a teacher's own requests. | Scoped in SQL to the teacher's groups/sets. | existing teacher-request checks |
+| A7 | P1 (CI) | Notification/E2E PG scripts inherited default 22:00–07:00 Tashkent quiet hours → **CI failed 17:00–02:00 UTC**. | Synthetic users start without a quiet window; quiet hours still tested explicitly. | both scripts pass at 22:11 Tashkent |
+
+Reviewed and acceptable: webhook secret (constant-time, fail closed), `update_id` receipts, callback identity from the
+sender's linked account only (never from callback data), per-callback re-authorisation of teacher/group ownership,
+appeal decisions under row locks (concurrent approvals re-evaluate `is_correct=False` after the first commit), result
+cards claimed once per result version (at-most-once: a failed send is not retried automatically, the student can
+re-request it), vocabulary answers idempotent per word with a website/bot staleness guard, OCR/AI fail closed.
+
+Known, not changed (P2): a student removed from a group can still finish an attempt already in progress; claimed update
+receipts are not rolled back if processing crashes (at-most-once); chats linked to a group before A1 keep working until
+re-linked — check with `SELECT id FROM "User" WHERE "telegramChatId" LIKE '-%'`.

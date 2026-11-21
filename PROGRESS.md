@@ -7,6 +7,21 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 50-BLOK: Yakuniy integratsiya — PR #210 + PR #209 bitta PostgreSQL sxemasida (2026-11-21) — PR #209, branch `feat/ielts-academic-full-mock-27`
+- **Muammo**: ikkala PR ham `core.0017` ustiga `core.0018` qo'shgan va `models.py`, `urls.py`, `ci.yml`, `PROGRESS.md` da to'qnashardi; qaysi biri ikkinchi merge qilinsa, Django `Conflicting migrations detected` bilan migratsiyani rad etardi (deploy to'xtaydi).
+- **Yechim**: PR #210 bu branchga merge qilindi (force-push yo'q), `core.0026_merge_mock27_and_telegram_bot2` (operatsiyasiz birlashtiruvchi tugun), `tests/test_migration_graph.py` (bitta leaf).
+- **PostgreSQL**: main→#210→birlashgan, main→#209→birlashgan va toza o'rnatish — sxemalar bir xil; 0017 ga rollback o'quvchi ma'lumotlarini saqlaydi; o'rtada yiqilgan migratsiya qayta ishga tushganda tugaydi; idempotent; `check_legacy_schema` o'tdi; `verify_next_migration_upgrade` o'tdi.
+- **Birlashgan testlar**: pytest 1573 o'tdi; 17 ta PG skript bitta bazada (Mock 27 81/81 + barcha Telegram skriptlari) o'tdi; HTTP 67/67, worker gate'lari o'tdi.
+- **Merge tartibi**: 1) PR #210, 2) PR #209. Egasi uchun qo'lda sinov: `docs/BESTWAY_FINAL_OWNER_ACCEPTANCE.md`. Mock 27 DRAFT holatida qoladi.
+
+### 49-BLOK: Telegram bot 2.0 — mustaqil yakuniy audit va tuzatishlar (2026-11-21) — PR #210, branch `feat/bestway-telegram-exam-engine-2`
+- **Xavfsizlik**: guruh chatini o'quvchi akkauntiga bog'lash taqiqlandi (`/start` token va kontakt faqat shaxsiy chatda); bir martalik token parallel so'rovlarda faqat bitta chatni bog'laydi; guruhda `/tests` o'quvchi testlarini ko'rsatmaydi.
+- **Test kalitlari**: `maxAttempts > 1` bo'lsa, oxirgi urinish yoki muddat tugaguncha o'quvchiga to'g'ri javob va izoh ko'rsatilmaydi (ustoz ko'radi).
+- **Outbox**: har bir xabar yuborishdan oldin lease qayta tekshiriladi (ikki worker bir xabarni ikki marta yubormaydi); `telegram-outbox` alohida opt-in profilida (`--profile workers` uni ishga tushirmaydi).
+- **CI**: bildirishnoma/E2E PG skriptlari soatga bog'liq edi (Toshkent 22:00–07:00 tinch soatlari) — tuzatildi; ustoz so'rovlari SQL darajasida filtrlanadi.
+- Tekshiruv: pytest 1543 o'tdi; PG: engine 23, class quiz 61, Telegram quiz 33, vocab 65, result cards 47, notifications 88, E2E 41. Tafsilotlar: `docs/TELEGRAM_BOT_2_SECURITY_AUDIT.md` (A1–A7).
+- **Merge tartibi**: avval PR #210, keyin PR #209 (unda `core.0026` birlashtiruvchi migratsiya bor).
+
 ### 41-BLOK: Mock 27 — yakuniy to'g'rilik va egasiga topshirish (2026-11-21) — PR #209, branch `feat/ielts-academic-full-mock-27`
 - **Xatolar**: `save_quick_content` `locked_exam`ni tranzaksiyadan tashqarida chaqirib HTTP 500 berardi — tuzatildi (qulf faqat `_locked_mutation` ichida), nomavjud imtihon 404, egasi bo'lmagan o'qituvchi 403. Gated imtihonda quick-content endi **to'liq readiness** talab qiladi (MOCK_NOT_READY 400). Eslatma: `is_published=True` tayinlanishi avvaldan saqlanmas edi (`bump` faqat versiyani saqlaydi) — haqiqiy nashr bypass'i yo'q edi.
 - **Migratsiya tartibi**: `core.0018` asosiy release (`deploy-release.sh`) da `manage.py migrate` bilan qo'llanadi; muqobil `deploy-django.yml` Django migrate'ni chaqirmaydi. Gate kodi jadval yo'q bo'lsa jim holatda (oddiy imtihonlar ishlaydi), import esa rad etadi. PG skriptida sinaldi.
