@@ -86,9 +86,9 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
     setExcelBusy(true);
     try {
       await downloadGroupExcel(groupId, group?.name ?? "group");
-      toast.success("Excel (.xlsx) yuklab olindi");
+      toast.success(t("excelDownloaded"));
     } catch (err: any) {
-      toast.error(err?.message ?? "Excel yuklab olishda xatolik");
+      toast.error(err?.message ?? t("excelFailed"));
     } finally {
       setExcelBusy(false);
     }
@@ -157,7 +157,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         {canSeePhones && (
           <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" />
-            <span>+ Yangi guruh yaratish</span>
+            <span>{t("create")}</span>
           </Button>
         )}
       </div>
@@ -182,36 +182,37 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
               <Button
                 size="sm"
                 onClick={() => setAttendanceOpen(true)}
-                className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover font-medium text-xs"
+                className="gap-1.5 font-medium text-xs"
               >
-                <CheckSquare className="size-4" />
-                <span>📋 Aqlli Davomat Olish</span>
+                <CheckSquare className="size-4" aria-hidden />
+                <span>{t("takeAttendance")}</span>
               </Button>
             )}
             <Button
               size="sm"
               variant="outline"
               asChild
-              className="gap-1.5 border-danger-border text-danger hover:bg-danger-bg text-xs"
+              className="gap-1.5 text-xs"
             >
               <a href={`/api/backend/v1/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
-                <FileText className="size-4 text-danger" />
-                <span>📄 Oylik Hisobot (PDF)</span>
+                <FileText className="size-4" aria-hidden />
+                <span>{t("monthlyReportPdf")}</span>
               </a>
             </Button>
             <Button
               size="sm"
+              variant="outline"
               onClick={handleDownloadExcel}
               loading={excelBusy}
-              className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover text-xs"
+              className="gap-1.5 text-xs"
             >
-              <Download className="size-4" />
-              <span>📊 Excel (.xlsx)</span>
+              <Download className="size-4" aria-hidden />
+              <span>{t("excelExport")}</span>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a href={`/api/backend/assessment/groups/${groupId}/export`} download>
-                <Download className="size-4" />
-                Vedomost (.csv)
+                <Download className="size-4" aria-hidden />
+                {t("gradeSheetCsv")}
               </a>
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>

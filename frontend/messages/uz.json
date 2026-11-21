@@ -356,7 +356,15 @@
     "transferStudents": "{count} ta o‘quvchi",
     "transferSubmit": "Ko‘chirish",
     "transferSuccess": "O‘quvchi tanlangan guruhga ko‘chirildi",
-    "transferNoTargets": "Bu o‘quvchini ko‘chirish uchun boshqa faol guruh yo‘q."
+    "transferNoTargets": "Bu o‘quvchini ko‘chirish uchun boshqa faol guruh yo‘q.",
+    "excelDownloaded": "Excel fayli yuklab olindi",
+    "excelFailed": "Excel faylini yuklab bo‘lmadi",
+    "takeAttendance": "Davomat olish",
+    "monthlyReportPdf": "Oylik hisobot (PDF)",
+    "excelExport": "Excel (.xlsx)",
+    "gradeSheetCsv": "Vedomost (.csv)",
+    "editName": "Guruh nomini tahrirlash",
+    "nameSaved": "Guruh nomi saqlandi"
   },
   "staff": {
     "title": "Xodimlar",
@@ -3480,5 +3488,27 @@
     "passMark": "O'tish balli: {percent}%",
     "assign": "Biriktirish",
     "assignmentCreated": "Vazifa biriktirildi"
+  },
+  "groupAnalytics": {
+    "title": "Guruh tahlili va natijalar jadvali",
+    "selectGroup": "Guruhni tanlang",
+    "students": "{count} ta o‘quvchi",
+    "excelExport": "Excel (.xlsx) yuklab olish",
+    "excelDownloaded": "Excel fayli yuklab olindi",
+    "excelFailed": "Excel faylini yuklab bo‘lmadi",
+    "empty": "Bu guruh bo‘yicha hali tahlil ma’lumotlari yo‘q.",
+    "averageBand": "Guruhning o‘rtacha bali",
+    "incompleteAverage": "To‘liq emas: {count} ta natija o‘tkazib yuborilgan bo‘limlarsiz hisoblandi",
+    "activeStudents": "Faol o‘quvchilar",
+    "completedExams": "Topshirilgan imtihonlar",
+    "skippedSections": "O‘tkazib yuborilgan bo‘limlar: <strong>{count}</strong> — ular o‘rtacha ballga kirmaydi.",
+    "colStudent": "O‘quvchi F.I.Sh.",
+    "colCompleted": "Topshirilgan imtihonlar",
+    "colWriting": "Writing",
+    "colSpeaking": "Speaking",
+    "colOverall": "Umumiy ball",
+    "noStudents": "Bu guruhda hali o‘quvchilar yo‘q.",
+    "incompleteHint": "O‘tkazib yuborilgan bo‘limlarsiz hisoblandi",
+    "incomplete": "to‘liq emas"
   }
 }

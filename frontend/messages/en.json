@@ -356,7 +356,15 @@
     "transferStudents": "{count, plural, one {# student} other {# students}}",
     "transferSubmit": "Move student",
     "transferSuccess": "Student moved to the selected group",
-    "transferNoTargets": "There is no other active group to move this student to."
+    "transferNoTargets": "There is no other active group to move this student to.",
+    "excelDownloaded": "Excel file downloaded",
+    "excelFailed": "The Excel file could not be downloaded",
+    "takeAttendance": "Take attendance",
+    "monthlyReportPdf": "Monthly report (PDF)",
+    "excelExport": "Excel (.xlsx)",
+    "gradeSheetCsv": "Grade sheet (.csv)",
+    "editName": "Rename group",
+    "nameSaved": "Group name saved"
   },
   "staff": {
     "title": "Staff",
@@ -3480,5 +3488,27 @@
     "passMark": "Pass mark: {percent}%",
     "assign": "Assign",
     "assignmentCreated": "Assignment set"
+  },
+  "groupAnalytics": {
+    "title": "Group analytics and results",
+    "selectGroup": "Select a group",
+    "students": "{count, plural, one {# student} other {# students}}",
+    "excelExport": "Download Excel (.xlsx)",
+    "excelDownloaded": "Excel file downloaded",
+    "excelFailed": "The Excel file could not be downloaded",
+    "empty": "No analytics are available for this group yet.",
+    "averageBand": "Group average band",
+    "incompleteAverage": "Incomplete: {count, plural, one {# result was} other {# results were}} calculated without skipped sections",
+    "activeStudents": "Active students",
+    "completedExams": "Completed exams",
+    "skippedSections": "Skipped sections: <strong>{count}</strong> — they are not included in the average.",
+    "colStudent": "Student",
+    "colCompleted": "Completed exams",
+    "colWriting": "Writing",
+    "colSpeaking": "Speaking",
+    "colOverall": "Overall",
+    "noStudents": "There are no students in this group yet.",
+    "incompleteHint": "Calculated without skipped sections",
+    "incomplete": "incomplete"
   }
 }

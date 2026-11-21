@@ -50,6 +50,7 @@ export function GroupAnalyticsPanel({
   onSelectGroup?: (groupId: string) => void;
   showGroupSelector?: boolean;
 }) {
+  const ta = useTranslations("groupAnalytics");
   const analyticsQ = useGroupAnalytics(selectedGroupId);
   const [excelLoading, setExcelLoading] = React.useState(false);
 
@@ -62,9 +63,9 @@ export function GroupAnalyticsPanel({
     setExcelLoading(true);
     try {
       await downloadGroupExcel(selectedGroupId, groupName);
-      toast.success("Excel (.xlsx) fayli yuklab olindi");
+      toast.success(ta("excelDownloaded"));
     } catch (err: any) {
-      toast.error(err?.message ?? "Excel yuklab olishda xatolik yuz berdi");
+      toast.error(err?.message ?? ta("excelFailed"));
     } finally {
       setExcelLoading(false);
     }
@@ -76,18 +77,18 @@ export function GroupAnalyticsPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <CardTitle className="text-base font-bold text-fg">
-              Guruh tahlili va natijalar jadvali
+              {ta("title")}
             </CardTitle>
             {showGroupSelector && groups && groups.length > 0 && onSelectGroup && (
               <select
-                aria-label="Guruhni tanlang"
+                aria-label={ta("selectGroup")}
                 value={selectedGroupId}
                 onChange={(e) => onSelectGroup(e.target.value)}
                 className="h-9 rounded-md border border-border bg-surface px-3 text-sm font-medium text-fg focus:border-brand focus:outline-none"
               >
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
-                    {g.name} ({g.studentsCount} o&apos;quvchi)
+                    {g.name} ({ta("students", { count: g.studentsCount })})
                   </option>
                 ))}
               </select>
@@ -107,7 +108,7 @@ export function GroupAnalyticsPanel({
               ) : (
                 <FileSpreadsheet className="size-4" />
               )}
-              <span>📊 Excel (.xlsx) yuklab olish</span>
+              <span>{ta("excelExport")}</span>
             </Button>
 
             <Button
@@ -149,7 +150,7 @@ export function GroupAnalyticsPanel({
           </div>
         ) : !analytics ? (
           <p className="py-4 text-center text-sm text-fg-muted">
-            Guruh tahlili ma&apos;lumotlari topilmadi.
+            {ta("empty")}
           </p>
         ) : (
           <>
@@ -158,7 +159,7 @@ export function GroupAnalyticsPanel({
               <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-fg-muted">
-                    Guruh O&apos;rtacha Balli (Average Band)
+                    {ta("averageBand")}
                   </span>
                   <Award className="size-4 text-brand" />
                 </div>
@@ -167,14 +168,14 @@ export function GroupAnalyticsPanel({
                 </p>
                 {analytics.averageBandScore !== null && analytics.incompleteOverallCount > 0 && (
                   <p className="mt-1 text-[11px] text-warning">
-                    to&apos;liq emas: {analytics.incompleteOverallCount} ta natija o&apos;tkazib yuborilgan bo&apos;limlarsiz hisoblandi
+                    {ta("incompleteAverage", { count: analytics.incompleteOverallCount })}
                   </p>
                 )}
               </div>
 
               <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-fg-muted">Faol o&apos;quvchilar</span>
+                  <span className="text-xs font-medium text-fg-muted">{ta("activeStudents")}</span>
                   <Users className="size-4 text-emerald-500" />
                 </div>
                 <p className="mt-1.5 text-2xl font-bold tabular-nums text-fg">
@@ -185,7 +186,7 @@ export function GroupAnalyticsPanel({
               <div className="rounded-xl border border-border bg-bg-subtle/60 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-fg-muted">
-                    Topshirilgan imtihonlar soni
+                    {ta("completedExams")}
                   </span>
                   <CheckCircle2 className="size-4 text-blue-500" />
                 </div>
@@ -196,7 +197,7 @@ export function GroupAnalyticsPanel({
             </div>
             {analytics.skippedSections > 0 && (
               <p className="text-xs text-fg-muted">
-                O&apos;tkazib yuborilgan bo&apos;limlar: <strong className="tabular-nums text-fg">{analytics.skippedSections}</strong> — ular o&apos;rtacha ballga kirmaydi.
+                {ta.rich("skippedSections", { count: analytics.skippedSections, strong: (chunks) => <strong className="tabular-nums text-fg">{chunks}</strong> })}
               </p>
             )}
 
@@ -206,19 +207,19 @@ export function GroupAnalyticsPanel({
                 <thead>
                   <tr className="border-b border-border bg-bg-subtle text-xs font-semibold text-fg-muted">
                     <th className="px-3.5 py-2.5">#</th>
-                    <th className="px-3.5 py-2.5">O&apos;quvchi F.I.Sh.</th>
-                    <th className="px-3.5 py-2.5 text-center">Topshirilgan imtihonlar</th>
-                    <th className="px-3.5 py-2.5 text-center">Writing balli</th>
-                    <th className="px-3.5 py-2.5 text-center">Speaking balli</th>
+                    <th className="px-3.5 py-2.5">{ta("colStudent")}</th>
+                    <th className="px-3.5 py-2.5 text-center">{ta("colCompleted")}</th>
+                    <th className="px-3.5 py-2.5 text-center">{ta("colWriting")}</th>
+                    <th className="px-3.5 py-2.5 text-center">{ta("colSpeaking")}</th>
                     <th className="px-3.5 py-2.5 text-center">Listening / Reading</th>
-                    <th className="px-3.5 py-2.5 text-center">Umumiy ball (Overall)</th>
+                    <th className="px-3.5 py-2.5 text-center">{ta("colOverall")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {analytics.students.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-6 text-center text-sm text-fg-muted">
-                        Ushbu guruhda hali o&apos;quvchilar yo&apos;q.
+                        {ta("noStudents")}
                       </td>
                     </tr>
                   ) : (
@@ -244,8 +245,8 @@ export function GroupAnalyticsPanel({
                         <td className="px-3.5 py-2.5 text-center font-bold text-brand tabular-nums">
                           {st.overallBand !== null ? st.overallBand.toFixed(1) : "—"}
                           {st.overallBand !== null && st.overallBandIncomplete && (
-                            <span className="ml-1 text-[10px] font-medium text-warning" title="O'tkazib yuborilgan bo'limlarsiz hisoblandi">
-                              to&apos;liq emas
+                            <span className="ml-1 text-[10px] font-medium text-warning" title={ta("incompleteHint")}>
+                              {ta("incomplete")}
                             </span>
                           )}
                         </td>
@@ -292,7 +293,7 @@ export function GroupsView() {
         actions={
           <Button size="sm" onClick={() => setDialog({ open: true, group: null })}>
             <Plus />
-            <span>+ Yangi guruh yaratish</span>
+            <span>{t("create")}</span>
           </Button>
         }
       />
@@ -330,7 +331,7 @@ export function GroupsView() {
           action={
             <Button size="sm" onClick={() => setDialog({ open: true, group: null })}>
               <Plus />
-              <span>+ Yangi guruh yaratish</span>
+              <span>{t("create")}</span>
             </Button>
           }
         />
