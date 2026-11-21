@@ -212,12 +212,13 @@ def contact_request(chat_id,text):
 
 
 def _get_superadmin_id() -> str:
+    """Operator-configured alert destination ('' when unset); never an authorization source."""
     try:
         from django.conf import settings as dj_settings
-        val = getattr(dj_settings, 'SUPERADMIN_TELEGRAM_ID', None)
+        configured = getattr(dj_settings, 'SUPERADMIN_TELEGRAM_ID', '')
     except Exception:
-        val = None
-    return str(val or os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765'))
+        configured = ''
+    return str(os.environ.get('SUPERADMIN_TELEGRAM_ID') or configured or '')
 
 
 SUPERADMIN_TELEGRAM_ID = _get_superadmin_id()
@@ -250,7 +251,7 @@ def _html_escape(value) -> str:
 def notify_submission_result(job_or_attempt):
     """
     Sends real-time formatted submission result notification to:
-    1. Superadmin (5582178765)
+    1. The operator-configured alert chat (SUPERADMIN_TELEGRAM_ID), if any
     2. Student's Group Teacher (if the teacher has a telegram_chat_id)
     Never raises exceptions to caller.
     """

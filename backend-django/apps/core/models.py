@@ -798,3 +798,14 @@ class SubmissionHandoff(models.Model):
 
     class Meta:
         db_table = "SubmissionHandoff"
+
+
+class TelegramUpdateReceipt(models.Model):
+    """One row per Telegram update_id ever accepted: webhook retries, polling restarts and replays are processed once.
+
+    The unique constraint is the atomic claim; rows older than the retention window are pruned opportunistically.
+    """
+
+    update_id = models.BigIntegerField(unique=True)
+    kind = models.CharField(max_length=20, blank=True, default="")
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)

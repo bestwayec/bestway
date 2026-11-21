@@ -40,7 +40,8 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
     # 1. FSM State Transitions
     # =========================================================================
 
-    def test_fsm_state_lifecycle_transitions(self):
+    @patch("apps.core.telegram_menu.linked_superadmin", side_effect=lambda cid: SimpleNamespace(role="super_admin") if str(cid) == "5582178765" else None)
+    def test_fsm_state_lifecycle_transitions(self, _linked):
         """Test set_state, get_state, update_state_data, and clear_state."""
         # 1. Initial state is empty
         state = fsm.get_state(self.superadmin_id)
@@ -209,7 +210,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
         )
 
         sent_messages = []
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))):
             # 1. Via Text command /topics
             telegram_bot.handle({
@@ -257,7 +258,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
             "is_active": True,
         }
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True), \
              patch("apps.core.telegram_bot._download_telegram_photo", return_value=b"\xff\xd8\xff\xe0FAKE_CHART_BYTES"), \
@@ -351,7 +352,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
             "is_active": True,
         }
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True), \
              patch("apps.core.telegram_menu.create_writing_topic_helper", return_value=fake_created_topic):
@@ -428,7 +429,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
             "is_active": True,
         }
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True), \
              patch("apps.core.telegram_menu.create_speaking_topic_helper", return_value=fake_created_topic):
@@ -528,7 +529,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
             "is_active": True,
         }
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True), \
              patch("apps.core.telegram_menu.create_speaking_topic_helper", return_value=fake_created_topic):
@@ -619,7 +620,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
 
         deleted_ids = []
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True), \
              patch("apps.core.telegram_menu.list_recent_topics_helper", return_value=sample_topics), \
@@ -690,7 +691,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
         sent_messages = []
         sa_user = SimpleNamespace(id="sa-1", name="Superadmin", role="super_admin", is_active=True, telegram_chat_id=self.superadmin_id)
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True):
 
@@ -734,7 +735,7 @@ class TelegramTopicManagementV071Tests(SimpleTestCase):
         sent_messages = []
         sa_user = SimpleNamespace(id="sa-1", name="Superadmin", role="super_admin", is_active=True, telegram_chat_id=self.superadmin_id)
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, **kw: sent_messages.append((cid, txt, kw.get("reply_markup")))), \
              patch.object(telegram_delivery, "answer_callback", return_value=True):
 

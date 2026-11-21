@@ -68,7 +68,7 @@ class WritingOcrAndGeminiFallbackTests(SimpleTestCase):
                 }
             raise RuntimeError("Unknown URL")
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "or-key", "XKIRO_API_KEY": "xk-key"}, clear=False), \
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "or-key", "XKIRO_API_KEY": "xk-key", "GEMINI_API_KEY": "gm-test-key"}, clear=False), \
              patch.object(writing_ocr, "_post_json", side_effect=fail_post):
             res = writing_ocr.extract_and_evaluate_images([page1, page2], task_prompt="Discuss education.", task_type="task2")
             self.assertEqual(len(res["pages"]), 2)

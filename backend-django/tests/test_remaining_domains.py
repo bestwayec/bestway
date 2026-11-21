@@ -217,6 +217,7 @@ class TelegramLifecycleTests(SimpleTestCase):
 
     def test_callback_query_handler_answers_and_delivers_apk(self):
         with patch.object(telegram_delivery,'answer_callback') as answer_cb, \
+             patch('apps.core.telegram_state.claim_update',return_value=True), \
              patch.object(telegram_menu,'send_apk',return_value=True) as send_apk:
             telegram_bot.handle({
                 'update_id':99,

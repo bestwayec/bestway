@@ -564,6 +564,9 @@ def writing_ocr_view(request, attempt_id, question_id=None):
     uploaded_items = _extract_uploaded_images(request)
     ocr_result = writing_ocr.extract_text_from_images([(raw, mime) for raw, mime, _ in uploaded_items])
     ocr_text = ocr_result.get('ocrText', '')
+    if not ocr_text.strip():
+        # Fail closed: never store (or grade) text the OCR did not actually read; the existing answer stays untouched.
+        engine.fail('OCR_UNAVAILABLE', "Rasmdan matnni o'qib bo'lmadi. Qayta urinib ko'ring yoki matnni qo'lda kiriting", 503)
     append = str(request.data.get('append') or request.query_params.get('append', '')).lower() in ('1', 'true', 'yes')
     written = []
     try:

@@ -12,29 +12,8 @@ from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
 
-try:
-    from . import writing_ocr
-except ImportError:
-    class _WritingOcrFallback:
-        @staticmethod
-        def extract_and_evaluate_images(images, task_prompt=None):
-            return {
-                'extracted_text': 'Essay text extracted from image.',
-                'word_count': 250,
-                'overall_band': 6.5,
-                'criteria': {
-                    'task_achievement': 6.5,
-                    'coherence_and_cohesion': 6.5,
-                    'lexical_resource': 6.5,
-                    'grammatical_range_and_accuracy': 6.5,
-                },
-                'strengths': ['Clear paragraph structure', 'Relevant examples provided'],
-                'weaknesses': ['Improve complex sentence variety', 'Check article usage'],
-                'feedback': 'Good overall response addressing the main parts of the prompt.',
-            }
-    writing_ocr = _WritingOcrFallback()
+from . import writing_ocr
 
-SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
 LINE='➖➖➖➖➖➖➖➖➖'
 HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/writing — Writing rasm tekshirish (OCR + AI)\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 WRITING_PROGRESS_MSG = (
@@ -67,14 +46,17 @@ def _download_telegram_photo(file_id: str) -> bytes | None:
     file_path = (info or {}).get('file_path')
     if not file_path:
         return None
-    token = os.environ.get('TELEGRAM_BOT_TOKEN', 'test-token')
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not token:
+        return None
     file_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
     try:
         req = Request(file_url, headers={'User-Agent': 'BestWay-TelegramBot/1.0'}, method='GET')
         with urlopen(req, timeout=60) as resp:
             return resp.read()
     except Exception as exc:
-        logging.getLogger(__name__).warning('Failed to download Telegram photo bytes: %r', exc)
+        # The request URL embeds the bot token: never log the exception text, only its type.
+        logging.getLogger(__name__).warning('Failed to download Telegram photo bytes (%s)', type(exc).__name__)
         return None
 
 
@@ -211,10 +193,20 @@ def _handle_writing_image(chat_id, msg, user=None):
             file_id = doc.get('file_id')
             mime_type = doc_mime
 
-    image_bytes = _download_telegram_photo(file_id) or b''
+    image_bytes = _download_telegram_photo(file_id)
     caption = (msg.get('caption') or '').strip()
+    if not image_bytes:
+        api.send(chat_id, "⚠️ Rasmni yuklab bo'lmadi. Iltimos, qayta yuboring.")
+        return
 
     result = writing_ocr.extract_and_evaluate_images([(image_bytes, mime_type)], task_prompt=caption)
+    # Fail closed: no text read, or no real AI evaluation -> NO band is shown and nobody is alerted with a score.
+    if not (result.get('ocrText') or result.get('ocr_text') or '').strip():
+        api.send(chat_id, "⚠️ Rasmdan matnni o'qib bo'lmadi. Aniqroq rasmga olib qayta yuboring.")
+        return
+    if result.get('available') is False or result.get('overall_band') is None:
+        api.send(chat_id, "ℹ️ Matn o'qildi, lekin avtomatik baholash hozir mavjud emas. Hech qanday ball berilmadi — ustozingiz tekshiradi.")
+        return
     report_html, overall_band_str = _format_writing_ocr_report(result)
     api.send(chat_id, report_html)
 
@@ -237,6 +229,9 @@ def _handle_writing_image(chat_id, msg, user=None):
 
 
 def handle(update):
+    from . import telegram_state
+    if not telegram_state.claim_update(update):
+        return  # duplicate delivery / replay of an already accepted update_id
     cb=update.get('callback_query')
     if cb:
         try:
