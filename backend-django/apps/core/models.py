@@ -951,6 +951,7 @@ class TelegramPreference(models.Model):
     quiet_start = models.TimeField(default=datetime.time(22, 0))
     quiet_end = models.TimeField(default=datetime.time(7, 0))
     timezone = models.CharField(max_length=40, default="Asia/Tashkent")
+    muted_kinds = models.JSONField(default=list, blank=True)   # notification kinds the user switched off
     updated_at = models.DateTimeField(auto_now=True)
 
 
@@ -1087,3 +1088,30 @@ class ResultCardDelivery(models.Model):
     class Meta:
         db_table = "ResultCardDelivery"
         constraints = [models.UniqueConstraint(fields=["kind", "ref_id", "recipient_id", "version"], name="one_result_card_per_result")]
+
+
+class TelegramOutbox(models.Model):
+    """Durable notification queue. Producers insert rows (unique dedupe key); a worker delivers them with leases, bounded
+    retries and rate limits, so a restart or a Telegram failure never loses or duplicates a notification."""
+
+    STATUSES = ("pending", "sending", "sent", "failed", "skipped", "dead")
+
+    id = models.BigAutoField(primary_key=True)
+    recipient_id = models.CharField(max_length=255)
+    kind = models.CharField(max_length=24)               # tests | deadlines | vocab | results | feedback | attendance | teacher
+    dedupe_key = models.CharField(max_length=255, unique=True)
+    text = models.TextField()
+    keyboard = models.JSONField(null=True, blank=True)
+    status = models.CharField(max_length=10, default="pending")
+    attempts = models.PositiveSmallIntegerField(default=0)
+    send_after = models.DateTimeField()                  # quiet-hours / scheduling deferral
+    next_attempt_at = models.DateTimeField()             # retry backoff
+    locked_until = models.DateTimeField(null=True, blank=True)   # worker lease; an expired lease is recoverable
+    last_error = models.CharField(max_length=60, blank=True, default="")   # short code only, never content/token
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "TelegramOutbox"
+        indexes = [models.Index(fields=["status", "next_attempt_at"], name="telegram_outbox_due"),
+                   models.Index(fields=["recipient_id", "kind"], name="telegram_outbox_recipient")]

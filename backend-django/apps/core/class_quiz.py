@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import logging
 import json
 import random
 from datetime import timedelta
@@ -34,6 +35,15 @@ MAX_QUESTIONS = 100
 MIN_PUBLISH_QUESTIONS = 1
 TF_OPTIONS = ['True', 'False']
 GRADING_VERSION = 1
+
+
+def _notify(name: str, *args):
+    """Queue a durable notification; a notification problem must never break an exam operation."""
+    try:
+        from . import telegram_notify
+        getattr(telegram_notify, name)(*args)
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).warning('notification %s could not be queued', name)
 
 
 def fail(code: str, message: str, status: int = 400):
@@ -347,6 +357,7 @@ def assign_quiz(actor, quiz_id, group_ids: list, deadline, *, time_limit_minutes
             created.append(row)
     for row in created:
         _audit(actor, 'class_quiz.assign', 'classQuizAssignment', row.id, new=dict(group=row.group_id, deadline=str(row.deadline)))
+        _notify('quiz_assigned', row.id)
     return [assignment_summary(row) for row in created]
 
 
@@ -549,7 +560,11 @@ def _finalize_locked(attempt: ClassQuizAttempt, *, auto: bool) -> ClassQuizAttem
 def finalize(attempt_id, *, auto=False) -> ClassQuizAttempt:
     with transaction.atomic():
         attempt = ClassQuizAttempt.objects.select_for_update().select_related('assignment').get(id=attempt_id)
-        return _finalize_locked(attempt, auto=auto)
+        was_open = attempt.status != 'submitted'
+        attempt = _finalize_locked(attempt, auto=auto)
+    if was_open and auto:
+        _notify('result_ready', attempt.id)      # deadline auto-submit: the student is not looking at the bot
+    return attempt
 
 
 def finish_attempt(actor, attempt_id) -> dict:

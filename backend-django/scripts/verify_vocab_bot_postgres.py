@@ -52,14 +52,25 @@ def check(value, message):
     print('PASS ' + message)
 
 
+def _enforce_callback_limit(keyboard):
+    """Telegram rejects inline keyboards whose callback_data exceeds 64 bytes: fail the script instead of hiding it."""
+    for row in keyboard or []:
+        for button in row:
+            data = button.get('callback_data')
+            if data is not None and len(data.encode()) > 64:
+                raise AssertionError(f'callback_data over 64 bytes ({len(data.encode())}): {data}')
+
+
 def fake_call(method, payload=None):
     payload = payload or {}
+    _enforce_callback_limit((payload.get('reply_markup') or {}).get('inline_keyboard'))
     if method == 'editMessageText':
         out.append(dict(chat=payload['chat_id'], text=payload['text'], keyboard=(payload.get('reply_markup') or {}).get('inline_keyboard'), edit=True))
     return {'ok': True, 'message_id': 1}
 
 
 def fake_send(chat_id, text, reply_markup=None):
+    _enforce_callback_limit((reply_markup or {}).get('inline_keyboard'))
     out.append(dict(chat=chat_id, text=text, keyboard=(reply_markup or {}).get('inline_keyboard'), edit=False))
     return {'message_id': 1}
 
@@ -405,6 +416,7 @@ try:
     print(f'\nALL {len(checks)} CHECKS PASSED')
 finally:
     with connection.cursor() as cursor:
+        cursor.execute('DELETE FROM "TelegramOutbox" WHERE recipient_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_vocabularyreviewevent WHERE review_id IN (SELECT id FROM "UserWeakWord" WHERE student_id = ANY(%s))', [users])
         cursor.execute('DELETE FROM "UserWeakWord" WHERE student_id = ANY(%s)', [users])
         cursor.execute('DELETE FROM core_vocabularyanswerreport WHERE student_id = ANY(%s)', [users])

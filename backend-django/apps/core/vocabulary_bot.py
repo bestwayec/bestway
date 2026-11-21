@@ -341,6 +341,16 @@ def decide_report(actor, report_id, approve: bool, note=""):
             VocabularyAnswerVariant.objects.get_or_create(
                 word=report.word, direction=report.direction, canonical=va.canon(report.response),
                 defaults={"text": report.response, "approved_by_id": actor.id, "source": "appeal"})
+        student_id, english, note_text, approved = report.student_id, report.word.english, report.note, approve
+        report_id = report.id
+
+        def notify():
+            try:
+                from . import telegram_notify
+                telegram_notify.vocab_report_decided(student_id, english, approved, note_text, key=f"vocab_report:{report_id}")
+            except Exception:  # noqa: BLE001 - never break the decision
+                pass
+        transaction.on_commit(notify)
         return report
 
 

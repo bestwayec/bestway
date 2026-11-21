@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -108,6 +109,29 @@ def send_photo(chat_id,photo,caption=None,parse_mode='HTML',reply_markup=None,fi
     except Exception:
         logging.getLogger(__name__).warning('Telegram delivery failed for sendPhoto')
     return None
+
+
+def send_detailed(chat_id,text,reply_markup=None):
+    """sendMessage with a classified outcome for the outbox: ('sent',None) | ('retry',seconds) | ('permanent',reason).
+
+    Only status codes and short reasons are returned; content and token are never logged."""
+    token=os.environ.get('TELEGRAM_BOT_TOKEN','')
+    if not token or not chat_id:return 'permanent','not_configured'
+    payload=dict(chat_id=chat_id,text=text,parse_mode='HTML')
+    if reply_markup is not None:payload['reply_markup']=reply_markup
+    try:
+        request=Request(f'https://api.telegram.org/bot{token}/sendMessage',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'},method='POST')
+        with urlopen(request,timeout=20) as response: data=json.loads(response.read())
+        return ('sent',None) if data.get('ok') else ('retry',60)
+    except HTTPError as error:
+        try:body=json.loads(error.read() or b'{}')
+        except Exception:body={}
+        if error.code==429:return 'retry',int((body.get('parameters') or {}).get('retry_after') or 30)
+        if error.code in (400,403,404):return 'permanent',f'http_{error.code}'
+        return 'retry',None
+    except Exception:
+        logging.getLogger(__name__).warning('Telegram delivery failed for sendMessage')
+        return 'retry',None
 
 
 def send_audio(chat_id,audio,caption=None,title=None,performer=None,filename='speaking.mp3',parse_mode='HTML',reply_markup=None):

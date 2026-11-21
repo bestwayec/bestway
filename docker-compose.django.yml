@@ -66,6 +66,12 @@ services:
     command: ["python", "manage.py", "run_game_scheduler"]
     mem_limit: 256m
     cpus: 0.25
+  telegram-outbox:
+    <<: *django
+    profiles: [workers]
+    command: ["python", "manage.py", "run_telegram_outbox"]
+    mem_limit: 256m
+    cpus: 0.25
   telegram-bot:
     <<: *django
     profiles: [telegram-polling]

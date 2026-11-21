@@ -127,7 +127,15 @@ class TelegramLifecycleTests(SimpleTestCase):
             telegram_bot.run(Event(),once=True);handle.assert_called_once_with({'update_id':12});self.assertEqual(provider.call_args.args[1]['timeout'],30)
 
     def test_role_menus_are_exact_and_html_is_escaped(self):
-        self.assertEqual(telegram_menu.menu_for('teacher')['keyboard'][0],[{'text':'👥 Guruhlarim'},{'text':'✍️ Baholash navbati'}])
+        teacher_rows=telegram_menu.menu_for('teacher')['keyboard']
+        self.assertEqual(teacher_rows[0],[{'text':'📝 Test yaratish'},{'text':'👥 Guruhlarim'}])
+        teacher_labels=[btn['text'] for row in teacher_rows for btn in row]
+        for label in ('✍️ Baholash navbati','📊 Natijalar',"📚 Lug'at to'plamlari",'🗓 Topshiriqlar',"✅ So'rovlar","📢 E'lonlar",'⚙️ Sozlamalar'):
+            self.assertIn(label,teacher_labels)
+        student_labels=[btn['text'] for row in telegram_menu.menu_for('student')['keyboard'] for btn in row]
+        for label in ("📚 Lug'at",'📝 Testlarim','🔁 Xatolarni takrorlash','📝 Natijalarim','📅 Davomatim',"👨‍🏫 O'qituvchi fikri",'⚙️ Sozlamalar'):
+            self.assertIn(label,student_labels)
+        self.assertNotIn('📝 Test yaratish',student_labels)
         for role in ('student','parent','teacher','admin','super_admin'):
             labels=[btn['text'] for row in telegram_menu.menu_for(role)['keyboard'] for btn in row]
             self.assertIn('📱 Android ilovani yuklab olish (.apk)',labels)

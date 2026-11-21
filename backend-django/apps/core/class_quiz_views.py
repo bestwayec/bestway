@@ -109,7 +109,9 @@ def attempt_answer(request, attempt_id):
 @api_view(['POST'])
 @permission_classes([Authenticated])
 def attempt_finish(request, attempt_id):
-    return success(quiz.finish_attempt(request.user, attempt_id), 201)
+    result = quiz.finish_attempt(request.user, attempt_id)
+    quiz._notify('result_ready', attempt_id)       # website finish: also leave the result card/review in Telegram (deduped)
+    return success(result, 201)
 
 
 @api_view(['GET'])

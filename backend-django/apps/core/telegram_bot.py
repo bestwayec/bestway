@@ -12,7 +12,10 @@ from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
 from . import telegram_quiz
+from . import telegram_state as _dialogs
 from . import telegram_vocab
+from . import telegram_teacher
+from . import telegram_settings
 
 from . import writing_ocr
 
@@ -246,6 +249,14 @@ def handle(update):
                 telegram_quiz.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
                                               chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
                 return
+            if telegram_teacher.is_teacher_callback(data):
+                telegram_teacher.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                                 chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
+            if telegram_settings.is_settings_callback(data):
+                telegram_settings.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                                  chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
             if telegram_vocab.is_vocab_callback(data):
                 telegram_vocab.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
                                                chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
@@ -351,16 +362,28 @@ def handle(update):
         if text in ('/tests', '/testlar'):
             telegram_quiz.send_my_tests(chat_id)
             return
-        if text.startswith('/') and telegram_vocab.command(chat_id, text, chat_type=(msg.get('chat') or {}).get('type', 'private')):
+        _ctype = (msg.get('chat') or {}).get('type', 'private')
+        if text.startswith('/') and (telegram_vocab.command(chat_id, text, chat_type=_ctype) or telegram_teacher.command(chat_id, text, chat_type=_ctype)
+                                     or telegram_settings.command(chat_id, text, chat_type=_ctype)):
             return
 
         # FSM State Interception for Multi-Step Topic Dialogs
         fsm_session = fsm.get_state(chat_id)
         fsm_state = fsm_session.get('state') if isinstance(fsm_session, dict) else None
+        if not fsm_state and text in ('/cancel', '/bekor'):      # leaves any pending quiz/vocabulary/teacher wizard step (durable dialog state)
+            try:
+                _who = links.find(str(chat_id), True)
+                _pending = _who is not None and _dialogs.get_dialog(_who.id)[0]
+            except Exception:  # noqa: BLE001 - fall back to the existing cancel handling
+                _pending = False
+            if _pending:
+                _dialogs.clear_dialog(_who.id)
+                api.send(chat_id, '✖️ Bekor qilindi. / Cancelled.')
+                return
 
         # A plain private message answers the pending free-text quiz question (durable dialog state, not memory).
         if not fsm_state and text and not text.startswith('/') and text not in menu.BTN.values() \
-                and (msg.get('chat') or {}).get('type', 'private') == 'private' and (telegram_quiz.handle_text(chat_id, text) or telegram_vocab.handle_text(chat_id, text)):
+                and (msg.get('chat') or {}).get('type', 'private') == 'private' and (telegram_quiz.handle_text(chat_id, text) or telegram_vocab.handle_text(chat_id, text) or telegram_teacher.handle_text(chat_id, text)):
             return
 
         if fsm_state:

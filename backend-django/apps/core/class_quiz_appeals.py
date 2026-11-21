@@ -41,6 +41,8 @@ def file_appeal(actor, attempt_id, question_index) -> tuple[ClassQuizAppeal, boo
         cq.fail('NOTHING_TO_APPEAL', "Bu javob uchun e'tiroz bildirib bo'lmaydi", 409)
     appeal, created = ClassQuizAppeal.objects.get_or_create(
         attempt=attempt, question_id=question['id'], defaults={'student_id': actor.id, 'response': answer.response[:2000]})
+    if created:
+        cq._notify('new_appeal', appeal.id)
     return appeal, created
 
 
@@ -108,6 +110,7 @@ def decide(actor, appeal_id, approve: bool, note: str = '') -> dict:
                     other.status, other.decided_by_id, other.decided_at, other.note = 'approved', actor.id, now, 'covered by an approved appeal'
                     other.save(update_fields=['status', 'decided_by_id', 'decided_at', 'note'])
         cq._audit(actor, 'class_quiz.appeal.' + appeal.status, 'classQuizAppeal', appeal.id, new=dict(status=appeal.status, changedAttempts=len(changed), note=note))
+        transaction.on_commit(lambda: cq._notify('appeal_decided', appeal.id, tuple(changed)))
         return dict(_view(appeal), changedAttempts=changed)
 
 

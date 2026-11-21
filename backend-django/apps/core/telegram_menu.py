@@ -54,6 +54,16 @@ BTN=dict(
     web_admin_sso='🔐 Web Admin (1-Click Kirish)',
     apk='📱 Android ilovani yuklab olish (.apk)',
     help='ℹ️ Yordam',
+    vocab="📚 Lug'at",
+    review='🔁 Xatolarni takrorlash',
+    feedback="👨‍🏫 O'qituvchi fikri",
+    settings='⚙️ Sozlamalar',
+    teacher_new='📝 Test yaratish',
+    teacher_results='📊 Natijalar',
+    teacher_sets="📚 Lug'at to'plamlari",
+    teacher_assign='🗓 Topshiriqlar',
+    teacher_requests="✅ So'rovlar",
+    teacher_announce="📢 E'lonlar",
 )
 LABEL=dict(present='✅ Keldi',absent='❌ Kelmadi',late='⏰ Kechikdi',paid="✅ To'langan",unpaid="❌ To'lanmagan",partial="🟡 Qisman to'langan",in_progress='⏳ Topshirilmoqda',grading='✍️ Baholanmoqda',completed='✅ Tayyor')
 def label(value):return LABEL.get(value,value)
@@ -109,11 +119,11 @@ def menu_for(role, chat_id=None):
             ['help'],
         ]
     elif role=='student':
-        rows=[['my_tests','results'],['points','attendance'],['payment','mock_exams'],['leaderboard','writing_ocr'],['web_login','code'],['apk','help']]
+        rows=[['vocab','my_tests'],['review','results'],['attendance','feedback'],['points','payment'],['mock_exams','leaderboard'],['writing_ocr','web_login'],['code','settings'],['apk','help']]
     elif role=='parent':
         rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
     elif role=='teacher':
-        rows=[['groups','grading'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
+        rows=[['teacher_new','groups'],['teacher_results','teacher_sets'],['teacher_assign','teacher_requests'],['teacher_announce','grading'],['monitoring','leaderboard'],['writing_ocr','mock_exams'],['web_login','code'],['settings','apk'],['help']]
     else:
         rows=[['today','debtors'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
     return dict(keyboard=[[dict(text=BTN[key]) for key in row] for row in rows],resize_keyboard=True)
@@ -1474,6 +1484,9 @@ def handle(chat_id, text, from_user=None):
         from . import telegram_quiz
         telegram_quiz.send_my_tests(chat_id)
         return True
+    routed = _route_new_menu(chat_id, text)
+    if routed:
+        return True
     key = next((key for key, value in BTN.items() if value == text), None)
     if key is None:
         return False
@@ -1487,3 +1500,19 @@ def handle(chat_id, text, from_user=None):
     return True
 
 
+
+
+def _route_new_menu(chat_id, text) -> bool:
+    """Reply-keyboard buttons of the vocabulary / teacher / settings features (same handlers as their slash commands)."""
+    from . import telegram_settings, telegram_teacher, telegram_vocab
+    commands = {BTN['vocab']: '/lugat', BTN['review']: '/takror', BTN['settings']: '/sozlamalar', BTN['teacher_new']: '/newtest',
+                BTN['teacher_results']: '/assignments', BTN['teacher_sets']: '/sets', BTN['teacher_assign']: '/assignments',
+                BTN['teacher_requests']: '/requests', BTN['teacher_announce']: '/announce'}
+    command = commands.get(text)
+    if command is not None:
+        return bool(telegram_vocab.command(chat_id, command) or telegram_teacher.command(chat_id, command) or telegram_settings.command(chat_id, command))
+    if text == BTN['feedback']:
+        from . import telegram_notify
+        telegram_notify.send_recent_feedback(chat_id)
+        return True
+    return False
