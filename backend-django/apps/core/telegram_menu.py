@@ -33,6 +33,7 @@ BTN=dict(
     attendance='📅 Davomatim',
     payment="💰 To'lovlarim",
     results='📝 Natijalarim',
+    my_tests='📝 Testlarim',
     mock_exams='🎯 Mock Imtihonlar',
     leaderboard='🥇 Reyting',
     writing_ocr='✍️ Writing Rasm Tekshirish (AI)',
@@ -108,7 +109,7 @@ def menu_for(role, chat_id=None):
             ['help'],
         ]
     elif role=='student':
-        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
+        rows=[['my_tests','results'],['points','attendance'],['payment','mock_exams'],['leaderboard','writing_ocr'],['web_login','code'],['apk','help']]
     elif role=='parent':
         rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
     elif role=='teacher':
@@ -1469,6 +1470,10 @@ def handle(chat_id, text, from_user=None):
         return True
     if not user:
         return False
+    if text == BTN['my_tests']:
+        from . import telegram_quiz
+        telegram_quiz.send_my_tests(chat_id)
+        return True
     key = next((key for key, value in BTN.items() if value == text), None)
     if key is None:
         return False

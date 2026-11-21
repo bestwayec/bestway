@@ -7,6 +7,11 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 44-BLOK: Telegram bot 2.0 — M3 Telegram test oqimi (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
+- **Yangi**: `telegram_quiz.py` (Testlarim → karta → Boshlash/Ko'rsatmalar → savol → javob → yakun → natija → xatolarni ko'rish), `/testlar` va `📝 Testlarim`; `TelegramDialogState`/`TelegramPreference` (core 0020) — matnli javob holati PostgreSQL'da (restartdan keyin ham).
+- **Xavfsizlik**: shaxs faqat bog'langan akkauntdan (callback'dagi id'ga ishonilmaydi); callback ≤64 bayt va qat'iy tekshiriladi; guruh chatida tugmalar rad etiladi; boshqa o'quvchi/ustoz/bog'lanmagan akkaunt rad etiladi; takroriy yetkazish `update_id` bilan, qo'sh bosish engine idempotentligi bilan.
+- Tekshiruv: `verify_telegram_quiz_postgres.py` 33 tekshiruv (40 savolli to'liq o'yin, restartdan keyin davom etish, parallel Finish, muddat tugashi, HTTP webhook), 9 unit test.
+
 ### 43-BLOK: Telegram bot 2.0 — M2 sinf testlari mexanizmi (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
 - **Yangi**: `ClassQuiz*` jadvallari (core 0019), `class_quiz.py` xizmat qatlami (sayt ham, bot ham shuni chaqiradi) va `/v1/class-quizzes…` API. Grammatika/lug'at/aralash testlar IELTS band'iga aylantirilmaydi (`isIeltsBand=false`, faqat foiz).
 - **Xavfsizlik/yaxlitlik**: ustoz faqat o'z testlari va o'z guruhlari; boshqa ustozning testi 404; tayinlashda o'zgarmas snapshot (keyingi tahrir eski natijani o'zgartirmaydi); server soati (deadline = min(topshiriq muddati, start+limit)); start/javob/yakun idempotent; parallel startlar bitta urinish; muddatdan keyingi javob rad etiladi va urinish avtomatik yakunlanadi; kalitlar topshirishgacha ochilmaydi; ota-ona faqat foiz xulosasi; CSV formula-injection zararsizlantirilgan.

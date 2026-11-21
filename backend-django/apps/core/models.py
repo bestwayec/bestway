@@ -1,4 +1,5 @@
 """Vocabulary and Spaced Repetition (SRS) models."""
+import datetime
 import uuid
 from django.db import models
 from apps.legacy_schema.models import Group, User, MockExam
@@ -925,3 +926,29 @@ class ClassQuizAnswer(models.Model):
     class Meta:
         db_table = "ClassQuizAnswer"
         constraints = [models.UniqueConstraint(fields=["attempt", "question_id"], name="unique_class_quiz_answer")]
+
+
+class TelegramDialogState(models.Model):
+    """Durable multi-step dialog position of one user (e.g. 'type your answer to question 7').
+
+    Critical exam state is NOT kept here: the attempt and its saved answers are PostgreSQL rows and the bot derives the
+    next question from them. This row only remembers which free-text question the next message answers, and expires.
+    """
+
+    user_id = models.CharField(max_length=255, unique=True)
+    state = models.CharField(max_length=40)
+    payload = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField()
+
+
+class TelegramPreference(models.Model):
+    """Per-user bot preferences: language, notification opt-in and quiet hours (local time in `timezone`)."""
+
+    user_id = models.CharField(max_length=255, unique=True)
+    language = models.CharField(max_length=2, default="uz")
+    notify_enabled = models.BooleanField(default=True)
+    quiet_start = models.TimeField(default=datetime.time(22, 0))
+    quiet_end = models.TimeField(default=datetime.time(7, 0))
+    timezone = models.CharField(max_length=40, default="Asia/Tashkent")
+    updated_at = models.DateTimeField(auto_now=True)

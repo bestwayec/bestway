@@ -41,3 +41,36 @@ def prune_receipts(now=None) -> int:
     cutoff = (now or timezone.now()) - RETENTION
     deleted, _ = TelegramUpdateReceipt.objects.filter(received_at__lt=cutoff).delete()
     return deleted
+
+
+# ------------------------------------------------------------------------------- durable dialog state / preferences
+from .models import TelegramDialogState, TelegramPreference  # noqa: E402
+
+DIALOG_TTL = timedelta(hours=6)
+
+
+def set_dialog(user_id: str, state: str, payload: dict, now=None) -> None:
+    now = now or timezone.now()
+    TelegramDialogState.objects.update_or_create(user_id=user_id, defaults=dict(state=state, payload=payload, expires_at=now + DIALOG_TTL))
+
+
+def get_dialog(user_id: str, now=None):
+    """(state, payload) or (None, {}) when there is none or it expired. Survives restarts and works across workers."""
+    row = TelegramDialogState.objects.filter(user_id=user_id).first()
+    if row is None or row.expires_at <= (now or timezone.now()):
+        return None, {}
+    return row.state, row.payload
+
+
+def clear_dialog(user_id: str) -> None:
+    TelegramDialogState.objects.filter(user_id=user_id).delete()
+
+
+def get_preference(user_id: str) -> TelegramPreference:
+    row, _created = TelegramPreference.objects.get_or_create(user_id=user_id)
+    return row
+
+
+def language_of(user_id: str) -> str:
+    row = TelegramPreference.objects.filter(user_id=user_id).values_list('language', flat=True).first()
+    return row if row in ('uz', 'en') else 'uz'

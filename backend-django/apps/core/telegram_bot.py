@@ -11,6 +11,7 @@ from . import telegram_delivery as api
 from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
+from . import telegram_quiz
 
 from . import writing_ocr
 
@@ -239,6 +240,11 @@ def handle(update):
             chat_id=cb.get('message',{}).get('chat',{}).get('id') or from_user.get('id')
             data=(cb.get('data') or '').strip()
             if cb.get('id'):api.answer_callback(cb['id'])
+            if telegram_quiz.is_quiz_callback(data):
+                # Quiz buttons: identity is the Telegram SENDER's linked account, answers go to their private chat.
+                telegram_quiz.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                              chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
             if chat_id and menu.is_superadmin(chat_id=chat_id):
                 menu.ensure_superadmin_user(chat_id, from_user=from_user)
             if chat_id and data in ('download_apk','apk','android_apk',menu.BTN['apk']):
@@ -337,9 +343,18 @@ def handle(update):
         user_pre = menu.ensure_superadmin_user(chat_id, from_user=from_user) if menu.is_superadmin(chat_id=chat_id) else None
         text = (msg.get('text') or '').strip()
 
+        if text in ('/tests', '/testlar'):
+            telegram_quiz.send_my_tests(chat_id)
+            return
+
         # FSM State Interception for Multi-Step Topic Dialogs
         fsm_session = fsm.get_state(chat_id)
         fsm_state = fsm_session.get('state') if isinstance(fsm_session, dict) else None
+
+        # A plain private message answers the pending free-text quiz question (durable dialog state, not memory).
+        if not fsm_state and text and not text.startswith('/') and text not in menu.BTN.values() \
+                and (msg.get('chat') or {}).get('type', 'private') == 'private' and telegram_quiz.handle_text(chat_id, text):
+            return
 
         if fsm_state:
             if text == '/cancel':
