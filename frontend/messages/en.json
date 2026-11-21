@@ -3193,7 +3193,10 @@
       "filterCompleted": "Completed",
       "noFilteredAssignments": "No assignments in this view.",
       "awaitingResult": "Calculating result",
-      "statusPending": "Pending"
+      "statusPending": "Pending",
+      "noneYet": "No assignments yet",
+      "noAssignmentsTitle": "No assignments from your teacher yet",
+      "noAssignmentsHint": "You are in {group}. New homework, vocabulary and exams from your teacher will appear here."
     },
     "certificateModal": {
       "print": "Print / PDF",

@@ -185,3 +185,24 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
     expect(mockPush).toHaveBeenCalledWith('/mock/exam-mock-4');
   });
 });
+
+describe('StudentAssignmentsWidget enrollment-aware empty state', () => {
+  it('does not tell an enrolled student to join a group when there are no assignments', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce([]);
+    await act(async () => root.render(React.createElement(StudentAssignmentsWidget, { groupName: 'Local Group A' })));
+    const text = host.textContent ?? '';
+    expect(text).toContain('No assignments from your teacher yet');
+    expect(text).toContain('You are in Local Group A');
+    expect(text).toContain('No assignments yet');
+    expect(text).not.toContain('All assignments are done');
+    expect(text).not.toMatch(/not in a group/i);
+    expect(Array.from(host.querySelectorAll('button')).some((b) => /join/i.test(b.textContent ?? ''))).toBe(false);
+  });
+
+  it('keeps the join-by-code path for a student without a classroom', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce([]);
+    await act(async () => root.render(React.createElement(StudentAssignmentsWidget, { groupName: null })));
+    expect(host.textContent).toMatch(/not in a group/i);
+    expect(Array.from(host.querySelectorAll('button')).some((b) => /join/i.test(b.textContent ?? ''))).toBe(true);
+  });
+});

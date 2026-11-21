@@ -51,7 +51,12 @@ export interface StudentAssignmentItem {
   completed_at?: string | null;
 }
 
-export function StudentAssignmentsWidget() {
+/**
+ * `groupName` comes from the authenticated profile: `undefined` while unknown,
+ * `null` when the student has no classroom. An empty assignment list only means
+ * "not in a group" when the profile says so.
+ */
+export function StudentAssignmentsWidget({ groupName }: { groupName?: string | null } = {}) {
   const tu = useTranslations("uiText");
   const router = useRouter();
   const [openingId, setOpeningId] = React.useState<string | null>(null);
@@ -146,12 +151,12 @@ export function StudentAssignmentsWidget() {
             <p className="text-[11px] text-fg-muted">
               {pendingAssignments.length > 0
                 ? tu("assignments.pending", { count: pendingAssignments.length })
-                : loadFailed ? null : tu("assignments.allDone")}
+                : loadFailed ? null : assignments.length > 0 ? tu("assignments.allDone") : tu("assignments.noneYet")}
             </p>
           </div>
         </div>
 
-        <Button
+        {!groupName && <Button
           size="sm"
           variant="outline"
           onClick={() => setJoinModalOpen(true)}
@@ -159,7 +164,7 @@ export function StudentAssignmentsWidget() {
         >
           <Plus className="h-3.5 w-3.5" />
           {tu("assignments.join")}
-        </Button>
+        </Button>}
       </div>
 
       {/* Filter Tabs */}
@@ -204,6 +209,12 @@ export function StudentAssignmentsWidget() {
           {tu("assignments.loadFailed")}{" "}
           <Button variant="ghost" onClick={() => void fetchAssignments()}>{tu("assignments.reload")}</Button>
         </div>
+      ) : assignments.length === 0 && groupName ? (
+        <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
+          <GraduationCap className="h-8 w-8 text-brand/80 mb-2" aria-hidden />
+          <p className="text-xs font-medium text-fg">{tu("assignments.noAssignmentsTitle")}</p>
+          <p className="text-[11px] text-fg-muted mt-0.5 max-w-xs">{tu("assignments.noAssignmentsHint", { group: groupName })}</p>
+        </Card>
       ) : assignments.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
           <GraduationCap className="h-8 w-8 text-brand/80 mb-2" />

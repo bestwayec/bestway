@@ -3193,7 +3193,10 @@
       "filterCompleted": "Tugallangan",
       "noFilteredAssignments": "Ushbu ko'rinishda vazifalar yo'q.",
       "awaitingResult": "Natija hisoblanmoqda",
-      "statusPending": "Kutilmoqda"
+      "statusPending": "Kutilmoqda",
+      "noneYet": "Hozircha topshiriq yo‘q",
+      "noAssignmentsTitle": "O‘qituvchingizdan hozircha topshiriq yo‘q",
+      "noAssignmentsHint": "Siz {group} guruhidasiz. O‘qituvchingiz bergan uy vazifasi, lug‘at va imtihonlar shu yerda paydo bo‘ladi."
     },
     "certificateModal": {
       "print": "Chop etish / PDF",
