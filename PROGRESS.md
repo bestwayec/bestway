@@ -7,6 +7,17 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 40-BLOK: IELTS Academic Full Mock 27 — audio darvozasi, qoralama import, original Writing/Speaking (2026-11-21) — branch `feat/ielts-academic-full-mock-27`
+- **Manba fayllar**: faqat 2 ta PDF yuklangan (Listening, Reading); `Full_test_27.html` ilova qilinmagan. Ikkala PDF'da uchinchi tomon suv belgisi bor → tarqatish huquqi **tasdiqlanmagan**; matnlar repoga kiritilmadi (ommaviy repo). Maxsus ekstraktor (`apps/core/mock27/extract_source.py`) shaxsiy katalogga yozadi.
+- **Tekshiruv**: Listening 40/40 (4 qism, 1–40), Reading 40/40 (3 matn, 1–40), barcha kalitlar hal qilinadi, Reading to'ldirish javoblari matnda topildi. Mavjud `validate_package` o'tdi.
+- **Audio**: Listening audiosi egasi tomonidan yuklanadi; sintetik audio yaratilmadi. `MockExamGate` + `MockListeningAudio` (migratsiya 0018): MISSING/UPLOADED/VERIFIED, MP3/M4A tekshiruvi (magic bytes, haqiqiy dekod, kodek, davomiylik), xavfsiz almashtirish, tasdiqlash fayl hash'i va javob kalitlariga bog'langan.
+- **Nashr darvozasi**: `content_rights` va `listening_audio_verified` readiness'ga qo'shildi; publish, demo va quick-content yo'llari o'tkazmaydi; clone darvozani saqlaydi. Imtihon DRAFT.
+- **Original kontent**: Writing Task 1 (Riverside Park 2005/2025, ikkita SVG + PNG, izchillik testlari) va Task 2; Speaking Part 1–3.
+- **Import**: `import_mock27` (tranzaksion, idempotent, mavjud `commit_import`). Mavjud xato tuzatildi: `resolve_bindings` naive/aware datetime.
+- **Testlar**: pytest 1496 o'tdi; 18 yangi unit test; `verify_mock27_postgres.py` 56/56 (haqiqiy PostgreSQL, CI'ga ulangan); mavjud PG skriptlar (readiness 65, item_bank 11, partial_practice 49, exam_window 24, listening_schedule 11, grading_consistency 79) o'tdi; tsc toza; vitest 873/873; Playwright `mock27-audio` 27/27 va `ielts-full` 10/10.
+- **Ochiq**: audio egasi yuklashi; huquq tasdig'i; `save_quick_content` 500 xatosi (mavjud, `locked_exam` tranzaksiyasiz); IELTS Speaking Part 2 tayyorgarlik vaqtini server majburlamaydi; Mock 27 bo'yicha talaba E2E (audio yo'q) bajarilmadi. Batafsil: `docs/MOCK27_IMPORT_AND_PUBLICATION.md`.
+
+
 ### 39-BLOK: R2 qayta tekshiruv + R3 premium frontend (2026-11-21) — branch `claude/beautiful-dirac-e83j8l`
 - **Tiklash**: oldingi sessiyaning R2 ishi (`claude/friendly-pascal-gsohro`) allaqachon main'da (#204, #205). R3 commit'lari hech bir remote branch'da yo'q edi (push qilinmagan, konteyner yo'qolgan) — R3 main (`ef3f267`) dan qayta bajarildi. #207 va bw-tauri #39 tegilmadi.
 - **R2 (joriy kodda)**: vocab-battle 20/20, drill 24/24, mobile-listening 16/16 (`BW_WEB=http://localhost:3300`; `127.0.0.1` da Next dev formani hydrate qilmaydi — muhit), multilevel-full: **3 ketma-ket yugurish, har biri 16/16** (11:13, 11:28, 11:42; Speaking 8×201, bitta tarmoq uzilishidan keyin qayta yuklash).
