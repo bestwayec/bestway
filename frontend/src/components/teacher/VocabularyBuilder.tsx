@@ -14,7 +14,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { VocabularyCollection, VocabularyCollectionWordInput } from "@/lib/group-contract.generated";
-import { api } from "@/lib/api-client";
+import { ApiError, api } from "@/lib/api-client";
+import { IMPORT_ACCEPT, MAX_IMPORT_BYTES, duplicateIndexes, mergeWithoutDuplicates, readFileText, spreadsheetToParserText } from "@/lib/vocabulary-import";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,14 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
   const [isParsing, setIsParsing] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [pasteError, setPasteError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const duplicates = React.useMemo(() => duplicateIndexes(words), [words]);
+  const previewDuplicates = React.useMemo(() => {
+    const combined = duplicateIndexes([...words, ...parsedPreview]);
+    return new Set([...combined].filter((index) => index >= words.length).map((index) => index - words.length));
+  }, [words, parsedPreview]);
 
   const handleAddSingleWord = () => {
     if (!engInput.trim() || !uzbInput.trim()) return;
@@ -76,21 +85,31 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
     setWords((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleParseRawText = async () => {
-    if (!rawPasteText.trim()) return;
+  const handleParseRawText = async (text: string = rawPasteText) => {
+    if (!text.trim()) return;
     setIsParsing(true);
+    setPasteError(null);
     try {
       const res = await api.post<{ words: WordItem[]; count: number }>("/v1/vocabulary/sets/parse-text", {
-        rawText: rawPasteText,
+        rawText: text,
       });
       setParsedPreview(res.words || []);
-    } catch (err: any) {
-      // Fallback local regex parsing if backend offline
-      const lines = rawPasteText.trim().split("\n");
+      if ((res.words || []).length === 0) setPasteError(t("noParsedWords"));
+    } catch (err: unknown) {
+      // A server answer (auth, validation, rate limit) is shown as-is. Only when the
+      // server could not be reached is a local preview offered; saving still goes
+      // through the server's validation.
+      if (err instanceof ApiError && err.status > 0) {
+        setParsedPreview([]);
+        setPasteError(err.message || t("saveFailed"));
+        return;
+      }
+      setPasteError(t("offlinePreview"));
+      const lines = text.trim().split("\n");
       const fallbackList: WordItem[] = [];
       for (const line of lines) {
         const clean = line.replace(/^\s*(?:\d+[\.\)]|[-•*])\s*/, "").trim();
-        const parts = clean.split(/\s*[-—–:=]\s*/);
+        const parts = clean.includes("\t") ? clean.split("\t") : clean.split(/\s+-\s+|\s*[—–:=]\s*/);
         if (parts.length >= 2 && parts[0] && parts[1]) {
           fallbackList.push({ english: parts[0].trim(), uzbek: parts[1].trim() });
         }
@@ -101,9 +120,27 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
     }
   };
 
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    setPasteError(null);
+    if (/\.xlsx?$/i.test(file.name)) {
+      setPasteError(t("xlsxHint"));
+      return;
+    }
+    if (file.size > MAX_IMPORT_BYTES) {
+      setPasteError(t("fileTooLarge"));
+      return;
+    }
+    const text = spreadsheetToParserText(file.name, await readFileText(file));
+    setRawPasteText(text);
+    await handleParseRawText(text);
+  };
+
   const handleApplySmartPaste = () => {
     if (parsedPreview.length > 0) {
-      setWords((prev) => [...prev, ...parsedPreview]);
+      const merged = mergeWithoutDuplicates(words, parsedPreview);
+      setWords(merged.words);
+      setNotice(merged.skipped > 0 ? t("duplicatesSkipped", { count: merged.skipped }) : null);
       setParsedPreview([]);
       setRawPasteText("");
       setIsSmartPasteOpen(false);
@@ -117,6 +154,10 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
     }
     if (words.length === 0) {
       setErrorMsg(t("needWord"));
+      return;
+    }
+    if (duplicates.size > 0) {
+      setErrorMsg(t("duplicatesBlock", { count: duplicates.size }));
       return;
     }
 
@@ -186,6 +227,10 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
           )}
         </div>
       </div>
+
+      {notice && (
+        <p role="status" className="rounded-xl border border-border bg-bg-subtle p-3 text-sm text-fg-muted">{notice}</p>
+      )}
 
       {errorMsg && (
         <div className="flex items-center gap-2 rounded-xl bg-danger/10 p-4 text-sm text-danger border border-danger/20">
@@ -329,9 +374,12 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
               <tbody className="divide-y divide-border">
                 {words.map((w, idx) => (
                   <React.Fragment key={w.id ?? idx}>
-                  <tr key={idx} className="hover:bg-bg-subtle/50 transition-colors">
+                  <tr key={idx} className={duplicates.has(idx) ? "bg-warning/10" : "hover:bg-bg-subtle/50 transition-colors"}>
                     <td className="py-2.5 px-4 text-fg-muted font-mono text-xs">{idx + 1}</td>
-                    <td className="py-2.5 px-4 font-medium text-fg">{w.english}</td>
+                    <td className="py-2.5 px-4 font-medium text-fg">
+                      {w.english}
+                      {duplicates.has(idx) && <Badge className="ml-2 border border-warning/40 bg-warning/10 text-fg">{t("duplicate")}</Badge>}
+                    </td>
                     <td className="py-2.5 px-4 text-brand font-medium">{w.uzbek}</td>
                     <td className="py-2.5 px-4 text-xs text-fg-muted">{w.partOfSpeech || w.part_of_speech || "—"}</td>
                     <td className="py-2.5 px-4 text-xs text-fg-muted max-w-xs truncate">
@@ -425,6 +473,24 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
               {t("pasteHint")} <code>apple - olma</code>, <code>1. banana : banan</code>, <code>• car = mashina</code>
             </p>
 
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={IMPORT_ACCEPT}
+                className="sr-only"
+                aria-label={t("importFile")}
+                onChange={(event) => { void handleImportFile(event.target.files?.[0]); event.target.value = ""; }}
+              />
+              <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isParsing}>
+                <Upload className="mr-2 h-4 w-4" aria-hidden />
+                {t("importFile")}
+              </Button>
+              <span className="text-xs text-fg-muted">{t("importHint")}</span>
+            </div>
+
+            {pasteError && <p role="alert" className="text-xs text-danger">{pasteError}</p>}
+
             <textarea
               rows={8}
               value={rawPasteText}
@@ -438,7 +504,7 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleParseRawText}
+                onClick={() => void handleParseRawText()}
                 disabled={isParsing || !rawPasteText.trim()}
                 className="border-brand/40 text-brand"
               >
@@ -463,8 +529,11 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
                   </thead>
                   <tbody className="divide-y divide-border">
                     {parsedPreview.slice(0, 15).map((p, i) => (
-                      <tr key={i}>
-                        <td className="py-1.5 px-3 font-medium text-fg">{p.english}</td>
+                      <tr key={i} className={previewDuplicates.has(i) ? "bg-warning/10" : undefined}>
+                        <td className="py-1.5 px-3 font-medium text-fg">
+                          {p.english}
+                          {previewDuplicates.has(i) && <span className="ml-2 text-[10px] font-semibold text-fg-muted">({t("duplicate")})</span>}
+                        </td>
                         <td className="py-1.5 px-3 text-brand font-medium">{p.uzbek}</td>
                         <td className="py-1.5 px-3 text-fg-muted">{p.part_of_speech || "—"}</td>
                       </tr>
@@ -484,7 +553,7 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
                 onClick={handleApplySmartPaste}
                 className="bg-brand hover:bg-brand-hover text-brand-fg"
               >
-                {t("addParsed", { count: parsedPreview.length })}
+                {t("addParsed", { count: parsedPreview.length - previewDuplicates.size })}
               </Button>
             </div>
           </div>

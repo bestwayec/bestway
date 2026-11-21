@@ -73,6 +73,15 @@ class VocabularyParserTests(SimpleTestCase):
         self.assertEqual(parsed[6]["part_of_speech"], "adj")
         self.assertIn("resilient", parsed[6]["context_sentence"])
 
+    def test_hyphenated_headwords_are_not_split(self):
+        raw = "self-confidence - o'ziga ishonch\nwell-known\tmashhur\tB2\nup-to-date — zamonaviy\nx-ray: rentgen"
+        parsed = service.parse_raw_vocabulary_text(raw)
+        self.assertEqual(
+            [(row["english"], row["uzbek"]) for row in parsed],
+            [("self-confidence", "o'ziga ishonch"), ("well-known", "mashhur"),
+             ("up-to-date", "zamonaviy"), ("x-ray", "rentgen")],
+        )
+
     def test_empty_input(self):
         self.assertEqual(service.parse_raw_vocabulary_text(""), [])
         self.assertEqual(service.parse_raw_vocabulary_text(None), [])

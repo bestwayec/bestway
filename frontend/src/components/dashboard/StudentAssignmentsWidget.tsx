@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   BookOpen,
@@ -51,7 +52,17 @@ export interface StudentAssignmentItem {
   completed_at?: string | null;
 }
 
-export function StudentAssignmentsWidget() {
+export interface StudentAssignmentsWidgetProps {
+  groupName?: string | null;
+}
+
+/**
+ * `groupName` comes from the authenticated profile: `undefined` while unknown,
+ * `null` when the student has no classroom. An empty assignment list only means
+ * "not in a group" when the profile says so.
+ */
+export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidgetProps) {
+  const format = useFormatter();
   const tu = useTranslations("uiText");
   const router = useRouter();
   const [openingId, setOpeningId] = React.useState<string | null>(null);
@@ -70,31 +81,23 @@ export function StudentAssignmentsWidget() {
     }
   }
 
-  const [assignments, setAssignments] = React.useState<StudentAssignmentItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [loadFailed, setLoadFailed] = React.useState(false);
+  // Shares the ["student", "my-assignments"] cache entry with TodayCard, so the
+  // dashboard requests the list once. The query cache is cleared on sign-out.
+  const assignmentsQ = useQuery({
+    queryKey: ["student", "my-assignments"],
+    queryFn: async () => {
+      const res = await apiClient.get<StudentAssignmentItem[]>("/student/my-assignments");
+      if (!Array.isArray(res)) throw new Error("Invalid assignment list");
+      return res;
+    },
+  });
+  const assignments = assignmentsQ.data ?? [];
+  const isLoading = assignmentsQ.isPending;
+  const loadFailed = assignmentsQ.isError;
+  const fetchAssignments = React.useCallback(() => assignmentsQ.refetch(), [assignmentsQ]);
   const [joinModalOpen, setJoinModalOpen] = React.useState(false);
   const [inviteCode, setInviteCode] = React.useState("");
   const [isJoining, setIsJoining] = React.useState(false);
-
-  const fetchAssignments = React.useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setLoadFailed(false);
-      const res = await apiClient.get<StudentAssignmentItem[]>("/student/my-assignments");
-      if (!Array.isArray(res)) throw new Error("Invalid assignment list");
-      setAssignments(res);
-    } catch {
-      setLoadFailed(true);
-      setAssignments([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
 
   const handleJoinCohort = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +124,8 @@ export function StudentAssignmentsWidget() {
     }
   };
 
+  const [filter, setFilter] = React.useState<"active" | "all" | "completed">("active");
+
   if (isLoading) {
     return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
@@ -128,6 +133,8 @@ export function StudentAssignmentsWidget() {
   // Active / pending assignments first
   const pendingAssignments = assignments.filter((a) => !a.is_submitted);
   const completedAssignments = assignments.filter((a) => a.is_submitted);
+  const displayedAssignments =
+    filter === "active" ? pendingAssignments : filter === "completed" ? completedAssignments : assignments;
 
   return (
     <div className="space-y-4">
@@ -142,12 +149,12 @@ export function StudentAssignmentsWidget() {
             <p className="text-[11px] text-fg-muted">
               {pendingAssignments.length > 0
                 ? tu("assignments.pending", { count: pendingAssignments.length })
-                : loadFailed ? null : tu("assignments.allDone")}
+                : loadFailed ? null : assignments.length > 0 ? tu("assignments.allDone") : tu("assignments.noneYet")}
             </p>
           </div>
         </div>
 
-        <Button
+        {!groupName && <Button
           size="sm"
           variant="outline"
           onClick={() => setJoinModalOpen(true)}
@@ -155,8 +162,44 @@ export function StudentAssignmentsWidget() {
         >
           <Plus className="h-3.5 w-3.5" />
           {tu("assignments.join")}
-        </Button>
+        </Button>}
       </div>
+
+      {/* Filter Tabs */}
+      {!loadFailed && assignments.length > 0 && (
+        <div role="group" aria-label={tu("assignments.filterAll")} className="flex items-center gap-1.5 border-b border-border/60 pb-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "active" ? "primary" : "ghost"}
+            aria-pressed={filter === "active"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("active")}
+          >
+            {tu("assignments.filterActive")} ({pendingAssignments.length})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "all" ? "primary" : "ghost"}
+            aria-pressed={filter === "all"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("all")}
+          >
+            {tu("assignments.filterAll")} ({assignments.length})
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={filter === "completed" ? "primary" : "ghost"}
+            aria-pressed={filter === "completed"}
+            className="h-7 px-2.5 text-xs"
+            onClick={() => setFilter("completed")}
+          >
+            {tu("assignments.filterCompleted")} ({completedAssignments.length})
+          </Button>
+        </div>
+      )}
 
       {/* Assignment List */}
       {loadFailed ? (
@@ -164,6 +207,12 @@ export function StudentAssignmentsWidget() {
           {tu("assignments.loadFailed")}{" "}
           <Button variant="ghost" onClick={() => void fetchAssignments()}>{tu("assignments.reload")}</Button>
         </div>
+      ) : assignments.length === 0 && groupName ? (
+        <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
+          <GraduationCap className="h-8 w-8 text-brand/80 mb-2" aria-hidden />
+          <p className="text-xs font-medium text-fg">{tu("assignments.noAssignmentsTitle")}</p>
+          <p className="text-[11px] text-fg-muted mt-0.5 max-w-xs">{tu("assignments.noAssignmentsHint", { group: groupName })}</p>
+        </Card>
       ) : assignments.length === 0 ? (
         <Card className="flex flex-col items-center justify-center p-6 text-center border-dashed border-border/80 bg-surface/40">
           <GraduationCap className="h-8 w-8 text-brand/80 mb-2" />
@@ -182,9 +231,13 @@ export function StudentAssignmentsWidget() {
             {tu("assignments.enterCode")}
           </Button>
         </Card>
+      ) : displayedAssignments.length === 0 ? (
+        <Card className="p-4 text-center border-dashed border-border/60 bg-surface/30">
+          <p className="text-xs text-fg-muted">{tu("assignments.noFilteredAssignments")}</p>
+        </Card>
       ) : (
         <div className="space-y-2.5">
-          {assignments.slice(0, 4).map((a) => {
+          {displayedAssignments.slice(0, 6).map((a) => {
             const deadlineDate = new Date(a.deadline);
             const isSoon = !a.is_submitted && deadlineDate.getTime() - Date.now() < 86400000 * 2;
 
@@ -219,7 +272,7 @@ export function StudentAssignmentsWidget() {
                       <span className="text-xs font-semibold text-fg-muted">{tu("assignments.withTeacher")}</span>
                     )}
                     {a.status === "awaiting_result" && (
-                      <span className="text-xs font-semibold text-fg-muted">Natija hisoblanmoqda</span>
+                      <span className="text-xs font-semibold text-fg-muted">{tu("assignments.awaitingResult")}</span>
                     )}
                     {a.status === "overdue" && (
                       <Badge className="bg-danger/20 text-danger border border-danger/30 text-[10px] px-1.5 py-0">
@@ -228,7 +281,7 @@ export function StudentAssignmentsWidget() {
                     )}
                     {a.status === "pending" && (
                       <Badge className="bg-info/10 text-info border border-info/20 text-[10px] px-1.5 py-0">
-                        Kutilmoqda ⏳
+                        {tu("assignments.statusPending")} ⏳
                       </Badge>
                     )}
                   </div>
@@ -240,7 +293,7 @@ export function StudentAssignmentsWidget() {
                           isSoon ? "text-warning animate-pulse" : "text-fg-subtle"
                         }`}
                       />
-                      Muddat: {deadlineDate.toLocaleDateString()} {deadlineDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {tu("assignments.deadline", { when: format.dateTime(deadlineDate, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
                     </span>
                   </div>
                 </div>

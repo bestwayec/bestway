@@ -25,7 +25,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { LiveExamRoomPanel } from "@/components/teacher/live-exam-room-panel";
 import { useMe } from "@/hooks/use-me";
-import { printGroupAnalyticsPdf, useGroupAnalytics } from "@/hooks/use-groups";
+import { printGroupAnalyticsPdf, useGroupAnalytics, useGroups } from "@/hooks/use-groups";
 import { useDebtors, usePayments } from "@/hooks/use-payments";
 import { api, ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -261,13 +261,11 @@ export function TeacherDashboard() {
 
   const firstName = me?.user.name.split(" ")[0] ?? "";
   const profile = me?.profile && "groups" in me.profile ? (me.profile as TeacherSelfProfile) : null;
-  const groupsQ = useQuery({
-    queryKey: ["teacher-dashboard-active-groups", me?.user.id],
-    enabled: Boolean(profile),
-    queryFn: () => api.get<TeacherGroupSummary[]>("/groups", { archived: false }),
-    staleTime: 30_000,
-  });
-  const groups = groupsQ.data ?? [];
+  // Shares the ["groups"] cache entry with the live-room panel and classroom
+  // views (the server lists active groups by default), so the dashboard issues
+  // one /groups request instead of two. The cache is cleared on sign-out.
+  const groupsQ = useGroups();
+  const groups: TeacherGroupSummary[] = profile ? groupsQ.data ?? [] : [];
   const totalStudents = groups.reduce((sum, g) => sum + g.studentsCount, 0);
 
   const gradingQ = useQuery({

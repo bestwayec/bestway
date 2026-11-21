@@ -53,8 +53,10 @@ def parse_raw_vocabulary_text(raw_text: str) -> list[dict[str, str]]:
 
     # Regex for stripping leading item markers: "1. ", "1) ", "• ", "- "
     item_prefix_re = re.compile(r"^\s*(?:\d+[\.\)]|[-•*])\s*")
-    # Separator regex: " - ", " — ", " – ", " : ", " = ", "\t", or surrounded by whitespace
-    delim_re = re.compile(r"\s*(?:[-—–:=]|\t)\s*")
+    # Separators: a tab (spreadsheet paste) wins; otherwise an en/em dash, ":" or
+    # "=", or a hyphen only when surrounded by spaces, so hyphenated headwords
+    # such as "self-confidence" or "well-known" are never split apart.
+    delim_re = re.compile(r"\s+-\s+|\s*[—–:=]\s*")
 
     for raw_line in lines:
         line = raw_line.strip()
@@ -62,7 +64,10 @@ def parse_raw_vocabulary_text(raw_text: str) -> list[dict[str, str]]:
             continue
 
         clean_line = item_prefix_re.sub("", line).strip()
-        parts = delim_re.split(clean_line, maxsplit=1)
+        if "\t" in clean_line:
+            parts = [cell for cell in clean_line.split("\t") if cell.strip()][:2]
+        else:
+            parts = delim_re.split(clean_line, maxsplit=1)
         if len(parts) < 2:
             continue
 
