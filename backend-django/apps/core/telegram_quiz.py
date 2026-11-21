@@ -44,7 +44,7 @@ TEXT = {
         deadline='Muddat: {d}', attempts='Urinishlar: {a}', start='▶️ Testni boshlash', instr='📄 Ko\'rsatmalar', back='⬅️ Orqaga',
         instructions=("📄 <b>Ko'rsatmalar</b>\n• Vaqt serverda hisoblanadi — telefoningiz soatiga bog'liq emas.\n• Javoblar darhol saqlanadi; uzilib qolsangiz "
                       "testni davom ettirishingiz mumkin.\n• Muddat tugagach javob qabul qilinmaydi va natija avtomatik hisoblanadi.\n"
-                      "• To'g'ri javoblar test yakunlangach ko'rsatiladi."),
+                      "• To'g'ri javoblar oxirgi urinishingizdan keyin yoki muddat tugagach ko'rsatiladi."),
         question='Savol {i}/{n}', left='⏱ {t}', type_answer="✍️ Javobingizni <b>xabar sifatida</b> yozib yuboring.", saved='✅ Saqlandi',
         prev='⬅️', nxt='➡️', finish='🏁 Yakunlash', answered='Javob berilgan: {a}/{n}', confirm_finish="Testni yakunlaysizmi? Keyin o'zgartirib bo'lmaydi.",
         yes='✅ Ha, yakunlash', no='↩️ Davom etish', result_title='📝 <b>Test natijasi</b>', correct='To\'g\'ri: <b>{c} / {n}</b>', score='Ball: <b>{p}%</b>',
@@ -62,7 +62,7 @@ TEXT = {
         tests_title='📝 <b>My tests</b>', new_test='📝 <b>New test: {title}</b>', questions='Questions: {n}', limit='Time limit: {m} minutes', no_limit='Time limit: none',
         deadline='Deadline: {d}', attempts='Attempts: {a}', start='▶️ Start test', instr='📄 Instructions', back='⬅️ Back',
         instructions=("📄 <b>Instructions</b>\n• Time is counted on the server, not by your phone.\n• Answers are saved instantly; if you get disconnected you can "
-                      "resume.\n• After the deadline no answers are accepted and the result is calculated automatically.\n• Correct answers are shown after you finish."),
+                      "resume.\n• After the deadline no answers are accepted and the result is calculated automatically.\n• Correct answers are shown after your last attempt or once the deadline has passed."),
         question='Question {i}/{n}', left='⏱ {t}', type_answer='✍️ Type your answer as a <b>message</b>.', saved='✅ Saved', prev='⬅️', nxt='➡️', finish='🏁 Finish',
         answered='Answered: {a}/{n}', confirm_finish='Finish the test? You cannot change answers afterwards.', yes='✅ Yes, finish', no='↩️ Continue',
         result_title='📝 <b>Test result</b>', correct='Correct: <b>{c} / {n}</b>', score='Score: <b>{p}%</b>', time='Time: <b>{t}</b>', status='Status: <b>{s}</b>',
