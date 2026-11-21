@@ -359,8 +359,11 @@ def handle(update):
         user_pre = menu.ensure_superadmin_user(chat_id, from_user=from_user) if menu.is_superadmin(chat_id=chat_id) else None
         text = (msg.get('text') or '').strip()
 
-        if text in ('/tests', '/testlar'):
-            telegram_quiz.send_my_tests(chat_id)
+        if text.split('@')[0] in ('/tests', '/testlar'):
+            if (msg.get('chat') or {}).get('type', 'private') != 'private':
+                api.send(chat_id, telegram_quiz.tr('uz', 'private_only'))   # a student's test list is never shown in a group
+            else:
+                telegram_quiz.send_my_tests(chat_id)
             return
         _ctype = (msg.get('chat') or {}).get('type', 'private')
         if text.startswith('/') and (telegram_vocab.command(chat_id, text, chat_type=_ctype) or telegram_teacher.command(chat_id, text, chat_type=_ctype)

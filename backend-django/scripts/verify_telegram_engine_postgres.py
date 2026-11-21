@@ -142,6 +142,40 @@ try:
         telegram_menu.send_web_admin_login('700000010')
     check(not sso.called, 'web-admin SSO is never issued to a teacher or a student chat')
 
+    # ---------------------------------------------------------------- linking: private chats only, single use under concurrency
+    from types import SimpleNamespace
+    from apps.core import telegram_links
+    from apps.legacy_schema.models import TelegramLinkToken
+    linker = mk_user('student')
+    with patch.object(telegram_delivery, 'username', lambda: 'verify_bot'):
+        token = telegram_links.create_token(SimpleNamespace(id=linker))['token']
+    with capture():
+        bot.handle({'update_id': base_id + 5, 'message': {'chat': {'id': -1007000001, 'type': 'supergroup'}, 'from': {'id': 700000040, 'first_name': 'T'},
+                                                          'text': f'/start {token}'}})
+    check(User.objects.get(id=linker).telegram_chat_id is None and TelegramLinkToken.objects.get(user_id=linker).used_at is None,
+          'a link token sent in a GROUP chat links nothing (the group would see the student\'s data) and stays usable')
+    racers = [str(700000050 + i) for i in range(6)]
+    link_barrier = threading.Barrier(len(racers))
+
+    def link_race(chat):
+        django.db.close_old_connections()
+        link_barrier.wait()
+        try:
+            telegram_links.consume(token, chat)
+        finally:
+            connection.close()
+    with capture():
+        threads = [threading.Thread(target=link_race, args=(c,)) for c in racers]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+    linked_chats = list(User.objects.filter(telegram_chat_id__in=racers).values_list('telegram_chat_id', flat=True))
+    check(len(linked_chats) == 1 and User.objects.get(id=linker).telegram_chat_id == linked_chats[0],
+          f'one link token consumed by {len(racers)} chats at once links exactly one chat ({len(linked_chats)} linked)')
+    legacy_group_link = mk_user('student', chat='-1007000002')       # a group chat linked before this rule existed
+    with capture():
+        bot.handle({'update_id': base_id + 6, 'message': {'chat': {'id': -1007000002, 'type': 'group'}, 'from': {'id': 700000041, 'first_name': 'T'}, 'text': '/tests'}})
+    check(sent and all('shaxsiy' in text for _c, text in sent), '/tests in a group chat never lists a student\'s tests there')
+
     # ---------------------------------------------------------------- fail-closed OCR / AI (no network)
     from apps.core import writing_ocr
     with patch.dict(os.environ, {'OPENROUTER_API_KEY': '', 'XKIRO_API_KEY': '', 'GEMINI_API_KEY': ''}), patch.object(writing_ocr, '_post_json', side_effect=RuntimeError('offline')):
@@ -150,6 +184,8 @@ try:
     print(f'\nALL {len(checks)} CHECKS PASSED')
 finally:
     TelegramUpdateReceipt.objects.filter(update_id__gte=base_id - 1, update_id__lte=base_id + 10).delete()
+    from apps.legacy_schema.models import TelegramLinkToken as _Tok
+    _Tok.objects.filter(user_id__in=created_users).delete()
     User.objects.filter(id__in=created_users).delete()  # fixtures first: one of them held the detached id
     if 'detached' in globals() and detached:
         User.objects.filter(id__in=detached).update(telegram_chat_id='5582178765')
