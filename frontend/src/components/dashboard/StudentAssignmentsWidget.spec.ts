@@ -5,6 +5,21 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StudentAssignmentsWidget, type StudentAssignmentItem } from './StudentAssignmentsWidget';
 import { apiClient } from '@/lib/api-client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const widget = (props?: React.ComponentProps<typeof StudentAssignmentsWidget>) =>
+  React.createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+    React.createElement(StudentAssignmentsWidget, props));
+
+// React Query resolves the mocked request on a later tick than the initial render.
+async function renderWidget(props?: React.ComponentProps<typeof StudentAssignmentsWidget>) {
+  await act(async () => {
+    root.render(widget(props));
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
 
 const mockPush = vi.fn();
 
@@ -42,6 +57,7 @@ vi.mock('next-intl', async () => {
         ? found.replace(/\{(\w+)[^}]*\}/g, (_, n: string) => String(values?.[n] ?? ''))
         : key;
     },
+    useFormatter: () => ({ dateTime: (value: Date) => value.toISOString().slice(0, 16) }),
   };
 });
 
@@ -115,13 +131,13 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
   it('switches between Active, All, and Completed tabs on click', async () => {
     vi.mocked(apiClient.get).mockResolvedValue(sampleAssignments);
 
-    await act(async () => {
-      root.render(React.createElement(StudentAssignmentsWidget));
-    });
+    await renderWidget();
 
     // Default tab is "active": shows 2 pending assignments, 1 completed hidden
     expect(host.textContent).toContain('Oxford 3000 Words Unit 1');
     expect(host.textContent).toContain('Full Mock Listening Test #4');
+    expect(host.textContent).toContain('Deadline: ');
+    expect(host.textContent).not.toContain('Muddat');
     expect(host.textContent).not.toContain('Grammar Foundations Review');
 
     // Click "All" tab
@@ -150,9 +166,7 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
   it('renders direct deep link to vocabulary assignment', async () => {
     vi.mocked(apiClient.get).mockResolvedValue([sampleAssignments[0]]);
 
-    await act(async () => {
-      root.render(React.createElement(StudentAssignmentsWidget));
-    });
+    await renderWidget();
 
     const vocabLink = host.querySelector('a[data-href="/vocabulary/assignment/asg-vocab-1"]');
     expect(vocabLink).not.toBeNull();
@@ -170,9 +184,7 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
       return null;
     });
 
-    await act(async () => {
-      root.render(React.createElement(StudentAssignmentsWidget));
-    });
+    await renderWidget();
 
     expect(host.textContent).toContain('Full Mock Listening Test #4');
     const startBtn = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Start'));
@@ -189,19 +201,20 @@ describe('StudentAssignmentsWidget interactive behavior', () => {
 describe('StudentAssignmentsWidget enrollment-aware empty state', () => {
   it('does not tell an enrolled student to join a group when there are no assignments', async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce([]);
-    await act(async () => root.render(React.createElement(StudentAssignmentsWidget, { groupName: 'Local Group A' })));
+    await renderWidget({ groupName: 'Local Group A' });
     const text = host.textContent ?? '';
     expect(text).toContain('No assignments from your teacher yet');
     expect(text).toContain('You are in Local Group A');
     expect(text).toContain('No assignments yet');
     expect(text).not.toContain('All assignments are done');
     expect(text).not.toMatch(/not in a group/i);
+    expect(text).not.toContain('Muddat');
     expect(Array.from(host.querySelectorAll('button')).some((b) => /join/i.test(b.textContent ?? ''))).toBe(false);
   });
 
   it('keeps the join-by-code path for a student without a classroom', async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce([]);
-    await act(async () => root.render(React.createElement(StudentAssignmentsWidget, { groupName: null })));
+    await renderWidget({ groupName: null });
     expect(host.textContent).toMatch(/not in a group/i);
     expect(Array.from(host.querySelectorAll('button')).some((b) => /join/i.test(b.textContent ?? ''))).toBe(true);
   });

@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   BookOpen,
@@ -51,12 +52,17 @@ export interface StudentAssignmentItem {
   completed_at?: string | null;
 }
 
+export interface StudentAssignmentsWidgetProps {
+  groupName?: string | null;
+}
+
 /**
  * `groupName` comes from the authenticated profile: `undefined` while unknown,
  * `null` when the student has no classroom. An empty assignment list only means
  * "not in a group" when the profile says so.
  */
-export function StudentAssignmentsWidget({ groupName }: { groupName?: string | null } = {}) {
+export function StudentAssignmentsWidget({ groupName }: StudentAssignmentsWidgetProps) {
+  const format = useFormatter();
   const tu = useTranslations("uiText");
   const router = useRouter();
   const [openingId, setOpeningId] = React.useState<string | null>(null);
@@ -75,31 +81,23 @@ export function StudentAssignmentsWidget({ groupName }: { groupName?: string | n
     }
   }
 
-  const [assignments, setAssignments] = React.useState<StudentAssignmentItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [loadFailed, setLoadFailed] = React.useState(false);
+  // Shares the ["student", "my-assignments"] cache entry with TodayCard, so the
+  // dashboard requests the list once. The query cache is cleared on sign-out.
+  const assignmentsQ = useQuery({
+    queryKey: ["student", "my-assignments"],
+    queryFn: async () => {
+      const res = await apiClient.get<StudentAssignmentItem[]>("/student/my-assignments");
+      if (!Array.isArray(res)) throw new Error("Invalid assignment list");
+      return res;
+    },
+  });
+  const assignments = assignmentsQ.data ?? [];
+  const isLoading = assignmentsQ.isPending;
+  const loadFailed = assignmentsQ.isError;
+  const fetchAssignments = React.useCallback(() => assignmentsQ.refetch(), [assignmentsQ]);
   const [joinModalOpen, setJoinModalOpen] = React.useState(false);
   const [inviteCode, setInviteCode] = React.useState("");
   const [isJoining, setIsJoining] = React.useState(false);
-
-  const fetchAssignments = React.useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setLoadFailed(false);
-      const res = await apiClient.get<StudentAssignmentItem[]>("/student/my-assignments");
-      if (!Array.isArray(res)) throw new Error("Invalid assignment list");
-      setAssignments(res);
-    } catch {
-      setLoadFailed(true);
-      setAssignments([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
 
   const handleJoinCohort = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,7 +293,7 @@ export function StudentAssignmentsWidget({ groupName }: { groupName?: string | n
                           isSoon ? "text-warning animate-pulse" : "text-fg-subtle"
                         }`}
                       />
-                      Muddat: {deadlineDate.toLocaleDateString()} {deadlineDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {tu("assignments.deadline", { when: format.dateTime(deadlineDate, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
                     </span>
                   </div>
                 </div>

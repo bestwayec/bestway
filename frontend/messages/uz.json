@@ -3196,7 +3196,8 @@
       "statusPending": "Kutilmoqda",
       "noneYet": "Hozircha topshiriq yo‘q",
       "noAssignmentsTitle": "O‘qituvchingizdan hozircha topshiriq yo‘q",
-      "noAssignmentsHint": "Siz {group} guruhidasiz. O‘qituvchingiz bergan uy vazifasi, lug‘at va imtihonlar shu yerda paydo bo‘ladi."
+      "noAssignmentsHint": "Siz {group} guruhidasiz. O‘qituvchingiz bergan uy vazifasi, lug‘at va imtihonlar shu yerda paydo bo‘ladi.",
+      "deadline": "Muddat: {when}"
     },
     "certificateModal": {
       "print": "Chop etish / PDF",
