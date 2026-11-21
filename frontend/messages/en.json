@@ -3026,7 +3026,16 @@
     "parse": "Read the text",
     "found": "{count, plural, one {# word found} other {# words found}}",
     "foundPreview": "{count, plural, one {# word} other {# words}} found; the first {shown} are shown",
-    "addParsed": "Add {count, plural, one {# word} other {# words}} to the set"
+    "addParsed": "Add {count, plural, one {# word} other {# words}} to the set",
+    "duplicate": "Duplicate",
+    "duplicatesBlock": "{count, plural, one {# row repeats} other {# rows repeat}} an earlier word with the same translation. Remove or edit the highlighted rows before saving.",
+    "duplicatesSkipped": "{count, plural, one {# duplicate was} other {# duplicates were}} skipped because the word and translation are already in the list.",
+    "importFile": "Import CSV / TSV / TXT",
+    "importHint": "First column: English word, second: translation. From Excel, copy the two columns and paste them below.",
+    "xlsxHint": "Excel files are not read directly. Save the sheet as CSV, or copy the two columns and paste them into the box.",
+    "fileTooLarge": "The file is larger than 512 KB. Split it into smaller lists.",
+    "noParsedWords": "No word lines were recognised. Use one word per line: word, separator, translation.",
+    "offlinePreview": "The server could not be reached, so this preview was made on your device. The list is checked again when you save."
   },
   "drill": {
     "checkFailed": "Could not check the answer. Try again.",

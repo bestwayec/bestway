@@ -3026,7 +3026,16 @@
     "parse": "Matnni o'qish",
     "found": "{count} ta so'z topildi",
     "foundPreview": "{count} ta so'z topildi; birinchi {shown} tasi ko'rsatilgan",
-    "addParsed": "{count} ta so'zni to'plamga qo'shish"
+    "addParsed": "{count} ta so'zni to'plamga qo'shish",
+    "duplicate": "Takror",
+    "duplicatesBlock": "{count} ta qator avvalgi so‘z va tarjimani takrorlaydi. Saqlashdan oldin belgilangan qatorlarni o‘chiring yoki tahrirlang.",
+    "duplicatesSkipped": "{count} ta takroriy so‘z qo‘shilmadi: so‘z va tarjima ro‘yxatda allaqachon bor.",
+    "importFile": "CSV / TSV / TXT import",
+    "importHint": "Birinchi ustun — inglizcha so‘z, ikkinchisi — tarjima. Excel’dan ikki ustunni nusxalab, quyiga joylashtiring.",
+    "xlsxHint": "Excel fayllari to‘g‘ridan-to‘g‘ri o‘qilmaydi. Jadvalni CSV sifatida saqlang yoki ikki ustunni nusxalab joylashtiring.",
+    "fileTooLarge": "Fayl 512 KB dan katta. Uni kichikroq ro‘yxatlarga bo‘ling.",
+    "noParsedWords": "So‘z qatorlari topilmadi. Har qatorga bitta: so‘z, ajratuvchi, tarjima.",
+    "offlinePreview": "Serverga ulanib bo‘lmadi, shu sababli oldindan ko‘rish qurilmangizda tayyorlandi. Saqlashda ro‘yxat qayta tekshiriladi."
   },
   "drill": {
     "checkFailed": "Javobni tekshirib bo'lmadi. Qayta urinib ko'ring.",
