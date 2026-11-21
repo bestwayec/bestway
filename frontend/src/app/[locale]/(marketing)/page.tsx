@@ -6,12 +6,14 @@ import {
   Award,
   Check,
   BarChart3,
+  BookOpenCheck,
   CalendarCheck,
   FileCheck2,
   GraduationCap,
   Mail,
   MapPin,
   Phone,
+  School,
   Star,
   Wallet,
 } from "lucide-react";
@@ -150,24 +152,34 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <MobileLandingGate locale={locale} isAuthenticated={isAuthenticated}>
-      {/* ── Hero: what it is, the real exam window, two actions ─────────────── */}
-      <section className="marketing-section relative border-b border-border bg-surface">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12 lg:py-20">
-          <div>
-            <p className="text-sm font-semibold text-brand-subtle-fg">{t("heroEyebrow")}</p>
-            <h1 className="mt-3 text-[2rem] font-bold leading-[1.15] tracking-tight text-fg sm:text-[2.5rem]">
+      {/* ── Hero: what it is, the real exam window, clear actions ───────────── */}
+      <section className="marketing-section relative overflow-hidden border-b border-border bg-surface">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[minmax(0,6fr)_minmax(0,6fr)] lg:gap-12 lg:py-16">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-subtle px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
+              <span aria-hidden className="size-1.5 rounded-full bg-brand" />
+              {t("heroEyebrow")}
+            </p>
+            <h1 className="mt-4 text-[1.75rem] leading-[1.18] font-bold tracking-tight text-balance text-fg sm:text-[2.25rem] lg:text-[2.375rem]">
               {t("heroTitle")}
             </h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-fg-muted sm:text-lg">{t("heroSubtitle")}</p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-fg-muted">{t("heroSubtitle")}</p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <a href="#placement-test" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
                 {t("heroCta")}
+                <ArrowRight aria-hidden />
               </a>
-              <Link href={isAuthenticated ? "/dashboard" : "/login"} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}>
-                {isAuthenticated ? t("toDashboard") : t("heroLogin")}
+              <Link href="/demo" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}>
+                {t("heroDemo")}
               </Link>
             </div>
-            <ul className="mt-8 space-y-2.5 text-sm text-fg-muted">
+            <p className="mt-4 text-sm text-fg-muted">
+              <Link href={isAuthenticated ? "/dashboard" : "/login"} className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-brand hover:underline">
+                {isAuthenticated ? t("toDashboard") : t("heroLogin")}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </p>
+            <ul className="mt-5 space-y-2 border-t border-border pt-5 text-sm text-fg-muted">
               {(["heroPoint1", "heroPoint2", "heroPoint3"] as const).map((key) => (
                 <li key={key} className="flex gap-2.5">
                   <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
@@ -179,6 +191,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           {/* A real screenshot of the exam window (seeded IELTS Academic mock, local stack). */}
           <figure className="min-w-0">
             <div className="overflow-hidden rounded-card border border-border bg-bg-subtle shadow-e3">
+              <div className="flex items-center gap-1.5 border-b border-border bg-surface px-3 py-2" aria-hidden>
+                <span className="size-2.5 rounded-full bg-border-strong" />
+                <span className="size-2.5 rounded-full bg-border-strong" />
+                <span className="size-2.5 rounded-full bg-border-strong" />
+                <span className="ml-3 truncate text-xs text-fg-subtle">{t("previewLabel")}</span>
+              </div>
               <Image src="/product/exam-light.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="block h-auto w-full dark:hidden" />
               <Image src="/product/exam-dark.webp" alt={t("productExamAlt")} width={1366} height={768} priority sizes="(min-width: 1024px) 640px, 100vw" className="hidden h-auto w-full dark:block" />
             </div>
@@ -186,14 +204,60 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </figure>
         </div>
       </section>
-      <section id="placement-test" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-20">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-20">
+
+      {/* ── Exam formats: IELTS-style and Multilevel, honest about status ──── */}
+      <section id="exams" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-20">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <SectionHeading title={t("formats.title")} subtitle={t("formats.subtitle")} />
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {([
+              { key: "ielts", Icon: Award },
+              { key: "multilevel", Icon: BarChart3 },
+            ] as const).map(({ key, Icon }) => (
+              <article key={key} className="flex flex-col rounded-card border border-border bg-surface p-6 shadow-e1">
+                <div className="flex items-start gap-4">
+                  <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand-subtle-fg">
+                    <Icon className="size-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold text-fg">{t(`formats.${key}Title`)}</h3>
+                    <p className="text-sm text-fg-subtle">{t(`formats.${key}Tag`)}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-fg-muted">{t(`formats.${key}Text`)}</p>
+                <p className="mt-3 text-xs font-semibold tracking-wide text-fg-subtle">{t("formats.skills")}</p>
+              </article>
+            ))}
+          </div>
+          <ul className="mt-6 grid gap-3 text-sm text-fg-muted sm:grid-cols-3">
+            {(["point1", "point2", "point3"] as const).map((key) => (
+              <li key={key} className="flex gap-2.5 rounded-control border border-border bg-surface px-4 py-3">
+                <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                <span>{t(`formats.${key}`)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link href="/demo" className={cn(buttonVariants({ size: "md" }), "w-full sm:w-auto")}>
+              {t("formats.demoCta")}
+            </Link>
+            <Link href={isAuthenticated ? "/mock" : "/login"} className={cn(buttonVariants({ variant: "outline", size: "md" }), "w-full sm:w-auto")}>
+              {t("formats.examsCta")}
+            </Link>
+          </div>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-xs text-fg-subtle">{t("formats.note")}</p>
+        </div>
+      </section>
+
+      <section id="placement-test" className="marketing-section border-b border-border bg-surface scroll-mt-20">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
           <ExpressPlacementTest isAuthenticated={isAuthenticated} />
+          <p className="mx-auto mt-4 max-w-2xl text-center text-xs text-fg-subtle">{t("placementNote")}</p>
         </div>
       </section>
 
       {/* ── What you get: three real parts of the product ───────────────────── */}
-      <section id="product" className="marketing-section border-b border-border bg-surface scroll-mt-16">
+      <section id="product" className="marketing-section border-b border-border bg-bg-subtle scroll-mt-16">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <SectionHeading title={t("productTitle")} subtitle={t("productSubtitle")} />
           <div className="mt-10 grid gap-8 lg:grid-cols-3">
@@ -214,6 +278,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </div>
           {/* A sample result: synthetic student and exam on the local stack, labelled as such. */}
           <figure className="mx-auto mt-12 max-w-3xl">
+            <p className="mb-3 flex justify-center">
+              <span className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs font-semibold text-fg">{t("demoDataBadge")}</span>
+            </p>
             <div className="overflow-hidden rounded-card border border-border bg-surface shadow-e2">
               <Image src="/product/result-light.webp" alt={t("productResultAlt")} width={766} height={203} sizes="(min-width: 768px) 768px, 100vw" className="block h-auto w-full dark:hidden" />
               <Image src="/product/result-dark.webp" alt={t("productResultAlt")} width={766} height={203} sizes="(min-width: 768px) 768px, 100vw" className="hidden h-auto w-full dark:block" />
@@ -223,9 +290,39 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
+      {/* ── Students and teachers / learning centers ───────────────────────── */}
+      <section id="audience" className="marketing-section border-b border-border bg-surface scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+          <SectionHeading title={t("audience.title")} subtitle={t("audience.subtitle")} />
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            {([
+              { key: "student", Icon: BookOpenCheck, items: ["s1", "s2", "s3", "s4", "s5"] },
+              { key: "teacher", Icon: School, items: ["t1", "t2", "t3", "t4", "t5"] },
+            ] as const).map(({ key, Icon, items }) => (
+              <article key={key} className="rounded-card border border-border bg-bg-subtle p-6">
+                <h3 className="flex items-center gap-3 text-lg font-semibold text-fg">
+                  <span className="inline-flex size-10 items-center justify-center rounded-xl bg-brand-subtle text-brand-subtle-fg">
+                    <Icon className="size-5" aria-hidden />
+                  </span>
+                  {t(`audience.${key}Title`)}
+                </h3>
+                <ul className="mt-5 space-y-3 text-sm leading-relaxed text-fg-muted">
+                  {items.map((item) => (
+                    <li key={item} className="flex gap-2.5">
+                      <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                      <span>{t(`audience.${item}`)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Kurslar ──────────────────────────────────────────────────────── */}
       <section id="courses" className="marketing-section border-b border-border bg-surface scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <Reveal>
             <SectionHeading title={t("coursesTitle")} subtitle={t("coursesSubtitle")} />
           </Reveal>
@@ -260,6 +357,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       <p className="mt-2 text-sm leading-relaxed text-fg-muted">
                         {t(`courseList.${key}.desc`)}
                       </p>
+                      <Link
+                        href={key === "sat" ? "/#contact" : "/demo"}
+                        className="relative z-10 mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
+                      >
+                        {key === "sat" ? t("courseAsk") : t("courseDemo")}
+                        <ArrowRight className="size-4" aria-hidden />
+                      </Link>
                     </div>
                   </PixelCard>
                 </Reveal>
@@ -273,7 +377,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* Shown only when real teacher profiles exist (no "coming soon" placeholder). */}
       {teachers.length > 0 && (
       <section id="teachers" className="marketing-section scroll-mt-16 overflow-x-clip">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <Reveal>
             <SectionHeading title={t("teachersTitle")} subtitle={t("teachersSubtitle")} />
           </Reveal>
@@ -288,7 +392,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       {/* ── Nega biz ─────────────────────────────────────────────────────── */}
       <section id="why" className="marketing-section border-t border-border bg-bg-subtle scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <Reveal>
             <SectionHeading title={t("whyTitle")} subtitle={t("whySubtitle")} />
           </Reveal>
@@ -320,7 +424,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* ── Yangiliklar ──────────────────────────────────────────────────── */}
       {articles.length > 0 && (
         <section id="news" className="marketing-section scroll-mt-16">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
             <Reveal>
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <SectionHeading align="left" title={t("newsTitle")} subtitle={t("newsSubtitle")} />
@@ -357,9 +461,45 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </section>
       )}
 
+      {/* ── FAQ: native disclosure widgets, keyboard and screen-reader friendly ─ */}
+      <section id="faq" className="marketing-section border-t border-border bg-bg-subtle scroll-mt-16">
+        <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6 sm:py-20">
+          <SectionHeading title={t("faq.title")} subtitle={t("faq.subtitle")} />
+          <div className="mt-8 divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">
+            {(["1", "2", "3", "4", "5"] as const).map((n) => (
+              <details key={n} className="group">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-fg hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
+                  {t(`faq.q${n}`)}
+                  <ArrowRight className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-90 motion-reduce:transition-none" aria-hidden />
+                </summary>
+                <p className="px-5 pb-5 text-sm leading-relaxed text-fg-muted">{t(`faq.a${n}`)}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Closing call to action ───────────────────────────────────────────── */}
+      <section className="marketing-section border-t border-border bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-12 sm:px-6 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl">
+            <h2 className="text-xl font-bold tracking-tight text-fg sm:text-2xl">{t("ctaBandTitle")}</h2>
+            <p className="mt-2 text-sm text-fg-muted">{t("ctaBandText")}</p>
+          </div>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <a href="#placement-test" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+              {t("heroCta")}
+            </a>
+            <Link href={isAuthenticated ? "/dashboard" : "/login"} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}>
+              {isAuthenticated ? t("toDashboard") : t("heroLogin")}
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Aloqa ────────────────────────────────────────────────────────── */}
-      <section id="contact" className="marketing-section scroll-mt-16">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+      <section id="contact" className="marketing-section border-t border-border scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
           <Reveal>
             <SectionHeading title={t("contactTitle")} subtitle={t("contactSubtitle")} />
           </Reveal>

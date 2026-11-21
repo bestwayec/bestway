@@ -15,10 +15,12 @@ import { cn } from "@/lib/utils";
 import { homePathForRole } from "@/lib/role-routing";
 
 const SECTIONS = [
+  { hash: "exams", key: "navExams" },
   { hash: "courses", key: "navCourses" },
   { hash: "teachers", key: "navTeachers" },
   { hash: "why", key: "navWhy" },
   { hash: "news", key: "navNews" },
+  { hash: "faq", key: "navFaq" },
   { hash: "contact", key: "navContact" },
 ] as const;
 
@@ -180,7 +182,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
           ) : (
             <div className="hidden items-center gap-1.5 sm:flex">
               <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>{t("login")}</Link>
-              <Link href="/register" className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
+              <Link href="/#placement-test" className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
             </div>
           )}
 
@@ -241,7 +243,7 @@ export function SiteHeader({ hidden = [] }: { hidden?: string[] }) {
                 ) : (
                   <>
                     <Link href="/login" onClick={() => setOpen(false)} className={buttonVariants({ variant: "outline", size: "sm" })}>{t("login")}</Link>
-                    <Link href="/register" onClick={() => setOpen(false)} className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
+                    <Link href="/#placement-test" onClick={() => setOpen(false)} className={buttonVariants({ size: "sm" })}>{t("heroCta")}</Link>
                   </>
                 )}
               </div>
