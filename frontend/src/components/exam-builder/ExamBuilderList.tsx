@@ -444,11 +444,11 @@ export function ExamBuilderList() {
           ))}
         </div>
         <div className="hidden overflow-x-auto rounded-card border border-border md:block">
-          <table className="w-full min-w-[900px] border-collapse bg-surface text-left text-sm">
+          <table className="w-full min-w-[860px] border-collapse bg-surface text-left text-sm">
             <thead className="sticky top-0 bg-surface">
               <tr className="border-b border-border text-xs uppercase tracking-wide text-fg-subtle">
                 <th scope="col" className="min-w-[260px] max-w-[340px] px-4 py-3 font-semibold">
-                  EXAM TITLE
+                  {tx(t, "colTitle", "Exam title")}
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colType", "Type")}</th>
                 <th scope="col" className="px-4 py-3 font-semibold">{tx(t, "colLevel", "Level")}</th>
@@ -509,8 +509,9 @@ export function ExamBuilderList() {
                     {e.durationMinutes != null && <span> · {e.durationMinutes} min</span>}
                     <span> · {e.price > 0 ? formatMoney(e.price) : tx(t, "free", "Free")}</span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <span className="flex items-center justify-end gap-1.5">
+                  <td className="px-4 py-3">
+                    {/* Wraps instead of pushing the last buttons out of the table on laptop screens. */}
+                    <span className="ml-auto flex max-w-[22rem] flex-wrap items-center justify-end gap-1.5">
                       <Button
                         size="sm"
                         variant={e.isPublished ? "outline" : "primary"}
