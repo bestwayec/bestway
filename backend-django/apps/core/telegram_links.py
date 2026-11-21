@@ -51,7 +51,18 @@ def attach(user_id,chat_id):
     User.objects.filter(id=user_id).update(telegram_chat_id=str(chat_id),updated_at=timezone.now())
 
 
+def _is_private_chat(chat_id):
+    # Telegram user (private) chat ids are positive; groups, supergroups and channels are negative. An account linked to a
+    # group chat would expose that student's tests, results and notifications to every member of the group.
+    try:
+        return int(str(chat_id))>0
+    except (TypeError,ValueError):
+        return False
+
+
 def consume(token,chat_id):
+    if not _is_private_chat(chat_id):
+        api.plain(chat_id,"❌ Akkauntni faqat bot bilan shaxsiy chatda bog'lash mumkin.");return
     row=TelegramLinkToken.objects.filter(token_hash=token_hash(token)).select_related('user').first()
     expires_at=row.expires_at if row else None
     # Prisma's legacy PostgreSQL schema uses TIMESTAMP WITHOUT TIME ZONE; values
@@ -61,13 +72,18 @@ def consume(token,chat_id):
     if not row or row.used_at or expires_at<timezone.now():
         api.plain(chat_id,'❌ Bog\'lash havolasi eskirgan yoki ishlatilgan.\nSaytga kiring va "Telegramni ulash" tugmasini qaytadan bosing.');return
     if not row.user.is_active:api.plain(chat_id,'❌ Akkaunt bloklangan. Administratsiyaga murojaat qiling.');return
-    attach(row.user_id,chat_id)
-    TelegramLinkToken.objects.filter(id=row.id).update(used_at=timezone.now())
+    with transaction.atomic():
+        # Single use under concurrency: only the request that flips used_at links the chat (no check-then-act race).
+        if not TelegramLinkToken.objects.filter(id=row.id,used_at__isnull=True).update(used_at=timezone.now()):
+            api.plain(chat_id,'❌ Bog\'lash havolasi eskirgan yoki ishlatilgan.\nSaytga kiring va "Telegramni ulash" tugmasini qaytadan bosing.');return
+        attach(row.user_id,chat_id)
     api.plain(chat_id,f'✅ <b>Bog\'landi!</b>\n\nAkkaunt: <b>{escape(row.user.name)}</b>\n\nEndi ball, davomat, to\'lov va test natijalari haqidagi xabarlar shu yerga keladi.')
     audit(SimpleNamespace(id=row.user_id),'user.telegram_link','user',row.user_id,new=dict(method='deep_link'))
 
 
 def contact(phone,chat_id,own):
+    if not _is_private_chat(chat_id):
+        api.plain(chat_id,"❌ Akkauntni faqat bot bilan shaxsiy chatda bog'lash mumkin.");return
     if not own:api.plain(chat_id,"❌ Iltimos, faqat o'zingizning raqamingizni yuboring.");return
     key=re.sub('[^0-9]','',phone)[-9:]
     if len(key)<9:api.plain(chat_id,"❌ Raqam formati noto'g'ri.");return

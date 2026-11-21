@@ -1,4 +1,5 @@
 """Vocabulary and Spaced Repetition (SRS) models."""
+import datetime
 import uuid
 from django.db import models
 from apps.legacy_schema.models import Group, User, MockExam
@@ -855,3 +856,319 @@ class MockListeningAudio(models.Model):
     verified_sha256 = models.CharField(max_length=64, null=True, blank=True)
     verified_fingerprint = models.CharField(max_length=64, null=True, blank=True)  # answer keys attested
     verification_note = models.TextField(blank=True, default="")
+
+
+class TelegramUpdateReceipt(models.Model):
+    """One row per Telegram update_id ever accepted: webhook retries, polling restarts and replays are processed once.
+
+    The unique constraint is the atomic claim; rows older than the retention window are pruned opportunistically.
+    """
+
+    update_id = models.BigIntegerField(unique=True)
+    kind = models.CharField(max_length=20, blank=True, default="")
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Classroom quizzes (grammar / vocabulary / mixed teacher-created tests). Separate from IELTS/Multilevel mocks: results
+# are percentages, never bands. Assignments hold an IMMUTABLE issued snapshot, so editing a quiz later never rewrites
+# what students saw or how they were graded.
+# ---------------------------------------------------------------------------------------------------------------------
+
+class ClassQuiz(models.Model):
+    CATEGORIES = (("grammar", "grammar"), ("vocabulary", "vocabulary"), ("mixed", "mixed"))
+    STATUSES = (("draft", "draft"), ("published", "published"), ("archived", "archived"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="class_quizzes")
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=12, choices=CATEGORIES, default="grammar")
+    status = models.CharField(max_length=10, choices=STATUSES, default="draft")
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True)
+    max_attempts = models.PositiveSmallIntegerField(default=1)
+    shuffle_questions = models.BooleanField(default=False)
+    revision = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ClassQuiz"
+        ordering = ["-updated_at"]
+
+
+class ClassQuizQuestion(models.Model):
+    TYPES = (("mcq", "mcq"), ("tf", "tf"), ("text", "text"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    quiz = models.ForeignKey(ClassQuiz, on_delete=models.CASCADE, related_name="questions")
+    position = models.PositiveIntegerField()
+    type = models.CharField(max_length=6, choices=TYPES)
+    prompt = models.TextField()
+    options = models.JSONField(default=list, blank=True)          # mcq: option texts; tf: ["True", "False"]
+    correct_answers = models.JSONField(default=list)               # mcq/tf: [option index]; text: accepted answers
+    accepted_variants = models.JSONField(default=list, blank=True)  # text only: extra approved spellings/translations
+    explanation = models.TextField(blank=True, default="")
+    points = models.PositiveSmallIntegerField(default=1)
+    vocabulary_word_id = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = "ClassQuizQuestion"
+        ordering = ["position"]
+        constraints = [models.UniqueConstraint(fields=["quiz", "position"], name="unique_class_quiz_position")]
+
+
+class ClassQuizAssignment(models.Model):
+    STATUSES = (("active", "active"), ("closed", "closed"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    quiz = models.ForeignKey(ClassQuiz, on_delete=models.PROTECT, related_name="assignments")
+    group = models.ForeignKey(Group, on_delete=models.DO_NOTHING, db_constraint=False, related_name="class_quiz_assignments")
+    assigned_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+    snapshot = models.JSONField()                      # immutable issued copy (title, settings, questions with keys)
+    snapshot_hash = models.CharField(max_length=64)
+    deadline = models.DateTimeField()
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True)
+    max_attempts = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=8, choices=STATUSES, default="active")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAssignment"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["group", "status", "deadline"], name="class_quiz_assign_group")]
+
+
+class ClassQuizAttempt(models.Model):
+    STATUSES = (("in_progress", "in_progress"), ("submitted", "submitted"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    assignment = models.ForeignKey(ClassQuizAssignment, on_delete=models.CASCADE, related_name="attempts")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="class_quiz_attempts")
+    attempt_no = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=12, choices=STATUSES, default="in_progress")
+    question_order = models.JSONField(default=list)     # question ids in the order this student sees them
+    started_at = models.DateTimeField()
+    deadline_at = models.DateTimeField()                # server-authoritative: min(assignment deadline, start + limit)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    auto_submitted = models.BooleanField(default=False)
+    correct_count = models.PositiveSmallIntegerField(null=True, blank=True)
+    question_count = models.PositiveSmallIntegerField(default=0)
+    score = models.FloatField(null=True, blank=True)
+    max_score = models.FloatField(null=True, blank=True)
+    percent = models.FloatField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    result_version = models.PositiveSmallIntegerField(default=1)  # bumped by an approved correction (see appeals)
+
+    class Meta:
+        db_table = "ClassQuizAttempt"
+        ordering = ["-started_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["assignment", "student", "attempt_no"], name="unique_class_quiz_attempt_no"),
+            models.UniqueConstraint(fields=["assignment", "student"], condition=models.Q(status="in_progress"),
+                                    name="one_active_class_quiz_attempt"),
+        ]
+        indexes = [models.Index(fields=["student", "status"], name="class_quiz_attempt_student")]
+
+
+class ClassQuizAnswer(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="answers")
+    question_id = models.CharField(max_length=255)
+    response = models.TextField(blank=True, default="")
+    is_correct = models.BooleanField(null=True, blank=True)
+    points = models.FloatField(null=True, blank=True)
+    saved_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "ClassQuizAnswer"
+        constraints = [models.UniqueConstraint(fields=["attempt", "question_id"], name="unique_class_quiz_answer")]
+
+
+class TelegramDialogState(models.Model):
+    """Durable multi-step dialog position of one user (e.g. 'type your answer to question 7').
+
+    Critical exam state is NOT kept here: the attempt and its saved answers are PostgreSQL rows and the bot derives the
+    next question from them. This row only remembers which free-text question the next message answers, and expires.
+    """
+
+    user_id = models.CharField(max_length=255, unique=True)
+    state = models.CharField(max_length=40)
+    payload = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField()
+
+
+class TelegramPreference(models.Model):
+    """Per-user bot preferences: language, notification opt-in and quiet hours (local time in `timezone`)."""
+
+    user_id = models.CharField(max_length=255, unique=True)
+    language = models.CharField(max_length=2, default="uz")
+    notify_enabled = models.BooleanField(default=True)
+    quiet_start = models.TimeField(default=datetime.time(22, 0))
+    quiet_end = models.TimeField(default=datetime.time(7, 0))
+    timezone = models.CharField(max_length=40, default="Asia/Tashkent")
+    muted_kinds = models.JSONField(default=list, blank=True)   # notification kinds the user switched off
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class VocabularyAnswerVariant(models.Model):
+    """A teacher-approved alternative answer for one word and direction (valid translation, accepted spelling).
+
+    Added only by an authorised teacher or through an approved correction; scoring consults it for NEW sessions, while
+    sessions already issued keep their own snapshot (history is never rewritten silently).
+    """
+
+    DIRECTIONS = (("eng_uzb", "eng_uzb"), ("uzb_eng", "uzb_eng"), ("spelling", "spelling"))
+
+    word = models.ForeignKey(VocabularyWord, on_delete=models.CASCADE, related_name="answer_variants")
+    direction = models.CharField(max_length=10, choices=DIRECTIONS)
+    text = models.CharField(max_length=255)
+    canonical = models.CharField(max_length=255)
+    approved_by_id = models.CharField(max_length=255)
+    source = models.CharField(max_length=20, default="teacher")   # teacher | appeal
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["word", "direction", "canonical"], name="unique_vocabulary_answer_variant")]
+
+
+class BotVocabRun(models.Model):
+    """One Telegram vocabulary run (practice or spaced-repetition review): server-held questions, answers and result.
+
+    Review runs apply each answer to the spaced-repetition schedule in the same transaction that records it, and a
+    repeated callback finds its stored answer instead of updating the schedule twice.
+    """
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="bot_vocab_runs")
+    kind = models.CharField(max_length=10)                      # practice | review
+    mode_letter = models.CharField(max_length=1, blank=True, default="")   # A..E for practice
+    set = models.ForeignKey(VocabularySet, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    practice_session_id = models.CharField(max_length=255, null=True, blank=True)
+    questions = models.JSONField(default=list)                  # [{wordId, type, prompt, options, expected, accepted}]
+    answers = models.JSONField(default=dict)                    # {wordId: {response, correct, at}}
+    status = models.CharField(max_length=10, default="active")  # active | finished
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = "BotVocabRun"
+        indexes = [models.Index(fields=["student", "status"], name="bot_vocab_run_student")]
+
+
+class VocabularyAnswerReport(models.Model):
+    """Student's "my answer should be accepted" request for one vocabulary answer; decided by an authorised teacher."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    word = models.ForeignKey(VocabularyWord, on_delete=models.CASCADE, related_name="answer_reports")
+    run_id = models.CharField(max_length=255)
+    direction = models.CharField(max_length=10)
+    response = models.CharField(max_length=500)
+    status = models.CharField(max_length=10, default="pending")   # pending | approved | rejected
+    decided_by_id = models.CharField(max_length=255, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["student", "run_id", "word"], name="one_vocab_report_per_answer")]
+        indexes = [models.Index(fields=["status", "created_at"], name="vocab_report_status")]
+
+
+class ClassQuizAppeal(models.Model):
+    """Student request "my answer should be accepted" for one wrong text answer of a submitted quiz attempt."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="appeals")
+    question_id = models.CharField(max_length=255)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    response = models.TextField()
+    status = models.CharField(max_length=10, default="pending")   # pending | approved | rejected
+    decided_by_id = models.CharField(max_length=255, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAppeal"
+        constraints = [models.UniqueConstraint(fields=["attempt", "question_id"], name="one_class_quiz_appeal_per_answer")]
+        indexes = [models.Index(fields=["status", "created_at"], name="class_quiz_appeal_status")]
+
+
+class ClassQuizAcceptedAnswer(models.Model):
+    """Teacher-approved extra accepted answer for one question of one ISSUED assignment (the snapshot is never edited)."""
+
+    id = models.BigAutoField(primary_key=True)
+    assignment = models.ForeignKey(ClassQuizAssignment, on_delete=models.CASCADE, related_name="accepted_answers")
+    question_id = models.CharField(max_length=255)
+    text = models.CharField(max_length=500)
+    approved_by_id = models.CharField(max_length=255)
+    appeal = models.ForeignKey(ClassQuizAppeal, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAcceptedAnswer"
+
+
+class ClassQuizCorrection(models.Model):
+    """Append-only audit row for every grading change an approved appeal caused (who, when, why, before/after)."""
+
+    id = models.BigAutoField(primary_key=True)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="corrections")
+    question_id = models.CharField(max_length=255)
+    appeal = models.ForeignKey(ClassQuizAppeal, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    old_correct_count = models.PositiveSmallIntegerField()
+    new_correct_count = models.PositiveSmallIntegerField()
+    old_percent = models.FloatField()
+    new_percent = models.FloatField()
+    result_version_after = models.PositiveSmallIntegerField()
+    decided_by_id = models.CharField(max_length=255)
+    reason = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizCorrection"
+
+
+class ResultCardDelivery(models.Model):
+    """One automatic result image per (result, recipient): the unique key makes a duplicate callback/restart a no-op."""
+
+    kind = models.CharField(max_length=12)          # quiz | vocab | group
+    ref_id = models.CharField(max_length=255)
+    recipient_id = models.CharField(max_length=255)  # user id (private) or 'chat:<id>' (authorised group summary)
+    version = models.PositiveSmallIntegerField(default=1)   # result_version: a corrected result may be re-issued once
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ResultCardDelivery"
+        constraints = [models.UniqueConstraint(fields=["kind", "ref_id", "recipient_id", "version"], name="one_result_card_per_result")]
+
+
+class TelegramOutbox(models.Model):
+    """Durable notification queue. Producers insert rows (unique dedupe key); a worker delivers them with leases, bounded
+    retries and rate limits, so a restart or a Telegram failure never loses or duplicates a notification."""
+
+    STATUSES = ("pending", "sending", "sent", "failed", "skipped", "dead")
+
+    id = models.BigAutoField(primary_key=True)
+    recipient_id = models.CharField(max_length=255)
+    kind = models.CharField(max_length=24)               # tests | deadlines | vocab | results | feedback | attendance | teacher
+    dedupe_key = models.CharField(max_length=255, unique=True)
+    text = models.TextField()
+    keyboard = models.JSONField(null=True, blank=True)
+    status = models.CharField(max_length=10, default="pending")
+    attempts = models.PositiveSmallIntegerField(default=0)
+    send_after = models.DateTimeField()                  # quiet-hours / scheduling deferral
+    next_attempt_at = models.DateTimeField()             # retry backoff
+    locked_until = models.DateTimeField(null=True, blank=True)   # worker lease; an expired lease is recoverable
+    last_error = models.CharField(max_length=60, blank=True, default="")   # short code only, never content/token
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "TelegramOutbox"
+        indexes = [models.Index(fields=["status", "next_attempt_at"], name="telegram_outbox_due"),
+                   models.Index(fields=["recipient_id", "kind"], name="telegram_outbox_recipient")]

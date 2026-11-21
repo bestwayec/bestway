@@ -15,7 +15,7 @@ from rest_framework.decorators import api_view
 from apps.legacy_schema.models import StudentProfile, User
 from common.api.exceptions import ContractAPIException
 
-from . import classrooms, vocabulary_collections, vocabulary_service
+from . import classrooms, vocabulary_answers, vocabulary_collections, vocabulary_service
 from .domain_contracts import invalid, payload
 from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission, QuizMode, VocabularyAttempt, VocabularyFlashcardProgress, VocabularyFlashcardReceipt, VocabularyHomeworkSession
 from .teacher_views import require_authenticated, require_role, success
@@ -94,6 +94,9 @@ def snapshot_questions(vocab_set, quiz, pinned_words=None):
             "english": word.english,
             "uzbek": word.uzbek,
             "expected": word.uzbek if question["type"] == QuizMode.ENG_UZB else word.english,
+            # every listed translation / synonym / teacher-approved variant is accepted; frozen into the snapshot
+            "accepted": vocabulary_answers.accepted_forms(
+                word, question["type"], vocabulary_answers.approved_variants(word.id, question["type"])),
         })
     return questions
 
@@ -126,7 +129,7 @@ def score_snapshot(snapshot, submitted):
     answers = answer_by_word(submitted, questions)
     wrong = []
     for word_id, row in questions.items():
-        if normalize(answers[word_id]) != normalize(row["expected"]):
+        if not vocabulary_answers.matches(answers[word_id], row["expected"], row.get("accepted")):
             wrong.append({
                 "wordId": word_id, "english": row["english"], "uzbek": row["uzbek"],
                 "userAnswer": answers[word_id], "correctAnswer": row["expected"], "type": row["question"]["type"],

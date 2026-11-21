@@ -31,7 +31,7 @@ WRITING_EVAL_SYSTEM_PROMPT = (
     "vocabulary_upgrades (array of {original, alternative, explanation}), band_8_rewrite (string)."
 )
 
-DEFAULT_GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "gemini-fallback-configured")
+DEFAULT_GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 
@@ -194,12 +194,9 @@ def _ocr_fallback_text(image_bytes: bytes, page_index: int) -> str:
             return "\n".join(printable_lines).strip()
     except Exception:
         pass
-    return (
-        f"In contemporary society, the question of whether education and technology improve student outcomes "
-        f"has sparked considerable debate (Page {page_index + 1}). First and foremost, structured learning "
-        f"environments cultivate analytical thinking and practical problem-solving skills. Furthermore, "
-        f"empirical evidence demonstrates that consistent practice leads to measurable academic progress."
-    )
+    # Fail closed: when no OCR provider could read the image the text is EMPTY. Inventing an essay here
+    # would be graded and stored as the student's own answer.
+    return ""
 
 
 def extract_text_from_images(images: list[tuple[bytes, str]]) -> dict:
@@ -241,12 +238,12 @@ def extract_text_from_images(images: list[tuple[bytes, str]]) -> dict:
             except Exception as e:
                 logger.warning("Gemini Vision OCR failed on page %d: %s", idx + 1, e)
 
-        # Graceful deterministic fallback if offline/airgapped
+        # Offline: only text that is literally embedded in the file is used; nothing is ever invented.
         if not extracted:
             extracted = _ocr_fallback_text(img_bytes, idx)
-            provider_name = "gemini"
+            provider_name = "embedded-text" if extracted else None
 
-        page_texts.append(extracted)
+        page_texts.append(extracted or "")
         if used_provider == "none" and provider_name:
             used_provider = provider_name
 
@@ -257,6 +254,7 @@ def extract_text_from_images(images: list[tuple[bytes, str]]) -> dict:
         "pages": page_texts,
         "wordCount": word_count,
         "provider": used_provider,
+        "available": bool(ocr_text),
     }
 
 
@@ -328,11 +326,13 @@ def _deterministic_writing_evaluation(text: str, task_prompt: str = "", task_typ
 
 
 def _normalize_eval_dict(raw: dict, word_count: int, provider: str) -> dict:
-    ta = _round_half(raw.get("task_achievement") or raw.get("taskAchievement") or raw.get("ta") or 6.0)
-    cc = _round_half(raw.get("coherence_cohesion") or raw.get("coherenceCohesion") or raw.get("cc") or 6.0)
-    lr = _round_half(raw.get("lexical_resource") or raw.get("lexicalResource") or raw.get("lr") or 6.0)
-    gra = _round_half(raw.get("grammatical_range") or raw.get("grammaticalRange") or raw.get("gra") or 6.0)
-    overall = _round_half(raw.get("overall_band") or raw.get("overallBand") or ((ta + cc + lr + gra) / 4.0))
+    # A provider answer without all four criteria is rejected (the caller falls through to the next tier);
+    # missing criteria are never filled in with a default band.
+    ta = _criterion(raw, "task_achievement", "taskAchievement", "ta")
+    cc = _criterion(raw, "coherence_cohesion", "coherenceCohesion", "cc")
+    lr = _criterion(raw, "lexical_resource", "lexicalResource", "lr")
+    gra = _criterion(raw, "grammatical_range", "grammaticalRange", "gra")
+    overall = _round_half((ta + cc + lr + gra) / 4.0)
 
     strengths = [str(s) for s in (raw.get("strengths") or []) if s] or [
         "Clear thesis and relevant arguments.",
@@ -363,6 +363,7 @@ def _normalize_eval_dict(raw: dict, word_count: int, provider: str) -> dict:
         "vocabulary_upgrades": vocab,
         "band_8_rewrite": rewrite,
         "provider": provider,
+        "available": True,
         # CamelCase aliases for frontend/mobile convenience
         "taskAchievement": ta,
         "coherenceCohesion": cc,
@@ -405,7 +406,7 @@ def evaluate_writing_text(text: str, task_prompt: str = "", task_type: str = "ta
     text = (text or "").strip()
     word_count = _count_words(text)
     if not text:
-        return _deterministic_writing_evaluation("", task_prompt=task_prompt, task_type=task_type, provider="heuristic")
+        return unavailable_evaluation(word_count, reason="no_text")
 
     user_message = (
         f"Task Type: IELTS Writing {task_type.upper()}\n"
@@ -475,13 +476,15 @@ def evaluate_writing_text(text: str, task_prompt: str = "", task_type: str = "ta
         except Exception as e:
             logger.warning("xKiro evaluate_writing_text failed: %s", e)
 
-    # Tier 3: Gemini REST API
+    # Tier 3: Gemini REST API (skipped without a configured key; the key travels in the URL, so errors are never logged verbatim)
+    gem_key = (
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or getattr(settings, "GEMINI_API_KEY", DEFAULT_GEMINI_API_KEY)
+        or DEFAULT_GEMINI_API_KEY
+    )
     try:
-        gem_key = (
-            os.environ.get("GEMINI_API_KEY", "").strip()
-            or getattr(settings, "GEMINI_API_KEY", DEFAULT_GEMINI_API_KEY)
-            or DEFAULT_GEMINI_API_KEY
-        )
+        if not gem_key:
+            raise RuntimeError("GEMINI_API_KEY is not configured")
         gem_model = (
             os.environ.get("GEMINI_MODEL", "").strip()
             or getattr(settings, "GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
@@ -510,9 +513,38 @@ def evaluate_writing_text(text: str, task_prompt: str = "", task_type: str = "ta
                 if parsed:
                     return _normalize_eval_dict(parsed, word_count=word_count, provider="gemini")
     except Exception as e:
-        logger.warning("Gemini evaluate_writing_text failed, using deterministic fallback: %s", e)
+        logger.warning("Gemini evaluate_writing_text unavailable (%s)", type(e).__name__)
 
-    return _deterministic_writing_evaluation(text, task_prompt=task_prompt, task_type=task_type, provider="gemini")
+    # Fail closed: no AI provider produced a valid evaluation, so NO band is returned. The length-based
+    # heuristic in _deterministic_writing_evaluation is not a grade and is never presented as one.
+    return unavailable_evaluation(word_count, reason="providers_unavailable")
+
+
+def unavailable_evaluation(word_count: int, reason: str) -> dict:
+    return {
+        "available": False,
+        "provider": "unavailable",
+        "reason": reason,
+        "overall_band": None,
+        "overallBand": None,
+        "criteriaScores": {},
+        "word_count": word_count,
+        "wordCount": word_count,
+        "strengths": [],
+        "weaknesses": [],
+        "mistakes_and_fixes": [],
+        "vocabulary_upgrades": [],
+        "band_8_rewrite": "",
+        "feedback": "Automatic evaluation is not available right now. No score was produced.",
+    }
+
+
+def _criterion(raw: dict, *names) -> float:
+    for name in names:
+        value = raw.get(name)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 9:
+            return _round_half(value)
+    raise ValueError(f"AI evaluation is missing a valid {names[0]} score")
 
 
 def extract_and_evaluate_images(images: list[tuple[bytes, str]], task_prompt: str = "", task_type: str = "task2") -> dict:

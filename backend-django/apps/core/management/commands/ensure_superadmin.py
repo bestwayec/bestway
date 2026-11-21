@@ -1,4 +1,4 @@
-"""Ensure the BestWay Superadmin account exists and is linked to Telegram ID 5582178765."""
+"""Ensure an operator-named super_admin account exists (no built-in Telegram id or password)."""
 from __future__ import annotations
 
 from uuid import uuid4
@@ -12,15 +12,15 @@ from common.auth.passwords import hash_password
 
 
 class Command(BaseCommand):
-    help = "Ensure the Superadmin user exists with role='super_admin', is_active=True, and telegram_chat_id='5582178765'."
+    help = ("Ensure an operator-named super_admin account exists. No built-in Telegram id or password: pass --telegram-id to link "
+            "Telegram (optional) and --password to set/reset the password (a random one is generated and shown once on creation).")
 
     def add_arguments(self, parser):
-        default_tg = getattr(settings, "SUPERADMIN_TELEGRAM_ID", "5582178765") or "5582178765"
         parser.add_argument(
             "--telegram-id",
             dest="telegram_id",
-            default=str(default_tg),
-            help="Telegram chat ID for the superadmin account (default: 5582178765)",
+            default=None,
+            help="Telegram chat ID to link to this account (optional; never defaulted)",
         )
         parser.add_argument(
             "--email",
@@ -48,15 +48,18 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        telegram_id = str(options.get("telegram_id") or "5582178765").strip()
+        telegram_id = str(options.get("telegram_id") or "").strip() or None
         email = str(options.get("email") or "superadmin@bestwayec.uz").strip()
         phone = str(options.get("phone") or "+998900000001").strip()
         name = str(options.get("name") or "Komiljon Roziyev (SuperAdmin)").strip()
-        raw_password = options.get("password") or "BestWaySuperAdmin2026!"
+        explicit_password = options.get("password") or None
+        import secrets
+        raw_password = explicit_password or secrets.token_urlsafe(18)
+        generated = explicit_password is None
         now = timezone.now()
 
         # Priority 1: User already linked to this telegram_id
-        user = User.objects.filter(telegram_chat_id=telegram_id).first()
+        user = User.objects.filter(telegram_chat_id=telegram_id).first() if telegram_id else None
         if user is None:
             # Priority 2: User with the specified email
             user = User.objects.filter(email=email).first()
@@ -69,16 +72,19 @@ class Command(BaseCommand):
             update_fields = {
                 "role": "super_admin",
                 "is_active": True,
-                "telegram_chat_id": telegram_id,
-                "password_hash": hash_password(raw_password),
                 "updated_at": now,
             }
+            if telegram_id:
+                update_fields["telegram_chat_id"] = telegram_id
+            if explicit_password:  # an existing account's password changes only when the operator asks
+                update_fields["password_hash"] = hash_password(explicit_password)
             if not user.email:
                 update_fields["email"] = email
             User.objects.filter(id=user.id).update(**update_fields)
             user.role = "super_admin"
             user.is_active = True
-            user.telegram_chat_id = telegram_id
+            if telegram_id:
+                user.telegram_chat_id = telegram_id
             action = "Updated"
         else:
             user_id = str(uuid4())
@@ -141,4 +147,6 @@ class Command(BaseCommand):
             f"telegram_chat_id={telegram_id} role=super_admin is_active=True is_superuser=True"
         )
         self.stdout.write(self.style.SUCCESS(msg))
+        if action == "Created" and generated:
+            self.stdout.write(self.style.WARNING(f"Generated password (shown once, change it after the first login): {raw_password}"))
         return msg

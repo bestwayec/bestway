@@ -341,7 +341,9 @@ def srs_submit_view(request):
         word = row.word
         kind = questions[word.id][0]
         expected = word.uzbek if kind == "eng_uzb" else word.english
-        correct = normalize(answers[word.id]) == normalize(expected)
+        from . import vocabulary_answers
+        accepted = vocabulary_answers.accepted_forms(word, kind, vocabulary_answers.approved_variants(word.id, kind))
+        correct = vocabulary_answers.matches(answers[word.id], expected, accepted)
         vocabulary_review.update_review(row, correct, now)
         if not correct:
             wrong.append({
