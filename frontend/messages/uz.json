@@ -348,7 +348,15 @@
     "updated": "Guruh yangilandi",
     "studentAdded": "O'quvchi qo'shildi",
     "studentRemoved": "O'quvchi chiqarildi",
-    "openPanel": "Davomat / to'lov"
+    "openPanel": "Davomat / to'lov",
+    "transferAction": "Boshqa guruhga ko‘chirish",
+    "transferTitle": "O‘quvchini boshqa guruhga ko‘chirish",
+    "transferDescription": "{name}ni boshqa faol guruhga o‘tkazish. Oldingi natijalar, baholar va a’zolik tarixi saqlanib qoladi.",
+    "transferTarget": "Yangi guruh",
+    "transferStudents": "{count} ta o‘quvchi",
+    "transferSubmit": "Ko‘chirish",
+    "transferSuccess": "O‘quvchi tanlangan guruhga ko‘chirildi",
+    "transferNoTargets": "Bu o‘quvchini ko‘chirish uchun boshqa faol guruh yo‘q."
   },
   "staff": {
     "title": "Xodimlar",

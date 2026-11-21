@@ -348,7 +348,15 @@
     "updated": "Group updated",
     "studentAdded": "Student added",
     "studentRemoved": "Student removed",
-    "openPanel": "Attendance / payments"
+    "openPanel": "Attendance / payments",
+    "transferAction": "Move to another group",
+    "transferTitle": "Move student to another group",
+    "transferDescription": "Move {name} to another active group. Their earlier results, grades and enrollment history stay on record.",
+    "transferTarget": "New group",
+    "transferStudents": "{count, plural, one {# student} other {# students}}",
+    "transferSubmit": "Move student",
+    "transferSuccess": "Student moved to the selected group",
+    "transferNoTargets": "There is no other active group to move this student to."
   },
   "staff": {
     "title": "Staff",

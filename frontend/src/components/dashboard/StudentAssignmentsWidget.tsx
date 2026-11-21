@@ -164,11 +164,12 @@ export function StudentAssignmentsWidget() {
 
       {/* Filter Tabs */}
       {!loadFailed && assignments.length > 0 && (
-        <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
+        <div role="group" aria-label={tu("assignments.filterAll")} className="flex items-center gap-1.5 border-b border-border/60 pb-2">
           <Button
             type="button"
             size="sm"
             variant={filter === "active" ? "primary" : "ghost"}
+            aria-pressed={filter === "active"}
             className="h-7 px-2.5 text-xs"
             onClick={() => setFilter("active")}
           >
@@ -178,6 +179,7 @@ export function StudentAssignmentsWidget() {
             type="button"
             size="sm"
             variant={filter === "all" ? "primary" : "ghost"}
+            aria-pressed={filter === "all"}
             className="h-7 px-2.5 text-xs"
             onClick={() => setFilter("all")}
           >
@@ -187,6 +189,7 @@ export function StudentAssignmentsWidget() {
             type="button"
             size="sm"
             variant={filter === "completed" ? "primary" : "ghost"}
+            aria-pressed={filter === "completed"}
             className="h-7 px-2.5 text-xs"
             onClick={() => setFilter("completed")}
           >
