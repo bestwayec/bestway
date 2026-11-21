@@ -952,3 +952,69 @@ class TelegramPreference(models.Model):
     quiet_end = models.TimeField(default=datetime.time(7, 0))
     timezone = models.CharField(max_length=40, default="Asia/Tashkent")
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class VocabularyAnswerVariant(models.Model):
+    """A teacher-approved alternative answer for one word and direction (valid translation, accepted spelling).
+
+    Added only by an authorised teacher or through an approved correction; scoring consults it for NEW sessions, while
+    sessions already issued keep their own snapshot (history is never rewritten silently).
+    """
+
+    DIRECTIONS = (("eng_uzb", "eng_uzb"), ("uzb_eng", "uzb_eng"), ("spelling", "spelling"))
+
+    word = models.ForeignKey(VocabularyWord, on_delete=models.CASCADE, related_name="answer_variants")
+    direction = models.CharField(max_length=10, choices=DIRECTIONS)
+    text = models.CharField(max_length=255)
+    canonical = models.CharField(max_length=255)
+    approved_by_id = models.CharField(max_length=255)
+    source = models.CharField(max_length=20, default="teacher")   # teacher | appeal
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["word", "direction", "canonical"], name="unique_vocabulary_answer_variant")]
+
+
+class BotVocabRun(models.Model):
+    """One Telegram vocabulary run (practice or spaced-repetition review): server-held questions, answers and result.
+
+    Review runs apply each answer to the spaced-repetition schedule in the same transaction that records it, and a
+    repeated callback finds its stored answer instead of updating the schedule twice.
+    """
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="bot_vocab_runs")
+    kind = models.CharField(max_length=10)                      # practice | review
+    mode_letter = models.CharField(max_length=1, blank=True, default="")   # A..E for practice
+    set = models.ForeignKey(VocabularySet, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    practice_session_id = models.CharField(max_length=255, null=True, blank=True)
+    questions = models.JSONField(default=list)                  # [{wordId, type, prompt, options, expected, accepted}]
+    answers = models.JSONField(default=dict)                    # {wordId: {response, correct, at}}
+    status = models.CharField(max_length=10, default="active")  # active | finished
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    result = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = "BotVocabRun"
+        indexes = [models.Index(fields=["student", "status"], name="bot_vocab_run_student")]
+
+
+class VocabularyAnswerReport(models.Model):
+    """Student's "my answer should be accepted" request for one vocabulary answer; decided by an authorised teacher."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    word = models.ForeignKey(VocabularyWord, on_delete=models.CASCADE, related_name="answer_reports")
+    run_id = models.CharField(max_length=255)
+    direction = models.CharField(max_length=10)
+    response = models.CharField(max_length=500)
+    status = models.CharField(max_length=10, default="pending")   # pending | approved | rejected
+    decided_by_id = models.CharField(max_length=255, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["student", "run_id", "word"], name="one_vocab_report_per_answer")]
+        indexes = [models.Index(fields=["status", "created_at"], name="vocab_report_status")]

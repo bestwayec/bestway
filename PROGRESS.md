@@ -7,6 +7,15 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 45-BLOK: Telegram bot 2.0 — M4 lug'at va oraliqli takrorlash (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
+- **Yangi**: `/lugat /mashq /takror /natija /yordam` (`telegram_vocab.py` + `vocabulary_bot.py`); rejimlar A (EN→UZ), B (UZ→EN), C (imlo), D (variantli), E (aralash); core 0021 (`VocabularyAnswerVariant`, `BotVocabRun`), 0022 (`VocabularyAnswerReport`).
+- **Mavjud kod qayta ishlatildi**: amaliyot `VocabularyPracticeSession` + `submit_quiz_attempt` orqali (attempt, ball, ota-ona xabari — bir martalik); `/takror` mavjud `vocabulary_review.due/update_review` (1→3→7→14→30 kun) — ikkinchi SRS yaratilmadi; sayt va bot bir xil `due()` sonini ko'rsatadi.
+- **Javob mosligi** (`vocabulary_answers.py`, fuzzy emas): katta-kichik harf, tinish belgisi, apostrof, vergul/nuqtali vergul bilan ajratilgan barcha tarjimalar, sinonimlar (UZ→EN), o'qituvchi tasdiqlagan variantlar; sayt (`score_snapshot`, `srs_submit_view`) ham shu matcherni ishlatadi.
+- **Apellyatsiya**: "✍️ Javobim qabul qilinsin" → `VocabularyAnswerReport`; faqat set egasi/guruh ustozi/admin qaror qiladi (boshqa ustoz uchun 404); tasdiqlansa variant qo'shiladi, berilgan snapshot va saqlangan natija o'zgarmaydi.
+- **Idempotentlik**: javob run satrida qulflanadi; takroriy tugma/update ikki marta SRS yangilamaydi; sayt javob bergan so'z qayta rejalashtirilmaydi (`reviewCount` himoyasi); tugatish ikki marta ball bermaydi.
+- Tekshiruv: `verify_vocab_bot_postgres.py` 62 tekshiruv (haqiqiy PostgreSQL, 13/15 takrorlash xulosasi, restartdan keyin davom etish, muddati o'tgan run, hostile callback, B o'quvchi A runiga kira olmaydi), `tests/test_vocabulary_bot.py`; to'liq pytest 1524 o'tdi.
+- Hali yo'q (M5/M6): natija kartasi PNG, o'qituvchi uchun Telegram vositalari, bildirishnoma outbox, Sozlamalar menyusi.
+
 ### 44-BLOK: Telegram bot 2.0 — M3 Telegram test oqimi (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
 - **Yangi**: `telegram_quiz.py` (Testlarim → karta → Boshlash/Ko'rsatmalar → savol → javob → yakun → natija → xatolarni ko'rish), `/testlar` va `📝 Testlarim`; `TelegramDialogState`/`TelegramPreference` (core 0020) — matnli javob holati PostgreSQL'da (restartdan keyin ham).
 - **Xavfsizlik**: shaxs faqat bog'langan akkauntdan (callback'dagi id'ga ishonilmaydi); callback ≤64 bayt va qat'iy tekshiriladi; guruh chatida tugmalar rad etiladi; boshqa o'quvchi/ustoz/bog'lanmagan akkaunt rad etiladi; takroriy yetkazish `update_id` bilan, qo'sh bosish engine idempotentligi bilan.

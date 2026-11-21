@@ -12,11 +12,12 @@ from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
 from . import telegram_quiz
+from . import telegram_vocab
 
 from . import writing_ocr
 
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/writing — Writing rasm tekshirish (OCR + AI)\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/writing — Writing rasm tekshirish (OCR + AI)\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/tests — mening testlarim\n/lugat — lug\'at mashqlari\n/mashq — mashq boshlash\n/takror — bugungi takrorlash\n/natija — lug\'at natijalarim\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 WRITING_PROGRESS_MSG = (
     "⏳ <b>Writing javobingiz o'qilmoqda (OCR) va AI tomonidan tekshirilmoqda...</b>\n"
     "<i>Iltimos, 5-10 soniya kuting.</i>"
@@ -245,6 +246,10 @@ def handle(update):
                 telegram_quiz.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
                                               chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
                 return
+            if telegram_vocab.is_vocab_callback(data):
+                telegram_vocab.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                               chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
             if chat_id and menu.is_superadmin(chat_id=chat_id):
                 menu.ensure_superadmin_user(chat_id, from_user=from_user)
             if chat_id and data in ('download_apk','apk','android_apk',menu.BTN['apk']):
@@ -346,6 +351,8 @@ def handle(update):
         if text in ('/tests', '/testlar'):
             telegram_quiz.send_my_tests(chat_id)
             return
+        if text.startswith('/') and telegram_vocab.command(chat_id, text, chat_type=(msg.get('chat') or {}).get('type', 'private')):
+            return
 
         # FSM State Interception for Multi-Step Topic Dialogs
         fsm_session = fsm.get_state(chat_id)
@@ -353,7 +360,7 @@ def handle(update):
 
         # A plain private message answers the pending free-text quiz question (durable dialog state, not memory).
         if not fsm_state and text and not text.startswith('/') and text not in menu.BTN.values() \
-                and (msg.get('chat') or {}).get('type', 'private') == 'private' and telegram_quiz.handle_text(chat_id, text):
+                and (msg.get('chat') or {}).get('type', 'private') == 'private' and (telegram_quiz.handle_text(chat_id, text) or telegram_vocab.handle_text(chat_id, text)):
             return
 
         if fsm_state:
