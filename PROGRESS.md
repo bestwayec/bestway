@@ -11,7 +11,7 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 - Gemini o‘zgarishlari auditi: transfer dialogi lokalizatsiya qilindi va `StudentTransferDialog` ga ajratildi (arxiv guruhlar chiqarildi, label, bo‘sh holat), PostgreSQL’da o‘qituvchilararo ko‘chirish 403 va bitta ochiq a’zolik isbotlandi (`4e8584c`, `161b7fc`).
 - Bosh sahifa qayta loyihalandi: imtihon formatlari, rasmiy emasligi haqidagi izohlar, o‘quvchi/o‘qituvchi bo‘limi, FAQ, CTA; header "Bepul darajani aniqlash" endi daraja testini ochadi (`db2f25a`). axe: 0 ta buzilish.
 - Lug‘at: CSV/TSV/TXT import, server qoidasiga mos takrorlarni aniqlash, defisli so‘zlar to‘g‘ri ajratiladi (`3e50f47`).
-- Dashboard: guruhga a’zo, lekin topshiriqsiz o‘quvchiga "guruhda emassiz" deyilmaydi; o‘qituvchi dashboardi 12 → 11 so‘rov (`150a317`).
+- Dashboard: guruhga a’zo, lekin topshiriqsiz o‘quvchiga "guruhda emassiz" deyilmaydi; o‘qituvchi dashboardi 12 → 11, o‘quvchi 8 → 7 so‘rov; "Muddat:" endi lokalizatsiya qilingan (`150a317`, `29dda3f`).
 - Prod bog‘liqliklar: sharp/zod/source-map-js/sanitize-html yangilandi (`b7d0c33`); Next.js 16.4.x — egasi qarori.
 - Testlar: pytest 1485 PASS, 15 ta PostgreSQL skript PASS, Vitest 854 PASS, tsc/lint/build PASS. Batafsil: `docs/BESTWAY_NEXT_STAGE06_TEST_MATRIX.md`, `docs/BESTWAY_NEXT_STAGE05_06_FINAL_REPORT.md`.
 - Qolgan: jismoniy Windows 4 GB va Android qurilma sinovlari, imzolangan reliz, Next.js yangilash, screen-reader sinovi.

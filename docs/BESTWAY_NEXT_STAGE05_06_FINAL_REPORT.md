@@ -12,7 +12,7 @@ Owner steps: [`BESTWAY_NEXT_OWNER_MERGE_CHECKLIST.md`](BESTWAY_NEXT_OWNER_MERGE_
 | Branch | `feat/bestway-next-stage05-completion` | `feat/bestway-next-stage05-completion` |
 | PR | [#207](https://github.com/bestwayec/bestway/pull/207) | [#39](https://github.com/bestwayec/bw-tauri/pull/39) |
 | Base of this session | `9d9ff0f` (verified remote head) | `146e1d0` (verified remote head) |
-| Commits this session | `161b7fc`, `4e8584c`, `db2f25a`, `3e50f47`, `b7d0c33`, `150a317`, + docs commit | `8cf17a8`, `83fd6ac`, + docs commit |
+| Commits this session | `161b7fc`, `4e8584c`, `db2f25a`, `3e50f47`, `b7d0c33`, `150a317`, `29dda3f`, + docs commit | `8cf17a8`, `83fd6ac`, + docs commit |
 
 ## Phase A — recovered baseline and Gemini audit
 
@@ -50,7 +50,7 @@ of a previously intermittent test is supporting, not conclusive, evidence; later
 | --- | --- | --- |
 | Public homepage | **Done** | tighter hero, exam-window frame, IELTS/Multilevel formats section, honest placement/demo-data notes, student vs. teacher section, accessible FAQ, closing CTA; 0 axe violations; screenshots `docs/screenshots/stage05/` |
 | Design system | Partial | used existing semantic tokens only (`design-system.spec.ts` passes); no competing system added. Desktop primitives from Gemini kept. Full cross-app migration not done |
-| Student workspace | Partial | enrollment-aware assignments fixed on web; desktop widget fixed. Remaining items (attendance, schedule, offline, resume) pre-existed from Stage 04 and were exercised only by the journeys listed |
+| Student workspace | Partial | enrollment-aware assignments fixed on web; single shared assignments fetch (8 → 7 requests); English deadline label no longer hardcoded Uzbek; desktop widget fixed. Remaining items (attendance, schedule, offline, resume) pre-existed from Stage 04 and were exercised only by the journeys listed |
 | Teacher command center | Partial | dashboard request de-duplicated (12 → 11); existing KPI/queue/payment cards verified rendering against real data |
 | Classroom management | Partial | transfer hardened and verified on PostgreSQL; other actions pre-existing and covered by `verify_classroom_postgres.py` |
 | Vocabulary Studio | **Improved** | CSV/TSV/TXT import (web + desktop), duplicate detection matching the server rule, safer server parsing of hyphenated words, no silent local fallback on server refusal; cross-client web→desktop parity PASS on real Django |
@@ -76,8 +76,8 @@ of a previously intermittent test is supporting, not conclusive, evidence; later
 
 - Desktop bundle (Vite prod): `main` 211.6 KB (66.1 KB gzip), `vendor-react` 190.0 KB (58.4 KB gzip),
   `vendor-three` 902.3 KB (240.7 KB gzip, lazy and skipped on ≤4 GB devices per Stage 03).
-- Web API requests on first load (production build, local Django): teacher dashboard 11 (was 12),
-  student dashboard 8, classroom page 10.
+- Web API requests on a fresh dashboard tab (production build, local Django, 3 runs each): teacher
+  11 (was 12), student 7 (was 8); classroom page 10.
 - Memory/startup on a 4 GB Windows PC: not measured this session.
 
 ## Remaining work

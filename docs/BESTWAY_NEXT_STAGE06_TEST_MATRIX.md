@@ -42,12 +42,13 @@ smoke and `manage.py check --deploy` — these run in hosted CI (see PR checks).
 | TypeScript | `npx tsc --noEmit` | PASS |
 | ESLint | `npm run lint` | PASS — 0 errors (414 pre-existing warnings) |
 | Vitest | `npm test` | PASS — 130 files, 854 tests (baseline 127 / 840) |
+| Note | `150a317` broke `next build` type checking (spec passed props to a `= {}` parameter); `tsc` had not been re-run after the spec edit. Fixed in `29dda3f`; build re-verified. | — |
 | Production build | `npm run build` | PASS (several rebuilds; last after every change) |
 | Homepage links/CTAs (Playwright, prod build + local Django) | scratch script | PASS — all header/main links resolve; unauthenticated `/mock` → `/login?next=…`; primary CTA scrolls to the placement test; FAQ opens with Enter; `/` (uz) 200 |
 | Responsive overflow | Playwright at 1440 / 820 / 390 px, uz + en | PASS — no horizontal overflow, no page errors |
 | Accessibility automation | axe-core 4 (wcag2a, wcag2aa, wcag21aa) | PASS — 0 violations on `/en` light+dark, `/` and `/en/demo` |
-| Authenticated teacher journey | login → dashboard → classroom → vocabulary | PASS — 200s; dashboard 11 API requests, no duplicates (was 12) |
-| Authenticated student journey | login → dashboard → vocabulary | PASS — 200s, 8 API requests |
+| Authenticated teacher journey | login → dashboard → classroom → vocabulary | PASS — 200s; dashboard 11 API requests in 3/3 fresh-tab runs, no duplicates (was 12 with `/groups` twice) |
+| Authenticated student journey | login → dashboard → vocabulary | PASS — 200s; dashboard 7 API requests in 3/3 runs (was 8 with `/student/my-assignments` twice) |
 | Authorization denials | student `GET /users`, `GET /groups/:id/member-history`, `POST /groups/:id/students`; anonymous `/groups` | PASS — 403, 403, 403, 401; anonymous dashboard → login |
 | Cross-client parity | web teacher creates + assigns a 3-word set; desktop student (browser build, real Django) sees it and the deep link opens that set | PASS — create 201, assign 201, student report access 403, teacher report 200 |
 | Production dependency audit | `npm audit --omit=dev` | sharp/zod/source-map-js/sanitize-html fixed; Next.js GHSA-h694-7cp9-m8p3 remains (affects nested `'use cache'`, not used) |
