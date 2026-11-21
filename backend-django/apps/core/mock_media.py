@@ -157,7 +157,7 @@ def store_upload(upload, field='file', *, staged=False, folder='mock'):
 
 def set_group_media(actor, group_id, files, *, _validated=False):
     group = _group_or_throw(group_id)
-    if not _validated and files.get('audio') is not None and group.section.skill == 'listening':
+    if not _validated and files.get('audio') is not None and getattr(group.section, 'skill', None) == 'listening':
         from .mock27.gates import requires_validated_audio
         if requires_validated_audio(group.section.exam_id):
             # Gated mock: only validated MP3/M4A recordings, registered for verification.
