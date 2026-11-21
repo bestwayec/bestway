@@ -23,12 +23,15 @@ from django.utils import timezone
 from common.api.exceptions import ContractAPIException
 
 from . import class_quiz as cq
+from . import class_quiz_appeals as appeals
+from . import result_card as rc
+from . import result_card_delivery as rcd
 from . import telegram_delivery as api
 from . import telegram_links as links
 from . import telegram_state as state
 
 logger = logging.getLogger(__name__)
-PREFIXES = ('qt', 'qo', 'qi', 'qs', 'qn', 'qa', 'qf', 'qc', 'qr')
+PREFIXES = ('qt', 'qo', 'qi', 'qs', 'qn', 'qa', 'qf', 'qc', 'qr', 'qp', 'qk')
 ID = re.compile(r'^[A-Za-z0-9_-]{8,64}$')
 LINE = '━━━━━━━━━━━━'
 PAGE = 4
@@ -50,6 +53,9 @@ TEXT = {
         time_up="⌛ Vaqt tugadi. Javoblaringiz saqlandi va natija hisoblandi.", stale="Bu tugma eskirgan. /testlar buyrug'ini bosing.", error="⚠️ Xatolik. Qayta urinib ko'ring.",
         not_yours="Bu test sizga tegishli emas.", private_only="🔒 Testni shaxsiy chatda ishlang.", unsupported="Iltimos, javobni matn ko'rinishida yuboring.",
         s_top="A'lo", s_good='Yaxshi', s_ok='Qoniqarli', s_low='Takrorlash kerak', ans_prompt="Javobni yuboring…", home='🏠 Menyu', tests_cmd='/testlar',
+        card_btn='🖼 Natija kartasi', appeal_btn='✍️ {n}-javobim qabul qilinsin', appeal_sent="📨 So'rov o'qituvchiga yuborildi. Natija faqat o'qituvchi qarori bilan o'zgaradi.",
+        appeal_dup="ℹ️ Bu javob uchun so'rov allaqachon yuborilgan.", appeal_none="Bu javob uchun so'rov yuborib bo'lmaydi.", appeal_status_pending='⏳ ko\'rib chiqilmoqda',
+        appeal_status_approved='✅ qabul qilindi', appeal_status_rejected='❌ rad etildi',
     ),
     'en': dict(
         not_linked='🔗 Please link your account first: /start', students_only='📝 Tests are for students.', no_tests='📭 No tests assigned to you yet.',
@@ -65,6 +71,9 @@ TEXT = {
         time_up='⌛ Time is up. Your saved answers were scored.', stale='This button is outdated. Send /tests.', error='⚠️ Something went wrong. Please try again.',
         not_yours='This test is not yours.', private_only='🔒 Please take tests in a private chat.', unsupported='Please send your answer as text.',
         s_top='Excellent', s_good='Good progress', s_ok='Fair', s_low='Needs practice', ans_prompt='Send your answer…', home='🏠 Menu', tests_cmd='/tests',
+        card_btn='🖼 Result card', appeal_btn='✍️ Accept my answer to #{n}', appeal_sent="📨 Request sent to your teacher. The result changes only by the teacher's decision.",
+        appeal_dup='ℹ️ A request for this answer was already sent.', appeal_none='A request cannot be sent for this answer.', appeal_status_pending='⏳ under review',
+        appeal_status_approved='✅ accepted', appeal_status_rejected='❌ rejected',
     ),
 }
 
@@ -195,9 +204,19 @@ def send_result(chat_id, message_id, actor, result):
     lines = ([tr(lang, 'time_up')] if result.get('autoSubmitted') else []) + [tr(lang, 'result_title'), f'<b>{esc(result["title"])}</b>', tr(lang, 'correct', c=result['correct'], n=result['total']),
              tr(lang, 'score', p=f'{result["percent"]:g}'), tr(lang, 'time', t=mmss(result['durationSeconds'])),
              tr(lang, 'status', s=status_label(lang, result['percent']))]
-    keyboard = [[dict(text=tr(lang, 'review'), callback_data=f'qr:{result["attemptId"]}:0')]] if result['correct'] < result['total'] else None
+    keyboard = [[dict(text=tr(lang, 'review'), callback_data=f'qr:{result["attemptId"]}:0')]] if result['correct'] < result['total'] else []
+    keyboard.append([dict(text=tr(lang, 'card_btn'), callback_data=f'qk:{result["attemptId"]}')])
     _render(chat_id, message_id, '\n'.join(lines), keyboard)
+    _send_card(chat_id, actor, lang, result, auto=True)
     return result
+
+
+def _send_card(chat_id, actor, lang, result, *, auto):
+    """Private card of a SAVED result (own chat only); automatic sends are once per result version."""
+    if result.get('status') != 'submitted' or result.get('percent') is None:
+        return
+    rcd.send_card(chat_id, rc.quiz_card_data(result, lang, actor.name), lang, kind='quiz', ref_id=result['attemptId'], recipient=actor.id,
+                  version=result.get('resultVersion') or 1, auto=auto)
 
 
 def send_review(chat_id, message_id, actor, attempt_id, page):
@@ -213,8 +232,15 @@ def send_review(chat_id, message_id, actor, attempt_id, page):
     for row in chunk:
         lines.append(f'\n❓ {esc(clip(row["prompt"], 220))}\n✖️ {tr(lang, "your")}: {esc(clip(row["yourAnswer"] or tr(lang, "empty"), 100))}\n'
                      f'✔️ {tr(lang, "right")}: <b>{esc(clip(row["correctAnswer"], 120))}</b>' + (f'\n💡 {esc(clip(row["explanation"], 200))}' if row['explanation'] else ''))
-    keyboard = [[dict(text=tr(lang, 'next_page'), callback_data=f'qr:{attempt_id}:{page + 1}')]] if start + PAGE < len(wrong) else None
-    _render(chat_id, message_id, '\n'.join(lines)[:3900], keyboard)
+    keyboard = []
+    for row in chunk:
+        if row.get('type') == 'text' and row.get('answered') and not row.get('appeal'):
+            keyboard.append([dict(text=tr(lang, 'appeal_btn', n=row['index'] + 1), callback_data=f'qp:{attempt_id}:{row["index"]}')])
+        elif row.get('appeal'):
+            lines.append(f'#{row["index"] + 1}: ' + tr(lang, 'appeal_status_' + row['appeal']))
+    if start + PAGE < len(wrong):
+        keyboard.append([dict(text=tr(lang, 'next_page'), callback_data=f'qr:{attempt_id}:{page + 1}')])
+    _render(chat_id, message_id, '\n'.join(lines)[:3900], keyboard or None)
 
 
 # ------------------------------------------------------------------------------------------------- callbacks
@@ -263,6 +289,12 @@ def handle_callback(from_id, message_id, data: str, *, chat_type='private') -> b
             send_result(chat_id, message_id, actor, cq.finish_attempt(actor, parts[1]))
         elif cmd == 'qr' and len(parts) == 3 and _valid(parts[1]) and parts[2].isdigit():
             send_review(chat_id, message_id, actor, parts[1], int(parts[2]))
+        elif cmd == 'qk' and len(parts) == 2 and _valid(parts[1]):
+            payload = cq.my_result(actor, parts[1])
+            _send_card(chat_id, actor, lang, payload, auto=False)       # explicit request: allowed again
+        elif cmd == 'qp' and len(parts) == 3 and _valid(parts[1]) and parts[2].isdigit():
+            _appeal, created = appeals.file_appeal(actor, parts[1], int(parts[2]))
+            api.send(chat_id, tr(lang, 'appeal_sent' if created else 'appeal_dup'))
         else:
             api.send(chat_id, tr(lang, 'stale'))
     except ContractAPIException as error:
@@ -315,6 +347,8 @@ def _explain(chat_id, lang, error: ContractAPIException):
         api.send(chat_id, tr(lang, 'no_attempts'))
     elif code in ('QUIZ_NOT_FOUND', 'ATTEMPT_NOT_FOUND'):
         api.send(chat_id, tr(lang, 'not_yours'))
+    elif code == 'NOTHING_TO_APPEAL':
+        api.send(chat_id, tr(lang, 'appeal_none'))
     elif code == 'ATTEMPT_FINISHED':
         api.send(chat_id, tr(lang, 'stale'))
     else:

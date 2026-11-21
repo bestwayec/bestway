@@ -87,6 +87,29 @@ def send_document(chat_id,document,caption=None,filename='bestway-app.apk',parse
     return None
 
 
+def send_photo(chat_id,photo,caption=None,parse_mode='HTML',reply_markup=None,filename='bestway-result.png'):
+    """Send PNG bytes as a photo. Returns the Telegram result or None; never logs the token or the content."""
+    if not chat_id or not isinstance(photo,(bytes,bytearray)):return None
+    token=os.environ.get('TELEGRAM_BOT_TOKEN','')
+    if not token:return None
+    try:
+        boundary='tg-photo-'+uuid4().hex
+        fields=dict(chat_id=str(chat_id))
+        if caption is not None:
+            fields['caption']=caption
+            if parse_mode:fields['parse_mode']=parse_mode
+        if reply_markup is not None:fields['reply_markup']=json.dumps(reply_markup)
+        parts=[f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode() for k,v in fields.items()]
+        safe_name=(filename or 'bestway-result.png').replace('"','')
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="photo"; filename="{safe_name}"\r\nContent-Type: image/png\r\n\r\n'.encode()+bytes(photo)+f'\r\n--{boundary}--\r\n'.encode())
+        request=Request(f'https://api.telegram.org/bot{token}/sendPhoto',data=b''.join(parts),headers={'Content-Type':f'multipart/form-data; boundary={boundary}'},method='POST')
+        with urlopen(request,timeout=60) as response: data=json.loads(response.read())
+        if data.get('ok'):return data.get('result')
+    except Exception:
+        logging.getLogger(__name__).warning('Telegram delivery failed for sendPhoto')
+    return None
+
+
 def send_audio(chat_id,audio,caption=None,title=None,performer=None,filename='speaking.mp3',parse_mode='HTML',reply_markup=None):
     if not chat_id or audio is None:return None
     token=os.environ.get('TELEGRAM_BOT_TOKEN','')

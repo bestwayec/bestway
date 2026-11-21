@@ -22,11 +22,13 @@ from common.api.exceptions import ContractAPIException
 from . import telegram_delivery as api
 from . import telegram_links as links
 from . import telegram_state as state
+from . import result_card as rc
+from . import result_card_delivery as rcd
 from . import vocabulary_bot as vb
 from .telegram_quiz import clip, esc, mmss
 
 logger = logging.getLogger(__name__)
-PREFIXES = ('vl', 'vs', 'vm', 'vo', 'vn', 'vc', 'vr', 'vh', 'vx')
+PREFIXES = ('vl', 'vs', 'vm', 'vo', 'vn', 'vc', 'vr', 'vh', 'vx', 'vk')
 ID = re.compile(r'^[A-Za-z0-9_-]{8,64}$')
 COMMANDS = {'/lugat': 'list', '/mashq': 'list', '/takror': 'review', '/natija': 'results', '/yordam': 'help'}
 MODE_NAMES = {
@@ -55,7 +57,7 @@ TEXT = {
         stats_title="📊 <b>Lug'at natijalarim</b>", stats_recent="So'nggi mashqlar:", stats_none="Hali mashqlar yo'q.", stats_srs="🔁 Takrorlash kutmoqda: {d}\n🧠 O'zlashtirilgan: {m} / {t}",
         help="📚 <b>Lug'at buyruqlari</b>\n/lugat — to'plamlar va mashqlar\n/mashq — mashq boshlash\n/takror — bugungi takrorlash\n/natija — natijalarim\n/yordam — shu yordam\n\nRejimlar: A (EN→UZ), B (UZ→EN), C (imlo), D (variantli), E (aralash).",
         stale="⚠️ Bu tugma eskirgan. /lugat ni qayta oching.", expired="⏱ Mashq muddati tugadi. /lugat dan qayta boshlang.", error="⚠️ Xatolik yuz berdi. Keyinroq urinib ko'ring.",
-        tomorrow="ertaga", today="bugun", in_days="{d} kundan keyin", in_minutes="{m} daqiqadan keyin", back="⬅️ Orqaga",
+        card_btn='🖼 Natija kartasi', tomorrow="ertaga", today="bugun", in_days="{d} kundan keyin", in_minutes="{m} daqiqadan keyin", back="⬅️ Orqaga",
     ),
     'en': dict(
         not_linked="🔗 Please link your account first: /start", students_only="📚 Vocabulary practice is for students.",
@@ -77,7 +79,7 @@ TEXT = {
         stats_title="📊 <b>My vocabulary results</b>", stats_recent="Recent practice:", stats_none="No practice yet.", stats_srs="🔁 Waiting for review: {d}\n🧠 Mastered: {m} / {t}",
         help="📚 <b>Vocabulary commands</b>\n/lugat — sets and practice\n/mashq — start practice\n/takror — today's review\n/natija — my results\n/yordam — this help\n\nModes: A (EN→UZ), B (UZ→EN), C (spelling), D (multiple choice), E (mixed).",
         stale="⚠️ This button is out of date. Reopen /lugat.", expired="⏱ This run expired. Start again with /lugat.", error="⚠️ Something went wrong. Please try again later.",
-        tomorrow="tomorrow", today="today", in_days="in {d} days", in_minutes="in {m} minutes", back="⬅️ Back",
+        card_btn='🖼 Result card', tomorrow="tomorrow", today="today", in_days="in {d} days", in_minutes="in {m} minutes", back="⬅️ Back",
     ),
 }
 
@@ -141,7 +143,7 @@ def send_modes(chat_id, message_id, actor, lang, set_id):
 def show_question(chat_id, message_id, actor, lang, run, index):
     questions = run.questions
     if run.status != 'active':
-        return send_result(chat_id, message_id, actor, lang, run.result or vb.finish(actor, run.id))
+        return send_result(chat_id, message_id, actor, lang, run.result or vb.finish(actor, run.id), run)
     if not 0 <= index < len(questions):
         nxt = vb.next_index(run)
         if nxt is None:
@@ -187,7 +189,7 @@ def send_finish_prompt(chat_id, message_id, lang, run):
             [[dict(text=tr(lang, 'yes'), callback_data=f'vc:{run.id}'), dict(text=tr(lang, 'no'), callback_data=f'vn:{run.id}:{vb.next_index(run) or 0}')]])
 
 
-def send_result(chat_id, message_id, actor, lang, result):
+def send_result(chat_id, message_id, actor, lang, result, run=None):
     state.clear_dialog(actor.id)
     if result['kind'] == 'review':
         lines = [tr(lang, 'review_done'), tr(lang, 'review_correct', c=result['correct'], n=result['total']), tr(lang, 'accuracy', p=f'{result["percent"]:g}'),
@@ -202,14 +204,20 @@ def send_result(chat_id, message_id, actor, lang, result):
             lines.append(tr(lang, 'due_now', n=info['dueNow']))
         elif when:
             lines.append(tr(lang, 'next_review', x=when))
-        keyboard = [[dict(text=tr(lang, 'review_btn'), callback_data='vr')]] if info.get('dueNow') else None
-        return _render(chat_id, message_id, '\n'.join(lines), keyboard)
+        keyboard = [[dict(text=tr(lang, 'review_btn'), callback_data='vr')]] if info.get('dueNow') else []
+        if run is not None:
+            keyboard.append([dict(text=tr(lang, 'card_btn'), callback_data=f'vk:{run.id}')])
+        _render(chat_id, message_id, '\n'.join(lines), keyboard or None)
+        return _send_card(chat_id, actor, lang, result, run, auto=True)
     lines = [tr(lang, 'result_title', title=esc(result.get('setTitle', ''))), tr(lang, 'correct', c=result['correct'], n=result['total']),
              tr(lang, 'accuracy', p=f'{result["percent"]:g}'), tr(lang, 'time', t=mmss(result['durationSeconds'])), tr(lang, 'to_review', w=result['wrong'])]
     if result.get('pointsAwarded'):
         lines.append(tr(lang, 'points', p=result['pointsAwarded']))
-    keyboard = [[dict(text=tr(lang, 'review_btn_after'), callback_data='vr')]] if result['wrong'] else None
-    _render(chat_id, message_id, '\n'.join(lines), keyboard)
+    keyboard = [[dict(text=tr(lang, 'review_btn_after'), callback_data='vr')]] if result['wrong'] else []
+    if run is not None:
+        keyboard.append([dict(text=tr(lang, 'card_btn'), callback_data=f'vk:{run.id}')])
+    _render(chat_id, message_id, '\n'.join(lines), keyboard or None)
+    _send_card(chat_id, actor, lang, result, run, auto=True)
     # list the wrong words (bounded) so the student sees exactly what to review
     wrong = result.get('wordsToReview') or []
     if wrong:
@@ -217,6 +225,13 @@ def send_result(chat_id, message_id, actor, lang, result):
         if len(wrong) > 20:
             rows.append(f'… +{len(wrong) - 20}')
         api.send(chat_id, tr(lang, 'mistakes_title') + '\n' + '\n'.join(rows))
+
+
+def _send_card(chat_id, actor, lang, result, run, *, auto):
+    """Private card built from the stored run result (never from client data); automatic send happens once per run."""
+    if run is None or 'percent' not in result:
+        return
+    rcd.send_card(chat_id, rc.vocab_card_data(result, lang, actor.name, run.finished_at), lang, kind='vocab', ref_id=run.id, recipient=actor.id, auto=auto)
 
 
 def send_review_intro(chat_id, message_id, actor, lang):
@@ -319,7 +334,13 @@ def handle_callback(from_id, message_id, data, *, chat_type='private'):
             outcome = vb.answer(actor, parts[1], int(parts[2]), parts[3])
             send_feedback(chat_id, message_id, lang, outcome, int(parts[2]))
         elif cmd == 'vc' and len(parts) == 2 and _valid(parts[1]):
-            send_result(chat_id, message_id, actor, lang, vb.finish(actor, parts[1]))
+            result = vb.finish(actor, parts[1])
+            send_result(chat_id, message_id, actor, lang, result, vb.get_run(actor, parts[1]))
+        elif cmd == 'vk' and len(parts) == 2 and _valid(parts[1]):
+            run = vb.get_run(actor, parts[1])
+            if run.result is None:
+                raise ContractAPIException('RUN_NOT_FOUND', 'not ready', 404)
+            _send_card(chat_id, actor, lang, run.result, run, auto=False)
         elif cmd == 'vx' and len(parts) == 3 and _valid(parts[1]) and parts[2].isdigit():
             _report, created = vb.report_answer(actor, parts[1], int(parts[2]))
             api.send(chat_id, tr(lang, 'reported' if created else 'reported_again'))

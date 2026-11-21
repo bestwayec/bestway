@@ -1018,3 +1018,72 @@ class VocabularyAnswerReport(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["student", "run_id", "word"], name="one_vocab_report_per_answer")]
         indexes = [models.Index(fields=["status", "created_at"], name="vocab_report_status")]
+
+
+class ClassQuizAppeal(models.Model):
+    """Student request "my answer should be accepted" for one wrong text answer of a submitted quiz attempt."""
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="appeals")
+    question_id = models.CharField(max_length=255)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="+")
+    response = models.TextField()
+    status = models.CharField(max_length=10, default="pending")   # pending | approved | rejected
+    decided_by_id = models.CharField(max_length=255, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAppeal"
+        constraints = [models.UniqueConstraint(fields=["attempt", "question_id"], name="one_class_quiz_appeal_per_answer")]
+        indexes = [models.Index(fields=["status", "created_at"], name="class_quiz_appeal_status")]
+
+
+class ClassQuizAcceptedAnswer(models.Model):
+    """Teacher-approved extra accepted answer for one question of one ISSUED assignment (the snapshot is never edited)."""
+
+    id = models.BigAutoField(primary_key=True)
+    assignment = models.ForeignKey(ClassQuizAssignment, on_delete=models.CASCADE, related_name="accepted_answers")
+    question_id = models.CharField(max_length=255)
+    text = models.CharField(max_length=500)
+    approved_by_id = models.CharField(max_length=255)
+    appeal = models.ForeignKey(ClassQuizAppeal, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAcceptedAnswer"
+
+
+class ClassQuizCorrection(models.Model):
+    """Append-only audit row for every grading change an approved appeal caused (who, when, why, before/after)."""
+
+    id = models.BigAutoField(primary_key=True)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="corrections")
+    question_id = models.CharField(max_length=255)
+    appeal = models.ForeignKey(ClassQuizAppeal, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    old_correct_count = models.PositiveSmallIntegerField()
+    new_correct_count = models.PositiveSmallIntegerField()
+    old_percent = models.FloatField()
+    new_percent = models.FloatField()
+    result_version_after = models.PositiveSmallIntegerField()
+    decided_by_id = models.CharField(max_length=255)
+    reason = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizCorrection"
+
+
+class ResultCardDelivery(models.Model):
+    """One automatic result image per (result, recipient): the unique key makes a duplicate callback/restart a no-op."""
+
+    kind = models.CharField(max_length=12)          # quiz | vocab | group
+    ref_id = models.CharField(max_length=255)
+    recipient_id = models.CharField(max_length=255)  # user id (private) or 'chat:<id>' (authorised group summary)
+    version = models.PositiveSmallIntegerField(default=1)   # result_version: a corrected result may be re-issued once
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ResultCardDelivery"
+        constraints = [models.UniqueConstraint(fields=["kind", "ref_id", "recipient_id", "version"], name="one_result_card_per_result")]

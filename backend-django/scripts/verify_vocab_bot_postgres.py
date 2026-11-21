@@ -40,6 +40,7 @@ from apps.legacy_schema.models import Group, PointsLog, StudentProfile, User
 
 run = uuid4().hex[:8]
 checks, users, groups_made = [], [], []
+photos = []       # photos sent (chat ids)
 out = []          # every outgoing Telegram message / edit: dict(chat, text, keyboard, edit)
 update_ids = iter(range(int(uuid4().int % 10**8) + 2 * 10**10, 10**12))
 
@@ -135,7 +136,7 @@ try:
     VocabularyWord.objects.create(set=private_set, english='secretword', uzbek='yashirin')
 
     with patch.object(delivery, 'call', fake_call), patch.object(delivery, 'send', fake_send), patch.object(delivery, 'menu', fake_menu), \
-            patch.object(delivery, 'answer_callback', lambda *a, **k: None):
+            patch.object(delivery, 'send_photo', lambda chat, photo, **k: photos.append(str(chat)) or {'message_id': 9}), patch.object(delivery, 'answer_callback', lambda *a, **k: None):
         # ---------------------------------------------------------------- commands and visibility
         say(CHAT, '/yordam')
         check('/takror' in last(CHAT)['text'] and '/natija' in last(CHAT)['text'], '/yordam lists the vocabulary commands')
@@ -218,6 +219,9 @@ try:
         points = StudentProfile.objects.get(user_id=student.id).current_points
         tap(CHAT, f'vc:{run_a.id}')
         tap(CHAT, f'vc:{run_a.id}')
+        check(photos == [CHAT], 'finishing a practice run sends exactly one result card to the student\'s own chat (repeat taps send none)')
+        tap(CHAT_B, f'vk:{run_a.id}')
+        check(photos == [CHAT], 'another student cannot request a card for someone else\'s run')
         check(VocabularyAttempt.objects.filter(student_id=student.id).count() == 1 and StudentProfile.objects.get(user_id=student.id).current_points == points, 'repeated finish taps create no second attempt and no duplicate points')
         check(UserWeakWord.objects.filter(student_id=student.id).count() == 20, 'all practised words are tracked for spaced repetition (wrong ones due)')
         wrong_words = set(UserWeakWord.objects.filter(student_id=student.id, correct_streak=0).values_list('word_id', flat=True))
@@ -334,8 +338,9 @@ try:
         tap(CHAT, f'vc:{review.id}')
         summary = ' '.join(o['text'] for o in out[-2:])
         check('Takrorlash yakunlandi' in summary and 'To\'g\'ri: 13/15' in summary, 'the revision summary reports Correct 13/15')
+        check(len(photos) == 5 and photos[-1] == CHAT, 'the revision summary also produced one private card (total cards so far: 5)')
         tap(CHAT, f'vc:{review.id}')
-        check(VocabularyReviewEvent.objects.count() - events_before == 15, 'finishing twice does not change progress')
+        check(len(photos) == 5 and VocabularyReviewEvent.objects.count() - events_before == 15, 'finishing twice does not change progress')
         rows = {r.word_id: r for r in UserWeakWord.objects.filter(student_id=student.id)}
         good = [q['wordId'] for q in review.questions[:13]]
         bad = [q['wordId'] for q in review.questions[13:]]

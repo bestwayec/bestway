@@ -8,6 +8,7 @@ from common.api.exceptions import ContractAPIException
 from common.auth.permissions import Authenticated
 
 from . import class_quiz as quiz
+from . import class_quiz_appeals as appeals
 from .views import body, success
 
 
@@ -127,3 +128,38 @@ def attempt_staff(request, attempt_id):
 @permission_classes([Authenticated])
 def child_results(request, student_id):
     return success(quiz.parent_results(request.user, student_id))
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def attempt_appeal(request, attempt_id):
+    data = body(request, {'questionIndex'})
+    appeal, created = appeals.file_appeal(request.user, attempt_id, data.get('questionIndex'))
+    return success(dict(id=appeal.id, status=appeal.status, created=created), 201 if created else 200)
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def appeals_pending(request):
+    return success(appeals.pending_appeals(request.user))
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def appeal_detail(request, appeal_id):
+    return success(appeals.get_appeal(request.user, appeal_id))
+
+
+@api_view(['POST'])
+@permission_classes([Authenticated])
+def appeal_decision(request, appeal_id):
+    data = body(request, {'approve', 'note'})
+    if not isinstance(data.get('approve'), bool):
+        raise ContractAPIException('VALIDATION_ERROR', 'approve must be true or false', 400)
+    return success(appeals.decide(request.user, appeal_id, data['approve'], data.get('note') or ''))
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def attempt_corrections(request, attempt_id):
+    return success(appeals.corrections_for_attempt(request.user, attempt_id))

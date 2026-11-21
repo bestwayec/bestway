@@ -26,7 +26,7 @@ from common.api.exceptions import ContractAPIException
 
 from . import groups
 from .mock_scoring import variants as _text_variants
-from .models import ClassQuiz, ClassQuizAnswer, ClassQuizAssignment, ClassQuizAttempt, ClassQuizQuestion
+from .models import ClassQuiz, ClassQuizAcceptedAnswer, ClassQuizAnswer, ClassQuizAssignment, ClassQuizAttempt, ClassQuizQuestion
 
 STAFF = ('teacher', 'admin', 'super_admin')
 CATEGORIES = ('grammar', 'vocabulary', 'mixed')
@@ -497,7 +497,7 @@ def save_answer(actor, attempt_id, question_id, response) -> dict:
 
 # ----------------------------------------------------------------------------------------------- grading
 
-def grade_response(question: dict, response) -> tuple[bool, float]:
+def grade_response(question: dict, response, extra=None) -> tuple[bool, float]:
     """Deterministic, server-owned. Choice questions compare the chosen option; text answers must equal an approved
     answer or variant after punctuation/case/hyphen/article normalisation (no fuzzy matching)."""
     if response is None or str(response).strip() == '':
@@ -505,7 +505,7 @@ def grade_response(question: dict, response) -> tuple[bool, float]:
     if question['type'] in ('mcq', 'tf'):
         return (str(response).strip() == str(question['correctAnswers'][0]), float(question['points']))
     approved: set[str] = set()
-    for text in list(question['correctAnswers']) + list(question.get('acceptedVariants') or []):
+    for text in list(question['correctAnswers']) + list(question.get('acceptedVariants') or []) + list(extra or []):
         approved |= _text_variants(text)
     ok = bool(_text_variants(str(response)) & approved)
     return ok, float(question['points'])
@@ -517,12 +517,16 @@ def _finalize_locked(attempt: ClassQuizAttempt, *, auto: bool) -> ClassQuizAttem
     now = timezone.now()
     snapshot = attempt.assignment.snapshot
     saved = {a.question_id: a for a in attempt.answers.all()}
+    # answers a teacher approved after an appeal also count for attempts submitted later (e.g. a late student)
+    extras: dict[str, list] = {}
+    for qid, text in ClassQuizAcceptedAnswer.objects.filter(assignment_id=attempt.assignment_id).values_list('question_id', 'text'):
+        extras.setdefault(qid, []).append(text)
     score = max_score = 0.0
     correct = 0
     for question in snapshot['questions']:
         max_score += question['points']
         answer = saved.get(question['id'])
-        ok, points = grade_response(question, answer.response if answer else None)
+        ok, points = grade_response(question, answer.response if answer else None, extra=extras.get(question['id']))
         if answer is not None:
             answer.is_correct, answer.points = ok, (points if ok else 0.0)
             answer.save(update_fields=['is_correct', 'points'])
@@ -565,8 +569,9 @@ def result_payload(attempt: ClassQuizAttempt, *, detail=True) -> dict:
                  attemptNo=attempt.attempt_no, resultVersion=attempt.result_version, isIeltsBand=False)
     if detail and attempt.status == 'submitted':
         saved = {a.question_id: a for a in attempt.answers.all()}
+        appeals = {a.question_id: a.status for a in attempt.appeals.all()}
         rows = []
-        for question in snapshot['questions']:
+        for index, question in enumerate(snapshot['questions']):
             answer = saved.get(question['id'])
             if question['type'] == 'text':
                 correct_display = ' / '.join(question['correctAnswers'])
@@ -575,7 +580,8 @@ def result_payload(attempt: ClassQuizAttempt, *, detail=True) -> dict:
                 correct_display = question['options'][question['correctAnswers'][0]]
                 given = question['options'][int(answer.response)] if answer and answer.response.isdigit() and int(answer.response) < len(question['options']) else ''
             rows.append(dict(questionId=question['id'], prompt=question['prompt'], yourAnswer=given, correctAnswer=correct_display,
-                             isCorrect=bool(answer and answer.is_correct), answered=answer is not None, explanation=question['explanation']))
+                             isCorrect=bool(answer and answer.is_correct), answered=answer is not None, explanation=question['explanation'],
+                             index=index, type=question['type'], appeal=appeals.get(question['id'])))
         value['review'] = rows
         value['incorrect'] = [r for r in rows if not r['isCorrect']]
     return value

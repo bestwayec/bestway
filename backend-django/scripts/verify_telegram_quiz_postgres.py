@@ -38,6 +38,7 @@ from apps.legacy_schema.models import Group, User
 
 run = uuid4().hex[:8]
 checks, users, groups_made = [], [], []
+photos = []       # photos sent (chat ids)
 out = []          # every outgoing Telegram message / edit: dict(chat, text, keyboard, edit)
 update_ids = iter(range(int(uuid4().int % 10**8) + 2 * 10**10, 10**12))
 
@@ -135,7 +136,7 @@ try:
     assignment = cq.assign_quiz(teacher, quiz, [gid], now + timedelta(days=2))[0]['id']
 
     with patch.object(delivery, 'call', fake_call), patch.object(delivery, 'send', fake_send), patch.object(delivery, 'menu', fake_menu), \
-            patch.object(delivery, 'answer_callback', lambda *a, **k: None), patch.object(delivery, 'contact_request', lambda c, t: out.append(dict(chat=c, text=t, keyboard=None, edit=False))):
+            patch.object(delivery, 'send_photo', lambda chat, photo, **k: photos.append(str(chat)) or {'message_id': 9}), patch.object(delivery, 'answer_callback', lambda *a, **k: None), patch.object(delivery, 'contact_request', lambda c, t: out.append(dict(chat=c, text=t, keyboard=None, edit=False))):
         # ---------------------------------------------------------------- list + card
         say(CHAT, '📝 Testlarim')
         listing = last(CHAT)
