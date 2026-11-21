@@ -67,6 +67,7 @@ from .mock_import_views import (
     validate_import_view,
 )
 from .mock_media import group_audio_view, group_image_view, group_media_view, review_audio_view
+from . import class_quiz_views as cq
 from .views import (
     desktop_authorize_view,
     desktop_exchange_view,
@@ -285,6 +286,22 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
+    path('class-quizzes', cq.quizzes),
+    path('class-quizzes/<str:quiz_id>', cq.quiz_detail),
+    path('class-quizzes/<str:quiz_id>/questions', cq.quiz_questions),
+    path('class-quizzes/<str:quiz_id>/preview', cq.quiz_preview),
+    path('class-quizzes/<str:quiz_id>/publish', cq.quiz_publish),
+    path('class-quizzes/<str:quiz_id>/assign', cq.quiz_assign),
+    path('class-quiz-assignments/mine', cq.my_assignments),
+    path('class-quiz-assignments/<str:assignment_id>/start', cq.assignment_start),
+    path('class-quiz-assignments/<str:assignment_id>/overview', cq.assignment_overview),
+    path('class-quiz-assignments/<str:assignment_id>/export', cq.assignment_export),
+    path('class-quiz-attempts/<str:attempt_id>', cq.attempt_detail),
+    path('class-quiz-attempts/<str:attempt_id>/answer', cq.attempt_answer),
+    path('class-quiz-attempts/<str:attempt_id>/finish', cq.attempt_finish),
+    path('class-quiz-attempts/<str:attempt_id>/result', cq.attempt_result),
+    path('class-quiz-attempts/<str:attempt_id>/staff', cq.attempt_staff),
+    path('class-quiz/children/<str:student_id>/results', cq.child_results),
     path('mock/groups/<str:group_id>/media', group_media_view),
     path('mock/groups/<str:group_id>/audio', group_audio_view),
     path('mock/groups/<str:group_id>/image', group_image_view),

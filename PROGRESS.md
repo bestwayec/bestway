@@ -7,6 +7,11 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 43-BLOK: Telegram bot 2.0 — M2 sinf testlari mexanizmi (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
+- **Yangi**: `ClassQuiz*` jadvallari (core 0019), `class_quiz.py` xizmat qatlami (sayt ham, bot ham shuni chaqiradi) va `/v1/class-quizzes…` API. Grammatika/lug'at/aralash testlar IELTS band'iga aylantirilmaydi (`isIeltsBand=false`, faqat foiz).
+- **Xavfsizlik/yaxlitlik**: ustoz faqat o'z testlari va o'z guruhlari; boshqa ustozning testi 404; tayinlashda o'zgarmas snapshot (keyingi tahrir eski natijani o'zgartirmaydi); server soati (deadline = min(topshiriq muddati, start+limit)); start/javob/yakun idempotent; parallel startlar bitta urinish; muddatdan keyingi javob rad etiladi va urinish avtomatik yakunlanadi; kalitlar topshirishgacha ochilmaydi; ota-ona faqat foiz xulosasi; CSV formula-injection zararsizlantirilgan.
+- Tekshiruv: `verify_class_quiz_postgres.py` 57 tekshiruv (haqiqiy PostgreSQL), 12 unit test.
+
 ### 42-BLOK: Telegram bot 2.0 — M1 xavfsizlik (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
 - **P0 tuzatildi**: (1) o'rnatilgan superadmin Telegram ID (4 joyda) + avtomatik akkaunt yaratish/rolni oshirish + web-admin SSO — endi faqat bog'langan, faol `super_admin` akkaunt; (2) OCR to'qilgan insho va to'qilgan band (web'da talaba javobi sifatida saqlanardi, bot'da qat'iy 6.5) — endi fail-closed, ball yo'q; (3) `ensure_superadmin` standart paroli va har ishga tushganda parolni tiklashi; (4) `update_id` dedupe/replay yo'q edi — `TelegramUpdateReceipt` (core 0018) bilan atomik.
 - Tekshiruv: pytest 1489 o'tdi, `verify_telegram_engine_postgres.py` 20 tekshiruv (haqiqiy PostgreSQL, HTTP webhook, parallel yetkazish). Audit: `docs/TELEGRAM_BOT_2_SECURITY_AUDIT.md`.

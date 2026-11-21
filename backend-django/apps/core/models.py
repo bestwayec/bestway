@@ -809,3 +809,119 @@ class TelegramUpdateReceipt(models.Model):
     update_id = models.BigIntegerField(unique=True)
     kind = models.CharField(max_length=20, blank=True, default="")
     received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Classroom quizzes (grammar / vocabulary / mixed teacher-created tests). Separate from IELTS/Multilevel mocks: results
+# are percentages, never bands. Assignments hold an IMMUTABLE issued snapshot, so editing a quiz later never rewrites
+# what students saw or how they were graded.
+# ---------------------------------------------------------------------------------------------------------------------
+
+class ClassQuiz(models.Model):
+    CATEGORIES = (("grammar", "grammar"), ("vocabulary", "vocabulary"), ("mixed", "mixed"))
+    STATUSES = (("draft", "draft"), ("published", "published"), ("archived", "archived"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="class_quizzes")
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=12, choices=CATEGORIES, default="grammar")
+    status = models.CharField(max_length=10, choices=STATUSES, default="draft")
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True)
+    max_attempts = models.PositiveSmallIntegerField(default=1)
+    shuffle_questions = models.BooleanField(default=False)
+    revision = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ClassQuiz"
+        ordering = ["-updated_at"]
+
+
+class ClassQuizQuestion(models.Model):
+    TYPES = (("mcq", "mcq"), ("tf", "tf"), ("text", "text"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    quiz = models.ForeignKey(ClassQuiz, on_delete=models.CASCADE, related_name="questions")
+    position = models.PositiveIntegerField()
+    type = models.CharField(max_length=6, choices=TYPES)
+    prompt = models.TextField()
+    options = models.JSONField(default=list, blank=True)          # mcq: option texts; tf: ["True", "False"]
+    correct_answers = models.JSONField(default=list)               # mcq/tf: [option index]; text: accepted answers
+    accepted_variants = models.JSONField(default=list, blank=True)  # text only: extra approved spellings/translations
+    explanation = models.TextField(blank=True, default="")
+    points = models.PositiveSmallIntegerField(default=1)
+    vocabulary_word_id = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = "ClassQuizQuestion"
+        ordering = ["position"]
+        constraints = [models.UniqueConstraint(fields=["quiz", "position"], name="unique_class_quiz_position")]
+
+
+class ClassQuizAssignment(models.Model):
+    STATUSES = (("active", "active"), ("closed", "closed"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    quiz = models.ForeignKey(ClassQuiz, on_delete=models.PROTECT, related_name="assignments")
+    group = models.ForeignKey(Group, on_delete=models.DO_NOTHING, db_constraint=False, related_name="class_quiz_assignments")
+    assigned_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_constraint=False, related_name="+")
+    snapshot = models.JSONField()                      # immutable issued copy (title, settings, questions with keys)
+    snapshot_hash = models.CharField(max_length=64)
+    deadline = models.DateTimeField()
+    time_limit_minutes = models.PositiveIntegerField(null=True, blank=True)
+    max_attempts = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=8, choices=STATUSES, default="active")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ClassQuizAssignment"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["group", "status", "deadline"], name="class_quiz_assign_group")]
+
+
+class ClassQuizAttempt(models.Model):
+    STATUSES = (("in_progress", "in_progress"), ("submitted", "submitted"))
+
+    id = models.CharField(primary_key=True, max_length=255, default=uuid4_str)
+    assignment = models.ForeignKey(ClassQuizAssignment, on_delete=models.CASCADE, related_name="attempts")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, db_constraint=False, related_name="class_quiz_attempts")
+    attempt_no = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=12, choices=STATUSES, default="in_progress")
+    question_order = models.JSONField(default=list)     # question ids in the order this student sees them
+    started_at = models.DateTimeField()
+    deadline_at = models.DateTimeField()                # server-authoritative: min(assignment deadline, start + limit)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    auto_submitted = models.BooleanField(default=False)
+    correct_count = models.PositiveSmallIntegerField(null=True, blank=True)
+    question_count = models.PositiveSmallIntegerField(default=0)
+    score = models.FloatField(null=True, blank=True)
+    max_score = models.FloatField(null=True, blank=True)
+    percent = models.FloatField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    result_version = models.PositiveSmallIntegerField(default=1)  # bumped by an approved correction (see appeals)
+
+    class Meta:
+        db_table = "ClassQuizAttempt"
+        ordering = ["-started_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["assignment", "student", "attempt_no"], name="unique_class_quiz_attempt_no"),
+            models.UniqueConstraint(fields=["assignment", "student"], condition=models.Q(status="in_progress"),
+                                    name="one_active_class_quiz_attempt"),
+        ]
+        indexes = [models.Index(fields=["student", "status"], name="class_quiz_attempt_student")]
+
+
+class ClassQuizAnswer(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    attempt = models.ForeignKey(ClassQuizAttempt, on_delete=models.CASCADE, related_name="answers")
+    question_id = models.CharField(max_length=255)
+    response = models.TextField(blank=True, default="")
+    is_correct = models.BooleanField(null=True, blank=True)
+    points = models.FloatField(null=True, blank=True)
+    saved_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "ClassQuizAnswer"
+        constraints = [models.UniqueConstraint(fields=["attempt", "question_id"], name="unique_class_quiz_answer")]
