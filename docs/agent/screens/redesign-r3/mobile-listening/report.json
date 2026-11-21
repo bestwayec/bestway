@@ -1,0 +1,101 @@
+{
+  "web": "http://localhost:3300",
+  "results": [
+    {
+      "name": "01-login-mobile",
+      "ok": true,
+      "ms": 4363,
+      "detail": "student signed in at 390x844"
+    },
+    {
+      "name": "02-catalog-durations-and-practice-scope",
+      "ok": true,
+      "ms": 290,
+      "detail": "listening 45 min, practice skills listening,reading,writing,speaking"
+    },
+    {
+      "name": "03-start-listening-practice",
+      "ok": true,
+      "ms": 215,
+      "detail": "attempt with 35 questions, 6 parts, numbers 1–35"
+    },
+    {
+      "name": "04-runner-palette-matches-question-numbers",
+      "ok": true,
+      "ms": 1157,
+      "detail": "palette shows 1…35, Part 1 visible; full-screen notice shown once"
+    },
+    {
+      "name": "05-part4-map-loads-and-palette-maps-to-q20",
+      "ok": true,
+      "ms": 1013,
+      "detail": "map 1200x700 via /api/backend/mock/groups/mock-record-01-grp-l4/image; palette 20 is current"
+    },
+    {
+      "name": "05b-part4-map-letters-360x640",
+      "ok": true,
+      "ms": 326,
+      "detail": "map 1200px wide shown at 276px (letters ~13px), Q19–23 offer A–H"
+    },
+    {
+      "name": "05b-part4-map-letters-390x844",
+      "ok": true,
+      "ms": 363,
+      "detail": "map 1200px wide shown at 306px (letters ~14px), Q19–23 offer A–H"
+    },
+    {
+      "name": "05c-listening-player-plays-part-1",
+      "ok": true,
+      "ms": 21035,
+      "detail": "player: no native controls, volume only, Play locked during preview, element playing (8.0s, volume 1)"
+    },
+    {
+      "name": "05d-exam-chrome-has-no-dtm-label",
+      "ok": true,
+      "ms": 168,
+      "detail": "palette titled 'Question palette'; no DTM label, no raw translation keys"
+    },
+    {
+      "name": "06-answer-persists-and-palette-marks-it",
+      "ok": true,
+      "ms": 3044,
+      "detail": "question 1 answered, saved, still answered after reload"
+    },
+    {
+      "name": "07-layout-360x640",
+      "ok": true,
+      "ms": 924,
+      "detail": "no overflow, last field reachable, question bar 103px, sheet wraps"
+    },
+    {
+      "name": "07-layout-390x844",
+      "ok": true,
+      "ms": 980,
+      "detail": "no overflow, last field reachable, question bar 103px, sheet wraps"
+    },
+    {
+      "name": "08-section-result-has-no-level",
+      "ok": true,
+      "ms": 2028,
+      "detail": "section result without level; report HTTP 200 %PDF-"
+    },
+    {
+      "name": "09-empty-attempt-final-state-and-layout",
+      "ok": true,
+      "ms": 1681,
+      "detail": "completed 0.2s after submit, no level; 360x640: 2 blocks, no overlap; 390x844: 2 blocks, no overlap"
+    },
+    {
+      "name": "09-audio-parts-1-4-decode",
+      "ok": true,
+      "ms": 473,
+      "detail": "decoded P1 8.0s 250KB rms 0.027; P2 8.0s 250KB rms 0.027; P3 8.0s 250KB rms 0.027; P4 8.0s 250KB rms 0.027"
+    },
+    {
+      "name": "10-microphone-check-refused-then-allowed",
+      "ok": true,
+      "ms": 16409,
+      "detail": "refused: help in the page language + Try again + continue without (buttons free); allowed (fake mic): 5 s test passes"
+    }
+  ]
+}

@@ -3305,6 +3305,7 @@
     "copied": "Nusxalandi"
   },
   "devUi": {
+    "results": "Natija infografikasi",
     "eyebrow": "Faqat ishlab chiqish uchun",
     "title": "Dizayn tizimi",
     "intro": "Har bir primitiv yorug' va qorong'i temada. Tokenlar va qoidalar: docs/design/DESIGN_SYSTEM.md va DIRECTION.md.",

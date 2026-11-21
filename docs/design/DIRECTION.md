@@ -236,7 +236,15 @@ looping animation in the exam window except the recording indicator.
 | 6 Landing and sign-in | bestwayec/bestway#201 | `redesign-6/` |
 | Final roles crawl + E2E fixes | (this branch) | — |
 
-Open (not done in this programme): admin sidebar grouping (`lib/nav.ts` needs sections); a step-by-step
-Exam Builder flow (the builder keeps its current panels and preview); the Writing split view (task
-beside the editor); `CefrResultInfographic` on the Exam Track page still uses per-skill hues; the
-attempts list API returns the latest 20 attempts, which bounds the band trend.
+R3 (branch `claude/beautiful-dirac-e83j8l`, screenshots `docs/agent/screens/redesign-r3/`) closed the items that were open:
+
+| Item | Where |
+|---|---|
+| Admin sidebar grouping (Learning / Exams / Users / Reports / Settings) | `frontend/src/lib/nav.ts` (`groupedNavForRole`), `components/app/sidebar-sections.tsx`, the mobile "More" sheet |
+| Step-by-step Exam Builder | `components/exam-builder/builder-steps.ts`, `BuilderStepper.tsx` (a guide over the existing editors; payloads unchanged) |
+| Writing split view (task beside the answer) | `GroupBlock` in `components/mock/mock-runner.tsx`, divider in `reading-split-divider.tsx` |
+| `CefrResultInfographic` on tokens, estimated vs verified | `components/mock/cefr-result-infographic.tsx` |
+| Attempt history beyond 20 | `GET /mock/attempts/mine` keyset `cursor` (`mock_attempts.my_attempts`), `lib/attempt-history.ts` |
+| Vocabulary library and review screens | `components/vocabulary/VocabularyCatalogView.tsx`, `app/[locale]/(app)/vocabulary/srs/page.tsx` |
+
+Still open: see the last block of `PROGRESS.md`.

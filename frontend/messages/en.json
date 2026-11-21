@@ -3305,6 +3305,7 @@
     "copied": "Copied"
   },
   "devUi": {
+    "results": "Result infographic",
     "eyebrow": "Development only",
     "title": "Design system",
     "intro": "Every primitive in light and dark. Tokens and rules: docs/design/DESIGN_SYSTEM.md and DIRECTION.md.",
