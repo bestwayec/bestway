@@ -564,9 +564,9 @@ def writing_ocr_view(request, attempt_id, question_id=None):
     uploaded_items = _extract_uploaded_images(request)
     ocr_result = writing_ocr.extract_text_from_images([(raw, mime) for raw, mime, _ in uploaded_items])
     ocr_text = ocr_result.get('ocrText', '')
-    if not ocr_text.strip():
-        # Fail closed: never store (or grade) text the OCR did not actually read; the existing answer stays untouched.
-        engine.fail('OCR_UNAVAILABLE', "Rasmdan matnni o'qib bo'lmadi. Qayta urinib ko'ring yoki matnni qo'lda kiriting", 503)
+    # Fail closed: text the OCR did not actually read is never invented or stored. The photographed pages are still
+    # saved privately for teacher review and the student's existing answer text is left untouched.
+    ocr_available = bool(ocr_text.strip())
     append = str(request.data.get('append') or request.query_params.get('append', '')).lower() in ('1', 'true', 'yes')
     written = []
     try:
@@ -583,9 +583,9 @@ def writing_ocr_view(request, attempt_id, question_id=None):
                 target.write_bytes(raw)
                 keys.append(key)
             prior = existing.response.strip() if existing and existing.response else ''
-            final_text = f"{prior}\n\n{ocr_text}".strip() if append and prior else ocr_text
+            final_text = (f"{prior}\n\n{ocr_text}".strip() if append and prior else ocr_text) if ocr_available else prior
             word_count = writing_ocr._count_words(final_text)
-            rubric.update(imageKeys=keys, ocrText=final_text, wordCount=word_count)
+            rubric.update(imageKeys=keys, ocrText=final_text, wordCount=word_count, ocrAvailable=ocr_available)
             urls = page_urls(attempt_id, question_id, keys)
             MockAnswer.objects.update_or_create(
                 attempt_id=attempt_id, question_id=question_id,
@@ -601,7 +601,7 @@ def writing_ocr_view(request, attempt_id, question_id=None):
     return success(dict(
         ocrText=final_text, pages=ocr_result.get('pages', []), imageKeys=keys,
         imageUrls=urls, wordCount=word_count, questionId=question_id,
-        provider=ocr_result.get('provider', 'gemini'),
+        provider=ocr_result.get('provider', 'gemini'), ocrAvailable=ocr_available,
     ))
 
 

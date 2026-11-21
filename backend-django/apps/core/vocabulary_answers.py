@@ -35,7 +35,7 @@ def accepted_forms(word, question_type: str, variants=()) -> list[str]:
     if question_type == "eng_uzb":
         forms = split_translations(word.uzbek)
     elif question_type == "uzb_eng":
-        forms = split_translations(word.english) + [s for s in (word.synonyms or []) if isinstance(s, str)]
+        forms = split_translations(word.english) + [s for s in (getattr(word, 'synonyms', None) or []) if isinstance(s, str)]
     else:  # spelling: the word itself (alternative spellings only if a teacher approved them)
         forms = split_translations(word.english)
     seen, out = set(), []

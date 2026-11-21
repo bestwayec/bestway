@@ -50,3 +50,10 @@ class VocabTextTests(SimpleTestCase):
 
     def test_commands_are_recognised_with_bot_suffix(self):
         self.assertEqual(set(tv.COMMANDS), {'/lugat', '/mashq', '/takror', '/natija', '/yordam'})
+
+
+class PinnedWordTests(SimpleTestCase):
+    def test_revision_snapshots_without_synonyms_still_work(self):
+        pinned = SimpleNamespace(english='big', uzbek='katta, ulkan')       # assignment revisions carry no synonyms field
+        self.assertEqual(va.accepted_forms(pinned, 'uzb_eng'), ['big'])
+        self.assertEqual(va.accepted_forms(pinned, 'eng_uzb'), ['katta', 'ulkan'])
