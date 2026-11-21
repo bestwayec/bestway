@@ -7,6 +7,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 41-BLOK: BESTWAY NEXT — yakuniy premium bosqich va reliz tekshiruvi (2026-11-21)
+- P0 (bw-tauri `c3ec47b`): desktop endi tokenlarni hech qachon ochiq `session.json` ga yozmaydi — faqat OS himoyalangan ombori (read-back bilan), aks holda faqat xotirada; eski fayl ko‘chiriladi va o‘chiriladi. Windows native test: PASS.
+- Sinf ekranlari va guruh tahlili to‘liq lokalizatsiya qilindi (`bb10958`); desktop lug‘at sahifasi bitta tilda, katta fleshkarta va progress (`ac22eb8`).
+- Jonli xavfsizlik probi: boshqa o‘quvchi/ota-ona so‘rovlari rad etildi, bekor qilingan refresh token 401 (`scripts/verify_cross_account_local.py`).
+- Veb→desktop lug‘at qabul testi: oflayn + qayta ishga tushirish + bir marta sinxron, bir xil 100% natija (bw-tauri `e2e/real-backend/`).
+- 77 ta sahifa × o‘lcham kombinatsiyasida gorizontal overflow yo‘q.
+- MERGE/RELIZ: BLOCKED — macOS notarizatsiyasi, Windows Authenticode, Android sertifikat mosligi va jismoniy qurilma sinovlari tasdiqlanmagan. Batafsil: `docs/BESTWAY_NEXT_STAGE06_PRODUCTION_REPORT.md`.
+
 ### 40-BLOK: BESTWAY NEXT — Stage 05 yakuni va Stage 06 QA (2026-11-21) — #207 & #39
 - Gemini o‘zgarishlari auditi: transfer dialogi lokalizatsiya qilindi va `StudentTransferDialog` ga ajratildi (arxiv guruhlar chiqarildi, label, bo‘sh holat), PostgreSQL’da o‘qituvchilararo ko‘chirish 403 va bitta ochiq a’zolik isbotlandi (`4e8584c`, `161b7fc`).
 - Bosh sahifa qayta loyihalandi: imtihon formatlari, rasmiy emasligi haqidagi izohlar, o‘quvchi/o‘qituvchi bo‘limi, FAQ, CTA; header "Bepul darajani aniqlash" endi daraja testini ochadi (`db2f25a`). axe: 0 ta buzilish.
