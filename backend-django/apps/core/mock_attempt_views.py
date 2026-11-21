@@ -316,11 +316,13 @@ def session_release_view(request, attempt_id):
 @permission_classes([AllowAny])
 def mine_view(request):
     student(request)
-    allowed = {'page', 'limit', 'status', 'examId', 'studentId', 'program'}
+    allowed = {'page', 'limit', 'cursor', 'status', 'examId', 'studentId', 'program'}
     query = dict(request.query_params.items())
     extra = next((k for k in query if k not in allowed), None)
     if extra:
         engine.fail('VALIDATION_ERROR', f'property {extra} should not exist')
+    if 'cursor' in query and 'page' in query:
+        engine.fail('VALIDATION_ERROR', 'cursor and page cannot be used together')
     for key, default, maximum in [('page', 1, None), ('limit', 20, 100)]:
         try:
             numeric = float(query.get(key, default))

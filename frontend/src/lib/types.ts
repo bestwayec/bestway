@@ -33,9 +33,12 @@ export type PurchaseStatus = "pending_confirmation" | "purchased";
 /* ── Javob konverti (backend/src/common/transform.interceptor.ts) ────────── */
 
 export interface PageMeta {
-  page: number;
+  page?: number;
   limit: number;
   total: number;
+  /** Cursor pagination (exam history): more rows exist after this page. */
+  hasMore?: boolean;
+  nextCursor?: string | null;
 }
 
 export interface ApiError {

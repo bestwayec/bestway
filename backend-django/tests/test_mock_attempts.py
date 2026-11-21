@@ -211,3 +211,17 @@ class AnnotationLimitTests(SimpleTestCase):
             response, saved = self.put(value)
             self.assertEqual(response.status_code, 400)
             saved.assert_not_called()
+
+
+class AttemptHistoryCursorTests(SimpleTestCase):
+    def test_cursor_round_trips_and_naive_prisma_times_are_utc(self):
+        naive = SimpleNamespace(started_at=datetime(2026, 11, 1, 9, 30, 15, 123000), id='attempt-1')
+        started_at, attempt_id = engine.decode_attempts_cursor(engine.encode_attempts_cursor(naive))
+        self.assertEqual(started_at, datetime(2026, 11, 1, 9, 30, 15, 123000, tzinfo=UTC))
+        self.assertEqual(attempt_id, 'attempt-1')
+
+    def test_invalid_cursors_are_validation_errors(self):
+        for bad in ('', 'not-a-cursor', 'e30', 'W10', '%00', 'x' * 300, None, 123):
+            with self.assertRaises(ContractAPIException) as caught:
+                engine.decode_attempts_cursor(bad)
+            self.assertEqual(caught.exception.code if hasattr(caught.exception, 'code') else 'VALIDATION_ERROR', 'VALIDATION_ERROR')

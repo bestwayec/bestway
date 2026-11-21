@@ -1897,6 +1897,8 @@
       "practiceLink": "Choose a practice section",
       "trendTitle": "Band over time",
       "trendChange": "{count} full results · {change} since the first",
+      "trendLatest": "Showing the latest {shown} of your {count} full results.",
+      "trendPartial": "Only your most recent attempts could be loaded, so this trend shows the latest {shown} full results and may be incomplete.",
       "trendAria": "Overall band by date: {points}"
     }
   },

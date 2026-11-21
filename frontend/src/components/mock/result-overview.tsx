@@ -8,7 +8,7 @@ import { Link } from "@/i18n/navigation";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/feedback";
 import { api } from "@/lib/api-client";
-import { useMyMockAttempts } from "@/hooks/use-mock";
+import { useMyMockAttemptHistory } from "@/hooks/use-mock";
 import type { MockAttemptSummary, MockSkill } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { familyRows } from "./type-accuracy-card";
@@ -137,8 +137,10 @@ export function bandHistory(attempts: MockAttemptSummary[]): Array<{ id: string;
  */
 export function BandTrend({ currentId }: { currentId: string }) {
   const t = useTranslations("mock.resultOverview");
-  const q = useMyMockAttempts();
-  const points = React.useMemo(() => bandHistory((q.data ?? []) as MockAttemptSummary[]).slice(-8), [q.data]);
+  const q = useMyMockAttemptHistory();
+  // Every full result counts for the totals and the change; the chart draws the latest eight.
+  const all = React.useMemo(() => bandHistory(q.data?.items ?? []), [q.data]);
+  const points = React.useMemo(() => all.slice(-8), [all]);
   if (q.isPending) return <Skeleton className="h-40" />;
   if (q.isError || points.length < 2) return null;
   const W = 560, H = 140, PAD = 28;
@@ -147,7 +149,7 @@ export function BandTrend({ currentId }: { currentId: string }) {
   const x = (i: number) => PAD + (i * (W - PAD * 2)) / Math.max(1, points.length - 1);
   const y = (b: number) => H - PAD + 8 - ((b - min) / Math.max(0.5, max - min)) * (H - PAD * 1.5);
   const path = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.band).toFixed(1)}`).join(" ");
-  const first = points[0].band, last = points[points.length - 1].band;
+  const first = all[0].band, last = all[all.length - 1].band;
   const change = last - first;
   const fmt = (d: string) => new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   return (
@@ -155,8 +157,13 @@ export function BandTrend({ currentId }: { currentId: string }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-fg"><TrendingUp className="size-5 text-fg-subtle" aria-hidden />{t("trendTitle")}</h2>
         <p className="text-sm text-fg-muted tabular-nums">
-          {t("trendChange", { count: points.length, change: `${change > 0 ? "+" : ""}${change.toFixed(1)}` })}
+          {t("trendChange", { count: all.length, change: `${change > 0 ? "+" : ""}${change.toFixed(1)}` })}
         </p>
+        {all.length > points.length || !q.data?.complete ? (
+          <p className="w-full text-sm text-fg-subtle" data-testid="band-trend-scope">
+            {q.data?.complete ? t("trendLatest", { shown: points.length, count: all.length }) : t("trendPartial", { shown: points.length })}
+          </p>
+        ) : null}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 h-auto w-full" role="img" aria-label={t("trendAria", { points: points.map((p) => `${fmt(p.date)} ${p.band.toFixed(1)}`).join(", ") })}>
         {[min, (min + max) / 2, max].map((b) => (

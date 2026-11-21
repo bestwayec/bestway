@@ -5,11 +5,14 @@ response/media mutations; no client revision or countdown is authoritative.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from copy import copy
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 
 from django.db import connection, transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -862,16 +865,54 @@ def my_attempts(actor, query):
         types = ['ielts_academic', 'ielts_general']
     else:
         types = None
+    rows = MockAttempt.objects.filter(student_id=actor.id).select_related('exam')
     if types is not None:
-        rows = MockAttempt.objects.filter(student_id=actor.id, exam__type__in=types).select_related('exam').order_by('-started_at')
-    else:
-        rows = MockAttempt.objects.filter(student_id=actor.id).select_related('exam').order_by('-started_at')
+        rows = rows.filter(exam__type__in=types)
     if query.get('status'):
         rows = rows.filter(status=query['status'])
     if query.get('examId'):
         rows = rows.filter(exam_id=query['examId'])
-    page, limit = query.get('page', 1), query.get('limit', 20)
-    return [summary(a) for a in rows[(page-1)*limit:page*limit]], dict(page=page, limit=limit, total=rows.count())
+    # Deterministic order: equal started_at values are broken by id, so no page repeats or skips an attempt.
+    rows = rows.order_by('-started_at', '-id')
+    limit = query.get('limit', 20)
+    total = rows.count()
+    if query.get('cursor') is not None:
+        # Keyset page: strictly older than the cursor row. Stable while new attempts are added at the top.
+        started_at, attempt_id = decode_attempts_cursor(query['cursor'])
+        page_rows = list(rows.filter(Q(started_at__lt=started_at) | Q(started_at=started_at, id__lt=attempt_id))[:limit + 1])
+        meta = dict(limit=limit, total=total)
+    else:
+        page = query.get('page', 1)
+        page_rows = list(rows[(page - 1) * limit:page * limit + 1])
+        meta = dict(page=page, limit=limit, total=total)
+    has_more = len(page_rows) > limit
+    page_rows = page_rows[:limit]
+    meta['hasMore'] = has_more
+    meta['nextCursor'] = encode_attempts_cursor(page_rows[-1]) if has_more and page_rows else None
+    return [summary(a) for a in page_rows], meta
+
+
+def encode_attempts_cursor(attempt):
+    started_at = attempt.started_at if attempt.started_at.tzinfo else attempt.started_at.replace(tzinfo=UTC)  # Prisma column: naive UTC
+    raw = json.dumps([started_at.isoformat(), str(attempt.id)], separators=(',', ':'))
+    return base64.urlsafe_b64encode(raw.encode()).decode().rstrip('=')
+
+
+def decode_attempts_cursor(cursor):
+    """Opaque cursor from `encode_attempts_cursor`; anything else is a 400, never a 500."""
+    try:
+        if not isinstance(cursor, str) or not cursor or len(cursor) > 200:
+            raise ValueError
+        raw = base64.urlsafe_b64decode(cursor + '=' * (-len(cursor) % 4))
+        started_at, attempt_id = json.loads(raw)
+        parsed = datetime.fromisoformat(started_at)
+        if parsed.tzinfo is None:
+            raise ValueError
+        if not isinstance(attempt_id, str) or not attempt_id or len(attempt_id) > 255:
+            raise ValueError
+        return parsed, attempt_id
+    except (ValueError, TypeError, binascii.Error):
+        fail('VALIDATION_ERROR', 'cursor is not valid')
 
 
 def detail(actor, attempt_id):

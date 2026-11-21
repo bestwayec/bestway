@@ -1897,6 +1897,8 @@
       "practiceLink": "Mashq bo'limini tanlash",
       "trendTitle": "Vaqt bo'yicha band",
       "trendChange": "{count} ta to'liq natija · birinchisidan beri {change}",
+      "trendLatest": "Oxirgi {shown} ta natija ko'rsatilmoqda (jami {count} ta to'liq natija).",
+      "trendPartial": "Faqat eng so'nggi urinishlar yuklandi, shuning uchun trend oxirgi {shown} ta to'liq natijani ko'rsatadi va to'liq bo'lmasligi mumkin.",
       "trendAria": "Sana bo'yicha umumiy band: {points}"
     }
   },
