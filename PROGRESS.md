@@ -7,6 +7,14 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 49-BLOK: Telegram bot 2.0 — mustaqil yakuniy audit va tuzatishlar (2026-11-21) — PR #210, branch `feat/bestway-telegram-exam-engine-2`
+- **Xavfsizlik**: guruh chatini o'quvchi akkauntiga bog'lash taqiqlandi (`/start` token va kontakt faqat shaxsiy chatda); bir martalik token parallel so'rovlarda faqat bitta chatni bog'laydi; guruhda `/tests` o'quvchi testlarini ko'rsatmaydi.
+- **Test kalitlari**: `maxAttempts > 1` bo'lsa, oxirgi urinish yoki muddat tugaguncha o'quvchiga to'g'ri javob va izoh ko'rsatilmaydi (ustoz ko'radi).
+- **Outbox**: har bir xabar yuborishdan oldin lease qayta tekshiriladi (ikki worker bir xabarni ikki marta yubormaydi); `telegram-outbox` alohida opt-in profilida (`--profile workers` uni ishga tushirmaydi).
+- **CI**: bildirishnoma/E2E PG skriptlari soatga bog'liq edi (Toshkent 22:00–07:00 tinch soatlari) — tuzatildi; ustoz so'rovlari SQL darajasida filtrlanadi.
+- Tekshiruv: pytest 1543 o'tdi; PG: engine 23, class quiz 61, Telegram quiz 33, vocab 65, result cards 47, notifications 88, E2E 41. Tafsilotlar: `docs/TELEGRAM_BOT_2_SECURITY_AUDIT.md` (A1–A7).
+- **Merge tartibi**: avval PR #210, keyin PR #209 (unda `core.0026` birlashtiruvchi migratsiya bor).
+
 ### 48-BLOK: Telegram bot 2.0 — M7 to'liq QA, E2E sayohatlar va reliz hujjatlari (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
 - `verify_e2e_journeys_postgres.py` (41): ustoz — haqiqiy HTTP login → 40 savolli test → tayinlash → muddat → monitoring/CSV; o'quvchi — `/start` token bilan bog'lash → test → 40 savol → natija + karta → xatolar → lug'at → `/takror` 13/15; xavfsizlik — anonim, A/B o'quvchi, A/B ustoz, ota-ona, soxta callback, takroriy yakunlash, 6 ta parallel yakunlash, muddati o'tgan urinish, restartdan keyin davom etish.
 - Barcha 7 PG skript CI'da; pytest 1540 o'tdi; frontend `tsc` 0 xato, ESLint 0 xato (413 eski ogohlantirish), Vitest 865 o'tdi, `next build` muvaffaqiyatli.

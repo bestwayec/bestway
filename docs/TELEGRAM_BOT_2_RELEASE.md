@@ -19,8 +19,9 @@ message to real students/groups need the owner's explicit approval.
 `0022` vocabulary answer reports · `0023` quiz appeals + accepted answers + corrections · `0024` result card deliveries ·
 `0025` outbox + `TelegramPreference.muted_kinds`.
 
-**Conflict to resolve at merge:** PR #209 (Mock 27) also owns `0018_mock_exam_gate_and_listening_audio`. Whoever merges second
-runs `python manage.py makemigrations --merge core` (the two chains touch unrelated tables) and commits the merge migration.
+**Merge order (decided in the final audit):** merge this PR (#210) **first**. PR #209 (Mock 27) also owns a `core.0018`;
+its branch already contains this PR plus the join `core.0026_merge_mock27_and_telegram_bot2` (no operations), verified on
+PostgreSQL in both upgrade orders. Do **not** run `makemigrations --merge` by hand.
 
 Rollback: every migration only adds objects. To roll back code, deploy the previous image; the new tables stay unused.
 To drop them: `python manage.py migrate core 0017` on a database that is not running the Mock 27 migration chain
