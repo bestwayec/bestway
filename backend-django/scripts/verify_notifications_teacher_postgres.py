@@ -4,6 +4,7 @@ Real Telegram update dictionaries go through the real handler (and the HTTP webh
 api.telegram.org is replaced by a recorder. Every fixture row is removed.
 """
 import json
+import datetime as _dt
 import os
 import sys
 import threading
@@ -88,6 +89,11 @@ def mk_user(role, chat=None):
     User.objects.create(id=uid, name=f'tq {role}', phone='+99875' + uuid4().hex[:7], role=role, password_hash='x', is_active=True,
                         telegram_chat_id=chat, created_at=now, updated_at=now)
     users.append(uid)
+    # Synthetic users start WITHOUT a quiet window: the default 22:00-07:00 (Asia/Tashkent) would otherwise defer every
+    # notification whenever this script runs in the evening, making results depend on the wall clock. Quiet hours are
+    # exercised explicitly where they are tested.
+    from apps.core.models import TelegramPreference as _Pref
+    _Pref.objects.update_or_create(user_id=uid, defaults=dict(quiet_start=_dt.time(0, 0), quiet_end=_dt.time(0, 0)))
     return SimpleNamespace(id=uid, role=role, is_authenticated=True)
 
 
@@ -256,6 +262,18 @@ try:
         tick()
         check(rows(dedupe_key=f'late-optout:{run}').first().status == 'skipped', 'an opt-out made after queueing skips the delivery')
         TelegramPreference.objects.filter(user_id=s2.id).update(notify_enabled=True)
+
+        # ---------------------------------------------------------------- lease fencing: a slow worker never re-sends a stolen row
+        fenced = outbox.enqueue(s1.id, 'tests', f'fence:{run}', 'fenced once')
+        claim_time = timezone.now()
+        stale = [r for r in outbox._claim(claim_time, 50) if r.id == fenced.id]       # worker A claims, then stalls
+        before = len(sent_log)
+        tick(now=claim_time + outbox.LEASE + timedelta(seconds=1))                     # worker B after A's lease expired
+        with patch.object(outbox, '_claim', lambda now, limit: stale):
+            late_stats = outbox.deliver_due(claim_time, sleep=lambda s: None)            # worker A wakes up with its stale claim
+        check(len(stale) == 1 and len(sent_log) == before + 1 and late_stats['sent'] == 0 and late_stats.get('lost') == 1
+              and rows(id=fenced.id).first().status == 'sent',
+              'a worker whose lease expired does not send a row another worker took over (sent exactly once)')
 
         # ---------------------------------------------------------------- Telegram failures
         TelegramPreference.objects.filter(user_id=s1.id).update(quiet_start=timezone.now().time(), quiet_end=timezone.now().time())   # no quiet window for the failure tests

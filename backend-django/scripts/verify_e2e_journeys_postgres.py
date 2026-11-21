@@ -4,6 +4,7 @@ Real Telegram update dictionaries go through the real handler (and the HTTP webh
 api.telegram.org is replaced by a recorder. Every fixture row is removed.
 """
 import json
+import datetime as _dt
 import os
 import sys
 import threading
@@ -91,6 +92,11 @@ def mk_user(role, chat=None):
     User.objects.create(id=uid, name=f'tq {role}', phone='+99875' + uuid4().hex[:7], role=role, password_hash='x', is_active=True,
                         telegram_chat_id=chat, created_at=now, updated_at=now)
     users.append(uid)
+    # Synthetic users start WITHOUT a quiet window: the default 22:00-07:00 (Asia/Tashkent) would otherwise defer every
+    # notification whenever this script runs in the evening, making results depend on the wall clock. Quiet hours are
+    # exercised explicitly where they are tested.
+    from apps.core.models import TelegramPreference as _Pref
+    _Pref.objects.update_or_create(user_id=uid, defaults=dict(quiet_start=_dt.time(0, 0), quiet_end=_dt.time(0, 0)))
     return SimpleNamespace(id=uid, role=role, is_authenticated=True)
 
 
