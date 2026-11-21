@@ -29,3 +29,20 @@ Scope reviewed: `telegram_bot.py`, `telegram_menu.py`, `telegram_fsm.py`, `teleg
 `tests/test_ocr_fail_closed.py`, `tests/test_telegram_state.py`, rewritten superadmin tests in `tests/test_telegram_v070.py`,
 and `scripts/verify_telegram_engine_postgres.py` (20 checks on real PostgreSQL: webhook 403/200, duplicate and concurrent updates,
 restart re-delivery, unlinked/student/deactivated/teacher identities, no auto-provisioning, no SSO, OCR/AI offline).
+
+## Status after milestones M1–M6 (verified on real PostgreSQL)
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| No privilege from a built-in Telegram ID; linked + role-checked accounts only | PASS | `verify_telegram_engine_postgres.py` |
+| OCR/AI fail closed (no fabricated scores) | PASS | `tests/test_ocr_fail_closed.py` |
+| Webhook secret required; update dedupe; replayed callbacks harmless | PASS | engine + quiz + notification scripts (HTTP webhook retry checks) |
+| Durable dialog state / no in-memory exam state | PASS | restart checks in quiz, vocab and E2E scripts |
+| Student A/B, Teacher A/B, parent, anonymous isolation | PASS | `verify_class_quiz`, `verify_result_cards`, `verify_e2e_journeys` |
+| Hostile / oversize callback data (Telegram 64-byte limit enforced by the scripts) | PASS | all Telegram scripts |
+| Result cards only from saved results; private delivery; no names in group summaries | PASS | `verify_result_cards_postgres.py`, `tests/test_result_card.py` |
+| Grading corrections audited, snapshots immutable | PASS | `ClassQuizCorrection`, snapshot-hash checks |
+| Notifications: durable, deduped, retried, rate-limited, opt-out, quiet hours, restart-safe | PASS | `verify_notifications_teacher_postgres.py` |
+| Bot token never logged | PASS | delivery logs only the method name / exception type |
+| Mini App for very long exams | NOT BUILT | see release notes |
+| Real-Telegram staging test | UNVERIFIED | no authorised test bot in this environment |

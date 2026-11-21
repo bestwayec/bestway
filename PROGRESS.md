@@ -7,6 +7,12 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 48-BLOK: Telegram bot 2.0 — M7 to'liq QA, E2E sayohatlar va reliz hujjatlari (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
+- `verify_e2e_journeys_postgres.py` (41): ustoz — haqiqiy HTTP login → 40 savolli test → tayinlash → muddat → monitoring/CSV; o'quvchi — `/start` token bilan bog'lash → test → 40 savol → natija + karta → xatolar → lug'at → `/takror` 13/15; xavfsizlik — anonim, A/B o'quvchi, A/B ustoz, ota-ona, soxta callback, takroriy yakunlash, 6 ta parallel yakunlash, muddati o'tgan urinish, restartdan keyin davom etish.
+- Barcha 7 PG skript CI'da; pytest 1540 o'tdi; frontend `tsc` 0 xato, ESLint 0 xato (413 eski ogohlantirish), Vitest 865 o'tdi, `next build` muvaffaqiyatli.
+- Hujjatlar: `docs/TELEGRAM_BOT_2_RELEASE.md` (migratsiyalar, qaytarish, sozlamalar, outbox'ni yoqish, ma'lum bo'shliqlar), xavfsizlik auditiga holat jadvali.
+- Ochiq: Mini App yo'q (PARTIAL), ustoz uchun sayt UI yo'q (API bor), haqiqiy Telegram staging tekshiruvi yo'q (UNVERIFIED), migratsiya 0018 raqami PR #209 bilan to'qnashadi (`makemigrations --merge`).
+
 ### 47-BLOK: Telegram bot 2.0 — M6 ustoz vositalari, sozlamalar va bardoshli bildirishnomalar (2026-11-21) — branch `feat/bestway-telegram-exam-engine-2`
 - **Bardoshli outbox** (`telegram_outbox.py`, `TelegramOutbox`, core 0025): bildirishnoma PostgreSQL'ga yoziladi (unique `dedupe_key`), worker `manage.py run_telegram_outbox` yetkazadi. Lease (90 s) — worker qulasa qator qayta olinadi; `FOR UPDATE SKIP LOCKED` — bir nechta worker takrorlamaydi; xato bo'lsa 1m/5m/15m/1h/6h backoff, 6 urinishdan keyin `dead`, doimiy xato (bot bloklangan) `failed`, 429 — o'tish to'xtaydi; token yo'q — navbat saqlanadi; tezlik: 25 xabar/o'tish va chatga 1 xabar/o'tish; opt-out va tinch soatlar (default 22:00–07:00 Asia/Tashkent) ham yuborishda, ham navbatga qo'yishda tekshiriladi. Compose: `telegram-outbox` xizmati **opt-in profil** (owner ruxsatisiz ishga tushmaydi).
 - **Ishlab chiqaruvchilar** (`telegram_notify.py`): yangi test, muddat yaqin (24 s / 2 s), kunlik lug'at takrori (17:00 dan), test yopildi xulosasi (ustozga, faqat sonlar; muddati o'tgan urinishlar avtomatik topshiriladi), natija tayyor (sayt/avto-topshirish), apellyatsiya qarori, yangi apellyatsiya (ustozga), lug'at so'rovi qarori, davomat (o'quvchiga, mavjud ota-ona oqimi o'zgarmadi), ustoz fikri API. Mock-baholash (IELTS) oqimiga ulanmagan — PARTIAL.
