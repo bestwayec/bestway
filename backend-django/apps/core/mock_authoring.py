@@ -942,7 +942,12 @@ def clone_corrected_multilevel(actor, exam_id: str):
 
 
 def save_quick_content(actor, exam_id: str, data: dict):
-    exam = locked_exam(exam_id)
+    # Plain read: the row lock is taken once, inside _locked_mutation's transaction (a select_for_update
+    # here ran outside any transaction and failed with TransactionManagementError -> HTTP 500).
+    try:
+        exam = MockExam.objects.get(id=exam_id)
+    except MockExam.DoesNotExist:
+        raise ContractAPIException("MOCK_EXAM_NOT_FOUND", "Mock imtihon topilmadi", 404)
     assert_author(actor, exam, allow_any_staff=True)
 
     def write(locked_exam_obj):
@@ -1223,8 +1228,13 @@ def save_quick_content(actor, exam_id: str, data: dict):
         # 4. Publish status
         publish_flag = data.get("publish", True) or data.get("isPublished", True)
         if publish_flag:
-            from .mock27.gates import assert_gate_allows_exposure
+            from .mock27.gates import assert_gate_allows_exposure, gate_for
             assert_gate_allows_exposure(locked_exam_obj)
+            if gate_for(exam_id) is not None:  # a gated exam is published only when EVERY readiness item passes
+                report = readiness(actor, exam_id)
+                if not report["ready"]:
+                    bad = "; ".join(i["detail"] or i["key"] for i in report["items"] if not i["ok"])
+                    raise ContractAPIException("MOCK_NOT_READY", f"Exam not ready to publish: {bad}", 400)
             locked_exam_obj.is_published = True
 
         return {"published": locked_exam_obj.is_published}

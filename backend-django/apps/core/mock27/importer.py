@@ -16,7 +16,7 @@ from common.api.exceptions import ContractAPIException
 
 from . import EXAM_SLUG, EXAM_TITLE
 from .original_content import DESCRIPTION, speaking_package, writing_package
-from .package_checks import evidence_issues, objective_issues
+from .package_checks import evidence_issues, objective_issues, script_evidence_issues
 
 ASSETS = Path(__file__).parent / 'assets'
 PRIVATE_FILES = {'listening': ('listening.package.json', 4), 'reading': ('reading.package.json', 3)}
@@ -53,10 +53,33 @@ def _validated(package: dict, raw: str, bindings: dict) -> str:
     return report['checksum']
 
 
+def load_original_packages(suffix: str = '') -> dict[str, tuple[dict, str]]:
+    """The fully original Listening/Reading replacement committed with the repository."""
+    from .original_listening import listening_package
+    from .original_reading import reading_package
+    packages = {}
+    for skill, builder, groups in (('listening', listening_package, 4), ('reading', reading_package, 3)):
+        package = builder()
+        package['packageId'] += suffix
+        problems = objective_issues(package, expected_groups=groups) + (evidence_issues(package) if skill == 'reading' else script_evidence_issues(package))
+        if problems:
+            raise ImportProblem(f'original {skill}: ' + '; '.join(problems))
+        packages[skill] = (package, json.dumps(package, ensure_ascii=False))
+    return packages
+
+
 def import_mock27(actor, *, source_dir: Path | None = None, source_digests: dict | None = None, dry_run: bool = False,
-                  exam_id: str = EXAM_SLUG, id_suffix: str = '') -> dict:
-    """Create/extend the draft exam. Never publishes; re-running changes nothing."""
-    packages = load_private_packages(source_dir, id_suffix)
+                  exam_id: str = EXAM_SLUG, id_suffix: str = '', content: str = 'supplied') -> dict:
+    """Create/extend the draft exam. Never publishes; re-running changes nothing.
+
+    content='supplied': Listening/Reading from the owner's private packages (rights stay unverified).
+    content='original': the fully original replacement committed in this repository (rights 'original').
+    """
+    if content not in ('supplied', 'original'):
+        raise ImportProblem('content must be "supplied" or "original"')
+    if content == 'original' and source_dir is not None:
+        raise ImportProblem('--source-dir cannot be combined with --content original')
+    packages = load_original_packages(id_suffix) if content == 'original' else load_private_packages(source_dir, id_suffix)
     for skill, builder in (('writing', writing_package), ('speaking', speaking_package)):
         package = builder()
         package['packageId'] += id_suffix

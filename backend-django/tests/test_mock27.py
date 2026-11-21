@@ -147,3 +147,111 @@ class AudioValidation(SimpleTestCase):
         self.assertEqual(self._code(self._upload(b'ID3', 'a.mp3', 'audio/mpeg')), 'FILE_TOO_SMALL')
         self.assertEqual(self._code(self._upload(make_mp3(20), 'a.mp3', 'audio/mpeg')), 'AUDIO_TOO_SHORT')
         self.assertIn(self._code(self._upload(make_mp3(70)[:60000], 'a.mp3', 'audio/mpeg')), ('AUDIO_TOO_SHORT', 'AUDIO_UNREADABLE'))
+
+
+class QuickContentRegression(SimpleTestCase):
+    """save_quick_content used to call locked_exam (select_for_update) outside any transaction -> HTTP 500."""
+
+    def test_precheck_takes_no_row_lock_and_unknown_exam_is_404(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from apps.core import mock_authoring
+
+        actor = SimpleNamespace(id='a', role='super_admin')
+        with patch('apps.core.mock_authoring.locked_exam') as locked, \
+                patch('apps.core.mock_authoring.MockExam.objects.get', side_effect=mock_authoring.MockExam.DoesNotExist), \
+                patch('apps.core.mock_authoring._locked_mutation') as mutation:
+            with self.assertRaises(ContractAPIException) as caught:
+                mock_authoring.save_quick_content(actor, 'missing', {})
+        self.assertEqual((caught.exception.contract_code, caught.exception.status_code), ('MOCK_EXAM_NOT_FOUND', 404))
+        locked.assert_not_called()
+        mutation.assert_not_called()
+
+    def test_existing_exam_locks_only_inside_the_mutation(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        from apps.core import mock_authoring
+
+        exam = SimpleNamespace(id='e', type='ielts_academic', is_published=False, content_version=1)
+        with patch('apps.core.mock_authoring.locked_exam') as locked, \
+                patch('apps.core.mock_authoring.MockExam.objects.get', return_value=exam), \
+                patch('apps.core.mock_authoring.assert_author'), \
+                patch('apps.core.mock_authoring._locked_mutation') as mutation, \
+                patch('apps.core.mock_authoring.audit_event'), \
+                patch('apps.core.mock_authoring.exam_payload', return_value={'id': 'e'}):
+            mock_authoring.save_quick_content(SimpleNamespace(id='a', role='super_admin'), 'e', {})
+        locked.assert_not_called()
+        mutation.assert_called_once()
+
+
+class SpeakingTimingRules(SimpleTestCase):
+    """Pins the documented IELTS speaking rules the platform declares (blueprint), see docs/MOCK27 runbook."""
+
+    def test_blueprint_declares_part_two_preparation_and_is_unofficial(self):
+        from apps.core.exam_blueprint import blueprint
+
+        spec = blueprint('ielts_academic')
+        self.assertFalse(spec['isOfficial'])
+        speaking = next(s for s in spec['sections'] if s['skill'] == 'speaking')
+        parts = {p['key']: p for p in speaking['parts']}
+        self.assertEqual((parts['2'].get('prepSeconds'), parts['2'].get('responseSeconds')), (60, 120))
+        self.assertNotIn('prepSeconds', parts['1'])
+        self.assertNotIn('prepSeconds', parts['3'])
+
+    def test_mock27_speaking_part2_states_the_preparation_time(self):
+        parts = original_content.speaking_package()['exam']['sections'][0]['groups']
+        self.assertIn('1 minute to prepare', parts[1]['instructions'])
+        self.assertIn('2 minutes', parts[1]['instructions'])
+
+
+class OriginalListeningReading(SimpleTestCase):
+    """The fully original replacement for the supplied Listening/Reading (used if rights cannot be verified)."""
+
+    def test_packages_are_valid_complete_and_evidenced(self):
+        from apps.core.mock27 import importer, original_listening, original_reading
+
+        loaded = importer.load_original_packages()
+        self.assertEqual(sorted(loaded), ['listening', 'reading'])
+        for skill, groups in (('listening', 4), ('reading', 3)):
+            package, raw = loaded[skill]
+            self.assertEqual(package_checks.objective_issues(package, expected_groups=groups), [])
+            self.assertTrue(validate_package(package, {}, raw)['canImport'])
+            self.assertEqual(package['source']['kind'], 'original_practice')
+        self.assertEqual(package_checks.script_evidence_issues(original_listening.listening_package()), [])
+        self.assertEqual(package_checks.evidence_issues(original_reading.reading_package()), [])
+
+    def test_listening_has_four_scripted_parts_and_expected_blocks(self):
+        from apps.core.mock27 import original_listening
+
+        parts = original_listening.listening_package()['exam']['sections'][0]['groups']
+        self.assertEqual([p['partNumber'] for p in parts], [1, 2, 3, 4])
+        self.assertEqual([len(p['questions']) for p in parts], [10, 10, 10, 10])
+        self.assertTrue(all(p['audioScript'].strip() for p in parts))
+        self.assertEqual([p['contentLayout'] for p in parts], ['notes', 'document', 'document', 'notes'])
+        self.assertEqual(len(original_listening.listening_package()['media']), 4)
+
+    def test_matching_banks_are_one_use_and_keys_unique(self):
+        from apps.core.mock27 import original_listening
+
+        for part in original_listening.listening_package()['exam']['sections'][0]['groups']:
+            keys = [q['correctAnswers'][0] for q in part['questions'] if q['type'] == 'matching']
+            self.assertEqual(len(keys), len(set(keys)), part['key'])
+
+    def test_reading_marks_reuse_where_instructions_allow_it(self):
+        from apps.core.mock27 import original_reading
+
+        groups = original_reading.reading_package()['exam']['sections'][0]['groups']
+        self.assertTrue(groups[1].get('optionsReusable'))
+        self.assertEqual([len(g['questions']) for g in groups], [13, 13, 14])
+
+    def test_original_content_cannot_be_mixed_with_a_source_dir(self):
+        from pathlib import Path
+
+        from apps.core.mock27.importer import ImportProblem, import_mock27
+
+        with self.assertRaises(ImportProblem):
+            import_mock27(object(), source_dir=Path('/x'), content='original')
+        with self.assertRaises(ImportProblem):
+            import_mock27(object(), content='nonsense')

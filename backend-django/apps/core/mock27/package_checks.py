@@ -87,3 +87,22 @@ def summary(package: dict) -> dict:
                 byType=dict(sorted(types.items())),
                 perGroup=[dict(key=g['key'], first=g['questions'][0]['number'], last=g['questions'][-1]['number'],
                                count=len(g['questions'])) for s in package['exam']['sections'] for g in s['groups']])
+
+
+def script_evidence_issues(package: dict) -> list[str]:
+    """Listening with spoken scripts (original content): every completion answer is spoken in its part's script."""
+    issues = []
+    for section in package['exam']['sections']:
+        if section['skill'] != 'listening':
+            continue
+        for group in section['groups']:
+            script = re.sub(r'\s+', ' ', (group.get('audioScript') or '').lower())
+            if not script:
+                issues.append(f'{group["key"]}: no audio script')
+                continue
+            for q in group['questions']:
+                if q['type'] in TEXT:
+                    forms = q['correctAnswers'] + q.get('acceptedVariants', [])
+                    if not any(f.lower() in script for f in forms):
+                        issues.append(f'Q{q["number"]}: answer {q["correctAnswers"]} is not spoken in its script')
+    return issues

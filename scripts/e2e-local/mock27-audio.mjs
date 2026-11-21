@@ -53,6 +53,9 @@ const toast = (page, re) => page.getByText(re).first().waitFor({ timeout: 20000 
 const { ctx: actx, page } = await login(ADMIN);
 await openListening(page);
 ok([await status(page, 1), await status(page, 2), await status(page, 3), await status(page, 4)].join() === "MISSING,MISSING,MISSING,MISSING", "all four parts show MISSING");
+for (const [n, range] of [[1, "Q1–10"], [2, "Q11–20"], [3, "Q21–30"], [4, "Q31–40"]]) {
+  ok((await row(page, n).innerText()).includes(range), `Part ${n} slot is labelled ${range}`);
+}
 ok(await page.getByText(/stays in DRAFT/).isVisible(), "the DRAFT notice is shown");
 ok(await page.getByLabel("Content rights").getByText("unverified").isVisible(), "content rights show unverified");
 ok(await page.getByText("Blocking publication").isVisible(), "publication blockers are listed");
@@ -116,6 +119,37 @@ for (const [w, h] of [[390, 844], [1024, 768], [1366, 768], [1920, 1080]]) {
   await page.getByLabel("Listening audio status").scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(OUT, `5-panel-${w}.png`) });
 }
+// --- all four slots: upload, verify, and see that ONLY the content-rights blocker is left ---
+await openListening(page);
+await setFile(page, 3, "part3.mp3");
+await page.waitForFunction(() => document.querySelector('[data-testid="audio-part-3"] [data-testid="audio-status"]')?.textContent?.includes("UPLOADED"), null, { timeout: 20000 });
+await setFile(page, 4, "part4.m4a");
+await page.waitForFunction(() => document.querySelector('[data-testid="audio-part-4"] [data-testid="audio-status"]')?.textContent?.includes("UPLOADED"), null, { timeout: 20000 });
+for (const n of [1, 2, 3, 4]) {
+  await row(page, n).getByRole("button", { name: "Verify" }).click();
+  const d = page.getByRole("dialog");
+  await d.waitFor();
+  await d.getByRole("button", { name: /Tick all/ }).click();
+  await d.getByLabel("I listened to the whole recording").check();
+  await d.getByRole("button", { name: "Confirm verification" }).click();
+  await page.waitForFunction((k) => document.querySelector(`[data-testid="audio-part-${k}"] [data-testid="audio-status"]`)?.textContent?.includes("VERIFIED"), n, { timeout: 20000 });
+}
+ok((await Promise.all([1, 2, 3, 4].map((n) => status(page, n)))).join() === "VERIFIED,VERIFIED,VERIFIED,VERIFIED", "all four parts are VERIFIED through the UI");
+ok(await page.getByText(/4\/4 verified/).first().isVisible(), "the header shows 4/4 verified");
+const blockers = await page.locator("ul.list-disc li").allInnerTexts();
+ok(blockers.length === 1 && /rights/i.test(blockers[0]), `the only publication blocker left is content rights (${blockers.length}: ${blockers[0]?.slice(0, 60)})`);
+await page.getByRole("button", { name: /Record verified rights/ }).first().click();
+const rd = page.getByRole("dialog");
+await rd.waitFor();
+const saveRights = rd.getByRole("button", { name: "Record verified rights" });
+ok(await saveRights.isDisabled(), "recording rights is disabled without evidence and confirmation");
+await rd.getByLabel("Permission reference").fill("too short");
+await rd.getByLabel(/I confirm BESTWAY has the right/).check();
+ok(await saveRights.isDisabled(), "a short evidence text is still refused");
+await page.keyboard.press("Escape");
+const still = await page.evaluate(async (id) => (await (await fetch(`/api/backend/mock/exams/${id}`)).json()).data?.isPublished, EXAM);
+ok(still === false, "the exam is still an unpublished draft (rights were not recorded, nothing was published)");
+await page.screenshot({ path: join(OUT, "6-four-verified-rights-blocker.png") });
 await actx.close();
 
 // --- teacher (not the owner of this exam, so no access; and teachers can never verify) ---

@@ -7,6 +7,17 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 41-BLOK: Mock 27 — yakuniy to'g'rilik va egasiga topshirish (2026-11-21) — PR #209, branch `feat/ielts-academic-full-mock-27`
+- **Xatolar**: `save_quick_content` `locked_exam`ni tranzaksiyadan tashqarida chaqirib HTTP 500 berardi — tuzatildi (qulf faqat `_locked_mutation` ichida), nomavjud imtihon 404, egasi bo'lmagan o'qituvchi 403. Gated imtihonda quick-content endi **to'liq readiness** talab qiladi (MOCK_NOT_READY 400). Eslatma: `is_published=True` tayinlanishi avvaldan saqlanmas edi (`bump` faqat versiyani saqlaydi) — haqiqiy nashr bypass'i yo'q edi.
+- **Migratsiya tartibi**: `core.0018` asosiy release (`deploy-release.sh`) da `manage.py migrate` bilan qo'llanadi; muqobil `deploy-django.yml` Django migrate'ni chaqirmaydi. Gate kodi jadval yo'q bo'lsa jim holatda (oddiy imtihonlar ishlaydi), import esa rad etadi. PG skriptida sinaldi.
+- **Speaking Part 2 tayyorgarligi**: blueprint (60 s + 120 s) e'lon qilingan, IELTS runner server fazasiz yozadi; faqat Multilevel majburlaydi. Barcha IELTS yozuv oqimini o'zgartirmaslik uchun majburlash qo'shilmadi; test bilan qayd etildi.
+- **Ruxsatlar**: talaba/boshqa talaba/anonim uchun kalitlar, audio script, saqlash kalitlari sizmasligi; audio oqimi, yuklash, tasdiqlash, huquq endpointlari — hammasi PG skriptida (81 tekshiruv).
+- **Reading kalitlari** (40/40) matn bo'yicha mazmunan o'qib tekshirildi (faqat "matnda bor" emas). Listening kalitlari kalit sahifasi va ichki izchillik bilan; eshitib tekshirish administrator tasdig'i orqali.
+- **Haqiqiy kontent bilan jarayon** (tashlab yuborilgan imtihon, bir martalik ohang fixturalari, egasining imtihoniga tegilmadi): avtosave → qayta yuklash → resume, server-avtoritar advance, aniq ball (L35→8.0, R34→7.5), variantlar/registr, bir martalik matching dublikat qoidasi, overall band yo'q, Writing/Speaking pending, takroriy submit idempotent — 19/19.
+- **Import**: `check_mock27 --stage preflight|post` (faqat o'qiydi), ekstraksiya deterministik (baytma-bayt bir xil), `import_mock27 --content original|supplied`. Huquq hujjati yo'q → **to'liq original Listening/Reading** (`original_listening.py`, `original_reading.py`, 4 ta ovozli skript, 40+40 savol; skriptlar ixcham) tayyorlandi.
+- **UI**: 4 ta slotni yuklash+tasdiqlash, "faqat huquq blokeri qoladi", ko'rinish chegaralari — Playwright 37/37. Egasi uchun qadamlar: `docs/MOCK27_IMPORT_AND_PUBLICATION.md` §4.
+
+
 ### 40-BLOK: IELTS Academic Full Mock 27 — audio darvozasi, qoralama import, original Writing/Speaking (2026-11-21) — branch `feat/ielts-academic-full-mock-27`
 - **Manba fayllar**: faqat 2 ta PDF yuklangan (Listening, Reading); `Full_test_27.html` ilova qilinmagan. Ikkala PDF'da uchinchi tomon suv belgisi bor → tarqatish huquqi **tasdiqlanmagan**; matnlar repoga kiritilmadi (ommaviy repo). Maxsus ekstraktor (`apps/core/mock27/extract_source.py`) shaxsiy katalogga yozadi.
 - **Tekshiruv**: Listening 40/40 (4 qism, 1–40), Reading 40/40 (3 matn, 1–40), barcha kalitlar hal qilinadi, Reading to'ldirish javoblari matnda topildi. Mavjud `validate_package` o'tdi.
@@ -15,7 +26,7 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 - **Original kontent**: Writing Task 1 (Riverside Park 2005/2025, ikkita SVG + PNG, izchillik testlari) va Task 2; Speaking Part 1–3.
 - **Import**: `import_mock27` (tranzaksion, idempotent, mavjud `commit_import`). Mavjud xato tuzatildi: `resolve_bindings` naive/aware datetime.
 - **Testlar**: pytest 1496 o'tdi; 18 yangi unit test; `verify_mock27_postgres.py` 56/56 (haqiqiy PostgreSQL, CI'ga ulangan); mavjud PG skriptlar (readiness 65, item_bank 11, partial_practice 49, exam_window 24, listening_schedule 11, grading_consistency 79) o'tdi; tsc toza; vitest 873/873; Playwright `mock27-audio` 27/27 va `ielts-full` 10/10.
-- **Ochiq**: audio egasi yuklashi; huquq tasdig'i; `save_quick_content` 500 xatosi (mavjud, `locked_exam` tranzaksiyasiz); IELTS Speaking Part 2 tayyorgarlik vaqtini server majburlamaydi; Mock 27 bo'yicha talaba E2E (audio yo'q) bajarilmadi. Batafsil: `docs/MOCK27_IMPORT_AND_PUBLICATION.md`.
+- **Ochiq** (41-blokda yopilganlari belgilangan): audio egasi yuklashi; huquq tasdig'i; ~~`save_quick_content` 500 xatosi~~ (41-blokda tuzatildi); IELTS Speaking Part 2 tayyorgarlik vaqtini server majburlamaydi (41-blokda ko'rib chiqildi); Mock 27 bo'yicha talaba E2E (audio yo'q) — 41-blokda tashlab yuborilgan imtihonda bajarildi. Batafsil: `docs/MOCK27_IMPORT_AND_PUBLICATION.md`.
 
 
 ### 39-BLOK: R2 qayta tekshiruv + R3 premium frontend (2026-11-21) — branch `claude/beautiful-dirac-e83j8l`

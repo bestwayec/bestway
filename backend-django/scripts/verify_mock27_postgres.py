@@ -98,6 +98,10 @@ try:
     a, t, o = client(admin), client(teacher), client(other_teacher)
     groups = list(MockQuestionGroup.objects.filter(section__exam_id=EXAM, section__skill='listening').order_by('part_number'))
     check(statuses(a) == ['MISSING'] * 4, 'all four Listening parts start MISSING')
+    mapping = [(p['partNumber'], p['questionRange']) for p in report(a)['audio']['parts']]
+    check(mapping == [(1, [1, 10]), (2, [11, 20]), (3, [21, 30]), (4, [31, 40])], f'audio slots map to the right parts and question ranges {mapping}')
+    check(sorted(MockQuestionGroup.objects.filter(section__exam_id=EXAM, section__skill='listening').values_list('part_number', flat=True)) == [1, 2, 3, 4],
+          'exactly four Listening groups, part numbers 1-4')
     check('audioKey' not in str(report(a)) and 'storage' not in str(report(a)), 'status payload exposes no storage key')
     r = readiness(admin, EXAM)
     failing = sorted(i['key'] for i in r['items'] if not i['ok'])
@@ -165,8 +169,13 @@ try:
     s = client(user('student'))
     check(a.patch(f'/v1/mock/exams/{EXAM}', {'isPublished': True}, format='json').status_code == 400, 'publishing is refused while gates fail')
     check(a.patch(f'/v1/mock/exams/{EXAM}', {'isDemo': True}, format='json').status_code == 400, 'marking the exam demo (catalogue exposure) is refused too')
-    # NB: quick-content currently fails with a 500 (pre-existing: locked_exam outside a transaction); either way it must not publish.
-    check(a.post(f'/v1/mock/exams/{EXAM}/quick-content', {'publish': True}, format='json').status_code != 200 and not MockExam.objects.get(id=EXAM).is_published, 'quick-content cannot publish a gated exam')
+    qc = a.post(f'/v1/mock/exams/{EXAM}/quick-content', {'publish': True}, format='json')
+    check(qc.status_code == 400 and error_code(qc) == 'MOCK_NOT_READY' and not MockExam.objects.get(id=EXAM).is_published,
+          'quick-content on a gated exam is refused with MOCK_NOT_READY (no 500, no publish)')
+    check(client(other_teacher).post(f'/v1/mock/exams/{EXAM}/quick-content', {'publish': True}, format='json').status_code == 403,
+          "quick-content by a teacher who does not own the exam is refused (403)")
+    check(a.post('/v1/mock/exams/does-not-exist/quick-content', {'publish': True}, format='json').status_code == 404,
+          'quick-content on an unknown exam is a clean 404')
     check(not MockExam.objects.get(id=EXAM).is_published and not MockExam.objects.get(id=EXAM).is_demo, 'exam is still an unpublished, non-demo draft')
     ids = [e['id'] for e in (s.get('/v1/mock/exams').json().get('data') or [])] if s.get('/v1/mock/exams').status_code == 200 else []
     check(EXAM not in ids, 'the draft is not in the student catalogue')
@@ -185,8 +194,65 @@ try:
     ready = readiness(admin, EXAM)
     check(ready['ready'], 'readiness passes only after audio AND rights AND content gates are all green')
     check(a.patch(f'/v1/mock/exams/{EXAM}', {'isPublished': True}, format='json').status_code == 200 and MockExam.objects.get(id=EXAM).is_published, 'publishing succeeds only then (fixture exam)')
+    # --- protected audio and answer keys: the student side of the (published fixture) exam ---
+    stu = user('student', 'c'); sc = client(stu); other = client(user('student', 'd'))
+    started = sc.post(f'/v1/mock/exams/{EXAM}/start', {'mode': 'timed', 'flow': 'full_test'}, format='json')
+    check(started.status_code in (200, 201), f'a student can start the published fixture ({started.status_code})')
+    raw = started.content.decode()
+    attempt_id = started.json()['data']['attemptId']
+    forbidden = [k for k in ('correctAnswers', 'acceptedVariants', 'audioScript', 'audioKey', 'storage', 'evidenceText', 'correct_answers') if k in raw]
+    check(not forbidden, f'attempt start payload carries no answer keys, script or storage keys {forbidden}')
+    detail = sc.get(f'/v1/mock/attempts/{attempt_id}')
+    check(detail.status_code == 200 and not any(k in detail.content.decode() for k in ('correctAnswers', 'acceptedVariants', 'audioScript', 'audioKey')),
+          'attempt detail in progress exposes no answer keys')
+    exam_view = sc.get(f'/v1/mock/exams/{EXAM}')
+    check(exam_view.status_code == 200 and not any(k in exam_view.content.decode() for k in ('correctAnswers', 'acceptedVariants', 'audioScript')),
+          'the student exam view exposes no answer keys')
+    check(a.get(f'/v1/mock/exams/{EXAM}').content.decode().count('correctAnswers') > 0, 'staff exam view does include keys (so the student check is meaningful)')
+    check(other.get(f'/v1/mock/attempts/{attempt_id}').status_code in (403, 404), "another student cannot read this student's attempt")
+    check(other.get(f'/v1/mock/groups/{p1}/audio?attemptId={attempt_id}').status_code in (401, 403, 404), "another student cannot stream audio with this student's attempt id")
+    heard = sc.get(f'/v1/mock/groups/{p1}/audio?attemptId={attempt_id}')
+    check(heard.status_code in (200, 206), f'the attempt owner can stream the audio in the exam ({heard.status_code})')
+    check(sc.get(f'/v1/mock/exams/{EXAM}/listening-audio').status_code == 403, 'a student cannot read the audio gate status')
+    check(upload(sc, p1, make_mp3(75), 'x.mp3', 'audio/mpeg').status_code == 403, 'a student cannot upload Listening audio')
+    check(sc.post(f'/v1/mock/groups/{p1}/listening-audio/verify', good, format='json').status_code == 403, 'a student cannot verify audio')
+    check(sc.post(f'/v1/mock/exams/{EXAM}/content-rights', dict(status='verified', attestation=True, evidence='x' * 30), format='json').status_code == 403, 'a student cannot record content rights')
+    check(sc.post(f'/v1/mock/groups/{p1}/media', {'audio': SimpleUploadedFile('p.mp3', make_mp3(75), content_type='audio/mpeg')}, format='multipart').status_code == 403, 'a student cannot use the legacy media endpoint')
+    anon = APIClient()
+    check(anon.get(f'/v1/mock/groups/{p1}/audio').status_code in (401, 403), 'anonymous users cannot stream exam audio')
     check(a.post(f'/v1/mock/exams/{EXAM}/content-rights', dict(status='unverified'), format='json').status_code == 200 and not MockExam.objects.get(id=EXAM).is_published,
           'withdrawing rights immediately unpublishes the exam')
+    # --- the fully original replacement path: imports, needs no rights decision, still needs real audio ---
+    OID, OSUF = EXAM + 'o', SUFFIX + 'o'
+    orig = import_mock27(admin, content='original', exam_id=OID, id_suffix=OSUF)
+    check(orig['imported'] == ['listening', 'reading', 'writing', 'speaking'] and orig['rights'] == 'original', 'original replacement imports with rights = original')
+    ocounts = {s: MockQuestion.objects.filter(group__section__exam_id=OID, group__section__skill=s).count() for s in ('listening', 'reading', 'writing', 'speaking')}
+    check(ocounts == dict(listening=40, reading=40, writing=2, speaking=3), f'original replacement has L40 R40 W2 S3 {ocounts}')
+    oready = readiness(admin, OID)
+    ofail = sorted(i['key'] for i in oready['items'] if not i['ok'])
+    check(not oready['ready'] and 'content_rights' not in ofail and {'listening_audio', 'listening_audio_verified'} <= set(ofail),
+          f'original replacement: rights pass, only the missing audio blocks publication {ofail}')
+    check(all(p['audioScript'] for p in [{'audioScript': g.audio_script} for g in MockQuestionGroup.objects.filter(section__exam_id=OID, section__skill='listening')]),
+          'every original Listening part stores its spoken script (staff-only)')
+    check(import_mock27(admin, content='original', exam_id=OID, id_suffix=OSUF)['replayed'] == ['listening', 'reading', 'writing', 'speaking'], 'original import is idempotent too')
+    delete_exam(admin, OID)
+    # --- deploy-ordering safety: if core.0018 were not applied yet, ordinary readiness must still work ---
+    from django.db import transaction as dj_transaction
+
+    class _Rollback(Exception):
+        pass
+    try:
+        with dj_transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute('ALTER TABLE core_mockexamgate RENAME TO core_mockexamgate_renamed')
+                cursor.execute('ALTER TABLE core_mocklisteningaudio RENAME TO core_mocklisteningaudio_renamed')
+            degraded = readiness(admin, EXAM)
+            check(not any(i['key'] in ('content_rights', 'listening_audio_verified') for i in degraded['items']),
+                  'without the gate tables readiness still works (gates inactive, no 500)')
+            raise _Rollback()
+    except _Rollback:
+        pass
+    check(MockExamGate.objects.filter(exam_id=EXAM).exists(), 'the table rename was rolled back (gate rows intact)')
     # --- clone keeps the gate ---
     cloned = a.post(f'/v1/mock/exams/{EXAM}/clone', {}, format='json')
     if cloned.status_code in (200, 201):
@@ -198,12 +264,13 @@ try:
     print(f'\nALL {len(checks)} CHECKS PASSED')
 finally:
     try:
-        if MockExam.objects.filter(id=EXAM).exists():
-            delete_exam(SimpleNamespace(id='x', role='super_admin', is_authenticated=True), EXAM)
+        for leftover in (EXAM, EXAM + 'o'):
+            if MockExam.objects.filter(id=leftover).exists():
+                delete_exam(SimpleNamespace(id='x', role='super_admin', is_authenticated=True), leftover)
         MockListeningAudio.objects.filter(exam_id=EXAM).delete()
         MockExamGate.objects.filter(exam_id=EXAM).delete()
         with connection.cursor() as cursor:
-            cursor.execute('DELETE FROM "MockExamImport" WHERE "packageId" LIKE %s', [f'%{SUFFIX}'])
+            cursor.execute('DELETE FROM "MockExamImport" WHERE "packageId" LIKE %s OR "packageId" LIKE %s', [f'%{SUFFIX}', f'%{SUFFIX}o'])
             cursor.execute('DELETE FROM "MockStagedMedia" WHERE "ownerId" LIKE %s', [f'm27-%{run_id}'])
         User.objects.filter(id__endswith=run_id).delete()
     finally:

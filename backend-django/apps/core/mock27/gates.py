@@ -11,17 +11,34 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
+
+from django.db import ProgrammingError, transaction
 
 from apps.core.models import MockExamGate, MockListeningAudio
 from apps.legacy_schema.models import MockExam, MockQuestion, MockQuestionGroup, MockSection
 
+logger = logging.getLogger(__name__)
 MISSING, UPLOADED, VERIFIED = 'MISSING', 'UPLOADED', 'VERIFIED'
 RIGHTS_OK = ('verified', 'original')
 
 
+def _tables_missing(error: Exception) -> bool:
+    return 'does not exist' in str(error) and 'core_mock' in str(error)
+
+
 def gate_for(exam_id: str):
-    return MockExamGate.objects.filter(exam_id=exam_id).first()
+    """The exam's gate row, or None. If migration core.0018 has not been applied yet (deploy ordering), no gate can
+    exist, so ordinary exams keep working instead of failing every readiness check; importing Mock 27 still fails loudly."""
+    try:
+        with transaction.atomic():  # savepoint: a missing table must not poison the caller's transaction
+            return MockExamGate.objects.filter(exam_id=exam_id).first()
+    except ProgrammingError as error:
+        if _tables_missing(error):
+            logger.warning('core.0018 not applied: mock exam gates are inactive (%s)', error)
+            return None
+        raise
 
 
 def requires_validated_audio(exam_id: str) -> bool:
@@ -165,5 +182,17 @@ def copy_gate(source_id: str, clone_id: str) -> None:
 
 
 def purge_gate(exam_id: str) -> None:
+    if gate_for(exam_id) is None and not _audio_rows_exist(exam_id):
+        return
     MockExamGate.objects.filter(exam_id=exam_id).delete()
     MockListeningAudio.objects.filter(exam_id=exam_id).delete()
+
+
+def _audio_rows_exist(exam_id: str) -> bool:
+    try:
+        with transaction.atomic():
+            return MockListeningAudio.objects.filter(exam_id=exam_id).exists()
+    except ProgrammingError as error:
+        if _tables_missing(error):
+            return False
+        raise
