@@ -90,6 +90,17 @@ def _claim(now, limit):
         return rows
 
 
+def _renew_lease(row, now) -> bool:
+    """Fencing check right before a send: the row must still carry OUR lease. One tick can take longer than LEASE
+    (25 sends x 20 s timeout), and a second worker may already have re-claimed a row we have not reached yet; without
+    this check both workers would send it. Renewing also keeps our own lease fresh for the send that follows."""
+    fresh = max(now, timezone.now()) + LEASE   # `now` may be an injected clock (tests, catch-up runs)
+    taken = TelegramOutbox.objects.filter(id=row.id, status='sending', locked_until=row.locked_until).update(locked_until=fresh)
+    if taken:
+        row.locked_until = fresh
+    return bool(taken)
+
+
 def _finish(row, status, error='', retry_in=None, now=None):
     now = now or timezone.now()
     row.status, row.last_error, row.locked_until = status, error[:60], None
@@ -107,6 +118,9 @@ def deliver_due(now=None, *, sleep=time.sleep, limit=MAX_PER_TICK) -> dict:
     chats_used = set()
     claimed = _claim(now, limit)
     for position, row in enumerate(claimed):
+        if not _renew_lease(row, now):                                       # our lease expired and another worker owns it now
+            stats['lost'] = stats.get('lost', 0) + 1
+            continue
         user = User.objects.filter(id=row.recipient_id, is_active=True).values('telegram_chat_id').first()
         chat = (user or {}).get('telegram_chat_id')
         if not chat:
