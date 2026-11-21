@@ -63,3 +63,26 @@ class Helpers(SimpleTestCase):
 
     def test_non_quiz_callbacks_are_ignored(self):
         self.assertFalse(tq.handle_callback(1, 1, 'btn:topic_x'))
+
+
+class ReviewKeyVisibility(SimpleTestCase):
+    """While a retake is still possible the review must not reveal the correct answer (class_quiz.keys_visible_to_student)."""
+
+    def review(self, correct_answer, explanation):
+        row = dict(prompt='Q1', yourAnswer='does', correctAnswer=correct_answer, explanation=explanation, type='mcq', answered=True,
+                   appeal=None, index=0)
+        shown = []
+        with patch.object(tq.cq, 'my_result', return_value=dict(incorrect=[row])), patch.object(tq, '_lang', return_value='en'), \
+                patch.object(tq, '_render', side_effect=lambda chat, mid, text, kb=None: shown.append(text)):
+            tq.send_review(1, None, object(), 'attempt-1', 0)
+        return shown[0]
+
+    def test_hidden_key_is_not_rendered(self):
+        text = self.review(None, '')
+        self.assertIn(tq.TEXT['en']['keys_later'], text)
+        self.assertNotIn(tq.TEXT['en']['right'], text)
+
+    def test_visible_key_is_rendered(self):
+        text = self.review('is done', 'Passive uses be + V3.')
+        self.assertIn('is done', text)
+        self.assertIn('Passive uses', text)

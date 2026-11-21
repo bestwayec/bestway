@@ -48,7 +48,7 @@ TEXT = {
         question='Savol {i}/{n}', left='⏱ {t}', type_answer="✍️ Javobingizni <b>xabar sifatida</b> yozib yuboring.", saved='✅ Saqlandi',
         prev='⬅️', nxt='➡️', finish='🏁 Yakunlash', answered='Javob berilgan: {a}/{n}', confirm_finish="Testni yakunlaysizmi? Keyin o'zgartirib bo'lmaydi.",
         yes='✅ Ha, yakunlash', no='↩️ Davom etish', result_title='📝 <b>Test natijasi</b>', correct='To\'g\'ri: <b>{c} / {n}</b>', score='Ball: <b>{p}%</b>',
-        time='Vaqt: <b>{t}</b>', status='Holat: <b>{s}</b>', review='🔎 Xatolarni ko\'rish', no_mistakes="🎉 Xato yo'q!", mistakes='🔎 <b>Xatolar</b> ({a}-{b} / {n})',
+        time='Vaqt: <b>{t}</b>', status='Holat: <b>{s}</b>', review='🔎 Xatolarni ko\'rish', keys_later="🔒 To'g'ri javob oxirgi urinishdan yoki muddat tugagach ko'rsatiladi", no_mistakes="🎉 Xato yo'q!", mistakes='🔎 <b>Xatolar</b> ({a}-{b} / {n})',
         your='Sizning javobingiz', right="To'g'ri javob", empty='(javob yo\'q)', next_page='Keyingi ➡️', closed="⌛ Test muddati tugagan.", no_attempts="Urinishlar tugagan.",
         time_up="⌛ Vaqt tugadi. Javoblaringiz saqlandi va natija hisoblandi.", stale="Bu tugma eskirgan. /testlar buyrug'ini bosing.", error="⚠️ Xatolik. Qayta urinib ko'ring.",
         not_yours="Bu test sizga tegishli emas.", private_only="🔒 Testni shaxsiy chatda ishlang.", unsupported="Iltimos, javobni matn ko'rinishida yuboring.",
@@ -66,7 +66,7 @@ TEXT = {
         question='Question {i}/{n}', left='⏱ {t}', type_answer='✍️ Type your answer as a <b>message</b>.', saved='✅ Saved', prev='⬅️', nxt='➡️', finish='🏁 Finish',
         answered='Answered: {a}/{n}', confirm_finish='Finish the test? You cannot change answers afterwards.', yes='✅ Yes, finish', no='↩️ Continue',
         result_title='📝 <b>Test result</b>', correct='Correct: <b>{c} / {n}</b>', score='Score: <b>{p}%</b>', time='Time: <b>{t}</b>', status='Status: <b>{s}</b>',
-        review='🔎 Review mistakes', no_mistakes='🎉 No mistakes!', mistakes='🔎 <b>Mistakes</b> ({a}-{b} / {n})', your='Your answer', right='Correct answer',
+        review='🔎 Review mistakes', keys_later='🔒 The correct answer is shown after your last attempt or the deadline', no_mistakes='🎉 No mistakes!', mistakes='🔎 <b>Mistakes</b> ({a}-{b} / {n})', your='Your answer', right='Correct answer',
         empty='(no answer)', next_page='Next ➡️', closed='⌛ This test is closed.', no_attempts='No attempts left.',
         time_up='⌛ Time is up. Your saved answers were scored.', stale='This button is outdated. Send /tests.', error='⚠️ Something went wrong. Please try again.',
         not_yours='This test is not yours.', private_only='🔒 Please take tests in a private chat.', unsupported='Please send your answer as text.',
@@ -231,7 +231,9 @@ def send_review(chat_id, message_id, actor, attempt_id, page):
     lines = [tr(lang, 'mistakes', a=start + 1, b=start + len(chunk), n=len(wrong)), LINE]
     for row in chunk:
         lines.append(f'\n❓ {esc(clip(row["prompt"], 220))}\n✖️ {tr(lang, "your")}: {esc(clip(row["yourAnswer"] or tr(lang, "empty"), 100))}\n'
-                     f'✔️ {tr(lang, "right")}: <b>{esc(clip(row["correctAnswer"], 120))}</b>' + (f'\n💡 {esc(clip(row["explanation"], 200))}' if row['explanation'] else ''))
+                     + (f'✔️ {tr(lang, "right")}: <b>{esc(clip(row["correctAnswer"], 120))}</b>' if row['correctAnswer'] is not None
+                        else tr(lang, 'keys_later'))
+                     + (f'\n💡 {esc(clip(row["explanation"], 200))}' if row['explanation'] else ''))
     keyboard = []
     for row in chunk:
         if row.get('type') == 'text' and row.get('answered') and not row.get('appeal'):

@@ -466,7 +466,7 @@ def get_attempt(actor, attempt_id) -> dict:
         finalize(attempt.id, auto=True)
         attempt = _own_attempt(actor, attempt_id)
     if attempt.status == 'submitted':
-        return result_payload(attempt)
+        return result_payload(attempt, reveal_keys=keys_visible_to_student(attempt))
     return _attempt_payload(attempt, resumed=True)
 
 
@@ -572,16 +572,28 @@ def finish_attempt(actor, attempt_id) -> dict:
     with transaction.atomic():
         attempt = _own_attempt(actor, attempt_id, lock=True)
         attempt = _finalize_locked(attempt, auto=timezone.now() >= attempt.deadline_at)
-    return result_payload(attempt)
+    return result_payload(attempt, reveal_keys=keys_visible_to_student(attempt))
 
 
-def result_payload(attempt: ClassQuizAttempt, *, detail=True) -> dict:
+def keys_visible_to_student(attempt: ClassQuizAttempt) -> bool:
+    """Correct answers/explanations are revealed only once they can no longer help a retake: the student has used every
+    attempt, or the assignment is closed / past its deadline. Otherwise attempt 1's review would hand over the key for
+    attempt 2."""
+    assignment = attempt.assignment
+    if assignment.status != 'active' or timezone.now() >= assignment.deadline:
+        return True
+    used = ClassQuizAttempt.objects.filter(assignment_id=assignment.id, student_id=attempt.student_id).count()
+    return used >= assignment.max_attempts
+
+
+def result_payload(attempt: ClassQuizAttempt, *, detail=True, reveal_keys=True) -> dict:
     snapshot = attempt.assignment.snapshot
     value = dict(attemptId=attempt.id, assignmentId=attempt.assignment_id, status=attempt.status, title=snapshot['title'],
                  category=snapshot['category'], correct=attempt.correct_count, total=attempt.question_count,
                  score=attempt.score, maxScore=attempt.max_score, percent=attempt.percent, durationSeconds=attempt.duration_seconds,
                  startedAt=attempt.started_at, submittedAt=attempt.submitted_at, autoSubmitted=attempt.auto_submitted,
-                 attemptNo=attempt.attempt_no, resultVersion=attempt.result_version, isIeltsBand=False)
+                 attemptNo=attempt.attempt_no, resultVersion=attempt.result_version, isIeltsBand=False,
+                 keysVisible=reveal_keys)
     if detail and attempt.status == 'submitted':
         saved = {a.question_id: a for a in attempt.answers.all()}
         appeals = {a.question_id: a.status for a in attempt.appeals.all()}
@@ -594,8 +606,10 @@ def result_payload(attempt: ClassQuizAttempt, *, detail=True) -> dict:
             else:
                 correct_display = question['options'][question['correctAnswers'][0]]
                 given = question['options'][int(answer.response)] if answer and answer.response.isdigit() and int(answer.response) < len(question['options']) else ''
-            rows.append(dict(questionId=question['id'], prompt=question['prompt'], yourAnswer=given, correctAnswer=correct_display,
-                             isCorrect=bool(answer and answer.is_correct), answered=answer is not None, explanation=question['explanation'],
+            rows.append(dict(questionId=question['id'], prompt=question['prompt'], yourAnswer=given,
+                             correctAnswer=correct_display if reveal_keys else None,
+                             isCorrect=bool(answer and answer.is_correct), answered=answer is not None,
+                             explanation=question['explanation'] if reveal_keys else '',
                              index=index, type=question['type'], appeal=appeals.get(question['id'])))
         value['review'] = rows
         value['incorrect'] = [r for r in rows if not r['isCorrect']]
@@ -606,7 +620,7 @@ def my_result(actor, attempt_id) -> dict:
     attempt = _own_attempt(actor, attempt_id)
     if attempt.status != 'submitted':
         fail('RESULT_NOT_READY', "Natija test yakunlangach ochiladi", 409)
-    return result_payload(attempt)
+    return result_payload(attempt, reveal_keys=keys_visible_to_student(attempt))
 
 
 # ----------------------------------------------------------------------------------------------- teacher / parent reads

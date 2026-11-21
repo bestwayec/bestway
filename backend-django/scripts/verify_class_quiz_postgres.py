@@ -235,6 +235,20 @@ try:
     check(code(cq.save_answer, s1, started['attemptId'], first_q['id'], 0) == 'ATTEMPT_FINISHED', 'no answers are accepted after submission')
     check(code(cq.start_attempt, s1, aid) == 'NO_ATTEMPTS_LEFT', 'a second attempt is refused when the maximum is 1')
 
+    # -------------------------------------------------------------- answer keys are not handed over while a retake remains
+    first_try = cq.finish_attempt(s2, results[0])
+    hidden = cq.my_result(s2, results[0])
+    check(first_try['keysVisible'] is False and hidden['keysVisible'] is False and hidden['incorrect']
+          and all(r['correctAnswer'] is None and r['explanation'] == '' for r in hidden['review']),
+          'with attempts left (1 of 2 used) the review shows right/wrong but no correct answers or explanations')
+    staff_view = cq.attempt_for_staff(teacher_a, results[0])
+    check(staff_view['keysVisible'] is True and all(r['correctAnswer'] for r in staff_view['review']), 'the teacher still sees the correct answers')
+    retake = cq.start_attempt(s2, second)
+    check(retake['attemptNo'] == 2 and 'correctAnswers' not in json.dumps(retake, default=str), 'the retake starts without any key')
+    last_try = cq.finish_attempt(s2, retake['attemptId'])
+    check(last_try['keysVisible'] is True and all(r['correctAnswer'] for r in cq.my_result(s2, results[0])['review']),
+          'after the last attempt the correct answers are revealed for every attempt')
+
     # -------------------------------------------------------------- deadlines are server-owned
     third = cq.assign_quiz(teacher_a, qid, [ga], now + timedelta(days=1))[0]['id']
     late = cq.start_attempt(s2, third)
