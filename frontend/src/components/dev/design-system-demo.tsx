@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { CefrResultInfographic } from "@/components/mock/cefr-result-infographic";
 import { toast } from "sonner";
 import { BookOpen, Inbox, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -208,6 +209,35 @@ export function DesignSystemDemo() {
             <Skeleton className="h-24 w-full" />
           </CardContent>
         </Card>
+      </Section>
+
+      <Section id="ds-results" title={t("results")}>
+        <div className="grid gap-4">
+          <CefrResultInfographic
+            isIelts
+            examTitle="Synthetic IELTS Academic mock"
+            overallBand={7}
+            verified={false}
+            sections={[
+              { skill: "listening", title: "Listening", band: 7.5, score: 32, max: 40 },
+              { skill: "reading", title: "Reading", band: 7, score: 30, max: 40 },
+              { skill: "writing", title: "Writing", band: 6.5 },
+              { skill: "speaking", title: "Speaking" },
+            ]}
+          />
+          <CefrResultInfographic
+            examTitle="Synthetic Multilevel mock"
+            cefrLevel="B2"
+            overallScore={58}
+            verified
+            sections={[
+              { skill: "listening", title: "Listening", standardScore: 62, score: 24, max: 35 },
+              { skill: "reading", title: "Reading", standardScore: 55, score: 21, max: 35 },
+              { skill: "writing", title: "Writing", standardScore: 58, score: 18, max: 30 },
+              { skill: "speaking", title: "Speaking", standardScore: 57, score: 17, max: 30 },
+            ]}
+          />
+        </div>
       </Section>
     </main>
   );

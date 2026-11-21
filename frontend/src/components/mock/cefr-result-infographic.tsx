@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Award, BookOpenText, CheckCircle2, ChevronRight, Headphones, Mic, PenLine, Sparkles } from "lucide-react";
+import { BookOpenText, Headphones, Mic, PenLine } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { MockSkill } from "@/lib/types";
-import { MULTILEVEL_CEFR_BANDS, multilevelBandFor, multilevelLevelText } from "@/lib/multilevel-scale";
+import { MULTILEVEL_CEFR_BANDS, multilevelLevelText } from "@/lib/multilevel-scale";
+import { cn } from "@/lib/utils";
 
 export interface SkillScoreData {
   skill: MockSkill;
@@ -26,6 +27,8 @@ export interface CefrResultInfographicProps {
   sections: SkillScoreData[];
   examTitle?: string;
   completedAt?: string | null;
+  /** True once the result is confirmed (teacher-reviewed or calibrated); otherwise it is labelled an estimate. */
+  verified?: boolean;
   className?: string;
 }
 
@@ -36,63 +39,15 @@ const SKILL_ICONS: Record<MockSkill, typeof Headphones> = {
   speaking: Mic,
 };
 
-const SKILL_COLORS: Record<MockSkill, { bar: string; text: string; bg: string }> = {
-  listening: { bar: "bg-emerald-500", text: "text-emerald-500", bg: "bg-emerald-500/10" },
-  reading: { bar: "bg-blue-500", text: "text-blue-500", bg: "bg-blue-500/10" },
-  writing: { bar: "bg-purple-500", text: "text-purple-500", bg: "bg-purple-500/10" },
-  speaking: { bar: "bg-amber-500", text: "text-amber-500", bg: "bg-amber-500/10" },
-};
+const MULTILEVEL_MAX = 75;
+const IELTS_MAX = 9;
 
-export function getCefrMeta(level?: string | null, belowB1Label = "Below B1") {
-  const norm = (level ?? "").trim().toUpperCase();
-  if (norm.includes("C2")) {
-    return {
-      label: "C2 — Mastery / Proficient User",
-      color: "from-violet-600 to-fuchsia-500",
-      badge: "border-violet-500/40 bg-violet-500/15 text-violet-400",
-      bandMin: multilevelBandFor("C1").min,
-      bandMax: multilevelBandFor("C1").max,
-      desc: "Can express themselves spontaneously, very fluently and precisely, differentiating finer shades of meaning.",
-    };
-  }
-  if (norm.includes("C1")) {
-    return {
-      label: "C1 — Effective Operational Proficiency",
-      color: "from-emerald-600 to-teal-500",
-      badge: "border-emerald-500/40 bg-emerald-500/15 text-emerald-400",
-      bandMin: multilevelBandFor("C1").min,
-      bandMax: multilevelBandFor("C1").max,
-      desc: "Can express ideas fluently and spontaneously without much obvious searching for expressions.",
-    };
-  }
-  if (norm.includes("B2")) {
-    return {
-      label: "B2 — Vantage / Independent User",
-      color: "from-sky-600 to-blue-500",
-      badge: "border-sky-500/40 bg-sky-500/15 text-sky-400",
-      bandMin: multilevelBandFor("B2").min,
-      bandMax: multilevelBandFor("B2").max,
-      desc: "Can interact with a degree of fluency and spontaneity with native speakers.",
-    };
-  }
-  if (norm.includes("B1")) {
-    return {
-      label: "B1 — Threshold / Independent User",
-      color: "from-amber-600 to-yellow-500",
-      badge: "border-amber-500/40 bg-amber-500/15 text-amber-400",
-      bandMin: multilevelBandFor("B1").min,
-      bandMax: multilevelBandFor("B1").max,
-      desc: "Can understand the main points of clear standard input on familiar matters.",
-    };
-  }
-  return {
-    label: belowB1Label,
-    color: "from-fg-subtle to-fg-subtle",
-    badge: "border-border-strong/40 bg-fg-subtle/15 text-fg-muted",
-    bandMin: MULTILEVEL_CEFR_BANDS[0].min,
-    bandMax: MULTILEVEL_CEFR_BANDS[0].max,
-    desc: "Can understand basic sentences and frequently used expressions related to immediate areas.",
-  };
+/** What one skill tile shows and the share (0–100) its meter fills. Only numbers the backend returned are used. */
+export function skillMeter(section: SkillScoreData, isIelts: boolean): { percent: number | null; max: number; value: number | null; kind: "band" | "standard" | "raw" | "pending" } {
+  if (isIelts && section.band != null) return { percent: (section.band / IELTS_MAX) * 100, max: IELTS_MAX, value: section.band, kind: "band" };
+  if (!isIelts && section.standardScore != null) return { percent: (section.standardScore / MULTILEVEL_MAX) * 100, max: MULTILEVEL_MAX, value: section.standardScore, kind: "standard" };
+  if (section.score != null && section.max != null && section.max > 0) return { percent: (section.score / section.max) * 100, max: section.max, value: section.score, kind: "raw" };
+  return { percent: null, max: 0, value: null, kind: "pending" };
 }
 
 export function CefrResultInfographic({
@@ -102,177 +57,115 @@ export function CefrResultInfographic({
   isIelts = false,
   sections,
   examTitle,
-  completedAt,
+  verified = false,
   className = "",
 }: CefrResultInfographicProps) {
-  // A single-section practice has no overall score or level: never dress it
-  // up as "A2 / Below B1" or draw a level bar for a score that does not exist.
+  // A single-section practice has no overall score or level: never dress it up as "A2 / Below B1".
   const hasOverall = isIelts ? overallBand != null : overallScore != null && Boolean(cefrLevel);
   const t = useTranslations("mock");
-  const belowB1 = t("levelBelowB1");
-  const meta = getCefrMeta(cefrLevel, belowB1);
-  const levelText = multilevelLevelText(cefrLevel, belowB1);
-  const bandText = (section: SkillScoreData) =>
-    section.band == null ? null : `Band ${section.bandBelowRange ? t("bandBelowRange") : section.band.toFixed(1)}`;
-  const totalScore = overallScore ?? 0;
-  const scorePercent = Math.min(Math.round((totalScore / 75) * 100), 100);
+  const ti = useTranslations("mock.infographic");
+  const levelText = multilevelLevelText(cefrLevel, t("levelBelowB1"));
+  const trackPercent = Math.min(Math.max(((overallScore ?? 0) / MULTILEVEL_MAX) * 100, 0), 100);
 
   return (
-    <Card className={`relative overflow-hidden border border-border/80 bg-gradient-to-b from-surface to-bg p-5 sm:p-6 ${className}`}>
-      {/* Decorative top accent glow */}
-      <div
-        className={`pointer-events-none absolute -top-24 left-1/2 h-48 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r ${meta.color} opacity-20 blur-3xl`}
-        aria-hidden
-      />
-
-      <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          {examTitle && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-fg-muted">
-              {examTitle}
-            </p>
+    <Card className={cn("p-5 sm:p-6", className)} data-testid="cefr-infographic">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          {examTitle && <p className="truncate text-sm text-fg-muted">{examTitle}</p>}
+          <h2 className="mt-1 text-lg font-semibold text-fg">
+            {!hasOverall ? ti("sectionResult") : isIelts ? ti("overallBand") : ti("cefrLevel")}
+          </h2>
+          {hasOverall ? (
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-display tabular-nums text-fg">{isIelts ? overallBand?.toFixed(1) : levelText}</span>
+              <Badge variant={verified ? "success" : "warning"} data-testid="infographic-status">
+                {verified ? ti("verified") : ti("estimated")}
+              </Badge>
+            </div>
+          ) : (
+            <p className="mt-1 max-w-prose text-sm text-fg-muted">{ti("sectionResultHint")}</p>
           )}
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-black tracking-tight text-fg sm:text-3xl">
-              {!hasOverall
-                ? "Bo'lim natijasi"
-                : isIelts
-                ? `Overall Band: ${overallBand?.toFixed(1) ?? "—"}`
-                : `CEFR Level: ${levelText}`}
-            </h2>
-            {hasOverall && (
-              <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.badge}`}>
-                <Award className="size-3.5" aria-hidden />
-                {levelText || "CEFR"}
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-fg-muted">
-            {hasOverall
-              ? `${meta.label} · ${meta.desc}`
-              : "Umumiy ball va CEFR darajasi faqat to'liq imtihon (4 bo'lim) topshirilganda chiqariladi."}
-          </p>
+          {hasOverall && !verified && <p className="mt-2 max-w-prose text-sm text-fg-muted">{ti("estimatedNote")}</p>}
         </div>
 
-        {/* Big Score Radial/Box */}
-        <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-border bg-bg-subtle/80 p-4 shadow-sm backdrop-blur">
-          <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-              {isIelts ? "IELTS Band" : "Total Score"}
-            </p>
-            <p className="text-3xl font-black tabular-nums text-fg sm:text-4xl">
-              {isIelts ? overallBand?.toFixed(1) ?? "—" : `${overallScore ?? "—"}`}
-              {!isIelts && <span className="text-sm font-normal text-fg-muted"> /75</span>}
+        {hasOverall && !isIelts && (
+          <div className="shrink-0 sm:text-right">
+            <p className="text-sm text-fg-muted">{ti("totalScore")}</p>
+            <p className="text-2xl font-bold tabular-nums text-fg">
+              {overallScore}
+              <span className="text-sm font-normal text-fg-muted"> / {MULTILEVEL_MAX}</span>
             </p>
           </div>
-          <div className="flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand-subtle-fg">
-            <Sparkles className="size-6" />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Visual Level Track Bar */}
+      {/* Multilevel scale: the real level thresholds with a marker at the score. No decorative fill. */}
       {!isIelts && hasOverall && (
-        <div className="relative z-10 mt-6 space-y-2">
-          <div className="flex justify-between text-[11px] font-medium text-fg-muted">
+        <div className="mt-5" role="img" aria-label={ti("levelTrackAria", { score: overallScore ?? 0, max: MULTILEVEL_MAX, level: levelText })}>
+          <div className="relative h-2 rounded-full bg-bg-subtle">
             {MULTILEVEL_CEFR_BANDS.map((band, index) => (
-              <span key={band.level} className={["", "font-semibold text-amber-500", "font-semibold text-sky-500", "font-semibold text-emerald-500"][index]}>
-                {band.label} ({band.min}–{band.max})
-              </span>
-            ))}
-          </div>
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-border/80">
-            {/* Zones, positioned from the same scale as the labels */}
-            {MULTILEVEL_CEFR_BANDS.map((band, index) => (
-              <div
+              <span
                 key={band.level}
-                className={["absolute inset-y-0 bg-fg-subtle/20", "absolute inset-y-0 bg-amber-500/20", "absolute inset-y-0 bg-sky-500/20", "absolute inset-y-0 bg-emerald-500/20"][index]}
-                style={{ left: `${(band.min / 75) * 100}%`, width: `${((band.max - band.min + (index === 3 ? 0 : 1)) / 75) * 100}%` }}
-                title={band.level}
+                aria-hidden
+                className={cn("absolute inset-y-0 bg-border", index > 0 && "border-l-2 border-surface", index === 0 && "rounded-l-full", index === MULTILEVEL_CEFR_BANDS.length - 1 && "rounded-r-full")}
+                style={{ left: `${(band.min / MULTILEVEL_MAX) * 100}%`, width: `${((band.max - band.min + (index === MULTILEVEL_CEFR_BANDS.length - 1 ? 0 : 1)) / MULTILEVEL_MAX) * 100}%` }}
               />
             ))}
-
-            {/* User progress bar */}
-            <div
-              className={`h-full rounded-full bg-gradient-to-r ${meta.color} transition-all duration-700`}
-              style={{ width: `${Math.max(scorePercent, 5)}%` }}
+            <span
+              aria-hidden
+              className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-brand"
+              style={{ left: `${trackPercent}%` }}
             />
+          </div>
+          <div className="mt-2 flex justify-between text-sm tabular-nums text-fg-muted">
+            {MULTILEVEL_CEFR_BANDS.map((band) => (
+              <span key={band.level}>
+                {band.label} · {band.min}–{band.max}
+              </span>
+            ))}
           </div>
         </div>
       )}
 
-      {/* 4-Skill Section Infographic Cards */}
-      <div className="relative z-10 mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={ti("skillsAria")}>
         {sections.map((section) => {
           const Icon = SKILL_ICONS[section.skill] ?? Headphones;
-          const colors = SKILL_COLORS[section.skill] ?? {
-            bar: "bg-brand",
-            text: "text-brand",
-            bg: "bg-brand/10",
-          };
-
-          // Scale score out of 75 for Multi-Level or out of 9 for IELTS
-          const rawScore = section.score ?? 0;
-          const maxScore = section.max ?? (section.skill === "listening" || section.skill === "reading" ? 35 : 30);
-          const standardized = section.standardScore;
-          const percent = standardized != null
-            ? Math.round((standardized / 75) * 100)
-            : maxScore > 0
-              ? Math.round((rawScore / maxScore) * 100)
-              : 0;
-
+          const meter = skillMeter(section, isIelts);
+          const name = section.title ?? section.skill;
+          const valueText =
+            meter.kind === "band" ? (section.bandBelowRange ? t("bandBelowRange") : meter.value!.toFixed(1))
+            : meter.kind === "pending" ? ti("pending")
+            : String(meter.value);
           return (
-            <div
-              key={section.skill}
-              className="group flex flex-col justify-between rounded-xl border border-border bg-surface/70 p-3.5 transition-all hover:border-brand/40 hover:bg-surface"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className={`flex size-8 items-center justify-center rounded-lg ${colors.bg} ${colors.text}`}>
-                    <Icon className="size-4" />
-                  </div>
-                  <span className="text-xs font-bold capitalize tracking-wide text-fg">
-                    {section.title ?? section.skill}
-                  </span>
-                </div>
-                {section.band != null && (
-                  <Badge variant="neutral" className="tabular-nums">
-                    {bandText(section)}
-                  </Badge>
-                )}
+            <li key={section.skill} className="rounded-card border border-border bg-surface p-3.5" data-testid={`infographic-${section.skill}`}>
+              <div className="flex items-center gap-2 text-sm font-medium text-fg">
+                <Icon className="size-4 text-fg-muted" aria-hidden />
+                <span className="truncate">{name}</span>
               </div>
-
-              <div className="mt-4">
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-fg-muted">Score</span>
-                  <span className="font-bold tabular-nums text-fg">
-                    {standardized != null ? (
-                      <>
-                        <span className="text-sm font-black text-brand">{standardized}</span>
-                        <span className="text-[11px] text-fg-subtle"> /75</span>
-                        <span className="ml-1 text-[10px] text-fg-muted font-normal">({rawScore}/{maxScore})</span>
-                      </>
-                    ) : section.band != null ? (
-                      bandText(section)
-                    ) : section.score != null ? (
-                      `${section.score} / ${maxScore}`
-                    ) : (
-                      "Pending"
-                    )}
-                  </span>
+              <p className="mt-3 text-2xl font-bold tabular-nums text-fg">
+                {valueText}
+                {meter.kind !== "pending" && !(meter.kind === "band" && section.bandBelowRange) && <span className="text-sm font-normal text-fg-muted"> / {meter.max}</span>}
+              </p>
+              <p className="text-sm text-fg-muted">
+                {meter.kind === "band" ? ti("bandLabel") : meter.kind === "standard" ? ti("standardLabel") : meter.kind === "raw" ? ti("rawLabel") : ti("pendingHint")}
+                {meter.kind === "standard" && section.score != null && section.max != null ? ` · ${section.score}/${section.max}` : ""}
+              </p>
+              {meter.percent != null && (
+                <div
+                  role="meter"
+                  aria-label={ti("meterAria", { skill: name, value: valueText, max: meter.max })}
+                  aria-valuemin={0}
+                  aria-valuemax={meter.max}
+                  aria-valuenow={meter.value ?? 0}
+                  className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-subtle"
+                >
+                  <div className="h-full rounded-full bg-chart-series" style={{ width: `${Math.min(Math.max(meter.percent, 0), 100)}%` }} />
                 </div>
-                {/* Horizontal skill progress */}
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-border">
-                  <div
-                    className={`h-full rounded-full ${colors.bar} transition-all duration-500`}
-                    style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
+              )}
+            </li>
           );
         })}
-      </div>
+      </ul>
     </Card>
   );
 }

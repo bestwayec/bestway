@@ -126,3 +126,54 @@ export function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard" || href === "/super-admin") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+/**
+ * Sidebar sections for the office / teacher / parent roles. Built only from the role-filtered list above
+ * (navForRole), so a section can never reach a route the role is not allowed to see.
+ */
+export type NavSectionId = "learning" | "exams" | "users" | "reports" | "settings";
+
+export const NAV_SECTION_ORDER: NavSectionId[] = ["learning", "exams", "users", "reports", "settings"];
+
+const SECTION_OF: Record<string, NavSectionId> = {
+  teacherWorkspace: "learning",
+  groups: "learning",
+  vocabulary: "learning",
+  bamboozle: "learning",
+  videos: "learning",
+  articles: "learning",
+  gallery: "learning",
+  leaderboard: "learning",
+  mock: "exams",
+  examBuilder: "exams",
+  examTrack: "exams",
+  students: "users",
+  staff: "users",
+  children: "users",
+  profile: "users",
+  attendance: "reports",
+  payments: "reports",
+  audit: "reports",
+  settings: "settings",
+};
+
+export interface NavSection {
+  id: NavSectionId;
+  items: NavItem[];
+}
+
+export interface GroupedNav {
+  /** Always visible, outside any section (the role's home page). */
+  top: NavItem[];
+  sections: NavSection[];
+}
+
+export function groupedNavForRole(role: Role): GroupedNav {
+  const items = navForRole(role).filter((item) => item.key !== "notifications");
+  const top = items.filter((item) => item.key === "dashboard");
+  const sections = NAV_SECTION_ORDER.map((id) => ({
+    id,
+    items: items.filter((item) => item.key !== "dashboard" && (SECTION_OF[item.key] ?? "learning") === id),
+  })).filter((section) => section.items.length > 0);
+  return { top, sections };
+}

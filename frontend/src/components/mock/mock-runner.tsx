@@ -59,7 +59,7 @@ import { ResponseProgress, WritingResponseGuide } from './exam-response-progress
 import { multilevelQuestionAnswered } from '@/lib/multilevel-completeness';
 import { canSelectSpeakingPart, nextSpeakingTarget, requestSpeakingAutoStart } from '@/lib/speaking-sequence';
 import { ExamLocker } from "./exam-locker";
-import { ReadingSplitDivider, useReadingSplit } from "./reading-split-divider";
+import { ReadingSplitDivider, useReadingSplit, useWritingSplit } from "./reading-split-divider";
 import type { ListeningSchedule } from "@/lib/listening-schedule";
 import { ExamSessionGate, useExamSession } from "./exam-session-gate";
 import { MicCheckModal } from "./mic-check-modal";
@@ -1353,8 +1353,14 @@ function GroupBlock({
     : "";
 
   // Wide screens: passage | divider | questions, each column scrolling on its own.
-  const isPassageSplit = hasPassage && !hasGappedContent;
+  // Writing: the task (picture, instructions, text, prompt) beside the answer. One split only — the passage lives in
+  // the task column, so there is never a split inside a split.
+  const isWritingSplit = skill === "writing" && !hasGappedContent;
+  const isPassageSplit = hasPassage && !hasGappedContent && !isWritingSplit;
+  // Passage / Questions tabs on phones are for Reading; Writing stacks the task above the answer.
+  const tabbed = hasPassage && !hasGappedContent && !isWritingSplit;
   const [readingSplit, setReadingSplit] = useReadingSplit();
+  const [writingSplit, setWritingSplit] = useWritingSplit();
   const splitRef = React.useRef<HTMLDivElement>(null);
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
 
@@ -1396,12 +1402,12 @@ function GroupBlock({
         )
       )}
       {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
-      {group.imageUrl && !isMapSplit && (
+      {group.imageUrl && !isMapSplit && !isWritingSplit && (
         <div className="mt-3">
           <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
         </div>
       )}
-      {group.instructions && (
+      {group.instructions && !isWritingSplit && (
         <div className="mt-3 text-sm font-medium text-fg-muted">
           <CbtAnnotatedText
             text={group.instructions}
@@ -1430,7 +1436,7 @@ function GroupBlock({
       )}
 
       {/* Mobile Tab Switcher for Reading when passage exists */}
-      {hasPassage && !hasGappedContent && (
+      {tabbed && (
         <div className="mt-3 flex rounded-control border border-border bg-bg-subtle p-1 lg:hidden" role="group" aria-label={tg("passageOrQuestions")}>
           <button
             type="button"
@@ -1465,11 +1471,15 @@ function GroupBlock({
         ref={splitRef}
         className={cn(
           "mt-3",
-          isPassageSplit
+          isPassageSplit || isWritingSplit
             ? "lg:grid lg:grid-cols-[minmax(0,var(--reading-passage))_auto_minmax(0,var(--reading-questions))] lg:gap-3 lg:items-start"
             : isMapSplit && !hasGappedContent && "lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start",
         )}
-        style={isPassageSplit ? ({ "--reading-passage": `${readingSplit}fr`, "--reading-questions": `${100 - readingSplit}fr` } as React.CSSProperties) : undefined}
+        style={isPassageSplit
+          ? ({ "--reading-passage": `${readingSplit}fr`, "--reading-questions": `${100 - readingSplit}fr` } as React.CSSProperties)
+          : isWritingSplit
+            ? ({ "--reading-passage": `${writingSplit}fr`, "--reading-questions": `${100 - writingSplit}fr` } as React.CSSProperties)
+            : undefined}
       >
         {isMapSplit && (
           // Sticky only beside the questions on wide screens; on phones a sticky
@@ -1481,7 +1491,38 @@ function GroupBlock({
             <GroupImage groupId={group.id} alt={group.title ? tg("mapFor", { title: group.title }) : tg("mapForPart")} />
           </div>
         )}
-        {hasPassage && !hasGappedContent && (
+        {isWritingSplit && (
+          <div
+            data-testid="writing-task-panel"
+            className={cn("mb-4 space-y-3 rounded-card border border-border bg-surface p-4 sm:p-5 lg:sticky lg:top-16 lg:mb-0 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4", !(group.imageUrl || group.instructions || hasPassage) && "hidden lg:block")}
+            // The task scrolls on its own beside the answer: keyboard users can focus and scroll it.
+            tabIndex={0}
+            role="region"
+            aria-label={tg("writingTaskRegion")}
+          >
+            {group.imageUrl && <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />}
+            {group.instructions && (
+              <div className="text-sm font-medium text-fg-muted">
+                <CbtAnnotatedText text={group.instructions} storageKey={`${attemptId}.${group.id}.instructions`} />
+              </div>
+            )}
+            {hasPassage && (
+              <div className="whitespace-pre-line text-base leading-relaxed text-fg sm:text-[17px] sm:leading-[1.75]" {...{ [VOCAB_TEXT_ATTRIBUTE]: "" }}>
+                <CbtAnnotatedText text={group.passageText!} storageKey={`${attemptId}.${group.id}.passage`} />
+              </div>
+            )}
+            {/* Wide screens: the prompt sits with the task (phones keep it with the answer, below). */}
+            <div className="hidden space-y-3 lg:block">
+              {(group?.questions || []).map((q) => (
+                <div key={q.id} className="whitespace-pre-line text-base leading-relaxed text-fg sm:text-[17px] sm:leading-[1.75]" {...{ [VOCAB_TEXT_ATTRIBUTE]: "" }}>
+                  {q.prompt}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {isWritingSplit && <ReadingSplitDivider variant="writing" value={writingSplit} onChange={setWritingSplit} containerRef={splitRef} />}
+        {hasPassage && !hasGappedContent && !isWritingSplit && (
           <div
             className={cn(
               "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base leading-relaxed text-fg max-w-[70ch] sm:text-[17px] sm:leading-[1.75] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4",
@@ -1558,10 +1599,10 @@ function GroupBlock({
               "lg:block",
               isPassageSplit && "lg:sticky lg:top-16 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1",
               isMapSplit && "lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:pl-2 lg:pr-1",
-              hasPassage && !hasGappedContent ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
+              tabbed ? (readingMobileTab === "questions" ? "block" : "hidden") : "block"
             )}
           >
-            {hasPassage && !hasGappedContent && (
+            {tabbed && (
               <div className="mb-2 flex items-center justify-between pb-2 border-b border-border/60 lg:hidden">
                 <span className="text-xs font-medium text-fg-muted">{tg("questionCount", { count: (group?.questions || []).length })}</span>
                 <button
@@ -1575,7 +1616,7 @@ function GroupBlock({
               </div>
             )}
             {(group?.questions || []).map((q) => (
-              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28">
+              <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
                 <QuestionInput
                   key={q.id}
                   question={q}
@@ -1590,6 +1631,7 @@ function GroupBlock({
                   multilevelSkill={skill}
                   isFlagged={flaggedQuestions?.has(q.id)}
                   onToggleFlag={onToggleFlag ? () => onToggleFlag(q.id) : undefined}
+                  promptInTaskPanel={isWritingSplit}
                 />
                 {practice && (skill === "listening" || skill === "reading") && (
                   <RevealAnswer attemptId={attemptId} questionId={q.id} initiallyRevealed={practice.revealed.has(q.id)} />
@@ -1611,7 +1653,9 @@ export function EssayQuestionEditor({
   multilevelSkill,
   groupTitle,
   header,
+  promptInTaskPanel = false,
 }: {
+  promptInTaskPanel?: boolean;
   q: MockQuestion;
   attemptId: string;
   value: string;
@@ -1668,7 +1712,7 @@ export function EssayQuestionEditor({
               : <p className="font-semibold text-fg">{multilevelTaskName(q.guidance, `Task ${q.number}`)}</p>}
             <MultilevelTaskMeta question={q} />
           </div>
-          <p className="whitespace-pre-line text-sm text-fg">{q.prompt}</p>
+          <p className={cn("whitespace-pre-line text-sm text-fg", promptInTaskPanel && "lg:hidden")}>{q.prompt}</p>
         </div>
       ) : header}
 
@@ -1778,7 +1822,10 @@ function QuestionInput({
   groupTitle,
   isFlagged,
   onToggleFlag,
+  promptInTaskPanel = false,
 }: {
+  /** Writing split view: on wide screens the prompt is shown in the task column, not again above the answer. */
+  promptInTaskPanel?: boolean;
   question: MockQuestion;
   attemptId: string;
   value: string;
@@ -1818,7 +1865,8 @@ function QuestionInput({
       <span className="grid size-7 shrink-0 place-items-center rounded-field border border-border-strong bg-bg-subtle text-sm font-bold text-fg tabular-nums">
         {q.displayNumber ?? q.number}
       </span>
-      <p className="min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg">{q.prompt}</p>
+      <p className={cn("min-w-0 flex-1 whitespace-pre-line pt-0.5 text-base leading-relaxed text-fg", promptInTaskPanel && "lg:hidden")}>{q.prompt}</p>
+      {promptInTaskPanel && <span className="hidden flex-1 lg:block" />}
       {flagButton}
     </div>
   );
@@ -1845,6 +1893,7 @@ function QuestionInput({
         multilevelSkill={multilevelSkill}
         groupTitle={groupTitle}
         header={header}
+        promptInTaskPanel={promptInTaskPanel}
       />
     );
   }

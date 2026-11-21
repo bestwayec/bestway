@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { HISTORY_PAGE_SIZE, loadAttemptHistory } from "@/lib/attempt-history";
 import { useStudentProgramScope } from './use-exam-programs';
 import type {
   CreateMockExamInput,
@@ -146,13 +147,36 @@ export function useStartMock() {
   });
 }
 
-export function useMyMockAttempts(status?: MockAttemptStatus) {
+function useMyAttemptHistoryQuery(status?: MockAttemptStatus) {
   const scope = useStudentProgramScope();
-  return useQuery({
-    queryKey: ["mock-attempts-mine", scope.owner, scope.program, status ?? "all"],
-    queryFn: () => api.get<MockAttemptSummary[]>("/mock/attempts/mine", { status, program: scope.program }),
-    enabled: scope.student && scope.ready,
-  });
+  return {
+    scope,
+    options: {
+      queryKey: ["mock-attempts-mine", scope.owner, scope.program, status ?? "all"],
+      queryFn: () =>
+        loadAttemptHistory(async (cursor) =>
+          api.getPaged<MockAttemptSummary[]>("/mock/attempts/mine", {
+            status,
+            program: scope.program,
+            limit: HISTORY_PAGE_SIZE,
+            cursor,
+          }),
+        ),
+      enabled: scope.student && scope.ready,
+    },
+  };
+}
+
+/** The student's whole authorised exam history (newest first), loaded through the cursor API. */
+export function useMyMockAttempts(status?: MockAttemptStatus) {
+  const { options } = useMyAttemptHistoryQuery(status);
+  return useQuery({ ...options, select: (history) => history.items });
+}
+
+/** Same data with its completeness: trends and "latest result" must say when only part of the history is shown. */
+export function useMyMockAttemptHistory(status?: MockAttemptStatus) {
+  const { options } = useMyAttemptHistoryQuery(status);
+  return useQuery(options);
 }
 
 export function useMockAttempts(status?: MockAttemptStatus, program?: 'IELTS' | 'MULTILEVEL') {

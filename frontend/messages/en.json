@@ -874,7 +874,14 @@
     "expandSidebar": "Expand sidebar",
     "profile": "Profile",
     "more": "More",
-    "results": "Results"
+    "results": "Results",
+    "sections": {
+      "learning": "Learning",
+      "exams": "Exams",
+      "users": "Users",
+      "reports": "Reports",
+      "settings": "Settings"
+    }
   },
   "brand": {
     "best": "Best",
@@ -1285,6 +1292,10 @@
       "sharedSituation": "Shared situation",
       "splitDivider": "Resize passage and questions",
       "splitValue": "Passage {passage}%, questions {questions}%",
+      "writingSplitDivider": "Resize task and answer",
+      "writingSplitValue": "Task {task}%, answer {answer}%",
+      "writingTaskRegion": "Task and instructions",
+      "writingAnswerRegion": "Your answer",
       "questionsRegion": "Questions",
       "listeningResume": "Continue listening",
       "listeningInterrupted": "The recording was interrupted. It continues from where the exam is now.",
@@ -1739,6 +1750,24 @@
       "continueHere": "Continue here"
     },
     "levelBelowB1": "Below B1",
+    "infographic": {
+      "overallBand": "Overall band",
+      "cefrLevel": "CEFR level",
+      "sectionResult": "Section result",
+      "sectionResultHint": "An overall score and CEFR level appear only after a full four-section exam.",
+      "verified": "Verified",
+      "estimated": "Estimated",
+      "estimatedNote": "Writing and Speaking are scored automatically until a teacher confirms them, so this result may change.",
+      "totalScore": "Total score",
+      "levelTrackAria": "Score {score} out of {max}, level {level}",
+      "skillsAria": "Results by skill",
+      "pending": "Pending",
+      "pendingHint": "Not scored yet",
+      "bandLabel": "Band",
+      "standardLabel": "Standard score",
+      "rawLabel": "Correct answers",
+      "meterAria": "{skill}: {value} out of {max}"
+    },
     "bandBelowRange": "below 4.0",
     "accuracy": "Accuracy:",
     "gradeDraftKept": "Unsaved — kept on this device",
@@ -1897,6 +1926,8 @@
       "practiceLink": "Choose a practice section",
       "trendTitle": "Band over time",
       "trendChange": "{count} full results · {change} since the first",
+      "trendLatest": "Showing the latest {shown} of your {count} full results.",
+      "trendPartial": "Only your most recent attempts could be loaded, so this trend shows the latest {shown} full results and may be incomplete.",
       "trendAria": "Overall band by date: {points}"
     }
   },
@@ -2183,6 +2214,28 @@
     "backendUnreachable": "No connection to the server. Check that the backend is running."
   },
   "examBuilder": {
+    "stepperLabel": "Exam builder steps",
+    "stepBack": "Previous step",
+    "stepNext": "Next step",
+    "stepOf": "Step {n} of {total}",
+    "stepInfo": "Exam information",
+    "stepTrack": "Track and sections",
+    "stepQuestions": "Questions",
+    "stepMaterial": "Passages, audio and files",
+    "stepKeys": "Answers and keys",
+    "stepPreview": "Preview",
+    "stepPublish": "Validate and publish",
+    "stepInfoHint": "Title, type and exam settings.",
+    "stepTrackHint": "Pick the IELTS or Multilevel track and add the sections.",
+    "stepQuestionsHint": "Write the questions of each part, passage or task.",
+    "stepMaterialHint": "Attach the passage text, audio and pictures the questions refer to.",
+    "stepKeysHint": "Set the correct answers, accepted variants and answer locations.",
+    "stepPreviewHint": "See the exam exactly as a student will.",
+    "stepPublishHint": "Fix every error, then publish. Save Draft keeps the exam hidden from students.",
+    "stepDone": "complete",
+    "stepAttention": "{count} to fix",
+    "stepTodo": "not started",
+    "saveVsPublish": "Save Draft stores your work and keeps the exam hidden from students. Publish makes it available to students and runs the final checks.",
     "starterTitle": "Create a ready-to-fill structure",
     "starterIelts": "4 listening parts, 3 reading passages, 2 writing tasks and 3 speaking parts. Add your material and questions directly, then review before publishing. Turn off to start blank.",
     "starterMultilevel": "Listening, reading, writing and speaking sections with one editable block each. Customize the structure for your test. Turn off to start blank.",
@@ -2842,6 +2895,8 @@
       "title": "My mistakes bank",
       "intro": "Words you got wrong in vocabulary tests are collected here. Answer a word correctly twice in a row and it counts as mastered.",
       "start": "Start mistakes practice",
+      "statDue": "Due now",
+      "noneDue": "Nothing is due right now. Words you got wrong come back here at their review time.",
       "statLearning": "Being learned",
       "statMastered": "Mastered",
       "statTotal": "Total tracked",
@@ -3250,6 +3305,7 @@
     "copied": "Copied"
   },
   "devUi": {
+    "results": "Result infographic",
     "eyebrow": "Development only",
     "title": "Design system",
     "intro": "Every primitive in light and dark. Tokens and rules: docs/design/DESIGN_SYSTEM.md and DIRECTION.md.",

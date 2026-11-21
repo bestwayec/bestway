@@ -56,6 +56,8 @@ async function run(name, { locale, width, height, dark }) {
   const groupLink = page.locator('a[href*="/groups/"]').first();
   await groupLink.waitFor({ timeout: 30000 });
   await groupLink.click();
+  // Since the classroom workspace (#206) the results section, which holds the live monitoring, opens from this toggle.
+  await page.getByRole("button", { name: locale === "en" ? "Results and analytics" : "Natijalar va tahlil", exact: true }).click();
   const monitor = page.getByText(locale === "en" ? "Live exam monitoring" : "Jonli imtihon kuzatuvi").first();
   const shown = await monitor.waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
   ok(shown, `${name}: the group's live monitoring is in the page language`);

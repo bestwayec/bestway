@@ -54,6 +54,8 @@ import { reviewBlockerCount } from "./review-blockers";
 import { ReviewPanel } from "./ReviewPanel";
 import { SectionPanel } from "./SectionPanel";
 import { Sidebar } from "./Sidebar";
+import { BuilderStepper } from "./BuilderStepper";
+import { builderSteps, stepForSelection, type BuilderStep, type StepId } from "./builder-steps";
 import { SKILL_META, selectionKey, tx, type Selection } from "./types";
 
 type ItemStatus = "ready" | "attention" | "empty";
@@ -194,6 +196,8 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const examQ = useMockExam(examId);
   const [selection, setSelection] = React.useState<Selection>({ kind: "overview" });
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [previewed, setPreviewed] = React.useState(false);
+  const [chosenStep, setChosenStep] = React.useState<StepId | null>(null);
   const [provenanceOpen, setProvenanceOpen] = React.useState(false);
   const [smartImportOpen, setSmartImportOpen] = React.useState(false);
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
@@ -273,6 +277,17 @@ export function ExamBuilder({ examId }: { examId: string }) {
     }
   }
   const effKey = selectionKey(effective);
+  const steps = React.useMemo(() => (detail ? builderSteps(detail, { previewed, blockers }) : []), [detail, previewed, blockers]);
+  const currentStep = stepForSelection(effective, chosenStep);
+  function goToStep(step: BuilderStep) {
+    setChosenStep(step.id);
+    if (step.target.kind === "preview") {
+      setPreviewed(true);
+      setPreviewOpen(true);
+      return;
+    }
+    requestSelect(step.target.selection);
+  }
 
   // Switching documents scrolls the editor back to top; the shell stays mounted.
   React.useEffect(() => {
@@ -473,7 +488,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:shrink-0 sm:flex-wrap sm:items-center">
+          <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:min-w-0 sm:max-w-full sm:flex-wrap sm:items-center sm:justify-end">
             <Button
               size="sm"
               variant="outline"
@@ -483,7 +498,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
               <Sparkles className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "quickImport", "Quick import (Smart / Excel / Audio)")}</span>
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)} className="min-h-9 justify-center max-sm:w-full sm:min-h-0">
+            <Button size="sm" variant="outline" onClick={() => { setPreviewed(true); setPreviewOpen(true); }} className="min-h-9 justify-center max-sm:w-full sm:min-h-0">
               <Eye className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "preview", "Preview")}</span>
             </Button>
@@ -540,6 +555,11 @@ export function ExamBuilder({ examId }: { examId: string }) {
           )}
         </p>
       )}
+
+      <BuilderStepper steps={steps} current={currentStep} onGo={goToStep} />
+      <p className="mt-2 text-xs text-fg-subtle" data-testid="save-vs-publish">
+        {tx(t, "saveVsPublish", "Save Draft stores your work and keeps the exam hidden from students. Publish makes it available to students and runs the final checks.")}
+      </p>
 
       <div className="flex min-w-0 items-start gap-4 pt-4">
         <div className="hidden shrink-0 md:block">

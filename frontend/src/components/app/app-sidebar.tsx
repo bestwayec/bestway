@@ -10,6 +10,7 @@ import { CENTER } from "@/lib/config";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SidebarSections } from "@/components/app/sidebar-sections";
 
 /** Yon panel holati — sahifa yangilanganda ham saqlanadi */
 const COLLAPSED_KEY = "bw-sidebar-collapsed";
@@ -86,6 +87,10 @@ export function AppSidebar({ role }: { role: Role }) {
       </div>
 
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto p-3">
+        {role !== "student" ? (
+          <SidebarSections role={role} collapsed={collapsed} />
+        ) : (
+          <>
         {/* Asosiy 4 ta band */}
         {primary.map((item) => {
           const active = isActive(pathname, item.href);
@@ -199,6 +204,8 @@ export function AppSidebar({ role }: { role: Role }) {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </nav>
 

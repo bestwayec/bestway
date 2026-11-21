@@ -874,7 +874,14 @@
     "expandSidebar": "Yon panelni ochish",
     "profile": "Profil",
     "more": "Yana",
-    "results": "Natijalar"
+    "results": "Natijalar",
+    "sections": {
+      "learning": "O'qish",
+      "exams": "Imtihonlar",
+      "users": "Foydalanuvchilar",
+      "reports": "Hisobotlar",
+      "settings": "Sozlamalar"
+    }
   },
   "brand": {
     "best": "Best",
@@ -1285,6 +1292,10 @@
       "sharedSituation": "Umumiy vaziyat",
       "splitDivider": "Matn va savollar kengligini o‘zgartirish",
       "splitValue": "Matn {passage}%, savollar {questions}%",
+      "writingSplitDivider": "Topshiriq va javob oralig'ini o'zgartirish",
+      "writingSplitValue": "Topshiriq {task}%, javob {answer}%",
+      "writingTaskRegion": "Topshiriq va ko'rsatmalar",
+      "writingAnswerRegion": "Sizning javobingiz",
       "questionsRegion": "Savollar",
       "listeningResume": "Tinglashni davom ettirish",
       "listeningInterrupted": "Yozuv uzilib qoldi. U imtihon hozir turgan joydan davom etadi.",
@@ -1739,6 +1750,24 @@
       "continueHere": "Shu yerda davom ettirish"
     },
     "levelBelowB1": "B1 dan quyi",
+    "infographic": {
+      "overallBand": "Umumiy band",
+      "cefrLevel": "CEFR darajasi",
+      "sectionResult": "Bo'lim natijasi",
+      "sectionResultHint": "Umumiy ball va CEFR darajasi faqat to'liq imtihon (4 bo'lim) topshirilgandan keyin chiqadi.",
+      "verified": "Tasdiqlangan",
+      "estimated": "Taxminiy",
+      "estimatedNote": "Writing va Speaking o'qituvchi tasdiqlaguncha avtomatik baholanadi, shuning uchun natija o'zgarishi mumkin.",
+      "totalScore": "Umumiy ball",
+      "levelTrackAria": "Ball: {max} dan {score}, daraja {level}",
+      "skillsAria": "Ko'nikmalar bo'yicha natijalar",
+      "pending": "Kutilmoqda",
+      "pendingHint": "Hali baholanmagan",
+      "bandLabel": "Band",
+      "standardLabel": "Standart ball",
+      "rawLabel": "To'g'ri javoblar",
+      "meterAria": "{skill}: {max} dan {value}"
+    },
     "bandBelowRange": "4.0 dan past",
     "accuracy": "Aniqlik:",
     "gradeDraftKept": "Saqlanmagan — shu qurilmada turibdi",
@@ -1897,6 +1926,8 @@
       "practiceLink": "Mashq bo'limini tanlash",
       "trendTitle": "Vaqt bo'yicha band",
       "trendChange": "{count} ta to'liq natija · birinchisidan beri {change}",
+      "trendLatest": "Oxirgi {shown} ta natija ko'rsatilmoqda (jami {count} ta to'liq natija).",
+      "trendPartial": "Faqat eng so'nggi urinishlar yuklandi, shuning uchun trend oxirgi {shown} ta to'liq natijani ko'rsatadi va to'liq bo'lmasligi mumkin.",
       "trendAria": "Sana bo'yicha umumiy band: {points}"
     }
   },
@@ -2183,6 +2214,28 @@
     "backendUnreachable": "Server bilan aloqa yo'q. Backend ishlab turganini tekshiring."
   },
   "examBuilder": {
+    "stepperLabel": "Imtihon yaratish bosqichlari",
+    "stepBack": "Oldingi bosqich",
+    "stepNext": "Keyingi bosqich",
+    "stepOf": "{total} dan {n}-bosqich",
+    "stepInfo": "Imtihon ma'lumotlari",
+    "stepTrack": "Yo'nalish va bo'limlar",
+    "stepQuestions": "Savollar",
+    "stepMaterial": "Matn, audio va fayllar",
+    "stepKeys": "Javoblar va kalitlar",
+    "stepPreview": "Ko'rib chiqish",
+    "stepPublish": "Tekshirish va e'lon qilish",
+    "stepInfoHint": "Nomi, turi va imtihon sozlamalari.",
+    "stepTrackHint": "IELTS yoki Multilevel yo'nalishini tanlang va bo'limlarni qo'shing.",
+    "stepQuestionsHint": "Har bir qism, matn yoki topshiriq savollarini yozing.",
+    "stepMaterialHint": "Savollar tayanadigan matn, audio va rasmlarni biriktiring.",
+    "stepKeysHint": "To'g'ri javoblar, qabul qilinadigan variantlar va javob joyini belgilang.",
+    "stepPreviewHint": "Imtihonni talaba ko'rgandek ko'ring.",
+    "stepPublishHint": "Barcha xatolarni tuzating, so'ng e'lon qiling. Qoralama saqlash imtihonni talabalardan yashirin qoldiradi.",
+    "stepDone": "tayyor",
+    "stepAttention": "{count} ta tuzatish kerak",
+    "stepTodo": "boshlanmagan",
+    "saveVsPublish": "Qoralamani saqlash ishingizni saqlaydi va imtihonni talabalardan yashirin qoldiradi. E'lon qilish uni talabalarga ochadi va yakuniy tekshiruvlarni ishga tushiradi.",
     "starterTitle": "To‘ldirishga tayyor tuzilma yaratish",
     "starterIelts": "4 ta tinglash qismi, 3 ta o‘qish matni, 2 ta yozish topshirig‘i va 3 ta gapirish qismi. Material va savollarni kiriting, so‘ng nashrdan oldin tekshiring. Bo‘sh boshlash uchun belgini olib tashlang.",
     "starterMultilevel": "Tinglash, o‘qish, yozish va gapirish bo‘limlari, har birida bittadan tahrirlanadigan blok. Tuzilmani testingizga moslang. Bo‘sh boshlash uchun belgini olib tashlang.",
@@ -2842,6 +2895,8 @@
       "title": "Mening xatolar bankim",
       "intro": "Lug'at testlarida adashgan so'zlaringiz shu yerda to'planadi. So'zga 2 marta ketma-ket to'g'ri javob bersangiz, u o'zlashtirilgan hisoblanadi.",
       "start": "Xatolar mashqini boshlash",
+      "statDue": "Hozir takrorlash kerak",
+      "noneDue": "Hozircha takrorlash kerak emas. Xato qilgan so'zlaringiz o'z vaqtida shu yerda qaytadi.",
       "statLearning": "O'rganilayotgan",
       "statMastered": "O'zlashtirilgan",
       "statTotal": "Jami kuzatilayotgan",
@@ -3250,6 +3305,7 @@
     "copied": "Nusxalandi"
   },
   "devUi": {
+    "results": "Natija infografikasi",
     "eyebrow": "Faqat ishlab chiqish uchun",
     "title": "Dizayn tizimi",
     "intro": "Har bir primitiv yorug' va qorong'i temada. Tokenlar va qoidalar: docs/design/DESIGN_SYSTEM.md va DIRECTION.md.",
