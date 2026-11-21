@@ -69,8 +69,12 @@ def _view(appeal: ClassQuizAppeal) -> dict:
 def pending_appeals(actor, limit=20) -> list[dict]:
     """Pending appeals of the actor's OWN groups only (admins: all)."""
     _staff(actor)
-    rows = (ClassQuizAppeal.objects.select_related('attempt__assignment').filter(status='pending').order_by('created_at'))
-    return [_view(a) for a in rows[:500] if _manages(actor, a.attempt.assignment)][:limit]
+    rows = ClassQuizAppeal.objects.select_related('attempt__assignment').filter(status='pending').order_by('created_at')
+    if actor.role not in ('admin', 'super_admin'):
+        # Filtered in SQL (not by scanning a capped global page): a teacher always sees their own groups' appeals.
+        own = list(Group.objects.filter(teacher_id=actor.id).values_list('id', flat=True))
+        rows = rows.filter(attempt__assignment__group_id__in=own)
+    return [_view(a) for a in rows[:limit] if _manages(actor, a.attempt.assignment)]
 
 
 def get_appeal(actor, appeal_id) -> dict:

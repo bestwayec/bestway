@@ -356,4 +356,7 @@ def decide_report(actor, report_id, approve: bool, note=""):
 
 def pending_reports(actor, limit=20):
     rows = VocabularyAnswerReport.objects.filter(status="pending").select_related("word__set__group").order_by("created_at")
-    return [r for r in rows[:200] if _manages_word(actor, r.word)][:limit]
+    if actor.role not in ("admin", "super_admin"):
+        # Same rule as _manages_word, applied in SQL so another teacher's backlog can never hide this teacher's reports.
+        rows = rows.filter(Q(word__set__created_by_id=actor.id) | Q(word__set__group__teacher_id=actor.id))
+    return [r for r in rows[:limit] if _manages_word(actor, r.word)]
