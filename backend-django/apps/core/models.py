@@ -798,3 +798,60 @@ class SubmissionHandoff(models.Model):
 
     class Meta:
         db_table = "SubmissionHandoff"
+
+
+class MockExamGate(models.Model):
+    """Per-exam publication gate for mocks built from supplied material.
+
+    ``exam_id`` points at the Prisma-owned ``MockExam.id`` (no database FK, like every other
+    Django-managed table here). While ``content_rights`` is ``unverified`` or a Listening part
+    lacks verified audio, readiness refuses to publish the exam. Exams without a row are not
+    affected, so existing mocks keep their behaviour.
+    """
+
+    RIGHTS = (("unverified", "unverified"), ("verified", "verified"), ("original", "original"))
+
+    exam_id = models.CharField(max_length=255, unique=True)
+    content_rights = models.CharField(max_length=12, choices=RIGHTS, default="unverified")
+    rights_sources = models.JSONField(default=dict)  # per skill: provided_material | original_practice
+    rights_note = models.TextField(blank=True, default="")
+    rights_verified_by_id = models.CharField(max_length=255, null=True, blank=True)
+    rights_verified_at = models.DateTimeField(null=True, blank=True)
+    require_verified_audio = models.BooleanField(default=True)
+    source_digests = models.JSONField(default=dict)  # sha256 of the owner-supplied source files
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class MockListeningAudio(models.Model):
+    """Validated recording of one Listening part and its verification state.
+
+    Status is derived, never trusted: MISSING (no ``audio_key``), UPLOADED, or VERIFIED only
+    while the file, its checksum and the part's answer keys are exactly what a staff member
+    attested to. Replacing the file or editing a key therefore drops the part back to UPLOADED.
+    """
+
+    STATUS = (("uploaded", "uploaded"), ("verified", "verified"))
+
+    group_id = models.CharField(max_length=255, unique=True)
+    exam_id = models.CharField(max_length=255, db_index=True)
+    part_number = models.PositiveSmallIntegerField()
+    storage_key = models.TextField()
+    sha256 = models.CharField(max_length=64)
+    size_bytes = models.BigIntegerField()
+    original_name = models.CharField(max_length=255, blank=True, default="")
+    mime_type = models.CharField(max_length=100, blank=True, default="")
+    container = models.CharField(max_length=8)
+    codec = models.CharField(max_length=24)
+    duration_ms = models.PositiveIntegerField()
+    sample_rate = models.PositiveIntegerField(null=True, blank=True)
+    channels = models.PositiveSmallIntegerField(null=True, blank=True)
+    revision = models.PositiveIntegerField(default=1)
+    uploaded_by_id = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField()
+    status = models.CharField(max_length=10, choices=STATUS, default="uploaded")
+    verified_by_id = models.CharField(max_length=255, null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verified_sha256 = models.CharField(max_length=64, null=True, blank=True)
+    verified_fingerprint = models.CharField(max_length=64, null=True, blank=True)  # answer keys attested
+    verification_note = models.TextField(blank=True, default="")

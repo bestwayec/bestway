@@ -339,6 +339,9 @@ def update_exam(actor, exam_id: str, data: dict):
         exam = locked_exam(exam_id); assert_author(actor, exam)
         profile_changed = "profile" in data and data["profile"] != exam.profile
         if profile_changed and MockAttempt.objects.filter(exam_id=exam_id).exists(): raise ContractAPIException("EXAM_VERSION_IN_USE", "Clone this exam before changing the profile used by attempts", 409)
+        if data.get("isDemo") is True:  # the catalogue lists demo exams to students: same gate as publishing
+            from .mock27.gates import assert_gate_allows_exposure
+            assert_gate_allows_exposure(exam)
         requires_readiness = data.get("isPublished") is True or (exam.is_published and data.get("isPublished") is not False and profile_changed)
         if requires_readiness:
             report = readiness(actor, exam_id, effective_profile=data.get("profile"))
@@ -386,6 +389,8 @@ def delete_exam(actor, exam_id: str):
         keys.extend((key, None) for key in MockAnswer.objects.filter(attempt_id__in=attempts).values_list('audio_key', flat=True) if key)
         # Prisma-owned foreign keys cascade sections, questions, attempts,
         # answers, purchases and assessment jobs/evaluations/transcripts.
+        from .mock27.gates import purge_gate
+        purge_gate(exam.id)
         exam.delete()
         audit_event(actor, "mock.exam.delete", "mockExam", exam_id, old=old)
         _cleanup_media_after_commit(keys)
@@ -741,6 +746,8 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
     item('template_placeholders', placeholders == 0, f'{placeholders} content block(s) still contain generated template placeholders' if placeholders else 'no generated template placeholders')
     open_issues = sum(i.status == 'open' for i in review)
     item('import_issues', open_issues == 0, f'{open_issues} open import issue(s) — resolve in Exam Builder' if open_issues else 'no open import issues')
+    from .mock27.gates import gate_readiness_items
+    items.extend(gate_readiness_items(exam))
     output = {"examId": exam_id, "ready": all(item["ok"] for item in items), "items": items}
     if exam.type == 'multilevel':
         from .mock_practice import metadata
@@ -781,6 +788,8 @@ def _copy_exam(actor, source: MockExam) -> MockExam:
             copied_group = MockQuestionGroup.objects.create(id=new_id(), section_id=copied_section.id, sort_order=group.sort_order, title=group.title, instructions=group.instructions, passage_text=group.passage_text, content_html=group.content_html, audio_script=group.audio_script, content_layout=group.content_layout, options_reusable=group.options_reusable, audio_key=group.audio_key, image_key=group.image_key, max_score=group.max_score, stimulus_ref=group.stimulus_ref, part_number=group.part_number, audio_play_limit=group.audio_play_limit, audio_duration_sec=group.audio_duration_sec, created_at=stamp)
             for question in MockQuestion.objects.filter(group_id=group.id).order_by("sort_order", "number", "id"):
                 MockQuestion.objects.create(id=new_id(), group_id=copied_group.id, number=question.number, sort_order=question.sort_order, type=question.type, prompt=question.prompt, options=question.options, correct_answers=question.correct_answers, accepted_variants=question.accepted_variants, points=question.points, word_limit=question.word_limit, answer_rule=question.answer_rule, cefr_level=question.cefr_level, skill_tags=question.skill_tags, evidence_text=question.evidence_text, evidence_offset=question.evidence_offset, audio_start_sec=question.audio_start_sec, created_at=stamp)
+    from .mock27.gates import copy_gate
+    copy_gate(source.id, clone.id)
     return clone
 
 
@@ -1214,6 +1223,8 @@ def save_quick_content(actor, exam_id: str, data: dict):
         # 4. Publish status
         publish_flag = data.get("publish", True) or data.get("isPublished", True)
         if publish_flag:
+            from .mock27.gates import assert_gate_allows_exposure
+            assert_gate_allows_exposure(locked_exam_obj)
             locked_exam_obj.is_published = True
 
         return {"published": locked_exam_obj.is_published}

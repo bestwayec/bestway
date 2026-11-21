@@ -67,6 +67,7 @@ from .mock_import_views import (
     validate_import_view,
 )
 from .mock_media import group_audio_view, group_image_view, group_media_view, review_audio_view
+from .mock27 import views as mock27_views
 from .views import (
     desktop_authorize_view,
     desktop_exchange_view,
@@ -286,6 +287,10 @@ urlpatterns = [
     path('v1/mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
     path('mock/groups/<str:group_id>/media', group_media_view),
+    path('mock/groups/<str:group_id>/listening-audio', mock27_views.listening_audio_view),
+    path('mock/groups/<str:group_id>/listening-audio/verify', mock27_views.listening_audio_verify_view),
+    path('mock/exams/<str:exam_id>/listening-audio', mock27_views.exam_gate_view),
+    path('mock/exams/<str:exam_id>/content-rights', mock27_views.content_rights_view),
     path('mock/groups/<str:group_id>/audio', group_audio_view),
     path('mock/groups/<str:group_id>/image', group_image_view),
     path('mock/exam-imports/validate', validate_import_view),
