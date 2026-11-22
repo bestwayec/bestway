@@ -17,6 +17,7 @@ export interface CbtAnnotations {
   highlights: string[];
   greenHighlights?: string[];
   pinkHighlights?: string[];
+  blueHighlights?: string[];
   underlines: string[];
   notes?: CbtStickyNote[];
 }
@@ -43,12 +44,12 @@ export function highlightCurrentSelection(): boolean {
 
 function loadAnnotations(key: string): CbtAnnotations {
   if (typeof window === "undefined") {
-    return { highlights: [], greenHighlights: [], pinkHighlights: [], underlines: [], notes: [] };
+    return { highlights: [], greenHighlights: [], pinkHighlights: [], blueHighlights: [], underlines: [], notes: [] };
   }
   try {
     const raw = localStorage.getItem(`bestway.cbt_annotations.${key}`);
     if (!raw) {
-      return { highlights: [], greenHighlights: [], pinkHighlights: [], underlines: [], notes: [] };
+      return { highlights: [], greenHighlights: [], pinkHighlights: [], blueHighlights: [], underlines: [], notes: [] };
     }
     const parsed = JSON.parse(raw);
     return {
@@ -61,6 +62,9 @@ function loadAnnotations(key: string): CbtAnnotations {
       pinkHighlights: Array.isArray(parsed.pinkHighlights)
         ? parsed.pinkHighlights.filter((s: unknown): s is string => typeof s === "string")
         : [],
+      blueHighlights: Array.isArray(parsed.blueHighlights)
+        ? parsed.blueHighlights.filter((s: unknown): s is string => typeof s === "string")
+        : [],
       underlines: Array.isArray(parsed.underlines)
         ? parsed.underlines.filter((s: unknown): s is string => typeof s === "string")
         : [],
@@ -72,7 +76,7 @@ function loadAnnotations(key: string): CbtAnnotations {
         : [],
     };
   } catch {
-    return { highlights: [], greenHighlights: [], pinkHighlights: [], underlines: [], notes: [] };
+    return { highlights: [], greenHighlights: [], pinkHighlights: [], blueHighlights: [], underlines: [], notes: [] };
   }
 }
 
@@ -120,6 +124,7 @@ interface Segment {
   isYellow: boolean;
   isGreen: boolean;
   isPink: boolean;
+  isBlue: boolean;
   isUnderline: boolean;
   note?: CbtStickyNote;
 }
@@ -129,6 +134,7 @@ function buildSegments(
   yellows: string[],
   greens: string[],
   pinks: string[],
+  blues: string[],
   underlines: string[],
   notes: CbtStickyNote[]
 ): Segment[] {
@@ -137,6 +143,7 @@ function buildSegments(
   const isYellow = new Uint8Array(len);
   const isGreen = new Uint8Array(len);
   const isPink = new Uint8Array(len);
+  const isBlue = new Uint8Array(len);
   const isUnderline = new Uint8Array(len);
   const noteIdx = new Int16Array(len).fill(-1);
 
@@ -158,6 +165,7 @@ function buildSegments(
   markMatches(yellows, isYellow);
   markMatches(greens, isGreen);
   markMatches(pinks, isPink);
+  markMatches(blues, isBlue);
   markMatches(underlines, isUnderline);
 
   notes.forEach((n, idx) => {
@@ -182,6 +190,7 @@ function buildSegments(
       isYellow[i] === isYellow[curStart] &&
       isGreen[i] === isGreen[curStart] &&
       isPink[i] === isPink[curStart] &&
+      isBlue[i] === isBlue[curStart] &&
       isUnderline[i] === isUnderline[curStart] &&
       noteIdx[i] === noteIdx[curStart];
 
@@ -192,6 +201,7 @@ function buildSegments(
         isYellow: isYellow[curStart] === 1,
         isGreen: isGreen[curStart] === 1,
         isPink: isPink[curStart] === 1,
+        isBlue: isBlue[curStart] === 1,
         isUnderline: isUnderline[curStart] === 1,
         note: nIndex >= 0 ? notes[nIndex] : undefined,
       });
@@ -311,7 +321,7 @@ export function CbtAnnotatedText({
   }, []);
 
   const addHighlight = React.useCallback(
-    (color: "yellow" | "green" | "pink" = "yellow") => {
+    (color: "yellow" | "green" | "pink" | "blue" = "yellow") => {
       const targetText = menu?.selectedText;
       if (!targetText) return;
 
@@ -331,11 +341,17 @@ export function CbtAnnotatedText({
             ? [...(prev.pinkHighlights ?? []), targetText]
             : (prev.pinkHighlights ?? []).filter((h) => h !== targetText);
 
+        const nextBlues =
+          color === "blue" && !(prev.blueHighlights ?? []).includes(targetText)
+            ? [...(prev.blueHighlights ?? []), targetText]
+            : (prev.blueHighlights ?? []).filter((h) => h !== targetText);
+
         return {
           ...prev,
           highlights: nextYellows,
           greenHighlights: nextGreens,
           pinkHighlights: nextPinks,
+          blueHighlights: nextBlues,
         };
       });
 
@@ -413,6 +429,9 @@ export function CbtAnnotatedText({
           (h) => !h.includes(target) && !target.includes(h)
         ),
         pinkHighlights: (prev.pinkHighlights ?? []).filter(
+          (h) => !h.includes(target) && !target.includes(h)
+        ),
+        blueHighlights: (prev.blueHighlights ?? []).filter(
           (h) => !h.includes(target) && !target.includes(h)
         ),
         underlines: prev.underlines.filter(
@@ -523,6 +542,17 @@ export function CbtAnnotatedText({
               <span className="size-3.5 rounded-full bg-pink-400 border border-pink-600/30" />
             </button>
 
+            {/* Highlight Blue */}
+            <button
+              type="button"
+              onClick={() => addHighlight("blue")}
+              title="Highlight Blue"
+              aria-label="Highlight Blue"
+              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-sky-500 hover:bg-sky-500/15 transition-colors touch-manipulation"
+            >
+              <span className="size-3.5 rounded-full bg-sky-400 border border-sky-600/30" />
+            </button>
+
             {/* Underline */}
             <button
               type="button"
@@ -621,6 +651,7 @@ export function CbtAnnotatedText({
             annotations.highlights,
             annotations.greenHighlights ?? [],
             annotations.pinkHighlights ?? [],
+            annotations.blueHighlights ?? [],
             annotations.underlines,
             annotations.notes ?? []
           );
@@ -670,6 +701,17 @@ export function CbtAnnotatedText({
                     <mark
                       key={`mp-${sIdx}`}
                       className="cursor-pointer rounded-xs bg-pink-300/70 px-0.5 text-fg"
+                      onClick={() => clearAnnotation(seg.text)}
+                      title={t("removeHighlight")}
+                    >
+                      {content}
+                    </mark>
+                  );
+                } else if (seg.isBlue) {
+                  content = (
+                    <mark
+                      key={`mb-${sIdx}`}
+                      className="cbt-highlight-blue cursor-pointer"
                       onClick={() => clearAnnotation(seg.text)}
                       title={t("removeHighlight")}
                     >

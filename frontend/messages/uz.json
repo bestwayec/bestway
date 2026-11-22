@@ -1613,7 +1613,11 @@
       "partialTitle": "Siz {total} tadan {answered} ta savolga javob berdingiz.",
       "partialBody": "Javob berilmagan savollarga 0 ball qo'yiladi. Imtihonni yakunlaysizmi?",
       "keepWorking": "Davom etish",
-      "confirm": "Ha, yakunlash"
+      "confirm": "Ha, yakunlash",
+      "answeredCard": "Belgilangan",
+      "unansweredCard": "Javobsiz",
+      "flaggedCard": "Bayroqcha",
+      "flaggedNotice": "Sizda qayta ko'rib chiqish uchun belgilangan {count} ta savol mavjud."
     },
     "resumeDialog": {
       "title": "Qaysi bo'limni davom ettirmoqchisiz?",

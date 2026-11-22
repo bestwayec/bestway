@@ -1104,6 +1104,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           isSubmitting={submit.isPending}
           answered={answered}
           total={total}
+          flaggedCount={flaggedQuestions.size}
           isSingleSection={isSingleSection}
           skillName={targetSkill}
         />
