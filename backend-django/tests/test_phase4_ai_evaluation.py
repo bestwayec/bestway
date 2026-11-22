@@ -63,7 +63,7 @@ class IeltsAiEvaluationPhase4Tests(SimpleTestCase):
         self.assertIn("Do not fabricate acoustic observations", prompt)
 
     def test_speech_diagnostics_detects_wpm_fillers_and_phonetics(self):
-        """Heuristic speech diagnostics must identify WPM, filler words, and phonetic watchlist items."""
+        """Text-only diagnostics report WPM and fillers, never pronunciation (no acoustic evidence)."""
         sample_speech = (
             "Well, um, I definitely think that learning a specific foreign language "
             "in this environment is very comfortable for every student."
@@ -81,12 +81,8 @@ class IeltsAiEvaluationPhase4Tests(SimpleTestCase):
         self.assertIn("um", fillers)
         self.assertIn("well", fillers)
 
-        # Check phonetic watchlist detection (definitely, specific, environment, comfortable)
-        mispronounced = [m["word"].lower() for m in diagnostics["mispronounced_words"]]
-        self.assertIn("comfortable", mispronounced)
-        self.assertIn("specific", mispronounced)
-        self.assertIn("environment", mispronounced)
-        self.assertIn("definitely", mispronounced)
+        # A transcript is not acoustic evidence: no word may be reported as mispronounced.
+        self.assertEqual(diagnostics["mispronounced_words"], [])
 
     def test_zero_result_builds_honest_zero_scores_without_ai_fabrication(self):
         """Submissions with zero work must produce null bands and zero raw scores without LLM calls."""
