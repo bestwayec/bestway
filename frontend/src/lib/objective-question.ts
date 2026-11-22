@@ -13,8 +13,22 @@ export interface ObjectiveQuestion {
   answerRule?: ObjectiveAnswerRule | null;
 }
 
-export const MATCHING_TYPES: ReadonlySet<string> = new Set(["matching", "matching_headings", "map_labelling"]);
-const SINGLE_CHOICE = new Set(["multiple_choice", "true_false_notgiven", "yes_no_notgiven", "matching", "matching_headings"]);
+export const MATCHING_TYPES: ReadonlySet<string> = new Set([
+  "matching",
+  "matching_headings",
+  "matching_features",
+  "matching_information",
+  "map_labelling",
+]);
+const SINGLE_CHOICE = new Set([
+  "multiple_choice",
+  "true_false_notgiven",
+  "yes_no_notgiven",
+  "matching",
+  "matching_headings",
+  "matching_features",
+  "matching_information",
+]);
 
 export function objectiveOptions(q: ObjectiveQuestion): string[] {
   if (q.options?.length) return q.options;
@@ -24,7 +38,12 @@ export function objectiveOptions(q: ObjectiveQuestion): string[] {
 }
 
 export function isObjectiveChoice(q: ObjectiveQuestion): boolean {
-  return SINGLE_CHOICE.has(q.type) || q.type === "multi_select" || (q.type === "map_labelling" && !!q.options?.length);
+  return (
+    SINGLE_CHOICE.has(q.type) ||
+    q.type === "multi_select" ||
+    (q.type === "map_labelling" && !!q.options?.length) ||
+    (!!q.options && q.options.length > 0)
+  );
 }
 
 /** Read legacy responses, while JSON arrays preserve punctuation in new answers. */

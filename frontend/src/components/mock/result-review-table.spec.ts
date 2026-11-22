@@ -28,6 +28,8 @@ describe("filterReviewRows", () => {
     expect(filterReviewRows(QUESTIONS, "all")).toHaveLength(4);
     expect(filterReviewRows(QUESTIONS, "wrong").map((x) => x.id)).toEqual(["q2"]);
     expect(filterReviewRows(QUESTIONS, "unanswered").map((x) => x.id)).toEqual(["q3", "q4"]);
+    expect(filterReviewRows(QUESTIONS, "correct").map((x) => x.id)).toEqual(["q1"]);
+    expect(filterReviewRows(QUESTIONS, "flagged", new Set(["q2", "q4"])).map((x) => x.id)).toEqual(["q2", "q4"]);
   });
 });
 
@@ -76,5 +78,34 @@ describe("ResultReviewTable", () => {
     expect(rows()[1].querySelector("button")?.getAttribute("aria-expanded")).toBe("true");
     await act(async () => (rows()[1] as HTMLTableRowElement).click());
     expect(host.querySelector('[data-testid="review-explain"]')).toBeNull();
+  });
+
+  it("renders multi-passage grouping and flagged items when provided", async () => {
+    const group2 = {
+      id: "g2",
+      title: "Passage 2",
+      instructions: null,
+      passageText: "Passage 2 text",
+      hasAudio: false,
+      questions: [q(5, "zeta", true, ["zeta"])],
+    } as unknown as MockAttemptGroup;
+
+    await act(async () =>
+      root.render(
+        React.createElement(ResultReviewTable, {
+          title: "Reading",
+          skill: "reading",
+          groups: [GROUP, group2],
+          flaggedIds: new Set(["q2"]),
+        }),
+      ),
+    );
+
+    expect(host.textContent).toContain("Passage 1");
+    expect(host.textContent).toContain("Passage 2");
+    expect(button(/^Flagged/).textContent).toBe("Flagged (1)");
+    await act(async () => button(/^Flagged/).click());
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].querySelector("td")!.textContent).toContain("2");
   });
 });

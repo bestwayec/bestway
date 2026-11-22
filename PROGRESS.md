@@ -7,6 +7,47 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 54-BLOK: IELTS CBT 2.0 — Talaba imtihon interfeysi, natijalar tahlili va xatolarni batafsil ko'rib chiqish (2026-11-22) — PR #213, branch `feat/bestway-ielts-cbt-2`
+- **PR #212 CI blokerini tuzatish va sinxronizatsiya**:
+  - `tests/test_smart_import_v2.py::test_15_owner_html_or_synthetic_fixture` testida Linux CI muhitida 3 != 40 xatosi keltirib chiqargan noto'g'ri sintetik matn o'rniga platformadan mustaqil, 3 ta to'liq passage va 40 ta pozitsiyali realistik IELTS Reading fixture o'rnatildi.
+  - `parse_smart_text_v2` da `in_answer_section` qoidalari mustahkamlandi: savollar diapazoni (`Questions X-Y`) uchraganda javoblar bo'limi holati xavfsiz reset qilinadi va savol belgisi (`?`) bilan tugagan qatorlar kalit deb xato hisoblanmaydi.
+  - PR #212 bo'yicha GitHub Actions CI (Analyze JS/TS, Analyze Python, Django regressions/Postgres/HTTP, Frontend build/lint/test) 4/4 to'liq PASS bo'ldi (`2e6b776`).
+  - `feat/bestway-ielts-cbt-2` (PR #213) ga PR #212 o'zgarishlari force-pushsiz toza merge qilindi (`a08acab`).
+- **Reading CBT talaba interfeysi**:
+  - Chap panel: to'liq passage matni, sarlavhasi, paragraflar, matnni belgilash (highlight), mustaqil aylantirish (independent scrolling), o'lchamini sozlash uchun `ReadingSplitDivider`, o'qish uchun qulay `font-serif leading-relaxed text-fg/95` tipografiyasi.
+  - O'ng panel: faqat tanlangan passajga tegishli savollar, guruh yo'riqnomalari, interaktiv javob boshqaruvi, aniq tanlangan javob holati, mustaqil aylantirish.
+  - Yuqori boshqaruv paneli: BESTWAY rasmiy logotipi, imtihon nomi, server taymeri bo'yicha qolgan vaqt, 40 ta savoldan javoblanganlar hisoblagichi (`Answered / 40`), yorug'/qorong'u mavzu, matn o'lchamini kattalashtirish/kichiklashtirish, topshirish tugmasi.
+  - Quyi navigatsiya paneli: 1–40 savollar tugmalari, Passage 1, 2, 3 bo'limlarini tanlash, javoblangan/javoblanmagan/belgilangan (flagged) vizual indikatorlari, ixtiyoriy savolga to'g'ridan-to'g'ri sakrash.
+  - Mobil ko'rinish: "Matn" (Passage) va "Savollar" (Questions) tablari, tablar o'rtasida o'tganda aylantirish o'rni va kiritilgan javoblar to'liq saqlanadi, qulay sensorli nishonlar.
+- **Barcha IELTS Reading savol turlarining to'liq qo'llab-quvvatlanishi**:
+  - Multiple Choice, True/False/Not Given, Yes/No/Not Given.
+  - Matching Headings, Matching Information, Matching Features (barcha matching turlari uchun mos variantli tanlov interfeysi ta'minlandi).
+  - Sentence Completion, Summary Completion, Note Completion, Short Answer.
+  - Ko'p tanlovli klasterlar ("Choose THREE" bloklari): qisqa variantli harflarda (A, B, C, D, E) tanlovlarni bekor qilmaydigan ko'p tanlovli toggle mantiqi to'g'rilandi (`toggleObjectiveOption`); 3 ta tanlov mustaqil saqlanadi, tartibidan qat'i nazar har bir to'g'ri variant mustaqil 1 ball keltiradi, umumiy 40 ballik tizim buzilmaydi. Imtihon paytida kalitlar sir saqlanadi.
+- **Listening CBT interfeysi**:
+  - 4 ta bo'lim (Section 1–4), 40 ta savol, audio ijro progressi, qat'iy vaqt hisobi, navigatsiya, xatoliklarni boshqarish, bo'lim audiolari va vaqt tamg'ali audio mosligi saqlanadi.
+- **Ishonchli avtosaqlash (Autosave)**:
+  - Saqlanmoqda / Saqlandi / Xatolik holatlari; navbatda kutilayotgan javoblar to'liq serverga jo'natilmaguncha imtihon yakunlanmaydi; uzilishlar va qayta yuklashlarda xavfsiz.
+- **IELTS Natijalar Tahlili Ekrani (`IeltsResultBreakdown`)**:
+  - To'g'ri (/40), Noto'g'ri, Javobsiz ko'rsatkichlari, IELTS Band bali, Sarflangan vaqt (daqiqalarda).
+  - Bo'limlar kesimidagi batafsil tahlil: Reading uchun 3 ta passage (P1, P2, P3), Listening uchun 4 ta section (S1, S2, S3, S4) aniqlik ko'rsatkichlari va progress barlari.
+  - Rasmiy Academic va General Training ballar jadvali tushuntirishlari.
+  - Amaliyot (Practice) rejimida Band bali ko'rsatilishi taqiqlandi (S4 qoidasi).
+- **Xatolarni batafsil ko'rib chiqish (`ResultReviewTable`)**:
+  - Qulay filtrlash: Barchasi (All), Noto'g'ri (Wrong), Javobsiz (Unanswered), To'g'ri (Correct), Belgilangan (Flagged).
+  - Bo'limlar bo'yicha guruhlash: Reading uchun Passage bo'yicha, Listening uchun Section bo'yicha guruhlash va har bir guruh uchun to'g'ri javoblar ko'rsatkichi (`X/Y to'g'ri`).
+  - Talaba javobi, rasmiy kalit, holat, tushuntirish, matn/audio transkript dalili (Passage / Audio transcript evidence), olingan ball.
+- **Writing va Speaking integratsiyasi**:
+  - Listening → Reading → Writing → Speaking → Natijalar safari saqlanadi. Obyektiv bo'limlar tekshirilgach, Writing/Speaking baholash kutilayotganligi aniq ko'rsatiladi va chala umumiy band to'qilmaydi.
+- **Tekshiruv**:
+  - Mock komponentlar testlari: 44 ta fayl, 280/280 test o'tdi (100% PASS).
+  - Yangi testlar: `ielts-result-breakdown.spec.ts` (4 test), `result-review-table.spec.ts` (6 test), `objective-question.spec.ts` (14 test), `mock-result-view.spec.ts` (22 test).
+  - Dizayn tizimi: `src/design-system.spec.ts` (74/74 passed).
+  - TypeScript: `npx tsc --noEmit` (0 xato).
+  - Backend: `pytest` mock parse/authoring/scoring/attempts testlari (94 passed, 1 skipped).
+  - Next.js: `npm run build` muvaffaqiyatli yakunlandi (100 sahifa).
+- **Git & PR**: Branch `feat/bestway-ielts-cbt-2`, muallif: `Komiljon Roziyev <kruziyev0@gmail.com>`, Zero AI attribution qoidasi to'liq ta'minlandi.
+
 ### 53-BLOK: Smart Exam Import v2 — 4 ta IELTS ko'nikmasi (Listening, Reading, Writing, Speaking), universal tahlil va saqlash (2026-11-22) — PR #212, branch `fix/bestway-smart-import-v2`
 - **4 ta ko'nikma uchun to'liq tahlil va import arxitekturasi**:
   1. *Listening*: 4 ta bo'lim (Section 1–4), 40 ta savol (1–10, 11–20, 21–30, 31–40), bo'lim yo'riqnomalari, so'z cheklovlari (masalan: `NO MORE THAN TWO WORDS`), barcha savol turlari (Form/Note/Table/Flowchart/Sentence completion, Map and Plan labelling, Matching, Multiple Choice, Short Answer, Multi-select). Har bir bo'lim uchun alohida audio yoki vaqt tamg'ali yagona audio qo'llab-quvvatlanadi. Audio yuklanmagan bo'lsa imtihon DRAFT sifatida saqlanadi, to'liq bo'lmagan Listening imtihonini nashr etish bloklanadi.
