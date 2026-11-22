@@ -78,9 +78,9 @@ def instant_evaluate_view(request):
     )
     return success(result)
 
-@transaction.atomic
 @api_view(['POST'])
 @permission_classes([roles('teacher', 'admin', 'super_admin')])
+@transaction.atomic
 def teacher_grade(request, attempt_id):
     from apps.legacy_schema.models import MockAttempt
 

@@ -415,12 +415,11 @@ def edit_time(item, now):
     return min(datetime.fromtimestamp(float(value) / 1000, tz=dt_timezone.utc), now)
 
 
-def save_answers(actor, attempt_id, items, *, bulk=False, force=False):
+def save_answers(actor, attempt_id, items, *, bulk=False):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         assert_in_progress(attempt)
-        if not force:
-            assert_time(attempt)
+        assert_time(attempt)
         if not bulk:
             assert_question(attempt, items[0]['questionId'])
         valid = questions(attempt, [a['questionId'] for a in items])
