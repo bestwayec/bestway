@@ -15,9 +15,9 @@
 | **0** | Safe Repository Recovery | `main` | **PASS** | N/A | `7e0e1f3` | origin/main synced, PR #212 & #213 merged, DB verified |
 | **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | #214 | `30e4261` | 4/4 GitHub CI passed (115 backend / 280 frontend) |
 | **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | #215 | `e8b893f` | 4/4 GitHub CI passed (119 backend / 90 frontend) |
-| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | TBD | Pending | 283 frontend / 119 backend passed, 0 type errors |
-| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **IN PROGRESS** | TBD | Pending | Active |
-| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **UNVERIFIED** | TBD | Pending | Queued |
+| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `35e19fc` | 283 frontend / 119 backend passed, 0 type errors |
+| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | Pending | 5 Phase 4 tests passed, 0 errors |
+| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **IN PROGRESS** | TBD | Pending | Active |
 | **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **UNVERIFIED** | TBD | Pending | Queued |
 
 ---
@@ -122,6 +122,41 @@
   - `npx vitest run src/components/mock/submit-confirm-modal.spec.ts`: 3 passed, 0 failed.
   - Full frontend mock suite: 283 passed across 45 test files (`npx vitest run src/components/mock/`).
   - Frontend TypeScript typecheck: 0 errors (`npx tsc --noEmit`).
+- **Commit SHA:** `35e19fc9b1eb8e860953a99e74287515b6d13d71`
+- **PR:** #216 (`https://github.com/bestwayec/bestway/pull/216`)
+- **Remaining Blockers:** None.
+- **Verification Status:** **PASS**
+
+---
+
+## Phase 4: AI Writing & Speaking Evaluation (PASS)
+- **Requirements:**
+  - **4.1 Writing Assessment Criteria:**
+    - Task Achievement / Task Response (TA/TR).
+    - Coherence & Cohesion (CC).
+    - Lexical Resource (LR).
+    - Grammatical Range & Accuracy (GRA).
+    - Official 0.0..9.0 half-band scale increments.
+    - Inline grammar corrections and vocabulary upgrades quoting candidate text.
+  - **4.2 Speaking Assessment Criteria:**
+    - Fluency & Coherence (FC).
+    - Lexical Resource (LR).
+    - Grammatical Range & Accuracy (GRA).
+    - Pronunciation (PR).
+    - Heuristic speech diagnostics: Words Per Minute (WPM), pause detection, filler tokens, phonetic watchlist.
+  - **4.3 Anti-Fabrication & Security Gates:**
+    - Prohibition of acoustic/audio fabrication when audio is missing/unavailable.
+    - Honest zero scoring (`build_zero_result`) returning null bands and zero raw scores on empty or unattempted submissions.
+    - STT provider failover chain (OpenRouter / Whisper / Gemini).
+- **Implemented Items:**
+  - Validated official 4-criterion IELTS Writing prompt structure (`assessment_prompts.py`).
+  - Validated official 4-criterion IELTS Speaking prompt and acoustic limitation enforcement (`assessment_prompts.py`).
+  - Verified speech diagnostics generator (`assessment_providers._generate_heuristic_speech_diagnostics`) for WPM, filler word detection, and phonetic watchlist matching.
+  - Verified anti-fabrication zero result builder (`assessment_worker.build_zero_result`) preventing false scores on empty submissions.
+  - Added dedicated Phase 4 test suite `backend-django/tests/test_phase4_ai_evaluation.py`.
+- **Tests:**
+  - `pytest tests/test_phase4_ai_evaluation.py`: 5 passed, 0 failed.
+  - Full backend regression suite: verified.
 - **Commit SHA:** Will be recorded upon commit.
 - **PR:** Will be recorded upon PR creation.
 - **Remaining Blockers:** None.
