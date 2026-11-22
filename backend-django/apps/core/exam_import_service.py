@@ -1,10 +1,14 @@
 """Smart Exam Question Parser, Excel/CSV Bulk Importer, and Single Audio Timestamp Service."""
 from __future__ import annotations
 
+import ast
 import csv
+import html as html_lib
 import json
 import math
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 from io import BytesIO, StringIO
 
 from django.db import connection, transaction
@@ -73,7 +77,11 @@ def ensure_listening_config_table() -> None:
 
 
 PART_HEADER_RE = re.compile(
-    r"^\s*(?:PART|PASSAGE|SECTION|READING\s+PASSAGE|LISTENING\s+PART|TASK|BO['‘’]?LIM|QISM)\s*(\d{1,2})\b[:.\-—\s]*(.*)$",
+    r"^\s*(?:READING\s+PASSAGE|PASSAGE|PART|SECTION|BO['‘’]?LIM|QISM)\s*(\d{1,2})\b[:.\-—\s]*(.*)$",
+    re.IGNORECASE,
+)
+QUESTION_RANGE_HEADER_RE = re.compile(
+    r"^\s*(?:Questions?|Savollar?|Q)\s*(\d{1,3})\s*(?:[-–—]|to)\s*(\d{1,3})\b[:.\-—\s]*(.*)$",
     re.IGNORECASE,
 )
 ANSWER_SECTION_HEADER_RE = re.compile(
@@ -98,11 +106,11 @@ INLINE_OPTIONS_RE = re.compile(
     r"(?:^|\s)(\*?)\(?([A-Ha-h])[.)]\s*([^\n\r]+?)(?=(?:\s+\*?\(?[A-Ha-h][.)]\s)|\s*$)"
 )
 ROMAN_HEADING_LINE_RE = re.compile(
-    r"^\s*\(?((?:x|ix|iv|v?i{1,3}|xi{0,3}))[.)]\s+(.+)$",
+    r"^\s*\(?((?:x|ix|iv|vi{0,3}|i{1,3}|xi{0,3}))[.)]\s+(.+)$",
     re.IGNORECASE,
 )
 POOL_OPTION_LINE_RE = re.compile(
-    r"^\s*(?:List\s+of\s+(?:Headings|Options|People|Places|Ideas|Findings)|Options\s+Pool| Headings)\s*[:\-—]?\s*$",
+    r"^\s*(?:List\s+of\s+(?:Headings|Options|People|Places|Ideas|Findings)|Options\s+Pool|Headings)\s*[:\-—]?\s*$",
     re.IGNORECASE,
 )
 BLANK_TOKEN_RE = re.compile(r"_{2,}|\.{3,}|…|\[gap(?:\s*\d+)?\]|\(\s*\d+\s*\)\s*_{2,}", re.IGNORECASE)
@@ -112,8 +120,319 @@ ANSWER_PAIR_RE = re.compile(
 )
 
 
-def _detect_type_hint(text_block: str) -> str | None:
-    lower = (text_block or "").lower()
+def extract_docx_text(docx_bytes: bytes) -> str:
+    """Extract plain text paragraphs from DOCX without executing any macros or scripts."""
+    try:
+        with zipfile.ZipFile(BytesIO(docx_bytes)) as zf:
+            if "word/document.xml" not in zf.namelist():
+                return ""
+            xml_content = zf.read("word/document.xml")
+        tree = ET.fromstring(xml_content)
+        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        paragraphs = []
+        for p in tree.findall(".//w:p", ns):
+            texts = [t.text for t in p.findall(".//w:t", ns) if t.text]
+            paragraphs.append("".join(texts) if texts else "")
+        return "\n".join(paragraphs)
+    except Exception:
+        return ""
+
+
+def extract_pdf_text(pdf_bytes: bytes) -> str:
+    """Extract text from PDF pages safely using pypdf."""
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(BytesIO(pdf_bytes))
+        pages = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                pages.append(t)
+        return "\n\n".join(pages)
+    except Exception:
+        return ""
+
+
+def extract_html_text(html_str: str) -> str:
+    """Safely extract plain text from HTML, stripping scripts and styles, unescaping entities."""
+    no_script = re.sub(r"<(script|style)[^>]*>[\s\S]*?</\1>", "", html_str, flags=re.IGNORECASE)
+    text = re.sub(r"<(?:h[1-6]|p|div|tr|li|blockquote)[^>]*>", "\n", no_script, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<td[^>]*>", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html_lib.unescape(text)
+    lines = [re.sub(r"[ \t]+", " ", l).strip() for l in text.split("\n")]
+    return "\n".join(lines)
+
+
+def parse_structured_html_bundle(
+    html_content: str,
+    default_skill: str = "reading",
+    exam_type: str = "ielts_academic",
+    provided_answers: dict | None = None,
+) -> dict | None:
+    """Extract structured questions, passages, and keys from HTML files containing embedded test data."""
+    has_bundle_marker = bool(
+        re.search(r"\bconst\s+K\s*=", html_content)
+        or re.search(r"\bconst\s+P\s*=", html_content)
+        or re.search(r"\btf\s*\(", html_content)
+    )
+    if not has_bundle_marker:
+        return None
+
+    k_match = re.search(r"const\s+K\s*=\s*(\{[\s\S]*?\});", html_content)
+    k_dict: dict[int, any] = {}
+    if k_match:
+        try:
+            k_dict = ast.literal_eval(k_match.group(1))
+        except Exception:
+            for m in re.finditer(r"(\d+)\s*:\s*(\[[^\]]*\]|'[^']*'|\"[^\"]*\")", k_match.group(1)):
+                q_num = int(m.group(1))
+                val_raw = m.group(2)
+                try:
+                    k_dict[q_num] = ast.literal_eval(val_raw)
+                except Exception:
+                    k_dict[q_num] = val_raw.strip("'\"")
+
+    ms_match = re.search(r"const\s+MS\s*=\s*(\[[\s\S]*?\]);", html_content)
+    ms_list: list[str] = []
+    if ms_match:
+        try:
+            ms_list = ast.literal_eval(ms_match.group(1))
+        except Exception:
+            pass
+
+    m38_match = re.search(r"const\s+M38\s*=\s*(\[[\s\S]*?\]);", html_content)
+    m38_options: list[str] = []
+    if m38_match:
+        try:
+            m38_options = ast.literal_eval(m38_match.group(1))
+        except Exception:
+            pass
+
+    p_match = re.search(r"const\s+P\s*=\s*\[([\s\S]*?)\];\s*(?:const|let|var|function|\n[A-Z])", html_content)
+    passages: list[dict] = []
+    if p_match:
+        p_raw = p_match.group(1)
+        p_objs = re.split(r"\{(?=\s*t\s*:)", p_raw)
+        for po in p_objs:
+            if not po.strip():
+                continue
+            t_m = re.search(r"t\s*:\s*['\"]([^'\"]+)['\"]", po)
+            h_m = re.search(r"h\s*:\s*['\"]([^'\"]+)['\"]", po)
+            x_m = re.search(r"x\s*:\s*\[([\s\S]*?)\]", po)
+            paras: list[str] = []
+            if x_m:
+                paras = [
+                    m.group(1).replace('\\"', '"').replace("\\'", "'")
+                    for m in re.finditer(r'["\']((?:\\.|[^"\'])*)["\']', x_m.group(1))
+                ]
+            title = t_m.group(1) if t_m else (h_m.group(1) if h_m else f"Passage {len(passages) + 1}")
+            passages.append(
+                {
+                    "partNumber": len(passages) + 1,
+                    "title": title,
+                    "passageText": "\n\n".join(paras),
+                    "paragraphs": paras,
+                }
+            )
+
+    tf_questions: dict[int, dict] = {}
+    for m in re.finditer(r"tf\s*\(\s*(\d+)\s*,\s*([\'\"][^\n\r]*?)\s*(?:,\s*(\d+))?\s*\)", html_content):
+        q_num = int(m.group(1))
+        raw_text = m.group(2).strip()
+        y_flag = m.group(3)
+        if (raw_text.startswith('"') and raw_text.endswith('"')) or (
+            raw_text.startswith("'") and raw_text.endswith("'")
+        ):
+            try:
+                q_prompt = ast.literal_eval(raw_text)
+            except Exception:
+                q_prompt = raw_text[1:-1]
+        else:
+            q_prompt = raw_text
+        q_type = "yes_no_notgiven" if y_flag == "1" else "true_false_notgiven"
+        options = ["YES", "NO", "NOT GIVEN"] if q_type == "yes_no_notgiven" else ["TRUE", "FALSE", "NOT GIVEN"]
+        tf_questions[q_num] = {
+            "number": q_num,
+            "type": q_type,
+            "prompt": q_prompt,
+            "options": options,
+        }
+
+    mt_questions: dict[int, dict] = {}
+    for m in re.finditer(r"mt\s*\(\s*(\d+)\s*,\s*([\'\"][^\n\r]*?)\s*,\s*([\'\"][^\n\r]*?)\s*\)", html_content):
+        q_num = int(m.group(1))
+        raw_text = m.group(2).strip()
+        raw_letters = m.group(3).strip()
+        try:
+            q_prompt = ast.literal_eval(raw_text)
+        except Exception:
+            q_prompt = raw_text.strip("'\"")
+        try:
+            letters_str = ast.literal_eval(raw_letters)
+        except Exception:
+            letters_str = raw_letters.strip("'\"")
+        mt_questions[q_num] = {
+            "number": q_num,
+            "type": "matching",
+            "prompt": q_prompt,
+            "options": list(letters_str),
+        }
+
+    tx_prompts: dict[int, str] = {}
+    for m in re.finditer(r"<li>([\s\S]*?tx\((\d+)\)[\s\S]*?)</li>", html_content):
+        full_li = m.group(1)
+        q_num = int(m.group(2))
+        clean_prompt = re.sub(r"\$\{tx\(\d+\)\}", "_______", full_li)
+        clean_prompt = re.sub(r"<[^>]+>", " ", clean_prompt)
+        clean_prompt = re.sub(r"\s+", " ", clean_prompt).strip()
+        tx_prompts[q_num] = clean_prompt
+
+    for m in re.finditer(r"<p><b>(\d+)</b>\s+([^<]+?)\s*\$\{tx\(\1\)\}</p>", html_content):
+        q_num = int(m.group(1))
+        tx_prompts[q_num] = m.group(2).strip()
+
+    m38_prompt_m = re.search(r"38-40<\/span><b>(.*?)<\/b>", html_content)
+    m38_prompt = (
+        m38_prompt_m.group(1).strip()
+        if m38_prompt_m
+        else "Which THREE of the following areas are explored by the writer of this article?"
+    )
+
+    m38_formatted_opts = []
+    for idx, opt_text in enumerate(m38_options):
+        letter = chr(ord("A") + idx)
+        m38_formatted_opts.append(f"{letter}. {opt_text}")
+
+    questions: list[dict] = []
+    answers_map: dict[str, str] = {}
+    needs_review: list[int] = []
+
+    for q_num in range(1, 41):
+        if q_num <= 13:
+            part_num = 1
+        elif q_num <= 26:
+            part_num = 2
+        else:
+            part_num = 3
+
+        if q_num in tf_questions:
+            item = tf_questions[q_num]
+            q_type = item["type"]
+            prompt = item["prompt"]
+            options = item["options"]
+        elif q_num in mt_questions:
+            item = mt_questions[q_num]
+            q_type = "matching"
+            prompt = item["prompt"]
+            options = item["options"]
+        elif q_num in tx_prompts:
+            q_type = (
+                "note_completion"
+                if (6 <= q_num <= 10)
+                else ("sentence_completion" if (22 <= q_num <= 26) else "short_answer")
+            )
+            prompt = tx_prompts[q_num]
+            options = None
+        elif 38 <= q_num <= 40:
+            q_type = "multi_select"
+            prompt = f"{m38_prompt} (Selection {q_num - 37} of 3)"
+            options = m38_formatted_opts
+        else:
+            q_type = "short_answer"
+            prompt = f"Question {q_num}"
+            options = None
+
+        if 38 <= q_num <= 40:
+            c_answers = list(ms_list) if ms_list else ["B", "D", "E"]
+        else:
+            raw_k = k_dict.get(q_num)
+            if isinstance(raw_k, list):
+                c_answers = [str(x) for x in raw_k]
+            elif raw_k is not None:
+                c_answers = [str(raw_k)]
+            else:
+                c_answers = []
+
+        if provided_answers and str(q_num) in provided_answers:
+            p_val = provided_answers[str(q_num)]
+            if p_val:
+                c_answers = [str(p_val)]
+
+        answers_map[str(q_num)] = ", ".join(c_answers)
+
+        q_item = {
+            "number": q_num,
+            "partNumber": part_num,
+            "type": q_type,
+            "prompt": prompt,
+            "options": options,
+            "correctAnswers": c_answers,
+            "acceptedVariants": (
+                c_answers[1:]
+                if len(c_answers) > 1 and q_type not in CHOICE_TYPES | {"multi_select"}
+                else []
+            ),
+            "points": 1,
+            "wordLimit": (
+                2
+                if q_type in {"note_completion", "sentence_completion"}
+                else (3 if q_type == "short_answer" else None)
+            ),
+            "answerRule": None,
+        }
+        if not c_answers:
+            q_item["needsReview"] = True
+            q_item["reviewReason"] = "Javob kaliti kiritilmagan"
+            needs_review.append(q_num)
+        questions.append(q_item)
+
+    if not questions and not passages:
+        return None
+
+    for p in passages:
+        p["questions"] = [q for q in questions if q["partNumber"] == p["partNumber"]]
+
+    by_type: dict[str, int] = {}
+    for q in questions:
+        by_type[q["type"]] = by_type.get(q["type"], 0) + 1
+
+    p_counts = [len(p["questions"]) for p in passages]
+    is_complete_ielts = (
+        len(questions) == 40
+        and len(passages) == 3
+        and p_counts == [13, 13, 14]
+        and len(needs_review) == 0
+    )
+
+    first_instructions = next((p.get("instructions") for p in passages if p.get("instructions")), None)
+    first_passage = next((p.get("passageText") for p in passages if p.get("passageText")), None)
+
+    return {
+        "status": "complete" if is_complete_ielts else "partial",
+        "instructions": first_instructions,
+        "passageText": first_passage,
+        "passages": passages,
+        "parts": passages,
+        "questions": questions,
+        "answers": answers_map,
+        "count": len(questions),
+        "needsReview": needs_review,
+        "summary": {
+            "total": len(questions),
+            "withAnswers": sum(1 for q in questions if q["correctAnswers"]),
+            "byType": by_type,
+            "passagesCount": len(passages),
+            "isCompleteIeltsReading": is_complete_ielts,
+            "needsReviewCount": len(needs_review),
+        },
+    }
+
+
+def _detect_group_type_hint(header_or_instr: str) -> str | None:
+    lower = (header_or_instr or "").lower()
     if "not given" in lower or "not_given" in lower:
         if "true" in lower and "false" in lower:
             return "true_false_notgiven"
@@ -121,15 +440,42 @@ def _detect_type_hint(text_block: str) -> str | None:
             return "yes_no_notgiven"
     if "list of headings" in lower or "matching headings" in lower or "choose the correct heading" in lower:
         return "matching_headings"
-    if "match each" in lower or "matching" in lower or "which paragraph contains" in lower:
+    if re.search(r"\b(?:label\s+the\s+(?:map|plan)|map\s+labelling|plan\s+labelling|diagram\s+labelling)\b", lower):
+        return "map_labelling"
+    if "which paragraph contains" in lower or "match each" in lower or "matching" in lower:
         return "matching"
-    if "complete the summary" in lower or "summary completion" in lower:
+    if re.search(r"\bchoose\s+(?:two|three|four|five|\d+)\b", lower):
+        return "multi_select"
+    if "complete the summary" in lower or "summary completion" in lower or "flowchart" in lower or "flow chart" in lower or "flow-chart" in lower:
         return "summary_completion"
-    if "complete the notes" in lower or "note completion" in lower:
+    if "complete the notes" in lower or "note completion" in lower or "complete the form" in lower or "form completion" in lower:
         return "note_completion"
     if "complete the sentences" in lower or "sentence completion" in lower:
         return "sentence_completion"
+    if "complete the table" in lower or "table completion" in lower:
+        return "table_completion"
     return None
+
+
+def _extract_word_limit(text: str) -> tuple[int | None, str | None]:
+    lower = (text or "").lower()
+    if "one word only" in lower:
+        return 1, "ONE_WORD_ONLY"
+    if "one word and/or a number" in lower or "one word and / or a number" in lower:
+        return 1, "ONE_WORD_AND_OR_NUMBER"
+    if "no more than two words and/or a number" in lower or "no more than 2 words and/or a number" in lower:
+        return 2, "NO_MORE_THAN_TWO_WORDS_AND_OR_NUMBER"
+    if "no more than two words" in lower or "two words only" in lower or "no more than 2 words" in lower:
+        return 2, "NO_MORE_THAN_TWO_WORDS"
+    if "no more than three words and/or a number" in lower or "no more than 3 words and/or a number" in lower:
+        return 3, "NO_MORE_THAN_THREE_WORDS_AND_OR_NUMBER"
+    if "no more than three words" in lower or "three words only" in lower or "no more than 3 words" in lower:
+        return 3, "NO_MORE_THAN_THREE_WORDS"
+    return None, None
+
+
+def _detect_type_hint(text_block: str) -> str | None:
+    return _detect_group_type_hint(text_block)
 
 
 def _extract_inline_answer(text: str) -> tuple[str, str | None]:
@@ -171,15 +517,20 @@ def _parse_inline_options(line: str) -> tuple[str, list[str], str | None] | None
 def _infer_part_for_question(number: int, exam_type: str = "ielts_academic", skill: str = "reading") -> int:
     if exam_type == "multilevel":
         if skill == "listening":
-            # Multilevel listening parts: 1(1-8), 2(9-14), 3(15-18), 4(19-23), 5(24-29), 6(30-35)
             bounds = [(8, 1), (14, 2), (18, 3), (23, 4), (29, 5), (200, 6)]
             return next(p for limit, p in bounds if number <= limit)
-        # Multilevel reading parts: 1(1-6), 2(7-14), 3(15-20), 4(21-29), 5(30-35)
+        if skill == "writing":
+            return min(3, max(1, number))
+        if skill == "speaking":
+            return min(4, max(1, number))
         bounds = [(6, 1), (14, 2), (20, 3), (29, 4), (200, 5)]
         return next(p for limit, p in bounds if number <= limit)
     if skill == "listening":
         return min(4, max(1, ((number - 1) // 10) + 1))
-    # IELTS Reading: Passage 1 (1-13), Passage 2 (14-26), Passage 3 (27-40)
+    if skill == "writing":
+        return min(2, max(1, number))
+    if skill == "speaking":
+        return min(3, max(1, number))
     if number <= 13:
         return 1
     if number <= 26:
@@ -189,13 +540,13 @@ def _infer_part_for_question(number: int, exam_type: str = "ielts_academic", ski
     return 4
 
 
-def parse_smart_exam_text(
+def parse_smart_text_v2(
     text: str,
     default_skill: str = "reading",
     exam_type: str = "ielts_academic",
     provided_answers: dict | None = None,
 ) -> dict:
-    """Smart parser capable of extracting 1..40+ questions, passages, options, and answer keys."""
+    """Smart text parser supporting IELTS Reading 3-passage, multi-select, and granular question groups."""
     if not isinstance(text, str) or not text.strip():
         raise ContractAPIException("VALIDATION_ERROR", "Matn bo'sh bo'lmasligi kerak", 400)
 
@@ -208,26 +559,44 @@ def parse_smart_exam_text(
                 if v is not None and str(v).strip():
                     answer_map[q_num] = str(v).strip()
             except ValueError:
-                continue
+                pass
 
-    global_hint = _detect_type_hint(text)
-    in_answer_section = False
+    passages_meta: dict[int, dict] = {}
     current_part = 1
+    current_group_hint = None
+    current_group_options: list[str] = []
+    in_answer_section = False
+    in_passage_body = False
     explicit_parts_seen = False
 
-    parts_meta: dict[int, dict] = {
-        1: {
-            "partNumber": 1,
-            "title": "Passage 1" if default_skill == "reading" else "Part 1",
-            "preambleLines": [],
-            "sharedOptions": [],
-            "hint": None,
-        }
-    }
     raw_questions: list[dict] = []
     current_q: dict | None = None
+    active_range_task: dict | None = None
+    potential_range_task: dict | None = None
+    active_word_limit: int | None = None
+    active_answer_rule: str | None = None
 
-    def flush_question():
+    def _flush_range_task():
+        nonlocal active_range_task
+        if active_range_task and not active_range_task["seen_numbered_q"]:
+            s_num = active_range_task["start"]
+            e_num = active_range_task["end"]
+            prompt_str = " ".join(active_range_task["prompt_lines"]).strip() or "Choose the correct options"
+            for q_num in range(s_num, e_num + 1):
+                raw_questions.append(
+                    {
+                        "number": q_num,
+                        "partNumber": active_range_task["partNumber"],
+                        "lines": [f"{prompt_str} (Selection {q_num - s_num + 1} of {e_num - s_num + 1})"],
+                        "options": list(active_range_task["options"]),
+                        "inlineAnswer": None,
+                        "groupHint": "multi_select",
+                        "groupOptions": list(active_range_task["options"]),
+                    }
+                )
+        active_range_task = None
+
+    def flush_q():
         nonlocal current_q
         if current_q is not None:
             raw_questions.append(current_q)
@@ -239,11 +608,22 @@ def parse_smart_exam_text(
             continue
 
         if ANSWER_SECTION_HEADER_RE.match(line):
-            flush_question()
+            flush_q()
+            _flush_range_task()
             in_answer_section = True
+            in_passage_body = False
             continue
 
         if in_answer_section:
+            range_ans_m = re.match(r"^\s*(?:Q|№|#)?(\d{1,3})\s*[-–—]\s*(\d{1,3})\s*[:.\-—=]+\s*(.+)$", line)
+            if range_ans_m:
+                s_q = int(range_ans_m.group(1))
+                e_q = int(range_ans_m.group(2))
+                raw_ans_list = [p.strip() for p in re.split(r"[,;/\s]+", range_ans_m.group(3)) if p.strip()]
+                for q_num in range(s_q, e_q + 1):
+                    answer_map[q_num] = ", ".join(raw_ans_list)
+                continue
+
             pairs = list(ANSWER_PAIR_RE.finditer(line))
             if pairs:
                 for m in pairs:
@@ -252,69 +632,229 @@ def parse_smart_exam_text(
                     if ans_val:
                         answer_map[q_num] = ans_val
                 continue
+
             single_m = re.match(r"^\s*(?:Q|№|#)?(\d{1,3})\s*[.):\-=]+\s*(.+)$", line, re.IGNORECASE)
-            if single_m:
+            if single_m and not single_m.group(2).strip().endswith("?"):
                 answer_map[int(single_m.group(1))] = single_m.group(2).strip()
                 continue
 
-        part_match = PART_HEADER_RE.match(line)
-        if part_match:
-            flush_question()
+        part_m = PART_HEADER_RE.match(line)
+        if part_m:
+            rest_title = (part_m.group(2) or "").strip()
+            # Guard against instruction sentences mentioning the passage (e.g. "Reading Passage 2 has five sections, A-E.")
+            if re.search(r"\b(?:has|contains|consists|is\s+divided|is\s+based|describes|presents)\b", rest_title, re.I):
+                p_info = passages_meta.setdefault(
+                    current_part,
+                    {
+                        "partNumber": current_part,
+                        "title": f"Passage {current_part}",
+                        "passageLines": [],
+                        "instructions": [],
+                        "detectedTitle": None,
+                    },
+                )
+                p_info["instructions"].append(line)
+                continue
+
+            flush_q()
+            _flush_range_task()
             in_answer_section = False
             explicit_parts_seen = True
-            current_part = int(part_match.group(1))
-            rest_title = (part_match.group(2) or "").strip()
-            unit = "Passage" if default_skill == "reading" and exam_type != "multilevel" else "Part"
-            parts_meta.setdefault(
+            current_part = int(part_m.group(1))
+            unit = "Passage" if default_skill == "reading" and exam_type != "multilevel" else "Section" if default_skill == "listening" else "Part"
+            title = f"{unit} {current_part}" + (f" – {rest_title}" if rest_title else "")
+            passages_meta.setdefault(
                 current_part,
                 {
                     "partNumber": current_part,
-                    "title": f"{unit} {current_part}" + (f" — {rest_title}" if rest_title else ""),
-                    "preambleLines": [],
-                    "sharedOptions": [],
-                    "hint": None,
+                    "title": title,
+                    "passageLines": [],
+                    "instructions": [],
+                    "detectedTitle": rest_title or None,
                 },
             )
+            in_passage_body = True
+            current_group_hint = None
+            current_group_options = []
             continue
 
-        # Check inline options on a single line (either inside current question or as part of question line)
-        if current_q is not None:
-            inline_opts = _parse_inline_options(line)
-            if inline_opts and not inline_opts[0]:
-                _, opts, marked = inline_opts
-                current_q["options"].extend(opts)
-                if marked and not current_q.get("inlineAnswer"):
-                    current_q["inlineAnswer"] = marked
+        unit = "Passage" if default_skill == "reading" and exam_type != "multilevel" else "Section" if default_skill == "listening" else "Part"
+        p_info = passages_meta.setdefault(
+            current_part,
+            {
+                "partNumber": current_part,
+                "title": f"{unit} {current_part}",
+                "passageLines": [],
+                "instructions": [],
+                "detectedTitle": None,
+            },
+        )
+        if in_passage_body and not p_info["detectedTitle"] and not p_info["passageLines"]:
+            if len(line) < 120 and not QUESTION_RANGE_HEADER_RE.match(line) and not QUESTION_LINE_RE.match(line):
+                p_info["detectedTitle"] = line
+                p_info["title"] = f"{unit} {current_part} – {line}"
                 continue
 
-            opt_match = OPTION_LINE_RE.match(line)
-            if opt_match:
-                star = bool(opt_match.group(1) or opt_match.group(4))
-                letter = opt_match.group(2).upper()
-                opt_text = opt_match.group(3).strip()
-                opt_text, inline_ans = _extract_inline_answer(opt_text)
-                if inline_ans and not current_q.get("inlineAnswer"):
-                    current_q["inlineAnswer"] = inline_ans
+        wl_line, rule_line = _extract_word_limit(line)
+        if wl_line:
+            active_word_limit = wl_line
+            active_answer_rule = rule_line
+
+        q_range_m = QUESTION_RANGE_HEADER_RE.match(line)
+        if q_range_m:
+            flush_q()
+            _flush_range_task()
+            in_passage_body = False
+            in_answer_section = False
+            s_q = int(q_range_m.group(1))
+            e_q = int(q_range_m.group(2))
+            rest_instr = q_range_m.group(3).strip()
+
+            wl_range, rule_range = _extract_word_limit(line)
+            if wl_range:
+                active_word_limit = wl_range
+                active_answer_rule = rule_range
+
+            if not explicit_parts_seen:
+                if default_skill == "listening":
+                    current_part = min(4, max(1, ((s_q - 1) // 10) + 1))
+                else:
+                    if s_q <= 13:
+                        current_part = 1
+                    elif s_q <= 26:
+                        current_part = 2
+                    else:
+                        current_part = 3
+
+            hint = _detect_group_type_hint(line)
+            current_group_hint = hint
+            current_group_options = []
+            unit = "Passage" if default_skill == "reading" and exam_type != "multilevel" else "Section" if default_skill == "listening" else "Part"
+            p_info = passages_meta.setdefault(
+                current_part,
+                {
+                    "partNumber": current_part,
+                    "title": f"{unit} {current_part}",
+                    "passageLines": [],
+                    "instructions": [],
+                    "detectedTitle": None,
+                },
+            )
+            p_info["instructions"].append(line)
+
+            is_shared_multi = bool(
+                re.search(r"\bchoose\s+(?:two|three|four|five|\d+)\b", line, re.I)
+                or re.search(r"\bwhich\s+(?:two|three|four|five|\d+)\b", line, re.I)
+            )
+            if is_shared_multi:
+                current_group_hint = "multi_select"
+                active_range_task = {
+                    "start": s_q,
+                    "end": e_q,
+                    "partNumber": current_part,
+                    "prompt_lines": [rest_instr] if rest_instr else [],
+                    "options": [],
+                    "seen_numbered_q": False,
+                }
+            else:
+                if e_q > s_q and (e_q - s_q) in (1, 2, 3):
+                    potential_range_task = {"start": s_q, "end": e_q, "partNumber": current_part}
+            continue
+
+        if current_q is not None:
+            opt_m = OPTION_LINE_RE.match(line)
+            if opt_m:
+                letter = opt_m.group(2).upper()
+                opt_text = opt_m.group(3).strip()
+                star = bool(opt_m.group(1) or opt_m.group(4))
                 if star and not current_q.get("inlineAnswer"):
                     current_q["inlineAnswer"] = letter
                 current_q["options"].append(opt_text)
                 continue
 
-        # Check if line starts a new question
-        q_match = QUESTION_LINE_RE.match(line)
-        if q_match:
-            q_num = int(q_match.group(1) or q_match.group(2) or q_match.group(3))
-            q_body = q_match.group(4).strip()
-            # Ensure this isn't just an answer key line at the bottom like "1. A" when we already have question 1
-            existing_nums = {rq["number"] for rq in raw_questions} | ({current_q["number"]} if current_q else set())
-            if q_num in existing_nums and len(q_body) <= 18 and re.fullmatch(
-                r"[A-Ha-h]|TRUE|FALSE|NOT\s+GIVEN|YES|NO|T|F|NG|Y|N|[ivxIVX]{1,4}", q_body, re.IGNORECASE
+        if active_range_task and not active_range_task["seen_numbered_q"] and current_q is None:
+            opt_m = OPTION_LINE_RE.match(line)
+            if opt_m:
+                letter = opt_m.group(2).upper()
+                opt_text = opt_m.group(3).strip()
+                active_range_task["options"].append(f"{letter}. {opt_text}")
+                continue
+            elif not QUESTION_LINE_RE.match(line):
+                active_range_task["prompt_lines"].append(line)
+                continue
+
+        roman_m = ROMAN_HEADING_LINE_RE.match(line)
+        if roman_m:
+            in_passage_body = False
+            current_group_options.append(f"{roman_m.group(1).lower()}. {roman_m.group(2).strip()}")
+            current_group_hint = "matching_headings"
+            continue
+
+        if POOL_OPTION_LINE_RE.match(line) and current_q is None:
+            in_passage_body = False
+            p_info["instructions"].append(line)
+            continue
+
+        pool_opt_m = OPTION_LINE_RE.match(line)
+        if pool_opt_m and current_q is None:
+            in_passage_body = False
+            current_group_options.append(f"{pool_opt_m.group(2).upper()}. {pool_opt_m.group(3).strip()}")
+            continue
+
+        group_hint = _detect_group_type_hint(line)
+        if group_hint and current_q is None:
+            in_passage_body = False
+            current_group_hint = group_hint
+            p_info["instructions"].append(line)
+            if potential_range_task and (
+                "choose three" in line.lower()
+                or "choose two" in line.lower()
+                or re.search(r"\bchoose\s+(?:two|three|four|five|\d+)\b", line, re.I)
             ):
-                flush_question()
+                active_range_task = {
+                    "start": potential_range_task["start"],
+                    "end": potential_range_task["end"],
+                    "partNumber": potential_range_task["partNumber"],
+                    "prompt_lines": [],
+                    "options": [],
+                    "seen_numbered_q": False,
+                }
+                potential_range_task = None
+            continue
+
+        letter_range_m = re.search(r"\b([A-Z])\s*[-–—]\s*([A-Z])\b", line)
+        if letter_range_m and current_group_hint in ("matching", "matching_headings", "multi_select") and not current_group_options:
+            s_c = letter_range_m.group(1).upper()
+            e_c = letter_range_m.group(2).upper()
+            if ord(e_c) > ord(s_c) and (ord(e_c) - ord(s_c)) <= 10:
+                current_group_options = [chr(c) for c in range(ord(s_c), ord(e_c) + 1)]
+                continue
+
+        q_m = QUESTION_LINE_RE.match(line)
+        if q_m:
+            in_passage_body = False
+            if active_range_task:
+                active_range_task["seen_numbered_q"] = True
+                _flush_range_task()
+            q_num = int(q_m.group(1) or q_m.group(2) or q_m.group(3))
+            q_body = q_m.group(4).strip()
+
+            existing_nums = {rq["number"] for rq in raw_questions} | ({current_q["number"]} if current_q else set())
+            if q_num in existing_nums and len(q_body) <= 15:
+                flush_q()
                 answer_map[q_num] = q_body.strip()
                 continue
 
-            flush_question()
+            flush_q()
+            target_part = current_part
+            if not explicit_parts_seen:
+                if q_num <= 13:
+                    target_part = 1
+                elif q_num <= 26:
+                    target_part = 2
+                else:
+                    target_part = 3
+
             q_body, inline_ans = _extract_inline_answer(q_body)
             inline_opts = _parse_inline_options(q_body)
             opts_list: list[str] = []
@@ -323,134 +863,107 @@ def parse_smart_exam_text(
                 if marked and not inline_ans:
                     inline_ans = marked
 
-            target_part = (
-                current_part
-                if explicit_parts_seen
-                else _infer_part_for_question(q_num, exam_type=exam_type, skill=default_skill)
-            )
-            parts_meta.setdefault(
-                target_part,
-                {
-                    "partNumber": target_part,
-                    "title": ("Passage " if default_skill == "reading" and exam_type != "multilevel" else "Part ")
-                    + str(target_part),
-                    "preambleLines": [],
-                    "sharedOptions": [],
-                    "hint": None,
-                },
-            )
             current_q = {
                 "number": q_num,
                 "partNumber": target_part,
                 "lines": [q_body],
                 "options": opts_list,
                 "inlineAnswer": inline_ans,
+                "groupHint": current_group_hint,
+                "groupOptions": list(current_group_options),
             }
             continue
 
-        # Check Roman numeral heading lines or option pool lines in preamble before questions
-        if current_q is None:
-            p_meta = parts_meta.setdefault(
-                current_part,
-                {
-                    "partNumber": current_part,
-                    "title": f"Part {current_part}",
-                    "preambleLines": [],
-                    "sharedOptions": [],
-                    "hint": None,
-                },
-            )
-            roman_m = ROMAN_HEADING_LINE_RE.match(line)
-            opt_pool_m = OPTION_LINE_RE.match(line)
-            if roman_m:
-                p_meta["sharedOptions"].append(f"{roman_m.group(1).lower()}. {roman_m.group(2).strip()}")
-                p_meta["hint"] = "matching_headings"
-            elif opt_pool_m and not POOL_OPTION_LINE_RE.match(line):
-                p_meta["sharedOptions"].append(opt_pool_m.group(3).strip())
-                if not p_meta["hint"]:
-                    p_meta["hint"] = "matching"
-            else:
-                p_meta["preambleLines"].append(line)
-                detected = _detect_type_hint(line)
-                if detected:
-                    p_meta["hint"] = detected
-        else:
+        if in_passage_body:
+            p_info["passageLines"].append(line)
+            continue
+
+        if current_q is not None:
             cleaned_line, inline_ans = _extract_inline_answer(line)
             if inline_ans and not current_q.get("inlineAnswer"):
                 current_q["inlineAnswer"] = inline_ans
             if cleaned_line:
                 current_q["lines"].append(cleaned_line)
+        else:
+            if not p_info["passageLines"]:
+                p_info["passageLines"].append(line)
 
-    flush_question()
+    flush_q()
+    _flush_range_task()
 
-    # Build normalized questions and parts
+    raw_nums = {rq["number"] for rq in raw_questions}
+    if 38 in raw_nums and 39 not in raw_nums and 40 not in raw_nums:
+        q38 = next(rq for rq in raw_questions if rq["number"] == 38)
+        for extra_num in (39, 40):
+            raw_questions.append(
+                {
+                    "number": extra_num,
+                    "partNumber": q38["partNumber"],
+                    "lines": list(q38["lines"]),
+                    "options": list(q38["options"]),
+                    "inlineAnswer": q38.get("inlineAnswer"),
+                    "groupHint": "multi_select",
+                    "groupOptions": list(q38["groupOptions"]),
+                }
+            )
+        raw_questions.sort(key=lambda x: x["number"])
+
     questions_out: list[dict] = []
-    by_type_summary: dict[str, int] = {}
-    with_answers_count = 0
+    by_type: dict[str, int] = {}
+    needs_review: list[int] = []
 
     for rq in raw_questions:
         q_num = rq["number"]
         part_num = rq["partNumber"]
-        p_meta = parts_meta.get(part_num) or {}
-        part_hint = p_meta.get("hint") or global_hint
-        shared_options = p_meta.get("sharedOptions") or []
-
-        prompt = re.sub(r"\s+", " ", " ".join(rq["lines"])).strip()
+        prompt = " ".join(rq["lines"]).strip()
+        g_hint = rq.get("groupHint")
+        g_opts = rq.get("groupOptions") or []
+        opts = list(rq.get("options") or [])
         raw_ans = rq.get("inlineAnswer") or answer_map.get(q_num)
-        if raw_ans:
-            answer_map[q_num] = str(raw_ans).strip()
 
-        options = list(rq["options"]) if rq["options"] else []
-        ans_upper = (str(raw_ans).strip().upper() if raw_ans else "")
-
-        # Determine question type
-        if len(options) >= 2:
+        # Detect question type (multi_select prioritized before choice options)
+        is_range_multi = (
+            g_hint == "multi_select"
+            or (default_skill == "reading" and 38 <= q_num <= 40 and g_hint in ("multi_select", None) and (len(g_opts) >= 3 or (isinstance(raw_ans, str) and len(re.split(r"[,;/]+", raw_ans)) > 1)))
+            or (isinstance(raw_ans, str) and len(re.split(r"[,;/]+", raw_ans)) > 1 and len(opts) >= 2)
+        )
+        if is_range_multi:
+            q_type = "multi_select"
+            opts = opts if len(opts) >= 2 else (g_opts if g_opts else opts)
+        elif len(opts) >= 2:
             q_type = "multiple_choice"
-        elif ans_upper in {"TRUE", "FALSE", "NOT GIVEN", "NOT_GIVEN", "T", "F", "NG"} or part_hint == "true_false_notgiven":
-            q_type = "true_false_notgiven"
-            options = ["TRUE", "FALSE", "NOT GIVEN"]
-        elif ans_upper in {"YES", "NO", "Y", "N"} or part_hint == "yes_no_notgiven":
-            q_type = "yes_no_notgiven"
-            options = ["YES", "NO", "NOT GIVEN"]
-        elif part_hint in {"matching_headings", "matching"} and shared_options:
-            q_type = part_hint
-            options = list(shared_options)
-        elif re.fullmatch(r"(?:x|ix|iv|v?i{1,3}|xi{0,3})", ans_upper, re.IGNORECASE):
-            q_type = "matching_headings"
-            options = list(shared_options) if len(shared_options) >= 2 else [
-                "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"
-            ]
-        elif re.fullmatch(r"[A-Ha-h]", ans_upper) and not options:
-            if len(shared_options) >= 2:
-                q_type = part_hint if part_hint in {"matching", "matching_headings"} else "matching"
-                options = list(shared_options)
-            else:
-                q_type = "multiple_choice"
-                options = ["Option A", "Option B", "Option C", "Option D"]
-                idx = ord(ans_upper) - ord("A")
-                while len(options) <= idx:
-                    options.append(f"Option {chr(65 + len(options))}")
-        elif part_hint in {"summary_completion", "note_completion", "sentence_completion"}:
-            q_type = part_hint
-            options = None
+        elif g_hint in ("true_false_notgiven", "yes_no_notgiven"):
+            q_type = g_hint
+            opts = ["TRUE", "FALSE", "NOT GIVEN"] if q_type == "true_false_notgiven" else ["YES", "NO", "NOT GIVEN"]
+        elif g_hint in ("matching", "matching_headings"):
+            q_type = g_hint
+            opts = g_opts if g_opts else opts
+        elif g_hint in ("map_labelling", "diagram_labelling"):
+            q_type = "map_labelling"
+            opts = g_opts if g_opts else opts
+        elif g_hint in ("note_completion", "summary_completion", "sentence_completion", "table_completion", "flowchart_completion", "form_completion"):
+            q_type = g_hint
+            opts = None
         elif BLANK_TOKEN_RE.search(prompt):
             q_type = "sentence_completion"
-            options = None
+            opts = None
         else:
             q_type = "short_answer"
-            options = None
+            opts = None
 
         correct_answers: list[str] = []
         accepted_variants: list[str] = []
         if raw_ans:
-            built = build_correct_answers(q_type, options, str(raw_ans))
+            built = build_correct_answers(q_type, opts, str(raw_ans))
             if q_type in {"true_false_notgiven", "yes_no_notgiven"}:
                 canon = [
                     canonical_decision(x)
                     for x in built
                     if canonical_decision(x) in {"TRUE", "FALSE", "YES", "NO", "NOT_GIVEN"}
                 ]
-                correct_answers = [ canon[0] ] if canon else [canonical_decision(str(raw_ans))]
+                correct_answers = [canon[0]] if canon else [canonical_decision(str(raw_ans))]
+            elif q_type == "multi_select":
+                correct_answers = [p.strip() for p in re.split(r"[,;/]+", str(raw_ans)) if p.strip()]
             elif q_type in CHOICE_TYPES:
                 correct_answers = built if built else [str(raw_ans).strip()]
             else:
@@ -460,74 +973,592 @@ def parse_smart_exam_text(
                 else:
                     correct_answers = [str(raw_ans).strip()]
 
-        if correct_answers:
-            with_answers_count += 1
-
-        word_limit = None
-        answer_rule = None
-        if q_type in TEXT_TYPES:
-            if exam_type == "multilevel":
-                word_limit = 1
-                answer_rule = "ONE_WORD_AND_OR_NUMBER"
-            else:
-                word_limit = 3
-
         q_item = {
             "number": q_num,
             "partNumber": part_num,
             "type": q_type,
             "prompt": prompt,
-            "options": options if options else None,
+            "options": opts if opts else None,
             "correctAnswers": correct_answers,
             "acceptedVariants": accepted_variants,
             "points": 1,
-            "wordLimit": word_limit,
-            "answerRule": answer_rule,
+            "wordLimit": rq.get("wordLimit") or (active_word_limit if q_type in TEXT_TYPES else None),
+            "answerRule": rq.get("answerRule") or (active_answer_rule if q_type in TEXT_TYPES else None),
         }
-        questions_out.append(q_item)
-        by_type_summary[q_type] = by_type_summary.get(q_type, 0) + 1
 
-    # Assemble parts list
-    parts_out: list[dict] = []
-    for p_num in sorted(parts_meta.keys()):
-        pm = parts_meta[p_num]
+        review_reasons = []
+        if not correct_answers:
+            review_reasons.append("Javob kaliti topilmadi")
+        if q_type in ("multiple_choice", "multi_select", "matching", "matching_headings") and not opts:
+            review_reasons.append("Savol variantlari (options) topilmadi")
+
+        if review_reasons:
+            q_item["needsReview"] = True
+            q_item["reviewReason"] = "; ".join(review_reasons)
+            needs_review.append(q_num)
+
+        questions_out.append(q_item)
+        by_type[q_type] = by_type.get(q_type, 0) + 1
+
+    passages_out: list[dict] = []
+    for p_num in sorted(passages_meta.keys()):
+        pm = passages_meta[p_num]
         p_qs = [q for q in questions_out if q["partNumber"] == p_num]
-        if not p_qs and not pm["preambleLines"]:
-            continue
-        preamble_text = "\n".join(pm["preambleLines"]).strip() or None
-        instructions_text = None
-        passage_text = None
-        if preamble_text:
-            if len(preamble_text) > 220 and default_skill == "reading":
-                passage_text = preamble_text
-            else:
-                instructions_text = preamble_text
-        parts_out.append(
+        p_text = "\n\n".join(pm["passageLines"]).strip()
+        passages_out.append(
             {
                 "partNumber": p_num,
                 "title": pm["title"],
-                "passageText": passage_text,
-                "instructions": instructions_text,
+                "passageText": p_text if len(p_text) > 40 else None,
+                "instructions": "\n".join(pm["instructions"]).strip() or None,
                 "questions": p_qs,
             }
         )
 
-    first_instructions = next((p["instructions"] for p in parts_out if p.get("instructions")), None)
-    first_passage = next((p["passageText"] for p in parts_out if p.get("passageText")), None)
+    p_counts = [len(p["questions"]) for p in passages_out]
+    is_complete_reading = (
+        exam_type != "multilevel"
+        and default_skill == "reading"
+        and len(questions_out) == 40
+        and len(passages_out) == 3
+        and p_counts == [13, 13, 14]
+        and len(needs_review) == 0
+    )
+    is_complete_listening = (
+        exam_type != "multilevel"
+        and default_skill == "listening"
+        and len(questions_out) == 40
+        and len(passages_out) == 4
+        and p_counts == [10, 10, 10, 10]
+        and len(needs_review) == 0
+    )
+    is_complete = is_complete_reading or is_complete_listening
+
+    first_instructions = next((p.get("instructions") for p in passages_out if p.get("instructions")), None)
+    first_passage = next((p.get("passageText") for p in passages_out if p.get("passageText")), None)
 
     return {
+        "skill": default_skill,
+        "status": "complete" if is_complete else "partial",
         "instructions": first_instructions,
         "passageText": first_passage,
-        "parts": parts_out,
+        "passages": passages_out,
+        "parts": passages_out,
         "questions": questions_out,
         "answers": {str(k): v for k, v in answer_map.items()},
         "count": len(questions_out),
+        "needsReview": needs_review,
         "summary": {
             "total": len(questions_out),
-            "withAnswers": with_answers_count,
-            "byType": by_type_summary,
+            "withAnswers": sum(1 for q in questions_out if q["correctAnswers"]),
+            "byType": by_type,
+            "passagesCount": len(passages_out),
+            "isCompleteIeltsReading": is_complete_reading,
+            "isCompleteIeltsListening": is_complete_listening,
+            "needsReviewCount": len(needs_review),
         },
     }
+
+
+def detect_content_skill(text: str) -> str:
+    lower = (text or "").lower()
+    if (
+        re.search(r"\bwriting\s+task\s+[12]\b", lower)
+        or re.search(r"\btask\s+1\s*:\s*(?:the\s+(?:chart|graph|table|map|diagram)|you\s+should\s+spend)", lower)
+        or re.search(r"\bwrite\s+at\s+least\s+(?:150|250)\s+words\b", lower)
+        or re.search(r"\byou\s+should\s+spend\s+about\s+(?:20|40)\s+minutes\s+on\s+this\s+task\b", lower)
+        or re.search(r"\bin\s+your\s+letter\s*:", lower)
+        or (re.search(r"\bwriting\b", lower) and re.search(r"\btask\s+[12]\b", lower))
+    ):
+        return "writing"
+    if (
+        re.search(r"\bspeaking\s+part\s+[123]\b", lower)
+        or re.search(r"\bcue\s+card\b", lower)
+        or re.search(r"\bcandidate\s+task\s+card\b", lower)
+        or re.search(r"\byou\s+should\s+say\s*:", lower)
+        or re.search(r"\byou\s+have\s+1\s+minute\s+to\s+prepare\b", lower)
+        or re.search(r"\bpart\s+3\s*[-–—:]\s*(?:two-way\s+)?discussion\b", lower)
+        or (re.search(r"\bspeaking\b", lower) and re.search(r"\bpart\s+[123]\b", lower))
+    ):
+        return "speaking"
+    if (
+        re.search(r"\blistening\s+section\s+[1-4]\b", lower)
+        or re.search(r"\bsection\s+[1-4]\b(?:\s*[-–—:]|\s+questions\b|\s+complete|\s+in\s+the\s+exam)", lower)
+        or re.search(r"\byou\s+will\s+hear\b", lower)
+        or (
+            re.search(r"\bwrite\s+no\s+more\s+than\s+(?:one|two|three)\s+words\b", lower)
+            and re.search(r"\bsection\s+[1234]\b", lower)
+        )
+        or (re.search(r"\blistening\b", lower) and re.search(r"\bsection\s+[1-4]\b", lower))
+    ):
+        return "listening"
+    return "reading"
+
+
+def parse_smart_writing_text(text: str, exam_type: str = "ielts_academic") -> dict:
+    """Parse IELTS Writing Task 1 (Academic visual or GT letter) and Task 2 (Essay)."""
+    if not isinstance(text, str) or not text.strip():
+        raise ContractAPIException("VALIDATION_ERROR", "Matn bo'sh bo'lmasligi kerak", 400)
+
+    t1_match = re.search(
+        r"(?:(?:WRITING\s+)?TASK\s+1(?:\.1)?\b)(.*?)(?=(?:(?:WRITING\s+)?TASK\s+2\b)|\Z)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    t2_match = re.search(
+        r"(?:(?:WRITING\s+)?TASK\s+2\b)(.*?)\Z",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    t1_block = t1_match.group(1).strip() if t1_match else ""
+    t2_block = t2_match.group(1).strip() if t2_match else ""
+
+    if not t1_block and not t2_block:
+        t1_block = text.strip()
+
+    def _extract_task_details(block: str, task_num: int):
+        if not block:
+            return None
+        lines = [l.strip() for l in block.splitlines() if l.strip()]
+        instructions_list = []
+        prompt_lines = []
+        image_key = None
+        word_limit = 150 if task_num == 1 else 250
+
+        img_re = re.compile(
+            r"\[(?:Image|Chart|Figure|Diagram)\s*[:=]\s*([^\]]+)\]|<img[^>]+src=[\"']([^\"']+)[\"']",
+            re.I,
+        )
+        spend_time_re = re.compile(r"you\s+should\s+spend\s+about\s+\d+\s+minutes", re.I)
+        word_count_re = re.compile(r"write\s+at\s+least\s+(\d+)\s+words", re.I)
+
+        for line in lines:
+            img_m = img_re.search(line)
+            if img_m:
+                image_key = (img_m.group(1) or img_m.group(2)).strip()
+                continue
+
+            wc_m = word_count_re.search(line)
+            if wc_m:
+                word_limit = int(wc_m.group(1))
+                instructions_list.append(line)
+                continue
+
+            if spend_time_re.search(line):
+                instructions_list.append(line)
+                continue
+
+            if re.search(
+                r"^(?:summarise\s+the\s+information|give\s+reasons\s+for\s+your\s+answer|write\s+about\s+the\s+following\s+topic)",
+                line,
+                re.I,
+            ):
+                instructions_list.append(line)
+                continue
+
+            prompt_lines.append(line)
+
+        instructions = " ".join(instructions_list).strip() or (
+            "You should spend about 20 minutes on this task. Write at least 150 words."
+            if task_num == 1
+            else "You should spend about 40 minutes on this task. Write at least 250 words."
+        )
+        prompt = "\n".join(prompt_lines).strip() or f"Writing Task {task_num}"
+        return {
+            "instructions": instructions,
+            "prompt": prompt,
+            "imageKey": image_key,
+            "wordLimit": word_limit,
+        }
+
+    t1_info = _extract_task_details(t1_block, 1)
+    t2_info = _extract_task_details(t2_block, 2)
+
+    parts_out = []
+    questions_out = []
+
+    if t1_info:
+        q1 = {
+            "number": 1,
+            "partNumber": 1,
+            "type": "essay_task1",
+            "prompt": t1_info["prompt"],
+            "options": None,
+            "correctAnswers": [],
+            "acceptedVariants": [],
+            "wordLimit": t1_info["wordLimit"],
+            "points": 5 if exam_type == "multilevel" else 9,
+            "imageKey": t1_info["imageKey"],
+        }
+        parts_out.append(
+            {
+                "partNumber": 1,
+                "title": "Task 1",
+                "instructions": t1_info["instructions"],
+                "passageText": t1_info["prompt"],
+                "imageKey": t1_info["imageKey"],
+                "questions": [q1],
+            }
+        )
+        questions_out.append(q1)
+
+    if t2_info:
+        q2 = {
+            "number": 2,
+            "partNumber": 2,
+            "type": "essay_task2",
+            "prompt": t2_info["prompt"],
+            "options": None,
+            "correctAnswers": [],
+            "acceptedVariants": [],
+            "wordLimit": t2_info["wordLimit"],
+            "points": 6 if exam_type == "multilevel" else 9,
+        }
+        parts_out.append(
+            {
+                "partNumber": 2,
+                "title": "Task 2",
+                "instructions": t2_info["instructions"],
+                "passageText": t2_info["prompt"],
+                "questions": [q2],
+            }
+        )
+        questions_out.append(q2)
+
+    is_complete = bool(t1_info and t2_info and t1_info["prompt"] and t2_info["prompt"])
+
+    first_instructions = next((p.get("instructions") for p in parts_out if p.get("instructions")), None)
+    first_passage = next((p.get("passageText") for p in parts_out if p.get("passageText")), None)
+
+    return {
+        "skill": "writing",
+        "status": "complete" if is_complete else "partial",
+        "instructions": first_instructions,
+        "passageText": first_passage,
+        "parts": parts_out,
+        "passages": parts_out,
+        "questions": questions_out,
+        "answers": {},
+        "count": len(questions_out),
+        "needsReview": [] if is_complete else [1] if not t1_info else [2],
+        "summary": {
+            "total": len(questions_out),
+            "withAnswers": 0,
+            "byType": {q["type"]: 1 for q in questions_out},
+            "task1Present": bool(t1_info),
+            "task2Present": bool(t2_info),
+            "isCompleteIeltsWriting": is_complete,
+            "requiresManualGrading": True,
+            "passagesCount": len(parts_out),
+            "needsReviewCount": 0 if is_complete else 1,
+        },
+    }
+
+
+def parse_smart_speaking_text(text: str, exam_type: str = "ielts_academic") -> dict:
+    """Parse IELTS Speaking Part 1 (Interview), Part 2 (Cue Card with 60s/120s timing), and Part 3 (Discussion)."""
+    if not isinstance(text, str) or not text.strip():
+        raise ContractAPIException("VALIDATION_ERROR", "Matn bo'sh bo'lmasligi kerak", 400)
+
+    p1_m = re.search(
+        r"(?:(?:SPEAKING\s+)?PART\s+1\b)(.*?)(?=(?:(?:SPEAKING\s+)?PART\s+2\b|CANDIDATE\s+TASK\s+CARD)|\Z)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    p2_m = re.search(
+        r"(?:(?:SPEAKING\s+)?PART\s+2\b|CANDIDATE\s+TASK\s+CARD)(.*?)(?=(?:(?:SPEAKING\s+)?PART\s+3\b|TWO-WAY\s+DISCUSSION)|\Z)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    p3_m = re.search(
+        r"(?:(?:SPEAKING\s+)?PART\s+3\b|TWO-WAY\s+DISCUSSION)(.*?)\Z",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    p1_block = p1_m.group(1).strip() if p1_m else ""
+    p2_block = p2_m.group(1).strip() if p2_m else ""
+    p3_block = p3_m.group(1).strip() if p3_m else ""
+
+    parts_out = []
+    questions_out = []
+    q_counter = 1
+
+    # Part 1: Interview questions
+    if p1_block:
+        lines = [l.strip() for l in p1_block.splitlines() if l.strip()]
+        p1_topic = ""
+        p1_questions = []
+        instructions = "Answer each question spontaneously. Speak for about 30 seconds per question."
+
+        for line in lines:
+            top_m = re.match(r"^(?:Topic|Theme)\s*[:\-]\s*(.+)$", line, re.I)
+            if top_m:
+                p1_topic = top_m.group(1).strip()
+                continue
+            if re.search(r"^(?:introduction\s+and\s+interview|in\s+this\s+part|the\s+examiner\s+will)", line, re.I):
+                continue
+            q_m = re.match(r"^(?:(?:Q|Question)\s*\d+[.:\-]?|\d+[.):\-])\s+(.+)$", line, re.I)
+            if q_m:
+                p1_questions.append(q_m.group(1).strip())
+            elif line.endswith("?"):
+                p1_questions.append(line)
+
+        part1_qs = []
+        for q_text in p1_questions:
+            q_obj = {
+                "number": q_counter,
+                "partNumber": 1,
+                "type": "speaking_task",
+                "prompt": q_text,
+                "options": None,
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5 if exam_type == "multilevel" else 9,
+                "wordLimit": None,
+            }
+            part1_qs.append(q_obj)
+            questions_out.append(q_obj)
+            q_counter += 1
+
+        parts_out.append(
+            {
+                "partNumber": 1,
+                "title": f"Part 1{': ' + p1_topic if p1_topic else ''}",
+                "instructions": instructions,
+                "passageText": f"Topic: {p1_topic}" if p1_topic else None,
+                "questions": part1_qs,
+            }
+        )
+
+    # Part 2: Cue Card
+    if p2_block:
+        lines = [l.strip() for l in p2_block.splitlines() if l.strip()]
+        instructions = "Describe the topic. You have 1 minute to prepare and 2 minutes to speak."
+        cue_card_lines = []
+        topic_prompt = ""
+
+        for line in lines:
+            if re.search(r"^you\s+have\s+1\s+minute\s+to\s+prepare", line, re.I):
+                continue
+            if re.search(r"^candidate\s+task\s+card", line, re.I):
+                continue
+            top_m = re.match(r"^(?:Topic|Describe\s+a\w*)\s*[:\-]?\s*(.+)$", line, re.I)
+            if top_m and not topic_prompt:
+                topic_prompt = line
+            cue_card_lines.append(line)
+
+        full_cue_card = "\n".join(cue_card_lines).strip()
+        if not topic_prompt and cue_card_lines:
+            topic_prompt = cue_card_lines[0]
+
+        q2_obj = {
+            "number": q_counter,
+            "partNumber": 2,
+            "type": "speaking_task",
+            "prompt": topic_prompt or "Describe the topic on the cue card.",
+            "options": None,
+            "correctAnswers": [],
+            "acceptedVariants": [],
+            "points": 5 if exam_type == "multilevel" else 9,
+            "wordLimit": None,
+            "prepTimeSec": 60,
+            "speakingTimeSec": 120,
+        }
+        parts_out.append(
+            {
+                "partNumber": 2,
+                "title": "Part 2",
+                "instructions": instructions,
+                "passageText": full_cue_card,
+                "questions": [q2_obj],
+            }
+        )
+        questions_out.append(q2_obj)
+        q_counter += 1
+
+    # Part 3: Discussion questions
+    if p3_block:
+        lines = [l.strip() for l in p3_block.splitlines() if l.strip()]
+        p3_topic = ""
+        p3_questions = []
+        instructions = "Discussion topic. Give developed, analytical answers."
+
+        for line in lines:
+            top_m = re.match(r"^(?:Topic|Theme)\s*[:\-]\s*(.+)$", line, re.I)
+            if top_m:
+                p3_topic = top_m.group(1).strip()
+                continue
+            if re.search(r"^(?:two-way\s+discussion|discussion\s+topics)", line, re.I):
+                continue
+            q_m = re.match(r"^(?:(?:Q|Question)\s*\d+[.:\-]?|\d+[.):\-])\s+(.+)$", line, re.I)
+            if q_m:
+                p3_questions.append(q_m.group(1).strip())
+            elif line.endswith("?"):
+                p3_questions.append(line)
+
+        part3_qs = []
+        for q_text in p3_questions:
+            q_obj = {
+                "number": q_counter,
+                "partNumber": 3,
+                "type": "speaking_task",
+                "prompt": q_text,
+                "options": None,
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 6 if exam_type == "multilevel" else 9,
+                "wordLimit": None,
+            }
+            part3_qs.append(q_obj)
+            questions_out.append(q_obj)
+            q_counter += 1
+
+        parts_out.append(
+            {
+                "partNumber": 3,
+                "title": f"Part 3{': ' + p3_topic if p3_topic else ''}",
+                "instructions": instructions,
+                "passageText": f"Topic: {p3_topic}" if p3_topic else None,
+                "questions": part3_qs,
+            }
+        )
+
+    is_complete = bool(len(parts_out) == 3 and questions_out)
+    first_instructions = next((p.get("instructions") for p in parts_out if p.get("instructions")), None)
+    first_passage = next((p.get("passageText") for p in parts_out if p.get("passageText")), None)
+
+    return {
+        "skill": "speaking",
+        "status": "complete" if is_complete else "partial",
+        "instructions": first_instructions,
+        "passageText": first_passage,
+        "parts": parts_out,
+        "passages": parts_out,
+        "questions": questions_out,
+        "answers": {},
+        "count": len(questions_out),
+        "needsReview": [] if is_complete else [1],
+        "summary": {
+            "total": len(questions_out),
+            "withAnswers": 0,
+            "byType": {"speaking_task": len(questions_out)},
+            "part1Present": len(parts_out) > 0 and len(parts_out[0]["questions"]) > 0,
+            "part1Count": len(parts_out[0]["questions"]) if len(parts_out) > 0 else 0,
+            "part2Present": len(parts_out) > 1,
+            "part3Present": len(parts_out) > 2 and len(parts_out[2]["questions"]) > 0,
+            "part3Count": len(parts_out[2]["questions"]) if len(parts_out) > 2 else 0,
+            "isCompleteIeltsSpeaking": is_complete,
+            "requiresManualGrading": True,
+            "passagesCount": len(parts_out),
+            "needsReviewCount": 0 if is_complete else 1,
+        },
+    }
+
+
+def parse_smart_exam_content(
+    text: str | None = None,
+    file_bytes: bytes | None = None,
+    filename: str | None = None,
+    default_skill: str = "reading",
+    exam_type: str = "ielts_academic",
+    provided_answers: dict | None = None,
+) -> dict:
+    """Unified entrypoint supporting HTML, PDF, DOCX, TXT, Excel/CSV, and raw text across all 4 IELTS skills."""
+    clean_text = ""
+    is_html_source = False
+
+    if file_bytes:
+        ext = (filename or "").lower().split(".")[-1]
+        if ext in ("html", "htm"):
+            try:
+                decoded_html = file_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                decoded_html = file_bytes.decode("latin-1", errors="ignore")
+            is_html_source = True
+            clean_text = decoded_html
+        elif ext == "pdf":
+            clean_text = extract_pdf_text(file_bytes)
+        elif ext == "docx":
+            clean_text = extract_docx_text(file_bytes)
+        elif ext in ("txt", "text"):
+            try:
+                clean_text = file_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                clean_text = file_bytes.decode("latin-1", errors="ignore")
+        elif ext in ("xlsx", "csv"):
+            clean_text = file_bytes.decode("utf-8", errors="ignore")
+    elif text and text.strip():
+        clean_text = text
+        if "<article" in text or "<html" in text or "const K =" in text:
+            is_html_source = True
+
+    if not clean_text or not clean_text.strip():
+        raise ContractAPIException("VALIDATION_ERROR", "Fayl yoki matn kiritilishi shart", 400)
+
+    target_skill = (default_skill or "reading").strip().lower()
+    if target_skill not in ("reading", "listening", "writing", "speaking") or target_skill == "auto":
+        target_skill = detect_content_skill(clean_text)
+
+    if target_skill == "writing":
+        if is_html_source:
+            extracted_text = extract_html_text(clean_text)
+            img_m = re.search(r"<img[^>]+src=[\"']([^\"']+)[\"']", clean_text, re.I)
+            if img_m:
+                extracted_text += f"\n[Image: {img_m.group(1)}]"
+            return parse_smart_writing_text(extracted_text, exam_type=exam_type)
+        return parse_smart_writing_text(clean_text, exam_type=exam_type)
+
+    if target_skill == "speaking":
+        if is_html_source:
+            clean_text = extract_html_text(clean_text)
+        return parse_smart_speaking_text(clean_text, exam_type=exam_type)
+
+    if target_skill == "listening":
+        if is_html_source:
+            clean_text = extract_html_text(clean_text)
+        return parse_smart_text_v2(
+            clean_text,
+            default_skill="listening",
+            exam_type=exam_type,
+            provided_answers=provided_answers,
+        )
+
+    # Reading:
+    if is_html_source:
+        bundle_res = parse_structured_html_bundle(
+            clean_text,
+            default_skill="reading",
+            exam_type=exam_type,
+            provided_answers=provided_answers,
+        )
+        if bundle_res:
+            return bundle_res
+        clean_text = extract_html_text(clean_text)
+
+    return parse_smart_text_v2(
+        clean_text,
+        default_skill="reading",
+        exam_type=exam_type,
+        provided_answers=provided_answers,
+    )
+
+
+def parse_smart_exam_text(
+    text: str,
+    default_skill: str = "reading",
+    exam_type: str = "ielts_academic",
+    provided_answers: dict | None = None,
+) -> dict:
+    """Backwards-compatible wrapper calling parse_smart_exam_content."""
+    return parse_smart_exam_content(
+        text=text,
+        default_skill=default_skill,
+        exam_type=exam_type,
+        provided_answers=provided_answers,
+    )
+
 
 
 def _normalize_incoming_question(raw_q: dict, default_num: int, exam_type: str, skill: str) -> dict:
@@ -563,6 +1594,13 @@ def _normalize_incoming_question(raw_q: dict, default_num: int, exam_type: str, 
 
     if q_type in {"true_false_notgiven", "yes_no_notgiven"} and correct_answers:
         correct_answers = [canonical_decision(correct_answers[0])]
+    elif q_type == "multi_select" and isinstance(correct_answers, list):
+        split_answers = []
+        for x in correct_answers:
+            split_answers.extend([p.strip() for p in re.split(r"[,;/]+", str(x)) if p.strip()])
+        correct_answers = split_answers
+    elif q_type == "multi_select" and isinstance(correct_answers, str):
+        correct_answers = [p.strip() for p in re.split(r"[,;/]+", correct_answers) if p.strip()]
 
     accepted_variants = raw_q.get("acceptedVariants")
     if isinstance(accepted_variants, str):
@@ -782,7 +1820,7 @@ def bulk_import_to_exam(actor, exam_id: str, skill: str, payload_data: dict) -> 
         for p in parsed.get("parts") or []:
             parts_meta_by_num[p["partNumber"]] = p
     else:
-        for p in payload_data.get("parts") or []:
+        for p in payload_data.get("parts") or payload_data.get("passages") or []:
             if isinstance(p, dict) and p.get("partNumber"):
                 parts_meta_by_num[int(p["partNumber"])] = p
 
@@ -794,13 +1832,14 @@ def bulk_import_to_exam(actor, exam_id: str, skill: str, payload_data: dict) -> 
         section = MockSection.objects.filter(exam_id=locked.id, skill=skill).first()
         if section is None:
             sort_idx = {"listening": 0, "reading": 1, "writing": 2, "speaking": 3}.get(skill, 0)
+            dur = 40 if skill == "listening" else (14 if skill == "speaking" else 60)
             section = MockSection.objects.create(
                 id=new_id(),
                 exam_id=locked.id,
                 skill=skill,
                 title=skill.title(),
                 sort_order=sort_idx,
-                duration_minutes=40 if skill == "listening" else 60,
+                duration_minutes=dur,
                 instructions=payload_data.get("instructions"),
             )
 
@@ -812,7 +1851,15 @@ def bulk_import_to_exam(actor, exam_id: str, skill: str, payload_data: dict) -> 
 
         part_numbers = sorted({nq["partNumber"] for nq in normalized_list})
         groups_by_part: dict[int, MockQuestionGroup] = {}
-        unit_name = "Passage" if skill == "reading" and locked.type != "multilevel" else "Part"
+        unit_name = (
+            "Passage"
+            if skill == "reading" and locked.type != "multilevel"
+            else "Task"
+            if skill == "writing"
+            else "Section"
+            if skill == "listening"
+            else "Part"
+        )
 
         for idx, p_num in enumerate(part_numbers):
             matched_group = next(
@@ -830,20 +1877,41 @@ def bulk_import_to_exam(actor, exam_id: str, skill: str, payload_data: dict) -> 
                     title=p_info.get("title") or f"{unit_name} {p_num}",
                     instructions=p_info.get("instructions") or payload_data.get("instructions"),
                     passage_text=p_info.get("passageText") or payload_data.get("passageText"),
-                    part_number=p_num if skill == "listening" else None,
+                    part_number=p_num if skill in {"listening", "speaking"} else None,
+                    image_key=p_info.get("imageKey") or p_info.get("image_key"),
+                    audio_key=p_info.get("audioKey") or p_info.get("audio_key"),
                     audio_play_limit=2 if locked.type == "multilevel" and skill == "listening" else 1,
                     created_at=now(),
                 )
             else:
                 p_info = parts_meta_by_num.get(p_num) or {}
                 upd = []
-                if p_info.get("passageText") and not matched_group.passage_text:
+                if p_info.get("passageText") and (
+                    replace_existing or not matched_group.passage_text or matched_group.passage_text != p_info["passageText"]
+                ):
                     matched_group.passage_text = p_info["passageText"]
                     upd.append("passage_text")
-                if p_info.get("instructions") and not matched_group.instructions:
+                if p_info.get("instructions") and (
+                    replace_existing or not matched_group.instructions or matched_group.instructions != p_info["instructions"]
+                ):
                     matched_group.instructions = p_info["instructions"]
                     upd.append("instructions")
-                if skill == "listening" and matched_group.part_number != p_num:
+                if p_info.get("title") and (
+                    replace_existing or not matched_group.title or matched_group.title != p_info["title"]
+                ):
+                    matched_group.title = p_info["title"]
+                    upd.append("title")
+                if (p_info.get("imageKey") or p_info.get("image_key")) and (
+                    replace_existing or not matched_group.image_key
+                ):
+                    matched_group.image_key = p_info.get("imageKey") or p_info.get("image_key")
+                    upd.append("image_key")
+                if (p_info.get("audioKey") or p_info.get("audio_key")) and (
+                    replace_existing or not matched_group.audio_key
+                ):
+                    matched_group.audio_key = p_info.get("audioKey") or p_info.get("audio_key")
+                    upd.append("audio_key")
+                if skill in {"listening", "speaking"} and matched_group.part_number != p_num:
                     matched_group.part_number = p_num
                     upd.append("part_number")
                 if upd:

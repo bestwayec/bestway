@@ -22,14 +22,30 @@ from .views import _can_view_student, require_role
 @permission_classes([Authenticated])
 def smart_parse_view(request):
     require_role(request, "teacher", "admin", "super_admin")
+    uploaded_file = request.FILES.get("file")
     data = request.data if isinstance(request.data, dict) else {}
     text = data.get("text") or ""
-    skill = (data.get("skill") or request.query_params.get("skill") or "reading").strip().lower()
+    skill = (data.get("skill") or data.get("defaultSkill") or request.query_params.get("skill") or "reading").strip().lower()
     exam_type = (data.get("examType") or data.get("type") or request.query_params.get("examType") or "ielts_academic").strip().lower()
-    answers = data.get("answers") if isinstance(data.get("answers"), dict) else None
+    answers = data.get("answers")
+    if isinstance(answers, str) and answers.strip():
+        try:
+            answers = json.loads(answers)
+        except Exception:
+            answers = None
+    if not isinstance(answers, dict):
+        answers = None
 
-    result = exam_import_service.parse_smart_exam_text(
+    file_bytes = None
+    filename = None
+    if uploaded_file:
+        file_bytes = uploaded_file.read()
+        filename = uploaded_file.name
+
+    result = exam_import_service.parse_smart_exam_content(
         text=text,
+        file_bytes=file_bytes,
+        filename=filename,
         default_skill=skill,
         exam_type=exam_type,
         provided_answers=answers,

@@ -1100,6 +1100,7 @@ export type ExamSimulatorMode = "cdi" | "dtm";
 
 export interface SmartParseQuestion {
   number: number;
+  partNumber?: number;
   type: MockQuestionType;
   prompt: string;
   options?: string[] | null;
@@ -1107,6 +1108,12 @@ export interface SmartParseQuestion {
   acceptedVariants?: string[] | null;
   points?: number;
   wordLimit?: number | null;
+  answerRule?: string | null;
+  needsReview?: boolean;
+  reviewReason?: string | null;
+  prepTimeSec?: number;
+  speakingTimeSec?: number;
+  cueCard?: string;
 }
 
 export interface SmartParsePart {
@@ -1114,17 +1121,39 @@ export interface SmartParsePart {
   title?: string;
   instructions?: string;
   passageText?: string;
+  imageKey?: string;
+  audioKey?: string;
   questions: SmartParseQuestion[];
 }
 
 export interface SmartParseResult {
   instructions?: string | null;
   passageText?: string | null;
+  skill?: MockSkill;
+  status?: "complete" | "partial" | "needs_review" | "invalid";
+  passages?: SmartParsePart[];
   parts?: SmartParsePart[];
   questions: SmartParseQuestion[];
   answers: Record<string, string>;
   count: number;
-  summary?: Record<string, number>;
+  needsReview?: number[];
+  summary?: {
+    total: number;
+    withAnswers: number;
+    byType: Record<string, number>;
+    passagesCount?: number;
+    isCompleteIeltsReading?: boolean;
+    isCompleteIeltsListening?: boolean;
+    isCompleteIeltsWriting?: boolean;
+    isCompleteIeltsSpeaking?: boolean;
+    task1Present?: boolean;
+    task2Present?: boolean;
+    part1Present?: boolean;
+    part2Present?: boolean;
+    part3Present?: boolean;
+    requiresManualGrading?: boolean;
+    needsReviewCount?: number;
+  };
 }
 
 export interface AudioTimestampItem {
