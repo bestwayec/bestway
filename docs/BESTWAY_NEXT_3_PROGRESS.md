@@ -13,9 +13,9 @@
 | Phase | Title | Branch | Status | PR | Commit SHA | Verification |
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- |
 | **0** | Safe Repository Recovery | `main` | **PASS** | N/A | `7e0e1f3` | origin/main synced, PR #212 & #213 merged, DB verified |
-| **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | TBD | Pending | 115 backend / 280 frontend passed |
-| **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **IN PROGRESS** | TBD | Pending | Active |
-| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **UNVERIFIED** | TBD | Pending | Queued |
+| **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | #214 | `30e4261` | 4/4 GitHub CI passed (115 backend / 280 frontend) |
+| **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | TBD | Pending | 119 backend / 90 frontend passed, 0 type errors |
+| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **IN PROGRESS** | TBD | Pending | Active |
 | **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **UNVERIFIED** | TBD | Pending | Queued |
 | **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **UNVERIFIED** | TBD | Pending | Queued |
 | **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **UNVERIFIED** | TBD | Pending | Queued |
@@ -63,6 +63,36 @@
   - `pytest tests/test_phase1_ielts_exam_journey.py`: 6 passed, 0 failed.
   - Comprehensive backend regression suite: 115 passed, 1 skipped, 0 failed (`test_mock_scoring.py`, `test_mock_attempts.py`, `test_mock_authoring.py`, `test_mock_rules.py`, `test_smart_import_v2.py`, `test_writing_ocr_and_groups_v070.py`, `test_phase1_ielts_exam_journey.py`).
   - Frontend mock suite: 280 passed across 44 test files (`npx vitest run src/components/mock/`).
+- **Commit SHA:** `30e4261d71056241dd42125e767e3bbcf0213981`
+- **PR:** #214 (`https://github.com/bestwayec/bestway/pull/214`)
+- **Remaining Blockers:** None.
+- **Verification Status:** **PASS**
+
+---
+
+## Phase 2: Smart Import 3.0 (PASS)
+- **Requirements:**
+  - **2.1 4-Step Wizard UI:**
+    - Step 1: Upload / Source Selection (PDF, DOCX, TXT, HTML upload & paste)
+    - Step 2: Parse & Fast Preview (high-level dashboard, question count badges, missing keys alert, detected passages summary, breakdown chips)
+    - Step 3: Validate & Map (interactive question table, prompt editing, question type selector, answer key assignment, audio file mapping / player)
+    - Step 4: Final Review & Confirm (summary cards, target section, test mode, draft/ready status toggle, atomic commit)
+  - **2.2 Quality Guardrails:**
+    - Clear "Needs Review" alert and filter for questions lacking answer keys.
+    - Transactional atomicity: fail-safe rollback of groups and questions upon exception.
+  - **2.3 Enhanced File Ingestion:**
+    - Advanced HTML sanitization: strips MS Word conditional comments (`<!--[if ...]>`), office tags (`<xml>`, `<o:p>`, `<w:...>`), scripts, styles, iframes, and zero-width artifacts (`\u200b`, `\xa0`).
+    - Audio attachment to groups and draft state preservation (`isDraft=True`).
+- **Implemented Items:**
+  - Upgraded `frontend/src/components/exam-builder/SmartBulkImportModal.tsx` from 3 steps to a 4-step wizard with dedicated Parse & Fast Preview step (Step 2) and final review/confirm step (Step 4).
+  - Enhanced `extract_html_text` in `backend-django/apps/core/exam_import_service.py` to strip office XML, MS Word comments, scripts, styles, iframes, and zero-width artifacts.
+  - Added draft preservation logic in `bulk_import_to_exam` when `isDraft=True` or `status='draft'` is provided.
+  - Added dedicated Phase 2 test suite `backend-django/tests/test_smart_import_v3.py`.
+- **Tests:**
+  - `pytest tests/test_smart_import_v3.py`: 4 passed, 0 failed.
+  - Comprehensive backend regression suite: 119 passed, 1 skipped, 0 failed.
+  - Frontend exam builder test suite: 90 passed across 17 test files (`npx vitest run src/components/exam-builder/`).
+  - Frontend TypeScript typecheck: 0 errors (`npx tsc --noEmit`).
 - **Commit SHA:** Will be recorded upon commit.
 - **PR:** Will be recorded upon PR creation.
 - **Remaining Blockers:** None.
