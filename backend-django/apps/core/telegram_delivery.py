@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -85,6 +86,52 @@ def send_document(chat_id,document,caption=None,filename='bestway-app.apk',parse
         # Never log token-bearing URLs or private notification content.
         logging.getLogger(__name__).warning('Telegram delivery failed for sendDocument')
     return None
+
+
+def send_photo(chat_id,photo,caption=None,parse_mode='HTML',reply_markup=None,filename='bestway-result.png'):
+    """Send PNG bytes as a photo. Returns the Telegram result or None; never logs the token or the content."""
+    if not chat_id or not isinstance(photo,(bytes,bytearray)):return None
+    token=os.environ.get('TELEGRAM_BOT_TOKEN','')
+    if not token:return None
+    try:
+        boundary='tg-photo-'+uuid4().hex
+        fields=dict(chat_id=str(chat_id))
+        if caption is not None:
+            fields['caption']=caption
+            if parse_mode:fields['parse_mode']=parse_mode
+        if reply_markup is not None:fields['reply_markup']=json.dumps(reply_markup)
+        parts=[f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode() for k,v in fields.items()]
+        safe_name=(filename or 'bestway-result.png').replace('"','')
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="photo"; filename="{safe_name}"\r\nContent-Type: image/png\r\n\r\n'.encode()+bytes(photo)+f'\r\n--{boundary}--\r\n'.encode())
+        request=Request(f'https://api.telegram.org/bot{token}/sendPhoto',data=b''.join(parts),headers={'Content-Type':f'multipart/form-data; boundary={boundary}'},method='POST')
+        with urlopen(request,timeout=60) as response: data=json.loads(response.read())
+        if data.get('ok'):return data.get('result')
+    except Exception:
+        logging.getLogger(__name__).warning('Telegram delivery failed for sendPhoto')
+    return None
+
+
+def send_detailed(chat_id,text,reply_markup=None):
+    """sendMessage with a classified outcome for the outbox: ('sent',None) | ('retry',seconds) | ('permanent',reason).
+
+    Only status codes and short reasons are returned; content and token are never logged."""
+    token=os.environ.get('TELEGRAM_BOT_TOKEN','')
+    if not token or not chat_id:return 'permanent','not_configured'
+    payload=dict(chat_id=chat_id,text=text,parse_mode='HTML')
+    if reply_markup is not None:payload['reply_markup']=reply_markup
+    try:
+        request=Request(f'https://api.telegram.org/bot{token}/sendMessage',data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'},method='POST')
+        with urlopen(request,timeout=20) as response: data=json.loads(response.read())
+        return ('sent',None) if data.get('ok') else ('retry',60)
+    except HTTPError as error:
+        try:body=json.loads(error.read() or b'{}')
+        except Exception:body={}
+        if error.code==429:return 'retry',int((body.get('parameters') or {}).get('retry_after') or 30)
+        if error.code in (400,403,404):return 'permanent',f'http_{error.code}'
+        return 'retry',None
+    except Exception:
+        logging.getLogger(__name__).warning('Telegram delivery failed for sendMessage')
+        return 'retry',None
 
 
 def send_audio(chat_id,audio,caption=None,title=None,performer=None,filename='speaking.mp3',parse_mode='HTML',reply_markup=None):
@@ -212,12 +259,13 @@ def contact_request(chat_id,text):
 
 
 def _get_superadmin_id() -> str:
+    """Operator-configured alert destination ('' when unset); never an authorization source."""
     try:
         from django.conf import settings as dj_settings
-        val = getattr(dj_settings, 'SUPERADMIN_TELEGRAM_ID', None)
+        configured = getattr(dj_settings, 'SUPERADMIN_TELEGRAM_ID', '')
     except Exception:
-        val = None
-    return str(val or os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765'))
+        configured = ''
+    return str(os.environ.get('SUPERADMIN_TELEGRAM_ID') or configured or '')
 
 
 SUPERADMIN_TELEGRAM_ID = _get_superadmin_id()
@@ -250,7 +298,7 @@ def _html_escape(value) -> str:
 def notify_submission_result(job_or_attempt):
     """
     Sends real-time formatted submission result notification to:
-    1. Superadmin (5582178765)
+    1. The operator-configured alert chat (SUPERADMIN_TELEGRAM_ID), if any
     2. Student's Group Teacher (if the teacher has a telegram_chat_id)
     Never raises exceptions to caller.
     """

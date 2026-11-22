@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import type { ExamGate } from "@/lib/listening-audio";
 import { HISTORY_PAGE_SIZE, loadAttemptHistory } from "@/lib/attempt-history";
 import { useStudentProgramScope } from './use-exam-programs';
 import type {
@@ -960,5 +961,53 @@ export function useGroupAttendanceSummary(groupId?: string, date?: string, enabl
     },
     enabled: !!groupId && enabled,
     retry: false,
+  });
+}
+
+/* ---------- Listening audio gate (supplied-material mocks) ---------- */
+export function useExamGate(examId: string) {
+  return useQuery({
+    queryKey: ["mock-gate", examId],
+    queryFn: () => api.get<ExamGate>(`/mock/exams/${examId}/listening-audio`),
+    enabled: !!examId,
+    retry: false,
+  });
+}
+
+function invalidateGate(qc: ReturnType<typeof useQueryClient>, examId: string) {
+  qc.invalidateQueries({ queryKey: ["mock-gate", examId] });
+  qc.invalidateQueries({ queryKey: ["mock-readiness", examId] });
+  qc.invalidateQueries({ queryKey: ["mock-exam"] });
+}
+
+export function useUploadListeningAudio(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { groupId: string; file: File }) => {
+      const form = new FormData();
+      form.append("audio", v.file);
+      return api.post<{ status: string; revision: number; replaced: boolean; warnings: string[] }>(`/mock/groups/${v.groupId}/listening-audio`, form);
+    },
+    onSuccess: () => invalidateGate(qc, examId),
+  });
+}
+
+export function useVerifyListeningAudio(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { groupId: string; heardQuestions: number[]; note: string }) =>
+      api.post(`/mock/groups/${v.groupId}/listening-audio/verify`, {
+        attestation: true, listenedFully: true, heardQuestions: v.heardQuestions, note: v.note,
+      }),
+    onSuccess: () => invalidateGate(qc, examId),
+  });
+}
+
+export function useSetContentRights(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { status: "verified" | "unverified"; evidence: string }) =>
+      api.post(`/mock/exams/${examId}/content-rights`, { status: v.status, attestation: v.status === "verified", evidence: v.evidence }),
+    onSuccess: () => invalidateGate(qc, examId),
   });
 }

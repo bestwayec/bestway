@@ -1,4 +1,5 @@
 """Atomic schema-1.0 package commit, media ledger, provenance and review routes."""
+import datetime
 import hashlib
 from datetime import timedelta
 
@@ -82,7 +83,10 @@ def resolve_bindings(actor, pkg, bindings):
             raise ContractAPIException('MOCK_IMPORT_MEDIA', f'Staged upload not found for "{key}"', 422)
         if row.owner_id != actor.id:
             raise ContractAPIException('MOCK_IMPORT_MEDIA', f'Staged upload for "{key}" belongs to another user', 403)
-        if row.expires_at < timezone.now():
+        expires = row.expires_at
+        if timezone.is_naive(expires):  # Prisma timestamp(3) columns come back naive (stored as UTC)
+            expires = expires.replace(tzinfo=datetime.timezone.utc)
+        if expires < timezone.now():
             raise ContractAPIException('MOCK_IMPORT_MEDIA', f'Staged upload for "{key}" has expired', 410)
         if row.kind != kinds[key]:
             raise ContractAPIException('MOCK_IMPORT_MEDIA', f'Media kind mismatch for "{key}"', 422)

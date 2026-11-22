@@ -135,6 +135,12 @@ def bulk(actor, data):
             notify_parents(r['studentId'], 'attendance', msg)
     audit(actor, 'attendance.bulk_update', 'group', data['groupId'],
         new=dict(date=data['date'][:10], records=len(data['records'])))
+    try:    # durable student notice (opt-in, quiet hours, deduped per student/day/state); parents keep the existing flow above
+        from . import telegram_notify
+        for r in marked:
+            telegram_notify.attendance_update(r['studentId'], day.isoformat(), r['state'], data['groupId'])
+    except Exception:  # noqa: BLE001
+        pass
     return dict(updated=len(marked), cleared=len(cleared))
 
 

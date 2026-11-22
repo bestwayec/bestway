@@ -66,6 +66,15 @@ services:
     command: ["python", "manage.py", "run_game_scheduler"]
     mem_limit: 256m
     cpus: 0.25
+  # Opt-in only (never part of `--profile workers`): start with
+  # `docker compose -f docker-compose.django.yml --profile telegram-outbox up -d telegram-outbox` once the owner approves
+  # sending notifications. Until then messages stay queued durably in PostgreSQL.
+  telegram-outbox:
+    <<: *django
+    profiles: [telegram-outbox]
+    command: ["python", "manage.py", "run_telegram_outbox"]
+    mem_limit: 256m
+    cpus: 0.25
   telegram-bot:
     <<: *django
     profiles: [telegram-polling]

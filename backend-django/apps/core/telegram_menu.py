@@ -19,7 +19,9 @@ from . import telegram_fsm as fsm
 from .telegram_links import escape, find
 
 urlopen=_stdlib_urlopen
-SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
+# Optional DESTINATION for admin alerts only. It never grants any permission: authorization is a validated,
+# server-side role on the linked account (see is_superadmin).
+SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '')) or '')
 APK_FILENAME='bestway-app.apk'
 DEFAULT_APK_REL_PATH='media/downloads/bestway-app.apk'
 DEFAULT_APK_URL='https://github.com/bestwayec/bw-tauri/releases/download/v0.5.3/bestway-app.apk'
@@ -31,6 +33,7 @@ BTN=dict(
     attendance='📅 Davomatim',
     payment="💰 To'lovlarim",
     results='📝 Natijalarim',
+    my_tests='📝 Testlarim',
     mock_exams='🎯 Mock Imtihonlar',
     leaderboard='🥇 Reyting',
     writing_ocr='✍️ Writing Rasm Tekshirish (AI)',
@@ -51,6 +54,16 @@ BTN=dict(
     web_admin_sso='🔐 Web Admin (1-Click Kirish)',
     apk='📱 Android ilovani yuklab olish (.apk)',
     help='ℹ️ Yordam',
+    vocab="📚 Lug'at",
+    review='🔁 Xatolarni takrorlash',
+    feedback="👨‍🏫 O'qituvchi fikri",
+    settings='⚙️ Sozlamalar',
+    teacher_new='📝 Test yaratish',
+    teacher_results='📊 Natijalar',
+    teacher_sets="📚 Lug'at to'plamlari",
+    teacher_assign='🗓 Topshiriqlar',
+    teacher_requests="✅ So'rovlar",
+    teacher_announce="📢 E'lonlar",
 )
 LABEL=dict(present='✅ Keldi',absent='❌ Kelmadi',late='⏰ Kechikdi',paid="✅ To'langan",unpaid="❌ To'lanmagan",partial="🟡 Qisman to'langan",in_progress='⏳ Topshirilmoqda',grading='✍️ Baholanmoqda',completed='✅ Tayyor')
 def label(value):return LABEL.get(value,value)
@@ -61,129 +74,35 @@ def date_uz(value):
 
 
 def get_superadmin_id() -> str:
-    return str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', SUPERADMIN_TELEGRAM_ID)))
+    """Alert destination configured by the operator ('' when unset). NOT an authorization source."""
+    return str(os.environ.get('SUPERADMIN_TELEGRAM_ID') or getattr(settings, 'SUPERADMIN_TELEGRAM_ID', '') or '')
+
+
+def linked_superadmin(chat_id):
+    """The ACTIVE super_admin account validly linked to this Telegram chat, or None. Read-only: nothing is created,
+    promoted or relinked here; a chat id alone never grants a role."""
+    if chat_id is None or str(chat_id).strip() == '':
+        return None
+    try:
+        return m.User.objects.filter(telegram_chat_id=str(chat_id), role='super_admin', is_active=True).first()
+    except Exception:
+        return None
 
 
 def is_superadmin(chat_id=None, user=None) -> bool:
-    if chat_id is not None and str(chat_id) == get_superadmin_id():
+    if user is not None and getattr(user, 'role', None) == 'super_admin' and getattr(user, 'is_active', True) is not False:
         return True
-    if user is not None and getattr(user, 'role', None) == 'super_admin':
-        return True
-    return False
+    return linked_superadmin(chat_id) is not None
 
 
 def ensure_superadmin_user(chat_id, from_user=None):
-    """
-    Ensures Telegram user 5582178765 has an active, approved super_admin User record
-    linked to telegram_chat_id=5582178765.
-    """
-    from types import SimpleNamespace
-    chat_str = str(chat_id)
-    user = None
-    try:
-        user = find(chat_str)
-    except Exception:
-        user = None
-
-    if user is None:
-        try:
-            user = m.User.objects.filter(telegram_chat_id=chat_str).first()
-        except Exception:
-            user = None
-
-    name_candidate = "BestWay Superadmin"
-    if isinstance(from_user, dict):
-        fn = (from_user.get('first_name') or '').strip()
-        ln = (from_user.get('last_name') or '').strip()
-        full = f"{fn} {ln}".strip() or (from_user.get('username') or '').strip()
-        if full:
-            name_candidate = full
-    elif hasattr(from_user, 'name') and getattr(from_user, 'name', None):
-        name_candidate = from_user.name
-
-    now = timezone.now()
-    if user is not None:
-        needs_update = (
-            getattr(user, 'role', None) != 'super_admin'
-            or not getattr(user, 'is_active', False)
-            or str(getattr(user, 'telegram_chat_id', '')) != chat_str
-        )
-        user.role = 'super_admin'
-        user.is_active = True
-        user.is_approved = True
-        user.telegram_chat_id = chat_str
-        if needs_update and getattr(user, 'id', None):
-            try:
-                m.User.objects.filter(id=user.id).update(
-                    role='super_admin',
-                    is_active=True,
-                    telegram_chat_id=chat_str,
-                    updated_at=now,
-                )
-            except Exception:
-                pass
-    else:
-        try:
-            import secrets
-
-            from common.auth.passwords import hash_password
-            pwd_hash = hash_password(secrets.token_urlsafe(16))
-        except Exception:
-            pwd_hash = 'superadmin_sso_hash'
-        uid = f"superadmin-{chat_str}"
-        try:
-            existing_sa = m.User.objects.filter(id=uid).first()
-            if existing_sa:
-                m.User.objects.filter(id=uid).update(
-                    role='super_admin',
-                    is_active=True,
-                    telegram_chat_id=chat_str,
-                    updated_at=now,
-                )
-                user = m.User.objects.filter(id=uid).first()
-            else:
-                user = m.User.objects.create(
-                    id=uid,
-                    name=name_candidate,
-                    phone=f"tg_{chat_str}",
-                    password_hash=pwd_hash,
-                    role='super_admin',
-                    is_active=True,
-                    telegram_chat_id=chat_str,
-                    created_at=now,
-                    updated_at=now,
-                )
-        except Exception:
-            user = SimpleNamespace(
-                id=uid,
-                name=name_candidate,
-                phone=f"tg_{chat_str}",
-                role='super_admin',
-                is_active=True,
-                is_approved=True,
-                telegram_chat_id=chat_str,
-            )
-
-    if user is not None:
-        user.role = 'super_admin'
-        user.is_active = True
-        user.is_approved = True
-        user.telegram_chat_id = chat_str
-        try:
-            if getattr(user, 'id', None):
-                m.StudentProfile.objects.filter(user_id=user.id).update(is_approved=True)
-        except Exception:
-            pass
-    return user
+    """Compatibility name. Returns the linked active super_admin user or None; it no longer creates or promotes accounts."""
+    return linked_superadmin(chat_id)
 
 
 def resolve_user(chat_id, active=True, from_user=None):
-    if is_superadmin(chat_id=chat_id):
-        return ensure_superadmin_user(chat_id, from_user=from_user)
-    user = find(chat_id, active)
-    if user and getattr(user, 'role', None) == 'super_admin':
-        user.is_approved = True
-    return user
+    # The linked, active super_admin account (if this chat has one) else the ordinary linked user. Never created here.
+    return linked_superadmin(chat_id) or find(chat_id, active)
 
 
 def menu_for(role, chat_id=None):
@@ -200,11 +119,11 @@ def menu_for(role, chat_id=None):
             ['help'],
         ]
     elif role=='student':
-        rows=[['points','attendance'],['payment','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
+        rows=[['vocab','my_tests'],['review','results'],['attendance','feedback'],['points','payment'],['mock_exams','leaderboard'],['writing_ocr','web_login'],['code','settings'],['apk','help']]
     elif role=='parent':
         rows=[['children'],['attendance','payment'],['points','results'],['mock_exams','leaderboard'],['writing_ocr'],['web_login','code'],['apk','help']]
     elif role=='teacher':
-        rows=[['groups','grading'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
+        rows=[['teacher_new','groups'],['teacher_results','teacher_sets'],['teacher_assign','teacher_requests'],['teacher_announce','grading'],['monitoring','leaderboard'],['writing_ocr','mock_exams'],['web_login','code'],['settings','apk'],['help']]
     else:
         rows=[['today','debtors'],['monitoring','leaderboard'],['writing_ocr'],['mock_exams','web_login'],['code','apk'],['help']]
     return dict(keyboard=[[dict(text=BTN[key]) for key in row] for row in rows],resize_keyboard=True)
@@ -317,8 +236,6 @@ def generate_sso_url(chat_id, user=None, from_user=None):
     return f"{base_url}/login?sso_token={urllib.parse.quote(token)}"
 
 def send_web_login(chat_id, user=None):
-    if is_superadmin(chat_id=chat_id, user=user):
-        user = ensure_superadmin_user(chat_id, from_user=user)
     url = generate_sso_url(chat_id, user)
     reply_markup = dict(inline_keyboard=[[dict(text="🌐 Web Platformaga Kirish", url=url)]])
     text = (
@@ -333,6 +250,9 @@ def send_web_login(chat_id, user=None):
 
 def send_web_admin_login(chat_id, user=None):
     user = ensure_superadmin_user(chat_id, from_user=user)
+    if user is None:  # fail closed: a chat id alone never yields an admin web session
+        api.send(chat_id, "⛔ Bu amal uchun tasdiqlangan superadmin akkaunti kerak.")
+        return
     url = generate_sso_url(chat_id, user)
     reply_markup = dict(inline_keyboard=[[dict(text=BTN['web_admin_sso'], url=url)]])
     text = (
@@ -1560,6 +1480,13 @@ def handle(chat_id, text, from_user=None):
         return True
     if not user:
         return False
+    if text == BTN['my_tests']:
+        from . import telegram_quiz
+        telegram_quiz.send_my_tests(chat_id)
+        return True
+    routed = _route_new_menu(chat_id, text)
+    if routed:
+        return True
     key = next((key for key, value in BTN.items() if value == text), None)
     if key is None:
         return False
@@ -1573,3 +1500,19 @@ def handle(chat_id, text, from_user=None):
     return True
 
 
+
+
+def _route_new_menu(chat_id, text) -> bool:
+    """Reply-keyboard buttons of the vocabulary / teacher / settings features (same handlers as their slash commands)."""
+    from . import telegram_settings, telegram_teacher, telegram_vocab
+    commands = {BTN['vocab']: '/lugat', BTN['review']: '/takror', BTN['settings']: '/sozlamalar', BTN['teacher_new']: '/newtest',
+                BTN['teacher_results']: '/assignments', BTN['teacher_sets']: '/sets', BTN['teacher_assign']: '/assignments',
+                BTN['teacher_requests']: '/requests', BTN['teacher_announce']: '/announce'}
+    command = commands.get(text)
+    if command is not None:
+        return bool(telegram_vocab.command(chat_id, command) or telegram_teacher.command(chat_id, command) or telegram_settings.command(chat_id, command))
+    if text == BTN['feedback']:
+        from . import telegram_notify
+        telegram_notify.send_recent_feedback(chat_id)
+        return True
+    return False
