@@ -20,14 +20,14 @@ describe("role home navigation", () => {
 
   it("prioritizes teaching tasks on mobile while keeping payments available", () => {
     expect(mobileNavForRole("teacher").map((item) => item.href)).toEqual([
-      "/dashboard", "/attendance", "/groups", "/teacher",
+      "/dashboard", "/attendance", "/teacher/results", "/groups",
     ]);
     expect(navForRole("teacher").some((item) => item.href === "/payments")).toBe(true);
   });
 
   it("keeps all super-admin sections and exact dashboard selection", () => {
     expect(navForRole("super_admin").map((item) => item.href)).toEqual([
-      "/super-admin", "/attendance", "/payments", "/students", "/groups", "/teacher", "/staff",
+      "/super-admin", "/attendance", "/payments", "/students", "/groups", "/teacher", "/teacher/results", "/staff",
       "/mock", "/vocabulary", "/bamboozle", "/exam-builder", "/videos", "/articles", "/gallery", "/notifications", "/settings", "/audit",
     ]);
     expect(isActive("/super-admin", "/super-admin")).toBe(true);
