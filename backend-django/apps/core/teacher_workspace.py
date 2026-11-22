@@ -556,7 +556,10 @@ def student_homework(actor) -> list[dict]:
         items.append(dict(kind='quiz', id=a['id'], title=a['title'], type=a['category'], groupName=group.name if group else '',
                           teacherName=group.teacher.name if group and group.teacher_id and group.teacher else '', deadline=a['deadline'],
                           status=status, percent=a['bestPercent'], questionCount=a['questionCount'], timeLimitMinutes=a['timeLimitMinutes'],
-                          attemptsLeft=a['attemptsLeft'], canStart=bool(can_start), href=student_href('quiz', a['id'])))
+                          attemptsLeft=a['attemptsLeft'], canStart=bool(can_start), href=student_href('quiz', a['id']),
+                          activeAttemptId=a['activeAttemptId'],
+                          lastAttemptId=ClassQuizAttempt.objects.filter(assignment_id=a['id'], student_id=actor.id, status='submitted')
+                          .order_by('-attempt_no').values_list('id', flat=True).first()))
     from .teacher_views import student_assignment_rows
     for row in student_assignment_rows(actor):
         sub_status = row['status']
