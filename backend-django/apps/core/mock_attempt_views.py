@@ -181,6 +181,11 @@ def submit_view(request, attempt_id):
         or data.get('timeout')
         or request.query_params.get('force')
     )
+    in_flight_answers = data.get('answers')
+    if in_flight_answers and isinstance(in_flight_answers, list) and len(in_flight_answers) > 0:
+        for item in in_flight_answers:
+            validate_answer(item)
+        engine.save_answers(request.user, attempt_id, in_flight_answers, bulk=True, force=force)
     return success(submit(request.user, attempt_id, skills, force=force), 201)
 
 

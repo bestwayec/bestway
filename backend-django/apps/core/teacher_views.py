@@ -312,8 +312,8 @@ def assignment_payload(assignment):
     }
 
 
-@api_view(["GET", "POST"])
 @transaction.atomic
+@api_view(["GET", "POST"])
 def classroom_assignments_view(request, group_id):
     actor = require_authenticated(request)
     require_role(request, "teacher", "admin", "super_admin")
@@ -708,8 +708,8 @@ def teacher_submissions_view(request):
     return success({"items": items, "total": total} if with_total else items)
 
 
-@api_view(["POST"])
 @transaction.atomic
+@api_view(["POST"])
 def teacher_grade_submission_view(request, submission_id: str):
     from . import mock_grading
 

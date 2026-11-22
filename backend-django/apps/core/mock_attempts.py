@@ -65,7 +65,7 @@ def aware(value):
 
 
 def versioned(attempt):
-    return attempt.specification_version in SPECS
+    return getattr(attempt, 'specification_version', None) in SPECS
 
 
 def assert_in_progress(attempt):
@@ -415,11 +415,12 @@ def edit_time(item, now):
     return min(datetime.fromtimestamp(float(value) / 1000, tz=dt_timezone.utc), now)
 
 
-def save_answers(actor, attempt_id, items, *, bulk=False):
+def save_answers(actor, attempt_id, items, *, bulk=False, force=False):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         assert_in_progress(attempt)
-        assert_time(attempt)
+        if not force:
+            assert_time(attempt)
         if not bulk:
             assert_question(attempt, items[0]['questionId'])
         valid = questions(attempt, [a['questionId'] for a in items])
@@ -943,7 +944,7 @@ def detail(actor, attempt_id):
             durationMinutes=section.duration_minutes, instructions=section.instructions,
             score=raw.get('score'), max=raw.get('max'), band=band,
             bandBelowRange=band_is_below_range(attempt.exam.type, section.skill, band, raw),
-            standardScore=(attempt.standard_scores or {}).get(section.skill, {}).get('estimatedStandardScore'), groups=[])
+            standardScore=(getattr(attempt, 'standard_scores', None) or {}).get(section.skill, {}).get('estimatedStandardScore'), groups=[])
         for gi, group in enumerate(groups_by_section.get(section.id, [])):
             shaped_group = dict(id=group.id, title=group.title, instructions=group.instructions,
                 passageText=None if versioned(attempt) and section.skill == 'listening' and not show else group.passage_text,
