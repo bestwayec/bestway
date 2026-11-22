@@ -15,10 +15,10 @@
 | **0** | Safe Repository Recovery | `main` | **PASS** | N/A | `7e0e1f3` | origin/main synced, PR #212 & #213 merged, DB verified |
 | **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | #214 | `30e4261` | 4/4 GitHub CI passed (115 backend / 280 frontend) |
 | **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | #215 | `e8b893f` | 4/4 GitHub CI passed (119 backend / 90 frontend) |
-| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `35e19fc` | 283 frontend / 119 backend passed, 0 type errors |
-| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | `3bba0ce` | 5 Phase 4 tests passed, 0 errors |
-| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | `8433f10` | 34 backend & 35 frontend tests passed |
-| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **PASS** | #219 | `0edf61f` | Hardening tests passed, Opus handoff generated |
+| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `672413d` | 283 frontend / 119 backend passed, 0 type errors |
+| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | `e375783` | 5 Phase 4 tests passed, 0 errors |
+| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | `9c49a23` | 34 backend & 35 frontend tests passed |
+| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **PASS** | #219 | `2cce52d` | Hardening tests passed, Opus handoff generated |
 
 ---
 

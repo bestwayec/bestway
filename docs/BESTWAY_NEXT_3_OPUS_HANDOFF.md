@@ -30,10 +30,10 @@ All work is organized into isolated, incremental branches following a stacked pu
 | :---: | :---: | :--- | :---: | :--- | :--- |
 | **1** | **#214** | `feat/bestway-next3-phase1-exam-audit` | `30e4261` | Full IELTS Exam Audit & E2E Repair | **4/4 GitHub CI PASSED** (115 backend / 280 frontend) |
 | **2** | **#215** | `feat/bestway-next3-phase2-smart-import` | `e8b893f` | Smart Import 3.0 4-step wizard & HTML cleaner | **4/4 GitHub CI PASSED** (119 backend / 90 frontend) |
-| **3** | **#216** | `feat/bestway-next3-phase3-cbt` | `35e19fc` | 4-color annotations, submit summary modal, CBT review | **PASSED** (283 frontend / 119 backend, 0 tsc errors) |
-| **4** | **#217** | `feat/bestway-next3-phase4-ai-evaluation` | `3bba0ce` | 4-criterion AI evaluation, speech diagnostics, anti-fabrication | **PASSED** (5 Phase 4 tests, 1571 regression tests) |
-| **5** | **#218** | `feat/bestway-next3-phase5-analytics` | `8433f10` | Student progress, cohort heatmaps, Excel exports | **PASSED** (34 backend tests, 35 frontend tests) |
-| **6** | **#219** | `feat/bestway-next3-phase6-hardening` | `HEAD` | Throttling, RBAC guards, zero attribution audit, Opus handoff | **PASSED** (Production hardening suite passed) |
+| **3** | **#216** | `feat/bestway-next3-phase3-cbt` | `672413d` | 4-color annotations, submit summary modal, CBT review | **PASSED** (283 frontend / 119 backend, 0 tsc errors) |
+| **4** | **#217** | `feat/bestway-next3-phase4-ai-evaluation` | `e375783` | 4-criterion AI evaluation, speech diagnostics, anti-fabrication | **PASSED** (5 Phase 4 tests, 1571 regression tests) |
+| **5** | **#218** | `feat/bestway-next3-phase5-analytics` | `9c49a23` | Student progress, cohort heatmaps, Excel exports | **PASSED** (34 backend tests, 35 frontend tests) |
+| **6** | **#219** | `feat/bestway-next3-phase6-hardening` | `2cce52d` | Throttling, RBAC guards, zero attribution audit, Opus handoff | **PASSED** (Production hardening suite passed) |
 
 *Merge Order Policy:* PRs must be reviewed and merged sequentially from #214 to #219 upon explicit owner authorization.
 
