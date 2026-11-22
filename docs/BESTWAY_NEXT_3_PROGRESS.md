@@ -14,9 +14,9 @@
 | :---: | :--- | :--- | :---: | :---: | :---: | :--- |
 | **0** | Safe Repository Recovery | `main` | **PASS** | N/A | `7e0e1f3` | origin/main synced, PR #212 & #213 merged, DB verified |
 | **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | #214 | `30e4261` | 4/4 GitHub CI passed (115 backend / 280 frontend) |
-| **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | TBD | Pending | 119 backend / 90 frontend passed, 0 type errors |
-| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **IN PROGRESS** | TBD | Pending | Active |
-| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **UNVERIFIED** | TBD | Pending | Queued |
+| **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | #215 | `e8b893f` | 4/4 GitHub CI passed (119 backend / 90 frontend) |
+| **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | TBD | Pending | 283 frontend / 119 backend passed, 0 type errors |
+| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **IN PROGRESS** | TBD | Pending | Active |
 | **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **UNVERIFIED** | TBD | Pending | Queued |
 | **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **UNVERIFIED** | TBD | Pending | Queued |
 
@@ -92,6 +92,35 @@
   - `pytest tests/test_smart_import_v3.py`: 4 passed, 0 failed.
   - Comprehensive backend regression suite: 119 passed, 1 skipped, 0 failed.
   - Frontend exam builder test suite: 90 passed across 17 test files (`npx vitest run src/components/exam-builder/`).
+  - Frontend TypeScript typecheck: 0 errors (`npx tsc --noEmit`).
+- **Commit SHA:** `e8b893f94958dde3cbd3ddcee89e7b14ab81e88e`
+- **PR:** #215 (`https://github.com/bestwayec/bestway/pull/215`)
+- **Remaining Blockers:** None.
+- **Verification Status:** **PASS**
+
+---
+
+## Phase 3: IELTS CBT 3.0 UI/UX (PASS)
+- **Requirements:**
+  - **3.1 Student Exam Experience:**
+    - Reading split screen: passage left, questions right, with independent scrolling.
+    - Draggable split divider (`reading-split-divider.tsx`) with localStorage persistence and touch/keyboard accessibility.
+    - Rich text annotations (`cbt-annotated-text.tsx`): 4-color highlighting (yellow, green, pink, blue), sticky notes, and clean deletion.
+    - Fixed top header: countdown timer with alert thresholds (<5m amber, <1m red), candidate profile, sound check, fullscreen.
+    - Bottom question navigator (`cbt-section-stepper.tsx`): chips 1-40 with answered, unanswered, flagged, and active status indicators.
+    - Submission confirmation modal (`submit-confirm-modal.tsx`): 3-card metrics summary of answered, unanswered, and flagged questions.
+  - **3.2 Results & Mistake Review:**
+    - Detailed mistake review (`result-review-table.tsx`): side-by-side comparison of candidate response vs answer key, review filter tabs (all, wrong, unanswered, correct, flagged), and quote explanation (`review-explain.tsx`).
+    - Official IELTS band breakdown (`ielts-result-breakdown.tsx`): section bands, overall band, time used, and CEFR equivalent.
+    - Candidate question type accuracy (`type-accuracy-card.tsx`).
+- **Implemented Items:**
+  - Upgraded `frontend/src/components/mock/submit-confirm-modal.tsx` to render a 3-metric summary grid (Answered, Unanswered, Flagged) and alert banner for flagged questions.
+  - Wired `flaggedCount={flaggedQuestions.size}` into `mock-runner.tsx` `<SubmitConfirmModal>`.
+  - Added blue highlighting support (`blueHighlights`) across `cbt-annotated-text.tsx` data structures, storage, toolbar buttons, and render passes.
+  - Added automated unit test suite `frontend/src/components/mock/submit-confirm-modal.spec.ts`.
+- **Tests:**
+  - `npx vitest run src/components/mock/submit-confirm-modal.spec.ts`: 3 passed, 0 failed.
+  - Full frontend mock suite: 283 passed across 45 test files (`npx vitest run src/components/mock/`).
   - Frontend TypeScript typecheck: 0 errors (`npx tsc --noEmit`).
 - **Commit SHA:** Will be recorded upon commit.
 - **PR:** Will be recorded upon PR creation.
