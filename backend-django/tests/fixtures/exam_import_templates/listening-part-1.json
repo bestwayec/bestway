@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "listening-part-1-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Listening Part 1 template",
+    "notes": "Replace every REPLACE placeholder and answer key using licensed or original material. After import, upload audio in each Part editor. Do not add audioRef or media entries when the teacher will upload audio later."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE - IELTS Listening Part 1 Practice",
+    "description": "Single-part IELTS Listening practice for Questions 1-10.",
+    "level": "IELTS",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear the Part 1 recording once only. Answer Questions 1-10.",
+        "durationMinutes": 10,
+        "groups": [
+          {
+            "key": "listening-part-1",
+            "title": "Part 1 - REPLACE - Everyday social conversation between two speakers",
+            "instructions": "Questions 1-10. Complete the form or table. Write ONE WORD AND/OR A NUMBER for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 1 form or table title</h3><table><thead><tr><th>REPLACE - Field</th><th>REPLACE - Details</th></tr></thead><tbody><tr><td>REPLACE - Field 1</td><td><span data-gap=\"1\"></span></td></tr><tr><td>REPLACE - Field 2</td><td><span data-gap=\"2\"></span></td></tr><tr><td>REPLACE - Field 3</td><td><span data-gap=\"3\"></span></td></tr><tr><td>REPLACE - Field 4</td><td><span data-gap=\"4\"></span></td></tr><tr><td>REPLACE - Field 5</td><td><span data-gap=\"5\"></span></td></tr><tr><td>REPLACE - Field 6</td><td><span data-gap=\"6\"></span></td></tr><tr><td>REPLACE - Field 7</td><td><span data-gap=\"7\"></span></td></tr><tr><td>REPLACE - Field 8</td><td><span data-gap=\"8\"></span></td></tr><tr><td>REPLACE - Field 9</td><td><span data-gap=\"9\"></span></td></tr><tr><td>REPLACE - Field 10</td><td><span data-gap=\"10\"></span></td></tr></tbody></table>",
+            "contentLayout": "table",
+            "audioScript": "",
+            "partNumber": 1,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-1",
+                "number": 1,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 1: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 1"
+              },
+              {
+                "key": "listening-question-2",
+                "number": 2,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 2: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 2"
+              },
+              {
+                "key": "listening-question-3",
+                "number": 3,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 3: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 3"
+              },
+              {
+                "key": "listening-question-4",
+                "number": 4,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 4: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 4"
+              },
+              {
+                "key": "listening-question-5",
+                "number": 5,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 5: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 5"
+              },
+              {
+                "key": "listening-question-6",
+                "number": 6,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 6: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 6"
+              },
+              {
+                "key": "listening-question-7",
+                "number": 7,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 7: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 7"
+              },
+              {
+                "key": "listening-question-8",
+                "number": 8,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 8: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 8"
+              },
+              {
+                "key": "listening-question-9",
+                "number": 9,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 9: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 9"
+              },
+              {
+                "key": "listening-question-10",
+                "number": 10,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 10: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 10"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-listening-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam/sections/0",
+      "message": "Replace and verify all Part 1 placeholders and answer keys, then upload its audio in the teacher editor.",
+      "sourceRef": "Generated IELTS Listening import template"
+    }
+  ]
+}

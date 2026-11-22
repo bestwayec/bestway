@@ -26,6 +26,23 @@ from .mock_rules import canonical_decision
 from .multilevel import CURRENT_SPEAKING_PROFILE, CURRENT_SPEC
 
 
+def optional_question_columns(question, group, skill):
+    """Columns for the optional schema-1.0 metadata (already validated). The evidence
+    offset is recomputed from the saved passage, never taken from the package."""
+    from . import item_metadata, review_evidence
+    columns = {}
+    if 'cefrLevel' in question:
+        columns['cefr_level'] = item_metadata.clean_cefr(question['cefrLevel'])
+    if 'skillTags' in question:
+        columns['skill_tags'] = item_metadata.clean_tags(question['skillTags'])
+    if question.get('evidenceText'):
+        text, offset = review_evidence.clean_evidence(question['evidenceText'], review_evidence.source_text(group, skill))
+        columns['evidence_text'], columns['evidence_offset'] = text, offset
+    if question.get('audioStartSec') is not None:
+        columns['audio_start_sec'] = review_evidence.clean_audio_start(question['audioStartSec'], None)
+    return columns
+
+
 def assert_staff(actor):
     if actor.role not in ('teacher', 'admin', 'super_admin'):
         raise ContractAPIException('MOCK_FORBIDDEN', 'Bu amal faqat xodimlar uchun', 403)
@@ -182,7 +199,8 @@ def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None)
                         part_number=group.get('partNumber') if section['skill'] == 'listening' else None,
                         audio_play_limit=group.get('audioPlayLimit', 1), audio_duration_sec=None,
                         audio_key=audio.storage_key if audio else None, image_key=image.storage_key if image else None,
-                        max_score=None, stimulus_ref=None, created_at=stamp)
+                        max_score=group.get('maxScore') if section['skill'] in ('writing', 'speaking') else None,
+                        stimulus_ref=group.get('stimulusRef') if section['skill'] == 'writing' else None, created_at=stamp)
                     maps.append(('group', group['key'], saved_group.id))
                     for qi, question in enumerate(group['questions']):
                         keys = question.get('correctAnswers', [])
@@ -191,7 +209,8 @@ def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None)
                         saved_question = MockQuestion.objects.create(id=new_id(), group_id=saved_group.id,
                             number=question['number'], sort_order=qi, type=question['type'], prompt=question['prompt'].strip(),
                             options=question.get('options', []), correct_answers=keys, accepted_variants=question.get('acceptedVariants', []),
-                            points=question.get('points', 1), word_limit=question.get('wordLimit'), answer_rule=question.get('answerRule'), created_at=stamp)
+                            points=question.get('points', 1), word_limit=question.get('wordLimit'), answer_rule=question.get('answerRule'),
+                            **optional_question_columns(question, saved_group, section['skill']), created_at=stamp)
                         maps.append(('question', question['key'], saved_question.id))
             row = MockExamImport.objects.create(id=new_id(), **identity, schema_version='1.0', profile=pkg['profile'],
                 raw_checksum=checksum, normalized_checksum=checksum, validated_checksum=checksum, exam_id=exam.id, created_at=stamp)

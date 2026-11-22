@@ -1,0 +1,708 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "listening-full-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Listening - four-part template",
+    "notes": "Replace every REPLACE placeholder and answer key using licensed or original material. After import, upload audio in each Part editor. Do not add audioRef or media entries when the teacher will upload audio later."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE - IELTS Listening Practice Test",
+    "description": "A 30-minute IELTS Listening practice test with four recordings and 40 questions.",
+    "level": "IELTS",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear four recordings once only. Answer Questions 1-40. Each correct answer receives one mark.",
+        "durationMinutes": 30,
+        "groups": [
+          {
+            "key": "listening-part-1",
+            "title": "Part 1 - REPLACE - Everyday social conversation between two speakers",
+            "instructions": "Questions 1-10. Complete the form or table. Write ONE WORD AND/OR A NUMBER for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 1 form or table title</h3><table><thead><tr><th>REPLACE - Field</th><th>REPLACE - Details</th></tr></thead><tbody><tr><td>REPLACE - Field 1</td><td><span data-gap=\"1\"></span></td></tr><tr><td>REPLACE - Field 2</td><td><span data-gap=\"2\"></span></td></tr><tr><td>REPLACE - Field 3</td><td><span data-gap=\"3\"></span></td></tr><tr><td>REPLACE - Field 4</td><td><span data-gap=\"4\"></span></td></tr><tr><td>REPLACE - Field 5</td><td><span data-gap=\"5\"></span></td></tr><tr><td>REPLACE - Field 6</td><td><span data-gap=\"6\"></span></td></tr><tr><td>REPLACE - Field 7</td><td><span data-gap=\"7\"></span></td></tr><tr><td>REPLACE - Field 8</td><td><span data-gap=\"8\"></span></td></tr><tr><td>REPLACE - Field 9</td><td><span data-gap=\"9\"></span></td></tr><tr><td>REPLACE - Field 10</td><td><span data-gap=\"10\"></span></td></tr></tbody></table>",
+            "contentLayout": "table",
+            "audioScript": "",
+            "partNumber": 1,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-1",
+                "number": 1,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 1: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 1"
+              },
+              {
+                "key": "listening-question-2",
+                "number": 2,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 2: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 2"
+              },
+              {
+                "key": "listening-question-3",
+                "number": 3,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 3: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 3"
+              },
+              {
+                "key": "listening-question-4",
+                "number": 4,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 4: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 4"
+              },
+              {
+                "key": "listening-question-5",
+                "number": 5,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 5: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 5"
+              },
+              {
+                "key": "listening-question-6",
+                "number": 6,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 6: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 6"
+              },
+              {
+                "key": "listening-question-7",
+                "number": 7,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 7: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 7"
+              },
+              {
+                "key": "listening-question-8",
+                "number": 8,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 8: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 8"
+              },
+              {
+                "key": "listening-question-9",
+                "number": 9,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 9: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 9"
+              },
+              {
+                "key": "listening-question-10",
+                "number": 10,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 10: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 10"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-2",
+            "title": "Part 2 - REPLACE - Everyday social monologue about a place, service or facility",
+            "instructions": "Questions 11-15. Label the plan, map or diagram. Write NO MORE THAN TWO WORDS for each answer. Upload the visual in the Part editor after import.\n\nQuestions 16-20. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 2,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-11",
+                "number": 11,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 11.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 11"
+              },
+              {
+                "key": "listening-question-12",
+                "number": 12,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 12.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 12"
+              },
+              {
+                "key": "listening-question-13",
+                "number": 13,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 13.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 13"
+              },
+              {
+                "key": "listening-question-14",
+                "number": 14,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 14.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 14"
+              },
+              {
+                "key": "listening-question-15",
+                "number": 15,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 15.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 15"
+              },
+              {
+                "key": "listening-question-16",
+                "number": 16,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 16.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 16"
+              },
+              {
+                "key": "listening-question-17",
+                "number": 17,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 17.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 17"
+              },
+              {
+                "key": "listening-question-18",
+                "number": 18,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 18.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 18"
+              },
+              {
+                "key": "listening-question-19",
+                "number": 19,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 19.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 19"
+              },
+              {
+                "key": "listening-question-20",
+                "number": 20,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 20.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 20"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-3",
+            "title": "Part 3 - REPLACE - Educational or training discussion with two to four speakers",
+            "instructions": "Questions 21-25. Match each statement with the correct speaker, opinion or category, A-E. You may use any letter more than once.\n\nQuestions 26-30. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 3,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-21",
+                "number": 21,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 21.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 21"
+              },
+              {
+                "key": "listening-question-22",
+                "number": 22,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 22.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 22"
+              },
+              {
+                "key": "listening-question-23",
+                "number": 23,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 23.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 23"
+              },
+              {
+                "key": "listening-question-24",
+                "number": 24,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 24.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 24"
+              },
+              {
+                "key": "listening-question-25",
+                "number": 25,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 25.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 25"
+              },
+              {
+                "key": "listening-question-26",
+                "number": 26,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 26.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 26"
+              },
+              {
+                "key": "listening-question-27",
+                "number": 27,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 27.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 27"
+              },
+              {
+                "key": "listening-question-28",
+                "number": 28,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 28.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 28"
+              },
+              {
+                "key": "listening-question-29",
+                "number": 29,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 29.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 29"
+              },
+              {
+                "key": "listening-question-30",
+                "number": 30,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 30.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 30"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-4",
+            "title": "Part 4 - REPLACE - Academic monologue or lecture",
+            "instructions": "Questions 31-40. Complete the notes. Write NO MORE THAN TWO WORDS for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 4 lecture notes title</h3><ul><li>REPLACE - Lecture note 31: <span data-gap=\"31\"></span></li><li>REPLACE - Lecture note 32: <span data-gap=\"32\"></span></li><li>REPLACE - Lecture note 33: <span data-gap=\"33\"></span></li><li>REPLACE - Lecture note 34: <span data-gap=\"34\"></span></li><li>REPLACE - Lecture note 35: <span data-gap=\"35\"></span></li><li>REPLACE - Lecture note 36: <span data-gap=\"36\"></span></li><li>REPLACE - Lecture note 37: <span data-gap=\"37\"></span></li><li>REPLACE - Lecture note 38: <span data-gap=\"38\"></span></li><li>REPLACE - Lecture note 39: <span data-gap=\"39\"></span></li><li>REPLACE - Lecture note 40: <span data-gap=\"40\"></span></li></ul>",
+            "contentLayout": "notes",
+            "audioScript": "",
+            "partNumber": 4,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-31",
+                "number": 31,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 31: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 31"
+              },
+              {
+                "key": "listening-question-32",
+                "number": 32,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 32: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 32"
+              },
+              {
+                "key": "listening-question-33",
+                "number": 33,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 33: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 33"
+              },
+              {
+                "key": "listening-question-34",
+                "number": 34,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 34: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 34"
+              },
+              {
+                "key": "listening-question-35",
+                "number": 35,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 35: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 35"
+              },
+              {
+                "key": "listening-question-36",
+                "number": 36,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 36: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 36"
+              },
+              {
+                "key": "listening-question-37",
+                "number": 37,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 37: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 37"
+              },
+              {
+                "key": "listening-question-38",
+                "number": 38,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 38: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 38"
+              },
+              {
+                "key": "listening-question-39",
+                "number": 39,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 39: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 39"
+              },
+              {
+                "key": "listening-question-40",
+                "number": 40,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 40: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 40"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-listening-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam/sections/0",
+      "message": "Replace and verify all Listening placeholders and answer keys, upload audio for Parts 1-4 in the teacher editor, and upload the Part 2 plan/map/diagram if that task is used.",
+      "sourceRef": "Generated IELTS Listening import template"
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import math
 import re
 import unicodedata
 
-from .mock_content import LAYOUTS, gap_numbers, sanitize_content
+from .mock_content import LAYOUTS, gap_numbers, reading_passage_count, sanitize_content
 from .mock_parse import build_correct_answers
 from .mock_rules import (
     ANSWER_RULES,
@@ -136,6 +136,45 @@ def _words(value):
     return len(re.sub(r'[.,/#!$%^&*;:{}=`~()"?\[\]<>+@\\|]', ' ', value).split())
 
 
+# Optional, additive schema-1.0 question metadata (exported by ``mock_export`` so a
+# round trip keeps the item bank level/tags and the review evidence). Older packages
+# without them stay valid; nothing here can block an otherwise valid legacy package.
+OPTIONAL_QUESTION_FIELDS = ('cefrLevel', 'skillTags', 'evidenceText', 'audioStartSec')
+
+
+def optional_question_issues(question, group, skill):
+    """Same rules the editor applies (item_metadata / review_evidence), as issues."""
+    from types import SimpleNamespace
+
+    from common.api.exceptions import ContractAPIException
+
+    from . import item_metadata, review_evidence
+    found = []
+    checks = [
+        ('cefrLevel', 'CEFR_LEVEL', lambda v: item_metadata.clean_cefr(v)),
+        ('skillTags', 'SKILL_TAGS', lambda v: item_metadata.clean_tags(v)),
+        ('audioStartSec', 'AUDIO_START', lambda v: review_evidence.clean_audio_start(v, None)),
+    ]
+    for field, code, check in checks:
+        if field in question:
+            try:
+                check(question[field])
+            except ContractAPIException as error:
+                found.append((code, '/' + field, error.contract_message))
+    if question.get('audioStartSec') not in (None, '') and skill != 'listening':
+        found.append(('AUDIO_START', '/audioStartSec', 'audioStartSec is only for Listening questions'))
+    if 'evidenceText' in question and question['evidenceText'] is not None:
+        source = review_evidence.source_text(SimpleNamespace(
+            audio_script=group.get('audioScript') if isinstance(group.get('audioScript'), str) else None,
+            passage_text=group.get('passageText') if isinstance(group.get('passageText'), str) else None,
+            content_html=group.get('contentHtml') if isinstance(group.get('contentHtml'), str) else None), skill)
+        try:
+            review_evidence.clean_evidence(question['evidenceText'], source)
+        except ContractAPIException as error:
+            found.append(('EVIDENCE_TEXT', '/evidenceText', error.contract_message))
+    return found
+
+
 def validate_package(pkg, media_bindings=None, raw_text=None):
     issues, notes = [], []
     counts = dict(sections=0, skills=0, groups=0, questions=0, media=0)
@@ -250,7 +289,17 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                     if not isinstance(group, dict):
                         add('GROUP', gb, 'group must be an object')
                         continue
-                    unknown(group, ('key', 'title', 'instructions', 'passageText', 'contentHtml', 'contentLayout', 'optionsReusable', 'audioScript', 'partNumber', 'audioPlayLimit', 'audioRef', 'imageRef', 'questions'), gb, 'group')
+                    unknown(group, ('key', 'title', 'instructions', 'passageText', 'contentHtml', 'contentLayout', 'optionsReusable', 'audioScript', 'partNumber', 'audioPlayLimit', 'audioRef', 'imageRef', 'questions', 'maxScore', 'stimulusRef'), gb, 'group')
+                    if group.get('maxScore') is not None:
+                        if skill not in ('writing', 'speaking'):
+                            add('MAX_SCORE', gb + '/maxScore', 'maxScore is only for Writing and Speaking parts')
+                        elif not integer(group['maxScore']) or not 1 <= group['maxScore'] <= 100:
+                            add('MAX_SCORE', gb + '/maxScore', 'maxScore must be an integer 1-100')
+                    if group.get('stimulusRef') is not None:
+                        if skill != 'writing':
+                            add('STIMULUS_REF', gb + '/stimulusRef', 'stimulusRef is only for Writing tasks that share a stimulus')
+                        elif not isinstance(group['stimulusRef'], str) or not KEY.fullmatch(group['stimulusRef']):
+                            add('STIMULUS_REF', gb + '/stimulusRef', 'stimulusRef must match ^[a-z][a-z0-9_-]{0,79}$')
                     key_check(group.get('key'), 'group', gb, group_keys)
                     if not nonblank(group.get('title')):
                         add('GROUP_TITLE', gb + '/title', 'group.title must be non-blank')
@@ -289,7 +338,9 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                         if not isinstance(question, dict):
                             add('QUESTION', qb, 'question must be an object')
                             continue
-                        unknown(question, ('key', 'number', 'type', 'prompt', 'options', 'correctAnswers', 'acceptedVariants', 'points', 'wordLimit', 'answerRule', 'sourceRef'), qb, 'question')
+                        unknown(question, ('key', 'number', 'type', 'prompt', 'options', 'correctAnswers', 'acceptedVariants', 'points', 'wordLimit', 'answerRule', 'sourceRef', *OPTIONAL_QUESTION_FIELDS), qb, 'question')
+                        for code, path, message in optional_question_issues(question, group, skill):
+                            add(code, qb + path, message)
                         key_check(question.get('key'), 'question', qb, question_keys)
                         number = question.get('number')
                         if isinstance(number, str):
@@ -298,7 +349,9 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                             add('NUMBER_RANGE', qb + '/number', 'question.number must be 1-200')
                         else:
                             q_nums.append(number)
-                            nk = f'{js_string(skill)}:{number}' if exam.get('type') == 'multilevel' else number
+                            # Numbering restarts per skill (IELTS Listening 1-40 and Reading 1-40;
+                            # Multilevel per section), exactly as the commit and the editor check it.
+                            nk = f'{js_string(skill)}:{number}'
                             if nk in numbers:
                                 add('NUMBER_COLLISION', qb + '/number', f'question number {number} collides with {numbers[nk]}')
                             else:
@@ -498,11 +551,13 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                     groups = section.get('groups') or []
                     by_skill[section.get('skill')] = dict(groups=len(groups), questions=sum(len(g.get('questions') or []) for g in groups if isinstance(g, dict)),
                         parts={g['partNumber'] for g in groups if isinstance(g, dict) and type(g.get('partNumber')) in (int, float)},
-                        types={q.get('type') for g in groups if isinstance(g, dict) for q in g.get('questions') or [] if isinstance(q, dict) and isinstance(q.get('type'), str)})
+                        types={q.get('type') for g in groups if isinstance(g, dict) for q in g.get('questions') or [] if isinstance(q, dict) and isinstance(q.get('type'), str)},
+                        passages=reading_passage_count(g.get('passageText') if isinstance(g, dict) and isinstance(g.get('passageText'), str) else None for g in groups))
                 for skill, count, group_count, parts in [('listening', 40, 4, True), ('reading', 40, 3, False)]:
-                    entry = by_skill.get(skill, dict(groups=0, questions=0, parts=set()))
-                    if entry['groups'] != group_count or entry['questions'] != count or (parts and entry['parts'] != {1, 2, 3, 4}):
-                        add('PROFILE_BLUEPRINT', '/exam/sections', f'full_mock {skill} needs {group_count} {"parts" if parts else "groups"} / {count} questions (found {entry["groups"]} groups, {entry["questions"]} questions)', ('publish',))
+                    entry = by_skill.get(skill, dict(groups=0, questions=0, parts=set(), passages=0))
+                    found = entry['groups'] if parts or entry['groups'] == group_count else entry['passages']
+                    if found != group_count or entry['questions'] != count or (parts and entry['parts'] != {1, 2, 3, 4}):
+                        add('PROFILE_BLUEPRINT', '/exam/sections', f'full_mock {skill} needs {group_count} {"parts" if parts else "passages"} / {count} questions (found {found} {"groups" if parts else "passages"}, {entry["questions"]} questions)', ('publish',))
                 writing = by_skill.get('writing', dict(questions=0, types=set()))
                 if writing['questions'] != 2 or not {'essay_task1', 'essay_task2'} <= writing['types']:
                     add('PROFILE_BLUEPRINT', '/exam/sections', 'full_mock writing needs task 1 and task 2', ('publish',))

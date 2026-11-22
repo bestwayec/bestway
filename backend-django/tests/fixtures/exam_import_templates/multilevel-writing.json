@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "multilevel-writing-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "CEFR Multilevel Writing template",
+    "notes": "Structure follows BestWay's configured Multilevel specification UZBMB_MULTILEVEL_EN_2026_V2 (the same blueprint the editor and publish checks use). It is a configurable platform default, not an official document. Listening audio is uploaded per part in the editor after import."
+  },
+  "exam": {
+    "type": "multilevel",
+    "title": "REPLACE — CEFR Multilevel Writing",
+    "description": "Multilevel Writing practice component.",
+    "level": "REPLACE — target level, e.g. B1–C1",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "writing",
+        "skill": "writing",
+        "title": "Writing",
+        "instructions": "REPLACE — Complete all three tasks.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ml-writing-informal-email",
+            "title": "Task 1.1 — Informal Letter",
+            "instructions": "REPLACE — Task instructions. Write about 50 words.",
+            "passageText": "REPLACE — Shared stimulus (the message both letters reply to).",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "stimulusRef": "writing-task-1",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-writing-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "essay_task1",
+                "prompt": "REPLACE — Task 1.1 — Informal Letter prompt. Write about 50 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-writing-formal-email",
+            "title": "Task 1.2 — Formal Letter",
+            "instructions": "REPLACE — Task instructions. Write 120–150 words.",
+            "passageText": "REPLACE — Shared stimulus (the message both letters reply to).",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "stimulusRef": "writing-task-1",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-writing-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "essay_task1",
+                "prompt": "REPLACE — Task 1.2 — Formal Letter prompt. Write 120–150 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-writing-publication",
+            "title": "Task 2 — Publication",
+            "instructions": "REPLACE — Task instructions. Write 180–200 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 6,
+            "questions": [
+              {
+                "key": "ml-writing-q3",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 3,
+                "type": "essay_task2",
+                "prompt": "REPLACE — Task 2 — Publication prompt. Write 180–200 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 6
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-multilevel-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder and sample answer key with verified material, upload Listening audio for each part, and attach the required pictures before publishing.",
+      "sourceRef": "Generated CEFR Multilevel template"
+    }
+  ]
+}

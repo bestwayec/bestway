@@ -79,3 +79,13 @@ def import_by_exam_view(request, exam_id):
 def resolve_import_issue_view(request, issue_id):
     require_role(request, 'teacher', 'admin', 'super_admin')
     return success(mock_imports.resolve_issue(request.user, issue_id))
+
+
+@api_view(['GET'])
+@permission_classes([Authenticated])
+def export_exam_view(request, exam_id):
+    """Schema-1.0 package of an exam (answer keys included: owner teacher or admin only)."""
+    require_role(request, 'teacher', 'admin', 'super_admin')
+    from .mock_export import export_package
+    skill = request.query_params.get('skill') or None
+    return success(export_package(request.user, exam_id, skill))

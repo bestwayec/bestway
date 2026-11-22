@@ -1,0 +1,234 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "listening-part-3-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Listening Part 3 template",
+    "notes": "Replace every REPLACE placeholder and answer key using licensed or original material. After import, upload audio in each Part editor. Do not add audioRef or media entries when the teacher will upload audio later."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE - IELTS Listening Part 3 Practice",
+    "description": "Single-part IELTS Listening practice for Questions 21-30.",
+    "level": "IELTS",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear the Part 3 recording once only. Answer Questions 21-30.",
+        "durationMinutes": 10,
+        "groups": [
+          {
+            "key": "listening-part-3",
+            "title": "Part 3 - REPLACE - Educational or training discussion with two to four speakers",
+            "instructions": "Questions 21-25. Match each statement with the correct speaker, opinion or category, A-E. You may use any letter more than once.\n\nQuestions 26-30. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 3,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-21",
+                "number": 21,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 21.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 21"
+              },
+              {
+                "key": "listening-question-22",
+                "number": 22,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 22.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 22"
+              },
+              {
+                "key": "listening-question-23",
+                "number": 23,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 23.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 23"
+              },
+              {
+                "key": "listening-question-24",
+                "number": 24,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 24.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 24"
+              },
+              {
+                "key": "listening-question-25",
+                "number": 25,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 25.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 25"
+              },
+              {
+                "key": "listening-question-26",
+                "number": 26,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 26.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 26"
+              },
+              {
+                "key": "listening-question-27",
+                "number": 27,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 27.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 27"
+              },
+              {
+                "key": "listening-question-28",
+                "number": 28,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 28.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 28"
+              },
+              {
+                "key": "listening-question-29",
+                "number": 29,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 29.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 29"
+              },
+              {
+                "key": "listening-question-30",
+                "number": 30,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 30.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 30"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-listening-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam/sections/0",
+      "message": "Replace and verify all Part 3 placeholders and answer keys, then upload its audio in the teacher editor.",
+      "sourceRef": "Generated IELTS Listening import template"
+    }
+  ]
+}

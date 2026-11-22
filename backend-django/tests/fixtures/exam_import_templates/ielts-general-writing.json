@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "ielts-general-writing-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS General Training Writing template",
+    "notes": "Replace every REPLACE placeholder with licensed or original material before publishing."
+  },
+  "exam": {
+    "type": "ielts_general",
+    "title": "REPLACE — IELTS General Training Writing",
+    "description": "General Training Writing: Task 1 letter (150 words) and Task 2 essay (250 words), 60 minutes.",
+    "level": "IELTS General Training",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "writing",
+        "skill": "writing",
+        "title": "General Training Writing",
+        "instructions": "The Writing test has two tasks. You have 60 minutes. Task 2 carries more weight than Task 1.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ielts-writing-general-task-1",
+            "title": "Writing Task 1 — Letter",
+            "instructions": "You should spend about 20 minutes on this task.\n\nREPLACE — Situation for the letter. Write a letter to … In your letter: • bullet 1 • bullet 2 • bullet 3. Begin your letter as follows: Dear …\n\nWrite at least 150 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-general-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "essay_task1",
+                "prompt": "REPLACE — Situation for the letter. Write a letter to … In your letter: • bullet 1 • bullet 2 • bullet 3. Begin your letter as follows: Dear … (Write at least 150 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          },
+          {
+            "key": "ielts-writing-general-task-2",
+            "title": "Writing Task 2 — Essay",
+            "instructions": "You should spend about 40 minutes on this task.\n\nWrite about the following topic:\n\nREPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience.\n\nWrite at least 250 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-general-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "essay_task2",
+                "prompt": "REPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience. (Write at least 250 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder (and attach required images) before publishing.",
+      "sourceRef": "Generated IELTS General Training Writing template"
+    }
+  ]
+}

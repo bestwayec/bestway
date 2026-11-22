@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "ielts-speaking-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Speaking template",
+    "notes": "Replace every REPLACE placeholder with licensed or original material before publishing."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE — IELTS Speaking",
+    "description": "Speaking Parts 1–3: interview, cue card long turn and discussion (11–14 minutes).",
+    "level": "IELTS Academic",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "speaking",
+        "skill": "speaking",
+        "title": "Speaking",
+        "instructions": "The Speaking test has three parts and lasts 11–14 minutes. Your answers are recorded.",
+        "durationMinutes": 15,
+        "groups": [
+          {
+            "key": "ielts-speaking-part-1",
+            "title": "Speaking Part 1 — Interview",
+            "instructions": "Answer the examiner's questions about familiar topics (4–5 minutes).",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "speaking_task",
+                "prompt": "Part 1 questions:\nTopic 1 — REPLACE\n1. REPLACE\n2. REPLACE\n3. REPLACE\nTopic 2 — REPLACE\n4. REPLACE\n5. REPLACE\n6. REPLACE",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          },
+          {
+            "key": "ielts-speaking-part-2",
+            "title": "Speaking Part 2 — Cue card",
+            "instructions": "You have 1 minute to prepare and make notes, then speak for up to 2 minutes.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "speaking_task",
+                "prompt": "CUE CARD:\nREPLACE — Describe …\nYou should say:\n- REPLACE\n- REPLACE\n- REPLACE\nand explain REPLACE.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          },
+          {
+            "key": "ielts-speaking-part-3",
+            "title": "Speaking Part 3 — Discussion",
+            "instructions": "Discuss broader questions linked to the Part 2 topic (4–5 minutes).",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q3",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 3,
+                "type": "speaking_task",
+                "prompt": "Part 3 discussion questions:\n1. REPLACE\n2. REPLACE\n3. REPLACE\n4. REPLACE",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder (and attach required images) before publishing.",
+      "sourceRef": "Generated IELTS Speaking template"
+    }
+  ]
+}

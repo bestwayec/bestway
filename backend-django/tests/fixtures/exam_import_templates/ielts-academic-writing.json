@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "ielts-academic-writing-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Academic Writing template",
+    "notes": "Replace every REPLACE placeholder with licensed or original material before publishing."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE — IELTS Academic Writing",
+    "description": "Academic Writing: Task 1 visual report (150 words) and Task 2 essay (250 words), 60 minutes.",
+    "level": "IELTS Academic",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "writing",
+        "skill": "writing",
+        "title": "Academic Writing",
+        "instructions": "The Writing test has two tasks. You have 60 minutes. Task 2 carries more weight than Task 1.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ielts-writing-academic-task-1",
+            "title": "Writing Task 1 — Visual report",
+            "instructions": "You should spend about 20 minutes on this task.\n\nREPLACE — The chart/graph/table/map/process below shows … Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-academic-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "essay_task1",
+                "prompt": "REPLACE — The chart/graph/table/map/process below shows … Summarise the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ],
+            "imageRef": "writing-task-1-visual"
+          },
+          {
+            "key": "ielts-writing-academic-task-2",
+            "title": "Writing Task 2 — Essay",
+            "instructions": "You should spend about 40 minutes on this task.\n\nWrite about the following topic:\n\nREPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience.\n\nWrite at least 250 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-academic-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "essay_task2",
+                "prompt": "REPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience. (Write at least 250 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [
+    {
+      "key": "writing-task-1-visual",
+      "kind": "image",
+      "fileName": "writing-task-1-visual.png",
+      "requiredForPublish": true,
+      "description": "Task 1 chart, graph, table, map or process diagram — attach before publishing."
+    }
+  ],
+  "reviewIssues": [
+    {
+      "key": "replace-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder (and attach required images) before publishing.",
+      "sourceRef": "Generated IELTS Academic Writing template"
+    }
+  ]
+}

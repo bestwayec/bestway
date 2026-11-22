@@ -106,3 +106,20 @@ def assert_gapped_questions(value, numbers):
         details.append('savol raqamlari takrorlangan')
     if details:
         raise ContractAPIException('GAP_QUESTION_MISMATCH', f"Kontent va savollar mos emas ({'; '.join(details)})", 400)
+
+
+def reading_passage_count(passage_texts) -> int:
+    """Reading passages in an ordered list of group passage texts.
+
+    Mirrors ``clusterReadingPassages`` (frontend): consecutive groups that repeat the
+    same non-blank passage text (whitespace-normalised) are one passage with several
+    task groups; every other group is its own passage. A section with one group per
+    passage therefore counts exactly as before.
+    """
+    count, previous = 0, None
+    for value in passage_texts:
+        text = ' '.join((value or '').split())
+        if not (text and text == previous):
+            count += 1
+        previous = text or None
+    return count

@@ -1,0 +1,291 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "reading-passage-1-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Academic Reading Passage 1 template",
+    "notes": "Replace every REPLACE placeholder with licensed or original material and supply source-verified answer keys before importing."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE — IELTS Academic Reading Passage 1",
+    "description": "Single-passage Academic Reading practice for Questions 1–13.",
+    "level": "Academic",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "reading",
+        "skill": "reading",
+        "title": "Academic Reading",
+        "instructions": "You should spend about 20 minutes on Questions 1–13, which are based on Reading Passage 1.",
+        "durationMinutes": 20,
+        "groups": [
+          {
+            "key": "reading-passage-1-identifying-information",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Do the following statements agree with the information given in Reading Passage 1? Choose TRUE if the statement agrees with the information, FALSE if it contradicts the information, or NOT GIVEN if there is no information on this.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-1",
+                "number": 1,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 1.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 1"
+              },
+              {
+                "key": "reading-question-2",
+                "number": 2,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 2.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 2"
+              },
+              {
+                "key": "reading-question-3",
+                "number": 3,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 3.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 3"
+              },
+              {
+                "key": "reading-question-4",
+                "number": 4,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 4.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 4"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-multiple-choice",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Choose the correct letter, A, B, C or D.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-5",
+                "number": 5,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 5.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 5"
+              },
+              {
+                "key": "reading-question-6",
+                "number": 6,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 6.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 6"
+              },
+              {
+                "key": "reading-question-7",
+                "number": 7,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 7.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 7"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-note-completion",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Complete the notes below. Choose ONE WORD ONLY from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "<h3>REPLACE — Notes title</h3><ol><li>REPLACE — Question 8 context: <span data-gap=\"8\"></span></li><li>REPLACE — Question 9 context: <span data-gap=\"9\"></span></li><li>REPLACE — Question 10 context: <span data-gap=\"10\"></span></li></ol>",
+            "contentLayout": "notes",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-8",
+                "number": 8,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 8.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 8"
+              },
+              {
+                "key": "reading-question-9",
+                "number": 9,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 9.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 9"
+              },
+              {
+                "key": "reading-question-10",
+                "number": 10,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 10.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 10"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-short-answer",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Answer the questions below. Choose NO MORE THAN THREE WORDS AND/OR A NUMBER from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-11",
+                "number": 11,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 11.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 11"
+              },
+              {
+                "key": "reading-question-12",
+                "number": 12,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 12.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 12"
+              },
+              {
+                "key": "reading-question-13",
+                "number": 13,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 13.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 13"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Template placeholders and sample answer keys must be replaced and verified against the source before publication.",
+      "sourceRef": "Generated IELTS Reading import template"
+    }
+  ]
+}
