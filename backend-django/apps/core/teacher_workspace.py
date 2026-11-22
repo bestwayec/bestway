@@ -487,7 +487,8 @@ def _with_counts(head, rows):
     counts = dict(assigned=len(current), submitted=sum(r['status'] in finished for r in current),
                   pending=sum(r['status'] in (NOT_STARTED, IN_PROGRESS) for r in current), overdue=sum(r['status'] == OVERDUE for r in current),
                   awaitingReview=sum(r['status'] in (AWAITING_REVIEW, SUBMITTED) for r in current), graded=len(graded))
-    order = {NOT_STARTED: 2, IN_PROGRESS: 1, OVERDUE: 3, AWAITING_REVIEW: 0, SUBMITTED: 0, GRADED: 4}
+    # needs the teacher first, then finished work, then who is still working / has not started
+    order = {AWAITING_REVIEW: 0, SUBMITTED: 0, GRADED: 1, IN_PROGRESS: 2, NOT_STARTED: 3, OVERDUE: 4}
     rows.sort(key=lambda r: (r['removed'], order[r['status']], r['name'] or ''))
     return dict(assignment=head, counts=counts, averagePercent=round(sum(graded) / len(graded), 1) if graded else None,
                 students=rows, refreshedAt=timezone.now())

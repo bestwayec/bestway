@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/workspace/homework-results";
 import { api, ApiError } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useStudentHomework, type StudentHomeworkItem } from "@/lib/teacher-workspace";
+import { formatDateTime, useStudentHomework, type StudentHomeworkItem } from "@/lib/teacher-workspace";
 
 const ICON = { quiz: ClipboardList, vocabulary: BookA, exam: GraduationCap, lesson: FileText } as const;
 
@@ -112,7 +112,7 @@ function HomeworkCard({ item }: { item: StudentHomeworkItem }) {
             <p className="font-semibold text-fg">{item.title}</p>
             <p className="text-xs text-fg-muted">{t(`kind.${item.kind}`)} · {item.groupName}{item.teacherName ? ` · ${item.teacherName}` : ""}</p>
             <p className={soon ? "text-xs font-medium text-warning" : "text-xs text-fg-muted"}>
-              {t("res.deadline")}: {deadline.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              {t("res.deadline")}: {formatDateTime(deadline)}
               {item.questionCount ? ` · ${t("hw.questions", { n: item.questionCount })}` : ""}
             </p>
           </div>

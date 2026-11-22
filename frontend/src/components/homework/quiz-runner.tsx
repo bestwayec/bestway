@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { api, ApiError } from "@/lib/api-client";
-import { formatDuration, useStudentHomework, type QuizAttempt, type QuizResult } from "@/lib/teacher-workspace";
+import { formatDateTime, formatDuration, useStudentHomework, type QuizAttempt, type QuizResult } from "@/lib/teacher-workspace";
 import { cn } from "@/lib/utils";
 
 type SaveState = "saving" | "saved" | "failed";
@@ -66,7 +66,7 @@ export function QuizRunner({ assignmentId }: { assignmentId: string }) {
         <ul className="mt-4 space-y-1 text-sm text-fg">
           <li>• {t("hw.questions", { n: item.questionCount ?? 0 })}</li>
           <li>• {item.timeLimitMinutes ? t("run.limit", { n: item.timeLimitMinutes }) : t("run.noLimit")}</li>
-          <li>• {t("res.deadline")}: {new Date(item.deadline).toLocaleString()}</li>
+          <li>• {t("res.deadline")}: {formatDateTime(item.deadline)}</li>
           <li>• {t("run.serverTimer")}</li>
         </ul>
         {error && <p className="mt-3 rounded-control bg-danger-bg p-3 text-sm text-danger" role="alert">{error}</p>}

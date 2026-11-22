@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { ApiError } from "@/lib/api-client";
 import {
   defaultDeadline,
+  formatDateTime,
   localInputToIso,
   useAssignHomework,
   useHomeworkOptions,
@@ -282,7 +283,7 @@ function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numb
                 <dt className="text-fg-muted">{t("hw.preview.type")}</dt><dd className="font-medium text-fg">{t(`kind.${plan.type}`)}</dd>
                 <dt className="text-fg-muted">{t("hw.preview.group")}</dt><dd className="font-medium text-fg">{plan.groupName} · {t("home.students", { n: plan.studentCount })}</dd>
                 {plan.questionCount != null && <><dt className="text-fg-muted">{t("hw.preview.size")}</dt><dd className="font-medium text-fg">{plan.type === "vocabulary" ? t("hw.words", { n: plan.questionCount }) : t("hw.questions", { n: plan.questionCount })}</dd></>}
-                <dt className="text-fg-muted">{t("hw.deadline")}</dt><dd className="font-medium text-fg">{new Date(plan.deadline).toLocaleString()}</dd>
+                <dt className="text-fg-muted">{t("hw.deadline")}</dt><dd className="font-medium text-fg">{formatDateTime(plan.deadline)}</dd>
                 {plan.type === "quiz" && <><dt className="text-fg-muted">{t("hw.timeLimit")}</dt><dd className="font-medium text-fg">{plan.timeLimitMinutes ? t("hw.minutes", { n: plan.timeLimitMinutes }) : t("hw.noLimit")}</dd></>}
               </dl>
             )}

@@ -37,3 +37,12 @@ describe("deadline helpers", () => {
     expect(formatDuration(-3)).toBe("00:00");
   });
 });
+
+describe("formatDateTime", () => {
+  it("is numeric and readable in every locale", async () => {
+    const { formatDateTime } = await import("./teacher-workspace");
+    expect(formatDateTime(new Date(2026, 10, 23, 20, 5))).toBe("23.11.2026 20:05");
+    expect(formatDateTime(null)).toBe("—");
+    expect(formatDateTime("nonsense")).toBe("—");
+  });
+});

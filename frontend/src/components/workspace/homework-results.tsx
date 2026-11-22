@@ -9,11 +9,12 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/app/page-header";
 import { api, ApiError } from "@/lib/api-client";
 import {
+  formatDateTime,
   useGradeSubmission,
   useGroupHomework,
   useHomeworkResults,
@@ -40,9 +41,7 @@ export function StatusBadge({ status }: { status: HomeworkStatus }) {
   return <Badge variant={STATUS_VARIANT[status]}>{t(`status.${status}`)}</Badge>;
 }
 
-function when(value: string | null) {
-  return value ? new Date(value).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
-}
+const when = formatDateTime;
 
 /** /teacher/results — a group's homework list, or one assignment when ?kind=&id= are present. */
 export function ResultsScreen() {
@@ -169,7 +168,7 @@ function HomeworkResultsView({ kind, id }: { kind: HomeworkKind; id: string }) {
             <Button variant="outline" asChild><a href={`/api/backend/v1/class-quiz-assignments/${a.id}/export`} download><Download />{t("res.export")}</a></Button>
           )}
           <Button variant="ghost" onClick={() => q.refetch()} aria-label={t("res.refresh")}><RefreshCw className={cn(q.isFetching && "animate-spin")} />{t("res.refresh")}</Button>
-          <span className="text-xs text-fg-subtle">{t("res.updated", { time: new Date(data.refreshedAt).toLocaleTimeString() })}</span>
+          <span className="text-xs text-fg-subtle">{t("res.updated", { time: formatDateTime(data.refreshedAt).slice(-5) })}</span>
         </div>
       </Card>
 
@@ -235,8 +234,9 @@ function AttemptDialog({ attemptId, name, onClose }: { attemptId: string; name: 
   }, [attemptId]);
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader><DialogTitle>{name}</DialogTitle></DialogHeader>
+        <DialogBody className="pb-5">
         {error ? <p className="text-sm text-danger">{t("common.loadError")}</p> : !data ? <Skeleton className="h-40" /> : (
           <div className="space-y-3">
             <p className="text-sm text-fg">{t("res.score", { c: data.correct, n: data.total, p: data.percent })}</p>
@@ -252,6 +252,7 @@ function AttemptDialog({ attemptId, name, onClose }: { attemptId: string; name: 
             </ul>
           </div>
         )}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

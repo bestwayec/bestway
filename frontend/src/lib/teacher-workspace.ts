@@ -347,6 +347,15 @@ export function changedRecords(saved: AttendanceSheet["students"], marks: Record
     .map((s) => ({ studentId: s.studentId, state: marks[s.studentId] as MarkState }));
 }
 
+/** `23.11.2026 20:00` — numeric on purpose: ICU's Uzbek short months render as "M11" in Chromium. */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "—";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);

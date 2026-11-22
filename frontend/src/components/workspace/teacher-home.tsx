@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/app/page-header";
 import { useMe } from "@/hooks/use-me";
-import { useWorkspaceOverview, type WorkspaceOverview } from "@/lib/teacher-workspace";
+import { formatDateTime, useWorkspaceOverview, type WorkspaceOverview } from "@/lib/teacher-workspace";
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
@@ -20,9 +20,6 @@ const ACTIONS = [
   { key: "results", href: "/teacher/results", icon: BarChart3, primary: false },
 ] as const;
 
-function formatDeadline(value: string, locale: string) {
-  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "uz-UZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-}
 
 export function TeacherHome() {
   const t = useTranslations("tw");
@@ -68,7 +65,6 @@ export function TeacherHome() {
 
 function Overview({ data }: { data: WorkspaceOverview }) {
   const t = useTranslations("tw");
-  const locale = t("common.locale");
   const today = data.groups.filter((g) => g.scheduledToday);
   const stats = [
     { label: t("home.stat.todayGroups"), value: data.todayGroups },
@@ -132,7 +128,7 @@ function Overview({ data }: { data: WorkspaceOverview }) {
                       <span className="block truncate font-medium text-fg">{u.title}</span>
                       <span className="block text-xs text-fg-muted">{u.groupName} · {t(`kind.${u.kind}`)}</span>
                     </span>
-                    <span className="shrink-0 text-xs font-medium text-fg-muted">{formatDeadline(u.deadline, locale)}</span>
+                    <span className="shrink-0 text-xs font-medium text-fg-muted">{formatDateTime(u.deadline)}</span>
                   </Link>
                 </li>
               ))}
