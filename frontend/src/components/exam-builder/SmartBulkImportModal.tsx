@@ -17,11 +17,14 @@ import {
   HelpCircle,
   Layers,
   Loader2,
+  Mic,
   Music,
+  PenTool,
   Play,
   RotateCcw,
   Sparkles,
   Upload,
+  Volume2,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -84,12 +87,17 @@ const QUESTION_TYPE_BADGE: Record<
   yes_no_notgiven: { label: "YNNG", variant: "warning" },
   matching: { label: "Matching", variant: "brand" },
   matching_headings: { label: "Matching Headings", variant: "brand" },
-  sentence_completion: { label: "Fill in the blank", variant: "success" },
+  sentence_completion: { label: "Sentence Completion", variant: "success" },
   note_completion: { label: "Note Completion", variant: "success" },
   summary_completion: { label: "Summary Completion", variant: "success" },
   table_completion: { label: "Table Completion", variant: "success" },
+  flowchart_completion: { label: "Flowchart Completion", variant: "success" },
+  form_completion: { label: "Form Completion", variant: "success" },
   short_answer: { label: "Short Answer", variant: "neutral" },
   map_labelling: { label: "Map Labelling", variant: "brand" },
+  essay_task1: { label: "Writing Task 1", variant: "brand" },
+  essay_task2: { label: "Writing Task 2 (Essay)", variant: "brand" },
+  speaking_task: { label: "Speaking Task", variant: "brand" },
 };
 
 const SAMPLE_SMART_TEXT = `READING PASSAGE 1
@@ -283,6 +291,207 @@ Answers:
 37: B
 38-40: A, C, D`;
 
+const SAMPLE_LISTENING_TEXT = `SECTION 1 Questions 1-10
+Complete the notes below.
+Write NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.
+
+Holiday Rental Booking
+1. Customer Name: Michael ___
+2. Contact Number: 07829 ___
+3. Check-in Date: 14th ___
+4. Number of Guests: ___ adults and two children
+5. Property Name: The Old ___
+6. Special Request: A baby ___ in the master bedroom
+7. Additional Service: Daily ___ delivery
+8. Payment: By ___ card
+9. Deposit Amount: £___
+10. Booking Reference: ___
+
+SECTION 2 Questions 11-20
+Questions 11-15
+Label the map below.
+Write the correct letter, A-E, next to questions 11-15.
+11. Information Desk
+12. Picnic Shelter
+13. Children's Playground
+14. Bicycle Rental
+15. Nature Trail Entrance
+
+Questions 16-20
+Choose the correct letter, A, B or C.
+16. The community center was established in:
+A) 1985
+B) 1995
+C) 2005
+17. The annual membership fee includes:
+A) Unlimited swimming pool access
+B) Free personal training sessions
+C) Complimentary locker hire
+18. Guided history walks take place:
+A) Every morning
+B) On Wednesday afternoons
+C) Saturday afternoons only
+19. Volunteers are urgently needed for:
+A) Landscaping the garden
+B) Organizing the book sale
+C) Assisting elderly visitors
+20. The evening concert series concludes with:
+A) A classical quartet
+B) A local jazz band
+C) A fireworks display
+
+SECTION 3 Questions 21-30
+Questions 21-25
+What opinion do the students express about each research method?
+Choose FIVE answers from the box and write the correct letter, A-F, next to questions 21-25.
+A) Too expensive to execute
+B) Highly reliable data
+C) Difficult to analyze
+D) Overused in previous studies
+E) Needs ethics approval
+F) Excellent response rate
+21. Online survey
+22. Focus group interviews
+23. Observational field notes
+24. Case study analysis
+25. Telephone polling
+
+Questions 26-30
+Complete the summary below.
+Write ONE WORD ONLY for each answer.
+26. The students decided to investigate public attitudes towards urban ___.
+27. Their target demographic comprises residents aged between 18 and ___.
+28. Dr. Harrison advised them to pilot test the questionnaire on campus ___.
+29. Data will be processed using specialized statistical ___ software.
+30. The final academic presentation is scheduled for next ___.
+
+SECTION 4 Questions 31-40
+Complete the lecture notes below.
+Write NO MORE THAN TWO WORDS for each answer.
+
+Cetacean Intelligence and Communication
+31. Cetaceans encompass dolphins, porpoises, and ___.
+32. The cerebral cortex in bottlenose dolphins contains complex ___ folds.
+33. Echolocation clicks allow marine mammals to detect objects in total ___.
+34. Signature whistles function analogously to human ___.
+35. Pod members coordinate hunting maneuvers using acoustic ___.
+36. Deep ocean noise from commercial shipping causes acoustic ___.
+37. Stranding events have been linked to military high-intensity ___.
+38. Cultural transmission of feeding techniques has been observed in humpback whale ___.
+39. Captive studies demonstrate self-awareness via the ___ test.
+40. International conservation treaties protect vulnerable migration ___.
+
+Answers:
+1: Davies
+2: 445901
+3: July
+4: 4
+5: Mill
+6: cot
+7: breakfast
+8: credit
+9: 150
+10: HD894
+11: B
+12: D
+13: A
+14: E
+15: C
+16: B
+17: A
+18: C
+19: B
+20: B
+21: F
+22: E
+23: B
+24: C
+25: A
+26: parks
+27: 35
+28: students
+29: analysis
+30: Friday
+31: whales
+32: cortical
+33: darkness
+34: names
+35: signals
+36: pollution
+37: sonar
+38: groups
+39: mirror
+40: routes`;
+
+const SAMPLE_WRITING_TEXT = `WRITING TASK 1
+You should spend about 20 minutes on this task.
+
+The chart below illustrates the percentage of renewable energy in four European countries between 2005 and 2025.
+[Image: https://cdn.bestway.uz/charts/ielts_writing_task1_renewables.png]
+
+Summarise the information by selecting and reporting the main features, and make comparisons where relevant.
+Write at least 150 words.
+
+WRITING TASK 2
+You should spend about 40 minutes on this task.
+Write about the following topic:
+
+In many societies today, people are spending more time working and less time with family and friends.
+What are the primary causes of this trend, and what effects does it have on individuals and society?
+
+Give reasons for your answer and include any relevant examples from your own knowledge or experience.
+Write at least 250 words.`;
+
+const SAMPLE_SPEAKING_TEXT = `IELTS SPEAKING TEST
+
+PART 1 - Introduction and Interview (4-5 minutes)
+Let's talk about where you live.
+1. Do you live in a house or an apartment?
+2. What is your favorite room in your home, and why?
+3. How long have you lived in your current neighborhood?
+4. Would you like to move to another area in the future?
+
+PART 2 - Long Turn / Cue Card (3-4 minutes)
+Describe a memorable journey you took by public transport.
+You should say:
+- where you went and who you traveled with
+- what mode of public transport you used
+- what happened during the journey
+and explain why this journey was particularly memorable to you.
+
+You will have to talk about the topic for 1-2 minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.
+
+PART 3 - Two-way Discussion (4-5 minutes)
+Let's discuss public transportation systems and urban planning.
+5. In your opinion, what makes a public transportation network effective in large cities?
+6. How can governments encourage more commuters to use buses and trains instead of private cars?
+7. Do you believe that high-speed railways will replace domestic flights in the coming decades?
+8. What impact might autonomous vehicles have on public transit in the future?`;
+
+const SKILL_CONFIG: Record<
+  MockSkill,
+  { label: string; shortHint: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  listening: { label: "Listening", shortHint: "4 Sections / 40 savol", icon: Headphones },
+  reading: { label: "Reading", shortHint: "3 Passages / 40 savol", icon: BookOpen },
+  writing: { label: "Writing", shortHint: "Task 1 va Task 2", icon: PenTool },
+  speaking: { label: "Speaking", shortHint: "Parts 1, 2, 3", icon: Mic },
+};
+
+function getSampleTextForSkill(targetSkill: MockSkill): string {
+  switch (targetSkill) {
+    case "listening":
+      return SAMPLE_LISTENING_TEXT;
+    case "writing":
+      return SAMPLE_WRITING_TEXT;
+    case "speaking":
+      return SAMPLE_SPEAKING_TEXT;
+    case "reading":
+    default:
+      return SAMPLE_SMART_TEXT;
+  }
+}
+
 function formatSecondsToMmSs(sec: number): string {
   const safe = Math.max(0, Math.floor(Number(sec) || 0));
   const m = Math.floor(safe / 60);
@@ -319,11 +528,8 @@ export function SmartBulkImportModal({
   listeningGroups = [],
   onImported,
 }: SmartBulkImportModalProps) {
-  const normalizedSkill: "reading" | "listening" =
-    defaultSkill === "listening" ? "listening" : "reading";
-
   const [activeTab, setActiveTab] = React.useState<SmartImportTab>(defaultTab);
-  const [skill, setSkill] = React.useState<"reading" | "listening">(normalizedSkill);
+  const [skill, setSkill] = React.useState<MockSkill>(defaultSkill || "reading");
   const [targetScope, setTargetScope] = React.useState<"exam" | "group">(
     groupId ? "group" : "exam",
   );
@@ -388,7 +594,7 @@ export function SmartBulkImportModal({
   React.useEffect(() => {
     if (open) {
       setActiveTab(defaultTab);
-      setSkill(defaultSkill === "listening" ? "listening" : "reading");
+      setSkill(defaultSkill || "reading");
       setTargetScope(groupId ? "group" : "exam");
       setCurrentStep(1);
     }
@@ -446,6 +652,11 @@ export function SmartBulkImportModal({
           defaultSkill: skill,
           examType,
         });
+      }
+
+      if (res.skill && res.skill !== skill) {
+        setSkill(res.skill);
+        toast.info(`Fayl mazmuni bo'yicha ${res.skill.toUpperCase()} bo'limi aniqlandi`);
       }
 
       setParseResult(res);
@@ -630,11 +841,27 @@ export function SmartBulkImportModal({
   // Derived metrics for Review and Preview
   const totalQuestions = editableQuestions.length;
   const questionsWithAnswers = editableQuestions.filter(
-    (q) => editableAnswers[String(q.number)]?.trim(),
+    (q) => editableAnswers[String(q.number)]?.trim() || (q.correctAnswers && q.correctAnswers.length > 0),
   ).length;
   const needsReviewList = editableQuestions.filter((q) => q.needsReview);
   const isCompleteIeltsReading =
     examType !== "multilevel" && skill === "reading" && totalQuestions === 40;
+  const isCompleteIeltsListening =
+    examType !== "multilevel" && skill === "listening" && totalQuestions === 40;
+  const isCompleteIeltsWriting =
+    skill === "writing" &&
+    editableQuestions.some((q) => q.number === 1) &&
+    editableQuestions.some((q) => q.number === 2);
+  const isCompleteIeltsSpeaking =
+    skill === "speaking" &&
+    editablePassages.length >= 3 &&
+    editableQuestions.length >= 3;
+
+  const isFullyComplete =
+    isCompleteIeltsReading ||
+    (isCompleteIeltsListening && Boolean(audioFile || playableAudioSrc)) ||
+    isCompleteIeltsWriting ||
+    isCompleteIeltsSpeaking;
 
   const filteredQuestions = filterNeedsReviewOnly ? needsReviewList : editableQuestions;
 
@@ -754,11 +981,13 @@ export function SmartBulkImportModal({
                   <span>Bo&apos;lim (Skill):</span>
                   <select
                     value={skill}
-                    onChange={(e) => setSkill(e.target.value as "reading" | "listening")}
+                    onChange={(e) => setSkill(e.target.value as MockSkill)}
                     className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-fg"
                   >
-                    <option value="reading">Reading (O&apos;qish)</option>
-                    <option value="listening">Listening (Tinglash)</option>
+                    <option value="listening">🎧 Listening (Tinglash - 4 Sections)</option>
+                    <option value="reading">📖 Reading (O&apos;qish - 3 Passages)</option>
+                    <option value="writing">✍️ Writing (Yozish - Task 1 &amp; 2)</option>
+                    <option value="speaking">🎙️ Speaking (Gapirish - Parts 1, 2, 3)</option>
                   </select>
                 </label>
 
@@ -795,6 +1024,41 @@ export function SmartBulkImportModal({
               {/* STEP 1: UPLOAD */}
               {currentStep === 1 && (
                 <div className="space-y-4">
+                  {/* Skill Selector 4 Cards */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-fg-muted">
+                      1. Bo&apos;limni tanlang (IELTS Skill):
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(["listening", "reading", "writing", "speaking"] as MockSkill[]).map((sk) => {
+                        const cfg = SKILL_CONFIG[sk];
+                        const Icon = cfg.icon;
+                        const isSelected = skill === sk;
+                        return (
+                          <button
+                            key={sk}
+                            type="button"
+                            onClick={() => {
+                              setSkill(sk);
+                              if (rawText.trim() && [SAMPLE_SMART_TEXT, SAMPLE_LISTENING_TEXT, SAMPLE_WRITING_TEXT, SAMPLE_SPEAKING_TEXT].includes(rawText)) {
+                                setRawText(getSampleTextForSkill(sk));
+                              }
+                            }}
+                            className={`flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all ${
+                              isSelected
+                                ? "border-brand bg-brand/10 text-brand shadow-xs ring-1 ring-brand"
+                                : "border-border bg-surface text-fg-muted hover:border-brand/40 hover:text-fg"
+                            }`}
+                          >
+                            <Icon className="size-5 mb-1.5" />
+                            <span className="text-xs font-bold text-fg">{cfg.label}</span>
+                            <span className="text-[10px] text-fg-muted mt-0.5">{cfg.shortHint}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Drag-and-drop zone */}
                   <div
                     onDragOver={(e) => {
@@ -906,13 +1170,13 @@ export function SmartBulkImportModal({
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              setRawText(SAMPLE_SMART_TEXT);
+                              setRawText(getSampleTextForSkill(skill));
                               setUploadedFile(null);
                             }}
                             className="h-7 text-xs"
                           >
                             <Sparkles className="size-3.5 mr-1 text-brand" />
-                            Namuna 40-savollik IELTS test
+                            Namuna {SKILL_CONFIG[skill]?.label || "IELTS"} test
                           </Button>
                           {rawText && (
                             <Button
@@ -935,7 +1199,15 @@ export function SmartBulkImportModal({
                           setRawText(e.target.value);
                           if (e.target.value.trim()) setUploadedFile(null);
                         }}
-                        placeholder="READING PASSAGE 1&#10;Matn sarlavhasi...&#10;&#10;1. Savol matni...&#10;A) Variant 1&#10;B) Variant 2&#10;&#10;Answers:&#10;1: B"
+                        placeholder={
+                          skill === "writing"
+                            ? "WRITING TASK 1\nYou should spend about 20 minutes...\n[Image: chart.png]\n\nWRITING TASK 2\nYou should spend about 40 minutes...\nEssay prompt..."
+                            : skill === "speaking"
+                              ? "PART 1\n1. Where do you live?\n\nPART 2\nDescribe a memorable journey...\nYou should say:\n- where you went\n\nPART 3\nDiscussion..."
+                              : skill === "listening"
+                                ? "SECTION 1 Questions 1-10\n1. Customer name: ___\n\nAnswers:\n1: Smith"
+                                : "READING PASSAGE 1\nMatn sarlavhasi...\n\n1. Savol matni...\n\nAnswers:\n1: TRUE"
+                        }
                         className="min-h-48 font-mono text-xs leading-relaxed"
                       />
                     </div>
@@ -966,18 +1238,36 @@ export function SmartBulkImportModal({
                     <div>
                       <h4 className="text-sm font-bold text-fg flex items-center gap-2">
                         <CheckCircle2 className="size-4 text-success" />
-                        Tahlil Natijasi: {totalQuestions} ta savol ajratildi
+                        Tahlil Natijasi: {totalQuestions} ta {skill === "writing" ? "topshiriq" : "savol"} ajratildi
                         {isCompleteIeltsReading && (
                           <Badge variant="success" className="ml-1 text-[11px]">
                             To&apos;liq 40/40 IELTS Reading
                           </Badge>
                         )}
+                        {isCompleteIeltsListening && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq 40/40 IELTS Listening
+                          </Badge>
+                        )}
+                        {isCompleteIeltsWriting && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq IELTS Writing (Task 1 &amp; 2)
+                          </Badge>
+                        )}
+                        {isCompleteIeltsSpeaking && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq IELTS Speaking (Parts 1, 2, 3)
+                          </Badge>
+                        )}
                       </h4>
                       <p className="text-xs text-fg-muted mt-0.5">
-                        {editablePassages.length > 0
-                          ? `${editablePassages.length} ta Passage aniqlandi. `
-                          : "Yagona matn. "}
-                        {questionsWithAnswers} / {totalQuestions} savol javob kalitiga ega.
+                        {skill === "writing"
+                          ? "IELTS Writing: Task 1 va Task 2 insho matnlari ajratildi."
+                          : skill === "speaking"
+                            ? "IELTS Speaking: Part 1, Part 2 (Cue Card) va Part 3 savollari ajratildi."
+                            : editablePassages.length > 0
+                              ? `${editablePassages.length} ta ${skill === "listening" ? "Section" : "Passage"} aniqlandi. ${questionsWithAnswers} / ${totalQuestions} savol javob kalitiga ega.`
+                              : `Yagona matn. ${questionsWithAnswers} / ${totalQuestions} savol javob kalitiga ega.`}
                       </p>
                     </div>
 
@@ -1007,224 +1297,450 @@ export function SmartBulkImportModal({
                     </div>
                   </div>
 
-                  {/* Passages Accordion / Tabs */}
-                  {editablePassages.length > 0 && (
-                    <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
-                        <div className="flex items-center gap-1.5 font-bold text-xs uppercase text-fg-muted">
-                          <BookOpen className="size-4 text-brand" />
-                          <span>Reading Matnlari (Passages)</span>
+                  {/* Skill-specific editor */}
+                  {skill === "writing" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-warning/30 bg-warning/5 p-3.5 text-xs text-fg flex items-start gap-2.5">
+                        <PenTool className="size-4 text-warning shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold text-warning">
+                            IELTS Writing (Task 1 va Task 2)
+                          </div>
+                          <p className="text-fg-muted text-[11px] mt-0.5">
+                            Har bir topshiriq o&apos;qituvchi tomonidan maxsus rubrika bo&apos;yicha baholanadi. Tizimda soxta avtomat band ball hisoblanmaydi.
+                          </p>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {editablePassages.map((p) => (
-                            <button
-                              key={p.partNumber}
-                              type="button"
-                              onClick={() => setActivePassageTab(p.partNumber)}
-                              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                                activePassageTab === p.partNumber
-                                  ? "bg-brand text-brand-fg"
-                                  : "bg-bg-subtle text-fg-muted hover:text-fg"
-                              }`}
-                            >
-                              Passage {p.partNumber}
-                            </button>
+                      </div>
+
+                      {/* Task 1 Card */}
+                      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="brand">Writing Task 1</Badge>
+                            <span className="text-xs text-fg-muted font-medium">
+                              (Academic grafik/jadval yoki General Training xat)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-fg-muted">Min:</span>
+                            <Badge variant="info">150 so&apos;z</Badge>
+                            <Badge variant="neutral">~20 daqiqa</Badge>
+                          </div>
+                        </div>
+
+                        <Field label="Ko'rsatma (Instructions)">
+                          <Input
+                            value={editablePassages[0]?.instructions || "You should spend about 20 minutes on this task. Write at least 150 words."}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[0]) next[0] = { ...next[0], instructions: val };
+                                return next;
+                              });
+                            }}
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+
+                        <Field label="Rasm yoki Grafik URL (Image Key)">
+                          <Input
+                            value={editablePassages[0]?.imageKey || ""}
+                            placeholder="https://cdn.bestway.uz/charts/... yoki [Image: chart.png]"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[0]) next[0] = { ...next[0], imageKey: val };
+                                return next;
+                              });
+                            }}
+                            className="h-8 text-xs font-mono"
+                          />
+                        </Field>
+
+                        <Field label="Task 1 Vazifa / Savol Matni (Prompt)">
+                          <Textarea
+                            value={editableQuestions.find((q) => q.number === 1)?.prompt || editablePassages[0]?.passageText || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditableQuestions((prev) => prev.map((q) => q.number === 1 ? { ...q, prompt: val } : q));
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[0]) next[0] = { ...next[0], passageText: val };
+                                return next;
+                              });
+                            }}
+                            rows={4}
+                            className="text-xs font-serif leading-relaxed"
+                          />
+                        </Field>
+                      </div>
+
+                      {/* Task 2 Card */}
+                      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="brand">Writing Task 2</Badge>
+                            <span className="text-xs text-fg-muted font-medium">Insho (Essay Topic)</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-fg-muted">Min:</span>
+                            <Badge variant="info">250 so&apos;z</Badge>
+                            <Badge variant="neutral">~40 daqiqa</Badge>
+                          </div>
+                        </div>
+
+                        <Field label="Ko'rsatma (Instructions)">
+                          <Input
+                            value={editablePassages[1]?.instructions || "You should spend about 40 minutes on this task. Write at least 250 words."}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[1]) next[1] = { ...next[1], instructions: val };
+                                return next;
+                              });
+                            }}
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+
+                        <Field label="Task 2 Insho Mavzusi (Prompt)">
+                          <Textarea
+                            value={editableQuestions.find((q) => q.number === 2)?.prompt || editablePassages[1]?.passageText || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditableQuestions((prev) => prev.map((q) => q.number === 2 ? { ...q, prompt: val } : q));
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[1]) next[1] = { ...next[1], passageText: val };
+                                return next;
+                              });
+                            }}
+                            rows={5}
+                            className="text-xs font-serif leading-relaxed"
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  ) : skill === "speaking" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-info/30 bg-info/5 p-3.5 text-xs text-fg flex items-start gap-2.5">
+                        <Mic className="size-4 text-info shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold text-info">
+                            IELTS Speaking (Part 1, Part 2 va Part 3)
+                          </div>
+                          <p className="text-fg-muted text-[11px] mt-0.5">
+                            Har bir qism audio yozib olish tizimi bilan integratsiya qilingan. Part 2 Cue card uchun 1 daqiqa tayyorgarlik va 2 daqiqa gapirish vaqti sozlangan.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Part 1 Card */}
+                      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <Badge variant="brand">Part 1: Introduction &amp; Interview</Badge>
+                          <span className="text-xs text-fg-muted">4–5 daqiqa</span>
+                        </div>
+                        <div className="space-y-2">
+                          {editableQuestions.filter((q) => q.partNumber === 1).map((q) => (
+                            <div key={q.number} className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-fg-muted w-6">Q{q.number}</span>
+                              <Input
+                                value={q.prompt}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditableQuestions((prev) => prev.map((item) => item.number === q.number ? { ...item, prompt: val } : item));
+                                }}
+                                className="h-8 text-xs flex-1"
+                              />
+                            </div>
                           ))}
                         </div>
                       </div>
 
-                      {editablePassages
-                        .filter((p) => p.partNumber === activePassageTab)
-                        .map((p, idx) => (
-                          <div key={p.partNumber} className="space-y-2">
-                            <Input
-                              value={p.title || `Passage ${p.partNumber}`}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditablePassages((prev) =>
-                                  prev.map((item) =>
-                                    item.partNumber === p.partNumber
-                                      ? { ...item, title: val }
-                                      : item,
-                                  ),
-                                );
-                              }}
-                              placeholder="Passage sarlavhasi..."
-                              className="h-8 text-xs font-bold"
-                            />
-                            <Textarea
-                              value={p.passageText || ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditablePassages((prev) =>
-                                  prev.map((item) =>
-                                    item.partNumber === p.partNumber
-                                      ? { ...item, passageText: val }
-                                      : item,
-                                  ),
-                                );
-                              }}
-                              placeholder="Passage to'liq matni..."
-                              className="min-h-28 text-xs font-serif leading-relaxed"
-                            />
+                      {/* Part 2 Card */}
+                      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <Badge variant="brand">Part 2: Long Turn (Cue Card)</Badge>
+                          <div className="flex items-center gap-2 text-xs">
+                            <Badge variant="info">Tayyorgarlik: 60s</Badge>
+                            <Badge variant="neutral">Nutq: 120s</Badge>
                           </div>
-                        ))}
+                        </div>
+                        <Field label="Cue Card Mavzusi va Bandlari (You should say:)">
+                          <Textarea
+                            value={editablePassages[1]?.passageText || editableQuestions.find((q) => q.partNumber === 2)?.prompt || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditablePassages((prev) => {
+                                const next = [...prev];
+                                if (next[1]) next[1] = { ...next[1], passageText: val };
+                                return next;
+                              });
+                              setEditableQuestions((prev) => prev.map((q) => q.partNumber === 2 ? { ...q, prompt: val } : q));
+                            }}
+                            rows={6}
+                            className="text-xs font-serif leading-relaxed"
+                          />
+                        </Field>
+                      </div>
+
+                      {/* Part 3 Card */}
+                      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <Badge variant="brand">Part 3: Two-way Discussion</Badge>
+                          <span className="text-xs text-fg-muted">4–5 daqiqa</span>
+                        </div>
+                        <div className="space-y-2">
+                          {editableQuestions.filter((q) => q.partNumber === 3).map((q) => (
+                            <div key={q.number} className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-fg-muted w-6">Q{q.number}</span>
+                              <Input
+                                value={q.prompt}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditableQuestions((prev) => prev.map((item) => item.number === q.number ? { ...item, prompt: val } : item));
+                                }}
+                                className="h-8 text-xs flex-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {/* Passages Accordion / Tabs */}
+                      {editablePassages.length > 0 && (
+                        <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                            <div className="flex items-center gap-1.5 font-bold text-xs uppercase text-fg-muted">
+                              <BookOpen className="size-4 text-brand" />
+                              <span>
+                                {skill === "listening"
+                                  ? "Listening Bo'limlari (Sections)"
+                                  : "Reading Matnlari (Passages)"}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {editablePassages.map((p) => (
+                                <button
+                                  key={p.partNumber}
+                                  type="button"
+                                  onClick={() => setActivePassageTab(p.partNumber)}
+                                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                                    activePassageTab === p.partNumber
+                                      ? "bg-brand text-brand-fg"
+                                      : "bg-bg-subtle text-fg-muted hover:text-fg"
+                                  }`}
+                                >
+                                  {skill === "listening" ? "Section" : "Passage"} {p.partNumber}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-                  {/* Question Type Breakdown */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(
-                      editableQuestions.reduce<Record<string, number>>((acc, q) => {
-                        acc[q.type] = (acc[q.type] ?? 0) + 1;
-                        return acc;
-                      }, {}),
-                    ).map(([type, count]) => {
-                      const meta = QUESTION_TYPE_BADGE[type] ?? {
-                        label: type,
-                        variant: "neutral" as const,
-                      };
-                      return (
-                        <Badge key={type} variant={meta.variant} className="text-xs">
-                          {meta.label}: {count}
-                        </Badge>
-                      );
-                    })}
-                  </div>
+                          {editablePassages
+                            .filter((p) => p.partNumber === activePassageTab)
+                            .map((p) => (
+                              <div key={p.partNumber} className="space-y-2">
+                                <Input
+                                  value={p.title || `${skill === "listening" ? "Section" : "Passage"} ${p.partNumber}`}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setEditablePassages((prev) =>
+                                      prev.map((item) =>
+                                        item.partNumber === p.partNumber
+                                          ? { ...item, title: val }
+                                          : item,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder={`${skill === "listening" ? "Section" : "Passage"} sarlavhasi...`}
+                                  className="h-8 text-xs font-bold"
+                                />
+                                <Textarea
+                                  value={p.passageText || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setEditablePassages((prev) =>
+                                      prev.map((item) =>
+                                        item.partNumber === p.partNumber
+                                          ? { ...item, passageText: val }
+                                          : item,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder={
+                                    skill === "listening"
+                                      ? "Audio skripti yoki bo'lim matni (ixtiyoriy)..."
+                                      : "Passage to'liq matni..."
+                                  }
+                                  className="min-h-28 text-xs font-serif leading-relaxed"
+                                />
+                              </div>
+                            ))}
+                        </div>
+                      )}
 
-                  {/* Interactive questions editing table */}
-                  <div className="max-h-80 overflow-y-auto rounded-xl border border-border bg-surface">
-                    <table className="w-full text-left text-xs">
-                      <thead className="sticky top-0 border-b border-border bg-bg-subtle text-[11px] font-bold uppercase text-fg-muted z-10">
-                        <tr>
-                          <th className="px-3 py-2 w-14">#</th>
-                          <th className="px-3 py-2 w-44">Savol turi</th>
-                          <th className="px-3 py-2">Savol matni va variantlar</th>
-                          <th className="px-3 py-2 w-36">To&apos;g&apos;ri javob</th>
-                          <th className="px-3 py-2 w-28 text-center">Holat</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {filteredQuestions.map((q, idx) => {
-                          const ansVal =
-                            editableAnswers[String(q.number)] ??
-                            (q.correctAnswers && q.correctAnswers.length > 0
-                              ? q.correctAnswers.join(" / ")
-                              : "");
-                          const badgeMeta = QUESTION_TYPE_BADGE[q.type] ?? {
-                            label: q.type,
+                      {/* Question Type Breakdown */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(
+                          editableQuestions.reduce<Record<string, number>>((acc, q) => {
+                            acc[q.type] = (acc[q.type] ?? 0) + 1;
+                            return acc;
+                          }, {}),
+                        ).map(([type, count]) => {
+                          const meta = QUESTION_TYPE_BADGE[type] ?? {
+                            label: type,
                             variant: "neutral" as const,
                           };
                           return (
-                            <tr
-                              key={`${q.number}-${idx}`}
-                              className={`hover:bg-surface-hover/60 ${
-                                q.needsReview ? "bg-warning/5" : ""
-                              }`}
-                            >
-                              <td className="px-3 py-2 font-bold tabular-nums text-fg">
-                                Q{q.number}
-                              </td>
-                              <td className="px-3 py-2">
-                                <select
-                                  value={q.type}
-                                  onChange={(e) => {
-                                    const nextType = e.target.value as MockQuestionType;
-                                    setEditableQuestions((prev) =>
-                                      prev.map((item) =>
-                                        item.number === q.number
-                                          ? { ...item, type: nextType }
-                                          : item,
-                                      ),
-                                    );
-                                  }}
-                                  className="w-full rounded border border-border bg-bg px-2 py-1 text-[11px] font-medium text-fg"
-                                >
-                                  {Object.entries(QUESTION_TYPE_BADGE).map(([k, v]) => (
-                                    <option key={k} value={k}>
-                                      {v.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <div className="mt-1">
-                                  <Badge variant={badgeMeta.variant} className="text-[10px]">
-                                    {badgeMeta.label}
-                                  </Badge>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 space-y-1">
-                                <Input
-                                  value={q.prompt}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setEditableQuestions((prev) =>
-                                      prev.map((item) =>
-                                        item.number === q.number
-                                          ? { ...item, prompt: val }
-                                          : item,
-                                      ),
-                                    );
-                                  }}
-                                  className="h-8 text-xs"
-                                />
-                                {q.options && q.options.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {q.options.map((opt, oi) => (
-                                      <span
-                                        key={oi}
-                                        className="rounded bg-bg-subtle px-1.5 py-0.5 text-[10px] text-fg-muted"
-                                      >
-                                        <strong>{String.fromCharCode(65 + oi)})</strong> {opt}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-3 py-2">
-                                <Input
-                                  value={ansVal}
-                                  placeholder="Javob kaliti"
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setEditableAnswers((prev) => ({
-                                      ...prev,
-                                      [String(q.number)]: val,
-                                    }));
-                                  }}
-                                  className={`h-8 text-xs font-semibold ${
-                                    !ansVal.trim()
-                                      ? "border-warning bg-warning/5"
-                                      : "border-brand/40"
-                                  }`}
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-center">
-                                {q.needsReview ? (
-                                  <Badge
-                                    variant="warning"
-                                    className="text-[10px] gap-1 cursor-help"
-                                    title={q.reviewReason || "Tekshirish zarur"}
-                                  >
-                                    <AlertTriangle className="size-3" />
-                                    Review
-                                  </Badge>
-                                ) : ansVal.trim() ? (
-                                  <Badge variant="success" className="text-[10px] gap-1">
-                                    <CheckCircle2 className="size-3" />
-                                    Tayyor
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="neutral" className="text-[10px]">
-                                    Javobsiz
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
+                            <Badge key={type} variant={meta.variant} className="text-xs">
+                              {meta.label}: {count}
+                            </Badge>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </div>
+
+                      {/* Interactive questions editing table */}
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-border bg-surface">
+                        <table className="w-full text-left text-xs">
+                          <thead className="sticky top-0 border-b border-border bg-bg-subtle text-[11px] font-bold uppercase text-fg-muted z-10">
+                            <tr>
+                              <th className="px-3 py-2 w-14">#</th>
+                              <th className="px-3 py-2 w-44">Savol turi</th>
+                              <th className="px-3 py-2">Savol matni va variantlar</th>
+                              <th className="px-3 py-2 w-36">To&apos;g&apos;ri javob</th>
+                              <th className="px-3 py-2 w-28 text-center">Holat</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filteredQuestions.map((q, idx) => {
+                              const ansVal =
+                                editableAnswers[String(q.number)] ??
+                                (q.correctAnswers && q.correctAnswers.length > 0
+                                  ? q.correctAnswers.join(" / ")
+                                  : "");
+                              const badgeMeta = QUESTION_TYPE_BADGE[q.type] ?? {
+                                label: q.type,
+                                variant: "neutral" as const,
+                              };
+                              return (
+                                <tr
+                                  key={`${q.number}-${idx}`}
+                                  className={`hover:bg-surface-hover/60 ${
+                                    q.needsReview ? "bg-warning/5" : ""
+                                  }`}
+                                >
+                                  <td className="px-3 py-2 font-bold tabular-nums text-fg">
+                                    Q{q.number}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <select
+                                      value={q.type}
+                                      onChange={(e) => {
+                                        const nextType = e.target.value as MockQuestionType;
+                                        setEditableQuestions((prev) =>
+                                          prev.map((item) =>
+                                            item.number === q.number
+                                              ? { ...item, type: nextType }
+                                              : item,
+                                          ),
+                                        );
+                                      }}
+                                      className="w-full rounded border border-border bg-bg px-2 py-1 text-[11px] font-medium text-fg"
+                                    >
+                                      {Object.entries(QUESTION_TYPE_BADGE).map(([k, v]) => (
+                                        <option key={k} value={k}>
+                                          {v.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="mt-1">
+                                      <Badge variant={badgeMeta.variant} className="text-[10px]">
+                                        {badgeMeta.label}
+                                      </Badge>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 space-y-1">
+                                    <Input
+                                      value={q.prompt}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setEditableQuestions((prev) =>
+                                          prev.map((item) =>
+                                            item.number === q.number
+                                              ? { ...item, prompt: val }
+                                              : item,
+                                          ),
+                                        );
+                                      }}
+                                      className="h-8 text-xs"
+                                    />
+                                    {q.options && q.options.length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {q.options.map((opt, oi) => (
+                                          <span
+                                            key={oi}
+                                            className="rounded bg-bg-subtle px-1.5 py-0.5 text-[10px] text-fg-muted"
+                                          >
+                                            <strong>{String.fromCharCode(65 + oi)})</strong> {opt}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <Input
+                                      value={ansVal}
+                                      placeholder="Javob kaliti"
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setEditableAnswers((prev) => ({
+                                          ...prev,
+                                          [String(q.number)]: val,
+                                        }));
+                                      }}
+                                      className={`h-8 text-xs font-semibold ${
+                                        !ansVal.trim()
+                                          ? "border-warning bg-warning/5"
+                                          : "border-brand/40"
+                                      }`}
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {q.needsReview ? (
+                                      <Badge
+                                        variant="warning"
+                                        className="text-[10px] gap-1 cursor-help"
+                                        title={q.reviewReason || "Tekshirish zarur"}
+                                      >
+                                        <AlertTriangle className="size-3" />
+                                        Review
+                                      </Badge>
+                                    ) : ansVal.trim() ? (
+                                      <Badge variant="success" className="text-[10px] gap-1">
+                                        <CheckCircle2 className="size-3" />
+                                        Tayyor
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="neutral" className="text-[10px]">
+                                        Javobsiz
+                                      </Badge>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1234,38 +1750,68 @@ export function SmartBulkImportModal({
                   {/* Summary Overview Card */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
-                      <span className="text-xs text-fg-muted font-medium">Reading Matnlari</span>
+                      <span className="text-xs text-fg-muted font-medium">
+                        {skill === "writing"
+                          ? "Topshiriqlar"
+                          : skill === "speaking"
+                            ? "Speaking Qismlari"
+                            : skill === "listening"
+                              ? "Listening Bo'limlari"
+                              : "Reading Matnlari"}
+                      </span>
                       <p className="text-xl font-bold text-fg">
-                        {editablePassages.length > 0 ? editablePassages.length : 1} ta Passage
+                        {skill === "writing"
+                          ? `${editableQuestions.length} ta Task`
+                          : skill === "speaking"
+                            ? `${editablePassages.length || 3} ta Part`
+                            : `${editablePassages.length || (skill === "listening" ? 4 : 3)} ta ${skill === "listening" ? "Section" : "Passage"}`}
                       </p>
                       <span className="text-[11px] text-brand">
-                        {editablePassages.map((p) => `P${p.partNumber}`).join(", ") || "Yagona matn"}
+                        {skill === "writing"
+                          ? "Task 1 va Task 2"
+                          : skill === "speaking"
+                            ? "Part 1, Part 2 (Cue Card), Part 3"
+                            : editablePassages.map((p) => `${skill === "listening" ? "Sec" : "P"}${p.partNumber}`).join(", ") || "Yagona matn"}
                       </span>
                     </div>
 
                     <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
-                      <span className="text-xs text-fg-muted font-medium">Jami Savollar</span>
-                      <p className="text-xl font-bold text-fg">{totalQuestions} / 40</p>
-                      <span className="text-[11px] text-success">
-                        {isCompleteIeltsReading
-                          ? "To'liq 40 ta savol mavjud"
-                          : `${totalQuestions} ta savol aniqlangan`}
+                      <span className="text-xs text-fg-muted font-medium">
+                        {skill === "writing" ? "So'z Chegarasi" : "Jami Savollar"}
                       </span>
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
-                      <span className="text-xs text-fg-muted font-medium">Javob Kalitlari</span>
                       <p className="text-xl font-bold text-fg">
-                        {questionsWithAnswers} / {totalQuestions}
+                        {skill === "writing" ? "150 / 250 so'z" : `${totalQuestions} / 40`}
+                      </p>
+                      <span className="text-[11px] text-success">
+                        {isFullyComplete
+                          ? "To'liq standart hajm mavjud"
+                          : `${totalQuestions} ta element aniqlangan`}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
+                      <span className="text-xs text-fg-muted font-medium">
+                        {skill === "writing" || skill === "speaking" ? "Baholash Tizimi" : "Javob Kalitlari"}
+                      </span>
+                      <p className="text-xl font-bold text-fg">
+                        {skill === "writing" || skill === "speaking"
+                          ? "O'qituvchi tekshiruvi"
+                          : `${questionsWithAnswers} / ${totalQuestions}`}
                       </p>
                       <span
                         className={`text-[11px] ${
-                          questionsWithAnswers === totalQuestions ? "text-success" : "text-warning"
+                          questionsWithAnswers === totalQuestions || skill === "writing" || skill === "speaking"
+                            ? "text-success"
+                            : "text-warning"
                         }`}
                       >
-                        {questionsWithAnswers === totalQuestions
-                          ? "Barcha savollarda kalit bor"
-                          : `${totalQuestions - questionsWithAnswers} ta savolda javob kiritilmagan`}
+                        {skill === "writing"
+                          ? "IELTS baholash rubrikasi bo'yicha"
+                          : skill === "speaking"
+                            ? "Audio yozuv tahlili bo'yicha"
+                            : questionsWithAnswers === totalQuestions
+                              ? "Barcha savollarda kalit bor"
+                              : `${totalQuestions - questionsWithAnswers} ta savolda javob kiritilmagan`}
                       </span>
                     </div>
                   </div>
@@ -1279,9 +1825,35 @@ export function SmartBulkImportModal({
                     <p className="text-fg-muted text-[11px] leading-relaxed">
                       Savollar bazaga atomik tranzaksiya bilan yoziladi. Mavjud talabalar urinishlari
                       (Student Attempts) daxlsiz qoladi va ularga hech qanday zarar yetkazilmaydi.
-                      Barcha 3 ta Passage tegishli guruhlarga joylanadi.
+                      Boshqa barcha bo&apos;limlar (Listening, Reading, Writing, Speaking) saqlanib qoladi.
                     </p>
                   </div>
+
+                  {/* Listening audio missing warning */}
+                  {skill === "listening" && !audioFile && !playableAudioSrc && (
+                    <div className="rounded-xl border border-warning/40 bg-warning/10 p-3.5 text-xs text-fg space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-warning">
+                        <AlertTriangle className="size-4" />
+                        Audio biriktirilmagan (DRAFT holatida saqlanadi)
+                      </div>
+                      <p className="text-fg-muted text-[11px] leading-relaxed">
+                        Listening savollari to&apos;liq saqlanadi, ammo audio yuklanmaganligi sababli test <strong>DRAFT</strong> bo&apos;lib qoladi. Talabalar test topshirishi uchun &ldquo;3. Yagona Audio &amp; Timestamps&rdquo; orqali audio yuklash shart.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Replace Existing warning */}
+                  {replaceExisting && (
+                    <div className="rounded-xl border border-danger/40 bg-danger/10 p-3.5 text-xs text-fg space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-danger">
+                        <AlertTriangle className="size-4" />
+                        DIQQAT: Mavjud {skill.toUpperCase()} savollari yangilariga almashtiriladi
+                      </div>
+                      <p className="text-fg-muted text-[11px] leading-relaxed">
+                        Faqat joriy {skill.toUpperCase()} bo&apos;limi yangilanadi. Boshqa bo&apos;limlar va mavjud talaba urinishlari (Student Attempts) butunligicha saqlanib qoladi.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Student-Style Interactive Preview */}
                   <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -1291,56 +1863,113 @@ export function SmartBulkImportModal({
                         Talaba ko&apos;rinishidagi test prevyusi (Student Preview)
                       </span>
                       <span className="text-[11px] text-fg-muted">
-                        Savollar: Q1–Q{totalQuestions}
+                        {skill === "writing"
+                          ? "Topshiriqlar: Task 1 va Task 2"
+                          : skill === "speaking"
+                            ? "Speaking: Parts 1, 2, 3"
+                            : `Savollar: Q1–Q${totalQuestions}`}
                       </span>
                     </div>
 
                     <div className="max-h-72 overflow-y-auto p-4 space-y-4">
-                      {editablePassages.map((p) => {
-                        const partQuestions = editableQuestions.filter(
-                          (q) => q.partNumber === p.partNumber,
-                        );
-                        return (
-                          <div
-                            key={p.partNumber}
-                            className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2"
-                          >
-                            <h5 className="font-bold text-xs text-fg flex items-center justify-between">
-                              <span>
-                                {p.title || `Passage ${p.partNumber}`} (Q
-                                {partQuestions[0]?.number || 1}–Q
-                                {partQuestions[partQuestions.length - 1]?.number || 40})
-                              </span>
-                              <Badge variant="info" className="text-[10px]">
-                                {partQuestions.length} ta savol
-                              </Badge>
-                            </h5>
-                            {p.passageText && (
-                              <p className="text-[11px] text-fg-muted font-serif line-clamp-3 italic">
-                                {p.passageText.slice(0, 300)}...
-                              </p>
-                            )}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                              {partQuestions.slice(0, 4).map((q) => (
-                                <div
-                                  key={q.number}
-                                  className="rounded border border-border bg-surface p-2 text-[11px]"
-                                >
-                                  <div className="font-semibold text-fg">
-                                    Q{q.number}. {q.prompt}
-                                  </div>
-                                  <div className="text-[10px] text-fg-muted mt-1 flex justify-between">
-                                    <span>Turi: {q.type}</span>
-                                    <span className="text-brand font-bold">
-                                      Kalit: {editableAnswers[String(q.number)] || "—"}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                      {skill === "writing" ? (
+                        <div className="space-y-4">
+                          <div className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Badge variant="brand">Task 1 (~20 daqiqa, 150+ so&apos;z)</Badge>
+                              {editablePassages[0]?.imageKey && (
+                                <Badge variant="info">Rasm biriktirilgan</Badge>
+                              )}
                             </div>
+                            <p className="text-xs font-semibold text-fg">
+                              {editableQuestions.find((q) => q.number === 1)?.prompt || editablePassages[0]?.passageText}
+                            </p>
                           </div>
-                        );
-                      })}
+                          <div className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2">
+                            <Badge variant="brand">Task 2 (~40 daqiqa, 250+ so&apos;z)</Badge>
+                            <p className="text-xs font-semibold text-fg">
+                              {editableQuestions.find((q) => q.number === 2)?.prompt || editablePassages[1]?.passageText}
+                            </p>
+                          </div>
+                        </div>
+                      ) : skill === "speaking" ? (
+                        <div className="space-y-4">
+                          <div className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2">
+                            <Badge variant="brand">Part 1: Interview</Badge>
+                            <ul className="list-disc list-inside text-xs text-fg space-y-1">
+                              {editableQuestions.filter((q) => q.partNumber === 1).map((q) => (
+                                <li key={q.number}>{q.prompt}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Badge variant="brand">Part 2: Cue Card</Badge>
+                              <div className="flex items-center gap-1 text-[11px] text-fg-muted">
+                                <span>60s tayyorgarlik</span> • <span>120s nutq</span>
+                              </div>
+                            </div>
+                            <p className="text-xs font-semibold text-fg whitespace-pre-line">
+                              {editablePassages[1]?.passageText || editableQuestions.find((q) => q.partNumber === 2)?.prompt}
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2">
+                            <Badge variant="brand">Part 3: Discussion</Badge>
+                            <ul className="list-disc list-inside text-xs text-fg space-y-1">
+                              {editableQuestions.filter((q) => q.partNumber === 3).map((q) => (
+                                <li key={q.number}>{q.prompt}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ) : (
+                        editablePassages.map((p) => {
+                          const partQuestions = editableQuestions.filter(
+                            (q) => q.partNumber === p.partNumber,
+                          );
+                          const unitTitle = skill === "listening" ? "Section" : "Passage";
+                          return (
+                            <div
+                              key={p.partNumber}
+                              className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2"
+                            >
+                              <h5 className="font-bold text-xs text-fg flex items-center justify-between">
+                                <span>
+                                  {p.title || `${unitTitle} ${p.partNumber}`} (Q
+                                  {partQuestions[0]?.number || 1}–Q
+                                  {partQuestions[partQuestions.length - 1]?.number || 40})
+                                </span>
+                                <Badge variant="info" className="text-[10px]">
+                                  {partQuestions.length} ta savol
+                                </Badge>
+                              </h5>
+                              {p.passageText && (
+                                <p className="text-[11px] text-fg-muted font-serif line-clamp-3 italic">
+                                  {p.passageText.slice(0, 300)}...
+                                </p>
+                              )}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {partQuestions.slice(0, 4).map((q) => (
+                                  <div
+                                    key={q.number}
+                                    className="rounded border border-border bg-surface p-2 text-[11px]"
+                                  >
+                                    <div className="font-semibold text-fg">
+                                      Q{q.number}. {q.prompt}
+                                    </div>
+                                    <div className="text-[10px] text-fg-muted mt-1 flex justify-between">
+                                      <span>Turi: {q.type}</span>
+                                      <span className="text-brand font-bold">
+                                        Kalit: {editableAnswers[String(q.number)] || "—"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1670,7 +2299,9 @@ export function SmartBulkImportModal({
                     onClick={() => void handleCommitSmartImport()}
                   >
                     <CheckCircle2 className="size-4 mr-1.5" />
-                    Bazaga to&apos;liq saqlash ({editableQuestions.length} savol)
+                    {isFullyComplete
+                      ? `Bazaga to'liq saqlash (${editableQuestions.length} ta ${skill === "writing" ? "topshiriq" : "savol"})`
+                      : `Qoralama (DRAFT) sifatida saqlash (${editableQuestions.length} ta ${skill === "writing" ? "topshiriq" : "savol"})`}
                   </Button>
                 </>
               )}

@@ -673,7 +673,7 @@ export function useSmartParseQuestions() {
   return useMutation({
     mutationFn: (body: FormData | {
       text?: string;
-      defaultSkill?: "reading" | "listening";
+      defaultSkill?: import("@/lib/types").MockSkill;
       examType?: string;
     }) => api.post<import("@/lib/types").SmartParseResult>("/mock/smart-parse", body),
   });
@@ -683,7 +683,7 @@ export function useExamBulkImport(examId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: {
-      skill: "reading" | "listening";
+      skill: import("@/lib/types").MockSkill;
       text?: string;
       questions?: unknown[];
       answers?: Record<string, string>;

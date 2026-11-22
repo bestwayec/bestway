@@ -1111,6 +1111,9 @@ export interface SmartParseQuestion {
   answerRule?: string | null;
   needsReview?: boolean;
   reviewReason?: string | null;
+  prepTimeSec?: number;
+  speakingTimeSec?: number;
+  cueCard?: string;
 }
 
 export interface SmartParsePart {
@@ -1118,12 +1121,15 @@ export interface SmartParsePart {
   title?: string;
   instructions?: string;
   passageText?: string;
+  imageKey?: string;
+  audioKey?: string;
   questions: SmartParseQuestion[];
 }
 
 export interface SmartParseResult {
   instructions?: string | null;
   passageText?: string | null;
+  skill?: MockSkill;
   status?: "complete" | "partial" | "needs_review" | "invalid";
   passages?: SmartParsePart[];
   parts?: SmartParsePart[];
@@ -1137,6 +1143,15 @@ export interface SmartParseResult {
     byType: Record<string, number>;
     passagesCount?: number;
     isCompleteIeltsReading?: boolean;
+    isCompleteIeltsListening?: boolean;
+    isCompleteIeltsWriting?: boolean;
+    isCompleteIeltsSpeaking?: boolean;
+    task1Present?: boolean;
+    task2Present?: boolean;
+    part1Present?: boolean;
+    part2Present?: boolean;
+    part3Present?: boolean;
+    requiresManualGrading?: boolean;
     needsReviewCount?: number;
   };
 }

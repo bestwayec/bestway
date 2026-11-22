@@ -7,6 +7,25 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 53-BLOK: Smart Exam Import v2 — 4 ta IELTS ko'nikmasi (Listening, Reading, Writing, Speaking), universal tahlil va saqlash (2026-11-22) — PR #212, branch `fix/bestway-smart-import-v2`
+- **4 ta ko'nikma uchun to'liq tahlil va import arxitekturasi**:
+  1. *Listening*: 4 ta bo'lim (Section 1–4), 40 ta savol (1–10, 11–20, 21–30, 31–40), bo'lim yo'riqnomalari, so'z cheklovlari (masalan: `NO MORE THAN TWO WORDS`), barcha savol turlari (Form/Note/Table/Flowchart/Sentence completion, Map and Plan labelling, Matching, Multiple Choice, Short Answer, Multi-select). Har bir bo'lim uchun alohida audio yoki vaqt tamg'ali yagona audio qo'llab-quvvatlanadi. Audio yuklanmagan bo'lsa imtihon DRAFT sifatida saqlanadi, to'liq bo'lmagan Listening imtihonini nashr etish bloklanadi.
+  2. *Reading*: 3 ta passage, 40 ta pozitsiya, barcha IELTS Reading savol turlari (TFNG, YNNG, Matching Headings/Features/Information, Summary/Sentence/Note completion, Multi-select cluster Q38–40) to'liq saqlab qolindi.
+  3. *Writing*: IELTS Academic (Task 1: jadvallar, grafiklar, xaritalar, jarayon diagrammalari, rasm yo'riqnomalari, 150 so'z; Task 2: insho savoli, 250 so'z) hamda General Training (Task 1: xat va punktlar; Task 2: insho). Asl topshiriq matni va rasm kalitlari saqlanadi; sun'iy intellekt orqali soxta avtomat band ball to'qilishi man etildi, topshiriqlar rasmiy o'qituvchi rubrikasi orqali baholanadi.
+  4. *Speaking*: Part 1 (shaxsiy tanishuv va intervyu mavzulari), Part 2 (Cue card, asosiy mavzu, nuqtalar, 60 s tayyorgarlik va 120 s nutq vaqtlari), Part 3 (chuqurlashtirilgan munozara savollari). Har bir qism alohida saqlanadi va mavjud audio yozib olish hamda baholash tizimi bilan integratsiya qilingan (`type: "speaking_task"`).
+- **Universal Import Interfeysi (`SmartBulkImportModal.tsx`)**:
+  - 1-qadam: 4 ta ko'nikmadan birini tanlash (Listening, Reading, Writing, Speaking) va mos namunaviy matnlar.
+  - 2-qadam: Ko'nikmaga mos tahlil va tahrirlash (Writing uchun Task 1 & 2 kartalari, rasm kaliti, so'z limiti; Speaking uchun Part 1, Part 2 Cue card vaqtlari, Part 3; Reading/Listening uchun Passage/Section tablari).
+  - 3-qadam: Ko'nikmaga mos talaba prevyusi, yetishmovchiliklar tahlili, Listening audiosi bo'lmasa qoralama (DRAFT) sifatida saqlash haqida aniq ogohlantirish.
+- **Xavfsiz ma'lumotlar bazasi integratsiyasi**:
+  - Mavjud `MockExam`, `MockSection`, `MockQuestionGroup`, `MockQuestion` modellari qayta ishlatildi, yangi ortiqcha sxemalar qo'shilmadi.
+  - Atomik tranzaksiya (`transaction.atomic()`), bo'limlar izolyatsiyasi (faqat import qilingan modul yangilanadi, boshqa modullar saqlanib qoladi), talabalar topshirgan urinishlariga ziyon yetkazilmaydi.
+  - Duration minutes: Listening: 40 daqiqa, Reading: 60 daqiqa, Writing: 60 daqiqa, Speaking: 14 daqiqa.
+- **Tekshiruv**:
+  - Backend: `pytest backend-django/tests/test_smart_import_v2.py` (23/23 passed, 100%), mock scoring & authoring testlari (43 passed, 1 skipped).
+  - Frontend: `npx vitest run src/design-system.spec.ts` (74/74 passed), `npx vitest run src/components/exam-builder/` (17 fayl, 90 passed), Next.js 16.3.6 production build muvaffaqiyatli (0 TypeScript xatosi, 100 sahifa).
+- **Git & Mualliflik**: Branch `fix/bestway-smart-import-v2`, `Komiljon Roziyev <kruziyev0@gmail.com>`, Rule 2 (Zero AI Attribution) 100% ta'minlandi.
+
 ### 52-BLOK: Smart Exam Import v2 — ko'p matnli (multi-passage) tahlil, xavfsiz ommaviy import va 3 bosqichli workflow (2026-11-22) — PR #212, branch `fix/bestway-smart-import-v2`
 - **Tuzatilgan fundamental muammolar**:
   1. *Global hint zaharlanishi*: `_detect_type_hint` barcha savollarga global qo'llanib, "not given" uchragan joyda boshqa turdagi (YNNG, bo'sh joy to'ldirish) savollarni ham TFNG ga aylantirardi — endi hintlar faqat tegishli savollar guruhiga lokal bog'landi.

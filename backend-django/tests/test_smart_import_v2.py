@@ -556,3 +556,379 @@ class SmartImportV2Tests(SimpleTestCase):
         self.assertEqual(res1["count"], res2["count"])
         self.assertEqual([q["prompt"] for q in res1["questions"]], [q["prompt"] for q in res2["questions"]])
         self.assertEqual(res1["answers"], res2["answers"])
+
+    def test_17_listening_4_sections_40_questions(self):
+        """17. Listening Smart Import: 4 sections, 40 questions, word limits and map labelling."""
+        raw_text = """
+        SECTION 1 Questions 1-10
+        Complete the notes below.
+        Write NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.
+        1. Name: ________
+        2. Address: 14 ________ Street
+        3. Phone: 07700 ________
+        4. Date of birth: 12th ________
+        5. Preferred course: ________
+        6. Accommodation type: ________
+        7. Dietary requirement: ________
+        8. Emergency contact: ________
+        9. Payment method: by ________
+        10. Reference number: ________
+
+        SECTION 2 Questions 11-20
+        Questions 11-15
+        Label the map below.
+        Write the correct letter, A-E, next to questions 11-15.
+        11. Visitor Center
+        12. Gift Shop
+        13. Picnic Area
+        14. Bird Sanctuary
+        15. Boat Hire
+
+        Questions 16-20
+        Choose the correct letter, A, B or C.
+        16. What time does the park open?
+        A. 8:00 am
+        B. 9:00 am
+        C. 10:00 am
+        17. Entry for children under 5 is:
+        A. free
+        B. half price
+        C. $5
+        18. Parking is located:
+        A. near the gate
+        B. behind the cafe
+        C. underground
+        19. Guided tours run:
+        A. every hour
+        B. twice daily
+        C. on weekends only
+        20. The cafe closes at:
+        A. 4:00 pm
+        B. 5:00 pm
+        C. 6:00 pm
+
+        SECTION 3 Questions 21-30
+        Questions 21-25
+        What opinion did each student express about the research project?
+        Choose FIVE answers from the box and write the correct letter, A-F, next to questions 21-25.
+        A. Too time consuming
+        B. Very rewarding
+        C. Hard to find sources
+        D. Excellent teamwork
+        E. Needed more guidance
+        F. Exceeded expectations
+        21. Jack
+        22. Emily
+        23. Sarah
+        24. David
+        25. Chloe
+
+        Questions 26-30
+        Complete the summary below.
+        Write ONE WORD ONLY for each answer.
+        26. The initial hypothesis proved to be ________.
+        27. The survey included over 200 ________.
+        28. Data analysis was conducted using ________ software.
+        29. The main challenge was the small sample ________.
+        30. The final report will be submitted in ________.
+
+        SECTION 4 Questions 31-40
+        Complete the lecture notes below.
+        Write NO MORE THAN TWO WORDS for each answer.
+        Marine Biodiversity and Coral Reefs
+        31. Coral reefs cover less than 1% of the ocean floor but support 25% of all marine ________.
+        32. Rising sea temperatures cause coral ________.
+        33. Ocean acidification reduces the ability of corals to build their calcium ________.
+        34. Agricultural runoff introduces excessive ________ into coastal waters.
+        35. Overfishing disrupts the delicate ________ balance.
+        36. Deep sea corals grow much more ________ than shallow water species.
+        37. Coral reefs act as natural ________ protecting coastlines from storms.
+        38. Marine protected areas have shown a 40% increase in fish ________.
+        39. Artificial reefs are constructed using sunken ships and ________ blocks.
+        40. Global cooperative action is essential before the year ________.
+
+        Answers:
+        1: John Smith
+        2: High
+        3: 900123
+        4: August
+        5: General English
+        6: Homestay
+        7: Vegetarian
+        8: Brother
+        9: Credit Card
+        10: EN459
+        11: B
+        12: D
+        13: A
+        14: E
+        15: C
+        16: B
+        17: A
+        18: A
+        19: B
+        20: C
+        21: B
+        22: A
+        23: D
+        24: C
+        25: F
+        26: correct
+        27: participants
+        28: statistical
+        29: size
+        30: December
+        31: species
+        32: bleaching
+        33: skeletons
+        34: nutrients
+        35: ecological
+        36: slowly
+        37: barriers
+        38: biomass
+        39: concrete
+        40: 2050
+        """
+        res = parse_smart_exam_content(text=raw_text, default_skill="listening")
+        self.assertEqual(res["count"], 40)
+        self.assertEqual(len(res["passages"]), 4)
+        self.assertEqual([len(p["questions"]) for p in res["passages"]], [10, 10, 10, 10])
+        self.assertTrue(res["summary"]["isCompleteIeltsListening"])
+        # Check Section 1 Q1 word limit
+        q1 = next(q for q in res["questions"] if q["number"] == 1)
+        self.assertEqual(q1["wordLimit"], 2)
+        self.assertEqual(q1["correctAnswers"], ["John Smith"])
+        # Check Section 2 Q11 map labelling
+        q11 = next(q for q in res["questions"] if q["number"] == 11)
+        self.assertEqual(q11["type"], "map_labelling")
+        # Check Section 4 Q38 is NOT forced to multi-select
+        q38 = next(q for q in res["questions"] if q["number"] == 38)
+        self.assertNotEqual(q38["type"], "multi_select")
+        self.assertEqual(q38["wordLimit"], 2)
+
+    def test_18_listening_audio_association_and_draft_status(self):
+        """18. Listening allows saving as draft when audio is not yet uploaded."""
+        raw_text = """
+        SECTION 1 Questions 1-5
+        1. First question
+        2. Second question
+        3. Third question
+        4. Fourth question
+        5. Fifth question
+        Answers:
+        1: A
+        2: B
+        3: C
+        4: D
+        5: E
+        """
+        res = parse_smart_exam_content(text=raw_text, default_skill="listening")
+        self.assertEqual(res["count"], 5)
+        self.assertFalse(res["summary"].get("isCompleteIeltsListening", False))
+        self.assertEqual(res["status"], "partial")
+
+    def test_19_writing_academic_task1_and_task2(self):
+        """19. Writing Smart Import (Academic): Task 1 with image and Task 2 essay."""
+        raw_text = """
+        WRITING TASK 1
+        You should spend about 20 minutes on this task.
+        The chart below shows the percentage of households with internet access in five countries between 2010 and 2020.
+        [Image: https://cdn.bestway.uz/charts/internet_access_2020.png]
+        Summarise the information by selecting and reporting the main features, and make comparisons where relevant.
+        Write at least 150 words.
+
+        WRITING TASK 2
+        You should spend about 40 minutes on this task.
+        Write about the following topic:
+        Some people believe that artificial intelligence will replace teachers in the future, while others think teachers will always be essential.
+        Discuss both views and give your own opinion.
+        Give reasons for your answer and include any relevant examples from your own knowledge or experience.
+        Write at least 250 words.
+        """
+        res = parse_smart_exam_content(text=raw_text, default_skill="writing")
+        self.assertEqual(res["count"], 2)
+        self.assertTrue(res["summary"]["isCompleteIeltsWriting"])
+        self.assertTrue(res["summary"]["task1Present"])
+        self.assertTrue(res["summary"]["task2Present"])
+        self.assertTrue(res["summary"]["requiresManualGrading"])
+
+        t1 = next(q for q in res["questions"] if q["number"] == 1)
+        self.assertEqual(t1["type"], "essay_task1")
+        self.assertEqual(t1["wordLimit"], 150)
+        self.assertEqual(t1["points"], 9)
+        self.assertIn("percentage of households", t1["prompt"])
+
+        t2 = next(q for q in res["questions"] if q["number"] == 2)
+        self.assertEqual(t2["type"], "essay_task2")
+        self.assertEqual(t2["wordLimit"], 250)
+        self.assertEqual(t2["points"], 9)
+        self.assertIn("artificial intelligence", t2["prompt"])
+
+        # Check passages/parts metadata
+        self.assertEqual(len(res["passages"]), 2)
+        self.assertEqual(res["passages"][0]["imageKey"], "https://cdn.bestway.uz/charts/internet_access_2020.png")
+
+    def test_20_writing_general_training(self):
+        """20. Writing Smart Import (General Training): Task 1 letter with bullet points."""
+        raw_text = """
+        WRITING TASK 1
+        You should spend about 20 minutes on this task.
+        You recently moved to a new apartment and discovered several problems with the heating and plumbing.
+        Write a letter to your landlord. In your letter:
+        - describe the problems in detail
+        - explain how this has affected your daily life
+        - tell the landlord what action you expect them to take
+        Write at least 150 words. You do NOT need to write any addresses.
+        Begin your letter as follows:
+        Dear Mr. Smith,
+
+        WRITING TASK 2
+        You should spend about 40 minutes on this task.
+        Write about the following topic:
+        In many countries today, people are choosing to live alone rather than with family.
+        Is this a positive or negative development?
+        Write at least 250 words.
+        """
+        res = parse_smart_exam_content(text=raw_text, default_skill="writing")
+        self.assertEqual(res["count"], 2)
+        t1 = next(q for q in res["questions"] if q["number"] == 1)
+        self.assertEqual(t1["type"], "essay_task1")
+        self.assertIn("heating and plumbing", t1["prompt"])
+        self.assertIn("Dear Mr. Smith", t1["prompt"])
+
+    def test_21_speaking_3_parts_and_cue_card(self):
+        """21. Speaking Smart Import: Part 1 interview, Part 2 cue card, Part 3 discussion."""
+        raw_text = """
+        IELTS SPEAKING TEST
+        PART 1 - Introduction and Interview (4-5 minutes)
+        Let's talk about your hometown.
+        1. Where is your hometown located?
+        2. What do you like most about living there?
+        3. Has your hometown changed much since you were a child?
+
+        PART 2 - Long Turn / Cue Card (3-4 minutes)
+        Describe a book that had a major influence on your life.
+        You should say:
+        - what the book was and who wrote it
+        - when you read it
+        - what the book was about
+        and explain why this book had such a significant impact on you.
+        You will have to talk about the topic for 1-2 minutes. You have one minute to think about what you are going to say. You can make some notes to help you if you wish.
+
+        PART 3 - Two-way Discussion (4-5 minutes)
+        Let's consider the role of reading in modern society.
+        4. Do you think young people read fewer books today than in the past?
+        5. How has digital technology changed people's reading habits?
+        6. Should schools place more emphasis on reading literature or technical books?
+        """
+        res = parse_smart_exam_content(text=raw_text, default_skill="speaking")
+        self.assertEqual(res["count"], 7)
+        self.assertEqual(len(res["passages"]), 3)
+        self.assertTrue(res["summary"]["isCompleteIeltsSpeaking"])
+        self.assertTrue(res["summary"]["part1Present"])
+        self.assertTrue(res["summary"]["part2Present"])
+        self.assertTrue(res["summary"]["part3Present"])
+
+        # Check Part 2 cue card question and passage
+        p2_q = next(q for q in res["questions"] if q["partNumber"] == 2)
+        self.assertEqual(p2_q["type"], "speaking_task")
+        self.assertEqual(p2_q["points"], 9)
+        self.assertIn("Describe a book", p2_q["prompt"])
+        self.assertIn("You should say:", res["passages"][1]["passageText"])
+        self.assertEqual(p2_q.get("prepTimeSec"), 60)
+        self.assertEqual(p2_q.get("speakingTimeSec"), 120)
+
+    def test_22_skill_auto_detection(self):
+        """22. Automatic skill detection correctly classifies Listening, Reading, Writing, and Speaking."""
+        from apps.core.exam_import_service import detect_content_skill
+
+        self.assertEqual(detect_content_skill("SECTION 1 Questions 1-10\nComplete the form"), "listening")
+        self.assertEqual(detect_content_skill("READING PASSAGE 1\nWater Management"), "reading")
+        self.assertEqual(detect_content_skill("WRITING TASK 1\nYou should spend 20 minutes\nWRITING TASK 2"), "writing")
+        self.assertEqual(detect_content_skill("IELTS SPEAKING PART 1\nDescribe a book\nCue card"), "speaking")
+
+    def test_23_multi_skill_section_isolation_and_preservation(self):
+        """23. Importing a skill section does NOT overwrite or corrupt other skill sections."""
+        from apps.legacy_schema.models import MockExam, MockQuestion, MockQuestionGroup, MockSection
+
+        fake_exam = SimpleNamespace(
+            id="exam-multi-skill",
+            type="ielts_academic",
+            created_by_id="author-1",
+            content_version=1,
+            save=lambda **kw: None,
+        )
+        mock_actor = SimpleNamespace(id="author-1", role="teacher", is_staff=True, is_authenticated=True)
+
+        created_sections = []
+        created_groups = []
+        created_questions = []
+
+        def fake_sec_create(**kwargs):
+            s = SimpleNamespace(**kwargs)
+            created_sections.append(s)
+            return s
+
+        def fake_grp_create(**kwargs):
+            g = SimpleNamespace(**kwargs)
+            created_groups.append(g)
+            return g
+
+        def fake_q_create(**kwargs):
+            defaults = {
+                "cefr_level": None,
+                "skill_tags": [],
+                "explanation": None,
+                "evidence_text": None,
+                "evidence_offset": None,
+                "audio_start_sec": None,
+            }
+            defaults.update(kwargs)
+            q = SimpleNamespace(**defaults)
+            created_questions.append(q)
+            return q
+
+        class DummyAtomic:
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                return False
+
+        with patch("django.db.transaction.atomic", return_value=DummyAtomic()), \
+             patch("apps.core.exam_import_service.audit_event"), \
+             patch.object(MockExam.objects, "get", return_value=fake_exam), \
+             patch.object(MockExam.objects, "select_for_update", return_value=SimpleNamespace(get=lambda **kw: fake_exam)), \
+             patch.object(MockSection.objects, "filter") as sec_filter, \
+             patch.object(MockSection.objects, "create", side_effect=fake_sec_create), \
+             patch.object(MockQuestionGroup.objects, "filter") as grp_filter, \
+             patch.object(MockQuestionGroup.objects, "create", side_effect=fake_grp_create), \
+             patch.object(MockQuestion.objects, "filter") as q_filter, \
+             patch.object(MockQuestion.objects, "create", side_effect=fake_q_create):
+
+            sec_filter.return_value.first.return_value = None
+            grp_filter.return_value.order_by.return_value = []
+            q_filter.return_value.first.return_value = None
+            q_filter.return_value.delete.return_value = (0, {})
+
+            writing_payload = {
+                "skill": "writing",
+                "questions": [
+                    {"number": 1, "partNumber": 1, "type": "essay_task1", "prompt": "Task 1 Prompt", "points": 9, "wordLimit": 150},
+                    {"number": 2, "partNumber": 2, "type": "essay_task2", "prompt": "Task 2 Prompt", "points": 9, "wordLimit": 250},
+                ],
+                "parts": [
+                    {"partNumber": 1, "title": "Task 1", "imageKey": "task1.png"},
+                    {"partNumber": 2, "title": "Task 2"},
+                ]
+            }
+
+            result = exam_import_service.bulk_import_to_exam(mock_actor, "exam-multi-skill", "writing", writing_payload)
+
+            self.assertEqual(result["skill"], "writing")
+            self.assertEqual(len(created_sections), 1)
+            self.assertEqual(created_sections[0].skill, "writing")
+            self.assertEqual(created_sections[0].duration_minutes, 60)
+            self.assertEqual(len(created_groups), 2)
+            self.assertEqual(created_groups[0].title, "Task 1")
+            self.assertEqual(created_groups[0].image_key, "task1.png")
+            self.assertEqual(len(created_questions), 2)
