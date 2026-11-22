@@ -155,15 +155,34 @@ def extract_pdf_text(pdf_bytes: bytes) -> str:
 
 
 def extract_html_text(html_str: str) -> str:
-    """Safely extract plain text from HTML, stripping scripts and styles, unescaping entities."""
-    no_script = re.sub(r"<(script|style)[^>]*>[\s\S]*?</\1>", "", html_str, flags=re.IGNORECASE)
-    text = re.sub(r"<(?:h[1-6]|p|div|tr|li|blockquote)[^>]*>", "\n", no_script, flags=re.IGNORECASE)
+    """Safely extract plain text from HTML, stripping scripts, styles, office XML, comments, and unescaping entities."""
+    # Strip HTML comments including conditional MS Word comments (<!--[if ...]>...<![endif]-->)
+    cleaned = re.sub(r"<!--[\s\S]*?-->", "", html_str)
+    # Strip embedded scripts, styles, noscripts, iframes, and office XML blocks
+    cleaned = re.sub(r"<(script|style|noscript|iframe|xml)[^>]*>[\s\S]*?</\1>", "", cleaned, flags=re.IGNORECASE)
+    # Strip office XML tags such as <o:p>, <w:...>
+    cleaned = re.sub(r"</?(?:o:[a-z0-9_-]+|w:[a-z0-9_-]+)[^>]*>", "", cleaned, flags=re.IGNORECASE)
+    # Convert block elements to newlines
+    text = re.sub(r"<(?:h[1-6]|p|div|tr|li|blockquote)[^>]*>", "\n", cleaned, flags=re.IGNORECASE)
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<td[^>]*>", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
+    # Replace non-breaking spaces and zero-width artifacts
+    text = text.replace("\xa0", " ").replace("\u200b", "").replace("\ufeff", "")
     text = html_lib.unescape(text)
     lines = [re.sub(r"[ \t]+", " ", l).strip() for l in text.split("\n")]
-    return "\n".join(lines)
+    # Deduplicate consecutive blank lines
+    result_lines = []
+    blank = False
+    for l in lines:
+        if not l:
+            if not blank:
+                result_lines.append("")
+                blank = True
+        else:
+            result_lines.append(l)
+            blank = False
+    return "\n".join(result_lines).strip()
 
 
 def parse_structured_html_bundle(
