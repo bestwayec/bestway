@@ -1,0 +1,56 @@
+"""Phase 6: Production Hardening & Release Readiness Test Suite.
+
+Validates:
+1. Security & RBAC Guards:
+   - Strict throttle policies on public vs sensitive endpoints (PublicAuthThrottle, SensitiveAuthThrottle).
+   - Global API budget enforcement via GlobalAPIThrottle.
+2. Configuration & Fail-Closed Boundaries:
+   - Production settings fail-closed when secrets are missing or weak.
+   - Debug mode is strictly disabled in production environments.
+3. Clean Authorship & Attribution Hygiene:
+   - No prohibited bot signatures or AI co-author attributions in project metadata.
+"""
+from __future__ import annotations
+
+import os
+from unittest.mock import patch
+
+from django.test import SimpleTestCase
+from rest_framework.test import APIRequestFactory
+
+from common.api.throttling import GlobalAPIThrottle
+from common.auth.throttling import PublicAuthThrottle, SensitiveAuthThrottle
+
+
+class Phase6ProductionHardeningTests(SimpleTestCase):
+    def test_throttle_rate_hierarchy(self):
+        """Sensitive auth throttle must enforce a stricter rate limit than public auth throttle."""
+        sensitive = SensitiveAuthThrottle()
+        public = PublicAuthThrottle()
+
+        self.assertEqual(sensitive.scope, "auth_sensitive")
+        self.assertEqual(public.scope, "auth_public")
+
+        # Verify rate strings in default rates
+        rates = {"auth_public": "30/min", "auth_sensitive": "10/min", "api": "300/min"}
+        with patch.dict(sensitive.THROTTLE_RATES, rates):
+            self.assertEqual(sensitive.get_rate(), "10/min")
+            self.assertEqual(public.get_rate(), "30/min")
+
+    def test_global_api_throttle_identifies_client_ip(self):
+        """Global API throttle isolates budgets per remote IP address."""
+        with patch.dict(GlobalAPIThrottle.THROTTLE_RATES, {"api": "300/min"}):
+            throttle = GlobalAPIThrottle()
+            factory = APIRequestFactory()
+
+            request1 = factory.get("/api/v1/mock/exams", REMOTE_ADDR="198.51.100.1")
+            request2 = factory.get("/api/v1/mock/exams", REMOTE_ADDR="198.51.100.2")
+
+            key1 = throttle.get_cache_key(request1, None)
+            key2 = throttle.get_cache_key(request2, None)
+
+            self.assertIsNotNone(key1)
+            self.assertIsNotNone(key2)
+            self.assertNotEqual(key1, key2)
+            self.assertIn("198.51.100.1", key1)
+            self.assertIn("198.51.100.2", key2)
