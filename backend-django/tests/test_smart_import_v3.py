@@ -10,7 +10,7 @@ Validates:
    - Needs Review detection for questions lacking answer keys.
    - Question distribution analysis across standard IELTS types.
 3. Audio metadata and draft state support:
-   - Passing isDraft=True or status='draft' preserves draft status in bulk_import_to_exam.
+   - Bulk import never changes publication state (imported content stays in the draft it targets).
    - Listening audio_key and image_key attachment to MockQuestionGroup.
 4. Transactional atomicity:
    - Fail-safe rollback of groups and questions upon exception during import.
@@ -104,9 +104,11 @@ class SmartImportV3ReliabilityTests(SimpleTestCase):
         self.assertEqual(q3["correctAnswers"], ["Ebenezer Howard"])
         self.assertFalse(q3.get("needsReview", False))
 
-    def test_bulk_import_to_exam_honors_draft_status(self):
-        """When isDraft=True or status='draft' is requested, exam status must be preserved as draft."""
-        exam = SimpleNamespace(id="exam-v3-1", type="ielts_academic", status="ready", content_version=1, save=MagicMock())
+    def test_bulk_import_to_exam_never_changes_publication_state(self):
+        """MockExam has no `status` column (publication is `is_published`); an import must not write it."""
+        from apps.legacy_schema.models import MockExam as RealMockExam
+        self.assertNotIn("status", {f.name for f in RealMockExam._meta.get_fields()})
+        exam = SimpleNamespace(id="exam-v3-1", type="ielts_academic", is_published=False, content_version=1, save=MagicMock())
         section = SimpleNamespace(id="sec-v3-1", exam_id="exam-v3-1", skill="reading", instructions="")
         group = SimpleNamespace(id="grp-v3-1", section_id="sec-v3-1", passage_text="", instructions="", title="Passage 1", sort_order=0, part_number=1, image_key=None, audio_key=None, save=MagicMock())
 
@@ -157,8 +159,8 @@ class SmartImportV3ReliabilityTests(SimpleTestCase):
             result = bulk_import_to_exam(actor, "exam-v3-1", "reading", payload)
             self.assertEqual(result["imported"], 1)
             self.assertEqual(result["examId"], "exam-v3-1")
-            self.assertEqual(exam.status, "draft")
-            exam.save.assert_called_with(update_fields=["status"])
+            self.assertFalse(exam.is_published)
+            exam.save.assert_not_called()
 
     def test_listening_audio_key_attached_to_group(self):
         """Listening import must attach provided audioKey to the question group."""

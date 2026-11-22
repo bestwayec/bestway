@@ -1779,11 +1779,6 @@ def bulk_import_to_group(actor, group_id: str, payload_data: dict) -> dict:
                 next_sort += 1
             saved_questions.append(q_obj)
 
-        if payload_data.get("isDraft") or payload_data.get("status") == "draft":
-            if hasattr(locked, "status") and locked.status != "draft":
-                locked.status = "draft"
-                locked.save(update_fields=["status"])
-
         bump(locked)
 
     audit_event(
@@ -1997,11 +1992,6 @@ def bulk_import_to_exam(actor, exam_id: str, skill: str, payload_data: dict) -> 
                     created_at=now(),
                 )
                 saved_questions.append(q_obj)
-
-        if payload_data.get("isDraft") or payload_data.get("status") == "draft":
-            if hasattr(locked, "status") and locked.status != "draft":
-                locked.status = "draft"
-                locked.save(update_fields=["status"])
 
         bump(locked)
 
