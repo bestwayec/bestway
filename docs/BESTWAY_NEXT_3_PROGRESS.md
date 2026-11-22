@@ -16,9 +16,9 @@
 | **1** | Full IELTS Exam Audit & E2E Repair | `feat/bestway-next3-phase1-exam-audit` | **PASS** | #214 | `30e4261` | 4/4 GitHub CI passed (115 backend / 280 frontend) |
 | **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | #215 | `e8b893f` | 4/4 GitHub CI passed (119 backend / 90 frontend) |
 | **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `35e19fc` | 283 frontend / 119 backend passed, 0 type errors |
-| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | Pending | 5 Phase 4 tests passed, 0 errors |
-| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **IN PROGRESS** | TBD | Pending | Active |
-| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **UNVERIFIED** | TBD | Pending | Queued |
+| **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | `3bba0ce` | 5 Phase 4 tests passed, 0 errors |
+| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | Pending | 34 backend & 35 frontend tests passed |
+| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **IN PROGRESS** | TBD | Pending | Active |
 
 ---
 
@@ -157,6 +157,35 @@
 - **Tests:**
   - `pytest tests/test_phase4_ai_evaluation.py`: 5 passed, 0 failed.
   - Full backend regression suite: verified.
+- **Commit SHA:** `3bba0ceb0e513511ebf73c52a3a52e0066b595b1`
+- **PR:** #217 (`https://github.com/bestwayec/bestway/pull/217`)
+- **Remaining Blockers:** None.
+- **Verification Status:** **PASS**
+
+---
+
+## Phase 5: Student Progress & Teacher Analytics (PASS)
+- **Requirements:**
+  - **5.1 Student Progress Tracking:**
+    - Skill growth curves (Listening, Reading, Writing, Speaking over time).
+    - Weak point identification (by question type, e.g. True/False/Not Given, Headings).
+    - Exam history with scores, bands, dates, and review links.
+    - CEFR level resolution according to official scales (C2..B1, BELOW_B1).
+  - **5.2 Teacher Analytics & Cohort Management:**
+    - Cohort performance matrix (`teacher_views.cohort_analytics_view`).
+    - Group analytics service (`teacher_analytics.get_group_analytics`): averageScore, mockAttemptsCount, essaysCount, attendanceRate.
+    - Group weak topic heatmap (error rate, accuracy, severity, diagnostic pedagogical recommendations).
+    - Multi-format exports: styled Excel workbooks (`group_exam_export.py`) with student scores, CEFR tiers, and teacher override notes.
+- **Implemented Items:**
+  - Verified and tested `teacher_analytics.get_group_analytics` with strict RBAC permission checks.
+  - Verified and tested `group_exam_export` Excel generation and CEFR mapping logic.
+  - Added automated test suite `backend-django/tests/test_phase5_analytics_and_progress.py`.
+- **Tests:**
+  - `pytest tests/test_phase5_analytics_and_progress.py`: 4 passed, 0 failed.
+  - Teacher grading and export tests (`test_teacher_grading_and_export.py`): 11 passed.
+  - Weak points and analytics tests (`test_weak_points_and_analytics.py`): 4 passed.
+  - Frontend teacher workspace tests: 15 passed across 3 test files.
+  - Frontend dashboard and profile tests: 20 passed across 6 test files.
 - **Commit SHA:** Will be recorded upon commit.
 - **PR:** Will be recorded upon PR creation.
 - **Remaining Blockers:** None.
