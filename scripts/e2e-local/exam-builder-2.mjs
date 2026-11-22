@@ -204,11 +204,13 @@ ok(readingQs.length === 40, `D2 Reading now has the package's 40 questions (${re
 ok(JSON.stringify(afterReplace.sections[0].groups.flatMap((g) => g.questions.map((q) => [q.id, q.number, q.correctAnswers]))) === keyBefore, "D2 Listening untouched by the Reading replacement");
 
 // ── D3: a pre-selected draft that has not loaded yet never falls back to "create a new exam" ──
-await t.goto(`${WEB}/en/exam-builder/${created.listening1}`);
-await t.getByRole("button", { name: "Import JSON" }).first().waitFor({ timeout: 60000 });
 let releaseList;
 const listGate = new Promise((resolve) => { releaseList = resolve; });
-await t.route(/\/api\/backend\/mock\/exams(\?.*)?$/, async (route) => { await listGate; await route.continue(); });
+// Installed before the page loads, in a fresh page, so no cached drafts list exists.
+await t.route(/\/api\/backend\/mock\/exams(\?.*)?$/, async (route) => { await listGate; await route.continue().catch(() => {}); });
+await t.goto("about:blank");
+await t.goto(`${WEB}/en/exam-builder/${created.listening1}`);
+await t.getByRole("button", { name: "Import JSON" }).first().waitFor({ timeout: 60000 });
 await t.getByRole("button", { name: "Import JSON" }).first().click();
 await dialog(t).waitFor();
 await pickTemplate(t, "IELTS", "Speaking", "IELTS Speaking · Parts 1–3");
@@ -218,7 +220,7 @@ ok(await dialog(t).getByText("Loading the selected draft…").isVisible(), "D3 w
 ok(await dialog(t).getByRole("button", { name: "Create draft" }).count() === 0, "D3 no 'Create draft' fallback while the pre-selected draft is unresolved");
 ok(await dialog(t).getByRole("button", { name: "Add to selected exam" }).isDisabled(), "D3 import is disabled until the draft resolves");
 releaseList();
-await t.unroute(/\/api\/backend\/mock\/exams(\?.*)?$/);
+await t.unroute(/\/api\/backend\/mock\/exams(\?.*)?$/, { behavior: "ignoreErrors" });
 await t.waitForFunction(() => { const b = [...document.querySelectorAll('[data-testid="json-import-dialog"] button')].find((x) => x.textContent?.trim() === "Add to selected exam"); return b && !b.disabled; }, null, { timeout: 30000 });
 ok(true, "D3 import is enabled once the draft has loaded");
 await dialog(t).getByRole("button", { name: "Close" }).last().click();
