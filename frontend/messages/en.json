@@ -2777,7 +2777,9 @@
     "importJsonHere": "Import JSON",
     "importReplaceLabel": "Replace the existing {skills} section(s) instead",
     "importReplaceHint": "Every question, passage, answer key and attached audio/image in those sections is deleted and replaced by this package. Other sections are kept. Only possible for an unpublished draft no student has started.",
-    "replaceInExam": "Replace sections in selected exam"
+    "replaceInExam": "Replace sections in selected exam",
+    "importTargetLoading": "Loading the selected draft…",
+    "importTargetGone": "The selected exam is no longer an editable draft. Choose another destination."
   },
   "teacherAiRanking": {
     "title": "Writing and Speaking AI ranking",

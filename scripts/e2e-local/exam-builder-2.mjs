@@ -75,7 +75,7 @@ async function checkImport(page) {
 async function createDraft(page) {
   const d = dialog(page);
   const committed = page.waitForResponse((r) => /\/mock\/exam-imports$/.test(new URL(r.url()).pathname) && r.request().method() === "POST", { timeout: 60000 });
-  await d.getByRole("button", { name: /^(Create draft|Add to selected exam)$/ }).click();
+  await d.getByRole("button", { name: /^(Create draft|Add to selected exam|Replace sections in selected exam)$/ }).click();
   const res = await committed;
   return { status: res.status(), body: await res.json().catch(() => ({})) };
 }
@@ -190,7 +190,9 @@ await dialog(t).waitFor();
 await pickTemplate(t, "IELTS", "Reading", "Academic Reading · Full test · 3 passages / 40 questions");
 await checkImport(t);
 await dialog(t).getByText("Ready to import").waitFor({ timeout: 30000 });
-ok(await dialog(t).getByRole("button", { name: "Add to selected exam" }).isVisible(), "D2 default for an existing skill is append, not replace");
+const appendButton = dialog(t).getByRole("button", { name: "Add to selected exam" });
+await t.waitForFunction(() => { const b = [...document.querySelectorAll('[data-testid="json-import-dialog"] button')].find((x) => x.textContent?.trim() === "Add to selected exam"); return b && !b.disabled; }, null, { timeout: 30000 });
+ok(await appendButton.isEnabled(), "D2 default for an existing skill is append, not replace (enabled once the draft resolves)");
 await dialog(t).getByTestId("import-replace-existing").check();
 ok(await dialog(t).getByRole("button", { name: "Replace sections in selected exam" }).isVisible(), "D2 replacing is an explicit opt-in with its own button label");
 await shot(t, "D2-replace-confirm-1440.png");
@@ -200,6 +202,26 @@ const afterReplace = (await api(t, "GET", `/mock/exams/${created.listening1}`)).
 const readingQs = afterReplace.sections.find((x) => x.skill === "reading").groups.flatMap((g) => g.questions);
 ok(readingQs.length === 40, `D2 Reading now has the package's 40 questions (${readingQs.length})`);
 ok(JSON.stringify(afterReplace.sections[0].groups.flatMap((g) => g.questions.map((q) => [q.id, q.number, q.correctAnswers]))) === keyBefore, "D2 Listening untouched by the Reading replacement");
+
+// ── D3: a pre-selected draft that has not loaded yet never falls back to "create a new exam" ──
+await t.goto(`${WEB}/en/exam-builder/${created.listening1}`);
+await t.getByRole("button", { name: "Import JSON" }).first().waitFor({ timeout: 60000 });
+let releaseList;
+const listGate = new Promise((resolve) => { releaseList = resolve; });
+await t.route(/\/api\/backend\/mock\/exams(\?.*)?$/, async (route) => { await listGate; await route.continue(); });
+await t.getByRole("button", { name: "Import JSON" }).first().click();
+await dialog(t).waitFor();
+await pickTemplate(t, "IELTS", "Speaking", "IELTS Speaking · Parts 1–3");
+await checkImport(t);
+await dialog(t).getByText("Ready to import").waitFor({ timeout: 30000 });
+ok(await dialog(t).getByText("Loading the selected draft…").isVisible(), "D3 while the draft list loads, the dialog says so");
+ok(await dialog(t).getByRole("button", { name: "Create draft" }).count() === 0, "D3 no 'Create draft' fallback while the pre-selected draft is unresolved");
+ok(await dialog(t).getByRole("button", { name: "Add to selected exam" }).isDisabled(), "D3 import is disabled until the draft resolves");
+releaseList();
+await t.unroute(/\/api\/backend\/mock\/exams(\?.*)?$/);
+await t.waitForFunction(() => { const b = [...document.querySelectorAll('[data-testid="json-import-dialog"] button')].find((x) => x.textContent?.trim() === "Add to selected exam"); return b && !b.disabled; }, null, { timeout: 30000 });
+ok(true, "D3 import is enabled once the draft has loaded");
+await dialog(t).getByRole("button", { name: "Close" }).last().click();
 
 // ── F (author part): a clean, publishable original exam imported through the dialog ───────────
 const stamp = Date.now();

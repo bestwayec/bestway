@@ -2777,7 +2777,9 @@
     "importJsonHere": "JSON import",
     "importReplaceLabel": "Mavjud {skills} bo‘lim(lar)ini almashtirish",
     "importReplaceHint": "Shu bo‘limlardagi barcha savollar, matnlar, javob kalitlari va biriktirilgan audio/rasmlar o‘chirilib, ushbu paket bilan almashtiriladi. Boshqa bo‘limlar saqlanadi. Faqat nashr qilinmagan va hech bir talaba boshlamagan qoralamada mumkin.",
-    "replaceInExam": "Tanlangan imtihonda bo‘limlarni almashtirish"
+    "replaceInExam": "Tanlangan imtihonda bo‘limlarni almashtirish",
+    "importTargetLoading": "Tanlangan qoralama yuklanmoqda…",
+    "importTargetGone": "Tanlangan imtihon endi tahrirlanadigan qoralama emas. Boshqa manzilni tanlang."
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",

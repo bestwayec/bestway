@@ -158,6 +158,10 @@ export function JsonImportDialog({
   const target = editableExams.find((exam) => exam.id === targetExamId) ?? null;
   const targetCheck = summary && target ? checkDraftDestination(summary, target) : null;
   const replacing = replaceExisting && targetCheck?.reason === "appends-to-existing";
+  // A destination chosen by id (e.g. from the editor) resolves only once the drafts list has
+  // loaded. Until then — or if it is no longer editable — importing must not silently fall back
+  // to "create a new exam".
+  const targetUnresolved = !!targetExamId && !target;
   const byteSize = React.useMemo(() => new TextEncoder().encode(text).length, [text]);
   const lineCount = React.useMemo(() => (text ? text.split("\n").length : 0), [text]);
 
@@ -324,7 +328,7 @@ export function JsonImportDialog({
   }
 
   function handleCommit() {
-    if (!parsedPkg || !report || (targetCheck && !targetCheck.ok)) return;
+    if (!parsedPkg || !report || targetUnresolved || (targetCheck && !targetCheck.ok)) return;
     setCommitError(null);
     setSessionExpired(false);
     setPhase("importing");
@@ -682,6 +686,13 @@ export function JsonImportDialog({
                       })}
                     </SelectContent>
                   </Select>
+                  {targetUnresolved && (
+                    <p className={cn("text-xs", exams.isLoading ? "text-fg-muted" : "text-danger")} role={exams.isLoading ? "status" : "alert"}>
+                      {exams.isLoading
+                        ? tx(t, "importTargetLoading", "Loading the selected draft…")
+                        : tx(t, "importTargetGone", "The selected exam is no longer an editable draft. Choose another destination.")}
+                    </p>
+                  )}
                   {!exams.isLoading && editableExams.length === 0 && (
                     <p className="text-xs text-fg-subtle">{tx(t, "noEditableExams", "No editable drafts are available.")}</p>
                   )}
@@ -812,12 +823,12 @@ export function JsonImportDialog({
                 <Button
                   onClick={handleCommit}
                   loading={importing}
-                  disabled={importing || (targetCheck !== null && !targetCheck.ok)}
+                  disabled={importing || targetUnresolved || (targetCheck !== null && !targetCheck.ok)}
                   className="min-h-10 justify-center"
                 >
                   {replacing
                     ? tx(t, "replaceInExam", "Replace sections in selected exam")
-                    : target
+                    : target || targetUnresolved
                       ? tx(t, "addToExam", "Add to selected exam")
                       : tx(t, "createDraft", "Create draft")}
                 </Button>
