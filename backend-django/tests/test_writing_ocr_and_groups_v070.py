@@ -15,6 +15,7 @@ from django.core.management import call_command
 from django.test import SimpleTestCase
 from openpyxl import load_workbook
 from rest_framework.test import APIClient
+import config.urls
 
 from apps.core import assessment_providers, assessment_worker, writing_ocr
 from tests.test_assessment_quality import fixture as quality_fixture

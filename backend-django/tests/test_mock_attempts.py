@@ -7,6 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from django.urls import resolve
 from rest_framework.test import APIClient
+import config.urls
 
 from apps.core import mock_attempts as engine
 from apps.core.mock_attempt_views import validate_answer, wire
