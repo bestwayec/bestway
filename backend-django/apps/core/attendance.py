@@ -132,15 +132,18 @@ def bulk(actor, data):
                 msg = f"⚠️ DIQQAT! Farzandingiz {members[r['studentId']].user.name} ketma-ket 2 marta dars qoldirdi ({day.isoformat()}). Iltimos, o'quv markazi ma'muriyati bilan bog'laning."
             else:
                 msg = f"Farzandingiz {members[r['studentId']].user.name} {day.isoformat()} kungi darsga kelmadi."
-            notify_parents(r['studentId'], 'attendance', msg)
+            # after commit: an outer transaction (Teacher Workspace save) that rolls back never notifies parents
+            transaction.on_commit(lambda sid=r['studentId'], text=msg: notify_parents(sid, 'attendance', text))
     audit(actor, 'attendance.bulk_update', 'group', data['groupId'],
         new=dict(date=data['date'][:10], records=len(data['records'])))
-    try:    # durable student notice (opt-in, quiet hours, deduped per student/day/state); parents keep the existing flow above
-        from . import telegram_notify
-        for r in marked:
-            telegram_notify.attendance_update(r['studentId'], day.isoformat(), r['state'], data['groupId'])
-    except Exception:  # noqa: BLE001
-        pass
+    def _student_notices():  # durable student notice (opt-in, quiet hours, deduped per student/day/state)
+        try:
+            from . import telegram_notify
+            for r in marked:
+                telegram_notify.attendance_update(r['studentId'], day.isoformat(), r['state'], data['groupId'])
+        except Exception:  # noqa: BLE001
+            pass
+    transaction.on_commit(_student_notices)
     return dict(updated=len(marked), cleared=len(cleared))
 
 

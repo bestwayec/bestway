@@ -434,7 +434,15 @@ def student_my_assignments_view(request):
     """
     require_authenticated(request)
     require_role(request, "student")
+    return success(student_assignment_rows(request.user))
 
+
+def student_assignment_rows(user):
+    """The student's lesson / exam / vocabulary homework rows (shared by this view and the unified homework list)."""
+    class _R:  # keeps the body below unchanged: it reads request.user
+        pass
+    request = _R()
+    request.user = user
     assignments_qs = HomeworkAssignment.objects.filter(
         classrooms.student_homework_scope(request.user.id),
     ).select_related("cohort__teacher", "cohort__classroom__teacher", "lesson", "exam").order_by("deadline")
@@ -497,7 +505,7 @@ def student_my_assignments_view(request):
             "completed_at": sub.completed_at.isoformat() if sub and sub.completed_at else None,
         })
 
-    return success(results)
+    return results
 
 
 @api_view(["GET"])

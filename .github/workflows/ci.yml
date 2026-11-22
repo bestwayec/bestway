@@ -98,6 +98,7 @@ jobs:
           python scripts/verify_result_cards_postgres.py
           python scripts/verify_notifications_teacher_postgres.py
           python scripts/verify_e2e_journeys_postgres.py
+          python scripts/verify_teacher_workspace_postgres.py
       - name: Match PostgreSQL dump client to the database server
         run: |
           mkdir -p "$RUNNER_TEMP/pg-client"

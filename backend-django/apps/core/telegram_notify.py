@@ -36,6 +36,9 @@ T = {
         attendance_absent="📅 {day} kuni darsda qatnashmagansiz.", attendance_late="📅 {day} kuni darsga kech qoldingiz.", attendance_present="📅 {day}: davomat belgilandi ✅",
         note='\nIzoh: {x}', feedback="👨‍🏫 <b>{teacher}</b> sizga fikr bildirdi:\n{text}", appeal_new="✍️ Yangi murojaat: <b>{title}</b>. Ko'rib chiqing.",
         start='▶️ Testni boshlash', review='🔎 Xatolarni ko\'rish', card='🖼 Natija kartasi', open_results='📊 Natijalar',
+        new_homework="📝 <b>Yangi uy vazifasi</b>\n{title}\n{detail}Muddat: {when}", open_homework='🌐 Vazifani ochish',
+        homework_reminder="⏰ <b>{title}</b> vazifasini hali topshirmadingiz. Muddat: {when}", hw_vocabulary="Lug'at mashqi · {n} ta so'z\n",
+        hw_exam='Imtihon\n', hw_lesson='Dars / vazifa\n', hw_questions='{n} ta savol\n',
     ),
     'en': dict(
         deadline24='⏰ The deadline for <b>{title}</b> is near: submit before {when}.', deadline2='⏰ Less than 2 hours left for <b>{title}</b>!',
@@ -46,6 +49,9 @@ T = {
         attendance_absent='📅 You were marked absent on {day}.', attendance_late='📅 You were marked late on {day}.', attendance_present='📅 {day}: attendance recorded ✅',
         note='\nNote: {x}', feedback='👨‍🏫 <b>{teacher}</b> left you feedback:\n{text}', appeal_new='✍️ New request: <b>{title}</b>. Please review.',
         start='▶️ Start test', review='🔎 Review mistakes', card='🖼 Result card', open_results='📊 Results',
+        new_homework='📝 <b>New homework</b>\n{title}\n{detail}Deadline: {when}', open_homework='🌐 Open homework',
+        homework_reminder='⏰ You have not submitted <b>{title}</b> yet. Deadline: {when}', hw_vocabulary='Vocabulary practice · {n} words\n',
+        hw_exam='Exam\n', hw_lesson='Lesson / task\n', hw_questions='{n} questions\n',
     ),
 }
 
@@ -78,10 +84,33 @@ def quiz_assigned(assignment_id, now=None):
         return 0
     summary = cq.assignment_summary(row)
     count = 0
+    from .teacher_workspace import site_url, student_href
+    web = site_url(student_href('quiz', row.id))
     for student_id in _linked_students(row.group_id):
         lang = state.language_of(student_id)
         text, keyboard = tq.assignment_card(lang, summary)
+        keyboard = (keyboard or []) + [[dict(text=T[lang]['open_homework'], url=web)]]   # same assignment on the website
         if outbox.enqueue(student_id, 'tests', f'quiz_assigned:{row.id}:{student_id}', text, keyboard, now=now):
+            count += 1
+    return count
+
+
+def homework_assigned(assignment_id, now=None):
+    """Lesson / vocabulary / exam homework from the website: a short notice + a button to the website homework page."""
+    from .models import HomeworkAssignment
+    from .teacher_workspace import homework_kind, site_url, student_href
+    row = HomeworkAssignment.objects.select_related('cohort', 'vocabulary_set').filter(id=assignment_id).first()
+    if row is None or not row.cohort.classroom_id:
+        return 0
+    kind = homework_kind(row)
+    words = row.vocabulary_set.words.filter(is_archived=False).count() if row.vocabulary_set_id else 0
+    web = site_url(student_href(kind, row.id))
+    count = 0
+    for student_id in _linked_students(row.cohort.classroom_id):
+        lang = state.language_of(student_id)
+        detail = T[lang]['hw_' + kind].format(n=words)
+        text = T[lang]['new_homework'].format(title=esc(row.title), detail=detail, when=local(row.deadline))
+        if outbox.enqueue(student_id, 'tests', f'homework_assigned:{row.id}:{student_id}', text, [[dict(text=T[lang]['open_homework'], url=web)]], now=now):
             count += 1
     return count
 

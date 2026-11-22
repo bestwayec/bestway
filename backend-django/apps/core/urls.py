@@ -69,6 +69,7 @@ from .mock_import_views import (
 from .mock_media import group_audio_view, group_image_view, group_media_view, review_audio_view
 from .mock27 import views as mock27_views
 from . import class_quiz_views as cq
+from . import teacher_workspace_views as tws
 from .views import (
     desktop_authorize_view,
     desktop_exchange_view,
@@ -287,6 +288,15 @@ urlpatterns = [
     path('mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry', telemetry_view),
     path('v1/mock/attempts/<str:attempt_id>/telemetry/', telemetry_view),
+    path('teacher/workspace/overview', tws.overview),
+    path('teacher/workspace/groups/<str:group_id>/attendance', tws.group_attendance),
+    path('teacher/workspace/groups/<str:group_id>/attendance/history', tws.group_attendance_history),
+    path('teacher/workspace/groups/<str:group_id>/homework', tws.group_homework),
+    path('teacher/workspace/groups/<str:group_id>/homework/options', tws.group_homework_options),
+    path('teacher/workspace/groups/<str:group_id>/homework/preview', tws.group_homework_preview),
+    path('teacher/workspace/homework/<str:kind>/<str:assignment_id>/results', tws.homework_results),
+    path('teacher/workspace/homework/<str:kind>/<str:assignment_id>/remind', tws.homework_remind),
+    path('student/homework', tws.student_homework),
     path('class-quizzes', cq.quizzes),
     path('class-quizzes/<str:quiz_id>', cq.quiz_detail),
     path('class-quizzes/<str:quiz_id>/questions', cq.quiz_questions),
