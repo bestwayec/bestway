@@ -169,6 +169,7 @@ await pickTemplate(t, "CEFR Multilevel", "Reading", "Multilevel Reading · 5 par
 await checkImport(t);
 await dialog(t).getByText("Ready to import").waitFor({ timeout: 30000 });
 const mismatch = dialog(t).getByRole("alert").filter({ hasText: "This package is CEFR Multilevel" });
+await mismatch.waitFor({ timeout: 30000 }).catch(() => {});
 ok(await mismatch.isVisible(), "D pre-selected IELTS draft is refused for a Multilevel package, with the reason");
 ok(await dialog(t).getByRole("button", { name: "Add to selected exam" }).isDisabled(), "D import button is disabled for the incompatible draft");
 await dialog(t).getByRole("button", { name: "Edit JSON" }).click();
