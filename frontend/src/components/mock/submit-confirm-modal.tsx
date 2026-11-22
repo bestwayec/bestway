@@ -60,13 +60,13 @@ export function SubmitConfirmModal({
           {/* Summary Cards Grid */}
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
-              <span className="text-[11px] font-medium text-fg-muted">Belgilangan</span>
+              <span className="text-[11px] font-medium text-fg-muted">{t("answeredCard")}</span>
               <p className="text-base font-bold text-success tabular-nums">
                 {answered} / {total}
               </p>
             </div>
             <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
-              <span className="text-[11px] font-medium text-fg-muted">Javobsiz</span>
+              <span className="text-[11px] font-medium text-fg-muted">{t("unansweredCard")}</span>
               <p className={`text-base font-bold tabular-nums ${missing > 0 ? "text-danger" : "text-fg-muted"}`}>
                 {missing}
               </p>
@@ -74,7 +74,7 @@ export function SubmitConfirmModal({
             <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
               <span className="text-[11px] font-medium text-fg-muted flex items-center justify-center gap-1">
                 <Flag className="size-3 text-warning" />
-                Bayroqcha
+                {t("flaggedCard")}
               </span>
               <p className={`text-base font-bold tabular-nums ${flaggedCount > 0 ? "text-warning" : "text-fg-muted"}`}>
                 {flaggedCount}
@@ -116,7 +116,7 @@ export function SubmitConfirmModal({
           {flaggedCount > 0 && (
             <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
               <Flag className="size-3.5 shrink-0" />
-              <span>Sizda qayta ko&apos;rib chiqish uchun belgilangan <strong>{flaggedCount} ta</strong> savol mavjud.</span>
+              <span>{t("flaggedNotice", { count: flaggedCount })}</span>
             </div>
           )}
         </div>

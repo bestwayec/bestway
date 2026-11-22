@@ -8,9 +8,10 @@ import uz from "../../../messages/uz.json";
 
 const locale = vi.hoisted(() => ({ current: "en" as "en" | "uz" }));
 vi.mock("next-intl", () => ({
-  useTranslations: (namespace: string) => (key: string) => {
+  useTranslations: (namespace: string) => (key: string, values?: Record<string, unknown>) => {
     const messages = (locale.current === "en" ? en : uz) as unknown as Record<string, any>;
-    return namespace.split(".").reduce((node, part) => node?.[part], messages)?.[key] ?? key;
+    const template: string = namespace.split(".").reduce((node, part) => node?.[part], messages)?.[key] ?? key;
+    return template.replace(/\{(\w+)(?:,[^}]+)?\}/g, (_, name) => String(values?.[name] ?? ""));
   },
 }));
 import { SubmitConfirmModal } from "./submit-confirm-modal";
@@ -59,12 +60,12 @@ describe("SubmitConfirmModal", () => {
     expect(text).toContain("36 / 40");
     expect(text).toContain("4"); // missing
     expect(text).toContain("3"); // flagged
-    expect(text).toContain("Bayroqcha");
+    expect(text).toContain("Flagged");
   });
 
   it("warns student when questions are flagged for review", async () => {
     await render({ answered: 38, total: 40, flaggedCount: 2 });
-    expect(document.body.textContent).toContain("2 ta");
+    expect(document.body.textContent).toContain("2 flagged");
   });
 
   it("calls onConfirm when student clicks submit button", async () => {

@@ -711,7 +711,7 @@ export function CbtAnnotatedText({
                   content = (
                     <mark
                       key={`mb-${sIdx}`}
-                      className="cursor-pointer rounded-xs bg-sky-300/70 dark:bg-sky-500/40 px-0.5 text-fg"
+                      className="cbt-highlight-blue cursor-pointer"
                       onClick={() => clearAnnotation(seg.text)}
                       title={t("removeHighlight")}
                     >
