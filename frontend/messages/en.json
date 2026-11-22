@@ -1617,7 +1617,7 @@
       "answeredCard": "Answered",
       "unansweredCard": "Unanswered",
       "flaggedCard": "Flagged",
-      "flaggedNotice": "You have {count} flagged {count, plural, one {question} other {questions}}."
+      "flaggedNotice": "You have {count} flagged questions for review."
     },
     "resumeDialog": {
       "title": "Which section do you want to continue?",
