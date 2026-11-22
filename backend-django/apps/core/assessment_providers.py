@@ -584,16 +584,12 @@ def _generate_heuristic_speech_diagnostics(text: str, duration_ms: int = 3000) -
         "analysis": ("Confusion with plural 'analyses'", "Singular stress on second syllable: /əˈnæl.ə.sɪs/"),
     }
 
-    for idx, w in enumerate(raw_words):
-        cleaned = re.sub(r"[^a-zA-Z]", "", w).lower()
-        if cleaned in phonetic_watchlist:
-            issue, tip = phonetic_watchlist[cleaned]
-            mispronounced_words.append({
-                "word": w.strip(".,!?;:\"'"),
-                "issue": issue,
-                "suggestion": tip,
-                "approximate_ms": idx * step_ms,
-            })
+    # A transcript cannot show how a word was pronounced: a word on the
+    # watchlist being *said* is not evidence that it was *mispronounced*.
+    # Pronunciation findings need acoustic evidence (pronunciationEvidence is
+    # always UNAVAILABLE for transcript-only input), so this text-only helper
+    # never reports mispronounced words.
+    del phonetic_watchlist
 
     if wpm >= 120 and len(pauses_and_hesitations) <= 2:
         fluency = 7.5

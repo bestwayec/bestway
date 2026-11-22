@@ -166,7 +166,7 @@ class FishAudioSTTAndDeepSeekEvaluatorTests(SimpleTestCase):
         self.assertIn("mispronounced_words", diag)
         self.assertIn("pauses_and_hesitations", diag)
         self.assertTrue(any(p["text"].lower() == "um" for p in diag["pauses_and_hesitations"]))
-        self.assertTrue(any(m["word"].lower() == "specific" for m in diag["mispronounced_words"]))
+        self.assertEqual(diag["mispronounced_words"], [])  # no pronunciation claims from text
         self.assertTrue(0.0 <= diag["fluency_score"] <= 9.0)
 
     @patch("apps.core.writing_ocr._post_json")
