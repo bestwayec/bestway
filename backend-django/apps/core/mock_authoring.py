@@ -675,7 +675,11 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
             item('listening_audio', bool(gs) and count == len(gs), f'{count}/{len(gs)} groups with audio')
         if skill == 'reading':
             if is_full and ielts:
-                item('reading_groups', len(gs) == 3, f'{len(gs)}/3 passages')
+                from .mock_content import reading_passage_count
+                # Legacy rule (one group per passage) still passes unchanged; several task
+                # groups sharing one passage text also count as one passage.
+                passages = 3 if len(gs) == 3 else reading_passage_count(g.passage_text for g in gs)
+                item('reading_groups', passages == 3, f'{passages}/3 passages')
                 item('reading_questions', len(qs) == 40, f'{len(qs)}/40 questions')
             missing = sum(bool(persisted_questions[g.id]) and not (g.passage_text or '').strip() and not (g.content_html or '').strip() for g in gs)
             item('reading_passage', missing == 0, 'all passages have text' if missing == 0 else f'{missing} passage(s) without text')

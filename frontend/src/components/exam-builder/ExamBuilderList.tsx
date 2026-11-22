@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react";
+import { Copy, Download, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react";
+import { downloadJsonText, exportFileName } from "./import-json";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -25,6 +26,7 @@ import { ExamQuestionsEditorDialog } from "@/components/exam-builder/ExamQuestio
 import { Sparkles } from "lucide-react";
 import {
   useCloneMockExam,
+  useExportExam,
   useDeleteMockExam,
   useMockExams,
   useUpdateMockExamAny,
@@ -96,6 +98,7 @@ export function ExamBuilderList() {
   };
   const examsQ = useMockExams();
   const clone = useCloneMockExam();
+  const exportExam = useExportExam();
   const del = useDeleteMockExam();
   const updateExam = useUpdateMockExamAny();
 
@@ -164,6 +167,20 @@ export function ExamBuilderList() {
     setTypeFilter("all");
     setLevelFilter("all");
     setSearch("");
+  }
+
+  function handleExport(e: MockExamListItem) {
+    if (exportExam.isPending) return;
+    exportExam.mutate(
+      { examId: e.id },
+      {
+        onSuccess: (pkg) => {
+          downloadJsonText(exportFileName(e.title), `${JSON.stringify(pkg, null, 2)}\n`);
+          toast.success(tx(t, "exportDone", "Exported as JSON — media files are listed in the package but not embedded."));
+        },
+        onError: (error) => toast.error(err(error, tc("unknownError"))),
+      },
+    );
   }
 
   function handleDuplicate(id: string) {
@@ -425,6 +442,20 @@ export function ExamBuilderList() {
                   <Copy className="size-4 shrink-0" aria-hidden />
                   <span className="truncate">{tx(t, "duplicate", "Duplicate")}</span>
                 </Button>
+                {e.canEdit && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title={`${tx(t, "exportJson", "Export JSON")} — ${e.title}`}
+                    aria-label={`${tx(t, "exportJson", "Export JSON")} — ${e.title}`}
+                    loading={exportExam.isPending && exportExam.variables?.examId === e.id}
+                    onClick={() => handleExport(e)}
+                    className="min-h-9 w-full justify-center"
+                  >
+                    <Download className="size-4 shrink-0" aria-hidden />
+                    <span className="truncate">{tx(t, "exportJson", "Export JSON")}</span>
+                  </Button>
+                )}
                 {canDelete && (
                   <Button
                     size="sm"
@@ -572,6 +603,18 @@ export function ExamBuilderList() {
                       >
                         <Copy className="size-4" aria-hidden />
                       </Button>
+                      {e.canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title={`${tx(t, "exportJson", "Export JSON")} — ${e.title}`}
+                          aria-label={`${tx(t, "exportJson", "Export JSON")} — ${e.title}`}
+                          loading={exportExam.isPending && exportExam.variables?.examId === e.id}
+                          onClick={() => handleExport(e)}
+                        >
+                          <Download className="size-4" aria-hidden />
+                        </Button>
+                      )}
                       {canDelete && (
                         <Button
                           size="sm"

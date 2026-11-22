@@ -1,0 +1,186 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "multilevel-speaking-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "CEFR Multilevel Speaking template",
+    "notes": "Structure follows BestWay's configured Multilevel specification UZBMB_MULTILEVEL_EN_2026_V2 (the same blueprint the editor and publish checks use). It is a configurable platform default, not an official document. Listening audio is uploaded per part in the editor after import."
+  },
+  "exam": {
+    "type": "multilevel",
+    "title": "REPLACE — CEFR Multilevel Speaking",
+    "description": "Multilevel Speaking practice component.",
+    "level": "REPLACE — target level, e.g. B1–C1",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "speaking",
+        "skill": "speaking",
+        "title": "Speaking",
+        "instructions": "REPLACE — Your answers are recorded. Speak clearly after each prompt.",
+        "durationMinutes": 30,
+        "groups": [
+          {
+            "key": "ml-speaking-part-1-1",
+            "title": "Part 1.1 — Interview",
+            "instructions": "Answer each question in about 30 seconds.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q1",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 1,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 1",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q2",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 2,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 2",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q3",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 3,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 3",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-speaking-part-1-2",
+            "title": "Part 1.2 — Picture comparison",
+            "instructions": "Look at the two pictures. Answer the first question in about 45 seconds and the others in about 30 seconds each.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q4",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 4,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 4",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q5",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 5,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 5",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q6",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 6,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 6",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ],
+            "imageRef": "speaking-part-1-2-pictures"
+          },
+          {
+            "key": "ml-speaking-part-2",
+            "title": "Part 2 — Monologue",
+            "instructions": "You have 1 minute to prepare and up to 2 minutes to speak.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q7",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 7,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 7",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-speaking-part-3",
+            "title": "Part 3 — Discussion",
+            "instructions": "You have 1 minute to prepare and up to 2 minutes to give your opinion.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 6,
+            "questions": [
+              {
+                "key": "ml-speaking-q8",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 8,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 8",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 6
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [
+    {
+      "key": "speaking-part-1-2-pictures",
+      "kind": "image",
+      "fileName": "speaking-part-1-2-pictures.png",
+      "requiredForPublish": true,
+      "description": "Two pictures for Part 1.2 — attach the file before publishing."
+    }
+  ],
+  "reviewIssues": [
+    {
+      "key": "replace-multilevel-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder and sample answer key with verified material, upload Listening audio for each part, and attach the required pictures before publishing.",
+      "sourceRef": "Generated CEFR Multilevel template"
+    }
+  ]
+}

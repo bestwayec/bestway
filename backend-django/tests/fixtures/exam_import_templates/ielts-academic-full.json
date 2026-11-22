@@ -1,0 +1,1666 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "ielts-academic-full-20261001080000",
+  "revision": 1,
+  "profile": "full_mock",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Academic Full Mock template",
+    "notes": "Replace every REPLACE placeholder with licensed or original material before publishing."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE — IELTS Academic Full Mock",
+    "description": "Four-skill Academic mock: Listening (4 parts / 40), Reading (3 passages / 40), Writing (2 tasks), Speaking (3 parts).",
+    "level": "IELTS Academic",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear four recordings once only. Answer Questions 1-40. Each correct answer receives one mark.",
+        "durationMinutes": 30,
+        "groups": [
+          {
+            "key": "listening-part-1",
+            "title": "Part 1 - REPLACE - Everyday social conversation between two speakers",
+            "instructions": "Questions 1-10. Complete the form or table. Write ONE WORD AND/OR A NUMBER for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 1 form or table title</h3><table><thead><tr><th>REPLACE - Field</th><th>REPLACE - Details</th></tr></thead><tbody><tr><td>REPLACE - Field 1</td><td><span data-gap=\"1\"></span></td></tr><tr><td>REPLACE - Field 2</td><td><span data-gap=\"2\"></span></td></tr><tr><td>REPLACE - Field 3</td><td><span data-gap=\"3\"></span></td></tr><tr><td>REPLACE - Field 4</td><td><span data-gap=\"4\"></span></td></tr><tr><td>REPLACE - Field 5</td><td><span data-gap=\"5\"></span></td></tr><tr><td>REPLACE - Field 6</td><td><span data-gap=\"6\"></span></td></tr><tr><td>REPLACE - Field 7</td><td><span data-gap=\"7\"></span></td></tr><tr><td>REPLACE - Field 8</td><td><span data-gap=\"8\"></span></td></tr><tr><td>REPLACE - Field 9</td><td><span data-gap=\"9\"></span></td></tr><tr><td>REPLACE - Field 10</td><td><span data-gap=\"10\"></span></td></tr></tbody></table>",
+            "contentLayout": "table",
+            "audioScript": "",
+            "partNumber": 1,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-1",
+                "number": 1,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 1: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 1"
+              },
+              {
+                "key": "listening-question-2",
+                "number": 2,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 2: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 2"
+              },
+              {
+                "key": "listening-question-3",
+                "number": 3,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 3: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 3"
+              },
+              {
+                "key": "listening-question-4",
+                "number": 4,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 4: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 4"
+              },
+              {
+                "key": "listening-question-5",
+                "number": 5,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 5: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 5"
+              },
+              {
+                "key": "listening-question-6",
+                "number": 6,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 6: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 6"
+              },
+              {
+                "key": "listening-question-7",
+                "number": 7,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 7: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 7"
+              },
+              {
+                "key": "listening-question-8",
+                "number": 8,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 8: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 8"
+              },
+              {
+                "key": "listening-question-9",
+                "number": 9,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 9: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 9"
+              },
+              {
+                "key": "listening-question-10",
+                "number": 10,
+                "type": "table_completion",
+                "prompt": "REPLACE - Form or table field for question 10: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 10"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-2",
+            "title": "Part 2 - REPLACE - Everyday social monologue about a place, service or facility",
+            "instructions": "Questions 11-15. Label the plan, map or diagram. Write NO MORE THAN TWO WORDS for each answer. Upload the visual in the Part editor after import.\n\nQuestions 16-20. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 2,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-11",
+                "number": 11,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 11.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 11"
+              },
+              {
+                "key": "listening-question-12",
+                "number": 12,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 12.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 12"
+              },
+              {
+                "key": "listening-question-13",
+                "number": 13,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 13.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 13"
+              },
+              {
+                "key": "listening-question-14",
+                "number": 14,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 14.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 14"
+              },
+              {
+                "key": "listening-question-15",
+                "number": 15,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 15.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 15"
+              },
+              {
+                "key": "listening-question-16",
+                "number": 16,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 16.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 16"
+              },
+              {
+                "key": "listening-question-17",
+                "number": 17,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 17.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 17"
+              },
+              {
+                "key": "listening-question-18",
+                "number": 18,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 18.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 18"
+              },
+              {
+                "key": "listening-question-19",
+                "number": 19,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 19.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 19"
+              },
+              {
+                "key": "listening-question-20",
+                "number": 20,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 20.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 20"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-3",
+            "title": "Part 3 - REPLACE - Educational or training discussion with two to four speakers",
+            "instructions": "Questions 21-25. Match each statement with the correct speaker, opinion or category, A-E. You may use any letter more than once.\n\nQuestions 26-30. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 3,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-21",
+                "number": 21,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 21.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 21"
+              },
+              {
+                "key": "listening-question-22",
+                "number": 22,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 22.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 22"
+              },
+              {
+                "key": "listening-question-23",
+                "number": 23,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 23.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 23"
+              },
+              {
+                "key": "listening-question-24",
+                "number": 24,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 24.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 24"
+              },
+              {
+                "key": "listening-question-25",
+                "number": 25,
+                "type": "matching",
+                "prompt": "REPLACE - Statement to match for question 25.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C",
+                  "REPLACE - Option D",
+                  "REPLACE - Option E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 25"
+              },
+              {
+                "key": "listening-question-26",
+                "number": 26,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 26.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 26"
+              },
+              {
+                "key": "listening-question-27",
+                "number": 27,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 27.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 27"
+              },
+              {
+                "key": "listening-question-28",
+                "number": 28,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 28.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 28"
+              },
+              {
+                "key": "listening-question-29",
+                "number": 29,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 29.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 29"
+              },
+              {
+                "key": "listening-question-30",
+                "number": 30,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 30.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 30"
+              }
+            ]
+          },
+          {
+            "key": "listening-part-4",
+            "title": "Part 4 - REPLACE - Academic monologue or lecture",
+            "instructions": "Questions 31-40. Complete the notes. Write NO MORE THAN TWO WORDS for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 4 lecture notes title</h3><ul><li>REPLACE - Lecture note 31: <span data-gap=\"31\"></span></li><li>REPLACE - Lecture note 32: <span data-gap=\"32\"></span></li><li>REPLACE - Lecture note 33: <span data-gap=\"33\"></span></li><li>REPLACE - Lecture note 34: <span data-gap=\"34\"></span></li><li>REPLACE - Lecture note 35: <span data-gap=\"35\"></span></li><li>REPLACE - Lecture note 36: <span data-gap=\"36\"></span></li><li>REPLACE - Lecture note 37: <span data-gap=\"37\"></span></li><li>REPLACE - Lecture note 38: <span data-gap=\"38\"></span></li><li>REPLACE - Lecture note 39: <span data-gap=\"39\"></span></li><li>REPLACE - Lecture note 40: <span data-gap=\"40\"></span></li></ul>",
+            "contentLayout": "notes",
+            "audioScript": "",
+            "partNumber": 4,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-31",
+                "number": 31,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 31: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 31"
+              },
+              {
+                "key": "listening-question-32",
+                "number": 32,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 32: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 32"
+              },
+              {
+                "key": "listening-question-33",
+                "number": 33,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 33: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 33"
+              },
+              {
+                "key": "listening-question-34",
+                "number": 34,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 34: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 34"
+              },
+              {
+                "key": "listening-question-35",
+                "number": 35,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 35: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 35"
+              },
+              {
+                "key": "listening-question-36",
+                "number": 36,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 36: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 36"
+              },
+              {
+                "key": "listening-question-37",
+                "number": 37,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 37: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 37"
+              },
+              {
+                "key": "listening-question-38",
+                "number": 38,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 38: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 38"
+              },
+              {
+                "key": "listening-question-39",
+                "number": 39,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 39: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 39"
+              },
+              {
+                "key": "listening-question-40",
+                "number": 40,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 40: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 40"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "reading",
+        "skill": "reading",
+        "title": "Academic Reading",
+        "instructions": "You should spend about 60 minutes on Questions 1–40, which are based on Reading Passages 1, 2 and 3. Answer all questions.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "reading-passage-1-identifying-information",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Do the following statements agree with the information given in Reading Passage 1? Choose TRUE if the statement agrees with the information, FALSE if it contradicts the information, or NOT GIVEN if there is no information on this.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-1",
+                "number": 1,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 1.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 1"
+              },
+              {
+                "key": "reading-question-2",
+                "number": 2,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 2.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 2"
+              },
+              {
+                "key": "reading-question-3",
+                "number": 3,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 3.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 3"
+              },
+              {
+                "key": "reading-question-4",
+                "number": 4,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Statement for question 4.",
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "TRUE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 4"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-multiple-choice",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Choose the correct letter, A, B, C or D.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-5",
+                "number": 5,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 5.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 5"
+              },
+              {
+                "key": "reading-question-6",
+                "number": 6,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 6.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 6"
+              },
+              {
+                "key": "reading-question-7",
+                "number": 7,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Multiple-choice question 7.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 7"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-note-completion",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Complete the notes below. Choose ONE WORD ONLY from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "<h3>REPLACE — Notes title</h3><ol><li>REPLACE — Question 8 context: <span data-gap=\"8\"></span></li><li>REPLACE — Question 9 context: <span data-gap=\"9\"></span></li><li>REPLACE — Question 10 context: <span data-gap=\"10\"></span></li></ol>",
+            "contentLayout": "notes",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-8",
+                "number": 8,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 8.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 8"
+              },
+              {
+                "key": "reading-question-9",
+                "number": 9,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 9.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 9"
+              },
+              {
+                "key": "reading-question-10",
+                "number": 10,
+                "type": "note_completion",
+                "prompt": "REPLACE — Completion prompt for question 10.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 1,
+                "sourceRef": "REPLACE — Passage source location for question 10"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-1-short-answer",
+            "title": "REPLACE — Reading Passage 1 title",
+            "instructions": "Answer the questions below. Choose NO MORE THAN THREE WORDS AND/OR A NUMBER from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 1.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-11",
+                "number": 11,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 11.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 11"
+              },
+              {
+                "key": "reading-question-12",
+                "number": 12,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 12.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 12"
+              },
+              {
+                "key": "reading-question-13",
+                "number": 13,
+                "type": "short_answer",
+                "prompt": "REPLACE — Completion prompt for question 13.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 3,
+                "sourceRef": "REPLACE — Passage source location for question 13"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-2-matching-headings",
+            "title": "REPLACE — Reading Passage 2 title",
+            "instructions": "Reading Passage 2 has six marked paragraphs, A–F. Choose the correct heading for each paragraph from the list of headings. There are more headings than paragraphs, so you will not use all of them. Each heading may be used only once.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 2.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-14",
+                "number": 14,
+                "type": "matching_headings",
+                "prompt": "Paragraph A",
+                "options": [
+                  "REPLACE — Heading i",
+                  "REPLACE — Heading ii",
+                  "REPLACE — Heading iii",
+                  "REPLACE — Heading iv",
+                  "REPLACE — Heading v",
+                  "REPLACE — Heading vi",
+                  "REPLACE — Heading vii"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 14"
+              },
+              {
+                "key": "reading-question-15",
+                "number": 15,
+                "type": "matching_headings",
+                "prompt": "Paragraph B",
+                "options": [
+                  "REPLACE — Heading i",
+                  "REPLACE — Heading ii",
+                  "REPLACE — Heading iii",
+                  "REPLACE — Heading iv",
+                  "REPLACE — Heading v",
+                  "REPLACE — Heading vi",
+                  "REPLACE — Heading vii"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 15"
+              },
+              {
+                "key": "reading-question-16",
+                "number": 16,
+                "type": "matching_headings",
+                "prompt": "Paragraph C",
+                "options": [
+                  "REPLACE — Heading i",
+                  "REPLACE — Heading ii",
+                  "REPLACE — Heading iii",
+                  "REPLACE — Heading iv",
+                  "REPLACE — Heading v",
+                  "REPLACE — Heading vi",
+                  "REPLACE — Heading vii"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 16"
+              },
+              {
+                "key": "reading-question-17",
+                "number": 17,
+                "type": "matching_headings",
+                "prompt": "Paragraph D",
+                "options": [
+                  "REPLACE — Heading i",
+                  "REPLACE — Heading ii",
+                  "REPLACE — Heading iii",
+                  "REPLACE — Heading iv",
+                  "REPLACE — Heading v",
+                  "REPLACE — Heading vi",
+                  "REPLACE — Heading vii"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 17"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-2-matching-features",
+            "title": "REPLACE — Reading Passage 2 title",
+            "instructions": "Match each statement with the correct feature, A–E. You may use any letter more than once.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 2.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-18",
+                "number": 18,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 18.",
+                "options": [
+                  "Feature A",
+                  "Feature B",
+                  "Feature C",
+                  "Feature D",
+                  "Feature E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 18"
+              },
+              {
+                "key": "reading-question-19",
+                "number": 19,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 19.",
+                "options": [
+                  "Feature A",
+                  "Feature B",
+                  "Feature C",
+                  "Feature D",
+                  "Feature E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 19"
+              },
+              {
+                "key": "reading-question-20",
+                "number": 20,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 20.",
+                "options": [
+                  "Feature A",
+                  "Feature B",
+                  "Feature C",
+                  "Feature D",
+                  "Feature E"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 20"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-2-sentence-completion",
+            "title": "REPLACE — Reading Passage 2 title",
+            "instructions": "Complete the sentences below. Choose NO MORE THAN TWO WORDS from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 2.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "<h3>REPLACE — Sentence completion</h3><ol><li>REPLACE — Question 21 context: <span data-gap=\"21\"></span></li><li>REPLACE — Question 22 context: <span data-gap=\"22\"></span></li><li>REPLACE — Question 23 context: <span data-gap=\"23\"></span></li></ol>",
+            "contentLayout": "sentences",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-21",
+                "number": 21,
+                "type": "sentence_completion",
+                "prompt": "REPLACE — Completion prompt for question 21.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 21"
+              },
+              {
+                "key": "reading-question-22",
+                "number": 22,
+                "type": "sentence_completion",
+                "prompt": "REPLACE — Completion prompt for question 22.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 22"
+              },
+              {
+                "key": "reading-question-23",
+                "number": 23,
+                "type": "sentence_completion",
+                "prompt": "REPLACE — Completion prompt for question 23.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 23"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-2-table-completion",
+            "title": "REPLACE — Reading Passage 2 title",
+            "instructions": "Complete the table below. Choose NO MORE THAN TWO WORDS AND/OR A NUMBER from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 2.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "<h3>REPLACE — Table title</h3><table><thead><tr><th>REPLACE — Category</th><th>REPLACE — Detail</th></tr></thead><tbody><tr><td>REPLACE — Row 24</td><td><span data-gap=\"24\"></span></td></tr><tr><td>REPLACE — Row 25</td><td><span data-gap=\"25\"></span></td></tr><tr><td>REPLACE — Row 26</td><td><span data-gap=\"26\"></span></td></tr></tbody></table>",
+            "contentLayout": "table",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-24",
+                "number": 24,
+                "type": "table_completion",
+                "prompt": "REPLACE — Completion prompt for question 24.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 24"
+              },
+              {
+                "key": "reading-question-25",
+                "number": 25,
+                "type": "table_completion",
+                "prompt": "REPLACE — Completion prompt for question 25.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 25"
+              },
+              {
+                "key": "reading-question-26",
+                "number": 26,
+                "type": "table_completion",
+                "prompt": "REPLACE — Completion prompt for question 26.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 26"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-3-writers-views",
+            "title": "REPLACE — Reading Passage 3 title",
+            "instructions": "Do the following statements agree with the views or claims of the writer in Reading Passage 3? Choose YES if the statement agrees with the writer, NO if it contradicts the writer, or NOT GIVEN if it is impossible to say what the writer thinks about this.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 3.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-27",
+                "number": 27,
+                "type": "yes_no_notgiven",
+                "prompt": "REPLACE — Statement for question 27.",
+                "options": [
+                  "YES",
+                  "NO",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "YES"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 27"
+              },
+              {
+                "key": "reading-question-28",
+                "number": 28,
+                "type": "yes_no_notgiven",
+                "prompt": "REPLACE — Statement for question 28.",
+                "options": [
+                  "YES",
+                  "NO",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "YES"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 28"
+              },
+              {
+                "key": "reading-question-29",
+                "number": 29,
+                "type": "yes_no_notgiven",
+                "prompt": "REPLACE — Statement for question 29.",
+                "options": [
+                  "YES",
+                  "NO",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "YES"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 29"
+              },
+              {
+                "key": "reading-question-30",
+                "number": 30,
+                "type": "yes_no_notgiven",
+                "prompt": "REPLACE — Statement for question 30.",
+                "options": [
+                  "YES",
+                  "NO",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "YES"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 30"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-3-multiple-choice-multiple-answers",
+            "title": "REPLACE — Reading Passage 3 title",
+            "instructions": "Choose TWO letters, A–E. Select exactly two answers for each numbered question.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 3.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-31",
+                "number": 31,
+                "type": "multi_select",
+                "prompt": "REPLACE — Completion prompt for question 31.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D",
+                  "REPLACE — Option E"
+                ],
+                "correctAnswers": [
+                  "A",
+                  "B"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 31"
+              },
+              {
+                "key": "reading-question-32",
+                "number": 32,
+                "type": "multi_select",
+                "prompt": "REPLACE — Completion prompt for question 32.",
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D",
+                  "REPLACE — Option E"
+                ],
+                "correctAnswers": [
+                  "A",
+                  "B"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 32"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-3-matching-information",
+            "title": "REPLACE — Reading Passage 3 title",
+            "instructions": "Which paragraph contains the following information? Choose the correct letter, A–F. You may use any letter more than once.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 3.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-33",
+                "number": 33,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 33.",
+                "options": [
+                  "Paragraph A",
+                  "Paragraph B",
+                  "Paragraph C",
+                  "Paragraph D",
+                  "Paragraph E",
+                  "Paragraph F"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 33"
+              },
+              {
+                "key": "reading-question-34",
+                "number": 34,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 34.",
+                "options": [
+                  "Paragraph A",
+                  "Paragraph B",
+                  "Paragraph C",
+                  "Paragraph D",
+                  "Paragraph E",
+                  "Paragraph F"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 34"
+              },
+              {
+                "key": "reading-question-35",
+                "number": 35,
+                "type": "matching",
+                "prompt": "REPLACE — Information statement for question 35.",
+                "options": [
+                  "Paragraph A",
+                  "Paragraph B",
+                  "Paragraph C",
+                  "Paragraph D",
+                  "Paragraph E",
+                  "Paragraph F"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE — Passage source location for question 35"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-3-summary-completion",
+            "title": "REPLACE — Reading Passage 3 title",
+            "instructions": "Complete the summary below. Choose NO MORE THAN TWO WORDS AND/OR A NUMBER from the passage for each answer.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 3.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "<h3>REPLACE — Summary title</h3><ol><li>REPLACE — Question 36 context: <span data-gap=\"36\"></span></li><li>REPLACE — Question 37 context: <span data-gap=\"37\"></span></li><li>REPLACE — Question 38 context: <span data-gap=\"38\"></span></li></ol>",
+            "contentLayout": "summary",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-36",
+                "number": 36,
+                "type": "summary_completion",
+                "prompt": "REPLACE — Completion prompt for question 36.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 36"
+              },
+              {
+                "key": "reading-question-37",
+                "number": 37,
+                "type": "summary_completion",
+                "prompt": "REPLACE — Completion prompt for question 37.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 37"
+              },
+              {
+                "key": "reading-question-38",
+                "number": 38,
+                "type": "summary_completion",
+                "prompt": "REPLACE — Completion prompt for question 38.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 38"
+              }
+            ]
+          },
+          {
+            "key": "reading-passage-3-diagram-label-completion",
+            "title": "REPLACE — Reading Passage 3 title",
+            "instructions": "Complete the labels on the diagram. Choose NO MORE THAN TWO WORDS from the passage for each answer. Add the diagram image in Exam Builder after import if required.",
+            "passageText": "REPLACE WITH THE COMPLETE TEXT FOR READING PASSAGE 3.\n\nPreserve all paragraph breaks. For matching tasks, include paragraph labels such as A, B, C and so on in the passage text.\n\nFor a complete Academic Reading test, the combined length of all three passages should be approximately 2,150–2,750 words.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "reading-question-39",
+                "number": 39,
+                "type": "map_labelling",
+                "prompt": "REPLACE — Completion prompt for question 39.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 39"
+              },
+              {
+                "key": "reading-question-40",
+                "number": 40,
+                "type": "map_labelling",
+                "prompt": "REPLACE — Completion prompt for question 40.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE — Passage source location for question 40"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "writing",
+        "skill": "writing",
+        "title": "Academic Writing",
+        "instructions": "The Writing test has two tasks. You have 60 minutes. Task 2 carries more weight than Task 1.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ielts-writing-academic-task-1",
+            "title": "Writing Task 1 — Visual report",
+            "instructions": "You should spend about 20 minutes on this task.\n\nREPLACE — The chart/graph/table/map/process below shows … Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-academic-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "essay_task1",
+                "prompt": "REPLACE — The chart/graph/table/map/process below shows … Summarise the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ],
+            "imageRef": "writing-task-1-visual"
+          },
+          {
+            "key": "ielts-writing-academic-task-2",
+            "title": "Writing Task 2 — Essay",
+            "instructions": "You should spend about 40 minutes on this task.\n\nWrite about the following topic:\n\nREPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience.\n\nWrite at least 250 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-writing-academic-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "essay_task2",
+                "prompt": "REPLACE — Essay topic. State the task type (opinion / discussion / advantages and disadvantages / problem and solution / two-part question). Give reasons for your answer and include any relevant examples from your own knowledge or experience. (Write at least 250 words.)",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "speaking",
+        "skill": "speaking",
+        "title": "Speaking",
+        "instructions": "The Speaking test has three parts and lasts 11–14 minutes. Your answers are recorded.",
+        "durationMinutes": 15,
+        "groups": [
+          {
+            "key": "ielts-speaking-part-1",
+            "title": "Speaking Part 1 — Interview",
+            "instructions": "Answer the examiner's questions about familiar topics (4–5 minutes).",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "speaking_task",
+                "prompt": "Part 1 questions:\nTopic 1 — REPLACE\n1. REPLACE\n2. REPLACE\n3. REPLACE\nTopic 2 — REPLACE\n4. REPLACE\n5. REPLACE\n6. REPLACE",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          },
+          {
+            "key": "ielts-speaking-part-2",
+            "title": "Speaking Part 2 — Cue card",
+            "instructions": "You have 1 minute to prepare and make notes, then speak for up to 2 minutes.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "speaking_task",
+                "prompt": "CUE CARD:\nREPLACE — Describe …\nYou should say:\n- REPLACE\n- REPLACE\n- REPLACE\nand explain REPLACE.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          },
+          {
+            "key": "ielts-speaking-part-3",
+            "title": "Speaking Part 3 — Discussion",
+            "instructions": "Discuss broader questions linked to the Part 2 topic (4–5 minutes).",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ielts-speaking-q3",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 3,
+                "type": "speaking_task",
+                "prompt": "Part 3 discussion questions:\n1. REPLACE\n2. REPLACE\n3. REPLACE\n4. REPLACE",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 9
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [
+    {
+      "key": "writing-task-1-visual",
+      "kind": "image",
+      "fileName": "writing-task-1-visual.png",
+      "requiredForPublish": true,
+      "description": "Task 1 chart, graph, table, map or process diagram — attach before publishing."
+    }
+  ],
+  "reviewIssues": [
+    {
+      "key": "replace-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder (and attach required images) before publishing.",
+      "sourceRef": "Generated IELTS Academic Full Mock template"
+    }
+  ]
+}

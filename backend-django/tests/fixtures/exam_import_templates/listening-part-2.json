@@ -1,0 +1,209 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "listening-part-2-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Listening Part 2 template",
+    "notes": "Replace every REPLACE placeholder and answer key using licensed or original material. After import, upload audio in each Part editor. Do not add audioRef or media entries when the teacher will upload audio later."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE - IELTS Listening Part 2 Practice",
+    "description": "Single-part IELTS Listening practice for Questions 11-20.",
+    "level": "IELTS",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear the Part 2 recording once only. Answer Questions 11-20.",
+        "durationMinutes": 10,
+        "groups": [
+          {
+            "key": "listening-part-2",
+            "title": "Part 2 - REPLACE - Everyday social monologue about a place, service or facility",
+            "instructions": "Questions 11-15. Label the plan, map or diagram. Write NO MORE THAN TWO WORDS for each answer. Upload the visual in the Part editor after import.\n\nQuestions 16-20. Choose the correct letter, A, B or C.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "partNumber": 2,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-11",
+                "number": 11,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 11.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 11"
+              },
+              {
+                "key": "listening-question-12",
+                "number": 12,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 12.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 12"
+              },
+              {
+                "key": "listening-question-13",
+                "number": 13,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 13.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 13"
+              },
+              {
+                "key": "listening-question-14",
+                "number": 14,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 14.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 14"
+              },
+              {
+                "key": "listening-question-15",
+                "number": 15,
+                "type": "map_labelling",
+                "prompt": "REPLACE - Label the numbered location or feature for question 15.",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 15"
+              },
+              {
+                "key": "listening-question-16",
+                "number": 16,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 16.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 16"
+              },
+              {
+                "key": "listening-question-17",
+                "number": 17,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 17.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 17"
+              },
+              {
+                "key": "listening-question-18",
+                "number": 18,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 18.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 18"
+              },
+              {
+                "key": "listening-question-19",
+                "number": 19,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 19.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 19"
+              },
+              {
+                "key": "listening-question-20",
+                "number": 20,
+                "type": "multiple_choice",
+                "prompt": "REPLACE - Multiple-choice question 20.",
+                "options": [
+                  "REPLACE - Option A",
+                  "REPLACE - Option B",
+                  "REPLACE - Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "sourceRef": "REPLACE - Recording Part source location for question 20"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-listening-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam/sections/0",
+      "message": "Replace and verify all Part 2 placeholders and answer keys, then upload its audio in the teacher editor and add the plan/map/diagram visual.",
+      "sourceRef": "Generated IELTS Listening import template"
+    }
+  ]
+}

@@ -131,12 +131,17 @@ describe("exam import templates", () => {
   });
 
   it("exposes every template and serializes valid JSON", () => {
-    expect(EXAM_IMPORT_TEMPLATES).toHaveLength(12);
-    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "reading")).toHaveLength(4);
-    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "listening")).toHaveLength(5);
-    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "multilevel")).toHaveLength(1);
-    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "writing")).toHaveLength(1);
-    expect(EXAM_IMPORT_TEMPLATES.filter((template) => template.skill === "speaking")).toHaveLength(1);
+    expect(EXAM_IMPORT_TEMPLATES).toHaveLength(18);
+    const count = (family: string, skill: string) =>
+      EXAM_IMPORT_TEMPLATES.filter((template) => template.family === family && template.skill === skill).length;
+    expect(count("ielts", "full")).toBe(1);
+    expect(count("ielts", "reading")).toBe(4);
+    expect(count("ielts", "listening")).toBe(5);
+    expect(count("ielts", "writing")).toBe(2);
+    expect(count("ielts", "speaking")).toBe(1);
+    expect(count("multilevel", "full")).toBe(1);
+    for (const skill of ["listening", "reading", "writing", "speaking"]) expect(count("multilevel", skill)).toBe(1);
+    expect(new Set(EXAM_IMPORT_TEMPLATES.map((template) => template.fileName)).size).toBe(18);
     for (const template of EXAM_IMPORT_TEMPLATES) {
       expect(() => JSON.parse(serializeExamImportTemplate(template.id))).not.toThrow();
     }

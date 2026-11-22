@@ -1,0 +1,1674 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "multilevel-full-20261001080000",
+  "revision": 1,
+  "profile": "full_mock",
+  "source": {
+    "kind": "provided_material",
+    "label": "CEFR Multilevel Full mock template",
+    "notes": "Structure follows BestWay's configured Multilevel specification UZBMB_MULTILEVEL_EN_2026_V2 (the same blueprint the editor and publish checks use). It is a configurable platform default, not an official document. Listening audio is uploaded per part in the editor after import."
+  },
+  "exam": {
+    "type": "multilevel",
+    "title": "REPLACE — CEFR Multilevel Full mock",
+    "description": "Four-section Multilevel mock: Listening (35 questions, 45 min), Reading (35 questions, 60 min), Writing (3 tasks, 60 min), Speaking (4 parts, 30 min).",
+    "level": "REPLACE — target level, e.g. B1–C1",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "Listening",
+        "instructions": "REPLACE — You will hear each recording twice. Answer Questions 1–35.",
+        "durationMinutes": 45,
+        "groups": [
+          {
+            "key": "ml-listening-part-1",
+            "title": "Part 1",
+            "instructions": "REPLACE — Choose the correct answer.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 1 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p1-q1",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 1,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 1",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q2",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 2,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 2",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q3",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 3,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 3",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q4",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 4,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 4",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q5",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 5,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 5",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q6",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 6,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 6",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q7",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 7,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 7",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p1-q8",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 8,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 8",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              }
+            ],
+            "partNumber": 1,
+            "audioPlayLimit": 2
+          },
+          {
+            "key": "ml-listening-part-2",
+            "title": "Part 2",
+            "instructions": "REPLACE — Write ONE WORD and/or A NUMBER for each answer.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 2 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p2-q9",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 9,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 9",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p2-q10",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 10,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 10",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p2-q11",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 11,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 11",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p2-q12",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 12,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 12",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p2-q13",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 13,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 13",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p2-q14",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 14,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 14",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              }
+            ],
+            "partNumber": 2,
+            "audioPlayLimit": 2
+          },
+          {
+            "key": "ml-listening-part-3",
+            "title": "Part 3",
+            "instructions": "REPLACE — Match each item with the correct option. There are more options than you need.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 3 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p3-q15",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 15,
+                "type": "matching",
+                "prompt": "REPLACE — Question 15",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p3-q16",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 16,
+                "type": "matching",
+                "prompt": "REPLACE — Question 16",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F"
+                ],
+                "correctAnswers": [
+                  "B"
+                ]
+              },
+              {
+                "key": "ml-listening-p3-q17",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 17,
+                "type": "matching",
+                "prompt": "REPLACE — Question 17",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F"
+                ],
+                "correctAnswers": [
+                  "C"
+                ]
+              },
+              {
+                "key": "ml-listening-p3-q18",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 18,
+                "type": "matching",
+                "prompt": "REPLACE — Question 18",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F"
+                ],
+                "correctAnswers": [
+                  "D"
+                ]
+              }
+            ],
+            "partNumber": 3,
+            "audioPlayLimit": 2,
+            "optionsReusable": false
+          },
+          {
+            "key": "ml-listening-part-4",
+            "title": "Part 4",
+            "instructions": "REPLACE — Match each item with the correct option. There are more options than you need.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 4 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p4-q19",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 19,
+                "type": "matching",
+                "prompt": "REPLACE — Question 19",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p4-q20",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 20,
+                "type": "matching",
+                "prompt": "REPLACE — Question 20",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H"
+                ],
+                "correctAnswers": [
+                  "B"
+                ]
+              },
+              {
+                "key": "ml-listening-p4-q21",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 21,
+                "type": "matching",
+                "prompt": "REPLACE — Question 21",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H"
+                ],
+                "correctAnswers": [
+                  "C"
+                ]
+              },
+              {
+                "key": "ml-listening-p4-q22",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 22,
+                "type": "matching",
+                "prompt": "REPLACE — Question 22",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H"
+                ],
+                "correctAnswers": [
+                  "D"
+                ]
+              },
+              {
+                "key": "ml-listening-p4-q23",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 23,
+                "type": "matching",
+                "prompt": "REPLACE — Question 23",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H"
+                ],
+                "correctAnswers": [
+                  "E"
+                ]
+              }
+            ],
+            "partNumber": 4,
+            "audioPlayLimit": 2,
+            "optionsReusable": false
+          },
+          {
+            "key": "ml-listening-part-5",
+            "title": "Part 5",
+            "instructions": "REPLACE — Choose the correct answer.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 5 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p5-q24",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 24,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 24",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p5-q25",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 25,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 25",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p5-q26",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 26,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 26",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p5-q27",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 27,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 27",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p5-q28",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 28,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 28",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-listening-p5-q29",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 29,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 29",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              }
+            ],
+            "partNumber": 5,
+            "audioPlayLimit": 2
+          },
+          {
+            "key": "ml-listening-part-6",
+            "title": "Part 6",
+            "instructions": "REPLACE — Write ONE WORD and/or A NUMBER for each answer.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "REPLACE — Transcript of Listening Part 6 (staff only, never shown to students).",
+            "questions": [
+              {
+                "key": "ml-listening-p6-q30",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 30,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 30",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p6-q31",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 31,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 31",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p6-q32",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 32,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 32",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p6-q33",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 33,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 33",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p6-q34",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 34,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 34",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-listening-p6-q35",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 35,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 35",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              }
+            ],
+            "partNumber": 6,
+            "audioPlayLimit": 2
+          }
+        ]
+      },
+      {
+        "key": "reading",
+        "skill": "reading",
+        "title": "Reading",
+        "instructions": "REPLACE — Read the texts and answer Questions 1–35.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ml-reading-part-1",
+            "title": "Part 1",
+            "instructions": "REPLACE — Write ONE WORD and/or A NUMBER for each answer.",
+            "passageText": "REPLACE — Text for Reading Part 1. Keep paragraph labels (A, B, C…) when items refer to them.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ml-reading-p1-q1",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 1,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 1",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p1-q2",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 2,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 2",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p1-q3",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 3,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 3",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p1-q4",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 4,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 4",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p1-q5",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 5,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 5",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p1-q6",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 6,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 6",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              }
+            ]
+          },
+          {
+            "key": "ml-reading-part-2",
+            "title": "Part 2",
+            "instructions": "REPLACE — Match each item with the correct option. There are more options than you need.",
+            "passageText": "REPLACE — Text for Reading Part 2. Keep paragraph labels (A, B, C…) when items refer to them.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ml-reading-p2-q7",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 7,
+                "type": "matching",
+                "prompt": "REPLACE — Question 7",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q8",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 8,
+                "type": "matching",
+                "prompt": "REPLACE — Question 8",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "B"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q9",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 9,
+                "type": "matching",
+                "prompt": "REPLACE — Question 9",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "C"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q10",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 10,
+                "type": "matching",
+                "prompt": "REPLACE — Question 10",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "D"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q11",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 11,
+                "type": "matching",
+                "prompt": "REPLACE — Question 11",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "E"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q12",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 12,
+                "type": "matching",
+                "prompt": "REPLACE — Question 12",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "F"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q13",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 13,
+                "type": "matching",
+                "prompt": "REPLACE — Question 13",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "G"
+                ]
+              },
+              {
+                "key": "ml-reading-p2-q14",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 14,
+                "type": "matching",
+                "prompt": "REPLACE — Question 14",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Item A",
+                  "REPLACE — Item B",
+                  "REPLACE — Item C",
+                  "REPLACE — Item D",
+                  "REPLACE — Item E",
+                  "REPLACE — Item F",
+                  "REPLACE — Item G",
+                  "REPLACE — Item H",
+                  "REPLACE — Item I",
+                  "REPLACE — Item J"
+                ],
+                "correctAnswers": [
+                  "H"
+                ]
+              }
+            ],
+            "optionsReusable": false
+          },
+          {
+            "key": "ml-reading-part-3",
+            "title": "Part 3",
+            "instructions": "REPLACE — Match each item with the correct option. There are more options than you need.",
+            "passageText": "REPLACE — Text for Reading Part 3. Keep paragraph labels (A, B, C…) when items refer to them.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ml-reading-p3-q15",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 15,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 15",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p3-q16",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 16,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 16",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "B"
+                ]
+              },
+              {
+                "key": "ml-reading-p3-q17",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 17,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 17",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "C"
+                ]
+              },
+              {
+                "key": "ml-reading-p3-q18",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 18,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 18",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "D"
+                ]
+              },
+              {
+                "key": "ml-reading-p3-q19",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 19,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 19",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "E"
+                ]
+              },
+              {
+                "key": "ml-reading-p3-q20",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 20,
+                "type": "matching_headings",
+                "prompt": "REPLACE — Question 20",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Heading A",
+                  "REPLACE — Heading B",
+                  "REPLACE — Heading C",
+                  "REPLACE — Heading D",
+                  "REPLACE — Heading E",
+                  "REPLACE — Heading F",
+                  "REPLACE — Heading G",
+                  "REPLACE — Heading H"
+                ],
+                "correctAnswers": [
+                  "F"
+                ]
+              }
+            ],
+            "optionsReusable": false
+          },
+          {
+            "key": "ml-reading-part-4",
+            "title": "Part 4",
+            "instructions": "REPLACE — Choose the correct answer.",
+            "passageText": "REPLACE — Text for Reading Part 4. Keep paragraph labels (A, B, C…) when items refer to them.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ml-reading-p4-q21",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 21,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 21",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q22",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 22,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 22",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q23",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 23,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 23",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q24",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 24,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 24",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q25",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 25,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Question 25",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "NOT_GIVEN"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q26",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 26,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Question 26",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "NOT_GIVEN"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q27",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 27,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Question 27",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "NOT_GIVEN"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q28",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 28,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Question 28",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "NOT_GIVEN"
+                ]
+              },
+              {
+                "key": "ml-reading-p4-q29",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 29,
+                "type": "true_false_notgiven",
+                "prompt": "REPLACE — Question 29",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "TRUE",
+                  "FALSE",
+                  "NOT GIVEN"
+                ],
+                "correctAnswers": [
+                  "NOT_GIVEN"
+                ]
+              }
+            ]
+          },
+          {
+            "key": "ml-reading-part-5",
+            "title": "Part 5",
+            "instructions": "REPLACE — Write ONE WORD and/or A NUMBER for each answer.",
+            "passageText": "REPLACE — Text for Reading Part 5. Keep paragraph labels (A, B, C…) when items refer to them.",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "questions": [
+              {
+                "key": "ml-reading-p5-q30",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 30,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 30",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p5-q31",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 31,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 31",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p5-q32",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 32,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 32",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p5-q33",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 33,
+                "type": "short_answer",
+                "prompt": "REPLACE — Question 33",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [],
+                "correctAnswers": [
+                  "replace"
+                ],
+                "wordLimit": 1
+              },
+              {
+                "key": "ml-reading-p5-q34",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 34,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 34",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              },
+              {
+                "key": "ml-reading-p5-q35",
+                "sourceRef": "REPLACE — page/line of the source for this item",
+                "number": 35,
+                "type": "multiple_choice",
+                "prompt": "REPLACE — Question 35",
+                "acceptedVariants": [],
+                "points": 1,
+                "options": [
+                  "REPLACE — Option A",
+                  "REPLACE — Option B",
+                  "REPLACE — Option C",
+                  "REPLACE — Option D"
+                ],
+                "correctAnswers": [
+                  "A"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "writing",
+        "skill": "writing",
+        "title": "Writing",
+        "instructions": "REPLACE — Complete all three tasks.",
+        "durationMinutes": 60,
+        "groups": [
+          {
+            "key": "ml-writing-informal-email",
+            "title": "Task 1.1 — Informal Letter",
+            "instructions": "REPLACE — Task instructions. Write about 50 words.",
+            "passageText": "REPLACE — Shared stimulus (the message both letters reply to).",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "stimulusRef": "writing-task-1",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-writing-q1",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 1,
+                "type": "essay_task1",
+                "prompt": "REPLACE — Task 1.1 — Informal Letter prompt. Write about 50 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-writing-formal-email",
+            "title": "Task 1.2 — Formal Letter",
+            "instructions": "REPLACE — Task instructions. Write 120–150 words.",
+            "passageText": "REPLACE — Shared stimulus (the message both letters reply to).",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "stimulusRef": "writing-task-1",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-writing-q2",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 2,
+                "type": "essay_task1",
+                "prompt": "REPLACE — Task 1.2 — Formal Letter prompt. Write 120–150 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-writing-publication",
+            "title": "Task 2 — Publication",
+            "instructions": "REPLACE — Task instructions. Write 180–200 words.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 6,
+            "questions": [
+              {
+                "key": "ml-writing-q3",
+                "sourceRef": "REPLACE — source of this task",
+                "number": 3,
+                "type": "essay_task2",
+                "prompt": "REPLACE — Task 2 — Publication prompt. Write 180–200 words.",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 6
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "speaking",
+        "skill": "speaking",
+        "title": "Speaking",
+        "instructions": "REPLACE — Your answers are recorded. Speak clearly after each prompt.",
+        "durationMinutes": 30,
+        "groups": [
+          {
+            "key": "ml-speaking-part-1-1",
+            "title": "Part 1.1 — Interview",
+            "instructions": "Answer each question in about 30 seconds.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q1",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 1,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 1",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q2",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 2,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 2",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q3",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 3,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 3",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-speaking-part-1-2",
+            "title": "Part 1.2 — Picture comparison",
+            "instructions": "Look at the two pictures. Answer the first question in about 45 seconds and the others in about 30 seconds each.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q4",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 4,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 4",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q5",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 5,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 5",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              },
+              {
+                "key": "ml-speaking-q6",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 6,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 6",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ],
+            "imageRef": "speaking-part-1-2-pictures"
+          },
+          {
+            "key": "ml-speaking-part-2",
+            "title": "Part 2 — Monologue",
+            "instructions": "You have 1 minute to prepare and up to 2 minutes to speak.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 5,
+            "questions": [
+              {
+                "key": "ml-speaking-q7",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 7,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 7",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 5
+              }
+            ]
+          },
+          {
+            "key": "ml-speaking-part-3",
+            "title": "Part 3 — Discussion",
+            "instructions": "You have 1 minute to prepare and up to 2 minutes to give your opinion.",
+            "passageText": "",
+            "contentHtml": "",
+            "contentLayout": "document",
+            "audioScript": "",
+            "maxScore": 6,
+            "questions": [
+              {
+                "key": "ml-speaking-q8",
+                "sourceRef": "REPLACE — source of this prompt",
+                "number": 8,
+                "type": "speaking_task",
+                "prompt": "REPLACE — Speaking question 8",
+                "options": [],
+                "correctAnswers": [],
+                "acceptedVariants": [],
+                "points": 6
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [
+    {
+      "key": "speaking-part-1-2-pictures",
+      "kind": "image",
+      "fileName": "speaking-part-1-2-pictures.png",
+      "requiredForPublish": true,
+      "description": "Two pictures for Part 1.2 — attach the file before publishing."
+    }
+  ],
+  "reviewIssues": [
+    {
+      "key": "replace-multilevel-placeholders",
+      "code": "OTHER",
+      "path": "/exam",
+      "message": "Replace every REPLACE placeholder and sample answer key with verified material, upload Listening audio for each part, and attach the required pictures before publishing.",
+      "sourceRef": "Generated CEFR Multilevel template"
+    }
+  ]
+}

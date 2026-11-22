@@ -27,7 +27,7 @@ def blueprint_issues(sections, full=True, specification_version=None, *, importe
     spec = SPECS.get(specification_version) or SPECS[CURRENT_SPEC]
     if imported:
         sections = [dict(s, groups=[dict(g, sortOrder=i, audioKey=g.get('audioRef'), imageKey=g.get('imageRef'),
-            audioDurationSec=None, maxScore=None, stimulusRef=None) for i, g in enumerate(s.get('groups') or []) if isinstance(g, dict)])
+            audioDurationSec=None, maxScore=g.get('maxScore'), stimulusRef=g.get('stimulusRef')) for i, g in enumerate(s.get('groups') or []) if isinstance(g, dict)])
             for s in sections if isinstance(s, dict) and s.get('skill') in spec]
     issues: list[str] = []
     if full and len(sections) != 4:

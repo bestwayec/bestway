@@ -1,4 +1,12 @@
+import {
+  createIeltsFullTemplate,
+  createIeltsSpeakingTemplate,
+  createIeltsWritingTemplate,
+  createMultilevelTemplate,
+} from "./template-packages";
+
 export type ExamImportTemplateId =
+  | "ielts-academic-full"
   | "listening-full"
   | "listening-part-1"
   | "listening-part-2"
@@ -8,15 +16,26 @@ export type ExamImportTemplateId =
   | "reading-passage-1"
   | "reading-passage-2"
   | "reading-passage-3"
+  | "ielts-academic-writing"
+  | "ielts-general-writing"
+  | "ielts-speaking"
   | "multilevel-full"
-  | "writing-full"
-  | "speaking-full";
+  | "multilevel-listening"
+  | "multilevel-reading"
+  | "multilevel-writing"
+  | "multilevel-speaking";
 
-export type ExamImportTemplateSkill = "reading" | "listening" | "writing" | "speaking" | "multilevel";
+/** The exam family a template belongs to; IELTS and Multilevel structures differ. */
+export type ExamImportTemplateFamily = "ielts" | "multilevel";
+/** "full" = four-skill mock. */
+export type ExamImportTemplateSkill = "full" | "listening" | "reading" | "writing" | "speaking";
 
 export interface ExamImportTemplateOption {
   id: ExamImportTemplateId;
+  family: ExamImportTemplateFamily;
   skill: ExamImportTemplateSkill;
+  /** The `exam.type` the generated package declares (drives draft compatibility). */
+  examType: "ielts_academic" | "ielts_general" | "multilevel";
   label: string;
   description: string;
   fileName: string;
@@ -24,40 +43,30 @@ export interface ExamImportTemplateOption {
 
 export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   {
-    id: "multilevel-full",
-    skill: "multilevel",
-    label: "Multi-Level CBT · Full 4-Section Mock (195 min)",
+    id: "ielts-academic-full",
+    family: "ielts",
+    skill: "full",
+    examType: "ielts_academic",
+    label: "IELTS Academic · Full mock · 4 skills",
     description:
-      "A complete Multi-Level CEFR test containing Listening (35 questions), Reading (35 questions), Writing (Task 1 & 2), and Speaking (Parts 1-3).",
-    fileName: "multilevel-cbt-full-template.json",
-  },
-  {
-    id: "writing-full",
-    skill: "writing",
-    label: "Writing · Task 1.1, Task 1.2 & Task 2",
-    description:
-      "A 60-minute Writing component containing Task 1.1 (informal letter), Task 1.2 (formal letter), and Task 2 (250-word discursive essay).",
-    fileName: "multilevel-writing-template.json",
-  },
-  {
-    id: "speaking-full",
-    skill: "speaking",
-    label: "Speaking · Parts 1, 2 & 3 Interview & Monologue",
-    description:
-      "A 15-minute Speaking component with Part 1 (Interview & Picture Comparison), Part 2 (Monologue), and Part 3 (Analytical Discussion).",
-    fileName: "multilevel-speaking-template.json",
+      "Listening (4 parts / 40), Academic Reading (3 passages / 40), Writing Task 1 + Task 2 and Speaking Parts 1–3. Upload Listening audio and the Task 1 visual after import.",
+    fileName: "ielts-academic-full-mock-template.json",
   },
   {
     id: "listening-full",
+    family: "ielts",
     skill: "listening",
+    examType: "ielts_academic",
     label: "IELTS Listening · Full test · 4 parts / 40 questions",
     description:
-      "A 30-minute Listening package with four official-style parts. Audio is added by the teacher in each Part editor after import.",
+      "A 30-minute Listening package with four parts. Audio is added by the teacher in each Part editor after import.",
     fileName: "ielts-listening-full-template.json",
   },
   {
     id: "listening-part-1",
+    family: "ielts",
     skill: "listening",
+    examType: "ielts_academic",
     label: "Listening Part 1 · Questions 1–10",
     description:
       "Everyday social conversation with a form/table-completion scaffold. Teacher uploads the Part 1 audio after import.",
@@ -65,7 +74,9 @@ export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   },
   {
     id: "listening-part-2",
+    family: "ielts",
     skill: "listening",
+    examType: "ielts_academic",
     label: "Listening Part 2 · Questions 11–20",
     description:
       "Everyday social monologue with plan/map labels and single-answer multiple choice. Teacher adds audio and the visual in the editor.",
@@ -73,7 +84,9 @@ export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   },
   {
     id: "listening-part-3",
+    family: "ielts",
     skill: "listening",
+    examType: "ielts_academic",
     label: "Listening Part 3 · Questions 21–30",
     description:
       "Educational or training discussion with matching and multiple-choice questions. Teacher uploads the Part 3 audio after import.",
@@ -81,7 +94,9 @@ export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   },
   {
     id: "listening-part-4",
+    family: "ielts",
     skill: "listening",
+    examType: "ielts_academic",
     label: "Listening Part 4 · Questions 31–40",
     description:
       "Academic monologue/lecture with a note-completion scaffold. Teacher uploads the Part 4 audio after import.",
@@ -89,7 +104,9 @@ export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   },
   {
     id: "academic-reading-full",
+    family: "ielts",
     skill: "reading",
+    examType: "ielts_academic",
     label: "Academic Reading · Full test · 3 passages / 40 questions",
     description:
       "A 60-minute package containing Passage 1 (Q1–13), Passage 2 (Q14–26) and Passage 3 (Q27–40).",
@@ -97,24 +114,105 @@ export const EXAM_IMPORT_TEMPLATES: readonly ExamImportTemplateOption[] = [
   },
   {
     id: "reading-passage-1",
+    family: "ielts",
     skill: "reading",
+    examType: "ielts_academic",
     label: "Reading Passage 1 · Questions 1–13",
     description: "Passage 1 reference covering TFNG, single choice, note completion and short answers.",
     fileName: "ielts-reading-passage-1-template.json",
   },
   {
     id: "reading-passage-2",
+    family: "ielts",
     skill: "reading",
+    examType: "ielts_academic",
     label: "Reading Passage 2 · Questions 14–26",
     description: "Passage 2 reference covering headings, features, sentence and table completion.",
     fileName: "ielts-reading-passage-2-template.json",
   },
   {
     id: "reading-passage-3",
+    family: "ielts",
     skill: "reading",
+    examType: "ielts_academic",
     label: "Reading Passage 3 · Questions 27–40",
     description: "Passage 3 reference covering YNNG, multi-select, matching, summary and diagram labels.",
     fileName: "ielts-reading-passage-3-template.json",
+  },
+  {
+    id: "ielts-academic-writing",
+    family: "ielts",
+    skill: "writing",
+    examType: "ielts_academic",
+    label: "IELTS Academic Writing · Task 1 visual + Task 2 essay",
+    description:
+      "60 minutes: Task 1 chart/graph/table/map/process report (150 words) with an image to attach, and a Task 2 essay (250 words).",
+    fileName: "ielts-academic-writing-template.json",
+  },
+  {
+    id: "ielts-general-writing",
+    family: "ielts",
+    skill: "writing",
+    examType: "ielts_general",
+    label: "IELTS General Training Writing · Letter + essay",
+    description: "60 minutes: Task 1 letter with three bullet points (150 words) and a Task 2 essay (250 words).",
+    fileName: "ielts-general-writing-template.json",
+  },
+  {
+    id: "ielts-speaking",
+    family: "ielts",
+    skill: "speaking",
+    examType: "ielts_academic",
+    label: "IELTS Speaking · Parts 1–3",
+    description: "Part 1 interview topics, Part 2 cue card (1 min preparation, 2 min talk) and Part 3 discussion.",
+    fileName: "ielts-speaking-template.json",
+  },
+  {
+    id: "multilevel-full",
+    family: "multilevel",
+    skill: "full",
+    examType: "multilevel",
+    label: "CEFR Multilevel · Full mock · 4 sections (195 min)",
+    description:
+      "Listening 6 parts / 35 (45 min), Reading 5 parts / 35 (60 min), Writing 3 tasks (60 min), Speaking 4 parts (30 min) — BestWay's configured Multilevel blueprint.",
+    fileName: "multilevel-full-mock-template.json",
+  },
+  {
+    id: "multilevel-listening",
+    family: "multilevel",
+    skill: "listening",
+    examType: "multilevel",
+    label: "Multilevel Listening · 6 parts / 35 questions",
+    description: "Parts 1–6 with the configured question types and option counts. Upload each part's audio after import.",
+    fileName: "multilevel-listening-template.json",
+  },
+  {
+    id: "multilevel-reading",
+    family: "multilevel",
+    skill: "reading",
+    examType: "multilevel",
+    label: "Multilevel Reading · 5 parts / 35 questions",
+    description: "Parts 1–5: gap filling, matching, headings, multiple choice with True/False/Not Given, and mixed Part 5.",
+    fileName: "multilevel-reading-template.json",
+  },
+  {
+    id: "multilevel-writing",
+    family: "multilevel",
+    skill: "writing",
+    examType: "multilevel",
+    label: "Multilevel Writing · Task 1.1, Task 1.2 & Task 2",
+    description:
+      "60 minutes: informal letter (about 50 words) and formal letter (120–150 words) on one shared stimulus, and a publication task (180–200 words).",
+    fileName: "multilevel-writing-template.json",
+  },
+  {
+    id: "multilevel-speaking",
+    family: "multilevel",
+    skill: "speaking",
+    examType: "multilevel",
+    label: "Multilevel Speaking · Parts 1.1, 1.2, 2 & 3",
+    description: "Interview, picture comparison (attach the two pictures), monologue and discussion with preparation times.",
+    fileName: "multilevel-speaking-template.json",
   },
 ] as const;
 
@@ -704,319 +802,24 @@ function selectedPassages(id: ExamImportTemplateId): readonly PassageBlueprint[]
   return PASSAGES.filter((passage) => passage.index === index);
 }
 
-function createWritingImportTemplate(
-  id: ExamImportTemplateId,
-  now: Date,
-): Record<string, unknown> {
-  return {
-    schemaVersion: "1.0",
-    packageId: `writing-full-${safeStamp(now)}`,
-    revision: 1,
-    profile: "practice",
-    source: {
-      kind: "provided_material",
-      label: "Multi-Level Writing Template",
-      notes: "Replace stimulus text and task prompts before publication.",
-    },
-    exam: {
-      type: "multilevel",
-      title: "REPLACE — Multi-Level Writing Practice",
-      description: "60-minute Multi-Level writing test containing Tasks 1.1, 1.2 and Task 2.",
-      level: "B1–C1",
-      isDemo: false,
-      price: 0,
-      isFreeForApproved: false,
-      sections: [
-        {
-          key: "writing",
-          skill: "writing",
-          title: "Writing",
-          instructions:
-            "The Writing section consists of Task 1 (Informal and Formal letters) and Task 2 (Discursive essay). Total duration: 60 minutes.",
-          durationMinutes: 60,
-          groups: [
-            {
-              key: "writing-task-1-1",
-              title: "Task 1.1 — Informal Letter",
-              instructions: "Write an informal letter to your friend. Write at least 150 words.",
-              passageText: "REPLACE — Shared stimulus for Task 1.1 and 1.2.",
-              stimulusRef: "writing-task-1",
-              maxScore: 5,
-              questions: [
-                {
-                  key: "writing-q-1",
-                  number: 1,
-                  type: "essay_task1",
-                  prompt: "REPLACE — Prompt for informal letter to a friend. Write at least 150 words.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                  wordLimit: 150,
-                },
-              ],
-            },
-            {
-              key: "writing-task-1-2",
-              title: "Task 1.2 — Formal Letter",
-              instructions: "Write a formal email or letter. Write at least 150 words.",
-              passageText: "REPLACE — Shared stimulus for Task 1.1 and 1.2.",
-              stimulusRef: "writing-task-1",
-              maxScore: 5,
-              questions: [
-                {
-                  key: "writing-q-2",
-                  number: 2,
-                  type: "essay_task1",
-                  prompt: "REPLACE — Prompt for formal email/letter. Write at least 150 words.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                  wordLimit: 150,
-                },
-              ],
-            },
-            {
-              key: "writing-task-2",
-              title: "Task 2 — Publication Essay",
-              instructions: "Write an essay discussing both views and give your opinion. Write at least 250 words.",
-              passageText: "",
-              maxScore: 6,
-              questions: [
-                {
-                  key: "writing-q-3",
-                  number: 3,
-                  type: "essay_task2",
-                  prompt: "REPLACE — Prompt for Task 2 essay. Discuss both views and give your opinion. Write at least 250 words.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 6,
-                  wordLimit: 250,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    media: [],
-    reviewIssues: [
-      {
-        key: "replace-writing-placeholders",
-        code: "OTHER",
-        path: "/exam/sections/0",
-        message: "Replace all writing task prompts and stimuli before publishing.",
-        sourceRef: "Generated Multi-Level Writing template",
-      },
-    ],
-  };
-}
-
-function createSpeakingImportTemplate(
-  id: ExamImportTemplateId,
-  now: Date,
-): Record<string, unknown> {
-  return {
-    schemaVersion: "1.0",
-    packageId: `speaking-full-${safeStamp(now)}`,
-    revision: 1,
-    profile: "practice",
-    source: {
-      kind: "provided_material",
-      label: "Multi-Level Speaking Template",
-      notes: "Replace interview questions, monologue cue card, and discussion questions.",
-    },
-    exam: {
-      type: "multilevel",
-      title: "REPLACE — Multi-Level Speaking Practice",
-      description: "15-minute Speaking assessment with Part 1 (Interview), Part 2 (Monologue), and Part 3 (Discussion).",
-      level: "B1–C1",
-      isDemo: false,
-      price: 0,
-      isFreeForApproved: false,
-      sections: [
-        {
-          key: "speaking",
-          skill: "speaking",
-          title: "Speaking",
-          instructions: "Ensure your microphone is tested and calibrated before starting the Speaking section.",
-          durationMinutes: 15,
-          groups: [
-            {
-              key: "speaking-part-1-1",
-              title: "Part 1.1 — Personal Interview",
-              instructions: "Answer the questions naturally and clearly.",
-              maxScore: 5,
-              questions: [
-                {
-                  key: "speaking-q-1",
-                  number: 1,
-                  type: "speaking_task",
-                  prompt: "REPLACE — Speaking question 1: Personal interview.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                },
-                {
-                  key: "speaking-q-2",
-                  number: 2,
-                  type: "speaking_task",
-                  prompt: "REPLACE — Speaking question 2: Personal interview.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                },
-                {
-                  key: "speaking-q-3",
-                  number: 3,
-                  type: "speaking_task",
-                  prompt: "REPLACE — Speaking question 3: Personal interview.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                },
-              ],
-            },
-            {
-              key: "speaking-part-2",
-              title: "Part 2 — Topic Monologue",
-              instructions: "You will have 1 minute to prepare and 2 minutes to speak.",
-              maxScore: 5,
-              questions: [
-                {
-                  key: "speaking-q-4",
-                  number: 4,
-                  type: "speaking_task",
-                  prompt: "REPLACE — Speaking Part 2 cue card: Describe an experience or project.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 5,
-                },
-              ],
-            },
-            {
-              key: "speaking-part-3",
-              title: "Part 3 — Discussion & Analysis",
-              instructions: "Give in-depth answers analyzing broader social issues.",
-              maxScore: 6,
-              questions: [
-                {
-                  key: "speaking-q-5",
-                  number: 5,
-                  type: "speaking_task",
-                  prompt: "REPLACE — Speaking Part 3 discussion question.",
-                  options: [],
-                  correctAnswers: [],
-                  acceptedVariants: [],
-                  points: 6,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    media: [],
-    reviewIssues: [
-      {
-        key: "replace-speaking-placeholders",
-        code: "OTHER",
-        path: "/exam/sections/0",
-        message: "Replace all speaking prompts and cue cards before publishing.",
-        sourceRef: "Generated Multi-Level Speaking template",
-      },
-    ],
-  };
-}
-
-function createMultilevelFullImportTemplate(now: Date): Record<string, unknown> {
-  const listeningPkg = createListeningImportTemplate("listening-full", now) as {
-    exam: { sections: Array<{ groups: unknown[] }> };
-  };
-  const readingPassages = PASSAGES;
-  const writingPkg = createWritingImportTemplate("writing-full", now) as {
-    exam: { sections: Array<{ groups: unknown[] }> };
-  };
-  const speakingPkg = createSpeakingImportTemplate("speaking-full", now) as {
-    exam: { sections: Array<{ groups: unknown[] }> };
-  };
-
-  return {
-    schemaVersion: "1.0",
-    packageId: `multilevel-cbt-full-${safeStamp(now)}`,
-    revision: 1,
-    profile: "full_mock",
-    source: {
-      kind: "provided_material",
-      label: "Multi-Level CEFR CBT Full Mock Template",
-      notes:
-        "Official 4-section CBT sequence: 1. Listening -> 2. Reading -> 3. Writing -> 4. Speaking. Replace all placeholders before publishing.",
-    },
-    exam: {
-      type: "multilevel",
-      title: "REPLACE — Multi-Level CEFR CBT Mock Exam",
-      description:
-        "Full 4-section CBT mock exam: Listening (45 min), Reading (60 min), Writing (60 min), and Speaking (15 min).",
-      level: "B1–C1",
-      isDemo: false,
-      price: 0,
-      isFreeForApproved: false,
-      sections: [
-        {
-          key: "listening",
-          skill: "listening",
-          title: "Listening",
-          instructions: "You will hear each recording twice. Answer all 35 questions.",
-          durationMinutes: 45,
-          groups: listeningPkg.exam.sections[0].groups,
-        },
-        {
-          key: "reading",
-          skill: "reading",
-          title: "Reading",
-          instructions: "Spend about 60 minutes on Questions 1–35 based on the texts.",
-          durationMinutes: 60,
-          groups: readingPassages.flatMap(makePassageGroups),
-        },
-        writingPkg.exam.sections[0],
-        speakingPkg.exam.sections[0],
-      ],
-    },
-    media: [],
-    reviewIssues: [
-      {
-        key: "replace-multilevel-full-placeholders",
-        code: "OTHER",
-        path: "/exam",
-        message:
-          "Replace and verify all placeholders across Listening, Reading, Writing, and Speaking before publishing.",
-        sourceRef: "Generated Multi-Level CBT Full Mock template",
-      },
-    ],
-  };
-}
-
-/**
- * Produces an import scaffold for IELTS or Multi-Level.
- */
 export function createExamImportTemplate(
   id: ExamImportTemplateId,
   now = new Date(),
 ): Record<string, unknown> {
-  if (id === "multilevel-full") {
-    return createMultilevelFullImportTemplate(now);
-  }
-  if (id === "writing-full") {
-    return createWritingImportTemplate(id, now);
-  }
-  if (id === "speaking-full") {
-    return createSpeakingImportTemplate(id, now);
+  if (id === "multilevel-full") return createMultilevelTemplate(["listening", "reading", "writing", "speaking"], "multilevel-full", now);
+  if (id === "multilevel-listening") return createMultilevelTemplate(["listening"], id, now);
+  if (id === "multilevel-reading") return createMultilevelTemplate(["reading"], id, now);
+  if (id === "multilevel-writing") return createMultilevelTemplate(["writing"], id, now);
+  if (id === "multilevel-speaking") return createMultilevelTemplate(["speaking"], id, now);
+  if (id === "ielts-academic-writing") return createIeltsWritingTemplate("academic", now);
+  if (id === "ielts-general-writing") return createIeltsWritingTemplate("general", now);
+  if (id === "ielts-speaking") return createIeltsSpeakingTemplate(now);
+  if (id === "ielts-academic-full") {
+    const firstSection = (pkg: Record<string, unknown>) =>
+      (pkg.exam as { sections: Array<Record<string, unknown>> }).sections[0];
+    const listening = firstSection(createListeningImportTemplate("listening-full", now));
+    const reading = firstSection(createExamImportTemplate("academic-reading-full", now));
+    return createIeltsFullTemplate(now, listening, reading);
   }
   if (id.startsWith("listening-")) {
     return createListeningImportTemplate(id, now);

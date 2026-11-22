@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "listening-part-4-20261001080000",
+  "revision": 1,
+  "profile": "practice",
+  "source": {
+    "kind": "provided_material",
+    "label": "IELTS Listening Part 4 template",
+    "notes": "Replace every REPLACE placeholder and answer key using licensed or original material. After import, upload audio in each Part editor. Do not add audioRef or media entries when the teacher will upload audio later."
+  },
+  "exam": {
+    "type": "ielts_academic",
+    "title": "REPLACE - IELTS Listening Part 4 Practice",
+    "description": "Single-part IELTS Listening practice for Questions 31-40.",
+    "level": "IELTS",
+    "isDemo": false,
+    "price": 0,
+    "isFreeForApproved": false,
+    "sections": [
+      {
+        "key": "listening",
+        "skill": "listening",
+        "title": "IELTS Listening",
+        "instructions": "You will hear the Part 4 recording once only. Answer Questions 31-40.",
+        "durationMinutes": 10,
+        "groups": [
+          {
+            "key": "listening-part-4",
+            "title": "Part 4 - REPLACE - Academic monologue or lecture",
+            "instructions": "Questions 31-40. Complete the notes. Write NO MORE THAN TWO WORDS for each answer.",
+            "passageText": "",
+            "contentHtml": "<h3>REPLACE - Part 4 lecture notes title</h3><ul><li>REPLACE - Lecture note 31: <span data-gap=\"31\"></span></li><li>REPLACE - Lecture note 32: <span data-gap=\"32\"></span></li><li>REPLACE - Lecture note 33: <span data-gap=\"33\"></span></li><li>REPLACE - Lecture note 34: <span data-gap=\"34\"></span></li><li>REPLACE - Lecture note 35: <span data-gap=\"35\"></span></li><li>REPLACE - Lecture note 36: <span data-gap=\"36\"></span></li><li>REPLACE - Lecture note 37: <span data-gap=\"37\"></span></li><li>REPLACE - Lecture note 38: <span data-gap=\"38\"></span></li><li>REPLACE - Lecture note 39: <span data-gap=\"39\"></span></li><li>REPLACE - Lecture note 40: <span data-gap=\"40\"></span></li></ul>",
+            "contentLayout": "notes",
+            "audioScript": "",
+            "partNumber": 4,
+            "audioPlayLimit": 1,
+            "questions": [
+              {
+                "key": "listening-question-31",
+                "number": 31,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 31: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 31"
+              },
+              {
+                "key": "listening-question-32",
+                "number": 32,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 32: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 32"
+              },
+              {
+                "key": "listening-question-33",
+                "number": 33,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 33: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 33"
+              },
+              {
+                "key": "listening-question-34",
+                "number": 34,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 34: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 34"
+              },
+              {
+                "key": "listening-question-35",
+                "number": 35,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 35: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 35"
+              },
+              {
+                "key": "listening-question-36",
+                "number": 36,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 36: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 36"
+              },
+              {
+                "key": "listening-question-37",
+                "number": 37,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 37: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 37"
+              },
+              {
+                "key": "listening-question-38",
+                "number": 38,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 38: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 38"
+              },
+              {
+                "key": "listening-question-39",
+                "number": 39,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 39: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 39"
+              },
+              {
+                "key": "listening-question-40",
+                "number": 40,
+                "type": "note_completion",
+                "prompt": "REPLACE - Note for question 40: ______",
+                "options": [],
+                "correctAnswers": [
+                  "REPLACE"
+                ],
+                "acceptedVariants": [],
+                "points": 1,
+                "wordLimit": 2,
+                "sourceRef": "REPLACE - Recording Part source location for question 40"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "media": [],
+  "reviewIssues": [
+    {
+      "key": "replace-listening-template-placeholders",
+      "code": "OTHER",
+      "path": "/exam/sections/0",
+      "message": "Replace and verify all Part 4 placeholders and answer keys, then upload its audio in the teacher editor.",
+      "sourceRef": "Generated IELTS Listening import template"
+    }
+  ]
+}

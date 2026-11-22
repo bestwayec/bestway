@@ -7,6 +7,12 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 55-BLOK: Exam Builder 2.0 — JSON import/eksport, 18 ta ishlaydigan shablon, CEFR Multilevel (2026-11-22) — branch `claude/blissful-planck-wa3s0n`
+- **Tasdiqlangan xatolar tuzatildi**: Import oynasidagi 12 shablondan 3 tasi (Full CBT, Writing, Speaking) server importeri tomonidan rad etilardi; "Multi-Level Full CBT" aslida IELTS Listening/Reading (88 savol) edi — platformaning `UZBMB_MULTILEVEL_EN_2026_V2` blueprintiga ko'ra qayta qurildi (35 + 35 + 3 vazifa + 4 qism); to'liq 4 ko'nikmali IELTS paketi savol raqamlari ko'nikmalar bo'yicha qayta boshlangani uchun hech qachon import bo'lmasdi; bir nechta task-guruhli Reading full mock readiness'dan o'tmasdi.
+- **Yangi**: `GET /mock/exams/<id>/export[?skill=]` (faqat egasi/admin, kalitlar bor; talaba 403) va ro'yxat/muharrirdagi "Export JSON"; import → eksport → qayta import 18 shablonning har biri uchun aynan bir xil (pytest, PostgreSQL). Ixtiyoriy maydonlar: `cefrLevel`, `skillTags`, `evidenceText`, `audioStartSec`, guruh `maxScore`/`stimulusRef`. Migratsiya yo'q.
+- **Import oynasi**: 3 bosqich, doimo ko'rinadigan footer, bitta scroll; IELTS/CEFR × ko'nikma shablon tanlovi; "JSON syntax error at line X, column Y"; paket ko'rinishi (bo'limlar, savollar, raqamlar, daqiqalar); xatolar `Reading › group 1 › Q5 › correctAnswers` ko'rinishida; manzil tekshiruvdan keyin, mos kelmaydigan qoralamalar o'chirilgan; muharrirdan "Import JSON" shu qoralamani tanlaydi.
+- **Tekshiruv**: `docs/EXAM_BUILDER_TEST_REPORT.md`; Playwright `scripts/e2e-local/exam-builder-2.mjs` 64/64. Hujjatlar: `docs/EXAM_BUILDER_AUDIT.md`, `docs/EXAM_BUILDER_IMPLEMENTATION.md`, `docs/EXAM_JSON_SCHEMA.md`, `docs/EXAM_BUILDER_USER_GUIDE.md`.
+
 ### 54-BLOK: IELTS CBT 2.0 — Talaba imtihon interfeysi, natijalar tahlili va xatolarni batafsil ko'rib chiqish (2026-11-22) — PR #213, branch `feat/bestway-ielts-cbt-2`
 - **PR #212 CI blokerini tuzatish va sinxronizatsiya**:
   - `tests/test_smart_import_v2.py::test_15_owner_html_or_synthetic_fixture` testida Linux CI muhitida 3 != 40 xatosi keltirib chiqargan noto'g'ri sintetik matn o'rniga platformadan mustaqil, 3 ta to'liq passage va 40 ta pozitsiyali realistik IELTS Reading fixture o'rnatildi.

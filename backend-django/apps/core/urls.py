@@ -65,6 +65,7 @@ from .mock_import_views import (
     resolve_import_issue_view,
     stage_import_media_view,
     validate_import_view,
+    export_exam_view,
 )
 from .mock_media import group_audio_view, group_image_view, group_media_view, review_audio_view
 from .mock27 import views as mock27_views
@@ -326,6 +327,7 @@ urlpatterns = [
     path('mock/groups/<str:group_id>/audio', group_audio_view),
     path('mock/groups/<str:group_id>/image', group_image_view),
     path('mock/exam-imports/validate', validate_import_view),
+    path('mock/exams/<str:exam_id>/export', export_exam_view),
     path('mock/exam-imports/media', stage_import_media_view),
     path('mock/exam-imports', commit_import_view),
     path('mock/exam-imports/by-package/<str:package_id>/revisions/<str:revision>', import_by_package_view),
