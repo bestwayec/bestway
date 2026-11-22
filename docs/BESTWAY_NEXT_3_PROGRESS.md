@@ -18,7 +18,7 @@
 | **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `35e19fc` | 283 frontend / 119 backend passed, 0 type errors |
 | **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | `3bba0ce` | 5 Phase 4 tests passed, 0 errors |
 | **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | `8433f10` | 34 backend & 35 frontend tests passed |
-| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **PASS** | #219 | Pending | Hardening tests passed, Opus handoff generated |
+| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **PASS** | #219 | `0edf61f` | Hardening tests passed, Opus handoff generated |
 
 ---
 
@@ -213,7 +213,7 @@
   - `pytest tests/test_phase6_production_hardening.py`: 3 passed, 0 failed.
   - Production settings tests (`test_production_settings.py`): 7 passed.
   - Authentication security tests (`test_auth_security.py`): 9 passed.
-- **Commit SHA:** Will be recorded upon commit.
-- **PR:** Will be recorded upon PR creation.
+- **Commit SHA:** `0edf61fa15c269225c589b275ea2fe4217180126`
+- **PR:** #219 (`https://github.com/bestwayec/bestway/pull/219`)
 - **Remaining Blockers:** None.
 - **Verification Status:** **PASS**
