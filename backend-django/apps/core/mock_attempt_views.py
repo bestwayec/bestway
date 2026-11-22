@@ -14,6 +14,7 @@ from . import exam_session
 from . import mock_attempts as engine
 from .views import body, require_authenticated, require_role
 from .views import success as envelope
+from common.api.exceptions import ContractAPIException
 
 
 def wire(value):
@@ -181,6 +182,19 @@ def submit_view(request, attempt_id):
         or data.get('timeout')
         or request.query_params.get('force')
     )
+    in_flight_answers = data.get('answers')
+    if isinstance(in_flight_answers, list) and in_flight_answers:
+        for item in in_flight_answers:
+            validate_answer(item)
+        # Answers that ride along with the final submit are saved under the same
+        # server deadline as every other save. `force`/`timeUp` come from the client
+        # and must never extend the timer: once time is up the late answers are
+        # dropped and the attempt is still submitted with what was saved in time.
+        try:
+            engine.save_answers(request.user, attempt_id, in_flight_answers, bulk=True)
+        except ContractAPIException as error:
+            if error.contract_code not in ('MOCK_TIME_UP', 'MOCK_SECTION_TIME_UP'):
+                raise
     return success(submit(request.user, attempt_id, skills, force=force), 201)
 
 

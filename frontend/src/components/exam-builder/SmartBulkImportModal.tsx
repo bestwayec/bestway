@@ -62,7 +62,7 @@ import type {
 import type { ImportedServerQuestion } from "./ImportPanel";
 
 export type SmartImportTab = "smart-text" | "excel" | "audio-timestamps";
-export type SmartImportStep = 1 | 2 | 3;
+export type SmartImportStep = 1 | 2 | 3 | 4;
 
 interface SmartBulkImportModalProps {
   open: boolean;
@@ -885,46 +885,35 @@ export function SmartBulkImportModal({
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-fg-muted">Bosqich:</span>
                 <div className="flex items-center gap-1">
-                  <span
-                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
-                      currentStep === 1
-                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
-                        : currentStep > 1
-                          ? "bg-success text-fg"
-                          : "bg-bg-subtle text-fg-muted"
-                    }`}
-                  >
-                    1
-                  </span>
-                  <div className="h-0.5 w-4 bg-border" />
-                  <span
-                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
-                      currentStep === 2
-                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
-                        : currentStep > 2
-                          ? "bg-success text-fg"
-                          : "bg-bg-subtle text-fg-muted"
-                    }`}
-                  >
-                    2
-                  </span>
-                  <div className="h-0.5 w-4 bg-border" />
-                  <span
-                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
-                      currentStep === 3
-                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
-                        : "bg-bg-subtle text-fg-muted"
-                    }`}
-                  >
-                    3
-                  </span>
+                  {[
+                    { step: 1, label: "Yuklash" },
+                    { step: 2, label: "Tahlil" },
+                    { step: 3, label: "Xaritalash" },
+                    { step: 4, label: "Tasdiqlash" },
+                  ].map((s, idx) => (
+                    <React.Fragment key={s.step}>
+                      {idx > 0 && <div className="h-0.5 w-3 bg-border" />}
+                      <span
+                        title={s.label}
+                        className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
+                          currentStep === s.step
+                            ? "bg-brand text-brand-fg ring-2 ring-brand/30"
+                            : currentStep > s.step
+                              ? "bg-success text-fg"
+                              : "bg-bg-subtle text-fg-muted"
+                        }`}
+                      >
+                        {s.step}
+                      </span>
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
           <DialogTitle className="mt-1.5 text-lg font-bold text-fg">
-            Savollarni Ommaviy Kiritish (Smart Import V2 / Excel / Audio)
+            Savollarni Ommaviy Kiritish (Smart Import 3.0 / Excel / Audio)
           </DialogTitle>
           <DialogDescription className="text-xs text-fg-muted">
             HTML, PDF, DOCX, TXT yoki Excel fayldan barcha savollar va reading matnlarini avtomatik
@@ -1230,8 +1219,208 @@ export function SmartBulkImportModal({
                 </div>
               )}
 
-              {/* STEP 2: AUTOMATIC ANALYSIS & REVIEW */}
+              {/* STEP 2: PARSE & FAST PREVIEW */}
               {currentStep === 2 && (
+                <div className="space-y-4">
+                  {/* Status & Summary header */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-bg-subtle/50 p-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-fg flex items-center gap-2">
+                        <CheckCircle2 className="size-4 text-success" />
+                        Tahlil Natijasi: {totalQuestions} ta {skill === "writing" ? "topshiriq" : "savol"} muvaffaqiyatli ajratildi
+                        {isCompleteIeltsReading && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq 40/40 IELTS Reading
+                          </Badge>
+                        )}
+                        {isCompleteIeltsListening && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq 40/40 IELTS Listening
+                          </Badge>
+                        )}
+                        {isCompleteIeltsWriting && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq IELTS Writing (Task 1 &amp; 2)
+                          </Badge>
+                        )}
+                        {isCompleteIeltsSpeaking && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq IELTS Speaking (Parts 1, 2, 3)
+                          </Badge>
+                        )}
+                      </h4>
+                      <p className="text-xs text-fg-muted mt-0.5">
+                        {skill === "writing"
+                          ? "IELTS Writing: Task 1 va Task 2 insho matnlari ajratildi."
+                          : skill === "speaking"
+                            ? "IELTS Speaking: Part 1, Part 2 (Cue Card) va Part 3 savollari ajratildi."
+                            : editablePassages.length > 0
+                              ? `${editablePassages.length} ta ${skill === "listening" ? "Section" : "Passage"} aniqlandi. ${questionsWithAnswers} / ${totalQuestions} savol javob kalitiga ega.`
+                              : `Yagona matn. ${questionsWithAnswers} / ${totalQuestions} savol javob kalitiga ega.`}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCurrentStep(1)}
+                        className="text-xs h-8"
+                      >
+                        <RotateCcw className="size-3.5 mr-1" />
+                        Boshqa fayl
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setCurrentStep(3)}
+                        className="text-xs h-8"
+                      >
+                        Xaritalashga o&apos;tish
+                        <ArrowRight className="size-3.5 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 4 Quick Stat Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                      <span className="text-[11px] font-medium text-fg-muted">Ko&apos;nikma (Skill)</span>
+                      <p className="text-base font-bold text-fg capitalize flex items-center gap-1.5">
+                        {skill === "listening" && <Headphones className="size-4 text-brand" />}
+                        {skill === "reading" && <BookOpen className="size-4 text-brand" />}
+                        {skill === "writing" && <PenTool className="size-4 text-brand" />}
+                        {skill === "speaking" && <Mic className="size-4 text-brand" />}
+                        {skill}
+                      </p>
+                      <span className="text-[10px] text-fg-muted">
+                        {examType === "multilevel" ? "CEFR Multi-Level" : "IELTS Standard"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                      <span className="text-[11px] font-medium text-fg-muted">
+                        {skill === "writing" ? "Topshiriqlar" : "Jami Savollar"}
+                      </span>
+                      <p className="text-base font-bold text-fg">
+                        {totalQuestions} {skill === "writing" ? "ta Task" : "ta"}
+                      </p>
+                      <span className="text-[10px] text-brand">
+                        {skill === "reading" || skill === "listening"
+                          ? totalQuestions === 40
+                            ? "Standart 40 ta savol"
+                            : `${totalQuestions}/40 savol`
+                          : skill === "writing"
+                            ? "Task 1 & Task 2"
+                            : "Parts 1, 2, 3"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                      <span className="text-[11px] font-medium text-fg-muted">
+                        {skill === "writing" || skill === "speaking" ? "Baholash" : "Javob Kalitlari"}
+                      </span>
+                      <p className="text-base font-bold text-fg">
+                        {skill === "writing" || skill === "speaking"
+                          ? "O'qituvchi / AI"
+                          : `${questionsWithAnswers} / ${totalQuestions}`}
+                      </p>
+                      <span className={`text-[10px] ${needsReviewList.length > 0 ? "text-warning font-semibold" : "text-success"}`}>
+                        {needsReviewList.length > 0
+                          ? `${needsReviewList.length} ta kalit kiritilishi kerak`
+                          : "Barcha kalitlar mavjud"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-surface p-3.5 space-y-1">
+                      <span className="text-[11px] font-medium text-fg-muted">
+                        {skill === "writing" ? "Hajm" : skill === "speaking" ? "Qismlar" : skill === "listening" ? "Bo'limlar" : "Matnlar"}
+                      </span>
+                      <p className="text-base font-bold text-fg">
+                        {editablePassages.length || 1} ta {skill === "listening" ? "Section" : skill === "writing" ? "Task" : skill === "speaking" ? "Part" : "Passage"}
+                      </p>
+                      <span className="text-[10px] text-fg-muted">
+                        {editablePassages.map((p) => `${skill === "listening" ? "S" : "P"}${p.partNumber}`).join(", ") || "Matn 1"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Needs Review Alert Banner */}
+                  {needsReviewList.length > 0 && (
+                    <div className="rounded-xl border border-warning/40 bg-warning/5 p-3.5 flex items-start gap-3">
+                      <AlertTriangle className="size-5 text-warning shrink-0 mt-0.5" />
+                      <div className="flex-1 text-xs">
+                        <span className="font-bold text-warning">
+                          {needsReviewList.length} ta savolda javob kaliti topilmadi (Needs Review):
+                        </span>
+                        <p className="text-fg-muted text-[11px] mt-0.5">
+                          Savollar: {needsReviewList.map((q) => `Q${q.number}`).slice(0, 15).join(", ")}
+                          {needsReviewList.length > 15 ? ` va yana ${needsReviewList.length - 15} ta...` : ""}.
+                          Keyingi 3-bosqichda (Xaritalash) ularga to&apos;g&apos;ri javoblarni qo&apos;lda kiritishingiz yoki o&apos;zgartirishingiz mumkin.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Question Types Distribution Chips */}
+                  <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
+                    <span className="text-xs font-bold text-fg">Aniqlangan Savol Turlari:</span>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {Object.entries(
+                        editableQuestions.reduce<Record<string, number>>((acc, q) => {
+                          acc[q.type] = (acc[q.type] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([qType, count]) => (
+                        <div
+                          key={qType}
+                          className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-subtle px-2.5 py-1 text-xs"
+                        >
+                          <span className="font-medium text-fg">
+                            {QUESTION_TYPE_BADGE[qType]?.label || qType}
+                          </span>
+                          <Badge variant="brand" className="text-[10px] px-1.5 py-0 h-4">
+                            {count} ta
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Detected Passages / Tasks Preview */}
+                  {editablePassages.length > 0 && (
+                    <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
+                      <span className="text-xs font-bold text-fg">
+                        Aniqlangan {skill === "listening" ? "Listening Bo'limlari" : skill === "writing" ? "Writing Topshiriqlari" : skill === "speaking" ? "Speaking Qismlari" : "Reading Matnlari"}:
+                      </span>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                        {editablePassages.map((p) => (
+                          <div
+                            key={p.partNumber}
+                            className="rounded-lg border border-border bg-bg-subtle/70 p-3 space-y-1.5 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-brand">
+                                {p.title || `${skill === "listening" ? "Section" : skill === "writing" ? "Task" : skill === "speaking" ? "Part" : "Passage"} ${p.partNumber}`}
+                              </span>
+                              <Badge variant="neutral" className="text-[10px]">
+                                {(p.passageText || "").length} belgi
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-fg-muted line-clamp-3">
+                              {p.passageText || p.instructions || "Matn kiritilmagan"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* STEP 3: VALIDATE & MAP */}
+              {currentStep === 3 && (
                 <div className="space-y-4">
                   {/* Status & Summary header */}
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-bg-subtle/50 p-4">
@@ -1288,11 +1477,20 @@ export function SmartBulkImportModal({
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setCurrentStep(1)}
+                        onClick={() => setCurrentStep(2)}
                         className="text-xs h-8"
                       >
-                        <RotateCcw className="size-3.5 mr-1" />
-                        Boshqa fayl
+                        <ArrowLeft className="size-3.5 mr-1" />
+                        Prevyu
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setCurrentStep(4)}
+                        className="text-xs h-8"
+                      >
+                        Tasdiqlash
+                        <ArrowRight className="size-3.5 ml-1" />
                       </Button>
                     </div>
                   </div>
@@ -1744,8 +1942,8 @@ export function SmartBulkImportModal({
                 </div>
               )}
 
-              {/* STEP 3: PREVIEW AND SAVE */}
-              {currentStep === 3 && (
+              {/* STEP 4: FINAL REVIEW AND SAVE */}
+              {currentStep === 4 && (
                 <div className="space-y-4">
                   {/* Summary Overview Card */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2274,7 +2472,7 @@ export function SmartBulkImportModal({
                     disabled={editableQuestions.length === 0}
                     onClick={() => setCurrentStep(3)}
                   >
-                    Oldinga: Prevyu va Saqlash
+                    Oldinga: Savollarni xaritalash
                     <ArrowRight className="size-4 ml-1.5" />
                   </Button>
                 </>
@@ -2287,6 +2485,29 @@ export function SmartBulkImportModal({
                     size="sm"
                     variant="outline"
                     onClick={() => setCurrentStep(2)}
+                  >
+                    <ArrowLeft className="size-4 mr-1.5" />
+                    Ortga (Prevyu)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={editableQuestions.length === 0}
+                    onClick={() => setCurrentStep(4)}
+                  >
+                    Oldinga: Yakuniy tasdiqlash
+                    <ArrowRight className="size-4 ml-1.5" />
+                  </Button>
+                </>
+              )}
+
+              {currentStep === 4 && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentStep(3)}
                   >
                     <ArrowLeft className="size-4 mr-1.5" />
                     Ortga (Tahrirlash)

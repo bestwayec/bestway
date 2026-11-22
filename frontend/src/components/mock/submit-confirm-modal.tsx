@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Flag, Send } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ interface SubmitConfirmModalProps {
   isSubmitting: boolean;
   answered: number;
   total: number;
+  flaggedCount?: number;
   skillName?: string;
   isSingleSection?: boolean;
 }
@@ -31,6 +32,7 @@ export function SubmitConfirmModal({
   isSubmitting,
   answered,
   total,
+  flaggedCount = 0,
   skillName,
   isSingleSection,
 }: SubmitConfirmModalProps) {
@@ -55,11 +57,29 @@ export function SubmitConfirmModal({
         </DialogHeader>
 
         <div className="my-4 space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-border bg-bg-subtle p-3.5">
-            <span className="text-sm font-medium text-fg">{t("answeredLabel")}</span>
-            <span className="text-base font-bold text-brand tabular-nums">
-              {answered} / {total}
-            </span>
+          {/* Summary Cards Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
+              <span className="text-[11px] font-medium text-fg-muted">{t("answeredCard")}</span>
+              <p className="text-base font-bold text-success tabular-nums">
+                {answered} / {total}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
+              <span className="text-[11px] font-medium text-fg-muted">{t("unansweredCard")}</span>
+              <p className={`text-base font-bold tabular-nums ${missing > 0 ? "text-danger" : "text-fg-muted"}`}>
+                {missing}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-3 text-center space-y-1">
+              <span className="text-[11px] font-medium text-fg-muted flex items-center justify-center gap-1">
+                <Flag className="size-3 text-warning" />
+                {t("flaggedCard")}
+              </span>
+              <p className={`text-base font-bold tabular-nums ${flaggedCount > 0 ? "text-warning" : "text-fg-muted"}`}>
+                {flaggedCount}
+              </p>
+            </div>
           </div>
 
           {!hasQuestions ? (
@@ -90,6 +110,13 @@ export function SubmitConfirmModal({
                   {t("partialBody")}
                 </p>
               </div>
+            </div>
+          )}
+
+          {flaggedCount > 0 && (
+            <div className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+              <Flag className="size-3.5 shrink-0" />
+              <span>{t("flaggedNotice", { count: flaggedCount })}</span>
             </div>
           )}
         </div>

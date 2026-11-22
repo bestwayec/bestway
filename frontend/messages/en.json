@@ -1613,7 +1613,11 @@
       "partialTitle": "You answered {answered} of {total, plural, one {# question} other {# questions}}.",
       "partialBody": "Unanswered questions score 0. Finish the exam?",
       "keepWorking": "Keep working",
-      "confirm": "Yes, finish"
+      "confirm": "Yes, finish",
+      "answeredCard": "Answered",
+      "unansweredCard": "Unanswered",
+      "flaggedCard": "Flagged",
+      "flaggedNotice": "You have {count} flagged questions for review."
     },
     "resumeDialog": {
       "title": "Which section do you want to continue?",

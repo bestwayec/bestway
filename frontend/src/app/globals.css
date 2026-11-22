@@ -432,6 +432,13 @@
     padding: 0 2px;
   }
 
+  mark.cbt-highlight-blue {
+    background: rgba(56, 189, 248, 0.35);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
   span.cbt-underline {
     text-decoration: underline;
     text-decoration-color: var(--brand);
