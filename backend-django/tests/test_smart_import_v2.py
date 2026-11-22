@@ -520,33 +520,205 @@ class SmartImportV2Tests(SimpleTestCase):
         self.assertEqual(author_payload["correctAnswers"], ["A"])
 
     def test_15_owner_html_or_synthetic_fixture(self):
-        """15. Reproduce 40/40 IELTS Reading structure on owner file or synthetic equivalent."""
+        """15. Reproduce 40/40 IELTS Reading structure on realistic platform-independent fixture and optional owner file."""
         import os
 
-        owner_file = r"C:\Users\user\Downloads\ielts_reading_test.html"
-        if os.path.exists(owner_file):
-            with open(owner_file, "rb") as f:
-                raw_bytes = f.read()
-            res = parse_smart_exam_content(file_bytes=raw_bytes, filename="ielts_reading_test.html")
-        else:
-            # Synthetic 40-question equivalent
-            synthetic_parts = ["READING PASSAGE 1\nPassage One Body"]
-            for i in range(1, 14):
-                synthetic_parts.append(f"{i}. Statement {i}?\nAnswers:\n{i}: TRUE")
-            synthetic_parts.append("READING PASSAGE 2\nPassage Two Body")
-            for i in range(14, 27):
-                synthetic_parts.append(f"{i}. Section {i}?\nAnswers:\n{i}: i")
-            synthetic_parts.append("READING PASSAGE 3\nPassage Three Body")
-            for i in range(27, 38):
-                synthetic_parts.append(f"{i}. Claim {i}?\nAnswers:\n{i}: YES")
-            synthetic_parts.append("Questions 38-40\nChoose THREE letters, A-G.\nWhich THREE areas are explored?\nA. One\nB. Two\nC. Three\nD. Four\nE. Five\nF. Six\nG. Seven\nAnswers:\n38-40: B, D, E")
-            res = parse_smart_exam_content(text="\n".join(synthetic_parts))
+        # Platform-independent 40-question realistic IELTS Reading fixture
+        synthetic_fixture = """
+READING PASSAGE 1
+The Secrets of the Maya Civilization
+The Maya civilization was a Mesoamerican civilization developed by the Maya peoples, and noted for its logosyllabic script—the most sophisticated and highly developed writing system in pre-Columbian Americas—as well as for its art, architecture, mathematics, calendar, and astronomical system.
 
+Questions 1-5
+Do the following statements agree with the information given in Reading Passage 1?
+Write TRUE if the statement agrees with the information, FALSE if the statement contradicts the information, or NOT GIVEN if there is no information on this.
+1. The Maya writing system was the most advanced in the pre-Columbian Americas.
+2. The Maya civilization was located primarily in South America.
+3. The Maya calendar was based entirely on lunar cycles.
+4. Archaeological excavations have uncovered extensive Maya trade routes.
+5. The collapse of the classic Maya civilization occurred suddenly without warning.
+
+Questions 6-10
+Complete the notes below.
+Choose ONE WORD ONLY from the passage for each answer.
+6. The primary building material used for Maya pyramids was ________.
+7. High-ranking nobles traded valuable objects crafted from ________.
+8. The Maya developed complex terrace systems to support their ________.
+9. Elaborate polychrome vessels demonstrated their mastery of ________.
+10. Ceremonial blades were frequently fashioned from volcanic ________.
+
+Questions 11-13
+Choose the correct letter, A, B, C or D.
+11. What was the central focus of early Maya urban planning?
+A. Defensive fortifications
+B. Astronomical alignment
+C. River transportation
+D. Market convenience
+12. How did Maya mathematicians express large numeric values?
+A. Using twenty as a base unit
+B. Using decimal fractions
+C. Using Roman-style numerals
+D. Using tally sticks exclusively
+13. Which factor contributed most to Classic Maya cultural exchange?
+A. Maritime exploration
+B. Overland inter-city trade
+C. Compulsory military service
+D. Unified imperial taxation
+
+READING PASSAGE 2
+Renewable Energy Transitions
+Global energy systems are undergoing a rapid transition toward decarbonization, driven by falling costs of solar photovoltaics and wind turbines alongside increasingly ambitious carbon reduction targets.
+
+Questions 14-18
+Reading Passage 2 has five sections, A-E.
+Choose the correct heading for each section from the list of headings below.
+List of Headings:
+i. Economic factors driving clean energy adoption
+ii. Grid stabilization through distributed battery storage
+iii. Policy frameworks for international carbon trading
+iv. Challenges in electrifying heavy industrial processes
+v. Environmental lifecycle assessments of solar components
+14. Section A
+15. Section B
+16. Section C
+17. Section D
+18. Section E
+
+Questions 19-22
+Look at the following researchers and the list of statements below.
+Match each researcher with the correct finding, A-C.
+A. Centralized grid storage will dominate market capacity by 2035.
+B. Offshore wind yields superior capacity factors compared to onshore turbines.
+C. Green hydrogen will serve as the primary fuel for maritime shipping.
+19. Dr. Aris Thorne
+20. Prof. Elena Rostova
+21. Dr. Marcus Vance
+22. Prof. Liam Gallagher
+
+Questions 23-26
+Complete the sentences below.
+Write NO MORE THAN TWO WORDS for each answer.
+23. Modern utility grids require advanced ________ to balance intermittent wind power.
+24. Next-generation solar cells incorporate ________ to achieve conversion efficiencies above 30 percent.
+25. Offshore foundations must resist corrosion caused by ________.
+26. Battery recycling facilities extract precious lithium and ________ for circular manufacturing.
+
+READING PASSAGE 3
+Artificial Intelligence in Clinical Diagnostics
+Artificial intelligence algorithms, particularly deep convolutional neural networks, have demonstrated diagnostic accuracy comparable to board-certified medical specialists across dermatology, radiology, and ophthalmology.
+
+Questions 27-32
+Do the following statements agree with the claims of the writer in Reading Passage 3?
+Write YES if the statement agrees with the claims of the writer, NO if the statement contradicts the claims of the writer, or NOT GIVEN if it is impossible to know what the writer thinks about this.
+27. Neural networks outperform human radiologists in identifying rare lung pathologies.
+28. Training models on biased demographic datasets skews predictive diagnostic reliability.
+29. Medical regulatory authorities have established uniform global standards for clinical AI approval.
+30. Clinicians frequently accept algorithmic recommendations without independent review.
+31. Federated learning allows models to train across hospitals without transferring patient records.
+32. Automated diagnostic tools will eventually replace primary care physicians entirely.
+
+Questions 33-37
+Answer the questions below.
+Choose NO MORE THAN TWO WORDS from the passage for each answer.
+33. Which algorithm architecture is most frequently deployed in medical imaging analysis?
+34. What primary barrier impedes algorithmic adoption in emergency triage workflows?
+35. Which privacy-preserving framework facilitates collaborative multi-center model training?
+36. What document must manufacturers submit to demonstrate algorithmic safety to regulators?
+37. Who bears ultimate legal liability for diagnostic errors resulting from algorithmic assistance?
+
+Questions 38-40
+Choose THREE letters, A-G.
+Which THREE of the following ethical concerns regarding medical AI are highlighted by the author?
+A. Algorithmic bias against underrepresented patient populations
+B. Lack of explainability in deep black-box decision models
+C. Excessive financial costs of high-performance computing hardware
+D. Vulnerability to adversarial data manipulation and cybersecurity attacks
+E. Inadequate compensation models for participating patient data donors
+F. Replacement of nursing staff in palliative care environments
+G. Monopolistic control over healthcare data by major technology corporations
+
+Answers:
+1: TRUE
+2: FALSE
+3: NOT GIVEN
+4: TRUE
+5: FALSE
+6: limestone
+7: jade
+8: agriculture
+9: pottery
+10: obsidian
+11: B
+12: A
+13: B
+14: i
+15: ii
+16: iii
+17: iv
+18: v
+19: A
+20: B
+21: C
+22: A
+23: software
+24: perovskites
+25: saltwater
+26: cobalt
+27: YES
+28: YES
+29: NO
+30: NO
+31: YES
+32: NOT GIVEN
+33: neural networks
+34: latency
+35: federated learning
+36: audit dossier
+37: physician
+38-40: A, B, D
+"""
+        res = parse_smart_exam_content(text=synthetic_fixture)
+
+        # 1. Exact 40 scoring positions and 3 passages
         self.assertEqual(res["count"], 40)
         self.assertEqual(len(res["passages"]), 3)
         self.assertEqual([len(p["questions"]) for p in res["passages"]], [13, 13, 14])
         self.assertEqual(res["status"], "complete")
         self.assertTrue(res["summary"]["isCompleteIeltsReading"])
+        self.assertEqual(res["summary"]["needsReviewCount"], 0)
+
+        # 2. Strict passage text persistence
+        self.assertIn("Mesoamerican civilization", res["passages"][0]["passageText"])
+        self.assertIn("decarbonization", res["passages"][1]["passageText"])
+        self.assertIn("convolutional neural networks", res["passages"][2]["passageText"])
+
+        # 3. Question type diversity across all IELTS Reading types
+        by_type = res["summary"]["byType"]
+        self.assertEqual(by_type.get("true_false_notgiven"), 5)
+        self.assertEqual(by_type.get("note_completion"), 5)
+        self.assertEqual(by_type.get("multiple_choice"), 3)
+        self.assertEqual(by_type.get("matching_headings"), 5)
+        self.assertEqual(by_type.get("matching"), 4)
+        self.assertEqual(by_type.get("sentence_completion"), 4)
+        self.assertEqual(by_type.get("yes_no_notgiven"), 6)
+        self.assertEqual(by_type.get("short_answer"), 5)
+        self.assertEqual(by_type.get("multi_select"), 3)
+
+        # 4. Multi-select cluster Q38-40
+        q38 = next(q for q in res["questions"] if q["number"] == 38)
+        self.assertEqual(q38["type"], "multi_select")
+        self.assertEqual(q38["correctAnswers"], ["A", "B", "D"])
+        self.assertEqual(len(q38["options"]), 7)
+
+        # 5. Optional local owner file verification when present on host
+        owner_file = r"C:\Users\user\Downloads\ielts_reading_test.html"
+        if os.path.exists(owner_file):
+            with open(owner_file, "rb") as f:
+                raw_bytes = f.read()
+            owner_res = parse_smart_exam_content(file_bytes=raw_bytes, filename="ielts_reading_test.html")
+            self.assertEqual(owner_res["count"], 40)
+            self.assertEqual(len(owner_res["passages"]), 3)
+            self.assertEqual(owner_res["status"], "complete")
 
     def test_16_duplicate_import_idempotency(self):
         """16. Importing or parsing same exam content multiple times is strictly idempotent."""
