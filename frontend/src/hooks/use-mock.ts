@@ -599,6 +599,23 @@ export interface CommitImportInput extends ValidateImportInput {
   targetExamId?: string;
 }
 
+export type ExportSkill = "listening" | "reading" | "writing" | "speaking";
+
+/**
+ * Schema-1.0 package of an exam (GET /mock/exams/:id/export). Staff only: the
+ * package contains answer keys, so the server allows the owner teacher or an
+ * admin. Media files are referenced, never inlined.
+ */
+export function exportExamPackage(examId: string, skill?: ExportSkill) {
+  return api.get<Record<string, unknown>>(`/mock/exams/${encodeURIComponent(examId)}/export`, skill ? { skill } : undefined);
+}
+
+export function useExportExam() {
+  return useMutation({
+    mutationFn: (v: { examId: string; skill?: ExportSkill }) => exportExamPackage(v.examId, v.skill),
+  });
+}
+
 export function useValidateExamImport() {
   return useMutation({
     mutationFn: (v: ValidateImportInput) =>

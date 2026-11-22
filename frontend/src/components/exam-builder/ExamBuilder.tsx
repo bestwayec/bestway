@@ -6,7 +6,9 @@ import {
   CheckCircle2,
   ClipboardList,
   Copy,
+  Download,
   Eye,
+  FileJson,
   Loader2,
   Rocket,
   Save,
@@ -30,6 +32,8 @@ import {
 import { PreviewDialog } from "@/components/exam-builder/PreviewDialog";
 import { ImportProvenanceDialog } from "@/components/exam-builder/ImportProvenanceDialog";
 import { SmartBulkImportModal } from "@/components/exam-builder/SmartBulkImportModal";
+import { JsonImportDialog } from "@/components/exam-builder/JsonImportDialog";
+import { ExportExamDialog } from "@/components/exam-builder/ExportExamDialog";
 import {
   useCloneMockExam,
   useExamImportProvenance,
@@ -200,6 +204,8 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const [chosenStep, setChosenStep] = React.useState<StepId | null>(null);
   const [provenanceOpen, setProvenanceOpen] = React.useState(false);
   const [smartImportOpen, setSmartImportOpen] = React.useState(false);
+  const [jsonImportOpen, setJsonImportOpen] = React.useState(false);
+  const [exportOpen, setExportOpen] = React.useState(false);
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
@@ -513,6 +519,26 @@ export function ExamBuilder({ examId }: { examId: string }) {
               <Copy className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "duplicate", "Duplicate")}</span>
             </Button>
+            {!detail.isPublished && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setJsonImportOpen(true)}
+                className="min-h-9 justify-center max-sm:w-full sm:min-h-0"
+              >
+                <FileJson className="size-4 shrink-0" aria-hidden />
+                <span className="truncate">{tx(t, "importJsonHere", "Import JSON")}</span>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setExportOpen(true)}
+              className="min-h-9 justify-center max-sm:w-full sm:min-h-0"
+            >
+              <Download className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{tx(t, "exportJson", "Export JSON")}</span>
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -765,6 +791,15 @@ export function ExamBuilder({ examId }: { examId: string }) {
       )}
 
       {detail && (
+        <>
+        <JsonImportDialog open={jsonImportOpen} onClose={() => setJsonImportOpen(false)} initialTargetExamId={examId} />
+        <ExportExamDialog
+          open={exportOpen}
+          onClose={() => setExportOpen(false)}
+          examId={examId}
+          title={detail.title}
+          skills={detail.sections.map((section) => section.skill)}
+        />
         <SmartBulkImportModal
           open={smartImportOpen}
           onOpenChange={setSmartImportOpen}
@@ -778,6 +813,7 @@ export function ExamBuilder({ examId }: { examId: string }) {
             void examQ.refetch();
           }}
         />
+        </>
       )}
 
       {/* Unsaved-changes navigation guard (in-builder moves and leaving the exam) */}

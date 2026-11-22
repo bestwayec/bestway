@@ -282,3 +282,17 @@ class ExportRoundTripTests(TestCase):
         self.assertTrue(items['reading_groups']['ok'], items['reading_groups'])
         self.assertTrue(items['reading_questions']['ok'])
         self.assertTrue(items['listening_questions']['ok'])
+
+    def test_export_uses_a_fixed_number_of_queries(self):
+        from django.test.utils import CaptureQueriesContext
+
+        from apps.core.mock_export import export_package
+        small = self.commit(fixture('listening-part-1')).data['data']['examId']
+        large = self.commit(fixture('ielts-academic-full')).data['data']['examId']
+        counts = []
+        for exam_id in (small, large):
+            with CaptureQueriesContext(connection) as queries:
+                export_package(TEACHER, exam_id)
+            counts.append(len(queries))
+        self.assertEqual(counts[0], counts[1], 'export must not issue a query per group or question')
+        self.assertLessEqual(counts[1], 7)
