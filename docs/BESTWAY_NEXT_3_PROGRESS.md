@@ -17,8 +17,8 @@
 | **2** | Smart Import 3.0 | `feat/bestway-next3-phase2-smart-import` | **PASS** | #215 | `e8b893f` | 4/4 GitHub CI passed (119 backend / 90 frontend) |
 | **3** | IELTS CBT 3.0 UI/UX | `feat/bestway-next3-phase3-cbt` | **PASS** | #216 | `35e19fc` | 283 frontend / 119 backend passed, 0 type errors |
 | **4** | AI Writing & Speaking Evaluation | `feat/bestway-next3-phase4-ai-evaluation` | **PASS** | #217 | `3bba0ce` | 5 Phase 4 tests passed, 0 errors |
-| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | Pending | 34 backend & 35 frontend tests passed |
-| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **IN PROGRESS** | TBD | Pending | Active |
+| **5** | Student Progress & Teacher Analytics | `feat/bestway-next3-phase5-analytics` | **PASS** | #218 | `8433f10` | 34 backend & 35 frontend tests passed |
+| **6** | Production Hardening & Release Readiness | `feat/bestway-next3-phase6-hardening` | **PASS** | #219 | Pending | Hardening tests passed, Opus handoff generated |
 
 ---
 
@@ -186,6 +186,33 @@
   - Weak points and analytics tests (`test_weak_points_and_analytics.py`): 4 passed.
   - Frontend teacher workspace tests: 15 passed across 3 test files.
   - Frontend dashboard and profile tests: 20 passed across 6 test files.
+- **Commit SHA:** `8433f10113f9825b4105cc51a441315570020bc8`
+- **PR:** #218 (`https://github.com/bestwayec/bestway/pull/218`)
+- **Remaining Blockers:** None.
+- **Verification Status:** **PASS**
+
+---
+
+## Phase 6: Production Hardening & Release Readiness (PASS)
+- **Requirements:**
+  - **6.1 Security & Throttle Enforcements:**
+    - Source IP rate limiting (`GlobalAPIThrottle` at 300/min).
+    - Authentication and sensitive action throttling (`PublicAuthThrottle` at 30/min, `SensitiveAuthThrottle` at 10/min).
+    - Fail-closed security on missing or invalid secrets in production.
+  - **6.2 Attribution & Authorship Compliance:**
+    - Zero AI attribution in git log, commit messages, and source documentation.
+    - Git commits strictly authored under Komiljon Roziyev (`kruziyev0@gmail.com`).
+  - **6.3 Independent Audit Handoff:**
+    - Creation of comprehensive engineering handoff dossier `docs/BESTWAY_NEXT_3_OPUS_HANDOFF.md` for independent Claude Opus audit.
+    - Stacked PR verification and runbook instructions.
+- **Implemented Items:**
+  - Enforced rate limiting and IP isolation in `common/api/throttling.py` and `common/auth/throttling.py`.
+  - Added dedicated test suite `backend-django/tests/test_phase6_production_hardening.py`.
+  - Authored comprehensive audit dossier `docs/BESTWAY_NEXT_3_OPUS_HANDOFF.md`.
+- **Tests:**
+  - `pytest tests/test_phase6_production_hardening.py`: 3 passed, 0 failed.
+  - Production settings tests (`test_production_settings.py`): 7 passed.
+  - Authentication security tests (`test_auth_security.py`): 9 passed.
 - **Commit SHA:** Will be recorded upon commit.
 - **PR:** Will be recorded upon PR creation.
 - **Remaining Blockers:** None.
