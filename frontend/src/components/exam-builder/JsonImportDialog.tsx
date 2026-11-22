@@ -130,6 +130,7 @@ export function JsonImportDialog({
   const [targetExamId, setTargetExamId] = React.useState(initialTargetExamId ?? "");
   const [syntaxError, setSyntaxError] = React.useState<JsonErrorLocation | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
+  const [replaceExisting, setReplaceExisting] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement | null>(null);
   const editorRef = React.useRef<HTMLTextAreaElement | null>(null);
 
@@ -156,6 +157,7 @@ export function JsonImportDialog({
   );
   const target = editableExams.find((exam) => exam.id === targetExamId) ?? null;
   const targetCheck = summary && target ? checkDraftDestination(summary, target) : null;
+  const replacing = replaceExisting && targetCheck?.reason === "appends-to-existing";
   const byteSize = React.useMemo(() => new TextEncoder().encode(text).length, [text]);
   const lineCount = React.useMemo(() => (text ? text.split("\n").length : 0), [text]);
 
@@ -180,6 +182,7 @@ export function JsonImportDialog({
     setImported(null);
     setTargetExamId(initialTargetExamId ?? "");
     setSyntaxError(null);
+    setReplaceExisting(false);
   }
 
   function close() {
@@ -331,6 +334,7 @@ export function JsonImportDialog({
         mediaBindings: bindings,
         validatedChecksum: report.checksum,
         ...(target ? { targetExamId: target.id } : {}),
+        ...(replacing ? { replaceExisting: true } : {}),
       },
       {
         onSuccess: (r) => {
@@ -654,7 +658,13 @@ export function JsonImportDialog({
                       {tx(t, "importDestinationHint", "Create a separate exam or add these sections to an existing editable draft.")}
                     </p>
                   </div>
-                  <Select value={targetExamId || "__new__"} onValueChange={(value) => setTargetExamId(value === "__new__" ? "" : value)}>
+                  <Select
+                    value={targetExamId || "__new__"}
+                    onValueChange={(value) => {
+                      setTargetExamId(value === "__new__" ? "" : value);
+                      setReplaceExisting(false);
+                    }}
+                  >
                     <SelectTrigger aria-label={tx(t, "importDestination", "Import destination")}>
                       <SelectValue />
                     </SelectTrigger>
@@ -688,6 +698,29 @@ export function JsonImportDialog({
                             })
                           : tx(t, "importAddsSections", "New sections will be added; existing sections are not changed.")}
                     </p>
+                  )}
+                  {targetCheck?.reason === "appends-to-existing" && (
+                    <label className="flex items-start gap-2 rounded-field border border-warning/40 bg-warning/5 px-3 py-2 text-xs">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 size-4 shrink-0 accent-[var(--warning)]"
+                        checked={replaceExisting}
+                        onChange={(e) => setReplaceExisting(e.target.checked)}
+                        data-testid="import-replace-existing"
+                      />
+                      <span>
+                        <span className="font-semibold text-fg">
+                          {tx(t, "importReplaceLabel", "Replace the existing {skills} section(s) instead", { skills: targetCheck.sharedSkills.join(", ") })}
+                        </span>
+                        <span className="block text-fg-muted">
+                          {tx(
+                            t,
+                            "importReplaceHint",
+                            "Every question, passage, answer key and attached audio/image in those sections is deleted and replaced by this package. Other sections are kept. Only possible for an unpublished draft no student has started.",
+                          )}
+                        </span>
+                      </span>
+                    </label>
                   )}
                 </section>
               )}
@@ -782,7 +815,11 @@ export function JsonImportDialog({
                   disabled={importing || (targetCheck !== null && !targetCheck.ok)}
                   className="min-h-10 justify-center"
                 >
-                  {target ? tx(t, "addToExam", "Add to selected exam") : tx(t, "createDraft", "Create draft")}
+                  {replacing
+                    ? tx(t, "replaceInExam", "Replace sections in selected exam")
+                    : target
+                      ? tx(t, "addToExam", "Add to selected exam")
+                      : tx(t, "createDraft", "Create draft")}
                 </Button>
               )}
             </>

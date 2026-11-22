@@ -19,7 +19,10 @@
    Each problem names its place, e.g. `Reading › group 2 “Passage 1” › Q5 › correctAnswers`.
 4. **Destination.** *Create a new exam*, or an editable draft of the **same exam type**. Drafts
    of another type are greyed out. Adding to a draft keeps everything already there; questions
-   in a skill the draft already has are appended and duplicate numbers are refused.
+   in a skill the draft already has are appended and duplicate numbers are refused. To swap a
+   section instead (e.g. a corrected Reading), tick **Replace the existing … section(s)**: everything
+   in those sections (questions, passages, keys, attached audio/images) is replaced by the package;
+   other sections stay. Only for unpublished drafts no student has started.
 5. **Media.** Optionally attach the listed audio/image files now; otherwise attach them later in
    the editor. A file marked *required* blocks publishing until it is attached.
 6. **Create draft / Add to selected exam.** The import is all-or-nothing. **Open in Exam Builder**

@@ -13,7 +13,7 @@ from .views import require_role, success
 def import_body(request, *, commit=False):
     raw = request.body.decode('utf-8')
     data = request.data
-    allowed = ('package', 'mediaBindings', 'validatedChecksum', 'targetExamId') if commit else ('package', 'mediaBindings')
+    allowed = ('package', 'mediaBindings', 'validatedChecksum', 'targetExamId', 'replaceExisting') if commit else ('package', 'mediaBindings')
     if not isinstance(data, dict):
         raise ContractAPIException('VALIDATION_ERROR', 'Validatsiya xatosi', 400)
     for key in data:
@@ -24,6 +24,11 @@ def import_body(request, *, commit=False):
             raise ContractAPIException('VALIDATION_ERROR', 'validatedChecksum must match /^[0-9a-f]{64}$/ regular expression', 400)
         if data.get('targetExamId') is not None and (not isinstance(data['targetExamId'], str) or not re.fullmatch(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', data['targetExamId'])):
             raise ContractAPIException('VALIDATION_ERROR', 'targetExamId must be a UUID', 400)
+    if commit and data.get('replaceExisting') is not None:
+        if type(data['replaceExisting']) is not bool:
+            raise ContractAPIException('VALIDATION_ERROR', 'replaceExisting must be a boolean', 400)
+        if data['replaceExisting'] and not data.get('targetExamId'):
+            raise ContractAPIException('VALIDATION_ERROR', 'replaceExisting requires targetExamId', 400)
     if not isinstance(data.get('package'), dict):
         raise ContractAPIException('VALIDATION_ERROR', 'package must be an object', 400)
     if data.get('mediaBindings') is not None and not isinstance(data['mediaBindings'], dict):
@@ -45,7 +50,7 @@ def commit_import_view(request):
     require_role(request, 'teacher', 'admin', 'super_admin')
     data, raw = import_body(request, commit=True)
     result = mock_imports.commit_import(request.user, data['package'], data.get('mediaBindings') or {},
-        data['validatedChecksum'], raw, data.get('targetExamId'))
+        data['validatedChecksum'], raw, data.get('targetExamId'), replace=data.get('replaceExisting') is True)
     return success(result, status=200 if result['replay'] else 201)
 
 

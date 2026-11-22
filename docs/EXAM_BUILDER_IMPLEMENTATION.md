@@ -11,7 +11,7 @@ where the audit found the defects (`EXAM_BUILDER_AUDIT.md`).
 | `mock_export.py` (new) | `export_package(actor, exam_id, skill=None)`: rows → schema-1.0 package. Deterministic keys (import source map first), one media declaration per distinct file, `requiredForPublish` for Listening audio, optional metadata, `practice` profile for single-skill exports. A fixed number of queries (≤ 7) whatever the exam size — no N+1 (test `test_export_uses_a_fixed_number_of_queries`). |
 | `mock_import_views.py`, `urls.py` | `GET mock/exams/<id>/export` (also under `/v1/`). |
 | `mock_import_validate.py` | Optional question fields `cefrLevel`, `skillTags`, `evidenceText`, `audioStartSec` (validated with the editor's own rules: `item_metadata`, `review_evidence`); optional group `maxScore` (Writing/Speaking 1–100) and `stimulusRef` (Writing); question-number uniqueness per skill; IELTS full-mock Reading counts passages. |
-| `mock_imports.py` | Persists the new fields (`optional_question_columns`; evidence offset recomputed), `max_score`, `stimulus_ref`. |
+| `mock_imports.py` | `replaceExisting` (controlled replacement of the target draft's sections of the package's skills, same transaction, audit `mock.exam.import.replace`). Persists the new fields (`optional_question_columns`; evidence offset recomputed), `max_score`, `stimulus_ref`. |
 | `multilevel.py` | Import-time blueprint check uses the package's `maxScore`/`stimulusRef` instead of forcing `None`. |
 | `mock_content.py` | `reading_passage_count()` — mirror of the frontend `clusterReadingPassages`. |
 | `mock_authoring.py` | Readiness `reading_groups` passes for 3 groups (unchanged) or 3 clustered passages. |

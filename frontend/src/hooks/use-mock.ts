@@ -597,6 +597,8 @@ export interface ValidateImportInput {
 export interface CommitImportInput extends ValidateImportInput {
   validatedChecksum: string;
   targetExamId?: string;
+  /** Replace the target draft's sections of the same skills instead of appending (unused drafts only). */
+  replaceExisting?: boolean;
 }
 
 export type ExportSkill = "listening" | "reading" | "writing" | "speaking";
@@ -642,6 +644,7 @@ export function useCommitExamImport() {
         ...(v.mediaBindings ? { mediaBindings: v.mediaBindings } : {}),
         validatedChecksum: v.validatedChecksum,
         ...(v.targetExamId ? { targetExamId: v.targetExamId } : {}),
+        ...(v.targetExamId && v.replaceExisting ? { replaceExisting: true } : {}),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mock-exams"] }),
   });

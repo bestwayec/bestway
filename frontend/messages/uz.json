@@ -2774,7 +2774,10 @@
     "exportHint": "Yangi imtihon yoki boshqa qoralamaga qayta import qilish mumkin bo‘lgan schema 1.0 paketini yuklab oling. Unda javob kalitlari bor — faqat xodimlar bilan ulashing. Qayta importdan keyin audio va rasmlarni yana biriktirish kerak.",
     "exportWholeExam": "Butun imtihon",
     "exportEmpty": "Bu imtihonda hali eksport qilinadigan bo‘lim yo‘q.",
-    "importJsonHere": "JSON import"
+    "importJsonHere": "JSON import",
+    "importReplaceLabel": "Mavjud {skills} bo‘lim(lar)ini almashtirish",
+    "importReplaceHint": "Shu bo‘limlardagi barcha savollar, matnlar, javob kalitlari va biriktirilgan audio/rasmlar o‘chirilib, ushbu paket bilan almashtiriladi. Boshqa bo‘limlar saqlanadi. Faqat nashr qilinmagan va hech bir talaba boshlamagan qoralamada mumkin.",
+    "replaceInExam": "Tanlangan imtihonda bo‘limlarni almashtirish"
   },
   "teacherAiRanking": {
     "title": "Writing va Speaking AI reytingi",

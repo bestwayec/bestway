@@ -131,7 +131,7 @@ def stage_media(actor, upload):
                 sizeBytes=row.size_bytes, kind=row.kind, expiresAt=row.expires_at)
 
 
-def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None):
+def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None, *, replace=False):
     assert_staff(actor)
     report = validate_package(pkg, bindings, raw_text)
     if not report['canImport']:
@@ -175,7 +175,17 @@ def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None)
             for si, section in enumerate(value['sections']):
                 old = MockSection.objects.filter(exam_id=exam.id, skill=section['skill']).first() if target else None
                 old_groups = list(MockQuestionGroup.objects.filter(section_id=old.id)) if old else []
-                if old:
+                if old and replace:
+                    # Controlled replacement of this skill in an unpublished draft that no
+                    # student has started (checked above under the row lock): its groups and
+                    # questions are removed and the package's take their place, in this same
+                    # transaction. Other skills of the draft are not touched.
+                    MockQuestion.objects.filter(group_id__in=[g.id for g in old_groups]).delete()
+                    MockQuestionGroup.objects.filter(id__in=[g.id for g in old_groups]).delete()
+                    MockSection.objects.filter(id=old.id).update(title=section.get('title'), instructions=section.get('instructions'),
+                        duration_minutes=section.get('durationMinutes', old.duration_minutes))
+                    old_groups = []
+                elif old:
                     numbers = set(MockQuestion.objects.filter(group__section_id=old.id).values_list('number', flat=True))
                     collision = next((q['number'] for g in section['groups'] for q in g['questions'] if q['number'] in numbers), None)
                     if collision is not None:
@@ -225,8 +235,9 @@ def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None)
             MockImportReviewIssue.objects.bulk_create(reviews)
             if staged:
                 MockStagedMedia.objects.filter(id__in=[s.id for s in staged.values()]).update(claimed_at=stamp, claimed_import_id=row.id)
-        audit_event(actor, 'mock.exam.import.append' if target else 'mock.exam.import', 'mockExam', exam.id,
-            new=dict(packageId=pkg['packageId'], revision=pkg['revision'], checksum=checksum, targetExamId=target_id))
+        audit_event(actor, ('mock.exam.import.replace' if replace else 'mock.exam.import.append') if target else 'mock.exam.import', 'mockExam', exam.id,
+            new=dict(packageId=pkg['packageId'], revision=pkg['revision'], checksum=checksum, targetExamId=target_id,
+                     replacedSkills=[s['skill'] for s in pkg['exam']['sections']] if replace and target else []))
         return status_payload(row, replay=False, added=bool(target))
     except IntegrityError:
         raced = MockExamImport.objects.filter(**identity).first()

@@ -10,7 +10,7 @@ some checks only for faster feedback.
 |---|---|---|
 | POST | `/v1/mock/exam-imports/validate` | Dry run. Returns `{checksum, issues[], counts, canImport, canPublish, …}`. Writes nothing. |
 | POST | `/v1/mock/exam-imports/media` | Stage an audio/image file (24 h) for `mediaBindings`. |
-| POST | `/v1/mock/exam-imports` | Commit `{package, mediaBindings?, validatedChecksum, targetExamId?}` in one transaction. 201 new, 200 replay. |
+| POST | `/v1/mock/exam-imports` | Commit `{package, mediaBindings?, validatedChecksum, targetExamId?, replaceExisting?}` in one transaction. 201 new, 200 replay. With `targetExamId` the package's skills are **appended** (duplicate numbers → 409); with `replaceExisting: true` the draft's sections of those skills are **replaced** (other skills untouched). Target must be an unpublished draft no student has started (409 `MOCK_CONTENT_LOCKED`) and, for teachers, their own (403). |
 | GET | `/v1/mock/exam-imports/by-package/<packageId>/revisions/<n>` | Recover the draft after a timeout. |
 | GET | `/v1/mock/exams/<id>/export[?skill=listening\|reading\|writing\|speaking]` | **New.** Package of the exam (or one skill). Owner teacher or admin. |
 

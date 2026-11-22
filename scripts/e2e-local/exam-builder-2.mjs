@@ -8,7 +8,7 @@
 // B  Reopen + export: the imported draft reopens in the editor; Export JSON round-trips through the validator
 // C  Invalid import: syntax error with line/column; semantic error with a readable path; nothing is created
 // D  Draft merge: Import JSON from the editor pre-selects the draft; incompatible drafts are disabled;
-//    existing questions and keys are untouched
+//    existing questions and keys are untouched; D2 replaces one skill only after an explicit opt-in
 // E  Answer security: a student cannot export, validate or import, and the student exam payload has no keys
 // F  Candidate journey + recovery: publish a clean imported exam, student starts, answers, the answer survives a
 //    reload, submits once (duplicate submit is idempotent), objective score matches the key
@@ -182,6 +182,24 @@ const listeningAfter = (await api(t, "GET", `/mock/exams/${created.listening1}`)
 ok(listeningAfter.sections.map((s) => s.skill).join() === "listening,reading", "D draft now has Listening + Reading");
 const keyAfter = JSON.stringify(listeningAfter.sections[0].groups.flatMap((g) => g.questions.map((q) => [q.id, q.number, q.correctAnswers])));
 ok(keyAfter === keyBefore, "D existing Listening question ids, numbers and keys are unchanged");
+
+// ── D2: controlled replacement of a skill the draft already has ─────────────────────────────
+await t.goto(`${WEB}/en/exam-builder/${created.listening1}`);
+await t.getByRole("button", { name: "Import JSON" }).first().click({ timeout: 60000 });
+await dialog(t).waitFor();
+await pickTemplate(t, "IELTS", "Reading", "Academic Reading · Full test · 3 passages / 40 questions");
+await checkImport(t);
+await dialog(t).getByText("Ready to import").waitFor({ timeout: 30000 });
+ok(await dialog(t).getByRole("button", { name: "Add to selected exam" }).isVisible(), "D2 default for an existing skill is append, not replace");
+await dialog(t).getByTestId("import-replace-existing").check();
+ok(await dialog(t).getByRole("button", { name: "Replace sections in selected exam" }).isVisible(), "D2 replacing is an explicit opt-in with its own button label");
+await shot(t, "D2-replace-confirm-1440.png");
+const replaced = await createDraft(t);
+ok(replaced.status === 201, `D2 replacement committed (HTTP ${replaced.status})`);
+const afterReplace = (await api(t, "GET", `/mock/exams/${created.listening1}`)).data;
+const readingQs = afterReplace.sections.find((x) => x.skill === "reading").groups.flatMap((g) => g.questions);
+ok(readingQs.length === 40, `D2 Reading now has the package's 40 questions (${readingQs.length})`);
+ok(JSON.stringify(afterReplace.sections[0].groups.flatMap((g) => g.questions.map((q) => [q.id, q.number, q.correctAnswers]))) === keyBefore, "D2 Listening untouched by the Reading replacement");
 
 // ── F (author part): a clean, publishable original exam imported through the dialog ───────────
 const stamp = Date.now();

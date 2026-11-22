@@ -138,13 +138,15 @@ class ExportRoundTripTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(TEACHER)
 
-    def commit(self, package, target=None, user=TEACHER):
+    def commit(self, package, target=None, user=TEACHER, replace=None):
         self.client.force_authenticate(user)
         report = self.client.post('/v1/mock/exam-imports/validate', {'package': package}, format='json')
         self.assertEqual(report.status_code, 200, report.data)
         body = {'package': package, 'validatedChecksum': report.data['data']['checksum']}
         if target:
             body['targetExamId'] = target
+        if replace is not None:
+            body['replaceExisting'] = replace
         return self.client.post('/v1/mock/exam-imports', body, format='json')
 
     def export(self, exam_id, skill=None, user=TEACHER):
@@ -296,3 +298,35 @@ class ExportRoundTripTests(TestCase):
             counts.append(len(queries))
         self.assertEqual(counts[0], counts[1], 'export must not issue a query per group or question')
         self.assertLessEqual(counts[1], 7)
+
+    def test_controlled_replacement_of_one_skill(self):
+        exam_id = self.commit(fixture('listening-part-1')).data['data']['examId']
+        self.commit(fixture('reading-passage-1'), target=exam_id)
+        reading_before = set(MockQuestion.objects.filter(group__section__exam_id=exam_id, group__section__skill='reading').values_list('id', flat=True))
+        listening_ids = set(MockQuestion.objects.filter(group__section__exam_id=exam_id, group__section__skill='listening').values_list('id', flat=True))
+        full = fixture('academic-reading-full')
+        # Appending collides with the existing Reading 1-13 ...
+        self.assertEqual(self.commit(full, target=exam_id).status_code, 409)
+        # ... replacing swaps the Reading section in one transaction.
+        response = self.commit(full, target=exam_id, replace=True)
+        self.assertEqual(response.status_code, 201, response.data)
+        reading_after = set(MockQuestion.objects.filter(group__section__exam_id=exam_id, group__section__skill='reading').values_list('id', flat=True))
+        self.assertEqual(len(reading_after), 40)
+        self.assertFalse(reading_before & reading_after)
+        self.assertEqual(set(MockQuestion.objects.filter(group__section__exam_id=exam_id, group__section__skill='listening').values_list('id', flat=True)), listening_ids)
+        self.assertEqual(MockSection.objects.filter(exam_id=exam_id, skill='reading').count(), 1)
+
+    def test_replacement_needs_a_target_and_an_unused_draft(self):
+        package = fixture('reading-passage-1')
+        report = self.client.post('/v1/mock/exam-imports/validate', {'package': package}, format='json').data['data']
+        response = self.client.post('/v1/mock/exam-imports', {'package': package, 'validatedChecksum': report['checksum'], 'replaceExisting': True}, format='json')
+        self.assertEqual(response.status_code, 400)
+        response = self.client.post('/v1/mock/exam-imports', {'package': package, 'validatedChecksum': report['checksum'], 'replaceExisting': 'yes'}, format='json')
+        self.assertEqual(response.status_code, 400)
+        exam_id = self.commit(package).data['data']['examId']
+        MockExam.objects.filter(id=exam_id).update(is_published=True)
+        again = fixture('reading-passage-1'); again['packageId'] = 'replace-published'
+        locked = self.commit(again, target=exam_id, replace=True)
+        self.assertEqual(locked.status_code, 409)
+        self.assertEqual(locked.data['error']['code'], 'MOCK_CONTENT_LOCKED')
+        self.assertEqual(MockQuestion.objects.filter(group__section__exam_id=exam_id).count(), 13)

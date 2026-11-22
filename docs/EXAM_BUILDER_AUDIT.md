@@ -66,6 +66,6 @@ lists how it was reproduced.
 
 ## Not done in this pass (see `EXAM_BUILDER_TEST_REPORT.md` → Remaining)
 
-Replace-a-section import, question-bank import destination, undo/redo, drag-and-drop
+Question-bank import destination (replace-a-section was added afterwards), undo/redo, drag-and-drop
 reordering beyond what the editor already has, rich-text tables in Writing prompts, and a
 CEFR score conversion (none is invented).
