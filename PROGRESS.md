@@ -7,7 +7,12 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
-### 54-BLOK: IELTS CBT 2.0 — Talaba imtihon interfeysi, natijalar tahlili va xatolarni batafsil ko'rib chiqish (2026-11-22) — branch `feat/bestway-ielts-cbt-2`
+### 54-BLOK: IELTS CBT 2.0 — Talaba imtihon interfeysi, natijalar tahlili va xatolarni batafsil ko'rib chiqish (2026-11-22) — PR #213, branch `feat/bestway-ielts-cbt-2`
+- **PR #212 CI blokerini tuzatish va sinxronizatsiya**:
+  - `tests/test_smart_import_v2.py::test_15_owner_html_or_synthetic_fixture` testida Linux CI muhitida 3 != 40 xatosi keltirib chiqargan noto'g'ri sintetik matn o'rniga platformadan mustaqil, 3 ta to'liq passage va 40 ta pozitsiyali realistik IELTS Reading fixture o'rnatildi.
+  - `parse_smart_text_v2` da `in_answer_section` qoidalari mustahkamlandi: savollar diapazoni (`Questions X-Y`) uchraganda javoblar bo'limi holati xavfsiz reset qilinadi va savol belgisi (`?`) bilan tugagan qatorlar kalit deb xato hisoblanmaydi.
+  - PR #212 bo'yicha GitHub Actions CI (Analyze JS/TS, Analyze Python, Django regressions/Postgres/HTTP, Frontend build/lint/test) 4/4 to'liq PASS bo'ldi (`2e6b776`).
+  - `feat/bestway-ielts-cbt-2` (PR #213) ga PR #212 o'zgarishlari force-pushsiz toza merge qilindi (`a08acab`).
 - **Reading CBT talaba interfeysi**:
   - Chap panel: to'liq passage matni, sarlavhasi, paragraflar, matnni belgilash (highlight), mustaqil aylantirish (independent scrolling), o'lchamini sozlash uchun `ReadingSplitDivider`, o'qish uchun qulay `font-serif leading-relaxed text-fg/95` tipografiyasi.
   - O'ng panel: faqat tanlangan passajga tegishli savollar, guruh yo'riqnomalari, interaktiv javob boshqaruvi, aniq tanlangan javob holati, mustaqil aylantirish.
