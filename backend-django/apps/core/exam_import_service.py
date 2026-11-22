@@ -634,7 +634,7 @@ def parse_smart_text_v2(
                 continue
 
             single_m = re.match(r"^\s*(?:Q|№|#)?(\d{1,3})\s*[.):\-=]+\s*(.+)$", line, re.IGNORECASE)
-            if single_m:
+            if single_m and not single_m.group(2).strip().endswith("?"):
                 answer_map[int(single_m.group(1))] = single_m.group(2).strip()
                 continue
 
@@ -705,6 +705,7 @@ def parse_smart_text_v2(
             flush_q()
             _flush_range_task()
             in_passage_body = False
+            in_answer_section = False
             s_q = int(q_range_m.group(1))
             e_q = int(q_range_m.group(2))
             rest_instr = q_range_m.group(3).strip()
