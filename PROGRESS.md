@@ -7,6 +7,25 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 52-BLOK: Smart Exam Import v2 — ko'p matnli (multi-passage) tahlil, xavfsiz ommaviy import va 3 bosqichli workflow (2026-11-22) — PR #212, branch `fix/bestway-smart-import-v2`
+- **Tuzatilgan fundamental muammolar**:
+  1. *Global hint zaharlanishi*: `_detect_type_hint` barcha savollarga global qo'llanib, "not given" uchragan joyda boshqa turdagi (YNNG, bo'sh joy to'ldirish) savollarni ham TFNG ga aylantirardi — endi hintlar faqat tegishli savollar guruhiga lokal bog'landi.
+  2. *Passage sarlavhalari noto'g'ri tutilishi*: `PART_HEADER_RE` yo'riqnoma jumlalarini ("Reading Passage 2 has five sections, A-E.") sarlavha deb bilib savollar blokini buzardi — yo'riqnomalarni filtrlovchi regex himoya qo'yildi.
+  3. *Q38–40 ko'p tanlovli (Choose THREE) savollarning tushib qolishi*: `Questions 38-40: Choose THREE` sarlavhasi ostida alohida raqamlanmagan savollar bitta savolga qisqarib, 40 o'rniga 37 savol chiqardi — endi diapazonli topshiriqlar mustaqil ball keltiruvchi diskret pozitsiyalarga yoyiladi (40/40 to'liq).
+  4. *To'qima variantlar (fabricated options) yo'qotildi*: Kaliti bo'lgan lekin varianti bo'lmagan harfli savollarga soxta `["Option A", "Option B", ...]` to'qilishi bekor qilindi; noaniq savollar `needsReview: true` sifatida belgilandi.
+  5. *Ko'p matnli (Passage 1, 2, 3) yo'qolishi bartaraf etildi*: Avval faqat 1-passage matni saqlanib, 2 va 3-matnlar tushib qolardi — `passages` massivi orqali barcha 3 ta matn atomik tranzaksiyada tegishli guruhlarga saqlanadi.
+- **Ko'p tanlovli klasterlarni baholash** (`mock_scoring.py`): Q38–40 kabi guruhlarda ixtiyoriy tartibda kiritilgan to'g'ri tanlovlar (masalan, `['D', 'A', 'C']` -> 3/3 ball) to'liq hisoblanadi, dublikatlar (masalan, `['A', 'A', 'D']` -> 2 ball) tekshiriladi.
+- **Xavfsiz fayl ekstraktorlari**: HTML, PDF (`pypdf`), DOCX (xavfsiz `xml.etree.ElementTree` zip-ekstraktori) va TXT qo'llab-quvvatlandi. HTML ichidagi JavaScript kodlari aslo bajarilmaydi (xavfsiz).
+- **Yangi 3 bosqichli UI**:
+  1. *1-bosqich (Yuklash)*: Drag-and-drop / fayl tanlash (HTML, PDF, DOCX, TXT, Excel) va matn nusxalash (Paste).
+  2. *2-bosqich (Avtomatik tahlil va tekshirish)*: 3 ta passage, 40 ta savol, turlar taqsimoti, kalitlar to'liqligi, NEEDS REVIEW ogohlantirishlari va ustoz tomonidan bevosita tahrirlash.
+  3. *3-bosqich (Ko'rib chiqish va saqlash)*: Talaba ko'rinishidagi test prevyusi, 40/40 yaxlitlik tekshiruvi, mavjud talabalar urinishlariga ziyon yetkazmasdan atomik tranzaksiyali saqlash.
+  4. Excel shablon yuklab olish/yuklash va Yagona Audio/Timestamps funksiyalari to'liq saqlab qolindi.
+- **Tekshiruv**:
+  - Backend: `pytest tests/test_smart_import_v2.py` (16/16 passed, 100%), mock suite (91 passed, 1 skipped).
+  - Frontend: `npx tsc --noEmit` (0 xato), `vitest run src/design-system.spec.ts` (74/74 passed), `vitest run src/components/exam-builder` (17 fayl, 90 passed), to'liq Vitest (136 fayl, 900/900 passed), `npm run build` (Next.js 100 sahifa muvaffaqiyatli build qilindi).
+- **Git & PR**: Branch `fix/bestway-smart-import-v2`, commit `0939263` (`Komiljon Roziyev <kruziyev0@gmail.com>`), PR #212 ochildi (merge/deploy qilinmadi).
+
 ### 51-BLOK: Teacher Workspace 2.0 — oddiy o'qituvchi kabineti, bir ekranli davomat, veb uy vazifasi (2026-11-22) — branch `feat/bestway-teacher-workspace-2`
 - **O'qituvchi bosh sahifasi**: 4 ta asosiy amal (Davomat olish, Uy vazifasi berish, Guruhlarim, O'quvchilar natijalari) + kichik ko'rinish (bugungi guruhlar, kelganlar, faol vazifalar, tekshirish kerak, 7 kunlik muddatlar). Eski panel `/teacher/insights`, cohortlar `/teacher/cohorts`.
 - **Davomat (bir ekran)**: hech kim avtomatik "keldi" bo'lmaydi; "Hammasi keldi" — aniq tugma; faqat o'zgargan belgilar saqlanadi; eskirgan varaq 409 bilan rad etiladi; saqlangach Keldi/Kelmadi/Kechikdi xulosasi. Ota-ona/o'quvchi xabarlari commit'dan keyin. "Sababli" holati yo'q (Prisma enum).
