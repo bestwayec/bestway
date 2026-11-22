@@ -84,7 +84,7 @@ function Overview({ data }: { data: WorkspaceOverview }) {
       </dl>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4">
+        <Card className="min-w-0 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-fg"><CalendarCheck className="size-4 text-brand" />{t("home.todayTitle")}</h2>
           {data.groups.length === 0 ? (
             <EmptyState icon={Users} title={t("home.noGroups")} description={t("home.noGroupsHint")} />
@@ -96,7 +96,7 @@ function Overview({ data }: { data: WorkspaceOverview }) {
                 const done = g.attendance.marked > 0;
                 return (
                   <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-fg">{g.name}</p>
                       <p className="flex items-center gap-1 text-xs text-fg-muted">
                         <Clock className="size-3" />
@@ -115,7 +115,7 @@ function Overview({ data }: { data: WorkspaceOverview }) {
           )}
         </Card>
 
-        <Card className="p-4">
+        <Card className="min-w-0 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-fg"><ListChecks className="size-4 text-brand" />{t("home.deadlinesTitle")}</h2>
           {data.upcoming.length === 0 ? (
             <p className="text-sm text-fg-muted">{t("home.noDeadlines")}</p>
@@ -124,7 +124,7 @@ function Overview({ data }: { data: WorkspaceOverview }) {
               {data.upcoming.map((u) => (
                 <li key={`${u.kind}-${u.id}`}>
                   <Link href={`/teacher/results?kind=${u.kind}&id=${u.id}`} className="flex items-center justify-between gap-2 rounded-md py-2.5 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-fg">{u.title}</span>
                       <span className="block text-xs text-fg-muted">{u.groupName} · {t(`kind.${u.kind}`)}</span>
                     </span>

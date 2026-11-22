@@ -166,17 +166,43 @@ await s.goto(`${WEB}/homework/quiz/00000000-0000-4000-8000-000000000000`);
 ok(await s.getByText(/topilmadi/).first().waitFor({ timeout: 30000 }).then(() => true).catch(() => false), "negative: a student cannot open an assignment that is not theirs");
 
 // ================================================================== responsive screenshots
+// Page-level scrollWidth is not enough (an ancestor can clip): report any visible element in <main> whose box
+// extends past the viewport, unless it sits inside a deliberate horizontal scroller (overflow-x auto/scroll).
+const clipped = () => {
+  const vw = window.innerWidth;
+  for (const el of document.querySelectorAll("main *")) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || r.right <= vw + 1) continue;
+    let scroller = false;
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      if (["auto", "scroll"].includes(getComputedStyle(a).overflowX)) { scroller = true; break; }
+    }
+    if (!scroller) return `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 40)} right=${Math.round(r.right)}`;
+  }
+  return "";
+};
 for (const width of [360, 768, 1024]) {
   const ctx = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 2, storageState: await tctx.storageState() });
   const p = await ctx.newPage();
   await p.goto(`${WEB}/dashboard`); await p.getByTestId("tw-action-attendance").waitFor({ timeout: 60000 });
-  const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-  ok(!overflow, `responsive: no horizontal scroll on the dashboard at ${width}px`);
+  const overflow = await p.evaluate(clipped);
+  ok(!overflow, `responsive: nothing overflows or is clipped on the dashboard at ${width}px (${overflow || ""})`);
   await shot(p, `10-dashboard-${width}.png`);
   await p.goto(`${WEB}/teacher/attendance?group=${g1}`); await p.getByTestId("att-list").waitFor({ timeout: 60000 });
-  ok(!(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), `responsive: no horizontal scroll on attendance at ${width}px`);
+  ok(!(await p.evaluate(clipped)), `responsive: nothing overflows or is clipped on attendance at ${width}px`);
   if (width === 360) await p.screenshot({ path: join(OUT, "11-attendance-360.png") });   // viewport: sticky bars stay in place
+  for (const [path, testid] of [[`/teacher/assign?group=${g1}`, "hw-type-quiz"], [`/teacher/results?group=${g1}`, "hw-list"]]) {
+    await p.goto(`${WEB}${path}`); await p.getByTestId(testid).first().waitFor({ timeout: 60000 });
+    const bad = await p.evaluate(clipped);
+    ok(!bad, `responsive: nothing clipped on ${path.split("?")[0]} at ${width}px ${bad}`);
+  }
   await ctx.close();
+  const sc = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 2, storageState: await sctx.storageState() });
+  const sp = await sc.newPage();
+  await sp.goto(`${WEB}/homework`); await sp.getByTestId("hw-card").first().waitFor({ timeout: 60000 });
+  const bad = await sp.evaluate(clipped);
+  ok(!bad, `responsive: nothing clipped on the student homework page at ${width}px ${bad}`);
+  await sc.close();
 }
 
 ok(errors.length === 0, `no uncaught page errors (${errors.slice(0, 3).join(" | ")})`);
