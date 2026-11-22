@@ -671,8 +671,8 @@ export function useResolveImportIssue(examId: string) {
 
 export function useSmartParseQuestions() {
   return useMutation({
-    mutationFn: (body: {
-      text: string;
+    mutationFn: (body: FormData | {
+      text?: string;
       defaultSkill?: "reading" | "listening";
       examType?: string;
     }) => api.post<import("@/lib/types").SmartParseResult>("/mock/smart-parse", body),
@@ -687,6 +687,8 @@ export function useExamBulkImport(examId: string) {
       text?: string;
       questions?: unknown[];
       answers?: Record<string, string>;
+      passages?: unknown[];
+      parts?: unknown[];
       passageText?: string;
       instructions?: string;
       replaceExisting?: boolean;
@@ -711,6 +713,8 @@ export function useGroupBulkImport(examId: string) {
       text?: string;
       questions?: unknown[];
       answers?: Record<string, string>;
+      passages?: unknown[];
+      parts?: unknown[];
       passageText?: string;
       instructions?: string;
       replaceExisting?: boolean;

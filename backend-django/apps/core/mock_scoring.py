@@ -277,8 +277,77 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
         for group in section['groups']:
             qs = group['questions']; group_scores = []
             duplicate = duplicate_matching(qs,{qid:a.get('response','') for qid,a in answers.items()}) if group.get('optionsReusable') is False else set()
+
+            shared_clusters = {}
+            if auto:
+                from collections import defaultdict
+                grouped_by_keys = defaultdict(list)
+                for q in qs:
+                    keys = tuple(sorted(str(k).strip().upper() for k in (q.get('correctAnswers') or [])))
+                    if len(keys) >= 2 and q.get('points', 1) == 1 and q.get('type') in ('multi_select', 'multiple_choice'):
+                        grouped_by_keys[keys].append(q)
+                for keys, c_qs in grouped_by_keys.items():
+                    if len(c_qs) >= 2:
+                        for q in c_qs:
+                            shared_clusters[q['id']] = c_qs
+
+            cluster_handled = set()
             for q in qs:
                 agg['max'] += q['points']; agg['count'] += 1; answer = answers.get(q['id'])
+                if auto and q['id'] in shared_clusters:
+                    if q['id'] in cluster_handled:
+                        continue
+                    c_qs = shared_clusters[q['id']]
+                    cluster_handled.update(cq['id'] for cq in c_qs)
+
+                    raw_tokens = []
+                    any_cluster_answered = False
+                    for cq in c_qs:
+                        c_ans = answers.get(cq['id'])
+                        if c_ans and trim(c_ans.get('response', '')):
+                            any_cluster_answered = True
+                            agg['answered'] += 1
+                            r_val = c_ans.get('response', '')
+                            if trim(r_val).startswith('['):
+                                try:
+                                    parsed_arr = json.loads(r_val)
+                                    if isinstance(parsed_arr, list):
+                                        raw_tokens.extend(str(item) for item in parsed_arr if item)
+                                except Exception:
+                                    pass
+                            else:
+                                for part in re.split(r'[,;' + JS_SPACE + ']+', r_val):
+                                    if trim(part):
+                                        raw_tokens.append(trim(part))
+
+                    c_options = c_qs[0].get('options') or []
+                    matched_indices = []
+                    if c_options:
+                        expected_indices = [choice_index(k, c_options) for k in c_qs[0].get('correctAnswers') or [] if choice_index(k, c_options) is not None]
+                        for tok in raw_tokens:
+                            c_idx = choice_index(tok, c_options)
+                            if c_idx is not None and c_idx in expected_indices and c_idx not in matched_indices:
+                                matched_indices.append(c_idx)
+                    if not matched_indices:
+                        norm_keys = [strict_answer_text(k) for k in c_qs[0].get('correctAnswers') or []]
+                        for tok in raw_tokens:
+                            st = strict_answer_text(tok)
+                            if st in norm_keys and st not in matched_indices:
+                                matched_indices.append(st)
+
+                    for idx, cq in enumerate(c_qs):
+                        cq_ans = answers.get(cq['id'])
+                        if idx < len(matched_indices):
+                            cq_match = True
+                            cq_score = cq['points']
+                        else:
+                            cq_match = False
+                            cq_score = 0
+                        agg['score'] += cq_score
+                        if cq_ans or any_cluster_answered:
+                            projections[cq['id']] = dict(isCorrect=cq_match, score=cq_score, isGraded=True)
+                    continue
+
                 if auto:
                     if answer and trim(answer.get('response','')): agg['answered'] += 1
                     matches = bool(answer) and q['id'] not in duplicate and correct(q['type'],answer['response'],q.get('correctAnswers') or [],word_limit=q.get('wordLimit'),accepted_variants=q.get('acceptedVariants'),answer_rule=q.get('answerRule'),options=q.get('options'))

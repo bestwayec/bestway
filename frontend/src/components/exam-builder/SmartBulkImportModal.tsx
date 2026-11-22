@@ -2,15 +2,24 @@
 
 import * as React from "react";
 import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
   CheckCircle2,
   Clock,
   Download,
+  Eye,
   FileSpreadsheet,
   FileText,
   Headphones,
+  HelpCircle,
+  Layers,
   Loader2,
   Music,
   Play,
+  RotateCcw,
   Sparkles,
   Upload,
   Wand2,
@@ -43,12 +52,14 @@ import type {
   MockGroup,
   MockQuestionType,
   MockSkill,
+  SmartParsePart,
   SmartParseQuestion,
   SmartParseResult,
 } from "@/lib/types";
 import type { ImportedServerQuestion } from "./ImportPanel";
 
 export type SmartImportTab = "smart-text" | "excel" | "audio-timestamps";
+export type SmartImportStep = 1 | 2 | 3;
 
 interface SmartBulkImportModalProps {
   open: boolean;
@@ -68,7 +79,7 @@ const QUESTION_TYPE_BADGE: Record<
   { label: string; variant: "info" | "success" | "warning" | "neutral" | "brand" }
 > = {
   multiple_choice: { label: "Multiple Choice", variant: "info" },
-  multi_select: { label: "Multi-Select", variant: "info" },
+  multi_select: { label: "Multi-Select (Choose N)", variant: "info" },
   true_false_notgiven: { label: "TFNG", variant: "warning" },
   yes_no_notgiven: { label: "YNNG", variant: "warning" },
   matching: { label: "Matching", variant: "brand" },
@@ -81,31 +92,196 @@ const QUESTION_TYPE_BADGE: Record<
   map_labelling: { label: "Map Labelling", variant: "brand" },
 };
 
-const SAMPLE_SMART_TEXT = `PASSAGE 1
-The Rise of Urban Vertical Farming
-In recent decades, vertical farming has emerged as a promising solution to urban food security. By cultivating crops in vertically stacked layers indoors, growers can control light, humidity, and nutrients year-round.
+const SAMPLE_SMART_TEXT = `READING PASSAGE 1
+The Secrets of Ancient Water Management
+In ancient arid regions, ancient engineers developed underground aqueduct systems known as qanats. These ingenious gravity-fed channels transported fresh mountain water across miles of desert without evaporation losses.
 
-1. What is the main advantage of vertical farming mentioned in the text?
-A) Lower electricity consumption
-B) Year-round climate control indoors
-C) Reduced need for trained staff
-D) Free municipal water supply
+Questions 1-5
+Do the following statements agree with the information given in Reading Passage 1?
+TRUE        if the statement agrees with the information
+FALSE       if the statement contradicts the information
+NOT GIVEN   if there is no information on this
 
-2. Vertical farms require more land than traditional farms.
-TRUE / FALSE / NOT GIVEN
+1. Qanats were designed to transport water above open surface ground.
+2. Evaporation was minimized by keeping the water flow underground.
+3. The construction of qanats required specialized surveyors.
+4. Qanat networks were only built in Mediterranean regions.
+5. Modern cities have completely abandoned historic qanat technology.
 
-3. Crops are grown in ___ stacked layers indoors.
+Questions 6-10
+Complete the sentences below.
+Choose ONE WORD ONLY from the passage for each answer.
 
-4. Match the feature with the correct category:
-A) LED Lighting
-B) Hydroponic roots
-C) Urban distribution
+6. The channels depended strictly on ___ to move water down slopes.
+7. Fresh water was primarily sourced from melting snow in the ___.
+8. Underground systems prevented water loss from desert ___.
+9. Vertical shafts provided essential ___ for workers digging tunnels.
+10. Local communities shared water rights based on carefully timed ___.
+
+Questions 11-13
+Choose the correct letter, A, B, C or D.
+
+11. What was the primary motivation for constructing qanats?
+A) Generating mechanical power for grain mills
+B) Securing clean drinking and irrigation water in dry climates
+C) Creating defensive underground escape routes
+D) Establishing commercial shipping waterways
+
+12. Maintenance of vertical access shafts was vital because they
+A) functioned as trade market stalls
+B) allowed workers to remove accumulated silt and debris
+C) stored emergency reserves during famines
+D) attracted tourist visitors to the region
+
+13. According to the text, the historical significance of qanats lies in their
+A) sustainable engineering adapted to extreme environments
+B) exclusive use of imported building metals
+C) high operational energy consumption
+D) rapid replacement by steam engine pumps
+
+READING PASSAGE 2
+The Neurobiology of Bilingual Cognition
+Recent cognitive neuroscience reveals that bilingual individuals maintain both languages active simultaneously. This dual activation stimulates neuroplasticity, bolstering executive functions such as task-switching and conflict resolution.
+
+Questions 14-18
+Reading Passage 2 has five sections, A-E.
+Which section contains the following information?
+
+14. Evidence of delayed onset of cognitive decline symptoms
+15. Neurological imaging techniques used during linguistic tests
+16. The mental effort required to suppress irrelevant language interference
+17. Behavioral advantages observed in multi-tasking experiments
+18. Historical misconceptions regarding childhood multilingualism
+
+Questions 19-22
+Look at the following researchers and the list of findings below.
+Match each researcher with the correct finding, A-F.
+
+19. Dr. Elena Vance
+20. Prof. Marcus Thorne
+21. Dr. Sophia Chen
+22. Prof. David Miller
+
+List of Findings:
+A) Early dual language exposure improves inhibitory brain control
+B) Bilingual seniors show superior spatial memory in navigation tasks
+C) Language switching recruits the prefrontal cortex extensively
+D) Monolinguals exhibit identical reaction times in simple visual tasks
+E) Brain reserve mitigates visible dementia symptoms for up to five years
+F) Vocabulary size in early childhood is initially divided between languages
+
+Questions 23-26
+Complete the summary below.
+Choose NO MORE THAN TWO WORDS from the passage for each answer.
+
+Neuroscientists utilizing functional magnetic resonance imaging have demonstrated that speaking two languages exercises the brain's 23. ___ control network. The constant need to resolve linguistic 24. ___ strengthens neural pathways. Consequently, bilingual individuals develop enhanced 25. ___ flexibility. This biological adaptation provides substantial 26. ___ against age-related degeneration.
+
+READING PASSAGE 3
+The Economics of Renewable Energy Transitions
+Transitioning national power grids to 100% renewable electricity presents complex socioeconomic and technical hurdles. Variable generation from solar photovoltaics and wind turbines necessitates robust energy storage, decentralized distribution networks, and modern grid balancing protocols.
+
+Questions 27-31
+Do the following statements agree with the claims of the writer in Reading Passage 3?
+YES         if the statement agrees with the claims of the writer
+NO          if the statement contradicts the claims of the writer
+NOT GIVEN   if it is impossible to say what the writer thinks about this
+
+27. Renewable energy costs have plummeted faster than most initial economic models forecast.
+28. Grid balancing becomes easier as the share of intermittent renewables rises.
+29. Utility-scale battery installations will eliminate all fossil fuel peaker plants by next year.
+30. Transmission infrastructure investments frequently lag behind generation capacity growth.
+31. Developing economies require customized financial models rather than copied Western policies.
+
+Questions 32-37
+Choose the correct letter, A, B, C or D.
+
+32. The primary vulnerability of isolated solar grids is their
+A) total reliance on rare earth minerals
+B) intermittency during prolonged overcast weather
+C) excessive operating personnel requirements
+D) vulnerability to seasonal river flooding
+
+33. Pumped hydroelectric storage is described as
+A) an obsolete technology superseded by lithium batteries
+B) the largest proven method for long-duration bulk storage
+C) too costly to operate in mountainous terrain
+D) unsuitable for integration with wind farms
+
+34. Dynamic electricity pricing aims to
+A) shift industrial consumption towards peak generation hours
+B) subsidize unprofitable traditional power stations
+C) eliminate retail consumer metering equipment
+D) protect private utility monopolies from competition
+
+35. The author emphasizes that decentralized energy production
+A) inevitably leads to widespread blackout risks
+B) empowers local communities and reduces transmission line losses
+C) increases wholesale administrative overheads tenfold
+D) requires constant manual supervision by regional engineers
+
+36. Regulatory reform is highlighted as necessary to
+A) prevent private consumers from installing rooftop solar panels
+B) streamline cross-border interconnectors and grid modernization
+C) mandate uniform coal production quotas across all provinces
+D) eliminate all environmental impact assessments for new dams
+
+37. What is the author's overall conclusion regarding the energy transition?
+A) The transition is technically unfeasible and should be abandoned
+B) Success hinges on systemic coordination between storage, transmission, and policy
+C) Nuclear energy will completely displace solar and wind before 2040
+D) Free market forces alone will resolve grid stability without government intervention
+
+Questions 38-40
+Choose THREE letters, A-G.
+Which THREE factors are identified by the author as essential for achieving 100% renewable grid stability?
+
+A) Rapid expansion of high-voltage direct current (HVDC) transmission lines
+B) Continued heavy subsidies for offshore deep-sea oil drilling
+C) Long-duration bulk energy storage solutions such as pumped hydro and flow batteries
+D) Artificial intelligence-driven predictive demand-response software
+E) Banning residential electric heat pump installations
+F) Complete nationalization of all retail electrical appliance manufacturers
+G) Immediate shutdown of all international power trading interconnections
 
 Answers:
-1: B
-2: FALSE
-3: vertically
-4: A`;
+1: FALSE
+2: TRUE
+3: NOT GIVEN
+4: FALSE
+5: FALSE
+6: gravity
+7: mountains
+8: evaporation
+9: ventilation
+10: quotas
+11: B
+12: B
+13: A
+14: E
+15: C
+16: A
+17: B
+18: F
+19: A
+20: C
+21: E
+22: B
+23: executive
+24: competition
+25: cognitive
+26: resilience
+27: YES
+28: NO
+29: NO
+30: YES
+31: YES
+32: B
+33: B
+34: A
+35: B
+36: B
+37: B
+38-40: A, C, D`;
 
 function formatSecondsToMmSs(sec: number): string {
   const safe = Math.max(0, Math.floor(Number(sec) || 0));
@@ -153,13 +329,23 @@ export function SmartBulkImportModal({
   );
   const [replaceExisting, setReplaceExisting] = React.useState(false);
 
-  // Tab 1: Smart Text Parser state
+  // Smart Import V2: 3-step workflow state
+  const [currentStep, setCurrentStep] = React.useState<SmartImportStep>(1);
+  const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
   const [rawText, setRawText] = React.useState("");
+  const [showPasteArea, setShowPasteArea] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  // Analysis & Edit state
   const [parseResult, setParseResult] = React.useState<SmartParseResult | null>(null);
   const [editableQuestions, setEditableQuestions] = React.useState<SmartParseQuestion[]>([]);
   const [editableAnswers, setEditableAnswers] = React.useState<Record<string, string>>({});
-  const [editablePassage, setEditablePassage] = React.useState("");
+  const [editablePassages, setEditablePassages] = React.useState<SmartParsePart[]>([]);
   const [editableInstructions, setEditableInstructions] = React.useState("");
+  const [activePassageTab, setActivePassageTab] = React.useState<number>(1);
+  const [filterNeedsReviewOnly, setFilterNeedsReviewOnly] = React.useState(false);
+
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Tab 2: Excel / CSV state
   const [excelFile, setExcelFile] = React.useState<File | null>(null);
@@ -204,6 +390,7 @@ export function SmartBulkImportModal({
       setActiveTab(defaultTab);
       setSkill(defaultSkill === "listening" ? "listening" : "reading");
       setTargetScope(groupId ? "group" : "exam");
+      setCurrentStep(1);
     }
   }, [open, defaultTab, defaultSkill, groupId]);
 
@@ -238,33 +425,74 @@ export function SmartBulkImportModal({
     [localAudioUrl],
   );
 
-  async function handleSmartParse() {
-    if (!rawText.trim()) {
-      toast.error("Avval savollar matnini kiriting");
+  // Trigger analysis from uploaded file or pasted text
+  async function handleAnalyze() {
+    if (!uploadedFile && !rawText.trim()) {
+      toast.error("Iltimos, avval fayl yuklang yoki matn kiriting");
       return;
     }
+
     try {
-      const res = await smartParseMut.mutateAsync({
-        text: rawText,
-        defaultSkill: skill,
-        examType,
-      });
+      let res: SmartParseResult;
+      if (uploadedFile) {
+        const form = new FormData();
+        form.append("file", uploadedFile);
+        form.append("defaultSkill", skill);
+        form.append("examType", examType);
+        res = await smartParseMut.mutateAsync(form);
+      } else {
+        res = await smartParseMut.mutateAsync({
+          text: rawText,
+          defaultSkill: skill,
+          examType,
+        });
+      }
+
       setParseResult(res);
       setEditableQuestions(res.questions ?? []);
       setEditableAnswers(res.answers ?? {});
-      setEditablePassage(res.passageText ?? "");
       setEditableInstructions(res.instructions ?? "");
-      toast.success(`${res.questions?.length ?? 0} ta savol muvaffaqiyatli ajratildi!`);
+
+      const parts = res.passages || res.parts || [];
+      if (parts.length > 0) {
+        setEditablePassages(parts);
+      } else if (res.passageText) {
+        setEditablePassages([
+          {
+            partNumber: 1,
+            title: "Passage 1",
+            passageText: res.passageText,
+            questions: res.questions ?? [],
+          },
+        ]);
+      } else {
+        setEditablePassages([]);
+      }
+
+      const qCount = res.questions?.length ?? 0;
+      const reviewCount = res.summary?.needsReviewCount ?? (res.needsReview?.length || 0);
+
+      if (reviewCount > 0) {
+        toast.warning(
+          `${qCount} ta savol ajratildi. ${reviewCount} ta savolda diqqat talab etiladi (Needs Review).`,
+        );
+      } else {
+        toast.success(`${qCount} ta savol va matnlar muvaffaqiyatli ajratildi!`);
+      }
+
+      setCurrentStep(2);
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Matnni tahlil qilishda xatolik yuz berdi");
+      toast.error(e instanceof ApiError ? e.message : "Faylni tahlil qilishda xatolik yuz berdi");
     }
   }
 
+  // Commit and save import
   async function handleCommitSmartImport() {
     if (editableQuestions.length === 0) {
       toast.error("Saqlash uchun kamida 1 ta savol bo'lishi kerak");
       return;
     }
+
     try {
       const preparedQuestions = editableQuestions.map((q) => {
         const ans = editableAnswers[String(q.number)]?.trim();
@@ -282,26 +510,28 @@ export function SmartBulkImportModal({
       if (targetScope === "group" && groupId) {
         const res = await groupBulkMut.mutateAsync({
           groupId,
-          text: rawText,
+          text: rawText || undefined,
           questions: preparedQuestions,
           answers: editableAnswers,
-          passageText: editablePassage || undefined,
+          passages: editablePassages.length > 0 ? editablePassages : undefined,
+          passageText: editablePassages[0]?.passageText || undefined,
           instructions: editableInstructions || undefined,
           replaceExisting,
         });
-        toast.success(`${res.added ?? preparedQuestions.length} ta savol guruhga saqlandi!`);
+        toast.success(`${res.added ?? preparedQuestions.length} ta savol guruhga muvaffaqiyatli saqlandi!`);
         onImported?.(res.questions as ImportedServerQuestion[] | undefined);
       } else {
         const res = await examBulkMut.mutateAsync({
           skill,
-          text: rawText,
+          text: rawText || undefined,
           questions: preparedQuestions,
           answers: editableAnswers,
-          passageText: editablePassage || undefined,
+          passages: editablePassages.length > 0 ? editablePassages : undefined,
+          passageText: editablePassages[0]?.passageText || undefined,
           instructions: editableInstructions || undefined,
           replaceExisting,
         });
-        toast.success(`${res.added ?? preparedQuestions.length} ta savol imtihonga saqlandi!`);
+        toast.success(`${res.added ?? preparedQuestions.length} ta savol imtihonga to'liq saqlandi!`);
         onImported?.(res.questions as ImportedServerQuestion[] | undefined);
       }
       onOpenChange(false);
@@ -310,6 +540,7 @@ export function SmartBulkImportModal({
     }
   }
 
+  // Excel handlers
   async function handleDownloadExcelTemplate() {
     setDownloadingTemplate(true);
     try {
@@ -357,6 +588,7 @@ export function SmartBulkImportModal({
     }
   }
 
+  // Audio timestamps handlers
   async function handleSaveTimestamps() {
     const timestamps: AudioTimestampItem[] = timestampRows.map((row) => ({
       partNumber: row.partNumber,
@@ -391,32 +623,88 @@ export function SmartBulkImportModal({
 
   const playableAudioSrc =
     localAudioUrl ||
-    (timestampsQ.data?.audioUrl ? `/api/backend${timestampsQ.data.audioUrl.startsWith("/") ? "" : "/"}${timestampsQ.data.audioUrl}` : null);
+    (timestampsQ.data?.audioUrl
+      ? `/api/backend${timestampsQ.data.audioUrl.startsWith("/") ? "" : "/"}${timestampsQ.data.audioUrl}`
+      : null);
+
+  // Derived metrics for Review and Preview
+  const totalQuestions = editableQuestions.length;
+  const questionsWithAnswers = editableQuestions.filter(
+    (q) => editableAnswers[String(q.number)]?.trim(),
+  ).length;
+  const needsReviewList = editableQuestions.filter((q) => q.needsReview);
+  const isCompleteIeltsReading =
+    examType !== "multilevel" && skill === "reading" && totalQuestions === 40;
+
+  const filteredQuestions = filterNeedsReviewOnly ? needsReviewList : editableQuestions;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-border bg-surface">
+      <DialogContent className="max-w-5xl p-0 overflow-hidden border-border bg-surface shadow-2xl">
+        {/* Header with Badges */}
         <DialogHeader className="border-b border-border bg-bg-subtle/80 px-6 pt-5 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Badge variant="brand" className="gap-1">
+              <Badge variant="brand" className="gap-1 font-semibold">
                 <Sparkles className="size-3.5" />
-                Tezkor Kiritish v0.8
+                Smart Import v2.0
               </Badge>
               <Badge variant="info">
                 {examType === "multilevel" ? "Multi-Level (0–75)" : "IELTS Academic / General"}
               </Badge>
               {groupLabel && <Badge variant="neutral">{groupLabel}</Badge>}
             </div>
+            {activeTab === "smart-text" && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-fg-muted">Bosqich:</span>
+                <div className="flex items-center gap-1">
+                  <span
+                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
+                      currentStep === 1
+                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
+                        : currentStep > 1
+                          ? "bg-success text-fg"
+                          : "bg-bg-subtle text-fg-muted"
+                    }`}
+                  >
+                    1
+                  </span>
+                  <div className="h-0.5 w-4 bg-border" />
+                  <span
+                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
+                      currentStep === 2
+                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
+                        : currentStep > 2
+                          ? "bg-success text-fg"
+                          : "bg-bg-subtle text-fg-muted"
+                    }`}
+                  >
+                    2
+                  </span>
+                  <div className="h-0.5 w-4 bg-border" />
+                  <span
+                    className={`flex size-6 items-center justify-center rounded-full text-xs font-bold transition ${
+                      currentStep === 3
+                        ? "bg-brand text-brand-fg ring-2 ring-brand/30"
+                        : "bg-bg-subtle text-fg-muted"
+                    }`}
+                  >
+                    3
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
+
           <DialogTitle className="mt-1.5 text-lg font-bold text-fg">
-            Savollarni Ommaviy Kiritish (Smart Text / Excel / Yagona Audio)
+            Savollarni Ommaviy Kiritish (Smart Import V2 / Excel / Audio)
           </DialogTitle>
           <DialogDescription className="text-xs text-fg-muted">
-            40 tagacha savolni Word/PDF matnidan avtomatik ajratib olish, Excel (.xlsx) shablondan yuklash yoki Listening uchun yagona audio fayl vaqtlari (timestamps) ni belgilash.
+            HTML, PDF, DOCX, TXT yoki Excel fayldan barcha savollar va reading matnlarini avtomatik
+            ajratish va xavfsiz import qilish.
           </DialogDescription>
 
-          {/* Tabs */}
+          {/* Top navigation tabs */}
           <div className="mt-3 flex flex-wrap gap-1.5 rounded-xl border border-border bg-bg p-1">
             <button
               type="button"
@@ -428,7 +716,7 @@ export function SmartBulkImportModal({
               }`}
             >
               <Wand2 className="size-3.5" />
-              <span>1. Smart Text Parser</span>
+              <span>1. Smart Import V2 (HTML, PDF, DOCX, TXT)</span>
             </button>
             <button
               type="button"
@@ -457,8 +745,8 @@ export function SmartBulkImportModal({
           </div>
         </DialogHeader>
 
-        <DialogBody className="max-h-[72vh] overflow-y-auto px-6 py-4 space-y-4">
-          {/* Common scope controls for Tab 1 & Tab 2 */}
+        <DialogBody className="max-h-[74vh] overflow-y-auto px-6 py-4 space-y-4">
+          {/* Scope & Skill Controls */}
           {activeTab !== "audio-timestamps" && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-bg-subtle/60 p-3">
               <div className="flex flex-wrap items-center gap-3">
@@ -483,7 +771,7 @@ export function SmartBulkImportModal({
                       className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-fg"
                     >
                       <option value="group">Faqat joriy qismga ({groupLabel || "Group"})</option>
-                      <option value="exam">Butun {skill} bo&apos;limiga (Partlarga bo&apos;lib)</option>
+                      <option value="exam">Butun {skill} bo&apos;limiga (Passage/Partlarga bo&apos;lib)</option>
                     </select>
                   </label>
                 )}
@@ -496,125 +784,328 @@ export function SmartBulkImportModal({
                   onChange={(e) => setReplaceExisting(e.target.checked)}
                   className="size-4 rounded border-border accent-brand"
                 />
-                <span>Mavjud savollarni almashtirish (Replace)</span>
+                <span>Mavjud savollarni almashtirish (Replace existing)</span>
               </label>
             </div>
           )}
 
-          {/* TAB 1: SMART TEXT PARSER */}
+          {/* TAB 1: SMART IMPORT V2 (3-STEP WIZARD) */}
           {activeTab === "smart-text" && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="smart-raw-text" className="text-xs font-bold uppercase tracking-wider text-fg-muted">
-                    Word yoki PDF dan ko&apos;chirilgan matn (Passage + 1..40 Savollar + Answers)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setRawText(SAMPLE_SMART_TEXT)}
-                      className="h-7 text-xs"
-                    >
-                      <FileText className="size-3.5 mr-1" />
-                      Namuna matn qo&apos;yish
-                    </Button>
-                    {rawText && (
+              {/* STEP 1: UPLOAD */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  {/* Drag-and-drop zone */}
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        setUploadedFile(file);
+                        toast.info(`Fayl tanlandi: ${file.name}`);
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
+                      isDragging
+                        ? "border-brand bg-brand/5 shadow-inner"
+                        : uploadedFile
+                          ? "border-brand/60 bg-bg-subtle/50"
+                          : "border-border-strong hover:border-brand/60 bg-bg-subtle/20"
+                    }`}
+                  >
+                    <div className="flex size-14 items-center justify-center rounded-full bg-brand/10 text-brand">
+                      <Upload className="size-7" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-bold text-fg">
+                      Faylni shu yerga tashlang yoki tanlang
+                    </h3>
+                    <p className="mt-1 text-xs text-fg-muted max-w-md">
+                      Qo&apos;llab-quvvatlanadi: <strong>HTML</strong>, <strong>PDF</strong>,{" "}
+                      <strong>DOCX</strong>, <strong>TXT</strong> va <strong>Excel (.xlsx)</strong>
+                    </p>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".html,.htm,.pdf,.docx,.txt,.xlsx,.xls,.csv"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setUploadedFile(file);
+                          toast.info(`Fayl tanlandi: ${file.name}`);
+                        }
+                      }}
+                    />
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="size-4 mr-1.5" />
+                        {uploadedFile ? "Boshqa fayl tanlash" : "Fayl tanlash"}
+                      </Button>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          setRawText("");
-                          setParseResult(null);
-                          setEditableQuestions([]);
-                        }}
-                        className="h-7 text-xs text-fg-muted"
+                        onClick={() => setShowPasteArea(!showPasteArea)}
                       >
-                        Tozalash
+                        <FileText className="size-4 mr-1.5" />
+                        {showPasteArea ? "Matn oynasini yopish" : "Matn nusxalash (Paste)"}
                       </Button>
+                    </div>
+
+                    {uploadedFile && (
+                      <div className="mt-4 flex items-center gap-2 rounded-xl border border-brand/40 bg-brand/10 px-4 py-2 text-xs font-semibold text-fg">
+                        <CheckCircle2 className="size-4 text-brand" />
+                        <span>{uploadedFile.name}</span>
+                        <span className="text-fg-muted">
+                          ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUploadedFile(null);
+                          }}
+                          className="ml-2 text-fg-muted hover:text-danger text-xs font-bold"
+                          title="Faylni olib tashlash"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     )}
                   </div>
-                </div>
 
-                <Textarea
-                  id="smart-raw-text"
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder="1. Savol matni...\nA) Variant 1\nB) Variant 2\nC) Variant 3\n\n2. True/False savol...\nTRUE / FALSE / NOT GIVEN\n\nAnswers:\n1: B\n2: TRUE"
-                  className="min-h-44 font-mono text-xs leading-relaxed"
-                />
+                  {/* Collapsible / Optional Paste-Text Area */}
+                  {showPasteArea && (
+                    <div className="space-y-2 rounded-xl border border-border bg-bg-subtle/30 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label
+                          htmlFor="smart-raw-text"
+                          className="text-xs font-bold uppercase tracking-wider text-fg-muted"
+                        >
+                          Matn nusxasi (Passage + 1..40 Savollar + Answers)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setRawText(SAMPLE_SMART_TEXT);
+                              setUploadedFile(null);
+                            }}
+                            className="h-7 text-xs"
+                          >
+                            <Sparkles className="size-3.5 mr-1 text-brand" />
+                            Namuna 40-savollik IELTS test
+                          </Button>
+                          {rawText && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setRawText("")}
+                              className="h-7 text-xs text-fg-muted"
+                            >
+                              Tozalash
+                            </Button>
+                          )}
+                        </div>
+                      </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[11px] text-fg-subtle">
-                    Avto-aniqlash: Multiple Choice (A–D), TFNG / YNNG, Matching va Bo&apos;sh joyni to&apos;ldirish (___).
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => void handleSmartParse()}
-                    loading={smartParseMut.isPending}
-                  >
-                    <Wand2 className="size-4 mr-1.5" />
-                    Matnni tahlil qilish (Parse)
-                  </Button>
-                </div>
-              </div>
-
-              {parseResult && (
-                <div className="space-y-3 rounded-xl border border-brand/30 bg-bg-subtle/40 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 text-brand" />
-                      <span className="text-sm font-bold text-fg">
-                        Tahlil natijasi: {editableQuestions.length} ta savol topildi
-                      </span>
+                      <Textarea
+                        id="smart-raw-text"
+                        value={rawText}
+                        onChange={(e) => {
+                          setRawText(e.target.value);
+                          if (e.target.value.trim()) setUploadedFile(null);
+                        }}
+                        placeholder="READING PASSAGE 1&#10;Matn sarlavhasi...&#10;&#10;1. Savol matni...&#10;A) Variant 1&#10;B) Variant 2&#10;&#10;Answers:&#10;1: B"
+                        className="min-h-48 font-mono text-xs leading-relaxed"
+                      />
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(
-                        editableQuestions.reduce<Record<string, number>>((acc, q) => {
-                          acc[q.type] = (acc[q.type] ?? 0) + 1;
-                          return acc;
-                        }, {}),
-                      ).map(([type, count]) => {
-                        const meta = QUESTION_TYPE_BADGE[type] ?? {
-                          label: type,
-                          variant: "neutral" as const,
-                        };
-                        return (
-                          <Badge key={type} variant={meta.variant}>
-                            {meta.label}: {count}
+                  )}
+
+                  {/* Safety & feature notice */}
+                  <div className="rounded-xl border border-border bg-bg-subtle/40 p-3 text-xs text-fg-muted space-y-1">
+                    <p className="flex items-center gap-1.5 font-semibold text-fg">
+                      <Sparkles className="size-3.5 text-brand" />
+                      Smart Import V2 imkoniyatlari:
+                    </p>
+                    <ul className="list-disc list-inside space-y-0.5 pl-1 text-[11px]">
+                      <li>IELTS 3 ta Passage va 40 ta savolni to&apos;liq ajratadi va saqlaydi</li>
+                      <li>TFNG, YNNG, Matching Headings, Features va Multi-select turlarini aniq ajratadi</li>
+                      <li>Q38–40 &ldquo;Choose THREE&rdquo; guruhini 3 ta mustaqil ball keltiruvchi savol sifatida saqlaydi</li>
+                      <li>Noma&apos;lum yoki tushunarsiz savollarni <strong>NEEDS REVIEW</strong> sifatida belgilaydi</li>
+                      <li>Xavfsiz: HTML ichidagi JavaScript kodlari aslo bajarilmaydi</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: AUTOMATIC ANALYSIS & REVIEW */}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  {/* Status & Summary header */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-bg-subtle/50 p-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-fg flex items-center gap-2">
+                        <CheckCircle2 className="size-4 text-success" />
+                        Tahlil Natijasi: {totalQuestions} ta savol ajratildi
+                        {isCompleteIeltsReading && (
+                          <Badge variant="success" className="ml-1 text-[11px]">
+                            To&apos;liq 40/40 IELTS Reading
                           </Badge>
-                        );
-                      })}
+                        )}
+                      </h4>
+                      <p className="text-xs text-fg-muted mt-0.5">
+                        {editablePassages.length > 0
+                          ? `${editablePassages.length} ta Passage aniqlandi. `
+                          : "Yagona matn. "}
+                        {questionsWithAnswers} / {totalQuestions} savol javob kalitiga ega.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {needsReviewList.length > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={filterNeedsReviewOnly ? "primary" : "outline"}
+                          onClick={() => setFilterNeedsReviewOnly(!filterNeedsReviewOnly)}
+                          className="text-xs h-8"
+                        >
+                          <AlertTriangle className="size-3.5 mr-1 text-warning" />
+                          Diqqat talab ({needsReviewList.length})
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCurrentStep(1)}
+                        className="text-xs h-8"
+                      >
+                        <RotateCcw className="size-3.5 mr-1" />
+                        Boshqa fayl
+                      </Button>
                     </div>
                   </div>
 
-                  {editablePassage && (
-                    <Field label="Ajratib olingan Reading matni (Passage)" htmlFor="smart-passage">
-                      <Textarea
-                        id="smart-passage"
-                        value={editablePassage}
-                        onChange={(e) => setEditablePassage(e.target.value)}
-                        className="min-h-24 text-xs"
-                      />
-                    </Field>
+                  {/* Passages Accordion / Tabs */}
+                  {editablePassages.length > 0 && (
+                    <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                        <div className="flex items-center gap-1.5 font-bold text-xs uppercase text-fg-muted">
+                          <BookOpen className="size-4 text-brand" />
+                          <span>Reading Matnlari (Passages)</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {editablePassages.map((p) => (
+                            <button
+                              key={p.partNumber}
+                              type="button"
+                              onClick={() => setActivePassageTab(p.partNumber)}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                                activePassageTab === p.partNumber
+                                  ? "bg-brand text-brand-fg"
+                                  : "bg-bg-subtle text-fg-muted hover:text-fg"
+                              }`}
+                            >
+                              Passage {p.partNumber}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {editablePassages
+                        .filter((p) => p.partNumber === activePassageTab)
+                        .map((p, idx) => (
+                          <div key={p.partNumber} className="space-y-2">
+                            <Input
+                              value={p.title || `Passage ${p.partNumber}`}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditablePassages((prev) =>
+                                  prev.map((item) =>
+                                    item.partNumber === p.partNumber
+                                      ? { ...item, title: val }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                              placeholder="Passage sarlavhasi..."
+                              className="h-8 text-xs font-bold"
+                            />
+                            <Textarea
+                              value={p.passageText || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditablePassages((prev) =>
+                                  prev.map((item) =>
+                                    item.partNumber === p.partNumber
+                                      ? { ...item, passageText: val }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                              placeholder="Passage to'liq matni..."
+                              className="min-h-28 text-xs font-serif leading-relaxed"
+                            />
+                          </div>
+                        ))}
+                    </div>
                   )}
 
-                  {/* Interactive preview table */}
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-border bg-surface">
+                  {/* Question Type Breakdown */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(
+                      editableQuestions.reduce<Record<string, number>>((acc, q) => {
+                        acc[q.type] = (acc[q.type] ?? 0) + 1;
+                        return acc;
+                      }, {}),
+                    ).map(([type, count]) => {
+                      const meta = QUESTION_TYPE_BADGE[type] ?? {
+                        label: type,
+                        variant: "neutral" as const,
+                      };
+                      return (
+                        <Badge key={type} variant={meta.variant} className="text-xs">
+                          {meta.label}: {count}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+
+                  {/* Interactive questions editing table */}
+                  <div className="max-h-80 overflow-y-auto rounded-xl border border-border bg-surface">
                     <table className="w-full text-left text-xs">
-                      <thead className="sticky top-0 border-b border-border bg-bg-subtle text-[11px] font-bold uppercase text-fg-muted">
+                      <thead className="sticky top-0 border-b border-border bg-bg-subtle text-[11px] font-bold uppercase text-fg-muted z-10">
                         <tr>
                           <th className="px-3 py-2 w-14">#</th>
-                          <th className="px-3 py-2 w-40">Savol turi</th>
+                          <th className="px-3 py-2 w-44">Savol turi</th>
                           <th className="px-3 py-2">Savol matni va variantlar</th>
                           <th className="px-3 py-2 w-36">To&apos;g&apos;ri javob</th>
+                          <th className="px-3 py-2 w-28 text-center">Holat</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {editableQuestions.map((q, idx) => {
+                        {filteredQuestions.map((q, idx) => {
                           const ansVal =
                             editableAnswers[String(q.number)] ??
                             (q.correctAnswers && q.correctAnswers.length > 0
@@ -625,7 +1116,12 @@ export function SmartBulkImportModal({
                             variant: "neutral" as const,
                           };
                           return (
-                            <tr key={`${q.number}-${idx}`} className="hover:bg-surface-hover/60">
+                            <tr
+                              key={`${q.number}-${idx}`}
+                              className={`hover:bg-surface-hover/60 ${
+                                q.needsReview ? "bg-warning/5" : ""
+                              }`}
+                            >
                               <td className="px-3 py-2 font-bold tabular-nums text-fg">
                                 Q{q.number}
                               </td>
@@ -635,8 +1131,10 @@ export function SmartBulkImportModal({
                                   onChange={(e) => {
                                     const nextType = e.target.value as MockQuestionType;
                                     setEditableQuestions((prev) =>
-                                      prev.map((item, i) =>
-                                        i === idx ? { ...item, type: nextType } : item,
+                                      prev.map((item) =>
+                                        item.number === q.number
+                                          ? { ...item, type: nextType }
+                                          : item,
                                       ),
                                     );
                                   }}
@@ -654,25 +1152,27 @@ export function SmartBulkImportModal({
                                   </Badge>
                                 </div>
                               </td>
-                              <td className="px-3 py-2">
+                              <td className="px-3 py-2 space-y-1">
                                 <Input
                                   value={q.prompt}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     setEditableQuestions((prev) =>
-                                      prev.map((item, i) =>
-                                        i === idx ? { ...item, prompt: val } : item,
+                                      prev.map((item) =>
+                                        item.number === q.number
+                                          ? { ...item, prompt: val }
+                                          : item,
                                       ),
                                     );
                                   }}
                                   className="h-8 text-xs"
                                 />
                                 {q.options && q.options.length > 0 && (
-                                  <div className="mt-1 flex flex-wrap gap-1">
+                                  <div className="flex flex-wrap gap-1">
                                     {q.options.map((opt, oi) => (
                                       <span
                                         key={oi}
-                                        className="rounded bg-bg-subtle px-1.5 py-0.5 text-[11px] text-fg-muted"
+                                        className="rounded bg-bg-subtle px-1.5 py-0.5 text-[10px] text-fg-muted"
                                       >
                                         <strong>{String.fromCharCode(65 + oi)})</strong> {opt}
                                       </span>
@@ -692,15 +1192,156 @@ export function SmartBulkImportModal({
                                     }));
                                   }}
                                   className={`h-8 text-xs font-semibold ${
-                                    !ansVal.trim() ? "border-warning" : "border-brand/40"
+                                    !ansVal.trim()
+                                      ? "border-warning bg-warning/5"
+                                      : "border-brand/40"
                                   }`}
                                 />
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                {q.needsReview ? (
+                                  <Badge
+                                    variant="warning"
+                                    className="text-[10px] gap-1 cursor-help"
+                                    title={q.reviewReason || "Tekshirish zarur"}
+                                  >
+                                    <AlertTriangle className="size-3" />
+                                    Review
+                                  </Badge>
+                                ) : ansVal.trim() ? (
+                                  <Badge variant="success" className="text-[10px] gap-1">
+                                    <CheckCircle2 className="size-3" />
+                                    Tayyor
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="neutral" className="text-[10px]">
+                                    Javobsiz
+                                  </Badge>
+                                )}
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: PREVIEW AND SAVE */}
+              {currentStep === 3 && (
+                <div className="space-y-4">
+                  {/* Summary Overview Card */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
+                      <span className="text-xs text-fg-muted font-medium">Reading Matnlari</span>
+                      <p className="text-xl font-bold text-fg">
+                        {editablePassages.length > 0 ? editablePassages.length : 1} ta Passage
+                      </p>
+                      <span className="text-[11px] text-brand">
+                        {editablePassages.map((p) => `P${p.partNumber}`).join(", ") || "Yagona matn"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
+                      <span className="text-xs text-fg-muted font-medium">Jami Savollar</span>
+                      <p className="text-xl font-bold text-fg">{totalQuestions} / 40</p>
+                      <span className="text-[11px] text-success">
+                        {isCompleteIeltsReading
+                          ? "To'liq 40 ta savol mavjud"
+                          : `${totalQuestions} ta savol aniqlangan`}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-bg-subtle/50 p-4 space-y-1">
+                      <span className="text-xs text-fg-muted font-medium">Javob Kalitlari</span>
+                      <p className="text-xl font-bold text-fg">
+                        {questionsWithAnswers} / {totalQuestions}
+                      </p>
+                      <span
+                        className={`text-[11px] ${
+                          questionsWithAnswers === totalQuestions ? "text-success" : "text-warning"
+                        }`}
+                      >
+                        {questionsWithAnswers === totalQuestions
+                          ? "Barcha savollarda kalit bor"
+                          : `${totalQuestions - questionsWithAnswers} ta savolda javob kiritilmagan`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Safety & Integrity Warning */}
+                  <div className="rounded-xl border border-brand/30 bg-brand/5 p-3.5 text-xs text-fg space-y-1">
+                    <div className="flex items-center gap-2 font-bold text-brand">
+                      <CheckCircle2 className="size-4" />
+                      Xavfsiz Tranzaksiyali Import (Transactional Safety)
+                    </div>
+                    <p className="text-fg-muted text-[11px] leading-relaxed">
+                      Savollar bazaga atomik tranzaksiya bilan yoziladi. Mavjud talabalar urinishlari
+                      (Student Attempts) daxlsiz qoladi va ularga hech qanday zarar yetkazilmaydi.
+                      Barcha 3 ta Passage tegishli guruhlarga joylanadi.
+                    </p>
+                  </div>
+
+                  {/* Student-Style Interactive Preview */}
+                  <div className="rounded-xl border border-border bg-surface overflow-hidden">
+                    <div className="border-b border-border bg-bg-subtle px-4 py-2.5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-fg flex items-center gap-1.5">
+                        <Eye className="size-3.5 text-brand" />
+                        Talaba ko&apos;rinishidagi test prevyusi (Student Preview)
+                      </span>
+                      <span className="text-[11px] text-fg-muted">
+                        Savollar: Q1–Q{totalQuestions}
+                      </span>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto p-4 space-y-4">
+                      {editablePassages.map((p) => {
+                        const partQuestions = editableQuestions.filter(
+                          (q) => q.partNumber === p.partNumber,
+                        );
+                        return (
+                          <div
+                            key={p.partNumber}
+                            className="rounded-lg border border-border/80 bg-bg-subtle/30 p-3 space-y-2"
+                          >
+                            <h5 className="font-bold text-xs text-fg flex items-center justify-between">
+                              <span>
+                                {p.title || `Passage ${p.partNumber}`} (Q
+                                {partQuestions[0]?.number || 1}–Q
+                                {partQuestions[partQuestions.length - 1]?.number || 40})
+                              </span>
+                              <Badge variant="info" className="text-[10px]">
+                                {partQuestions.length} ta savol
+                              </Badge>
+                            </h5>
+                            {p.passageText && (
+                              <p className="text-[11px] text-fg-muted font-serif line-clamp-3 italic">
+                                {p.passageText.slice(0, 300)}...
+                              </p>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                              {partQuestions.slice(0, 4).map((q) => (
+                                <div
+                                  key={q.number}
+                                  className="rounded border border-border bg-surface p-2 text-[11px]"
+                                >
+                                  <div className="font-semibold text-fg">
+                                    Q{q.number}. {q.prompt}
+                                  </div>
+                                  <div className="text-[10px] text-fg-muted mt-1 flex justify-between">
+                                    <span>Turi: {q.type}</span>
+                                    <span className="text-brand font-bold">
+                                      Kalit: {editableAnswers[String(q.number)] || "—"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -716,7 +1357,8 @@ export function SmartBulkImportModal({
                     1-qadam: Tayyor 40 savollik Excel (.xlsx) shablonni yuklab oling
                   </h4>
                   <p className="text-xs text-fg-muted">
-                    Shablonda savol raqami, turi, savol matni, A/B/C/D variantlar va to&apos;g&apos;ri javob ustunlari tayyorlangan.
+                    Shablonda savol raqami, turi, savol matni, A/B/C/D variantlar va to&apos;g&apos;ri
+                    javob ustunlari tayyorlangan.
                   </p>
                 </div>
                 <Button
@@ -792,7 +1434,8 @@ export function SmartBulkImportModal({
                       Yagona Listening Audio Fayli
                     </h4>
                     <p className="text-xs text-fg-muted">
-                      Audioni 4–6 bo&apos;lakka qirqish shart emas: bitta to&apos;liq audio yuklang va har bir Part boshlanish vaqtini belgilang.
+                      Audioni 4–6 bo&apos;lakka qirqish shart emas: bitta to&apos;liq audio yuklang va
+                      har bir Part boshlanish vaqtini belgilang.
                     </p>
                   </div>
                   <div>
@@ -816,14 +1459,17 @@ export function SmartBulkImportModal({
                       onClick={() => audioInputRef.current?.click()}
                     >
                       <Upload className="size-4 mr-1.5" />
-                      {audioFile || playableAudioSrc ? "Audioni almashtirish" : "Yagona Audio yuklash"}
+                      {audioFile || playableAudioSrc
+                        ? "Audioni almashtirish"
+                        : "Yagona Audio yuklash"}
                     </Button>
                   </div>
                 </div>
 
                 {audioFile && (
                   <p className="text-xs text-brand font-medium">
-                    Tanlangan fayl: {audioFile.name} ({(audioFile.size / (1024 * 1024)).toFixed(2)} MB)
+                    Tanlangan fayl: {audioFile.name} ({(audioFile.size / (1024 * 1024)).toFixed(2)}{" "}
+                    MB)
                   </p>
                 )}
 
@@ -842,7 +1488,8 @@ export function SmartBulkImportModal({
                       className="w-full h-10"
                     />
                     <p className="text-[11px] text-fg-subtle">
-                      Maslahat: Audioni eshitib ko&apos;rib, kerakli joyda to&apos;xtating va &ldquo;Joriy vaqtni olish&rdquo; tugmasini bosing.
+                      Maslahat: Audioni eshitib ko&apos;rib, kerakli joyda to&apos;xtating va
+                      &ldquo;Joriy vaqtni olish&rdquo; tugmasini bosing.
                     </p>
                   </div>
                 )}
@@ -854,7 +1501,9 @@ export function SmartBulkImportModal({
                     <Clock className="size-3.5" />
                     Partlar bo&apos;yicha vaqt belgilari (Start / End Timestamps)
                   </h4>
-                  {timestampsQ.isLoading && <Loader2 className="size-4 animate-spin text-fg-muted" />}
+                  {timestampsQ.isLoading && (
+                    <Loader2 className="size-4 animate-spin text-fg-muted" />
+                  )}
                 </div>
 
                 <div className="divide-y divide-border rounded-xl border border-border bg-surface overflow-hidden">
@@ -923,7 +1572,9 @@ export function SmartBulkImportModal({
                                 const cur = audioPlayerRef.current?.currentTime ?? 0;
                                 setTimestampRows((prev) =>
                                   prev.map((r, i) =>
-                                    i === idx ? { ...r, startMmSs: formatSecondsToMmSs(cur) } : r,
+                                    i === idx
+                                      ? { ...r, startMmSs: formatSecondsToMmSs(cur) }
+                                      : r,
                                   ),
                                 );
                               }}
@@ -956,22 +1607,74 @@ export function SmartBulkImportModal({
           )}
         </DialogBody>
 
-        <DialogFooter className="border-t border-border bg-bg-subtle/60 px-6 py-3">
+        <DialogFooter className="border-t border-border bg-bg-subtle/60 px-6 py-3 flex flex-wrap items-center justify-between gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Bekor qilish
+            Yopish
           </Button>
 
           {activeTab === "smart-text" && (
-            <Button
-              type="button"
-              size="sm"
-              disabled={editableQuestions.length === 0}
-              loading={examBulkMut.isPending || groupBulkMut.isPending}
-              onClick={() => void handleCommitSmartImport()}
-            >
-              <Upload className="size-4 mr-1.5" />
-              Bazaga saqlash ({editableQuestions.length} savol)
-            </Button>
+            <div className="flex items-center gap-2">
+              {currentStep === 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!uploadedFile && !rawText.trim()}
+                  loading={smartParseMut.isPending}
+                  onClick={() => void handleAnalyze()}
+                >
+                  <Wand2 className="size-4 mr-1.5" />
+                  Avtomatik tahlil qilish (Analyze)
+                  <ArrowRight className="size-4 ml-1.5" />
+                </Button>
+              )}
+
+              {currentStep === 2 && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentStep(1)}
+                  >
+                    <ArrowLeft className="size-4 mr-1.5" />
+                    Ortga (Fayl)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={editableQuestions.length === 0}
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    Oldinga: Prevyu va Saqlash
+                    <ArrowRight className="size-4 ml-1.5" />
+                  </Button>
+                </>
+              )}
+
+              {currentStep === 3 && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentStep(2)}
+                  >
+                    <ArrowLeft className="size-4 mr-1.5" />
+                    Ortga (Tahrirlash)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={editableQuestions.length === 0}
+                    loading={examBulkMut.isPending || groupBulkMut.isPending}
+                    onClick={() => void handleCommitSmartImport()}
+                  >
+                    <CheckCircle2 className="size-4 mr-1.5" />
+                    Bazaga to&apos;liq saqlash ({editableQuestions.length} savol)
+                  </Button>
+                </>
+              )}
+            </div>
           )}
 
           {activeTab === "excel" && (
