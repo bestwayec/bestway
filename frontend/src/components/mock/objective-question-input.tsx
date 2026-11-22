@@ -43,7 +43,11 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
           <fieldset>
             <legend className="sr-only">{t("questionNumber", { number: q.displayNumber ?? q.number })}</legend>
             {isShortOptions ? (
-              <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label={t("questionOptions", { number: q.displayNumber ?? q.number })}>
+              <div
+                className="flex flex-wrap gap-2 pt-1"
+                role={multiple ? "group" : "radiogroup"}
+                aria-label={t("questionOptions", { number: q.displayNumber ?? q.number })}
+              >
                 {options.map((option) => {
                   const checked = selected.includes(option);
                   const unavailable = MATCHING_TYPES.has(q.type) && unavailableOptions.includes(option) && !checked;
@@ -52,7 +56,15 @@ export function ObjectiveQuestionInput({ question: q, value, onChange, unavailab
                       key={option}
                       type="button"
                       disabled={disabled || unavailable}
-                      onClick={() => onChange(checked ? "" : option)}
+                      onClick={() =>
+                        onChange(
+                          multiple
+                            ? toggleObjectiveOption(value, option, options)
+                            : checked
+                            ? ""
+                            : option,
+                        )
+                      }
                       className={cn(
                         "flex size-10 items-center justify-center rounded-lg border text-sm font-bold transition-all touch-manipulation",
                         checked

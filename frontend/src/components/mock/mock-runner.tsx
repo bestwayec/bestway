@@ -847,6 +847,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-surface/95 px-3 backdrop-blur sm:gap-2 sm:px-4 lg:-mx-5 lg:px-5"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="font-black text-brand tracking-wider text-sm sm:text-base mr-0.5 select-none shrink-0">BESTWAY</span>
             {isSingleSection && targetSkill && (
               <span className="hidden shrink-0 whitespace-nowrap rounded-chip border border-brand/30 bg-brand-subtle px-2 py-0.5 text-sm font-semibold text-brand-subtle-fg md:inline">
                 {tr(attempt.mode === "practice" ? "practiceBadge" : "examBadge", { skill: t(`skills.${targetSkill}`) })}
@@ -1535,10 +1536,17 @@ function GroupBlock({
             role="region"
             aria-label={tg("passageRegion")}
           >
-            <CbtAnnotatedText
-              text={group.passageText!}
-              storageKey={`${attemptId}.${group.id}.passage`}
-            />
+            {group.title && (
+              <h2 className="mb-3 text-lg sm:text-xl font-bold tracking-tight text-fg border-b border-border/60 pb-2">
+                {group.title}
+              </h2>
+            )}
+            <div className="font-serif leading-relaxed text-fg/95">
+              <CbtAnnotatedText
+                text={group.passageText!}
+                storageKey={`${attemptId}.${group.id}.passage`}
+              />
+            </div>
             <div className="mt-4 pt-3 border-t border-border/60 lg:hidden text-center">
               <Button
                 type="button"

@@ -22,6 +22,7 @@ import type { MockAttemptDetail, MockAttemptQuestion, MockAttemptSection, MockSk
 import { cn } from "@/lib/utils";
 import { mayShowSectionBand } from "@/lib/score-display";
 import { ResultReviewTable } from "./result-review-table";
+import { IeltsResultBreakdown } from "./ielts-result-breakdown";
 import { TypeAccuracyCard } from "./type-accuracy-card";
 import { AssessmentPanel } from "./assessment-panel";
 import { AiDiagnosticCoach } from "./ai-diagnostic-coach";
@@ -88,6 +89,24 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
     const key = level.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
     return ["C2", "C1", "B2", "B1"].includes(key) ? t(`resultOverview.cefr${key}`) : t("resultOverview.cefrBelow");
   };
+
+  const flaggedIds = React.useMemo(() => {
+    const raw = attempt.annotations;
+    if (!raw) return new Set<string>();
+    if (Array.isArray(raw)) {
+      return new Set<string>(
+        raw.flatMap((item) =>
+          typeof item === "object" && item && "flags" in item && Array.isArray((item as any).flags)
+            ? (item as any).flags
+            : []
+        )
+      );
+    }
+    if (typeof raw === "object" && "flags" in raw && Array.isArray((raw as any).flags)) {
+      return new Set<string>((raw as any).flags);
+    }
+    return new Set<string>();
+  }, [attempt.annotations]);
 
   return (
     <div className="mx-auto max-w-3xl print:max-w-none print:m-0">
@@ -329,6 +348,7 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
       />
 
       {!isIelts && attempt.specificationVersion && <MultilevelResultBreakdown attempt={attempt} />}
+      {isIelts && (completed || partialPractice) && <IeltsResultBreakdown attempt={attempt} />}
 
       {attempt.status !== "in_progress" && <AssessmentPanel attemptId={attempt.id} isStaff={isStaff} />}
 
@@ -358,7 +378,15 @@ export function MockResultView({ attempt }: { attempt: MockAttemptDetail }) {
           const canGrade = isStaff && MANUAL_SKILLS.has(s.skill);
           // Auto-marked sections read as one compact table; Writing and Speaking keep their cards (audio, grading).
           if (!MANUAL_SKILLS.has(s.skill)) {
-            return <ResultReviewTable key={s.id} title={t(`skills.${s.skill}`)} skill={s.skill} groups={s.groups} />;
+            return (
+              <ResultReviewTable
+                key={s.id}
+                title={t(`skills.${s.skill}`)}
+                skill={s.skill}
+                groups={s.groups}
+                flaggedIds={flaggedIds}
+              />
+            );
           }
           return (
             <div key={s.id}>
