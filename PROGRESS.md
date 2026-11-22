@@ -7,6 +7,16 @@ BestWay / GRAND EDUCATION platformasining asosiy yo'nalishlari — Faqat Writing
 
 ## Bajarildi
 
+### 51-BLOK: Teacher Workspace 2.0 — oddiy o'qituvchi kabineti, bir ekranli davomat, veb uy vazifasi (2026-11-22) — branch `feat/bestway-teacher-workspace-2`
+- **O'qituvchi bosh sahifasi**: 4 ta asosiy amal (Davomat olish, Uy vazifasi berish, Guruhlarim, O'quvchilar natijalari) + kichik ko'rinish (bugungi guruhlar, kelganlar, faol vazifalar, tekshirish kerak, 7 kunlik muddatlar). Eski panel `/teacher/insights`, cohortlar `/teacher/cohorts`.
+- **Davomat (bir ekran)**: hech kim avtomatik "keldi" bo'lmaydi; "Hammasi keldi" — aniq tugma; faqat o'zgargan belgilar saqlanadi; eskirgan varaq 409 bilan rad etiladi; saqlangach Keldi/Kelmadi/Kechikdi xulosasi. Ota-ona/o'quvchi xabarlari commit'dan keyin. "Sababli" holati yo'q (Prisma enum).
+- **Uy vazifasi (3 qadam)**: guruh → grammatika testi (mavjud yoki yangi: savollar + kalit) / lug'at / nashr qilingan imtihon / dars → nom + muddat; jonli server preview; takroriy va parallel bosish bitta vazifa yaratadi; DRAFT imtihon (Mock 27) hech qachon taklif qilinmaydi.
+- **O'quvchi**: `/homework` (Mening vazifalarim) ikkala manbadan haqiqiy holatlar bilan; `/homework/quiz/[id]` — server taymeri, darhol saqlash, internet uzilsa qayta urinish, davom ettirish, idempotent yakunlash.
+- **Natijalar**: Biriktirilgan / Topshirgan / Kutilmoqda / O'rtacha, 15 s da yangilanadi; xatolarni ko'rish, dars vazifasini baholash, CSV, topshirmaganlarga eslatma (outbox, worker opt-in). Guruh sahifasi: Umumiy · O'quvchilar · Davomat · Vazifalar · Natijalar.
+- **Telegram**: yangi vazifa/eslatma faqat outbox'ga navbatga qo'yiladi (opt-out, tinch soatlar), quiz xabarida saytga tugma; hech narsa yuborilmagan.
+- **Ma'lumotlar bazasi**: yangi jadval/migratsiya YO'Q (`teacher_workspace.py` mavjud servislar ustida).
+- **Tekshiruv**: pytest 1573 o'tdi; PG skriptlar 18/18 (yangi `verify_teacher_workspace_postgres.py` 61 tekshiruv, CI'da); Playwright `teacher-workspace.mjs` 45/45 (haqiqiy Chromium + Django + PostgreSQL); tsc 0, ESLint 0 xato, Vitest 879, `next build` OK. Hujjat: `docs/TEACHER_WORKSPACE_2.md`, skrinshotlar `docs/evidence/teacher-workspace-2/`.
+
 ### 50-BLOK: Yakuniy integratsiya — PR #210 + PR #209 bitta PostgreSQL sxemasida (2026-11-21) — PR #209, branch `feat/ielts-academic-full-mock-27`
 - **Muammo**: ikkala PR ham `core.0017` ustiga `core.0018` qo'shgan va `models.py`, `urls.py`, `ci.yml`, `PROGRESS.md` da to'qnashardi; qaysi biri ikkinchi merge qilinsa, Django `Conflicting migrations detected` bilan migratsiyani rad etardi (deploy to'xtaydi).
 - **Yechim**: PR #210 bu branchga merge qilindi (force-push yo'q), `core.0026_merge_mock27_and_telegram_bot2` (operatsiyasiz birlashtiruvchi tugun), `tests/test_migration_graph.py` (bitta leaf).

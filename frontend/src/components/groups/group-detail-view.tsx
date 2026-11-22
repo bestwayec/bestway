@@ -38,7 +38,9 @@ import { useSettings } from "@/hooks/use-settings";
 import { useMe } from "@/hooks/use-me";
 import { formatPhone } from "@/lib/utils";
 import { GroupAiRanking } from "@/components/teacher/group-ai-ranking";
-import { SmartAttendanceDialog } from "@/components/teacher/smart-attendance-dialog";
+import { AttendanceScreen } from "@/components/workspace/attendance-sheet";
+import { GroupHomeworkList } from "@/components/workspace/homework-results";
+import { useSearchParams } from "next/navigation";
 import { GroupAnalyticsDashboard } from "@/components/teacher/group-analytics-dashboard";
 import { CheckSquare, FileText } from "lucide-react";
 import { GroupLiveMonitoring } from "@/components/teacher/group-live-monitoring";
@@ -51,6 +53,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const tc = useTranslations("common");
   const tw = useTranslations("weekdaysShort");
   const ws = useTranslations("workspace");
+  const wt = useTranslations("tw");
   const router = useRouter();
   const { data: group, isLoading, isError, refetch } = useGroupDetail(groupId);
   const { data: allGroups } = useGroups();
@@ -60,13 +63,20 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   const settingsQ = useSettings();
   const [editOpen, setEditOpen] = React.useState(false);
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [attendanceOpen, setAttendanceOpen] = React.useState(false);
+  const params = useSearchParams();
+  const TABS = ["overview", "students", "attendance", "homework", "results"] as const;
+  type Tab = (typeof TABS)[number];
+  const requestedTab = params.get("tab") as Tab | null;
+  const [tab, setTabState] = React.useState<Tab>(requestedTab && TABS.includes(requestedTab) ? requestedTab : "overview");
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    window.history.replaceState(null, "", `${window.location.pathname}?tab=${next}`);   // shareable, no reload
+  };
   const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = React.useState("");
   const [rosterSearch, setRosterSearch] = React.useState("");
   const [rosterLimit, setRosterLimit] = React.useState(20);
-  const [showAnalytics, setShowAnalytics] = React.useState(false);
   const debounced = useDebouncedValue(search);
   const picker = useStudents(debounced.trim(), debounced.trim().length >= 2);
 
@@ -175,13 +185,9 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canSeePhones && (
-              <Button
-                size="sm"
-                onClick={() => setAttendanceOpen(true)}
-                className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover font-medium text-xs"
-              >
+              <Button size="sm" onClick={() => setTab("attendance")} className="gap-1.5 text-xs font-medium">
                 <CheckSquare className="size-4" />
-                <span>📋 Aqlli Davomat Olish</span>
+                <span>{wt("home.action.attendance")}</span>
               </Button>
             )}
             <Button
@@ -218,15 +224,47 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         </div>
       </Card>
 
-      {canSeePhones && <nav aria-label={ws("classroomSections")} className="mb-4 flex flex-wrap gap-2">
-        <Button asChild variant="outline"><a href="#classroom-roster">{t("students")}</a></Button>
-        <Button asChild variant="outline"><a href="#classroom-assignments">{ws("assignments")}</a></Button>
-        <Button variant="outline" aria-expanded={showAnalytics} aria-controls={showAnalytics ? "classroom-results" : undefined}
-          onClick={() => setShowAnalytics(!showAnalytics)}>{ws("results")}</Button>
-      </nav>}
+      {canSeePhones && (
+        <div role="tablist" aria-label={ws("classroomSections")} className="mb-4 flex gap-1 overflow-x-auto rounded-card border border-border bg-surface p-1" data-testid="group-tabs">
+          {TABS.map((key) => (
+            <button key={key} type="button" role="tab" aria-selected={tab === key} id={`group-tab-${key}`} aria-controls={`group-panel-${key}`}
+              onClick={() => setTab(key)}
+              className={`min-h-11 shrink-0 rounded-control px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${tab === key ? "bg-brand text-brand-fg" : "text-fg hover:bg-surface-hover"}`}>
+              {wt(`group.tab.${key}`)}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {canSeePhones && showAnalytics && (
-        <section id="classroom-results" aria-label={ws("results")}>
+      {canSeePhones && tab === "overview" && (
+        <section id="group-panel-overview" role="tabpanel" aria-labelledby="group-tab-overview" className="mb-4 grid gap-3 sm:grid-cols-3">
+          <button type="button" onClick={() => setTab("attendance")} className="min-h-24 rounded-card border border-brand/40 bg-brand-subtle p-4 text-left font-semibold text-fg hover:bg-brand/15">{wt("home.action.attendance")}<span className="mt-1 block text-xs font-normal text-fg-muted">{wt("home.students", { n: group.students.length })}</span></button>
+          <Link href={`/teacher/assign?group=${groupId}`} className="min-h-24 rounded-card border border-brand/40 bg-brand-subtle p-4 font-semibold text-fg hover:bg-brand/15">{wt("home.action.assign")}<span className="mt-1 block text-xs font-normal text-fg-muted">{wt("group.assignHint")}</span></Link>
+          <button type="button" onClick={() => setTab("results")} className="min-h-24 rounded-card border border-border bg-surface p-4 text-left font-semibold text-fg hover:bg-surface-hover">{wt("home.action.results")}<span className="mt-1 block text-xs font-normal text-fg-muted">{wt("group.resultsHint")}</span></button>
+        </section>
+      )}
+
+      {canSeePhones && tab === "attendance" && (
+        <section id="group-panel-attendance" role="tabpanel" aria-labelledby="group-tab-attendance" className="mb-4">
+          <AttendanceScreen embeddedGroupId={groupId} />
+        </section>
+      )}
+
+      {canSeePhones && tab === "homework" && (
+        <section id="group-panel-homework" role="tabpanel" aria-labelledby="group-tab-homework" className="mb-4 space-y-4">
+          <Button asChild><Link href={`/teacher/assign?group=${groupId}`}><Plus />{wt("home.action.assign")}</Link></Button>
+          <GroupHomeworkList groupId={groupId} />
+          {me && (
+            <details className="rounded-card border border-border bg-surface p-4">
+              <summary className="cursor-pointer text-sm font-medium text-fg-muted">{wt("group.classicTasks")}</summary>
+              <div className="mt-3"><ClassroomAssignments key={groupId} groupId={groupId} userId={me.user.id} /></div>
+            </details>
+          )}
+        </section>
+      )}
+
+      {canSeePhones && tab === "results" && (
+        <section id="group-panel-results" role="tabpanel" aria-labelledby="group-tab-results" aria-label={ws("results")}>
           <LiveExamRoomPanel defaultGroupId={groupId} />
           <GroupAnalyticsPanel
             groups={allGroups}
@@ -244,20 +282,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         </section>
       )}
 
-      {/* Aqlli Davomat Olish Modali */}
-      <SmartAttendanceDialog
-        groupId={groupId}
-        groupName={group.name}
-        students={(group.students ?? []).map((s) => ({
-          studentId: s.studentId,
-          studentName: s.name,
-          phone: s.phone,
-        }))}
-        open={attendanceOpen}
-        onOpenChange={setAttendanceOpen}
-        onSuccess={() => refetch()}
-      />
-
+      {(!canSeePhones || tab === "students") && (<div id="group-panel-students" role={canSeePhones ? "tabpanel" : undefined}>
       {/* O'quvchi qo'shish */}
       <Card className="mb-4">
         <CardHeader>
@@ -388,9 +413,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
       </Card>
 
       {canSeePhones && me && <ClassroomManagement key={groupId} group={group} userId={me.user.id} />}
-      {canSeePhones && me && <section id="classroom-assignments" className="scroll-mt-20" aria-label={ws("assignments")}>
-        <ClassroomAssignments key={groupId} groupId={groupId} userId={me.user.id} />
-      </section>}
+      </div>)}
 
       <GroupFormDialog open={editOpen} group={group} onClose={() => setEditOpen(false)} />
       <GroupFormDialog open={createOpen} group={null} onClose={() => setCreateOpen(false)} />

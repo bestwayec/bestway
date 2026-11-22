@@ -3,6 +3,7 @@ import {
   BookA,
   BookOpen,
   CalendarCheck,
+  ClipboardList,
   GraduationCap,
   Images,
   LayoutDashboard,
@@ -47,7 +48,10 @@ const NAV: NavItem[] = [
   { href: "/payments", key: "payments", icon: Wallet, roles: STAFF, mobile: true },
   { href: "/students", key: "students", icon: Users, roles: OFFICE, mobile: true },
   { href: "/groups", key: "groups", icon: BookOpen, roles: STAFF },
-  { href: "/teacher", key: "teacherWorkspace", icon: GraduationCap, roles: STAFF, mobile: true },
+  // Teachers: /dashboard IS the Teacher Workspace, so the separate entry is shown to the office only (no duplicate menu).
+  { href: "/teacher", key: "teacherWorkspace", icon: GraduationCap, roles: OFFICE, mobile: true },
+  { href: "/teacher/results", key: "homework", icon: ClipboardList, roles: STAFF, mobile: true },
+  { href: "/homework", key: "myHomework", icon: ClipboardList, roles: ["student"], mobile: true },
   { href: "/staff", key: "staff", icon: UserCog, roles: OFFICE },
   { href: "/mock", key: "mock", icon: Target, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },
   { href: "/vocabulary", key: "vocabulary", icon: BookA, roles: ["student", "teacher", "admin", "super_admin"], mobile: true },
@@ -82,8 +86,8 @@ export function primaryNavForRole(role: Role): NavItem[] {
   if (role === "student") {
     return [
       { href: "/dashboard", key: "dashboard", icon: LayoutDashboard, roles: ["student"], mobile: true },
+      { href: "/homework", key: "myHomework", icon: ClipboardList, roles: ["student"], mobile: true },
       { href: "/mock", key: "mock", icon: Target, roles: ["student"], mobile: true },
-      { href: "/videos", key: "videos", icon: PlaySquare, roles: ["student"], mobile: true },
       { href: "/profile", key: "results", icon: BarChart3, roles: ["student"], mobile: true },
     ];
   }
@@ -97,6 +101,7 @@ export function primaryNavForRole(role: Role): NavItem[] {
 export function secondaryNavForRole(role: Role): NavItem[] {
   if (role === "student") {
     return [
+      { href: "/videos", key: "videos", icon: PlaySquare, roles: ["student"] },
       { href: "/vocabulary", key: "vocabulary", icon: BookA, roles: ["student"] },
       { href: "/bamboozle", key: "bamboozle", icon: Swords, roles: ["student"] },
       { href: "/leaderboard", key: "leaderboard", icon: Trophy, roles: ["student"] },
@@ -115,7 +120,7 @@ export function mobileNavForRole(role: Role): NavItem[] {
   }
   const items = navForRole(role);
   if (role === "teacher") {
-    const priorities = ["dashboard", "attendance", "groups", "teacherWorkspace"];
+    const priorities = ["dashboard", "attendance", "homework", "groups"];
     return priorities.flatMap((key) => items.filter((item) => item.key === key));
   }
   return items.filter((item) => item.mobile).slice(0, 4);

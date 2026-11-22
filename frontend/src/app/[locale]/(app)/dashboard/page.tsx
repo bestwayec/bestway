@@ -11,7 +11,9 @@ const skeleton = <div className="h-64 animate-pulse rounded-card bg-border/40" /
 const AdminDashboard = dynamic(() => import("@/components/dashboard/admin-dashboard").then((m) => m.AdminDashboard), {
   loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
-const TeacherDashboard = dynamic(() => import("@/components/dashboard/teacher-dashboard").then((m) => m.TeacherDashboard), {
+// Teacher Workspace 2.0: the teacher's home is the simple workspace (attendance, homework, groups, results).
+// The previous detailed dashboard stays available at /teacher/insights.
+const TeacherHome = dynamic(() => import("@/components/workspace/teacher-home").then((m) => m.TeacherHome), {
   loading: () => <div className="h-64 animate-pulse rounded-card bg-border/40" />,
 });
 const StudentDashboard = dynamic(() => import("@/components/dashboard/student-dashboard").then((m) => m.StudentDashboard), {
@@ -44,7 +46,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
     case "admin":
       return <HydrationGate fallback={skeleton}><AdminDashboard /></HydrationGate>;
     case "teacher":
-      return <HydrationGate fallback={skeleton}><TeacherDashboard /></HydrationGate>;
+      return <HydrationGate fallback={skeleton}><TeacherHome /></HydrationGate>;
     case "student":
       return <HydrationGate fallback={skeleton}><StudentDashboard /></HydrationGate>;
     case "parent":
