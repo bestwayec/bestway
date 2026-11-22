@@ -42,6 +42,22 @@ def verify():
     assert teacher.post(member_url, {"studentId": student_id}, format="json").status_code == 201
     assert teacher.post(member_url, {"studentId": student_id}, format="json").status_code == 201
     assert student.get("/v1/groups").json()["data"][0]["id"] == group_id
+    # Another teacher cannot pull a student out of this teacher's classroom.
+    assert other.post("/v1/groups", {"name": "Foreign classroom"}, format="json").status_code == 201
+    foreign_id = other.get("/v1/groups").json()["data"][0]["id"]
+    hijack = other.post(f"/v1/groups/{foreign_id}/students", {"studentId": student_id}, format="json")
+    assert hijack.status_code == 403, hijack.status_code
+    assert ClassroomEnrollment.objects.get(student_id=student_id, ended_at__isnull=True).group_id == group_id
+    # Moving between the teacher's own classrooms closes exactly one interval and opens one.
+    assert teacher.post("/v1/groups", {"name": "Classroom journey sibling"}, format="json").status_code == 201
+    sibling_id = next(g["id"] for g in teacher.get("/v1/groups").json()["data"] if g["id"] != group_id)
+    assert teacher.post(f"/v1/groups/{sibling_id}/students", {"studentId": student_id}, format="json").status_code == 201
+    assert ClassroomEnrollment.objects.get(student_id=student_id, ended_at__isnull=True).group_id == sibling_id
+    assert ClassroomEnrollment.objects.filter(student_id=student_id, group_id=group_id, ended_at__isnull=False).count() == 1
+    assert teacher.post(member_url, {"studentId": student_id}, format="json").status_code == 201
+    assert ClassroomEnrollment.objects.filter(student_id=student_id, ended_at__isnull=True).count() == 1
+    # Archive (not delete) the sibling: enrollment history must remain on record.
+    assert teacher.put(f"/v1/groups/{sibling_id}/archive", {"archived": True}, format="json").json()["data"]["archived"]
 
     day = timezone.localdate()
     attendance = {"groupId": group_id, "date": day.isoformat(), "records": [{"studentId": student_id, "state": "late"}]}

@@ -46,13 +46,7 @@ export function GroupFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isEdit
-              ? isTeacher
-                ? "Guruh nomini tahrirlash"
-                : t("edit")
-              : isTeacher
-                ? "Yangi guruh yaratish"
-                : t("create")}
+            {isEdit ? (isTeacher ? t("editName") : t("edit")) : t("create")}
           </DialogTitle>
         </DialogHeader>
         {open && (
@@ -102,7 +96,7 @@ function GroupFormFields({
 
     const onSettled = {
       onSuccess: () => {
-        toast.success(isEdit ? (isTeacher ? "Guruh nomi muvaffaqiyatli saqlandi" : t("updated")) : t("created"));
+        toast.success(isEdit ? (isTeacher ? t("nameSaved") : t("updated")) : t("created"));
         onClose();
       },
       onError: (err: any) => {

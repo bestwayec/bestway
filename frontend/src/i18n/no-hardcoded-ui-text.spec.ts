@@ -74,6 +74,10 @@ const FILES = [
   "src/components/mock/runner-shortcuts.tsx",
   "src/components/mock/writing-image-ocr.tsx",
   "src/components/dashboard/InstantAiCheckerModal.tsx",
+  "src/components/groups/group-detail-view.tsx",
+  "src/components/groups/groups-view.tsx",
+  "src/components/groups/group-form-dialog.tsx",
+  "src/components/groups/student-transfer-dialog.tsx",
 ];
 
 /** Microphone and recording screens: every message the student reads comes from the catalogue (no literal in either language). */

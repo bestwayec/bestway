@@ -1,0 +1,59 @@
+{
+ "teacherDashboard": {
+  "status": 200,
+  "apiCalls": 11,
+  "counts": {
+   "/api/backend/auth/me": 1,
+   "/api/backend/mock/live-rooms": 1,
+   "/api/backend/groups": 1,
+   "/api/backend/payments": 1,
+   "/api/backend/payments/debtors": 1,
+   "/api/backend/mock/exams": 1,
+   "/api/backend/teacher/submissions": 1,
+   "/api/backend/attendance/teacher-today": 1,
+   "/api/backend/groups/5d81bda2-39dd-4252-b52e-86e791480806/analytics": 1,
+   "/api/backend/groups/5d81bda2-39dd-4252-b52e-86e791480806": 1,
+   "/api/backend/mock/attempts": 1
+  }
+ },
+ "teacherGroups": [
+  "Local Group A"
+ ],
+ "classroom": {
+  "status": 200,
+  "apiCalls": 10,
+  "hasStudents": true
+ },
+ "teacherVocabulary": {
+  "status": 200,
+  "apiCalls": 3
+ },
+ "teacherErrors": [
+  "gis is not defined"
+ ],
+ "studentDashboard": {
+  "status": 200,
+  "url": "http://localhost:3000/en/dashboard",
+  "apiCalls": 8,
+  "uniqueApi": [
+   "/api/backend/auth/me",
+   "/api/backend/mock/prediction/me",
+   "/api/backend/exam-programs/mine",
+   "/api/backend/student/my-assignments",
+   "/api/backend/vocabulary/srs/stats",
+   "/api/backend/mock/attempts/mine",
+   "/api/backend/mock/exams"
+  ]
+ },
+ "studentVocabulary": {
+  "status": 200
+ },
+ "studentListUsers": 403,
+ "studentMemberHistory": 403,
+ "studentAddStudent": 403,
+ "studentErrors": [
+  "gis is not defined"
+ ],
+ "anonDashboardUrl": "http://localhost:3000/en/login?next=%2Fen%2Fdashboard",
+ "anonGroupsApi": 401
+}

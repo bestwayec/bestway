@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   ArrowLeft,
+  ArrowRightLeft,
   CalendarClock,
   Download,
   Pencil,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { StudentTransferDialog } from "@/components/groups/student-transfer-dialog";
 import { ClassroomManagement } from "@/components/groups/classroom-management";
 import { ClassroomAssignments } from "@/components/groups/classroom-assignments";
 import { GroupFormDialog } from "@/components/groups/group-form-dialog";
@@ -74,6 +76,8 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
   };
   const [excelBusy, setExcelBusy] = React.useState(false);
   const [pointsTarget, setPointsTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const [transferTarget, setTransferTarget] = React.useState<{ id: string; name: string } | null>(null);
+  const otherGroups = React.useMemo(() => (allGroups ?? []).filter((g) => g.id !== groupId && !g.archived), [allGroups, groupId]);
   const [search, setSearch] = React.useState("");
   const [rosterSearch, setRosterSearch] = React.useState("");
   const [rosterLimit, setRosterLimit] = React.useState(20);
@@ -92,9 +96,9 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
     setExcelBusy(true);
     try {
       await downloadGroupExcel(groupId, group?.name ?? "group");
-      toast.success("Excel (.xlsx) yuklab olindi");
+      toast.success(t("excelDownloaded"));
     } catch (err: any) {
-      toast.error(err?.message ?? "Excel yuklab olishda xatolik");
+      toast.error(err?.message ?? t("excelFailed"));
     } finally {
       setExcelBusy(false);
     }
@@ -163,7 +167,7 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         {canSeePhones && (
           <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" />
-            <span>+ Yangi guruh yaratish</span>
+            <span>{t("create")}</span>
           </Button>
         )}
       </div>
@@ -186,34 +190,35 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
           <div className="flex flex-wrap items-center gap-2">
             {canSeePhones && (
               <Button size="sm" onClick={() => setTab("attendance")} className="gap-1.5 text-xs font-medium">
-                <CheckSquare className="size-4" />
-                <span>{wt("home.action.attendance")}</span>
+                <CheckSquare className="size-4" aria-hidden />
+                <span>{t("takeAttendance")}</span>
               </Button>
             )}
             <Button
               size="sm"
               variant="outline"
               asChild
-              className="gap-1.5 border-danger-border text-danger hover:bg-danger-bg text-xs"
+              className="gap-1.5 text-xs"
             >
               <a href={`/api/backend/v1/groups/${groupId}/report/pdf`} target="_blank" rel="noopener noreferrer">
-                <FileText className="size-4 text-danger" />
-                <span>📄 Oylik Hisobot (PDF)</span>
+                <FileText className="size-4" aria-hidden />
+                <span>{t("monthlyReportPdf")}</span>
               </a>
             </Button>
             <Button
               size="sm"
+              variant="outline"
               onClick={handleDownloadExcel}
               loading={excelBusy}
-              className="gap-1.5 bg-brand text-brand-fg hover:bg-brand-hover text-xs"
+              className="gap-1.5 text-xs"
             >
-              <Download className="size-4" />
-              <span>📊 Excel (.xlsx)</span>
+              <Download className="size-4" aria-hidden />
+              <span>{t("excelExport")}</span>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a href={`/api/backend/assessment/groups/${groupId}/export`} download>
-                <Download className="size-4" />
-                Vedomost (.csv)
+                <Download className="size-4" aria-hidden />
+                {t("gradeSheetCsv")}
               </a>
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
@@ -392,6 +397,17 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
                       >
                         <Sparkles className="text-brand" />
                       </Button>
+                      {canSeePhones && otherGroups.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${t("transferAction")}: ${s.name}`}
+                          title={t("transferAction")}
+                          onClick={() => setTransferTarget({ id: s.studentId, name: s.name })}
+                        >
+                          <ArrowRightLeft className="size-3.5 text-fg-muted hover:text-brand" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -423,6 +439,12 @@ export function GroupDetailView({ groupId }: { groupId: string }) {
         studentId={pointsTarget?.id ?? ""}
         studentName={pointsTarget?.name ?? ""}
         limit={teacherLimit}
+      />
+      <StudentTransferDialog
+        sourceGroupId={groupId}
+        student={transferTarget}
+        groups={allGroups}
+        onClose={() => setTransferTarget(null)}
       />
     </div>
   );

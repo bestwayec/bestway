@@ -175,7 +175,7 @@ export function StudentDashboard() {
       <div className="grid min-w-0 gap-4 lg:grid-cols-5">
         <div className="min-w-0 lg:col-span-3"><TodayCard /></div>
         <div id="assignments" className="min-w-0 scroll-mt-20 lg:col-span-2">
-          <StudentAssignmentsWidget />
+          <StudentAssignmentsWidget groupName={profile.groupName ?? null} />
         </div>
       </div>
 
