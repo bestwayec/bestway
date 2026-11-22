@@ -13,7 +13,7 @@ if (!["127.0.0.1", "localhost"].includes(new URL(WEB).hostname)) { console.error
 const OUT = process.argv[2] || join(here, "..", "..", ".local", "e2e", "writing");
 mkdirSync(OUT, { recursive: true });
 const state = JSON.parse(readFileSync(join(here, "..", "..", ".local", "e2e", "ielts-full.json"), "utf8"));
-const VIEWPORTS = [[1366, 768], [390, 844], [360, 640]];
+const VIEWPORTS = process.env.BW_VIEWPORTS ? process.env.BW_VIEWPORTS.split(",").map((v) => v.split("x").map(Number)) : [[1366, 768], [390, 844], [360, 640]];
 const ANSWER = [
   "The chart compares the number of visitors to three museums between 2010 and 2020.",
   "Overall, the science museum attracted the most visitors, while the art gallery grew the fastest.",

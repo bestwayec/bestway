@@ -69,5 +69,6 @@ ATTEMPT_SIGNATURE_REQUIRED = env_bool('ATTEMPT_SIGNATURE_REQUIRED', False)
 ANDROID_LATEST_VERSION = env('ANDROID_LATEST_VERSION', '0.8.0')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
-SUPERADMIN_TELEGRAM_ID = os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')
+# Optional alert destination only; it never grants any permission (authorization = a linked, active super_admin account).
+SUPERADMIN_TELEGRAM_ID = os.environ.get('SUPERADMIN_TELEGRAM_ID', '')
 

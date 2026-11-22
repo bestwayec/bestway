@@ -126,11 +126,11 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/20 text-brand-subtle-fg">
+            <div className="rounded-card border border-border bg-surface p-2.5 text-brand">
               <BookA className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight text-fg">
                 {tc("title")}
               </h1>
               <p className="text-sm text-fg-muted mt-0.5">
@@ -145,7 +145,6 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             type="button"
             variant="outline"
             onClick={() => setIsPlayerBattleOpen(true)}
-            className="border-warning-border text-warning hover:bg-warning/10"
           >
             <Gamepad2 className="mr-2 h-4 w-4" />
             {tc("joinWithPin")}
@@ -156,7 +155,6 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               type="button"
               onClick={() => setBattleSetId(sets[0].id)}
               variant="outline"
-              className="border-warning-border bg-warning-bg text-warning hover:bg-warning/15 font-medium"
             >
               <Zap className="mr-2 h-4 w-4" />
               {tc("liveBattle")}
@@ -178,7 +176,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
             <Button
               type="button"
               onClick={() => setIsBuilderOpen(true)}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-md"
+              className="bg-brand hover:bg-brand-hover text-brand-fg font-medium"
             >
               <Plus className="mr-2 h-4 w-4" />
               {tc("createSet")}
@@ -187,66 +185,42 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
         </div>
       </div>
 
-      {/* Subway Vocab Runner Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-r from-brand-subtle/40 via-bg-subtle to-brand-subtle/20 p-6 md:p-7 shadow-xl">
-        <div className="absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-semibold text-brand-subtle-fg">
-              <Zap className="h-3.5 w-3.5 text-brand animate-pulse" />
-              <span>{tc("runnerBadge")}</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-fg tracking-tight flex items-center gap-2">
-              {tc("runnerTitle")}
-            </h2>
-            <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">
-              {tc("runnerBody")}
-            </p>
-          </div>
-
-          <div className="shrink-0 flex items-center">
-            <Link href="/vocabulary/runner">
-              <Button
-                size="lg"
-                className="bg-brand hover:bg-brand-hover text-brand-fg font-extrabold px-6 py-3 rounded-xl shadow-lg transition-transform hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
-              >
-                <Gamepad2 className="h-5 w-5" />
-                <span>{tc("playNow")}</span>
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* SRS Quick Alert Banner (if user has weak words) */}
+      {/* Daily review: the first thing to do when there are words to review (spaced repetition). */}
       {srsStats && srsStats.totalWeakWords > 0 && (
-        <div className="rounded-2xl border border-warning/30 bg-gradient-to-r from-warning/10 via-surface to-brand/10 p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-warning-bg text-warning shrink-0">
-              <AlertTriangle className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-fg flex flex-wrap items-center gap-2">
-                <span>{tc("srsTitle")}</span>
-                <Badge variant="danger" className="shrink-0 whitespace-nowrap px-2 text-xs">
-                  {tc("srsCount", { count: srsStats.totalWeakWords })}
-                </Badge>
-              </h3>
-              <p className="text-xs text-fg-muted mt-0.5">
-                {tc("srsBody")}
-              </p>
-            </div>
+        <section aria-label={tc("srsTitle")} className="flex flex-col justify-between gap-4 rounded-card border border-border bg-surface p-5 sm:flex-row sm:items-center">
+          <div className="min-w-0">
+            <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-fg">
+              <span>{tc("srsTitle")}</span>
+              <Badge variant="neutral" className="shrink-0 whitespace-nowrap px-2 text-xs tabular-nums">
+                {tc("srsCount", { count: srsStats.totalWeakWords })}
+              </Badge>
+            </h2>
+            <p className="mt-1 text-sm text-fg-muted">{tc("srsBody")}</p>
           </div>
-
-          <Link href="/vocabulary/srs">
-            <Button variant="outline" className="border-warning-border bg-warning-bg text-warning hover:bg-warning/15 font-semibold shrink-0">
+          <Link href="/vocabulary/srs" className="shrink-0">
+            <Button className="w-full bg-brand font-semibold text-brand-fg hover:bg-brand-hover sm:w-auto">
               <Sparkles className="mr-2 h-4 w-4" />
               {tc("srsCta")}
             </Button>
           </Link>
-        </div>
+        </section>
       )}
+
+      {/* The word game: one calm row, secondary to the word sets. */}
+      <section aria-label={tc("runnerTitle")} className="flex flex-col justify-between gap-4 rounded-card border border-border bg-bg-subtle p-4 sm:flex-row sm:items-center sm:p-5">
+        <div className="min-w-0">
+          <p className="text-sm text-fg-muted">{tc("runnerBadge")}</p>
+          <h2 className="text-lg font-semibold text-fg">{tc("runnerTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-sm text-fg-muted">{tc("runnerBody")}</p>
+        </div>
+        <Link href="/vocabulary/runner" className="shrink-0">
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            <span>{tc("playNow")}</span>
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </Link>
+      </section>
 
       {/* Filters and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -260,7 +234,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
               onClick={() => setSelectedLevel(lvl)}
               className={`min-h-11 rounded-control px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand ${
                 selectedLevel === lvl
-                  ? "bg-brand text-brand-fg shadow-md"
+                  ? "bg-brand text-brand-fg"
                   : "bg-bg-subtle text-fg-muted hover:bg-bg-subtle/80 hover:text-fg"
               }`}
             >
@@ -301,7 +275,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
       {!isLoading && !errorMsg && (
         <>
           {filteredSets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-12 text-center text-fg-muted space-y-3">
+            <div className="space-y-3 rounded-card border border-dashed border-border p-12 text-center text-fg-muted">
               <BookOpen className="h-10 w-10 text-fg-muted/60 mx-auto" />
               <h3 className="text-base font-semibold text-fg">{tc("emptyTitle")}</h3>
               <p className="text-xs text-fg-muted max-w-sm mx-auto">
@@ -315,7 +289,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                 return (
                   <div
                     key={s.id}
-                    className="group rounded-2xl border border-border bg-surface p-6 shadow-sm hover:shadow-xl hover:border-brand/40 transition-all duration-300 flex flex-col justify-between space-y-5"
+                    className="group flex flex-col justify-between space-y-5 rounded-card border border-border bg-surface p-5 transition-colors duration-base hover:border-brand/40 sm:p-6"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
@@ -328,7 +302,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-bold text-fg group-hover:text-brand transition-colors line-clamp-1">
+                        <h3 className="text-lg font-semibold text-fg line-clamp-1">
                           {s.title}
                         </h3>
                         {s.description && (
@@ -362,7 +336,7 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
 
                       <div className="flex items-center gap-2">
                         <Link href={`/vocabulary/${s.id}`} className="flex-1">
-                          <Button className="w-full bg-brand hover:bg-brand-hover text-brand-fg font-medium shadow-sm">
+                          <Button className="w-full bg-brand hover:bg-brand-hover text-brand-fg font-medium">
                             <Play className="mr-1.5 h-4 w-4" />
                             {tc("startPractice")}
                           </Button>
@@ -375,7 +349,6 @@ export function VocabularyCatalogView({ userRole = "student" }: { userRole?: str
                               type="button"
                               variant="outline"
                               onClick={() => setBattleSetId(s.id)}
-                              className="border-warning-border text-warning hover:bg-warning/10"
                               title={tc("battleForSet")}
                               aria-label={tc("battleForSet")}
                             >

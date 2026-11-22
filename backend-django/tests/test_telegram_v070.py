@@ -13,32 +13,50 @@ from apps.legacy_schema import models as m
 class TelegramV070Tests(SimpleTestCase):
 
     def setUp(self):
-        self.superadmin_id = "5582178765"
+        self.superadmin_id = "5582178765"  # an arbitrary linked admin chat used by the fixtures below
         self.bot_token = "test-bot-token-v070"
 
-    def test_superadmin_constant_and_auto_provisioning(self):
-        self.assertEqual(telegram_bot.SUPERADMIN_TELEGRAM_ID, "5582178765")
-        self.assertEqual(telegram_menu.SUPERADMIN_TELEGRAM_ID, "5582178765")
-        self.assertEqual(telegram_delivery.SUPERADMIN_TELEGRAM_ID, "5582178765")
+    def test_no_builtin_superadmin_identity_and_no_auto_provisioning(self):
+        """Security: a Telegram id (even the one that used to be hard-coded) never grants super_admin or creates accounts."""
+        for module in (telegram_menu, telegram_delivery):
+            self.assertNotEqual(getattr(module, "SUPERADMIN_TELEGRAM_ID", ""), "5582178765")
+        self.assertFalse(hasattr(telegram_bot, "SUPERADMIN_TELEGRAM_ID"))
+        with patch.object(m.User.objects, "filter") as user_filter, patch.object(m.User.objects, "create") as user_create, \
+                patch.object(m.StudentProfile.objects, "filter") as profile_filter:
+            user_filter.return_value.first.return_value = None
+            self.assertFalse(telegram_menu.is_superadmin(chat_id=5582178765))
+            self.assertIsNone(telegram_menu.ensure_superadmin_user(5582178765, from_user={"first_name": "Komiljon"}))
+            user_create.assert_not_called()
+            user_filter.return_value.update.assert_not_called()
+            profile_filter.return_value.update.assert_not_called()
 
-        existing_student = SimpleNamespace(
-            id="user-sa-1",
-            name="Komiljon",
-            phone="+998901234567",
-            role="student",
-            is_active=False,
-            telegram_chat_id="5582178765",
-        )
-        with patch("apps.core.telegram_menu.find", return_value=existing_student), \
-             patch.object(m.User.objects, "filter") as mock_user_filter, \
-             patch.object(m.StudentProfile.objects, "filter") as mock_sp_filter:
-            user = telegram_menu.ensure_superadmin_user(5582178765, from_user={"first_name": "Komiljon"})
-            self.assertEqual(user.role, "super_admin")
-            self.assertTrue(user.is_active)
-            self.assertTrue(user.is_approved)
-            self.assertEqual(user.telegram_chat_id, "5582178765")
-            mock_user_filter.return_value.update.assert_called_once()
-            mock_sp_filter.return_value.update.assert_called_once_with(is_approved=True)
+    def test_a_student_linked_to_the_old_default_id_is_not_promoted(self):
+        student = SimpleNamespace(id="u1", name="S", role="student", is_active=True, telegram_chat_id="5582178765")
+        with patch.object(m.User.objects, "filter") as user_filter:
+            user_filter.return_value.first.return_value = None  # the lookup requires role='super_admin' in the query
+            self.assertFalse(telegram_menu.is_superadmin(chat_id="5582178765", user=student))
+            kwargs = user_filter.call_args.kwargs
+            self.assertEqual(kwargs.get("role"), "super_admin")
+            self.assertIs(kwargs.get("is_active"), True)
+        self.assertEqual(student.role, "student")
+
+    def test_only_an_active_super_admin_user_object_or_link_is_authorised(self):
+        active = SimpleNamespace(role="super_admin", is_active=True)
+        inactive = SimpleNamespace(role="super_admin", is_active=False)
+        with patch.object(m.User.objects, "filter") as user_filter:
+            user_filter.return_value.first.return_value = None
+            self.assertTrue(telegram_menu.is_superadmin(user=active))
+            self.assertFalse(telegram_menu.is_superadmin(user=inactive))
+            self.assertFalse(telegram_menu.is_superadmin(chat_id=None))
+
+    def test_web_admin_sso_is_refused_without_a_linked_super_admin(self):
+        sent = []
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=None), \
+                patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, reply_markup=None: sent.append(txt)), \
+                patch("apps.core.telegram_menu.generate_sso_url") as sso:
+            telegram_menu.send_web_admin_login(5582178765)
+        sso.assert_not_called()
+        self.assertTrue(sent and "superadmin" in sent[0].lower())
 
     def test_superadmin_start_and_panel_buttons(self):
         sent_menus = []
@@ -52,7 +70,7 @@ class TelegramV070Tests(SimpleTestCase):
             telegram_chat_id="5582178765",
         )
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(telegram_delivery, "menu", side_effect=lambda cid, txt, kb: sent_menus.append((cid, txt, kb))), \
              patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, reply_markup=None: sent_messages.append((cid, txt, reply_markup))):
             # 1. /start auto-recognizes 5582178765 and shows Superadmin keyboard
@@ -107,7 +125,7 @@ class TelegramV070Tests(SimpleTestCase):
             exam=SimpleNamespace(title="IELTS Academic Mock #4"),
         )
 
-        with patch("apps.core.telegram_menu.ensure_superadmin_user", return_value=sa_user), \
+        with patch("apps.core.telegram_menu.linked_superadmin", return_value=sa_user), \
              patch.object(m.User.objects, "count", return_value=120), \
              patch.object(m.StudentProfile.objects, "filter") as mock_sp_filter, \
              patch.object(m.User.objects, "filter") as mock_u_filter, \
@@ -173,6 +191,8 @@ class TelegramV070Tests(SimpleTestCase):
         sent_messages = []
         fake_image_bytes = b"\xff\xd8\xff\xe0fake-jpeg-handwritten-essay"
         mock_ocr_result = {
+            "ocrText": "Technology has changed how people learn. " * 12,
+            "available": True,
             "ocrText": "Nowadays technology plays a crucial role in modern education and global communication.",
             "wordCount": 265,
             "overall_band": 7.0,
@@ -201,7 +221,7 @@ class TelegramV070Tests(SimpleTestCase):
         mock_http_resp = MagicMock()
         mock_http_resp.__enter__.return_value.read.return_value = fake_image_bytes
 
-        with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": self.bot_token}), \
+        with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": self.bot_token, "SUPERADMIN_TELEGRAM_ID": "5582178765"}), \
              patch("apps.core.telegram_links.find", return_value=student_user), \
              patch.object(telegram_delivery, "call", return_value={"file_path": "photos/file_42.jpg"}) as mock_tg_call, \
              patch("apps.core.telegram_bot.urlopen", return_value=mock_http_resp), \
@@ -297,7 +317,8 @@ class TelegramV070Tests(SimpleTestCase):
             },
         )
 
-        with patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, reply_markup=None: sent_messages.append((cid, txt))):
+        with patch.dict(os.environ, {"SUPERADMIN_TELEGRAM_ID": "5582178765"}), \
+                patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, reply_markup=None: sent_messages.append((cid, txt))):
             recipients = telegram_delivery.notify_submission_result(job_obj)
             self.assertEqual(recipients, ["5582178765", "77665544"])
             self.assertEqual(len(sent_messages), 2)
@@ -317,3 +338,29 @@ class TelegramV070Tests(SimpleTestCase):
             self.assertIn("TA: <b>6.5</b>", sa_msg)
             self.assertIn("CC: <b>7.0</b>", sa_msg)
             self.assertIn("https://bestwayec.uz/uz/results/att-writing-777", sa_msg)
+
+    def test_without_an_alert_destination_only_the_teacher_is_notified(self):
+        with patch.dict(os.environ, {"SUPERADMIN_TELEGRAM_ID": ""}):
+            self.assertEqual(telegram_delivery._get_superadmin_id(), "")
+
+    def test_writing_photo_fails_closed_when_ocr_or_ai_is_unavailable(self):
+        student = SimpleNamespace(id="stu-1", name="Malika", role="student", is_active=True, telegram_chat_id="99887766")
+        message = {"message": {"chat": {"id": 99887766}, "from": {"id": 99887766, "first_name": "M"},
+                               "photo": [{"file_id": "f1"}], "caption": "Discuss."}}
+        scenarios = {
+            "no image bytes": (None, {}),
+            "no text read": (b"img", {"ocrText": "", "available": False, "overall_band": None}),
+            "no ai evaluation": (b"img", {"ocrText": "some text " * 30, "available": False, "overall_band": None}),
+        }
+        for name, (image, result) in scenarios.items():
+            sent = []
+            with self.subTest(name), patch.dict(os.environ, {"SUPERADMIN_TELEGRAM_ID": "5582178765"}), \
+                    patch("apps.core.telegram_links.find", return_value=student), \
+                    patch("apps.core.telegram_bot._download_telegram_photo", return_value=image), \
+                    patch("apps.core.telegram_bot.writing_ocr.extract_and_evaluate_images", return_value=result), \
+                    patch.object(telegram_delivery, "send", side_effect=lambda cid, txt, reply_markup=None: sent.append((str(cid), txt))):
+                telegram_bot.handle_update(message)
+            texts = " ".join(text for _cid, text in sent)
+            self.assertNotIn("Overall Writing Band", texts, name)
+            self.assertNotIn("5582178765", [cid for cid, _ in sent], f"{name}: admin must not be alerted with a score")
+            self.assertTrue(any(cid == "99887766" for cid, _ in sent))

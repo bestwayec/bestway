@@ -15,6 +15,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import type { MockExamDetail } from "@/lib/types";
 import { groupIssueCount } from "./checks";
+import { ListeningAudioGatePanel } from "./ListeningAudioGatePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { partRangeLabel, partTypeSummary } from "./ListeningPartEditor";
 import { tx, type Selection } from "./types";
@@ -135,6 +136,7 @@ export function ListeningSectionPanel({
 
   return (
     <div className="space-y-4">
+      <ListeningAudioGatePanel examId={examId} />
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-bold text-fg">
           {tx(t, "parts", "Parts")} ({parts.length})

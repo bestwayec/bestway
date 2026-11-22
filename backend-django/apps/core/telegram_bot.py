@@ -11,32 +11,16 @@ from . import telegram_delivery as api
 from . import telegram_fsm as fsm
 from . import telegram_links as links
 from . import telegram_menu as menu
+from . import telegram_quiz
+from . import telegram_state as _dialogs
+from . import telegram_vocab
+from . import telegram_teacher
+from . import telegram_settings
 
-try:
-    from . import writing_ocr
-except ImportError:
-    class _WritingOcrFallback:
-        @staticmethod
-        def extract_and_evaluate_images(images, task_prompt=None):
-            return {
-                'extracted_text': 'Essay text extracted from image.',
-                'word_count': 250,
-                'overall_band': 6.5,
-                'criteria': {
-                    'task_achievement': 6.5,
-                    'coherence_and_cohesion': 6.5,
-                    'lexical_resource': 6.5,
-                    'grammatical_range_and_accuracy': 6.5,
-                },
-                'strengths': ['Clear paragraph structure', 'Relevant examples provided'],
-                'weaknesses': ['Improve complex sentence variety', 'Check article usage'],
-                'feedback': 'Good overall response addressing the main parts of the prompt.',
-            }
-    writing_ocr = _WritingOcrFallback()
+from . import writing_ocr
 
-SUPERADMIN_TELEGRAM_ID = str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', '5582178765')))
 LINE='➖➖➖➖➖➖➖➖➖'
-HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/writing — Writing rasm tekshirish (OCR + AI)\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
+HELP=f'ℹ️ <b>Buyruqlar</b>\n{LINE}\n\n/start — akkauntni bog\'lash\n/menu — menyuni ko\'rsatish\n/writing — Writing rasm tekshirish (OCR + AI)\n/code — ilovaga kirish kodi (6 xonali)\n/login — web saytga bir martalik kirish (SSO)\n/apk — Android ilovani yuklab olish (.apk)\n/mock — mock imtihonlar\n/tests — mening testlarim\n/lugat — lug\'at mashqlari\n/mashq — mashq boshlash\n/takror — bugungi takrorlash\n/natija — lug\'at natijalarim\n/leaderboard — markaz reytingi\n/status — bog\'lanish holati\n/unlink — akkauntni uzish\n/help — shu yordam'
 WRITING_PROGRESS_MSG = (
     "⏳ <b>Writing javobingiz o'qilmoqda (OCR) va AI tomonidan tekshirilmoqda...</b>\n"
     "<i>Iltimos, 5-10 soniya kuting.</i>"
@@ -67,14 +51,17 @@ def _download_telegram_photo(file_id: str) -> bytes | None:
     file_path = (info or {}).get('file_path')
     if not file_path:
         return None
-    token = os.environ.get('TELEGRAM_BOT_TOKEN', 'test-token')
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not token:
+        return None
     file_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
     try:
         req = Request(file_url, headers={'User-Agent': 'BestWay-TelegramBot/1.0'}, method='GET')
         with urlopen(req, timeout=60) as resp:
             return resp.read()
     except Exception as exc:
-        logging.getLogger(__name__).warning('Failed to download Telegram photo bytes: %r', exc)
+        # The request URL embeds the bot token: never log the exception text, only its type.
+        logging.getLogger(__name__).warning('Failed to download Telegram photo bytes (%s)', type(exc).__name__)
         return None
 
 
@@ -211,10 +198,20 @@ def _handle_writing_image(chat_id, msg, user=None):
             file_id = doc.get('file_id')
             mime_type = doc_mime
 
-    image_bytes = _download_telegram_photo(file_id) or b''
+    image_bytes = _download_telegram_photo(file_id)
     caption = (msg.get('caption') or '').strip()
+    if not image_bytes:
+        api.send(chat_id, "⚠️ Rasmni yuklab bo'lmadi. Iltimos, qayta yuboring.")
+        return
 
     result = writing_ocr.extract_and_evaluate_images([(image_bytes, mime_type)], task_prompt=caption)
+    # Fail closed: no text read, or no real AI evaluation -> NO band is shown and nobody is alerted with a score.
+    if not (result.get('ocrText') or result.get('ocr_text') or '').strip():
+        api.send(chat_id, "⚠️ Rasmdan matnni o'qib bo'lmadi. Aniqroq rasmga olib qayta yuboring.")
+        return
+    if result.get('available') is False or result.get('overall_band') is None:
+        api.send(chat_id, "ℹ️ Matn o'qildi, lekin avtomatik baholash hozir mavjud emas. Hech qanday ball berilmadi — ustozingiz tekshiradi.")
+        return
     report_html, overall_band_str = _format_writing_ocr_report(result)
     api.send(chat_id, report_html)
 
@@ -237,6 +234,9 @@ def _handle_writing_image(chat_id, msg, user=None):
 
 
 def handle(update):
+    from . import telegram_state
+    if not telegram_state.claim_update(update):
+        return  # duplicate delivery / replay of an already accepted update_id
     cb=update.get('callback_query')
     if cb:
         try:
@@ -244,6 +244,23 @@ def handle(update):
             chat_id=cb.get('message',{}).get('chat',{}).get('id') or from_user.get('id')
             data=(cb.get('data') or '').strip()
             if cb.get('id'):api.answer_callback(cb['id'])
+            if telegram_quiz.is_quiz_callback(data):
+                # Quiz buttons: identity is the Telegram SENDER's linked account, answers go to their private chat.
+                telegram_quiz.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                              chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
+            if telegram_teacher.is_teacher_callback(data):
+                telegram_teacher.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                                 chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
+            if telegram_settings.is_settings_callback(data):
+                telegram_settings.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                                  chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
+            if telegram_vocab.is_vocab_callback(data):
+                telegram_vocab.handle_callback(from_user.get('id'), cb.get('message',{}).get('message_id'), data,
+                                               chat_type=(cb.get('message',{}).get('chat',{}) or {}).get('type','private'))
+                return
             if chat_id and menu.is_superadmin(chat_id=chat_id):
                 menu.ensure_superadmin_user(chat_id, from_user=from_user)
             if chat_id and data in ('download_apk','apk','android_apk',menu.BTN['apk']):
@@ -342,9 +359,35 @@ def handle(update):
         user_pre = menu.ensure_superadmin_user(chat_id, from_user=from_user) if menu.is_superadmin(chat_id=chat_id) else None
         text = (msg.get('text') or '').strip()
 
+        if text.split('@')[0] in ('/tests', '/testlar'):
+            if (msg.get('chat') or {}).get('type', 'private') != 'private':
+                api.send(chat_id, telegram_quiz.tr('uz', 'private_only'))   # a student's test list is never shown in a group
+            else:
+                telegram_quiz.send_my_tests(chat_id)
+            return
+        _ctype = (msg.get('chat') or {}).get('type', 'private')
+        if text.startswith('/') and (telegram_vocab.command(chat_id, text, chat_type=_ctype) or telegram_teacher.command(chat_id, text, chat_type=_ctype)
+                                     or telegram_settings.command(chat_id, text, chat_type=_ctype)):
+            return
+
         # FSM State Interception for Multi-Step Topic Dialogs
         fsm_session = fsm.get_state(chat_id)
         fsm_state = fsm_session.get('state') if isinstance(fsm_session, dict) else None
+        if not fsm_state and text in ('/cancel', '/bekor'):      # leaves any pending quiz/vocabulary/teacher wizard step (durable dialog state)
+            try:
+                _who = links.find(str(chat_id), True)
+                _pending = _who is not None and _dialogs.get_dialog(_who.id)[0]
+            except Exception:  # noqa: BLE001 - fall back to the existing cancel handling
+                _pending = False
+            if _pending:
+                _dialogs.clear_dialog(_who.id)
+                api.send(chat_id, '✖️ Bekor qilindi. / Cancelled.')
+                return
+
+        # A plain private message answers the pending free-text quiz question (durable dialog state, not memory).
+        if not fsm_state and text and not text.startswith('/') and text not in menu.BTN.values() \
+                and (msg.get('chat') or {}).get('type', 'private') == 'private' and (telegram_quiz.handle_text(chat_id, text) or telegram_vocab.handle_text(chat_id, text) or telegram_teacher.handle_text(chat_id, text)):
+            return
 
         if fsm_state:
             if text == '/cancel':

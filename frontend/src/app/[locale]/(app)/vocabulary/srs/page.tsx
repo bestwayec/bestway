@@ -93,14 +93,14 @@ export default function VocabularySrsPage() {
       </div>
 
       {/* SRS Hero Header */}
-      <div className="rounded-2xl border border-border bg-surface p-6 md:p-8 shadow-xl space-y-6">
+      <div className="space-y-6 rounded-card border border-border bg-surface p-5 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-warning bg-warning/10 px-2.5 py-1 rounded-md border border-warning/20">
-              <Sparkles className="h-3.5 w-3.5" />
+            <p className="inline-flex items-center gap-2 text-sm text-fg-muted">
+              <Sparkles className="h-4 w-4" aria-hidden />
               <span>{ts("badge")}</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-fg">
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-fg">
               {ts("title")}
             </h1>
             <p className="text-sm text-fg-muted max-w-xl">
@@ -124,7 +124,7 @@ export default function VocabularySrsPage() {
               type="button"
               disabled={!stats || stats.totalDueWords === 0}
               onClick={() => setIsQuizActive(true)}
-              className="bg-brand hover:bg-brand-hover text-brand-fg font-semibold shadow-md"
+              className="bg-brand font-semibold text-brand-fg hover:bg-brand-hover"
             >
               <Play className="mr-2 h-4 w-4" />
               {ts("start")}
@@ -132,38 +132,39 @@ export default function VocabularySrsPage() {
           </div>
         </div>
 
-        {/* SRS Stats Cards */}
+        {/* The number that matters first is what is due now; the rest is context. Neutral tiles, status colour only for status. */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-6">
-            <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
-              <div className="text-xs uppercase tracking-wider text-warning font-semibold flex items-center justify-between">
-                <span>{ts("statLearning")}</span>
-                <Flame className="h-4 w-4" />
+          <div className="border-t border-border pt-6">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="srs-stats">
+              <div className="col-span-2 rounded-card border border-brand/40 bg-brand-subtle p-4 sm:col-span-1">
+                <dt className="flex items-center justify-between text-sm font-medium text-brand-subtle-fg">
+                  <span>{ts("statDue")}</span>
+                  <Flame className="h-4 w-4" aria-hidden />
+                </dt>
+                <dd className="mt-2 text-2xl font-bold tabular-nums text-fg">{t("words", { count: stats.totalDueWords })}</dd>
               </div>
-              <p className="text-2xl font-bold text-fg mt-2">
-                {t("words", { count: stats.totalWeakWords })}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
-              <div className="text-xs uppercase tracking-wider text-brand font-semibold flex items-center justify-between">
-                <span>{ts("statMastered")}</span>
-                <CheckCircle2 className="h-4 w-4" />
+              <div className="rounded-card border border-border bg-surface p-4">
+                <dt className="flex items-center justify-between text-sm font-medium text-fg-muted">
+                  <span>{ts("statLearning")}</span>
+                </dt>
+                <dd className="mt-2 text-2xl font-bold tabular-nums text-fg">{t("words", { count: stats.totalWeakWords })}</dd>
               </div>
-              <p className="text-2xl font-bold text-brand mt-2">
-                {t("words", { count: stats.totalMasteredWords })}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-bg-subtle/40 p-4">
-              <div className="text-xs uppercase tracking-wider text-fg-muted font-semibold flex items-center justify-between">
-                <span>{ts("statTotal")}</span>
-                <Trophy className="h-4 w-4" />
+              <div className="rounded-card border border-border bg-surface p-4">
+                <dt className="flex items-center justify-between text-sm font-medium text-fg-muted">
+                  <span>{ts("statMastered")}</span>
+                  <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+                </dt>
+                <dd className="mt-2 text-2xl font-bold tabular-nums text-fg">{t("words", { count: stats.totalMasteredWords })}</dd>
               </div>
-              <p className="text-2xl font-bold text-fg mt-2">
-                {t("words", { count: stats.totalWeakWords + stats.totalMasteredWords })}
-              </p>
-            </div>
+              <div className="col-span-2 rounded-card border border-border bg-surface p-4 sm:col-span-1">
+                <dt className="flex items-center justify-between text-sm font-medium text-fg-muted">
+                  <span>{ts("statTotal")}</span>
+                  <Trophy className="h-4 w-4" aria-hidden />
+                </dt>
+                <dd className="mt-2 text-2xl font-bold tabular-nums text-fg">{t("words", { count: stats.totalWeakWords + stats.totalMasteredWords })}</dd>
+              </div>
+            </dl>
+            {stats.totalDueWords === 0 && <p className="mt-3 text-sm text-fg-muted" data-testid="srs-none-due">{ts("noneDue")}</p>}
           </div>
         )}
       </div>
@@ -182,7 +183,7 @@ export default function VocabularySrsPage() {
       )}
 
       {!isLoading && stats && (
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-4">
+        <div className="space-y-4 rounded-card border border-border bg-surface p-5 sm:p-6">
           <h2 className="text-base font-bold text-fg flex items-center justify-between">
             <span>{ts("listTitle")}</span>
             <Badge variant="neutral" className="text-xs">
@@ -193,7 +194,7 @@ export default function VocabularySrsPage() {
           </h2>
 
           {stats.weakWords.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-12 text-center text-fg-muted space-y-3">
+            <div className="space-y-3 rounded-card border border-dashed border-border p-12 text-center text-fg-muted">
               <CheckCircle2 className="h-12 w-12 text-brand mx-auto" />
               <h3 className="text-base font-bold text-fg">{ts("emptyTitle")}</h3>
               <p className="text-xs text-fg-muted max-w-sm mx-auto">
@@ -206,9 +207,9 @@ export default function VocabularySrsPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-auto rounded-card border border-border">
               <table className="w-full text-left text-sm">
-                <thead className="bg-bg-subtle text-fg-muted text-xs uppercase tracking-wider">
+                <thead className="bg-bg-subtle text-sm text-fg-muted">
                   <tr>
                     <th className="py-2.5 px-4 font-semibold">#</th>
                     <th className="py-2.5 px-4 font-semibold">{ts("colEnglish")}</th>
@@ -223,12 +224,12 @@ export default function VocabularySrsPage() {
                   {stats.weakWords.map((w, idx) => (
                     <tr key={w.id} className="hover:bg-bg-subtle/50 transition-colors">
                       <td className="py-2.5 px-4 text-fg-muted font-mono text-xs">{idx + 1}</td>
-                      <td className="py-2.5 px-4 font-bold text-fg">{w.english}</td>
-                      <td className="py-2.5 px-4 text-brand font-medium">
+                      <td className="px-4 py-2.5 font-semibold text-fg">{w.english}</td>
+                      <td className="px-4 py-2.5 font-medium text-fg-muted">
                         {w.uzbek}
                       </td>
                       <td className="py-2.5 px-4 text-center">
-                        <Badge variant="danger" className="h-5 px-2 text-xs">
+                        <Badge variant="neutral" className="h-5 px-2 text-xs tabular-nums">
                           {ts("times", { count: w.mistakeCount })}
                         </Badge>
                       </td>

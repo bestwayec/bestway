@@ -92,3 +92,10 @@ docker-compose.override.yml
 
 # Local development state (pids, logs, e2e reports) created by scripts/local-*.ps1
 /.local/
+
+# Mock 27: owner-supplied Listening/Reading material has unverified redistribution rights.
+# Extracted packages must never be committed.
+private_content/
+**/private_mock27/
+*.package.json
+!backend-django/tests/**/*.package.json

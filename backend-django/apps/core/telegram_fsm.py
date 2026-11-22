@@ -12,14 +12,10 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SUPERADMIN_TELEGRAM_ID = '5582178765'
-
-
 def get_superadmin_id() -> str:
-    """Returns the configured Superadmin Telegram ID."""
-    if settings.configured:
-        return str(getattr(settings, 'SUPERADMIN_TELEGRAM_ID', os.environ.get('SUPERADMIN_TELEGRAM_ID', DEFAULT_SUPERADMIN_TELEGRAM_ID)))
-    return str(os.environ.get('SUPERADMIN_TELEGRAM_ID', DEFAULT_SUPERADMIN_TELEGRAM_ID))
+    """Operator-configured alert destination ('' when unset). Never an authorization source."""
+    configured = getattr(settings, 'SUPERADMIN_TELEGRAM_ID', '') if settings.configured else ''
+    return str(os.environ.get('SUPERADMIN_TELEGRAM_ID') or configured or '')
 
 
 SUPERADMIN_TELEGRAM_ID = get_superadmin_id()
@@ -56,13 +52,14 @@ TOPIC_STATES = {
 
 
 def is_superadmin(chat_id: int | str | None = None, user: Any = None) -> bool:
-    """Verifies whether the given chat_id or user model has Superadmin privileges."""
-    sa_id = get_superadmin_id()
-    if chat_id is not None and str(chat_id).strip() == sa_id:
+    """True only for an ACTIVE account whose server-side role is super_admin: either the given user object, or the
+    account validly linked to this chat. A chat id (or any built-in/default id) alone never grants anything."""
+    if user is not None and getattr(user, 'role', None) == 'super_admin' and getattr(user, 'is_active', True) is not False:
         return True
-    if user is not None and getattr(user, 'role', None) == 'super_admin':
-        return True
-    return False
+    if chat_id is None or str(chat_id).strip() == '':
+        return False
+    from . import telegram_menu
+    return telegram_menu.linked_superadmin(chat_id) is not None
 
 
 def is_topic_state(state: str | None) -> bool:
@@ -75,7 +72,7 @@ def is_topic_state(state: str | None) -> bool:
 def check_superadmin_guard(chat_id: int | str) -> bool:
     """
     Superadmin Security Guard.
-    Ensures that only SUPERADMIN_TELEGRAM_ID can perform topic management tasks.
+    Ensures that only a linked, active super_admin account can perform topic management tasks.
     Rejects unauthorized access with an alert message and resets dialog state.
     """
     cid = str(chat_id).strip()

@@ -260,6 +260,7 @@ export function ExamTrackDashboard() {
             overallBand={latestCompleted.overallBand}
             isIelts={latestCompleted.examType !== "multilevel"}
             examTitle={latestCompleted.examTitle}
+            verified={Boolean(latestCompleted.isTeacherReviewed || latestCompleted.scoreMethod === "OFFICIAL_CALIBRATED")}
             sections={(["listening", "reading", "writing", "speaking"] as MockSkill[]).map((s) => {
               const raw = latestCompleted.rawScores?.[s];
               return {
@@ -267,6 +268,8 @@ export function ExamTrackDashboard() {
                 title: tm(`skills.${s}`),
                 score: raw?.score,
                 max: raw?.max,
+                band: latestCompleted.sectionBands?.[s] ?? null,
+                standardScore: latestCompleted.standardScores?.[s]?.estimatedStandardScore ?? null,
               };
             })}
           />

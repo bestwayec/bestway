@@ -1,8 +1,14 @@
+import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
-import { TeacherWorkspaceView } from "@/components/teacher/TeacherWorkspaceView";
+import { Skeleton } from "@/components/ui/feedback";
+import { TeacherHome } from "@/components/workspace/teacher-home";
 
-export default async function TeacherPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return <TeacherWorkspaceView />;
+  return (
+    <Suspense fallback={<Skeleton className="h-72" />}>
+      <TeacherHome />
+    </Suspense>
+  );
 }
