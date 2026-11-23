@@ -85,7 +85,12 @@ def _text(value) -> str:
     return value if isinstance(value, str) else ''
 
 
-def export_package(actor, exam_id: str, skill: str | None = None) -> dict:
+def export_package(actor, exam_id: str, skill: str | None = None, *, template: bool = False, group_id: str | None = None) -> dict:
+    """`template=True` produces a reusable package *without answer keys*: correctAnswers and
+    acceptedVariants are emptied and answer-revealing review fields (evidence, audio timestamps)
+    are dropped. The package carries `"template": true`, which lets the importer accept the empty
+    keys as a publish blocker (never an import blocker), and an open review issue so a draft made
+    from it cannot be published until keys are added. `group_id` exports one question group."""
     exam = MockExam.objects.filter(id=exam_id).first()
     if exam is None:
         raise ContractAPIException('MOCK_EXAM_NOT_FOUND', 'Mock imtihon topilmadi', 404)
@@ -100,6 +105,11 @@ def export_package(actor, exam_id: str, skill: str | None = None) -> dict:
         if not sections:
             raise ContractAPIException('MOCK_SECTION_NOT_FOUND', f'Bu imtihonda {skill} bo‘limi yo‘q', 404)
     groups = list(MockQuestionGroup.objects.filter(section_id__in=[s.id for s in sections]).order_by('sort_order', 'created_at'))
+    if group_id is not None:
+        groups = [g for g in groups if g.id == group_id]
+        if not groups:
+            raise ContractAPIException('MOCK_GROUP_NOT_FOUND', 'Savollar guruhi topilmadi', 404)
+        sections = [s for s in sections if s.id == groups[0].section_id]
     questions = list(MockQuestion.objects.filter(group_id__in=[g.id for g in groups]).order_by('sort_order', 'number'))
     by_section: dict[str, list] = {}
     for group in groups:
@@ -174,10 +184,14 @@ def export_package(actor, exam_id: str, skill: str | None = None) -> dict:
                     item['cefrLevel'] = question.cefr_level
                 if question.skill_tags:
                     item['skillTags'] = list(question.skill_tags)
-                if question.evidence_text:
+                if question.evidence_text and not template:
                     item['evidenceText'] = question.evidence_text
-                if question.audio_start_sec is not None:
+                if question.audio_start_sec is not None and not template:
                     item['audioStartSec'] = question.audio_start_sec
+                if template:
+                    item['correctAnswers'], item['acceptedVariants'] = [], []
+                    if item.get('answerRule') is None:
+                        item.pop('answerRule', None)
                 out_questions.append(item)
             value['questions'] = out_questions
             out_groups.append(value)
@@ -196,7 +210,15 @@ def export_package(actor, exam_id: str, skill: str | None = None) -> dict:
                  sections=exported_sections)
     if exam.practice_level and exam.type == 'multilevel' and profile == 'practice':
         value['practiceLevel'] = exam.practice_level
-    package_id = _slug(f'bw-{exam.id}' + (f'-{skill}' if skill else ''), 'bw')
-    return dict(schemaVersion='1.0', packageId=package_id, revision=max(1, int(exam.content_version or 1)),
-                profile=profile, source=dict(kind='provided_material', label=f'BestWay export: {exam.title}'[:200]),
-                exam=value, media=media, reviewIssues=[])
+    if group_id is not None and profile == 'full_mock':
+        profile = 'practice'
+    stem = f'bw-{"tpl-" if template else ""}{exam.id}' + (f'-{skill}' if skill else '') + (f'-g{group_id[:8]}' if group_id else '')
+    package = dict(schemaVersion='1.0', packageId=_slug(stem, 'bw'), revision=max(1, int(exam.content_version or 1)),
+                   profile=profile, source=dict(kind='provided_material', label=f'BestWay {"template" if template else "export"}: {exam.title}'[:200]),
+                   exam=value, media=media, reviewIssues=[])
+    if template:
+        package['template'] = True
+        package['reviewIssues'] = [dict(key='template-answer-keys', code='MISSING_ANSWER', path='/exam',
+            message='Template without answer keys: add and verify every answer key before publishing.',
+            sourceRef=f'BestWay template of exam {exam.id}')]
+    return package

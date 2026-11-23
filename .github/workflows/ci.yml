@@ -83,6 +83,7 @@ jobs:
         run: |
           python scripts/verify_readiness_contract_postgres.py
           python scripts/verify_item_bank_postgres.py
+          python scripts/verify_exam_builder_completion_postgres.py
           python scripts/verify_partial_practice_postgres.py
           python scripts/verify_exam_window_postgres.py
           python scripts/verify_finish_load_postgres.py

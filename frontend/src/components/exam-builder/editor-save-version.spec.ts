@@ -19,6 +19,8 @@ vi.mock('react', async (importOriginal) => {
       const value = harness.stateIndex++ === 0 ? harness.image : typeof initial === 'function' ? initial() : initial;
       return [value, vi.fn()];
     },
+    // useUndoableState (editor edit history) is a reducer; the harness only needs its initial value.
+    useReducer: (_reducer: unknown, arg: unknown, init?: (a: unknown) => unknown) => [init ? init(arg) : arg, vi.fn()],
     useRef: (current: unknown) => ({ current }),
     useMemo: (calculate: () => unknown) => calculate(),
     useCallback: (callback: unknown) => callback,

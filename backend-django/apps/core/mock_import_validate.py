@@ -210,7 +210,10 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
     if not isinstance(pkg, dict):
         add('JSON_PARSE', '', 'Package must be a JSON object')
         return finish()
-    unknown(pkg, ('schemaVersion', 'packageId', 'revision', 'profile', 'source', 'exam', 'media', 'reviewIssues'), '', 'top-level')
+    unknown(pkg, ('schemaVersion', 'packageId', 'revision', 'profile', 'source', 'exam', 'media', 'reviewIssues', 'template'), '', 'top-level')
+    template = pkg.get('template') is True
+    if 'template' in pkg and type(pkg['template']) is not bool:
+        add('TEMPLATE_FLAG', '/template', 'template must be a boolean')
     if pkg.get('schemaVersion') != '1.0':
         add('SCHEMA_VERSION', '/schemaVersion', 'schemaVersion must be exactly "1.0"')
     if not isinstance(pkg.get('packageId'), str) or not KEY.fullmatch(pkg['packageId']):
@@ -335,6 +338,7 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                     q_nums = []
                     for qi, question in enumerate(questions):
                         qb = gb + f'/questions/{qi}'
+                        keyless = template and isinstance(question, dict) and question.get('correctAnswers') == []
                         if not isinstance(question, dict):
                             add('QUESTION', qb, 'question must be an object')
                             continue
@@ -400,12 +404,12 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                             add('CORRECT', qb + '/correctAnswers', 'correctAnswers must be an array')
                         else:
                             if not manual and not correct:
-                                add('MISSING_ANSWER', qb + '/correctAnswers', 'auto-graded questions require at least one key')
+                                add('MISSING_ANSWER', qb + '/correctAnswers', 'auto-graded questions require at least one key', ('publish',) if keyless else ('import',))
                             if manual and correct:
                                 add('MANUAL_KEY', qb + '/correctAnswers', 'manual tasks must have empty correctAnswers')
                             if qt in ('multiple_choice', 'matching', 'matching_headings', 'multi_select'):
                                 multi = qt == 'multi_select'
-                                if (multi and len(correct) < 2) or (not multi and len(correct) > 1):
+                                if ((multi and len(correct) < 2) or (not multi and len(correct) > 1)) and not keyless:
                                     add('CORRECT_COUNT', qb + '/correctAnswers', 'multi-select requires at least two letters' if multi else 'single-choice questions accept exactly one letter')
                                 for key in correct:
                                     if not isinstance(key, str) or not re.fullmatch('[A-Z]', key):
@@ -450,12 +454,15 @@ def validate_package(pkg, media_bindings=None, raw_text=None):
                         if question.get('answerRule') is not None and question['answerRule'] not in tuple(ANSWER_RULES):
                             add('ANSWER_RULE', qb + '/answerRule', 'answerRule is invalid')
                         for issue in objective_question_issues(question, skill in ('reading', 'listening'), audio_stem=skill == 'listening'):
-                            add('QUESTION_ENGINE', qb, issue)
+                            key_issue = keyless and ('key' in issue)
+                            add('QUESTION_ENGINE', qb, issue, ('publish',) if key_issue else ('import',))
                         if not nonblank(question.get('sourceRef')):
                             add('SOURCE_REF', qb + '/sourceRef', 'question.sourceRef must be non-blank')
                     counts['questions'] += len(questions)
                     for issue in objective_group_issues(dict(contentLayout=group.get('contentLayout'), optionsReusable=group.get('optionsReusable'), imageKey=group.get('imageRef'), questions=[q for q in questions if isinstance(q, dict)]), skill in ('reading', 'listening')):
-                        add('QUESTION_ENGINE', gb, issue, ('publish',) if 'require an image' in issue else ('import',))
+                        publish_only = 'require an image' in issue or (template and 'key' in issue and all(
+                            isinstance(q, dict) and q.get('correctAnswers') == [] for q in questions))
+                        add('QUESTION_ENGINE', gb, issue, ('publish',) if publish_only else ('import',))
                     gaps = gap_numbers(sanitize_content(rich)) if isinstance(rich, str) and rich else []
                     if isinstance(rich, str) and rich and (gaps or group.get('contentLayout') in ('document', 'table', 'notes', 'summary', 'sentences')):
                         dup = [n for i, n in enumerate(gaps) if n in gaps[:i]]

@@ -655,8 +655,12 @@ export interface MockExamImportRef {
 }
 
 /** GET /mock/exams */
+/** DRAFT → VALIDATED → PUBLISHED → ARCHIVED (staff responses only). */
+export type ExamLifecycle = "draft" | "validated" | "published" | "archived";
+
 export interface MockExamListItem {
   id: string;
+  lifecycle?: ExamLifecycle;
   type: MockExamType;
   profile?: string;
   title: string;
@@ -761,6 +765,7 @@ export interface MockSection {
 /** shapeExam natijasi (start javobidagi `exam`) — narx/access YO'Q */
 export interface MockExamStructure {
   id: string;
+  lifecycle?: ExamLifecycle | null;
   code?: string;
   type: MockExamType;
   examType?: string;

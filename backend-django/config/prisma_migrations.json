@@ -152,6 +152,12 @@
       "checksums": [
         "8f07e01fff340df0208b373263a91f908b5cc2c239ea8661b69cfd95310afbef"
       ]
+    },
+    {
+      "name": "20261123000000_exam_lifecycle",
+      "checksums": [
+        "935d1dc4f76bc37f85018abe9517ce6e5e6ab1d7a132aac03818e06514da94a4"
+      ]
     }
   ]
 }

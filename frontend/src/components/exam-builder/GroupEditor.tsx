@@ -29,6 +29,8 @@ import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { multilevelPartSummary } from "./multilevel-part-guidance";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
+import { UndoRedoBar } from "./UndoRedoBar";
+import { useUndoableState } from "./undo-history";
 import { SKILL_META, TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 function toBuilder(group: MockExamDetail["sections"][number]["groups"][number]): BuilderPart {
@@ -125,7 +127,10 @@ export function GroupEditor({
 
   // Fresh server snapshot per group (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilder(group) : null));
-  const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  // Unsaved edits of this panel, with undo/redo. Saving resets the history (version boundary).
+  const partHistory = useUndoableState<BuilderPart | null>(() => snapshot);
+  const part = partHistory.value;
+  const setPart = partHistory.set;
   const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
@@ -213,7 +218,7 @@ export function GroupEditor({
       draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
-      setPart(p);
+      partHistory.reset(p);
       if (mode === "visual") setVisualQuestions(savedQuestions);
       if (p.audioPendingFile || imageFile) {
         const form = new FormData();
@@ -226,7 +231,7 @@ export function GroupEditor({
       setErrors([]);
       const cleaned: BuilderPart = { ...p, audioPendingFile: null, audioFileName: p.audioPendingFile ? p.audioPendingFile.name : p.audioFileName };
       setSnapshot(JSON.parse(JSON.stringify(cleaned)));
-      setPart(cleaned);
+      partHistory.reset(cleaned);
       if (mode === "visual") {
         setVisualText(cleaned.passageText);
         setVisualQuestions(cleaned.questions);
@@ -579,6 +584,7 @@ export function GroupEditor({
           {tx(t, "questionsTitle", "Questions")} ({mode === "visual" ? visualQuestions.length : part.questions.length})
         </h3>
         <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
+          <UndoRedoBar history={partHistory} disabled={mode === "visual"} disabledReason={tx(t, "undoFormOnly", "Undo/redo works in the form list")} />
           <div
             className="col-span-2 flex items-center gap-1 rounded-field border border-border p-1 sm:col-span-1"
             role="tablist"

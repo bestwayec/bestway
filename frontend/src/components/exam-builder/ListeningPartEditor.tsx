@@ -42,6 +42,8 @@ import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas, visualScratchKey } from "./visual-editor/VisualQuestionCanvas";
+import { UndoRedoBar } from "./UndoRedoBar";
+import { useUndoableState } from "./undo-history";
 import { TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 const LISTENING_TYPES = TYPES_BY_SKILL["listening"];
@@ -148,7 +150,10 @@ export function ListeningPartEditor({
 
   // Fresh server snapshot per part (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
-  const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  // Unsaved edits of this panel, with undo/redo. Saving resets the history (version boundary).
+  const partHistory = useUndoableState<BuilderPart | null>(() => snapshot);
+  const part = partHistory.value;
+  const setPart = partHistory.set;
   const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
@@ -252,7 +257,7 @@ export function ListeningPartEditor({
       draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
-      setPart(p);
+      partHistory.reset(p);
       if (mode === "visual") setVisualQuestions(savedQuestions);
       if (p.audioPendingFile || imageFile) {
         const form = new FormData();
@@ -276,7 +281,7 @@ export function ListeningPartEditor({
       // Keep dirty in sync: baseline now matches the saved state and pending media is consumed.
       const cleaned: BuilderPart = { ...p, audioPendingFile: null, audioFileName: p.audioPendingFile ? p.audioPendingFile.name : p.audioFileName };
       setSnapshot(JSON.parse(JSON.stringify(cleaned)));
-      setPart(cleaned);
+      partHistory.reset(cleaned);
       if (mode === "visual") {
         setVisualText(cleaned.passageText);
         setVisualQuestions(cleaned.questions);
@@ -618,6 +623,7 @@ export function ListeningPartEditor({
             </h3>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            <UndoRedoBar history={partHistory} disabled={mode === "visual"} disabledReason={tx(t, "undoFormOnly", "Undo/redo works in the form list")} />
             <div
               className="flex items-center gap-1 rounded-field border border-border p-0.5"
               role="tablist"

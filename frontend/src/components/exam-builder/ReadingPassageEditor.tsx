@@ -43,6 +43,8 @@ import { StudentPreview } from "./StudentPreview";
 import { QuestionGroupSettings } from "./QuestionGroupSettings";
 import { newPresetQuestion, presetForPart, type QuestionFormatPreset } from "./question-format-model";
 import { VisualQuestionCanvas } from "./visual-editor/VisualQuestionCanvas";
+import { UndoRedoBar } from "./UndoRedoBar";
+import { useUndoableState } from "./undo-history";
 import { TYPES_BY_SKILL, nextQuestionNumber, sectionNumbers, tx, type Selection } from "./types";
 
 const READING_TYPES = TYPES_BY_SKILL["reading"];
@@ -246,7 +248,10 @@ export function ReadingPassageEditor({
 
   // Fresh server snapshot per passage (parent keys by groupId).
   const [snapshot, setSnapshot] = React.useState<BuilderPart | null>(() => (group ? toBuilderPart(group) : null));
-  const [part, setPart] = React.useState<BuilderPart | null>(() => snapshot);
+  // Unsaved edits of this panel, with undo/redo. Saving resets the history (version boundary).
+  const partHistory = useUndoableState<BuilderPart | null>(() => snapshot);
+  const part = partHistory.value;
+  const setPart = partHistory.set;
   const draftVersion = React.useRef(detail.contentVersion);
   const [formatPreset, setFormatPreset] = React.useState<QuestionFormatPreset | undefined>(() => snapshot ? presetForPart(snapshot) : undefined);
   // Visual paste mode (Task 8): second view over the same part state.
@@ -322,7 +327,7 @@ export function ReadingPassageEditor({
       draftVersion.current = saved.version;
       const savedQuestions = p.questions.map((q, index) => ({ ...q, savedQuestionId: saved.questions[index].id }));
       p = { ...p, questions: savedQuestions };
-      setPart(p);
+      partHistory.reset(p);
       if (mode === "visual") setVisualQuestions(savedQuestions);
       if (imageFile) {
         const form = new FormData();
@@ -651,6 +656,7 @@ export function ReadingPassageEditor({
               </span>
             </h3>
             <div className="ml-auto flex flex-wrap items-center gap-2">
+              <UndoRedoBar history={partHistory} disabled={mode === "visual"} disabledReason={tx(t, "undoFormOnly", "Undo/redo works in the form list")} />
               <div
                 className="flex items-center gap-1 rounded-field border border-border p-0.5"
                 role="tablist"
