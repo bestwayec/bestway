@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { BATTLE_ANSWER_STYLES } from "./battle-answer-styles";
+import { getPronunciationEngine } from "@/lib/pronunciation/engine";
 
 export interface VocabBattleHostProps {
   setId: string;
@@ -124,13 +125,11 @@ export function VocabBattleHost({ setId, onClose }: VocabBattleHostProps) {
     }
   };
 
+  // Shared engine: the same word twice, never overlapping a previous round's audio.
   const handlePlayAudio = (word: string) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = "en-US";
-    window.speechSynthesis.speak(utterance);
+    void getPronunciationEngine().play({ text: word, repeat: 2, owner: "vocab-battle-host" });
   };
+  React.useEffect(() => () => getPronunciationEngine().stop("vocab-battle-host"), []);
 
   if (isLoading) {
     return (

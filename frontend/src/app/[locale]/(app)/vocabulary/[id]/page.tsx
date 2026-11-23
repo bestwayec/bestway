@@ -11,7 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VocabularyQuizRunner } from "@/components/vocabulary/VocabularyQuizRunner";
 
-type QuizModeType = "mixed" | "eng_uzb" | "uzb_eng" | "spelling";
+type QuizModeType =
+  | "mixed" | "eng_uzb" | "uzb_eng" | "spelling"
+  | "smart_mix" | "listen_choose" | "listen_type" | "fill_blank" | "context_meaning" | "synonym";
+type NewType = "listen_choose" | "listen_type" | "fill_blank" | "context_meaning" | "synonym";
 
 export default function VocabularyDetailPage() {
   const t = useTranslations("vocabulary");
@@ -23,18 +26,30 @@ export default function VocabularyDetailPage() {
   // The set's own title, level and size from the server; nothing is shown until (or unless) it loads.
   const setQ = useQuery({
     queryKey: ["vocabulary-set", setId],
-    queryFn: () => api.get<{ title: string; level: string; wordCount: number }>(`/v1/vocabulary/sets/${setId}`),
+    queryFn: () =>
+      api.get<{ title: string; level: string; wordCount: number; questionTypes?: Partial<Record<NewType, number>> }>(`/v1/vocabulary/sets/${setId}`),
     enabled: !!setId,
   });
 
   const [mode, setMode] = React.useState<QuizModeType>("mixed");
   const [isQuizStarted, setIsQuizStarted] = React.useState(false);
 
-  const MODES: Array<{ id: QuizModeType; label: string; desc: string }> = [
+  const counts = setQ.data?.questionTypes;
+  // A 3.0 type is offered only when the set has the data to build it (e.g. example sentences
+  // containing the word, teacher-entered synonyms). Counts come from the server.
+  // Unknown (still loading) is not "unavailable": counts are shown and types disabled only once known.
+  const available = (type: NewType) => (counts ? (counts[type] ?? 0) : undefined);
+  const MODES: Array<{ id: QuizModeType; label: string; desc: string; count?: number }> = [
     { id: "mixed", label: tm("mixed"), desc: tm("mixedDesc") },
     { id: "eng_uzb", label: tm("engUzb"), desc: tm("engUzbDesc") },
     { id: "uzb_eng", label: tm("uzbEng"), desc: tm("uzbEngDesc") },
     { id: "spelling", label: tm("spelling"), desc: tm("spellingDesc") },
+    { id: "smart_mix", label: tm("smartMix"), desc: tm("smartMixDesc") },
+    { id: "listen_choose", label: tm("listenChoose"), desc: tm("listenChooseDesc"), count: available("listen_choose") },
+    { id: "listen_type", label: tm("listenType"), desc: tm("listenTypeDesc"), count: available("listen_type") },
+    { id: "fill_blank", label: tm("fillBlank"), desc: tm("fillBlankDesc"), count: available("fill_blank") },
+    { id: "context_meaning", label: tm("contextMeaning"), desc: tm("contextMeaningDesc"), count: available("context_meaning") },
+    { id: "synonym", label: tm("synonym"), desc: tm("synonymDesc"), count: available("synonym") },
   ];
 
   if (isQuizStarted) {
@@ -86,14 +101,16 @@ export default function VocabularyDetailPage() {
         <div role="radiogroup" aria-label={tm("title")} className="space-y-3">
           {MODES.map((m) => {
             const isSelected = mode === m.id;
+            const unavailable = m.count === 0;
             return (
               <button
                 key={m.id}
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
+                disabled={unavailable}
                 onClick={() => setMode(m.id)}
-                className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex items-center justify-between gap-4 ${
+                className={`w-full rounded-xl border p-4 text-left transition-all duration-200 flex items-center justify-between gap-4 disabled:cursor-not-allowed disabled:opacity-50 ${
                   isSelected
                     ? "border-brand bg-brand/10 shadow-md ring-1 ring-brand"
                     : "border-border bg-surface hover:bg-bg-subtle/50 hover:border-border"
@@ -109,6 +126,11 @@ export default function VocabularyDetailPage() {
                     )}
                   </div>
                   <p className="text-xs text-fg-muted">{m.desc}</p>
+                  {m.count !== undefined && (
+                    <p className="text-[11px] text-fg-subtle">
+                      {unavailable ? tm("typeUnavailable") : tm("typeWords", { count: m.count })}
+                    </p>
+                  )}
                 </div>
                 <div
                   className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${

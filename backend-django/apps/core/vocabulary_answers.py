@@ -31,9 +31,15 @@ def split_translations(text: str) -> list[str]:
 
 
 def accepted_forms(word, question_type: str, variants=()) -> list[str]:
-    """Texts accepted for `word` in a question of `question_type` (eng_uzb | uzb_eng | spelling)."""
-    if question_type == "eng_uzb":
+    """Texts accepted for `word` in a question of `question_type`.
+
+    eng_uzb / listen_choose / context_meaning -> the Uzbek translation(s);
+    uzb_eng -> the English word and its synonyms; synonym -> the listed synonyms only;
+    spelling / listen_type / fill_blank -> the word itself (plus teacher-approved spellings)."""
+    if question_type in ("eng_uzb", "listen_choose", "context_meaning"):
         forms = split_translations(word.uzbek)
+    elif question_type == "synonym":
+        forms = [s for s in (getattr(word, 'synonyms', None) or []) if isinstance(s, str) and s.strip()]
     elif question_type == "uzb_eng":
         forms = split_translations(word.english) + [s for s in (getattr(word, 'synonyms', None) or []) if isinstance(s, str)]
     else:  # spelling: the word itself (alternative spellings only if a teacher approved them)
@@ -56,4 +62,8 @@ def matches(response, expected, accepted=None) -> bool:
 
 def approved_variants(word_id: str, direction: str) -> list[str]:
     from .models import VocabularyAnswerVariant
+    from .vocabulary_questions import VARIANT_DIRECTION
+    direction = VARIANT_DIRECTION.get(direction, direction)
+    if direction is None:
+        return []
     return list(VocabularyAnswerVariant.objects.filter(word_id=word_id, direction=direction).values_list("text", flat=True))

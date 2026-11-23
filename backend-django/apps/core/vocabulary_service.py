@@ -161,6 +161,16 @@ def quiz_from_words(vocab_set, words, mode):
     # Shuffle question order
     random.shuffle(words)
 
+    from . import vocabulary_questions
+    if mode in vocabulary_questions.NEW_TYPES or mode == QuizMode.SMART_MIX:
+        rng = random.Random()
+        plan = vocabulary_questions.plan_types(words, mode, rng)
+        questions = [vocabulary_questions.build_question(word, plan[word.id], words, rng) for word in words]
+        return {
+            "setId": vocab_set.id, "setTitle": vocab_set.title, "level": vocab_set.level, "mode": mode,
+            "totalQuestions": len(questions), "questions": questions,
+        }
+
     all_uzbek = [w.uzbek for w in words]
     all_english = [w.english for w in words]
 
@@ -210,9 +220,15 @@ def quiz_from_words(vocab_set, words, mode):
             "prompt": prompt,
             "type": q_type,
             "options": options,
-            "contextSentence": word.context_sentence,
+            # The example sentence usually contains the English word, which is the answer of
+            # uzb_eng and spelling questions: only send it where the word is the prompt.
+            "contextSentence": word.context_sentence if q_type == "eng_uzb" else None,
             "partOfSpeech": word.part_of_speech,
             "firstLetter": word.english[0].upper() if word.english else "",
+            # The spoken word is the English prompt only for eng_uzb; uzb_eng / spelling must not
+            # play (or ship audio for) the answer before submission.
+            "audioUrl": (getattr(word, "audio_url", "") or None) if q_type == "eng_uzb" else None,
+            "pronunciation": (getattr(word, "pronunciation", "") or None) if q_type == "eng_uzb" else None,
         })
 
     return {
@@ -428,9 +444,15 @@ def generate_srs_quiz_for_user(student_id: str, limit: int = 20) -> dict[str, An
             "prompt": prompt,
             "type": q_type,
             "options": options,
-            "contextSentence": word.context_sentence,
+            # The example sentence usually contains the English word, which is the answer of
+            # uzb_eng and spelling questions: only send it where the word is the prompt.
+            "contextSentence": word.context_sentence if q_type == "eng_uzb" else None,
             "partOfSpeech": word.part_of_speech,
             "firstLetter": word.english[0].upper() if word.english else "",
+            # The spoken word is the English prompt only for eng_uzb; uzb_eng / spelling must not
+            # play (or ship audio for) the answer before submission.
+            "audioUrl": (getattr(word, "audio_url", "") or None) if q_type == "eng_uzb" else None,
+            "pronunciation": (getattr(word, "pronunciation", "") or None) if q_type == "eng_uzb" else None,
         })
 
     session = signing.dumps({

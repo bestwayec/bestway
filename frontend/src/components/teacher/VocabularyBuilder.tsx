@@ -19,6 +19,7 @@ import { IMPORT_ACCEPT, MAX_IMPORT_BYTES, duplicateIndexes, mergeWithoutDuplicat
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PronounceButton, PronunciationSettingsBar } from "@/lib/pronunciation/react";
 
 export interface WordItem extends VocabularyCollectionWordInput {
   part_of_speech?: string;
@@ -36,6 +37,7 @@ const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "IELTS", "MULTILEVEL"];
 
 export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: VocabularyBuilderProps) {
   const t = useTranslations("vocabularyBuilder");
+  const tp = useTranslations("pronunciation");
   const te = useTranslations("vocabularyEditor");
   const [editWord, setEditWord] = React.useState<number | null>(null);
   const [title, setTitle] = React.useState(collection?.title ?? "");
@@ -419,6 +421,15 @@ export function VocabularyBuilder({ groupId, collection, onSuccess, onCancel }: 
                           <option value="">{te("inherit")}</option>{LEVELS.map(level => <option key={level}>{level}</option>)}
                         </select>
                       </label>
+                    </div>
+                    {/* Teacher check: hear exactly what students will hear (stored audio first, then the browser voice). */}
+                    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-field border border-border bg-bg-subtle p-2 text-xs" data-testid="builder-pronunciation">
+                      <PronounceButton text={w.english} audioUrl={w.audioUrl || null} resetKey={`${idx}:${w.english}:${w.audioUrl ?? ""}`} size="sm" label={tp("play")} />
+                      <span className={w.audioUrl ? "text-fg-muted" : "text-warning"}>
+                        {w.audioUrl ? tp("storedAudio") : tp("noStoredAudio")}
+                      </span>
+                      {w.pronunciation && <span className="font-mono text-fg-muted">{w.pronunciation}</span>}
+                      <PronunciationSettingsBar />
                     </div>
                   </td></tr>}
                   </React.Fragment>

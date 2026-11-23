@@ -47,9 +47,12 @@ def issue(assignment, student_id, mode):
     if existing:
         return existing
     revision = vocabulary_collections.assignment_revision(assignment)
+    # Revisions pinned before Learning 3.0 lack the audio/IPA/synonym keys: default them.
     pinned_words = [SimpleNamespace(
         id=word["id"], english=word["english"], uzbek=word["uzbek"],
         context_sentence=word["contextSentence"], part_of_speech=word["partOfSpeech"],
+        audio_url=word.get("audioUrl") or "", pronunciation=word.get("pronunciation") or "",
+        synonyms=list(word.get("synonyms") or []),
     ) for word in revision["words"]]
     collection = SimpleNamespace(id=assignment.vocabulary_set_id, title=revision["title"], level=revision["level"])
     quiz = vocabulary_service.quiz_from_words(collection, pinned_words, mode)
@@ -82,6 +85,13 @@ def words_view(request, assignment_id):
     return success(vocabulary_collections.assignment_revision(assignment)["words"])
 
 
+def expected_for(word, question):
+    from .vocabulary_questions import NEW_TYPES, expected_answer
+    if question["type"] in NEW_TYPES:
+        return expected_answer(word, question["type"], question)
+    return word.uzbek if question["type"] == QuizMode.ENG_UZB else word.english
+
+
 def snapshot_questions(vocab_set, quiz, pinned_words=None):
     words = {word.id: word for word in (pinned_words if pinned_words is not None else vocab_set.words.filter(is_archived=False))}
     questions = []
@@ -93,7 +103,7 @@ def snapshot_questions(vocab_set, quiz, pinned_words=None):
             "question": question,
             "english": word.english,
             "uzbek": word.uzbek,
-            "expected": word.uzbek if question["type"] == QuizMode.ENG_UZB else word.english,
+            "expected": expected_for(word, question),
             # every listed translation / synonym / teacher-approved variant is accepted; frozen into the snapshot
             "accepted": vocabulary_answers.accepted_forms(
                 word, question["type"], vocabulary_answers.approved_variants(word.id, question["type"])),

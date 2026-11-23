@@ -2971,7 +2971,11 @@
     "firstLetter": "First letter:",
     "spellingPlaceholder": "Type the correct English spelling…",
     "check": "Check",
-    "stop": "Stop practice"
+    "stop": "Stop practice",
+    "listenChooseHint": "Listen and choose the meaning",
+    "listenTypeHint": "Listen and type the word",
+    "synonymHint": "Choose a synonym",
+    "fillBlankHint": "Type the missing word"
   },
   "trackDashboard": {
     "officialStandard": "Official section order",
@@ -3058,7 +3062,21 @@
       "uzbEng": "Uzbek → English",
       "uzbEngDesc": "You see an Uzbek word and choose the correct English word.",
       "spelling": "Spelling",
-      "spellingDesc": "You hear or read the word and type it correctly in English."
+      "spellingDesc": "You hear or read the word and type it correctly in English.",
+      "smartMix": "Mixed 3.0 — every available type",
+      "smartMixDesc": "Each word gets a type its data supports: listening, gap-fill, meaning in context, synonym.",
+      "listenChoose": "Listen and choose",
+      "listenChooseDesc": "Hear the word twice, choose its Uzbek meaning.",
+      "listenType": "Listen and type",
+      "listenTypeDesc": "Hear the word twice, type it.",
+      "fillBlank": "Fill in the blank",
+      "fillBlankDesc": "Complete the example sentence with the word.",
+      "contextMeaning": "Meaning in context",
+      "contextMeaningDesc": "Read the word in a sentence and choose its meaning.",
+      "synonym": "Synonym",
+      "synonymDesc": "Choose a word with the same meaning.",
+      "typeWords": "{count} words have the data for this type",
+      "typeUnavailable": "Not available — this set has no data for it yet (e.g. example sentences or synonyms)."
     },
     "srs": {
       "badge": "Spaced Repetition System (SRS)",
@@ -3903,5 +3921,27 @@
     "noStudents": "There are no students in this group yet.",
     "incompleteHint": "Calculated without skipped sections",
     "incomplete": "incomplete"
+  },
+  "pronunciation": {
+    "play": "Play pronunciation",
+    "stop": "Stop",
+    "progress": "Playing {play}/{total}",
+    "blocked": "Tap the speaker to play",
+    "error": "Pronunciation could not be played",
+    "unsupported": "Audio is not available in this browser",
+    "accentUsed": "voice: {lang}",
+    "settings": "Pronunciation settings",
+    "autoPlay": "Play automatically",
+    "repeat": "Repeat",
+    "speed": "Speed",
+    "speedNormal": "Normal",
+    "speedSlow": "Slow",
+    "accent": "Accent",
+    "accentAuto": "Any English",
+    "accentGB": "British (if available)",
+    "accentUS": "American (if available)",
+    "startListening": "Start listening",
+    "storedAudio": "Stored audio file — students hear this recording.",
+    "noStoredAudio": "No stored audio — students hear the browser voice (quality varies by device). Add an audio URL to control it."
   }
 }
