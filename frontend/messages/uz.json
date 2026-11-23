@@ -2971,7 +2971,11 @@
     "firstLetter": "Bosh harfi:",
     "spellingPlaceholder": "Inglizcha to‘g‘ri yozilishini kiriting…",
     "check": "Tekshirish",
-    "stop": "Mashqni to‘xtatish"
+    "stop": "Mashqni to‘xtatish",
+    "listenChooseHint": "Tinglang va ma’nosini tanlang",
+    "listenTypeHint": "Tinglang va so‘zni yozing",
+    "synonymHint": "Sinonimini tanlang",
+    "fillBlankHint": "Tushib qolgan so‘zni yozing"
   },
   "trackDashboard": {
     "officialStandard": "Rasmiy bo‘limlar tartibi",
@@ -3058,7 +3062,21 @@
       "uzbEng": "O'zbekcha → Inglizcha",
       "uzbEngDesc": "O'zbekcha so'z beriladi, inglizcha to'g'ri variantni tanlaysiz.",
       "spelling": "Imlo (Spelling)",
-      "spellingDesc": "So'zni eshitasiz yoki o'qiysiz va inglizcha to'g'ri yozasiz."
+      "spellingDesc": "So'zni eshitasiz yoki o'qiysiz va inglizcha to'g'ri yozasiz.",
+      "smartMix": "Aralash 3.0 — barcha mavjud turlar",
+      "smartMixDesc": "Har bir so‘zga ma’lumoti yetarli bo‘lgan tur: tinglash, gap to‘ldirish, gapdagi ma’no, sinonim.",
+      "listenChoose": "Eshitib tanlash",
+      "listenChooseDesc": "So‘zni ikki marta eshiting, o‘zbekcha ma’nosini tanlang.",
+      "listenType": "Eshitib yozish",
+      "listenTypeDesc": "So‘zni ikki marta eshiting va yozing.",
+      "fillBlank": "Gapni to‘ldirish",
+      "fillBlankDesc": "Misol gapni so‘z bilan to‘ldiring.",
+      "contextMeaning": "Gapdagi ma’no",
+      "contextMeaningDesc": "So‘zni gapda o‘qing va ma’nosini tanlang.",
+      "synonym": "Sinonim",
+      "synonymDesc": "Ma’nosi bir xil so‘zni tanlang.",
+      "typeWords": "{count} ta so‘zda bu tur uchun ma’lumot bor",
+      "typeUnavailable": "Mavjud emas — to‘plamda buning uchun ma’lumot yo‘q (masalan, misol gaplar yoki sinonimlar)."
     },
     "srs": {
       "badge": "Spaced Repetition System (SRS)",
@@ -3903,5 +3921,27 @@
     "noStudents": "Bu guruhda hali o‘quvchilar yo‘q.",
     "incompleteHint": "O‘tkazib yuborilgan bo‘limlarsiz hisoblandi",
     "incomplete": "to‘liq emas"
+  },
+  "pronunciation": {
+    "play": "Talaffuzni eshitish",
+    "stop": "To‘xtatish",
+    "progress": "Eshittirilmoqda {play}/{total}",
+    "blocked": "Eshitish uchun karnay tugmasini bosing",
+    "error": "Talaffuzni ijro etib bo‘lmadi",
+    "unsupported": "Bu brauzerda audio mavjud emas",
+    "accentUsed": "ovoz: {lang}",
+    "settings": "Talaffuz sozlamalari",
+    "autoPlay": "Avtomatik eshittirish",
+    "repeat": "Takror",
+    "speed": "Tezlik",
+    "speedNormal": "Odatiy",
+    "speedSlow": "Sekin",
+    "accent": "Talaffuz",
+    "accentAuto": "Istalgan inglizcha",
+    "accentGB": "Britancha (mavjud bo‘lsa)",
+    "accentUS": "Amerikacha (mavjud bo‘lsa)",
+    "startListening": "Tinglashni boshlash",
+    "storedAudio": "Saqlangan audio — o‘quvchilar shu yozuvni eshitadi.",
+    "noStoredAudio": "Saqlangan audio yo‘q — o‘quvchilar brauzer ovozini eshitadi (sifati qurilmaga bog‘liq). Boshqarish uchun audio havolasini qo‘shing."
   }
 }

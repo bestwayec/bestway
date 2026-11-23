@@ -239,7 +239,18 @@ def vocabulary_set_detail_view(request, set_id):
         "words": words,
         "wordCount": len(words),
         "attempts": attempts,
+        # How many words can support each Vocabulary 3.0 question type (grounded data only).
+        "questionTypes": question_type_counts(vocab_set),
     })
+
+
+def question_type_counts(vocab_set):
+    from . import vocabulary_questions
+    counts = {t: 0 for t in vocabulary_questions.NEW_TYPES}
+    for word in vocab_set.words.filter(is_archived=False)[:service.MAX_PRACTICE_WORDS]:
+        for q_type in vocabulary_questions.eligible_types(word):
+            counts[q_type] += 1
+    return counts
 
 
 @api_view(["GET"])

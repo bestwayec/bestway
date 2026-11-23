@@ -15,3 +15,20 @@ Bug found by the browser run (not by unit tests): `bulk_create` of `MockQuestion
 schema because `type` is a PostgreSQL enum (Django-created test tables use varchar). Fixed with
 per-row inserts; `scripts/verify_exam_builder_completion_postgres.py` now runs this path on the
 Prisma schema in CI.
+
+PR A merged: [#222](https://github.com/bestwayec/bestway/pull/222) → `7dc2398` (CI 4/4).
+
+## PR B — Pronunciation engine + Vocabulary Exam 3.0
+
+| Feature | Implementation | Verification |
+|---|---|---|
+| Two-play pronunciation | `lib/pronunciation/engine.ts` + `react.tsx` (see `BESTWAY_VOCAB_AUDIO_ENGINE.md`); quiz, flashcards, teacher builder, battle host and click-to-vocab use it | 15 + 5 unit tests; browser 23/23 ×2 (pause 650–651 ms) |
+| New question types | `vocabulary_questions.py`: listen_choose, listen_type, fill_blank, context_meaning, synonym, smart_mix — each only for words whose data supports it; no antonyms (no data) | `test_vocabulary_exam_3.py` (11) |
+| Grading | existing snapshot scoring; `accepted_forms` extended per type; teacher variants reused via base direction | same |
+| Mode picker | set detail returns `questionTypes` counts; types without data are disabled with the reason | browser V1 |
+
+Bugs found and fixed: answer leak (example sentence sent for uzb→eng/spelling); old speaker read
+Uzbek prompts with an English voice; engine bug (cancel during the pause never settled the old
+play — found by unit test); mode picker disabled every new type while loading (found in browser);
+homework start would return HTTP 500 because pinned word snapshots lacked the new audio fields
+(found by `verify_vocabulary_homework_postgres.py`; fixed and covered by a regression test).

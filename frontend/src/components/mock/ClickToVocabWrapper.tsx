@@ -5,6 +5,7 @@ import { BookPlus, Check, Volume2, X, Sparkles, Loader2, Play } from "lucide-rea
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getPronunciationEngine } from "@/lib/pronunciation/engine";
 
 export interface ClickToVocabWrapperProps {
   children?: React.ReactNode;
@@ -72,12 +73,8 @@ export function ClickToVocabWrapper({
 
   const handlePlayPronunciation = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!selectedWord || typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(selectedWord);
-    utterance.lang = "en-US";
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
+    if (!selectedWord) return;
+    void getPronunciationEngine().play({ text: selectedWord, repeat: 2, owner: "click-to-vocab" });
   };
 
   const handleAddToSRS = async (e: React.MouseEvent) => {

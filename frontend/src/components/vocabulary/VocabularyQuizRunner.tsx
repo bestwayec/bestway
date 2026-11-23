@@ -12,12 +12,14 @@ import {
   RotateCcw,
   Sparkles,
   Trophy,
-  Volume2,
   VolumeX,
   XCircle,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
+import { PronounceButton, PronunciationSettingsBar } from "@/lib/pronunciation/react";
+import { LISTENING_TYPES, TYPED_TYPES, speakableText, type QuizQuestionType } from "./question-types";
+export { LISTENING_TYPES, TYPED_TYPES, speakableText, type QuizQuestionType } from "./question-types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +32,17 @@ export interface QuizQuestion {
   id: string;
   wordId: string;
   prompt: string;
-  type: "eng_uzb" | "uzb_eng" | "spelling";
+  type: QuizQuestionType;
   options: string[];
   contextSentence?: string | null;
   partOfSpeech?: string | null;
   firstLetter?: string;
+  /** Listening types: the word the learner hears (never displayed). */
+  speak?: string | null;
+  /** Teacher-provided pronunciation audio, preferred over the speech engine. */
+  audioUrl?: string | null;
+  /** IPA, only where it does not reveal a listening answer. */
+  pronunciation?: string | null;
 }
 
 export interface QuizResult {
@@ -60,7 +68,7 @@ export interface VocabularyQuizRunnerProps {
   setId?: string;
   assignmentId?: string;
   isSrs?: boolean;
-  mode?: "mixed" | "eng_uzb" | "uzb_eng" | "spelling";
+  mode?: "mixed" | "smart_mix" | QuizQuestionType;
   onFinish?: (result: QuizResult) => void;
   onExit?: () => void;
 }
@@ -90,30 +98,10 @@ export function VocabularyQuizRunner({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [quizResult, setQuizResult] = React.useState<QuizResult | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const [isSpeechSupported, setIsSpeechSupported] = React.useState(false);
-
-  // Check Web Speech API availability
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      setIsSpeechSupported(true);
-    }
-  }, []);
-
-  const speakWord = React.useCallback(
-    (textToSpeak: string) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = "en-US";
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.warn("TTS error", err);
-      }
-    },
-    [],
-  );
+  // Browsers block audio until the learner interacts: automatic two-play pronunciation starts
+  // only after the first tap/key press; before that the speaker button is the explicit start.
+  const [interacted, setInteracted] = React.useState(false);
+  const tp = useTranslations("pronunciation");
 
   // Fetch Quiz Questions. Only the latest load may set the questions: an
   // earlier response arriving later (remount, React StrictMode) used to replace
@@ -172,12 +160,6 @@ export function VocabularyQuizRunner({
 
   const currentQ = questions[currentIndex];
 
-  // Auto-pronounce if prompt is English
-  React.useEffect(() => {
-    if (currentQ && currentQ.type === "eng_uzb") {
-      speakWord(currentQ.prompt);
-    }
-  }, [currentQ, speakWord]);
 
   const handleSelectOption = (opt: string) => {
     if (isAnswered || !currentQ) return;
@@ -456,8 +438,22 @@ export function VocabularyQuizRunner({
   // Active Question Runner
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
 
+  const spoken = speakableText(currentQ);
+  const listening = LISTENING_TYPES.has(currentQ.type);
+  const typed = TYPED_TYPES.has(currentQ.type);
+  const TYPE_LABEL: Record<QuizQuestionType, string> = {
+    eng_uzb: "ENG → UZB", uzb_eng: "UZB → ENG", spelling: "SPELLING", listen_choose: "LISTEN → UZB",
+    listen_type: "LISTEN → TYPE", fill_blank: "FILL THE GAP", context_meaning: "IN CONTEXT", synonym: "SYNONYM",
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-surface/90 backdrop-blur-xl p-6 md:p-8 shadow-2xl text-fg max-w-2xl mx-auto space-y-6">
+    <div
+      className="rounded-2xl border border-border bg-surface/90 backdrop-blur-xl p-6 md:p-8 shadow-2xl text-fg max-w-2xl mx-auto space-y-6"
+      onPointerDownCapture={() => setInteracted(true)}
+      onKeyDownCapture={() => setInteracted(true)}
+      data-testid="vocab-quiz"
+      data-question-type={currentQ.type}
+    >
       {/* Top Bar: Progress and Title */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-fg-muted">
@@ -467,11 +463,7 @@ export function VocabularyQuizRunner({
               variant="neutral"
               className="border-brand/30 text-brand text-[10px] uppercase font-mono"
             >
-              {currentQ.type === "eng_uzb"
-                ? "ENG → UZB"
-                : currentQ.type === "uzb_eng"
-                ? "UZB → ENG"
-                : "SPELLING"}
+              {TYPE_LABEL[currentQ.type] ?? currentQ.type}
             </Badge>
           </div>
           <span className="font-mono">
@@ -496,31 +488,47 @@ export function VocabularyQuizRunner({
           </span>
         )}
 
-        <div className="flex items-center justify-center gap-3">
-          <h3 className="text-3xl font-extrabold text-fg tracking-tight">
-            {currentQ.prompt}
-          </h3>
-          {/* TTS Speaker Button */}
-          {isSpeechSupported && (
-            <button
-              type="button"
-              onClick={() => speakWord(currentQ.prompt)}
-              className="p-2 rounded-full bg-surface-hover hover:bg-border-strong text-brand hover:text-brand transition-colors shadow-sm"
-              title={t("listen")}
-              aria-label={t("listen")}
-            >
-              <Volume2 className="h-5 w-5" />
-            </button>
-          )}
-        </div>
+        {listening ? (
+          <div className="flex flex-col items-center gap-3">
+            <PronounceButton
+              key={currentQ.id}
+              text={spoken ?? ""}
+              audioUrl={currentQ.audioUrl}
+              resetKey={currentQ.id}
+              size="lg"
+              autoPlay={interacted}
+              label={interacted ? tp("play") : tp("startListening")}
+            />
+            <p className="text-sm text-fg-muted">
+              {currentQ.type === "listen_choose" ? t("listenChooseHint") : t("listenTypeHint")}
+            </p>
+          </div>
+        ) : currentQ.type === "fill_blank" ? (
+          <p className="text-xl font-semibold leading-relaxed text-fg" data-testid="vocab-prompt">{currentQ.prompt}</p>
+        ) : (
+          <div className="flex items-center justify-center gap-3">
+            <h3 className="text-3xl font-extrabold text-fg tracking-tight" data-testid="vocab-prompt">
+              {currentQ.prompt}
+            </h3>
+            {spoken && (
+              <PronounceButton key={currentQ.id} text={spoken} audioUrl={currentQ.audioUrl} resetKey={currentQ.id} autoPlay={interacted} />
+            )}
+          </div>
+        )}
 
-        {currentQ.contextSentence && (
+        {currentQ.pronunciation && !listening && (
+          <p className="font-mono text-sm text-fg-muted">{currentQ.pronunciation}</p>
+        )}
+        {currentQ.type === "synonym" && <p className="text-sm text-fg-muted">{t("synonymHint")}</p>}
+        {currentQ.type === "fill_blank" && <p className="text-sm text-fg-muted">{t("fillBlankHint")}</p>}
+
+        {currentQ.contextSentence && currentQ.type !== "fill_blank" && (
           <p className="text-xs text-fg-muted italic max-w-md mx-auto">
-            "{currentQ.contextSentence}"
+            &ldquo;{currentQ.contextSentence}&rdquo;
           </p>
         )}
 
-        {currentQ.type === "spelling" && currentQ.firstLetter && (
+        {(currentQ.type === "spelling" || currentQ.type === "fill_blank") && currentQ.firstLetter && (
           <div className="inline-flex items-center gap-1.5 text-xs text-warning bg-warning-bg px-3 py-1 rounded-lg border border-warning/20">
             <HelpCircle className="h-3.5 w-3.5" />
             <span>{t("firstLetter")} <strong>{currentQ.firstLetter}...</strong></span>
@@ -528,8 +536,10 @@ export function VocabularyQuizRunner({
         )}
       </div>
 
-      {/* Answer Area: 4-Option Grid or Spelling Input */}
-      {currentQ.type === "spelling" ? (
+      <PronunciationSettingsBar className="justify-center text-fg-muted" />
+
+      {/* Answer Area: 4-Option Grid or typed answer */}
+      {typed ? (
         <div className="space-y-4">
           <div className="flex gap-2">
             <Input

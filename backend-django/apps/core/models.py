@@ -23,6 +23,12 @@ class QuizMode(models.TextChoices):
     ENG_UZB = "eng_uzb", "English -> Uzbek"
     UZB_ENG = "uzb_eng", "Uzbek -> English"
     SPELLING = "spelling", "Spelling (Yozish)"
+    LISTEN_CHOOSE = "listen_choose", "Listen and choose (Eshitib tanlash)"
+    LISTEN_TYPE = "listen_type", "Listen and type (Eshitib yozish)"
+    FILL_BLANK = "fill_blank", "Fill in the blank (Gapni to'ldirish)"
+    CONTEXT_MEANING = "context_meaning", "Meaning in context (Gapdagi ma'no)"
+    SYNONYM = "synonym", "Synonym (Sinonim)"
+    SMART_MIX = "smart_mix", "All available types (Aralash 3.0)"
 
 
 class VocabularySet(models.Model):

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api-client";
@@ -9,6 +9,8 @@ import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { VocabularyQuizRunner } from "@/components/vocabulary/VocabularyQuizRunner";
+import { PronounceButton, PronunciationSettingsBar } from "@/lib/pronunciation/react";
+import { getPronunciationEngine } from "@/lib/pronunciation/engine";
 
 export function VocabularyAssignment({ assignmentId }: { assignmentId: string }) {
   const t = useTranslations("vocabularyAssignment");
@@ -16,8 +18,6 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
   const [mode, setMode] = useState<VocabularyMode>();
   const [revealed, setRevealed] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [audioErrorFor, setAudioErrorFor] = useState<string>();
-  const audio = useRef<HTMLAudioElement>(null);
   const { data: me } = useMe();
   const enabled = me?.user.role === "student";
   const client = useQueryClient();
@@ -41,7 +41,6 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
   const order = progress.data?.order.length ? progress.data.order : cards.data?.map(card => card.id) ?? [];
   const index = Math.max(0, order.indexOf(progress.data?.lastWordId ?? ""));
   const card = cards.data?.find(item => item.id === order[index]);
-  const canSpeak = typeof window !== "undefined" && !!window.speechSynthesis && !!window.SpeechSynthesisUtterance;
 
   if (mode) {
     return <VocabularyQuizRunner assignmentId={assignmentId} mode={mode} onExit={() => setMode(undefined)} />;
@@ -61,32 +60,6 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
     }
     save.mutate({ order: shuffled, lastWordId: shuffled[0] });
     setRevealed(false);
-  }
-
-  async function pronounce() {
-    if (!card || muted) return;
-    setAudioErrorFor(undefined);
-    const recording = audio.current;
-    if (recording) {
-      try {
-        if (recording.readyState) recording.currentTime = 0;
-        await recording.play();
-        return;
-      } catch (error) {
-        if (recording !== audio.current || recording.muted || (error instanceof DOMException && error.name === "AbortError")) return;
-      }
-    }
-    if (!canSpeak) {
-      setAudioErrorFor(card.id);
-      return;
-    }
-    const speech = new SpeechSynthesisUtterance(card.english);
-    speech.lang = "en-US";
-    speech.onerror = event => {
-      if (event.error !== "canceled" && event.error !== "interrupted") setAudioErrorFor(card.id);
-    };
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(speech);
   }
 
   return (
@@ -123,19 +96,16 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
                 <Button key={status} variant="outline" disabled={save.isPending} aria-pressed={progress.data.familiarity[card.id] === status}
                   onClick={() => save.mutate({ lastWordId: card.id, wordId: card.id, status })}>{te(status)}</Button>
               ))}
-              {(card.audioUrl || canSpeak) && <>
-                <Button variant="outline" disabled={muted} onClick={() => void pronounce()}>{te("pronounce")}</Button>
-                <Button variant="outline" aria-pressed={muted} onClick={() => {
-                  audio.current?.pause();
-                  window.speechSynthesis?.cancel();
-                  setMuted(value => !value);
-                }}>
-                  {te(muted ? "unmute" : "mute")}
-                </Button>
-              </>}
+              {/* Shared engine: stored audio first, browser speech as fallback; plays twice by default. */}
+              {!muted && <PronounceButton text={card.english} audioUrl={card.audioUrl} resetKey={card.id} label={te("pronounce")} />}
+              <Button variant="outline" aria-pressed={muted} onClick={() => {
+                getPronunciationEngine().stop();
+                setMuted(value => !value);
+              }}>
+                {te(muted ? "unmute" : "mute")}
+              </Button>
             </div>
-            {card.audioUrl && <audio key={card.id} ref={audio} muted={muted} preload="none" src={card.audioUrl} />}
-            {audioErrorFor === card.id && <p role="status">{te("audioUnavailable")}</p>}
+            {!muted && <PronunciationSettingsBar />}
             {save.isPending && <p role="status">{te(save.isPaused ? "pendingOffline" : "sync")}</p>}
             {save.isSuccess && <p role="status">{te("saved")}</p>}
             {save.isError && <p role="alert">{save.error instanceof Error ? save.error.message : t("failed")}</p>}
