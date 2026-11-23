@@ -10,7 +10,17 @@ approval).
 |---|---|---|---|
 | [#222](https://github.com/bestwayec/bestway/pull/222) | Exam Builder completion | `7dc2398` | 4/4 |
 | [#223](https://github.com/bestwayec/bestway/pull/223) | Pronunciation engine + Vocabulary Exam 3.0 | `40a7cfb` | 4/4 |
-| PR C | Games, teacher question type | see final report | — |
+| [#224](https://github.com/bestwayec/bestway/pull/224) | Games, teacher question type | `d73d07a` | 4/4 |
+
+## Final `main` verification (`d73d07a`)
+
+| Check | Result |
+|---|---|
+| Hosted CI + CodeQL on the `main` push | success (no deploy workflow ran) |
+| pytest (full) | 1682 passed, 4 skipped |
+| CI PostgreSQL sequence, fresh database | 7/7 |
+| Vitest / tsc | 976 passed / 0 errors |
+| Browser: `exam-builder-2` 73/73, `exam-builder-completion` 27/27, `vocab-learning-3` 23/23, `games-learning-3` 26/26, `vocab-battle` 20/20, `teacher-workspace` 45/45, `ielts-full` 10/10, `multilevel-full` 16/16, `learning-3-viewports` 305/305 | all pass |
 
 ## Database changes to apply at deploy time
 
