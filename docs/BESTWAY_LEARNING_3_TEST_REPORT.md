@@ -37,12 +37,16 @@ New tests in PR C: Bamboozle security/rules (5), Battle timing/validation (3 + 1
 | browser (PR B) | mode picker disabled every new type while loading |
 | browser (PR C) | guest joined with a placeholder name before the profile loaded |
 | browser (PR C) | the 1v1 room creator had no button |
+| hosted CI (PR C, first run) | `verify_points_integrity_postgres.py` ranked players by client `elapsedSec`, which the server now ignores; the fixture now moves the server clock per answer (same ranking and awards asserted). I had not run that CI group locally before pushing; afterwards all 20 scripts of the group were run locally |
 
 ## Performance
 
 No performance improvement is claimed. Measured facts relevant to the new code: the online arena
 polls one room document every 2 s while the tab is visible and stops when the game ends; the
 pronunciation pause between plays measured 650–651 ms in Chromium.
+
+Local note: `verify_item_bank_postgres.py` fails against the long-lived local database on `main`
+as well (pre-existing local rows); it passes in CI on a fresh database.
 
 ## Not verified
 
