@@ -33,7 +33,7 @@ def group_attendance_history(request, group_id):
 
 
 HOMEWORK_FIELDS = {'type', 'title', 'deadline', 'quizId', 'newQuiz', 'timeLimitMinutes', 'maxAttempts', 'vocabularySetId', 'examId',
-                   'lessonId', 'minPassPercent'}
+                   'lessonId', 'minPassPercent', 'vocabularyMode'}
 
 
 @api_view(['GET', 'POST'])

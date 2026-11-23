@@ -70,10 +70,13 @@ def battle_next_view(request, pin):
 def battle_answer_view(request, pin):
     """Participant submits answer to current question."""
     user = require_authenticated(request)
-    data = request.data or {}
-    q_index = int(data.get("questionIndex", 0))
-    sel_index = int(data.get("selectedIndex", 0))
-    elapsed = float(data.get("elapsedSec", 0.0))
+    data = request.data if isinstance(request.data, dict) else {}
+    try:
+        q_index = int(data.get("questionIndex", 0))
+        sel_index = int(data.get("selectedIndex", 0))
+    except (TypeError, ValueError):
+        raise ContractAPIException("VALIDATION_ERROR", "Javob ma'lumotlari yaroqsiz", 400)
+    elapsed = data.get("elapsedSec", 0.0)  # ignored when the server has the start time
 
     result = submit_battle_answer(pin, user, q_index, sel_index, elapsed_sec=elapsed)
     return success(result)

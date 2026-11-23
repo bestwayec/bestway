@@ -488,6 +488,8 @@ class HomeworkAssignment(models.Model):
         related_name="homework_assignments",
     )
     vocabulary_revision = models.JSONField(null=True, blank=True)
+    # Question type the teacher chose for vocabulary homework (None = the learner picks).
+    vocabulary_mode = models.CharField(max_length=20, choices=QuizMode.choices, null=True, blank=True)
     deadline = models.DateTimeField()
     min_pass_percent = models.IntegerField(default=80)
     created_at = models.DateTimeField(auto_now_add=True)

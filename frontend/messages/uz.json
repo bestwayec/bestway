@@ -103,7 +103,10 @@
     "completed": "{completed} / {assigned} o‘quvchi yakunladi",
     "missed": "Ko‘p xato qilingan so‘zlar",
     "overdue": "{count} ta muddati o‘tgan",
-    "minimum": "Minimal ball (%)"
+    "minimum": "Minimal ball (%)",
+    "teacherMode": "O‘qituvchingiz belgilagan test: {mode}",
+    "startTest": "Testni boshlash",
+    "continueTest": "Davom etish"
   },
   "classroomAssignments": {
     "exam": "Nashr etilgan imtihon",
@@ -3804,7 +3807,10 @@
       "alreadyTitle": "Bu vazifa allaqachon biriktirilgan",
       "successBody": "«{title}» guruhga biriktirildi.",
       "seeResults": "Natijalarni ko'rish",
-      "another": "Yana vazifa berish"
+      "another": "Yana vazifa berish",
+      "questionType": "Savol turi",
+      "learnerChooses": "O‘quvchi tanlaydi",
+      "questionTypeHint": "Hamma uchun bir xil tur. Faqat so‘zlarda ma’lumoti bor turlar qabul qilinadi."
     },
     "res": {
       "title": "O'quvchilar natijalari",
@@ -3943,5 +3949,26 @@
     "startListening": "Tinglashni boshlash",
     "storedAudio": "Saqlangan audio — o‘quvchilar shu yozuvni eshitadi.",
     "noStoredAudio": "Saqlangan audio yo‘q — o‘quvchilar brauzer ovozini eshitadi (sifati qurilmaga bog‘liq). Boshqarish uchun audio havolasini qo‘shing."
+  },
+  "bamboozleOnline": {
+    "room": "Xona",
+    "youAre": "Siz: {name}",
+    "you": "siz",
+    "exit": "Chiqish",
+    "score": "Hisob",
+    "double": "Keyingi savolda 2×",
+    "waiting": "Raqib havolani ochishini kutyapmiz…",
+    "finished": "O‘yin tugadi",
+    "yourTurn": "Sizning navbatingiz — kartani oching",
+    "theirTurn": "{name} navbati",
+    "correct": "to‘g‘ri javob",
+    "wrong": "noto‘g‘ri javob",
+    "error": "Kartani ochib bo‘lmadi. Qayta urinib ko‘ring.",
+    "copy": "Havolani nusxalash",
+    "copied": "Nusxalandi",
+    "card": "{n}-karta",
+    "cancel": "Orqaga",
+    "draw": "Durang!",
+    "winner": "{name} g‘alaba qozondi!"
   }
 }

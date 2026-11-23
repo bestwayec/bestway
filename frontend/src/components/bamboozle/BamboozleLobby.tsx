@@ -25,6 +25,7 @@ import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BamboozleArena, BamboozleCard } from "./BamboozleArena";
+import { BamboozleOnlineArena, OnlineRoom, readSeat, rememberSeat } from "./BamboozleOnlineArena";
 import { QuizDeckCreator } from "./QuizDeckCreator";
 
 export interface QuizDeckItem {
@@ -40,7 +41,7 @@ export interface QuizDeckItem {
 }
 
 export function BamboozleLobby() {
-  const { data: me } = useMe();
+  const { data: me, isLoading: meLoading } = useMe();
   const role = me?.user?.role;
   const canManageDecks = ["teacher", "admin", "super_admin"].includes(role || "");
 
@@ -71,6 +72,7 @@ export function BamboozleLobby() {
     cards: BamboozleCard[];
   } | null>(null);
   const [isCopied, setIsCopied] = React.useState(false);
+  const [hostRoom, setHostRoom] = React.useState<{ room: OnlineRoom; token: string } | null>(null);
 
   // Creator modal
   const [isCreatorOpen, setIsCreatorOpen] = React.useState(false);
@@ -79,34 +81,40 @@ export function BamboozleLobby() {
   const requestedDeckId = searchParams?.get("deck");
   const requestedRoom = searchParams?.get("room");
 
-  // Auto-connect if room param is present
+  // Online 1v1 seat: the server-scored game (see BamboozleOnlineArena).
+  const [online, setOnline] = React.useState<{ room: OnlineRoom; token: string; team: 1 | 2 } | null>(null);
+
+  // A shared link (?room=CODE) takes the guest seat, or returns a player to their own seat.
   React.useEffect(() => {
-    if (requestedRoom) {
-      (async () => {
-        try {
-          setIsLoading(true);
-          const res = await api.get<any>(`/v1/bamboozle/rooms/${requestedRoom}`);
-          const roomData = res?.data?.data || res?.data || res;
-          if (roomData && Array.isArray(roomData.cards)) {
-            setActiveDeck({
-              title: roomData.deck_title || "Bamboozle 1v1 Jang",
-              category: roomData.category || "Grammar",
-              cards: roomData.cards,
-              roomCode: roomData.room_code,
-              shareUrl: roomData.share_url,
-              telegramShareUrl: roomData.telegram_share_url,
-              team1Name: roomData.team1_name || "O'yinchi 1",
-              team2Name: me?.user?.name || roomData.team2_name || "Do'st",
-            });
-          }
-        } catch (e) {
-          console.error("Room fetch error:", e);
-        } finally {
-          setIsLoading(false);
+    if (!requestedRoom || meLoading) return; // join with the learner's own name, not a placeholder
+    const code = requestedRoom.toUpperCase();
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const seat = readSeat(code);
+        const room = await api.post<OnlineRoom>(`/v1/bamboozle/rooms/${encodeURIComponent(code)}/join`, {
+          guest_name: me?.user?.name, player_token: seat?.token,
+        });
+        const token = room.player_token ?? seat?.token;
+        const team = room.my_team ?? seat?.team;
+        if (cancelled) return;
+        if (!token || !team) {
+          toast.error("Xona to'lgan");
+          return;
         }
-      })();
-    }
-  }, [requestedRoom, me]);
+        rememberSeat(code, token, team);
+        setOnline({ room, token, team });
+      } catch (e) {
+        if (!cancelled) toast.error(e instanceof Error && e.message ? e.message : "Xona topilmadi");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedRoom, meLoading, me?.user?.name]);
 
   const fetchDecks = React.useCallback(async () => {
     setIsLoading(true);
@@ -225,18 +233,19 @@ export function BamboozleLobby() {
   const handleStart1v1Challenge = async (deck: QuizDeckItem) => {
     try {
       setIsLoading(true);
-      const res = await api.post<any>("/v1/bamboozle/rooms/create", {
+      const room = await api.post<OnlineRoom>("/v1/bamboozle/rooms/create", {
         deck_id: deck.id,
         host_name: me?.user?.name || "O'yinchi 1",
       });
-      const room = res?.data?.data || res?.data || res;
-      if (room && room.room_code) {
+      if (room && room.room_code && room.player_token) {
+        rememberSeat(room.room_code, room.player_token, 1);
+        setHostRoom({ room, token: room.player_token });
         setChallengeModal({
           roomCode: room.room_code,
           deckId: String(deck.id),
           deckTitle: room.deck_title || deck.title,
-          shareUrl: room.share_url,
-          telegramShareUrl: room.telegram_share_url,
+          shareUrl: room.share_url ?? "",
+          telegramShareUrl: room.telegram_share_url ?? "",
           cards: room.cards || [],
         });
       }
@@ -298,6 +307,20 @@ export function BamboozleLobby() {
       });
     }
   };
+
+  if (online) {
+    return (
+      <BamboozleOnlineArena
+        initialRoom={online.room}
+        token={online.token}
+        team={online.team}
+        onExit={() => {
+          setOnline(null);
+          router.replace("/bamboozle");
+        }}
+      />
+    );
+  }
 
   if (activeDeck) {
     return (
@@ -482,6 +505,18 @@ export function BamboozleLobby() {
                       </>
                     )}
                   </Button>
+                  {!isLocked && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleStart1v1Challenge(deck)}
+                      data-testid="bamboozle-1v1"
+                      className="mt-2 w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
+                    >
+                      <Users className="w-4 h-4" aria-hidden />
+                      <span>Do&apos;st bilan 1v1 (onlayn)</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -566,16 +601,7 @@ export function BamboozleLobby() {
             <Button
               type="button"
               onClick={() => {
-                setActiveDeck({
-                  title: challengeModal.deckTitle,
-                  category: "Grammar",
-                  cards: challengeModal.cards,
-                  roomCode: challengeModal.roomCode,
-                  shareUrl: challengeModal.shareUrl,
-                  telegramShareUrl: challengeModal.telegramShareUrl,
-                  team1Name: me?.user?.name || "O'yinchi 1",
-                  team2Name: "Do'st (Kutilmoqda)",
-                });
+                if (hostRoom) setOnline({ room: hostRoom.room, token: hostRoom.token, team: 1 });
                 setChallengeModal(null);
               }}
               className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2"

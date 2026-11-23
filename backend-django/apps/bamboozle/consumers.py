@@ -3,8 +3,7 @@ import json
 import logging
 from typing import Dict, Any, Set
 from django.core.cache import cache
-from apps.bamboozle.views import get_cached_room, save_cached_room
-from apps.core.lms_services import apply_bamboozle_card_effect
+from apps.bamboozle.views import PlayRejected, apply_play, get_cached_room, public_room, save_cached_room
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ async def bamboozle_websocket_consumer(scope, receive, send):
                 if room:
                     await send({
                         "type": "websocket.send",
-                        "text": json.dumps({"type": "STATE_SYNC", "room": room}),
+                        "text": json.dumps({"type": "STATE_SYNC", "room": public_room(room)}),
                     })
 
             elif event_type == "websocket.receive":
@@ -62,53 +61,33 @@ async def bamboozle_websocket_consumer(scope, receive, send):
                             "type": "websocket.send",
                             "text": json.dumps({
                                 "type": "STATE_SYNC",
-                                "room": room,
+                                "room": public_room(room),
                                 "timestamp": payload.get("timestamp"),
                             }),
                         })
 
                 # TILE / CARD ACTION BROADCAST
                 elif msg_type == "CARD_ACTION":
-                    card_id = payload.get("card_id")
-                    is_correct = bool(payload.get("is_correct", True))
-                    team = int(payload.get("team", 1))
-                    has_double = bool(payload.get("has_double", False))
-
+                    # Same server-side rules as the HTTP play endpoint: the player token picks
+                    # the team, the server judges the answer; `is_correct`/`team` are ignored.
                     room = get_cached_room(room_code)
-                    if room:
-                        target_card = next((c for c in room.get("cards", []) if str(c.get("id")) == str(card_id)), None)
-                        if target_card and not target_card.get("is_revealed"):
-                            new_t1, new_t2, effect_msg = apply_bamboozle_card_effect(
-                                active_team=team,
-                                card_type=target_card.get("card_type", "question"),
-                                points=target_card.get("points", 10),
-                                team1_score=room["team1_score"],
-                                team2_score=room["team2_score"],
-                                is_correct=is_correct,
-                                has_double=has_double,
-                            )
-                            target_card["is_revealed"] = True
-                            target_card["revealed_by_team"] = team
-                            target_card["effect_message"] = effect_msg
-
-                            room["team1_score"] = new_t1
-                            room["team2_score"] = new_t2
-                            room["revealed_cards_count"] = sum(1 for c in room["cards"] if c.get("is_revealed"))
-                            room["active_turn"] = 2 if team == 1 else 1
-
-                            if room["revealed_cards_count"] >= room.get("total_cards", len(room["cards"])):
-                                room["status"] = "finished"
-
-                            save_cached_room(room)
-
-                            broadcast_msg = json.dumps({"type": "GAME_UPDATE", "room": room})
-                            dead_channels = set()
-                            for peer_send in list(_ROOM_CHANNELS[room_group]):
-                                try:
-                                    await peer_send({"type": "websocket.send", "text": broadcast_msg})
-                                except Exception:
-                                    dead_channels.add(peer_send)
-                            _ROOM_CHANNELS[room_group] -= dead_channels
+                    if not room:
+                        continue
+                    try:
+                        apply_play(room, payload.get("player_token"), payload.get("card_id"), payload.get("answer"))
+                    except PlayRejected as rejected:
+                        await send({"type": "websocket.send",
+                                    "text": json.dumps({"type": "ERROR", "code": rejected.code, "error": rejected.message})})
+                        continue
+                    save_cached_room(room)
+                    broadcast_msg = json.dumps({"type": "GAME_UPDATE", "room": public_room(room)})
+                    dead_channels = set()
+                    for peer_send in list(_ROOM_CHANNELS[room_group]):
+                        try:
+                            await peer_send({"type": "websocket.send", "text": broadcast_msg})
+                        except Exception:
+                            dead_channels.add(peer_send)
+                    _ROOM_CHANNELS[room_group] -= dead_channels
 
             elif event_type == "websocket.disconnect":
                 break

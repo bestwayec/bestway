@@ -285,7 +285,16 @@ def _validate(actor, group, data: dict) -> dict:
         words = vocab.words.filter(is_archived=False).count()
         if not words:
             fail('VALIDATION_ERROR', "To'plamda so'zlar yo'q")
-        plan.update(vocabularySetId=vocab.id, title=_title(data.get('title') or vocab.title), questionCount=words)
+        mode = data.get('vocabularyMode')
+        if mode is not None:
+            from .models import QuizMode
+            from .vocabulary_views import question_type_counts
+            if mode not in QuizMode.values:
+                fail('VALIDATION_ERROR', "Savol turi yaroqsiz")
+            if question_type_counts(vocab).get(mode, words) == 0:
+                fail('VALIDATION_ERROR', "Bu to'plamdagi so'zlarda ushbu savol turi uchun ma'lumot yo'q")
+        plan.update(vocabularySetId=vocab.id, title=_title(data.get('title') or vocab.title), questionCount=words,
+                    vocabularyMode=mode)
     elif kind == 'exam':
         exam = assignable_exams().filter(id=data.get('examId')).first() if isinstance(data.get('examId'), str) else None
         if exam is None:
@@ -352,7 +361,8 @@ def assign_homework(actor, group_id, data: dict) -> dict:
         from .teacher_views import create_assignment
         vocab = VocabularySet.objects.select_for_update().get(id=plan['vocabularySetId']) if plan.get('vocabularySetId') else None
         made = create_assignment(cohort, dict(lesson_id=plan.get('lessonId'), exam_id=plan.get('examId'), deadline=plan['deadline'].isoformat(),
-                                              min_pass_percent=plan['minPassPercent']), plan['title'], vocabulary_set=vocab)
+                                              min_pass_percent=plan['minPassPercent']), plan['title'], vocabulary_set=vocab,
+                                  vocabulary_mode=plan.get('vocabularyMode'))
         assignment_id = made['id']
         transaction.on_commit(lambda: _notify_homework(assignment_id))
         return dict(created=True, kind=plan['type'], id=assignment_id, title=plan['title'], groupId=group.id)
@@ -446,7 +456,7 @@ def homework_results(actor, kind, assignment_id) -> dict:
                          attemptId=sub.attempt_id if sub and sub.source == 'exam_attempt' else None,
                          canGrade=kind == 'lesson' and status == AWAITING_REVIEW and student_id in roster))
     head = dict(kind=homework_kind(a), id=a.id, title=a.title, groupId=group_id, groupName=classrooms.name(a.cohort), deadline=a.deadline,
-                minPassPercent=a.min_pass_percent, examId=a.exam_id, vocabularySetId=a.vocabulary_set_id, lessonTitle=a.lesson.title if a.lesson else None,
+                minPassPercent=a.min_pass_percent, examId=a.exam_id, vocabularySetId=a.vocabulary_set_id, vocabularyMode=a.vocabulary_mode, lessonTitle=a.lesson.title if a.lesson else None,
                 createdAt=a.created_at, closed=a.deadline < now)
     return _with_counts(head, rows)
 

@@ -254,7 +254,7 @@ def teacher_assignments_view(request):
     return success(create_assignment(cohort, data, title), 201)
 
 
-def create_assignment(cohort, data, title, *, vocabulary_set=None):
+def create_assignment(cohort, data, title, *, vocabulary_set=None, vocabulary_mode=None):
     lesson_id = data.get("lesson_id")
     lesson = None
     if lesson_id:
@@ -287,6 +287,7 @@ def create_assignment(cohort, data, title, *, vocabulary_set=None):
         exam=exam,
         vocabulary_set=vocabulary_set,
         vocabulary_revision=vocabulary_collections.snapshot(vocabulary_set) if vocabulary_set else None,
+        vocabulary_mode=vocabulary_mode if vocabulary_set else None,
         deadline=deadline,
         min_pass_percent=min_pass,
     )

@@ -1,6 +1,7 @@
 """Vocab Battle Engine - Live Classroom Kahoot-style Quiz Competition."""
 import logging
 import random
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 from django.db import transaction
@@ -168,9 +169,42 @@ def get_battle_state(pin: str, current_user=None) -> dict[str, Any]:
     }
 
 
+ANSWER_GRACE_SEC = 2.0  # network delay allowed after the time limit
+
+
+def _question_started_at(question: dict[str, Any]):
+    raw = question.get("startedAt")
+    try:
+        return datetime.fromisoformat(raw) if raw else None
+    except (TypeError, ValueError):
+        return None
+
+
+def server_elapsed(question: dict[str, Any], client_elapsed: float = 0.0) -> float:
+    """Seconds since the host opened the question, by the server clock. The client's own
+    figure is used only for a question opened by an older build (no start time), and is
+    clamped to 0..timeLimit so it can never add points."""
+    limit = float(question.get("timeLimit", 15))
+    started = _question_started_at(question)
+    if started is not None:
+        return max(0.0, (timezone.now() - started).total_seconds())
+    try:
+        value = float(client_elapsed)
+    except (TypeError, ValueError):
+        value = limit
+    return limit if value != value else min(max(value, 0.0), limit)  # NaN -> no speed bonus
+
+
 def submit_battle_answer(pin: str, user, question_index: int, selected_index: int, elapsed_sec: float = 0.0) -> dict[str, Any]:
-    """Submit an answer to current battle question and calculate speed/streak points."""
-    session = VocabBattleSession.objects.filter(pin=pin).first()
+    """Submit an answer to current battle question and calculate speed/streak points.
+    Timing comes from the server; the row is locked so simultaneous answers never overwrite
+    each other's scores."""
+    with transaction.atomic():
+        return _submit_locked(pin, user, question_index, selected_index, elapsed_sec)
+
+
+def _submit_locked(pin, user, question_index, selected_index, elapsed_sec):
+    session = VocabBattleSession.objects.select_for_update().filter(pin=pin).first()
     if not session:
         raise ContractAPIException("BATTLE_NOT_FOUND", "Bellashuv topilmadi", 404)
 
@@ -186,7 +220,12 @@ def submit_battle_answer(pin: str, user, question_index: int, selected_index: in
 
     q = questions[question_index]
     correct_index = q["correctIndex"]
-    is_correct = selected_index == correct_index
+    if not isinstance(selected_index, int) or not 0 <= selected_index < len(q.get("options") or []):
+        raise ContractAPIException("INVALID_OPTION", "Noto'g'ri javob varianti", 400)
+    time_limit = float(q.get("timeLimit", 15))
+    elapsed = server_elapsed(q, elapsed_sec)
+    late = elapsed > time_limit + ANSWER_GRACE_SEC
+    is_correct = selected_index == correct_index and not late
 
     user_id = str(user.id)
     participants = dict(session.participants or {})
@@ -213,9 +252,8 @@ def submit_battle_answer(pin: str, user, question_index: int, selected_index: in
             "alreadyAnswered": True,
         }
 
-    # Points formula: 100 base + speed_bonus (0..150) + streak_bonus
-    time_limit = q.get("timeLimit", 15)
-    speed_factor = max(0.0, float(time_limit) - min(float(elapsed_sec), float(time_limit)))
+    # Points formula: 100 base + speed_bonus (0..10 x timeLimit) + streak_bonus
+    speed_factor = max(0.0, time_limit - min(elapsed, time_limit))
     speed_bonus = int(speed_factor * 10)  # e.g. 10s left -> +100 bonus
 
     if is_correct:
@@ -232,7 +270,8 @@ def submit_battle_answer(pin: str, user, question_index: int, selected_index: in
         "selectedIndex": selected_index,
         "isCorrect": is_correct,
         "pointsGained": points_gained,
-        "elapsedSec": elapsed_sec,
+        "elapsedSec": round(elapsed, 2),
+        "late": late,
     }
 
     session.participants = participants
@@ -245,6 +284,7 @@ def submit_battle_answer(pin: str, user, question_index: int, selected_index: in
         "totalScore": p["score"],
         "streak": p["streak"],
         "alreadyAnswered": False,
+        "late": late,
     }
 
 
@@ -274,8 +314,14 @@ def next_battle_step(pin: str, host_user) -> dict[str, Any]:
                 session.status = BattleStatus.QUESTION
             else:
                 _finish_locked(session)
+        if session.status == BattleStatus.QUESTION:
+            questions = list(session.questions or [])
+            idx = session.current_question_index
+            if 0 <= idx < len(questions):
+                questions[idx] = dict(questions[idx], startedAt=timezone.now().isoformat())
+                session.questions = questions
         if session.status != BattleStatus.FINISHED:
-            session.save(update_fields=["status", "current_question_index", "updated_at"])
+            session.save(update_fields=["status", "current_question_index", "questions", "updated_at"])
     return get_battle_state(pin, current_user=host_user)
 
 
