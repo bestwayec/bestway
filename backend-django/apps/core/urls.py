@@ -58,6 +58,14 @@ from .mock_attempt_views import (
     telemetry_view,
     writing_ocr_view, writing_page_view,
 )
+from .exam_builder_views import (
+    bank_groups_view,
+    bank_insert_view,
+    exam_archive_view,
+    exam_restore_view,
+    exam_template_view,
+    exam_validate_view,
+)
 from .mock_import_views import (
     commit_import_view,
     import_by_exam_view,
@@ -328,6 +336,12 @@ urlpatterns = [
     path('mock/groups/<str:group_id>/image', group_image_view),
     path('mock/exam-imports/validate', validate_import_view),
     path('mock/exams/<str:exam_id>/export', export_exam_view),
+    path('mock/exams/<str:exam_id>/template', exam_template_view),
+    path('mock/exams/<str:exam_id>/validate', exam_validate_view),
+    path('mock/exams/<str:exam_id>/archive', exam_archive_view),
+    path('mock/exams/<str:exam_id>/restore', exam_restore_view),
+    path('mock/exams/<str:exam_id>/bank-insert', bank_insert_view),
+    path('mock/question-bank/groups', bank_groups_view),
     path('mock/exam-imports/media', stage_import_media_view),
     path('mock/exam-imports', commit_import_view),
     path('mock/exam-imports/by-package/<str:package_id>/revisions/<str:revision>', import_by_package_view),

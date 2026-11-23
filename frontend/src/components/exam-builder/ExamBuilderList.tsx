@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Copy, Download, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Download, Eye, FilePlus2, FileUp, Globe, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react";
+import { LIFECYCLE_BADGE, inLifecycleTab, lifecycleActions, lifecycleOf, type LifecycleTab } from "./lifecycle";
 import { downloadJsonText, exportFileName } from "./import-json";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ import { ExamQuestionsEditorDialog } from "@/components/exam-builder/ExamQuestio
 import { Sparkles } from "lucide-react";
 import {
   useCloneMockExam,
+  useExamLifecycle,
   useExportExam,
   useDeleteMockExam,
   useMockExams,
@@ -39,7 +41,7 @@ import type { MockExamListItem, MockExamType } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { EXAM_TYPE_LABEL, EXAM_TYPES, tx } from "./types";
 
-type StatusTab = "all" | "drafts" | "published";
+type StatusTab = LifecycleTab;
 
 function err(e: unknown, fallback: string): string {
   return e instanceof ApiError ? `${e.message} (${e.code})` : fallback;
@@ -99,6 +101,9 @@ export function ExamBuilderList() {
   const examsQ = useMockExams();
   const clone = useCloneMockExam();
   const exportExam = useExportExam();
+  const archiveExam = useExamLifecycle("archive");
+  const restoreExam = useExamLifecycle("restore");
+  const [archiveTarget, setArchiveTarget] = React.useState<MockExamListItem | null>(null);
   const del = useDeleteMockExam();
   const updateExam = useUpdateMockExamAny();
 
@@ -140,8 +145,7 @@ export function ExamBuilderList() {
   }, [all]);
 
   const items = React.useMemo(() => {
-    const byTab =
-      tab === "all" ? all : all.filter((e) => (tab === "drafts" ? !e.isPublished : e.isPublished));
+    const byTab = all.filter((e) => inLifecycleTab(lifecycleOf(e), tab));
     const byType = typeFilter === "all" ? byTab : byTab.filter((e) => e.type === typeFilter);
     const byLevel =
       levelFilter === "all"
@@ -155,11 +159,8 @@ export function ExamBuilderList() {
   }, [all, tab, typeFilter, levelFilter, search]);
 
   const counts = React.useMemo(() => {
-    return {
-      all: all.length,
-      drafts: all.filter((e) => !e.isPublished).length,
-      published: all.filter((e) => e.isPublished).length,
-    };
+    const count = (tab: LifecycleTab) => all.filter((e) => inLifecycleTab(lifecycleOf(e), tab)).length;
+    return { all: count("all"), drafts: count("drafts"), validated: count("validated"), published: count("published"), archived: count("archived") };
   }, [all]);
 
   function clearFilters() {
@@ -180,6 +181,50 @@ export function ExamBuilderList() {
         },
         onError: (error) => toast.error(err(error, tc("unknownError"))),
       },
+    );
+  }
+
+  function LifecycleBadge({ state }: { state: ReturnType<typeof lifecycleOf> }) {
+    const badge = LIFECYCLE_BADGE[state];
+    return <Badge variant={badge.variant} data-testid="exam-lifecycle">{tx(t, badge.key, badge.fallback)}</Badge>;
+  }
+
+  function ArchiveToggle({ exam, compact }: { exam: MockExamListItem; compact: boolean }) {
+    const state = lifecycleOf(exam);
+    const restoring = restoreExam.isPending && restoreExam.variables === exam.id;
+    if (lifecycleActions(state).canRestore) {
+      return (
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={restoring}
+          title={`${tx(t, "restore", "Restore")} — ${exam.title}`}
+          aria-label={`${tx(t, "restore", "Restore")} — ${exam.title}`}
+          className={compact ? undefined : "min-h-9 w-full justify-center"}
+          onClick={() =>
+            restoreExam.mutate(exam.id, {
+              onSuccess: () => toast.success(tx(t, "restored", "Exam restored as a draft.")),
+              onError: (error) => toast.error(err(error, tc("unknownError"))),
+            })
+          }
+        >
+          <ArchiveRestore className="size-4 shrink-0" aria-hidden />
+          {!compact && <span className="truncate">{tx(t, "restore", "Restore")}</span>}
+        </Button>
+      );
+    }
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        title={`${tx(t, "archive", "Archive")} — ${exam.title}`}
+        aria-label={`${tx(t, "archive", "Archive")} — ${exam.title}`}
+        className={compact ? undefined : "min-h-9 w-full justify-center"}
+        onClick={() => setArchiveTarget(exam)}
+      >
+        <Archive className="size-4 shrink-0" aria-hidden />
+        {!compact && <span className="truncate">{tx(t, "archive", "Archive")}</span>}
+      </Button>
     );
   }
 
@@ -241,7 +286,7 @@ export function ExamBuilderList() {
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Tabs value={tab} onValueChange={(v) => setTab(v as StatusTab)} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-3 sm:flex sm:w-auto">
+          <TabsList className="grid w-full grid-cols-3 sm:flex sm:w-auto" aria-label={tx(t, "lifecycleFilter", "Exam status")}>
             <TabsTrigger panel={false} value="all" className="min-h-9 truncate px-2 text-xs sm:text-sm">
               {tx(t, "tabAll", "All")} ({counts.all})
             </TabsTrigger>
@@ -250,6 +295,12 @@ export function ExamBuilderList() {
             </TabsTrigger>
             <TabsTrigger panel={false} value="published" className="min-h-9 truncate px-2 text-xs sm:text-sm">
               {tx(t, "tabPublished", "Published")} ({counts.published})
+            </TabsTrigger>
+            <TabsTrigger panel={false} value="validated" className="min-h-9 truncate px-2 text-xs sm:text-sm">
+              {tx(t, "lifecycleValidated", "Validated")} ({counts.validated})
+            </TabsTrigger>
+            <TabsTrigger panel={false} value="archived" className="min-h-9 truncate px-2 text-xs sm:text-sm">
+              {tx(t, "lifecycleArchived", "Archived")} ({counts.archived})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -359,9 +410,7 @@ export function ExamBuilderList() {
                   </p>
                 </div>
                 <span className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge variant={e.isPublished ? "success" : "warning"}>
-                    {e.isPublished ? tx(t, "published", "Published") : tx(t, "draft", "Draft")}
-                  </Badge>
+                  <LifecycleBadge state={lifecycleOf(e)} />
                   {e.imported && (
                     <Badge variant="info" title={`${e.imported.packageId} · r${e.imported.revision}`}>
                       {tx(t, "aiImported", "AI imported")}
@@ -379,7 +428,7 @@ export function ExamBuilderList() {
                 <span> · {e.price > 0 ? formatMoney(e.price) : tx(t, "free", "Free")}</span>
               </p>
               <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-                <Button
+                {lifecycleActions(lifecycleOf(e)).canTogglePublish && <Button
                   size="sm"
                   variant={e.isPublished ? "outline" : "primary"}
                   className={e.isPublished ? "min-h-9 w-full justify-center text-xs" : "min-h-9 w-full justify-center text-xs bg-brand hover:bg-brand-hover text-brand-fg"}
@@ -389,7 +438,7 @@ export function ExamBuilderList() {
                 >
                   <Globe className="size-3.5 shrink-0" aria-hidden />
                   <span className="truncate">{e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}</span>
-                </Button>
+                </Button>}
                 <Button
                   size="sm"
                   variant="subtle"
@@ -456,6 +505,7 @@ export function ExamBuilderList() {
                     <span className="truncate">{tx(t, "exportJson", "Export JSON")}</span>
                   </Button>
                 )}
+                {e.canEdit && <ArchiveToggle exam={e} compact={false} />}
                 {canDelete && (
                   <Button
                     size="sm"
@@ -517,11 +567,7 @@ export function ExamBuilderList() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <span className="inline-flex items-center gap-1.5">
-                      <Badge variant={e.isPublished ? "success" : "warning"}>
-                        {e.isPublished
-                          ? tx(t, "published", "Published")
-                          : tx(t, "draft", "Draft")}
-                      </Badge>
+                      <LifecycleBadge state={lifecycleOf(e)} />
                       {e.imported && (
                         <Badge variant="info" title={`${e.imported.packageId} · r${e.imported.revision}`}>
                           {tx(t, "aiImported", "AI imported")}
@@ -543,7 +589,7 @@ export function ExamBuilderList() {
                   <td className="px-4 py-3">
                     {/* Wraps instead of pushing the last buttons out of the table on laptop screens. */}
                     <span className="ml-auto flex max-w-[22rem] flex-wrap items-center justify-end gap-1.5">
-                      <Button
+                      {lifecycleActions(lifecycleOf(e)).canTogglePublish && <Button
                         size="sm"
                         variant={e.isPublished ? "outline" : "primary"}
                         className={e.isPublished ? "text-xs" : "text-xs bg-brand hover:bg-brand-hover text-brand-fg"}
@@ -553,7 +599,7 @@ export function ExamBuilderList() {
                       >
                         <Globe className="size-3.5 shrink-0" aria-hidden />
                         <span>{e.isPublished ? tx(t, "unpublish", "Unpublish") : tx(t, "publish", "Publish")}</span>
-                      </Button>
+                      </Button>}
                       <Button
                         size="sm"
                         variant="subtle"
@@ -615,6 +661,7 @@ export function ExamBuilderList() {
                           <Download className="size-4" aria-hidden />
                         </Button>
                       )}
+                      {e.canEdit && <ArchiveToggle exam={e} compact />}
                       {canDelete && (
                         <Button
                           size="sm"
@@ -659,6 +706,30 @@ export function ExamBuilderList() {
           onQuestionsImported={handleDirectBulkImport}
         />
       )}
+
+      <ConfirmDialog
+        open={archiveTarget != null}
+        title={`${tx(t, "archive", "Archive")} — “${archiveTarget?.title ?? ""}”?`}
+        description={tx(
+          t,
+          "archiveConfirm",
+          "Students can no longer find or start this exam. Attempts, answers and results are kept, and you can restore it later as a draft.",
+        )}
+        confirmLabel={tx(t, "archive", "Archive")}
+        loading={archiveExam.isPending}
+        onCancel={() => setArchiveTarget(null)}
+        onConfirm={() => {
+          const target = archiveTarget;
+          if (!target) return;
+          archiveExam.mutate(target.id, {
+            onSuccess: () => {
+              toast.success(tx(t, "archived", "Exam archived — results are kept."));
+              setArchiveTarget(null);
+            },
+            onError: (error) => toast.error(err(error, tc("unknownError"))),
+          });
+        }}
+      />
 
       <ConfirmDialog
         open={deleteTarget != null && canDelete}

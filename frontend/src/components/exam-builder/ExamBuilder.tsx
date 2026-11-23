@@ -9,7 +9,9 @@ import {
   Download,
   Eye,
   FileJson,
+  Library,
   Loader2,
+  ShieldCheck,
   Rocket,
   Save,
   Sparkles,
@@ -34,12 +36,15 @@ import { ImportProvenanceDialog } from "@/components/exam-builder/ImportProvenan
 import { SmartBulkImportModal } from "@/components/exam-builder/SmartBulkImportModal";
 import { JsonImportDialog } from "@/components/exam-builder/JsonImportDialog";
 import { ExportExamDialog } from "@/components/exam-builder/ExportExamDialog";
+import { QuestionBankDialog } from "@/components/exam-builder/QuestionBankDialog";
+import { LIFECYCLE_BADGE, lifecycleActions, lifecycleOf } from "./lifecycle";
 import {
   useCloneMockExam,
   useExamImportProvenance,
   useMockExam,
   useMockReadiness,
   useResolveImportIssue,
+  useExamLifecycle,
 } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
 import type { MockExamDetail } from "@/lib/types";
@@ -113,8 +118,8 @@ function EditorContextBar({ detail, selection }: { detail: MockExamDetail; selec
         primary={tx(t, "publish", "Publish")}
         secondary={`${detail.title} · ${detail.questionCount} ${tx(t, "questions", "questions")}`}
         trailing={
-          <Badge variant={detail.isPublished ? "success" : "warning"}>
-            {detail.isPublished ? tx(t, "published", "Published") : tx(t, "draft", "Draft")}
+          <Badge variant={LIFECYCLE_BADGE[lifecycleOf(detail)].variant}>
+            {tx(t, LIFECYCLE_BADGE[lifecycleOf(detail)].key, LIFECYCLE_BADGE[lifecycleOf(detail)].fallback)}
           </Badge>
         }
       />
@@ -206,6 +211,9 @@ export function ExamBuilder({ examId }: { examId: string }) {
   const [smartImportOpen, setSmartImportOpen] = React.useState(false);
   const [jsonImportOpen, setJsonImportOpen] = React.useState(false);
   const [exportOpen, setExportOpen] = React.useState(false);
+  const [bankOpen, setBankOpen] = React.useState(false);
+  const validateExam = useExamLifecycle("validate");
+  const restoreExam = useExamLifecycle("restore");
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
@@ -470,8 +478,8 @@ export function ExamBuilder({ examId }: { examId: string }) {
                 <h1 className="min-w-0 flex-1 truncate text-[15px] font-bold text-fg sm:flex-none sm:basis-auto">
                   {detail.title}
                 </h1>
-                <Badge variant={detail.isPublished ? "success" : "warning"} className="shrink-0">
-                  {detail.isPublished ? tx(t, "published", "Published") : tx(t, "draft", "Draft")}
+                <Badge variant={LIFECYCLE_BADGE[lifecycleOf(detail)].variant} className="shrink-0" data-testid="editor-lifecycle">
+                  {tx(t, LIFECYCLE_BADGE[lifecycleOf(detail)].key, LIFECYCLE_BADGE[lifecycleOf(detail)].fallback)}
                 </Badge>
                 {provQ.data && (
                   <button
@@ -519,7 +527,38 @@ export function ExamBuilder({ examId }: { examId: string }) {
               <Copy className="size-4 shrink-0" aria-hidden />
               <span className="truncate">{tx(t, "duplicate", "Duplicate")}</span>
             </Button>
-            {!detail.isPublished && (
+            {lifecycleActions(lifecycleOf(detail)).canEditContent && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBankOpen(true)}
+                className="min-h-9 justify-center max-sm:w-full sm:min-h-0"
+              >
+                <Library className="size-4 shrink-0" aria-hidden />
+                <span className="truncate">{tx(t, "bankOpen", "Question bank")}</span>
+              </Button>
+            )}
+            {lifecycleActions(lifecycleOf(detail)).canValidate && (
+              <Button
+                size="sm"
+                variant="outline"
+                loading={validateExam.isPending}
+                onClick={() =>
+                  validateExam.mutate(examId, {
+                    onSuccess: () => toast.success(tx(t, "validatedToast", "Validated — the exam is complete and ready to publish.")),
+                    onError: (e) => {
+                      toast.error(e instanceof ApiError ? e.message : tc("unknownError"));
+                      requestSelect({ kind: "review" });
+                    },
+                  })
+                }
+                className="min-h-9 justify-center max-sm:w-full sm:min-h-0"
+              >
+                <ShieldCheck className="size-4 shrink-0" aria-hidden />
+                <span className="truncate">{tx(t, "validateExam", "Validate")}</span>
+              </Button>
+            )}
+            {lifecycleActions(lifecycleOf(detail)).canEditContent && (
               <Button
                 size="sm"
                 variant="outline"
@@ -572,6 +611,21 @@ export function ExamBuilder({ examId }: { examId: string }) {
 
       {/* Live-edit warning (ported from the removed legacy manage view):
           published exams serve students immediately. */}
+      {lifecycleOf(detail) === "archived" && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-field border border-border bg-bg-subtle px-3 py-2 text-xs text-fg-muted" role="status">
+          <span className="flex-1">
+            {tx(t, "archivedBanner", "Archived — students cannot find or start this exam; attempts and results are kept. Restore it to edit.")}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            loading={restoreExam.isPending}
+            onClick={() => restoreExam.mutate(examId, { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) })}
+          >
+            {tx(t, "restore", "Restore")}
+          </Button>
+        </div>
+      )}
       {detail.isPublished && (
         <p className="mt-3 rounded-field border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning">
           {tx(
@@ -793,6 +847,14 @@ export function ExamBuilder({ examId }: { examId: string }) {
       {detail && (
         <>
         <JsonImportDialog open={jsonImportOpen} onClose={() => setJsonImportOpen(false)} initialTargetExamId={examId} />
+        <QuestionBankDialog
+          open={bankOpen}
+          onClose={() => setBankOpen(false)}
+          examId={examId}
+          examType={detail.type}
+          defaultSkill={activeGroup?.s.skill ?? activeSection?.skill}
+          onInserted={() => void examQ.refetch()}
+        />
         <ExportExamDialog
           open={exportOpen}
           onClose={() => setExportOpen(false)}

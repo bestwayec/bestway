@@ -618,6 +618,101 @@ export function useExportExam() {
   });
 }
 
+/** GET /mock/exams/:id/template — reusable package without answer keys (staff, owner/admin). */
+export function exportExamTemplate(examId: string, opts: { skill?: ExportSkill; groupId?: string } = {}) {
+  return api.get<Record<string, unknown>>(`/mock/exams/${encodeURIComponent(examId)}/template`, {
+    ...(opts.skill ? { skill: opts.skill } : {}),
+    ...(opts.groupId ? { groupId: opts.groupId } : {}),
+  });
+}
+
+export interface ExamLifecyclePayload {
+  id: string;
+  lifecycle: import("@/lib/types").ExamLifecycle;
+  isPublished: boolean;
+  validatedAt: string | null;
+  validatedVersion: number | null;
+  contentVersion: number;
+  archivedAt: string | null;
+}
+
+/** POST /mock/exams/:id/{validate|archive|restore}; refreshes lists and the open exam. */
+export function useExamLifecycle(action: "validate" | "archive" | "restore") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (examId: string) =>
+      api.post<ExamLifecyclePayload>(`/mock/exams/${encodeURIComponent(examId)}/${action}`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["mock-exams"] });
+      void qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      void qc.invalidateQueries({ queryKey: ["mock-readiness"] });
+    },
+  });
+}
+
+export interface BankGroupQuestion {
+  number: number;
+  type: string;
+  prompt: string;
+  options: string[];
+  cefrLevel: string | null;
+  skillTags: string[];
+}
+
+export interface BankGroup {
+  groupId: string;
+  title: string | null;
+  instructions: string | null;
+  skill: import("@/lib/types").MockSkill;
+  partNumber: number | null;
+  examId: string;
+  examTitle: string;
+  examType: import("@/lib/types").MockExamType;
+  hasAudio: boolean;
+  hasImage: boolean;
+  passageExcerpt: string;
+  questionCount: number;
+  questions: BankGroupQuestion[];
+}
+
+export interface BankQuery {
+  search?: string;
+  examType?: string;
+  section?: string;
+  type?: string;
+  tag?: string;
+  cefrLevel?: string;
+  excludeExamId?: string;
+}
+
+/** GET /mock/question-bank/groups — reusable groups (own exams; admins all). Never answer keys. */
+export function useQuestionBank(query: BankQuery, enabled = true) {
+  const clean = Object.fromEntries(Object.entries(query).filter(([, v]) => v)) as Record<string, string>;
+  return useQuery({
+    queryKey: ["question-bank", clean],
+    queryFn: () => api.get<{ items: BankGroup[]; count: number }>("/mock/question-bank/groups", clean),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** POST /mock/exams/:id/bank-insert — copies whole groups into the draft (renumbered). */
+export function useBankInsert(examId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (groupIds: string[]) =>
+      api.post<{ examId: string; inserted: Array<{ sourceGroupId: string; groupId: string; skill: string; numbers: number[]; partNumberDropped: boolean }>; version: number }>(
+        `/mock/exams/${encodeURIComponent(examId)}/bank-insert`,
+        { groupIds },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["mock-exam"] });
+      void qc.invalidateQueries({ queryKey: ["mock-exams"] });
+      void qc.invalidateQueries({ queryKey: ["mock-readiness"] });
+    },
+  });
+}
+
 export function useValidateExamImport() {
   return useMutation({
     mutationFn: (v: ValidateImportInput) =>

@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useExportExam, type ExportSkill } from "@/hooks/use-mock";
+import { exportExamTemplate, useExportExam, type ExportSkill } from "@/hooks/use-mock";
 import { ApiError } from "@/lib/api-client";
 import { downloadJsonText, exportFileName } from "./import-json";
 import { tx } from "./types";
@@ -40,8 +40,25 @@ export function ExportExamDialog({
   const t = useTranslations("examBuilder");
   const tc = useTranslations("common");
   const exportExam = useExportExam();
+  const [mode, setMode] = React.useState<"full" | "template">("full");
+  const [templateBusy, setTemplateBusy] = React.useState<ExportSkill | "all" | null>(null);
+  const busy = exportExam.isPending || templateBusy !== null;
 
-  function run(skill?: ExportSkill) {
+  async function run(skill?: ExportSkill) {
+    if (mode === "template") {
+      setTemplateBusy(skill ?? "all");
+      try {
+        const pkg = await exportExamTemplate(examId, { skill });
+        downloadJsonText(exportFileName(`${title}-template`, skill), `${JSON.stringify(pkg, null, 2)}\n`);
+        toast.success(tx(t, "templateExportDone", "Template exported — no answer keys are included."));
+        onClose();
+      } catch (e) {
+        toast.error(e instanceof ApiError ? `${e.message} (${e.code})` : tc("unknownError"));
+      } finally {
+        setTemplateBusy(null);
+      }
+      return;
+    }
     exportExam.mutate(
       { examId, skill },
       {
@@ -56,7 +73,7 @@ export function ExportExamDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !exportExam.isPending && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{tx(t, "exportJson", "Export JSON")}</DialogTitle>
@@ -69,11 +86,30 @@ export function ExportExamDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-2">
+          <div className="grid grid-cols-2 gap-1 rounded-control border border-border p-1" role="radiogroup" aria-label={tx(t, "exportMode", "What to export")}>
+            {(["full", "template"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={mode === value}
+                onClick={() => setMode(value)}
+                className={`min-h-9 rounded-[calc(var(--radius-control)-2px)] px-2 text-xs font-medium transition-colors ${mode === value ? "bg-brand text-white" : "text-fg-muted hover:bg-surface-hover"}`}
+              >
+                {value === "full" ? tx(t, "exportModeFull", "With answer keys") : tx(t, "exportModeTemplate", "Template (no keys)")}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-fg-muted">
+            {mode === "full"
+              ? tx(t, "exportModeFullHint", "Complete copy for backup or moving to another draft. Contains answer keys — staff only.")
+              : tx(t, "exportModeTemplateHint", "Questions, passages and options without answer keys or answer evidence. A draft made from it cannot be published until keys are added.")}
+          </p>
           <Button
             className="min-h-10 w-full justify-center"
-            onClick={() => run()}
-            loading={exportExam.isPending && !exportExam.variables?.skill}
-            disabled={exportExam.isPending || skills.length === 0}
+            onClick={() => void run()}
+            loading={(exportExam.isPending && !exportExam.variables?.skill) || templateBusy === "all"}
+            disabled={busy || skills.length === 0}
           >
             <Download className="size-4" aria-hidden />
             {tx(t, "exportWholeExam", "Whole exam")}
@@ -85,9 +121,9 @@ export function ExportExamDialog({
                   key={skill}
                   variant="outline"
                   className="min-h-10 justify-center capitalize"
-                  onClick={() => run(skill)}
-                  loading={exportExam.isPending && exportExam.variables?.skill === skill}
-                  disabled={exportExam.isPending}
+                  onClick={() => void run(skill)}
+                  loading={(exportExam.isPending && exportExam.variables?.skill === skill) || templateBusy === skill}
+                  disabled={busy}
                 >
                   {skill}
                 </Button>
@@ -99,7 +135,7 @@ export function ExportExamDialog({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={exportExam.isPending} className="min-h-10 justify-center">
+          <Button variant="outline" onClick={onClose} disabled={busy} className="min-h-10 justify-center">
             {tc("close")}
           </Button>
         </DialogFooter>

@@ -608,6 +608,10 @@ model MockExam {
   profile                String                @default("practice") // practice | full_mock
   blueprintRef           String? // full_mock tasdiqlangan blueprint havolasi (ixtiyoriy)
   contentVersion         Int                   @default(1) // optimistic concurrency (teacher save bilan)
+  // --- Exam lifecycle (additive): VALIDATED = readiness passed for this contentVersion ---
+  validatedAt            DateTime?
+  validatedVersion       Int?
+  archivedAt             DateTime?
 
   sections  MockSection[]
   attempts  MockAttempt[]

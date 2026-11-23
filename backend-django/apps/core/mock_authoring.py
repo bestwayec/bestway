@@ -135,6 +135,8 @@ def assert_author(actor, exam: MockExam, *, allow_any_staff: bool = False) -> No
 
 
 def assert_mutable(exam: MockExam) -> None:
+    if getattr(exam, "archived_at", None):
+        raise ContractAPIException("MOCK_EXAM_ARCHIVED", "This exam is archived. Restore it before editing", 409)
     if exam.is_published:
         raise ContractAPIException("MOCK_CONTENT_LOCKED", "Unpublish an unused draft or clone this exam before editing published content", 409)
     if MockAttempt.objects.filter(exam_id=exam.id).exists():
@@ -339,6 +341,8 @@ def update_exam(actor, exam_id: str, data: dict):
         exam = locked_exam(exam_id); assert_author(actor, exam)
         profile_changed = "profile" in data and data["profile"] != exam.profile
         if profile_changed and MockAttempt.objects.filter(exam_id=exam_id).exists(): raise ContractAPIException("EXAM_VERSION_IN_USE", "Clone this exam before changing the profile used by attempts", 409)
+        if getattr(exam, "archived_at", None) and (data.get("isPublished") is True or data.get("isDemo") is True):
+            raise ContractAPIException("MOCK_EXAM_ARCHIVED", "This exam is archived. Restore it before publishing", 409)
         if data.get("isDemo") is True:  # the catalogue lists demo exams to students: same gate as publishing
             from .mock27.gates import assert_gate_allows_exposure
             assert_gate_allows_exposure(exam)
