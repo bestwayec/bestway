@@ -8,7 +8,9 @@ answered, one award per drill, daily cap).
 import os
 import sys
 from pathlib import Path
+from datetime import datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import patch
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -77,12 +79,17 @@ with transaction.atomic():
         check(client(name, 'student').post('/v1/vocabulary/battle/join', {'pin': pin}, format='json').status_code == 200, f'{name} joins')
     check(client('other', 'teacher').post('/v1/vocabulary/battle/join', {'pin': pin}, format='json').status_code == 200, 'a second teacher joins as a player')
     check(host.post(f'/v1/vocabulary/battle/{pin}/next').data['data']['status'] == 'QUESTION', 'question is open')
-    correct = VocabBattleSession.objects.get(pin=pin).questions[0]['correctIndex']
-    # The teacher answers fastest, then a, b, c, d; "zero" answers wrongly.
+    opened = VocabBattleSession.objects.get(pin=pin).questions[0]
+    correct = opened['correctIndex']
+    started = datetime.fromisoformat(opened['startedAt'])
+    # The teacher answers fastest, then a, b, c, d; "zero" answers wrongly. Speed is measured by the
+    # server clock from the question's start, so the fixture moves that clock (client elapsedSec is ignored).
     for name, role, elapsed in (('other', 'teacher', 0), ('a', 'student', 2), ('b', 'student', 4), ('c', 'student', 6), ('d', 'student', 8)):
-        answer = client(name, role).post(f'/v1/vocabulary/battle/{pin}/answer', {'questionIndex': 0, 'selectedIndex': correct, 'elapsedSec': elapsed}, format='json')
+        with patch('apps.core.vocab_battle.timezone.now', return_value=started + timedelta(seconds=elapsed)):
+            answer = client(name, role).post(f'/v1/vocabulary/battle/{pin}/answer', {'questionIndex': 0, 'selectedIndex': correct, 'elapsedSec': 99}, format='json')
         check(answer.status_code == 200 and answer.data['data']['isCorrect'], f'{name} answers correctly')
-    wrong = client('zero', 'student').post(f'/v1/vocabulary/battle/{pin}/answer', {'questionIndex': 0, 'selectedIndex': (correct + 1) % 4, 'elapsedSec': 1}, format='json')
+    with patch('apps.core.vocab_battle.timezone.now', return_value=started + timedelta(seconds=1)):
+        wrong = client('zero', 'student').post(f'/v1/vocabulary/battle/{pin}/answer', {'questionIndex': 0, 'selectedIndex': (correct + 1) % 4, 'elapsedSec': 1}, format='json')
     check(wrong.status_code == 200 and not wrong.data['data']['isCorrect'], 'zero answers wrongly')
     check(host.post(f'/v1/vocabulary/battle/{pin}/next').data['data']['status'] == 'LEADERBOARD', 'leaderboard is shown')
     state = client('a', 'student').get(f'/v1/vocabulary/battle/{pin}/state').data['data']
