@@ -834,6 +834,7 @@ urlpatterns = [
     path('v1/student/my-assignments/', teacher_views.student_my_assignments_view),
     path('student/assignments/<str:assignment_id>/vocabulary', vocabulary_homework.start_view),
     path('student/assignments/<str:assignment_id>/vocabulary/words', vocabulary_homework.words_view),
+    path('student/assignments/<str:assignment_id>/vocabulary/settings', vocabulary_homework.settings_view),
     path('student/assignments/<str:assignment_id>/vocabulary/snapshot', vocabulary_homework.snapshot_view),
     path('student/assignments/<str:assignment_id>/vocabulary/flashcards', vocabulary_homework.flashcards_view),
     path('student/assignments/<str:assignment_id>/vocabulary/flashcards/sync', vocabulary_homework.flashcards_sync_view),

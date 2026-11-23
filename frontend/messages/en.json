@@ -103,7 +103,10 @@
     "completed": "{completed} of {assigned} students completed",
     "missed": "Commonly missed words",
     "overdue": "{count} overdue",
-    "minimum": "Required score (%)"
+    "minimum": "Required score (%)",
+    "teacherMode": "Your teacher set this test: {mode}",
+    "startTest": "Start the test",
+    "continueTest": "Continue"
   },
   "classroomAssignments": {
     "exam": "Published exam",
@@ -3804,7 +3807,10 @@
       "alreadyTitle": "This homework was already assigned",
       "successBody": "“{title}” was assigned to the group.",
       "seeResults": "View results",
-      "another": "Assign another"
+      "another": "Assign another",
+      "questionType": "Question type",
+      "learnerChooses": "Learner chooses",
+      "questionTypeHint": "Fixes the type for everyone. Only types the words have data for are accepted."
     },
     "res": {
       "title": "Student results",
@@ -3943,5 +3949,26 @@
     "startListening": "Start listening",
     "storedAudio": "Stored audio file — students hear this recording.",
     "noStoredAudio": "No stored audio — students hear the browser voice (quality varies by device). Add an audio URL to control it."
+  },
+  "bamboozleOnline": {
+    "room": "Room",
+    "youAre": "You play as {name}",
+    "you": "you",
+    "exit": "Exit",
+    "score": "Score",
+    "double": "2× on the next question",
+    "waiting": "Waiting for your opponent to open the link…",
+    "finished": "Game over",
+    "yourTurn": "Your turn — open a card",
+    "theirTurn": "{name}'s turn",
+    "correct": "correct answer",
+    "wrong": "wrong answer",
+    "error": "Could not play the card. Try again.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "card": "Card {n}",
+    "cancel": "Back",
+    "draw": "Draw!",
+    "winner": "{name} wins!"
   }
 }

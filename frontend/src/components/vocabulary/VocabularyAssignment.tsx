@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api-client";
-import type { VocabularyCard, VocabularyFlashcardChange, VocabularyFlashcards, VocabularyMode } from "@/lib/group-contract.generated";
+import type { VocabularyCard, VocabularyFlashcardChange, VocabularyFlashcards } from "@/lib/group-contract.generated";
+import type { VocabularyQuizRunnerProps } from "@/components/vocabulary/VocabularyQuizRunner";
+
+type RunnerMode = NonNullable<VocabularyQuizRunnerProps["mode"]>;
 import { useMe } from "@/hooks/use-me";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -12,10 +15,16 @@ import { VocabularyQuizRunner } from "@/components/vocabulary/VocabularyQuizRunn
 import { PronounceButton, PronunciationSettingsBar } from "@/lib/pronunciation/react";
 import { getPronunciationEngine } from "@/lib/pronunciation/engine";
 
+const MODE_LABEL: Record<string, string> = {
+  mixed: "mixed", eng_uzb: "engUzb", uzb_eng: "uzbEng", spelling: "spelling", listen_choose: "listenChoose",
+  listen_type: "listenType", fill_blank: "fillBlank", context_meaning: "contextMeaning", synonym: "synonym", smart_mix: "smartMix",
+};
+
 export function VocabularyAssignment({ assignmentId }: { assignmentId: string }) {
   const t = useTranslations("vocabularyAssignment");
   const te = useTranslations("vocabularyEditor");
-  const [mode, setMode] = useState<VocabularyMode>();
+  const tm = useTranslations("vocabulary.mode");
+  const [mode, setMode] = useState<RunnerMode>();
   const [revealed, setRevealed] = useState(false);
   const [muted, setMuted] = useState(false);
   const { data: me } = useMe();
@@ -38,6 +47,12 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
     mutationFn: (body: VocabularyFlashcardChange) => api.patch<VocabularyFlashcards>(path + "/flashcards", body),
     onSuccess: data => client.setQueryData(progressKey, data),
   });
+  const settings = useQuery({
+    queryKey: ["vocabulary-assignment-settings", me?.user.id, assignmentId],
+    enabled,
+    queryFn: () => api.get<{ mode: RunnerMode | null; startedMode: RunnerMode | null }>(path + "/settings"),
+  });
+  const fixedMode = settings.data?.mode ?? null;
   const order = progress.data?.order.length ? progress.data.order : cards.data?.map(card => card.id) ?? [];
   const index = Math.max(0, order.indexOf(progress.data?.lastWordId ?? ""));
   const card = cards.data?.find(item => item.id === order[index]);
@@ -65,8 +80,15 @@ export function VocabularyAssignment({ assignmentId }: { assignmentId: string })
   return (
     <section className="mx-auto max-w-3xl space-y-5">
       <h1 className="text-2xl font-bold">{t("heading")}</h1>
-      <div className="flex flex-wrap gap-2">
-        {(["mixed", "spelling", "eng_uzb", "uzb_eng"] as const).map(value => (
+      <div className="flex flex-wrap items-center gap-2">
+        {fixedMode ? (
+          <>
+            <p className="w-full text-sm text-fg-muted" data-testid="teacher-mode">{t("teacherMode", { mode: tm(MODE_LABEL[fixedMode] ?? "mixed") })}</p>
+            <Button type="button" onClick={() => setMode(fixedMode)} data-testid="start-teacher-mode">
+              {settings.data?.startedMode ? t("continueTest") : t("startTest")}
+            </Button>
+          </>
+        ) : settings.isPending && enabled ? null : (["mixed", "spelling", "eng_uzb", "uzb_eng"] as const).map(value => (
           <Button type="button" key={value} onClick={() => setMode(value)}>{t(value)}</Button>
         ))}
         <Button asChild variant="outline"><Link href="/vocabulary/srs">{t("review")}</Link></Button>

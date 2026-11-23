@@ -139,6 +139,7 @@ jobs:
           python scripts/verify_vocabulary_practice_postgres.py
           python scripts/verify_vocabulary_homework_postgres.py
           python scripts/verify_teacher_submissions_postgres.py
+          python scripts/verify_learning_3_games_postgres.py
       - name: Check production security configuration
         run: python manage.py check --deploy --fail-level WARNING --settings=config.settings.production
       - name: Check shared cache

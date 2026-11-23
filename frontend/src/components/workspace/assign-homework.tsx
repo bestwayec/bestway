@@ -106,8 +106,18 @@ export function AssignHomework({ embeddedGroupId, onDone }: { embeddedGroupId?: 
   );
 }
 
+export const VOCABULARY_HOMEWORK_MODES = [
+  "mixed", "eng_uzb", "uzb_eng", "spelling", "listen_choose", "listen_type", "fill_blank", "context_meaning", "synonym", "smart_mix",
+] as const;
+export type VocabularyHomeworkMode = (typeof VOCABULARY_HOMEWORK_MODES)[number];
+const MODE_LABEL: Record<VocabularyHomeworkMode, string> = {
+  mixed: "mixed", eng_uzb: "engUzb", uzb_eng: "uzbEng", spelling: "spelling", listen_choose: "listenChoose",
+  listen_type: "listenType", fill_blank: "fillBlank", context_meaning: "contextMeaning", synonym: "synonym", smart_mix: "smartMix",
+};
+
 function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numbered: boolean; onAssigned: (r: AssignResult) => void }) {
   const t = useTranslations("tw");
+  const tm = useTranslations("vocabulary.mode");
   const options = useHomeworkOptions(groupId);
   const preview = usePreviewHomework(groupId);
   const assign = useAssignHomework(groupId);
@@ -122,6 +132,7 @@ function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numb
   const [timeLimit, setTimeLimit] = React.useState<string>("");
   const [maxAttempts, setMaxAttempts] = React.useState("1");
   const [minPass, setMinPass] = React.useState("60");
+  const [vocabMode, setVocabMode] = React.useState<VocabularyHomeworkMode | "">("");
   const [plan, setPlan] = React.useState<HomeworkPreview | null>(null);
   const [problem, setProblem] = React.useState<string | null>(null);
   const opts = options.data;
@@ -136,10 +147,10 @@ function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numb
       return { ...base, ...extra, newQuiz: { questionsText, answerKey, category: "grammar" } };
     }
     const pass = { minPassPercent: Number(minPass) };
-    if (kind === "vocabulary") return sourceId ? { ...base, ...pass, vocabularySetId: sourceId } : null;
+    if (kind === "vocabulary") return sourceId ? { ...base, ...pass, vocabularySetId: sourceId, ...(vocabMode ? { vocabularyMode: vocabMode } : {}) } : null;
     if (kind === "exam") return sourceId ? { ...base, ...pass, examId: sourceId } : null;
     return { ...base, ...pass, lessonId: sourceId || undefined };
-  }, [kind, quizMode, sourceId, title, questionsText, answerKey, deadline, timeLimit, maxAttempts, minPass]);
+  }, [kind, quizMode, sourceId, title, questionsText, answerKey, deadline, timeLimit, maxAttempts, minPass, vocabMode]);
 
   // Live preview (validated by the server, nothing saved) — no separate confirmation screen.
   const previewMutate = preview.mutate;
@@ -160,6 +171,7 @@ function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numb
     setKind(next);
     setSourceId("");
     setTitle("");
+    setVocabMode("");
     if (next === "quiz" && opts?.quizzes.length === 0) setQuizMode("new");
   }
 
@@ -234,6 +246,15 @@ function HomeworkForm({ groupId, numbered, onAssigned }: { groupId: string; numb
                   <option value="">{kind === "lesson" ? t("hw.noLesson") : t("hw.choose")}</option>
                   {sourceList.map((s) => <option key={s.id} value={s.id}>{s.label}{s.meta ? ` · ${s.meta}` : ""}</option>)}
                 </select>
+              </label>
+            )}
+            {kind === "vocabulary" && sourceId && (
+              <label className="mt-3 grid gap-1 text-sm font-medium text-fg">{t("hw.questionType")}
+                <select className={field} value={vocabMode} onChange={(e) => setVocabMode(e.target.value as VocabularyHomeworkMode | "")} data-testid="hw-vocab-mode">
+                  <option value="">{t("hw.learnerChooses")}</option>
+                  {VOCABULARY_HOMEWORK_MODES.map((m) => <option key={m} value={m}>{tm(MODE_LABEL[m])}</option>)}
+                </select>
+                <span className="text-xs font-normal text-fg-muted">{t("hw.questionTypeHint")}</span>
               </label>
             )}
           </div>

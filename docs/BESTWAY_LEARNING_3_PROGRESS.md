@@ -32,3 +32,19 @@ Uzbek prompts with an English voice; engine bug (cancel during the pause never s
 play — found by unit test); mode picker disabled every new type while loading (found in browser);
 homework start would return HTTP 500 because pinned word snapshots lacked the new audio fields
 (found by `verify_vocabulary_homework_postgres.py`; fixed and covered by a regression test).
+
+PR B merged: [#223](https://github.com/bestwayec/bestway/pull/223) → `40a7cfb` (CI 4/4).
+
+## PR C — Games, teacher question type, audit of SRS/flashcards
+
+| Area | Finding (before) | Change | Verification |
+|---|---|---|---|
+| Bamboozle 1v1 room | Room state (GET/join/WebSocket) sent every card's `correct_answer`; `/play` and WS `CARD_ACTION` trusted client `is_correct`, `team`, `has_double`; no identity or turn check; the "1v1" button was never wired; production runs WSGI (gunicorn) so the WebSocket never connected and each device scored locally | Per-seat secret token (only its SHA-256 stored), turn/status checks, server judges the chosen option, server-kept 2x bonus, `public_room()` hides unopened answers and token hashes, cache lock per play, contract-shaped errors. New `BamboozleOnlineArena` plays over HTTP + 2 s polling; button added to deck cards; the dead WebSocket client removed. Classroom projector mode (host judges oral answers) unchanged | 5 new backend tests; browser B1–B5 (two browsers) |
+| Vocab Battle | Speed bonus from client `elapsedSec` (a negative value gave unbounded points); answers saved without a row lock (simultaneous answers could overwrite each other); malformed input → 500 | Server start time stamped when a question opens; elapsed from the server clock (legacy questions clamp the client value 0..limit, NaN → no bonus); late answers (> limit + 2 s) score 0; `select_for_update`; option range check; 400 on malformed input | 3 new unit tests; PG script; browser `vocab-battle.mjs` 20/20 |
+| Vocab Runner | Already server-scored (session replay). Weak words were recorded from the client's mistake list | Weak words come from the mistakes the server counted | `test_runner_game.py` 17/17 |
+| Teacher question type | Learner picked the mode at homework start (one session per learner) | `HomeworkAssignment.vocabulary_mode` (migration `0028`), validated against the set's data in preview/assign; start ignores the learner's request; `GET …/vocabulary/settings`; assign-form select; learner page shows the fixed type | PG script 14/14; browser H1–H2 |
+| Flashcards / SRS / progress | Audited: SRS sessions are signed, owner-checked, stale-checked and graded server-side; flashcard sync is op-id idempotent; stats and history are read from stored rows | No change needed | existing tests + PG scripts |
+
+Not done (no grounded data or out of scope): antonym questions (no antonym data stored);
+pronunciation in Runner/Bamboozle (their content is grammar/general quiz cards, not vocabulary
+words with audio).

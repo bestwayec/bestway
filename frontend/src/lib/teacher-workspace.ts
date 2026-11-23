@@ -78,6 +78,8 @@ export interface HomeworkDraft {
   timeLimitMinutes?: number | null;
   maxAttempts?: number;
   vocabularySetId?: string;
+  /** Question type the teacher fixes for vocabulary homework; omitted = the learner picks. */
+  vocabularyMode?: string;
   examId?: string;
   lessonId?: string;
   minPassPercent?: number;

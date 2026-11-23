@@ -483,6 +483,7 @@ def start_runner_session(user: User, questions: List[Dict[str, Any]]) -> str:
         "userId": user.id,
         "startedAt": timezone.now().timestamp(),
         "answers": {q["id"]: q["correct"] for q in questions},
+        "prompts": {q["id"]: q.get("prompt") or "" for q in questions},
     }, RUNNER_SESSION_TTL)
     return session_id
 
@@ -567,7 +568,10 @@ def _submit_session(user: User, session_id: str, data: Dict[str, Any]) -> Dict[s
                 )
             total_xp = StudentProfile.objects.filter(pk=profile.pk).values_list("current_points", flat=True).first()
             saved = True
-    _record_weak_words(user, data.get("mistakes"))
+    # Weak words come from the mistakes the server itself counted, never from the client's list.
+    prompts = session.get("prompts") or {}
+    _record_weak_words(user, [{"prompt": prompts.get(qid), "correct": session["answers"].get(qid)}
+                              for qid in mistake_ids])
 
     capped = saved and awarded < earned
     result = {

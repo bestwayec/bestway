@@ -72,8 +72,20 @@ def start_view(request, assignment_id):
     if mode not in QuizMode.values:
         invalid("Mashq turi yaroqsiz")
     assignment = assignment_for_student(actor.id, assignment_id)
-    session = issue(assignment, actor.id, mode)
+    # The teacher's chosen question type wins over the learner's request.
+    session = issue(assignment, actor.id, assignment.vocabulary_mode or mode)
     return success(session_payload(session))
+
+
+@api_view(["GET"])
+@transaction.atomic
+def settings_view(request, assignment_id):
+    """What the learner needs before starting: the teacher's question type, if any."""
+    actor = require_authenticated(request)
+    require_role(request, "student")
+    assignment = assignment_for_student(actor.id, assignment_id)
+    started = VocabularyHomeworkSession.objects.filter(assignment=assignment, student_id=actor.id).values_list("mode", flat=True).first()
+    return success({"mode": assignment.vocabulary_mode, "startedMode": started})
 
 
 @api_view(["GET"])
