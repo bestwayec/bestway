@@ -14,7 +14,10 @@ actor = SimpleNamespace(id='student-1')
 
 @pytest.fixture(autouse=True)
 def isolated_cache():
-    with override_settings(CACHES=LOCMEM), patch('apps.core.exam_session.engine.own', return_value=None):
+    with (override_settings(CACHES=LOCMEM),
+          patch('apps.core.exam_session.engine.own', return_value=None),
+          patch('apps.core.exam_session.transaction.get_connection') as connection):
+        connection.return_value.in_atomic_block = True
         cache.clear()
         yield
         cache.clear()

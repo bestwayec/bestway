@@ -33,6 +33,7 @@ import { multilevelTaskName, scoreMaximum } from "./multilevel-student-ui";
 import { criteriaScore, gradeDraftKey, nextGradeIndex, readGradeDraft, writeGradeDraft } from "@/lib/grade-draft";
 import { isEmptyAttempt } from "@/lib/empty-attempt";
 import { multilevelLevelText } from "@/lib/multilevel-scale";
+import { AttemptRecordingPlayer } from "./attempt-recording-player";
 
 const media = (path: string) => `/api/backend${path}`;
 const MANUAL_SKILLS = new Set<MockSkill>(["writing", "speaking"]);
@@ -558,14 +559,10 @@ function ReviewRow({  q,
 
           {/* Speaking audio */}
           {q.hasAudio && (
-            <audio
-              controls
+            <AttemptRecordingPlayer
               src={media(`/mock/attempts/${attemptId}/answers/${q.id}/audio`)}
               className="mt-2 h-9 w-full max-w-sm"
-              preload="none"
-            >
-              <track kind="captions" />
-            </audio>
+            />
           )}
 
           {/* IELTS live speaking: nothing was recorded; the teacher scores the interview with the criteria. */}

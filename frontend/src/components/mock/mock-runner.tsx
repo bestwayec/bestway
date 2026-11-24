@@ -84,7 +84,10 @@ import { AudioScriptToggle, RevealAnswer } from "./practice-tools";
 import { RunnerTools, PhoneToolsRow, ClearAnswersDialog } from "./runner-tools";
 import { ShortcutsDialog, useRunnerShortcuts } from "./runner-shortcuts";
 import { highlightCurrentSelection } from "./cbt-annotated-text";
-import { enqueue as enqueueAnswer, confirm as confirmQueuedAnswers, loadQueue, clearQueue } from "@/lib/answer-queue";
+import {
+  isMemoryEdit, loadQueue, persistEdit, readUnconfirmedSubmit, rememberUnconfirmedSubmit, removeEdit,
+  type AnswerEdit, type AnswerReceipt, type QueuedAnswer,
+} from "@/lib/answer-queue";
 import { AnswerQueueBanner } from "./answer-queue-banner";
 import { ApiError } from "@/lib/api-client";
 import { installHaptics } from "@/lib/haptics";
@@ -94,7 +97,15 @@ import { LoadErrorPanel } from "@/components/common/load-error-panel";
 
 const ESSAY = new Set<MockQuestionType>(["essay_task1", "essay_task2"]);
 
-const STOP_RECORDINGS_EVENT = "mock-stop-recordings";
+type SaveState = "idle" | "queued" | "saving" | "saved" | "retrying" | "error" | "offline" | "conflict";
+
+function isExamTimeUp(error: unknown) {
+  return error instanceof ApiError && ["MOCK_TIME_UP", "MOCK_SECTION_TIME_UP"].includes(error.code);
+}
+
+function isSubmitted(status: unknown): boolean {
+  return status === "grading" || status === "completed";
+}
 
 
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
@@ -127,7 +138,7 @@ function sectionGroupsOf(section: unknown): SectionGroupShape[] {
   return (value?.parts as SectionGroupShape[] | undefined) || [];
 }
 
-export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
+export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDetail; refreshAttempt?: () => void }) {
   const t = useTranslations("mock");
   const tc = useTranslations("common");
   const tm = useTranslations("errorPanel");
@@ -295,23 +306,22 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     const ans: Record<string, string> = {};
     const audio = new Set<string>();
     const durations: Record<string, number> = {};
+    const revisions: Record<string, string | null> = {};
     for (const s of (attempt?.sections || [])) {
       const groups = s?.groups || (s as any)?.parts || [];
       for (const g of groups) {
         for (const q of (g?.questions || [])) {
           ans[q.id] = q.response ?? "";
+          revisions[q.id] = q.answerRevision ?? null;
           if (q.hasAudio) audio.add(q.id);
           if (q.hasAudio && q.audioDurationMs != null) durations[q.id] = q.audioDurationMs;
         }
       }
     }
-    return { ans, audio, durations };
+    return { ans, audio, durations, revisions };
   }, [attempt]);
 
-  // Server answers are the authoritative resume state. Edits stay in memory only
-  // until autosave persists them, so a reload cannot manufacture a second attempt.
-  // Unsent edits from this device (a reload or a lost connection) are shown and sent
-  // again; the server keeps whichever edit is newer.
+  // Recover device edits over the last authorized server snapshot.
   const [queuedAtStart] = React.useState(() => loadQueue(attempt.id));
   const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
     const merged = { ...initial.ans };
@@ -371,26 +381,28 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   const [transitionModal, setTransitionModal] = React.useState<{ completedSkill: MockSkill; nextSkill: MockSkill } | null>(null);
 
   const answersRef = React.useRef(answers);
-  React.useEffect(() => {
-    answersRef.current = answers;
-  }, [answers]);
-  const dirty = React.useRef<Set<string>>(new Set(Object.keys(queuedAtStart).filter((id) => id in initial.ans)));
-  // Edit time of each unsent answer (ms, server clock).
-  const editedAt = React.useRef<Map<string, number>>(new Map(Object.entries(queuedAtStart).map(([id, entry]) => [id, entry.editedAt])));
-  const [queuedCount, setQueuedCount] = React.useState(() => Object.keys(queuedAtStart).filter((id) => id in initial.ans).length);
-  // Submit could not be confirmed (network / 5xx): answers are on the server, the hand-in is not.
-  const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(false);
-  const outgoing = React.useCallback((ids: string[], snapshot: Record<string, string>) =>
-    ids.map((id) => ({ questionId: id, response: snapshot[id] ?? "", editedAt: editedAt.current.get(id) ?? Date.now() + serverOffsetRef.current })), []);
-  // A newer answer from another tab or device wins; show it instead of the old edit.
-  const adoptServerValues = React.useCallback((stale: Record<string, string> | undefined) => {
-    if (!stale || !Object.keys(stale).length) return;
-    const next = { ...answersRef.current, ...stale };
-    answersRef.current = next;
-    for (const id of Object.keys(stale)) { dirty.current.delete(id); editedAt.current.delete(id); }
-    setAnswers(next);
-    toast.info(tr("answerUpdatedElsewhere"));
-  }, [tr]);
+  const revisions = React.useRef(initial.revisions);
+  const edits = React.useRef(new Map(Object.entries(queuedAtStart).filter(([id]) => Object.hasOwn(initial.ans, id))));
+  const conflicts = React.useRef(new Map<string, Extract<AnswerReceipt, { status: "conflict" }>>());
+  const [writer] = React.useState(() => typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2));
+  const lastLocalEdit = React.useRef(Math.max(0, ...[...edits.current.values()].map((edit) => edit.editedAt)));
+  const memoryOnly = React.useRef(new Set([...edits.current].filter(([id, edit]) =>
+    isMemoryEdit(attempt.id, id, edit)).map(([id]) => id)));
+  const [storageUnavailable, setStorageUnavailable] = React.useState(memoryOnly.current.size > 0);
+  const [confirmedAnswers, setConfirmedAnswers] = React.useState(initial.ans);
+  const [queuedCount, setQueuedCount] = React.useState(edits.current.size);
+  const [conflictCount, setConflictCount] = React.useState(0);
+  const [submitUnconfirmed, setSubmitUnconfirmed] = React.useState(() => readUnconfirmedSubmit(attempt.id));
+  const activeQuestionIds = React.useMemo(() => {
+    const section = attempt.sections?.find((item) => item.skill === attempt.currentSkill);
+    return new Set(sectionGroupsOf(section).flatMap((group) => (group.questions ?? []).map((question) => question.id)));
+  }, [attempt.sections, attempt.currentSkill]);
+  const canSaveQuestion = React.useCallback((id: string) => !isFullTest || activeQuestionIds.has(id), [activeQuestionIds, isFullTest]);
+  const saveItems = React.useCallback(() =>
+    [...edits.current].filter(([id]) => canSaveQuestion(id) && !conflicts.current.has(id))
+      .sort(([, left], [, right]) => left.editedAt - right.editedAt), [canSaveQuestion]);
   const submittingRef = React.useRef(false);
   const saveInFlight = React.useRef<Promise<unknown> | null>(null);
   const [saveRevision, setSaveRevision] = React.useState(0);
@@ -402,7 +414,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   });
   const sessionElsewhereRef = React.useRef(false);
   React.useEffect(() => { sessionElsewhereRef.current = examSession.elsewhere; }, [examSession.elsewhere]);
-  const [saveState, setSaveState] = React.useState<"idle" | "saving" | "saved" | "error" | "offline">("saved");
+  const [saveState, setSaveState] = React.useState<SaveState>(edits.current.size ? "queued" : "idle");
   React.useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -418,59 +430,156 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     return () => window.removeEventListener('multilevel:recording-uploaded', saved);
   }, [attempt.id]);
 
-  const flush = React.useCallback(() => {
-    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current) return;
-    const targetSection = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-    const targetGroups = targetSection?.groups || (targetSection as any)?.parts || [];
-    const ids = [...dirty.current].filter((id) => !versioned || !isFullTest || targetGroups.some((g: any) => (g?.questions || []).some((q: any) => q.id === id)));
-    if (!ids.length) return;
-    const snapshot = { ...answersRef.current };
-    const items = outgoing(ids, snapshot).sort((a, b) => a.editedAt - b.editedAt);
-    setSaveState("saving");
+  // Refetches can update clean fields, but never replace an edit or a more recent receipt.
+  React.useEffect(() => {
+    const clean: Record<string, string> = {};
+    for (const [id, value] of Object.entries(initial.ans)) {
+      const remote = initial.revisions[id];
+      const known = revisions.current[id];
+      if (edits.current.has(id) || (known && (!remote || remote < known))) continue;
+      revisions.current[id] = remote;
+      if (answersRef.current[id] !== value) clean[id] = value;
+    }
+    if (!Object.keys(clean).length) return;
+    answersRef.current = { ...answersRef.current, ...clean };
+    setAnswers(answersRef.current);
+    setConfirmedAnswers((confirmed) => ({ ...confirmed, ...clean }));
+  }, [initial]);
+
+  const updateQueueState = React.useCallback(() => {
+    setQueuedCount(edits.current.size);
+    setConflictCount(conflicts.current.size);
+    setStorageUnavailable(memoryOnly.current.size > 0);
+    setSaveState(conflicts.current.size ? "conflict" : edits.current.size ? "queued" : "saved");
+  }, []);
+
+  const savePending = React.useCallback(async () => {
+    const items = saveItems();
+    if (items.length) setSaveState((state) => state === "retrying" ? state : "saving");
+    for (let offset = 0; offset < items.length; offset += 200) {
+      const batch = items.slice(offset, offset + 200);
+      const payload: AnswerEdit[] = batch.map(([questionId, { response, editedAt, baseRevision }]) => ({
+        questionId, response, editedAt, ...(baseRevision !== undefined ? { baseRevision } : {}),
+      }));
+      const result = await bulkMutateAsync(payload);
+      if (result.saved !== batch.length || !result.receipts || batch.some(([id, edit]) => {
+        const receipt = result.receipts?.[id];
+        return !receipt || receipt.editedAt !== edit.editedAt ||
+          (receipt.revision !== null && typeof receipt.revision !== "string") ||
+          (receipt.status !== "saved" && (receipt.status !== "conflict" || typeof receipt.response !== "string"));
+      })) throw new Error("Missing answer acknowledgment");
+      const confirmed: Record<string, string> = {};
+      for (const [id, sent] of batch) {
+        const receipt = result.receipts[id];
+        revisions.current[id] = receipt.revision;
+        if (receipt.status === "conflict") {
+          conflicts.current.set(id, receipt);
+          confirmed[id] = receipt.response;
+          continue;
+        }
+        confirmed[id] = sent.response;
+        removeEdit(attempt.id, id, sent);
+        const current = edits.current.get(id);
+        if (current?.editedAt === sent.editedAt && current.response === sent.response) {
+          edits.current.delete(id);
+          memoryOnly.current.delete(id);
+        } else if (current?.writer && current.baseRevision === sent.baseRevision) {
+          // The next edit was typed while this request was in flight. Advance only
+          // its base revision. The editor and journal retain its current value.
+          const rebased = { ...current, writer: current.writer, baseRevision: receipt.revision };
+          edits.current.set(id, rebased);
+          if (persistEdit(attempt.id, id, rebased)) memoryOnly.current.delete(id);
+          else memoryOnly.current.add(id);
+        }
+      }
+      setConfirmedAnswers((previous) => ({ ...previous, ...confirmed }));
+      updateQueueState();
+    }
+  }, [attempt.id, bulkMutateAsync, saveItems, updateQueueState]);
+
+  const flush = React.useCallback((retry = false) => {
+    if (saveInFlight.current || submittingRef.current || sessionElsewhereRef.current || !saveItems().length) return;
+    if (!navigator.onLine) {
+      setSaveState("offline");
+      return;
+    }
+    setSaveState((state) => retry || state === "error" || state === "offline" ? "retrying" : "saving");
     let succeeded = false;
-    saveInFlight.current = bulkMutateAsync(items).then((result) => {
-      if (result.saved !== ids.length) throw new Error('Some answers could not be saved');
+    saveInFlight.current = savePending().then(() => {
       succeeded = true;
-      confirmQueuedAnswers(attempt.id, items);
-      items.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt || answersRef.current[item.questionId] === snapshot[item.questionId]) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
-      adoptServerValues(result.stale);
-      setQueuedCount(dirty.current.size);
-      if (!dirty.current.size) setSaveState("saved");
     }).catch((error: unknown) => {
-      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") { setSaveState("idle"); return; }
-      setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
-      toast.error(versioned || isExplainedSaveError(error) ? studentSaveErrorMessage(error) : tc("saveFailed"));
+      if (error instanceof ApiError && error.code === "EXAM_SESSION_ELSEWHERE") {
+        sessionElsewhereRef.current = true;
+        setSaveState("queued");
+        return;
+      }
+      setSaveState(navigator.onLine ? "error" : "offline");
+      if (versioned || isExplainedSaveError(error)) toast.error(studentSaveErrorMessage(error));
     }).finally(() => {
       saveInFlight.current = null;
-      // Edits made while saving remain dirty; debounce their latest snapshot.
-      if (succeeded && dirty.current.size) setSaveRevision((revision) => revision + 1);
+      if (succeeded && saveItems().length) setSaveRevision((revision) => revision + 1);
     });
-  }, [bulkMutateAsync, tc, versioned, isFullTest, attempt.id, attempt.sections, attempt.currentSkill, outgoing, adoptServerValues]);
+  }, [saveItems, savePending, versioned]);
 
-  // Debounce autosave
   React.useEffect(() => {
     const id = setTimeout(flush, 1500);
     return () => clearTimeout(id);
   }, [answers, flush, saveRevision]);
 
   function setAnswer(qid: string, val: string) {
-    if (submittingRef.current) return;
-    dirty.current.add(qid);
-    const stamp = Math.max(Date.now() + serverOffsetRef.current, (editedAt.current.get(qid) ?? 0) + 1);
-    editedAt.current.set(qid, stamp);
-    enqueueAnswer(attempt.id, qid, val, stamp);
-    setQueuedCount(dirty.current.size);
-    const next = { ...answersRef.current, [qid]: val };
-    answersRef.current = next;
-    setSaveState(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "saving");
-    setAnswers(next);
+    if (submittingRef.current || submitUnconfirmed || !canSaveQuestion(qid) || !Object.hasOwn(initial.ans, qid)) return;
+    const previous = edits.current.get(qid);
+    const stamp = Math.max(Date.now() + serverOffsetRef.current, lastLocalEdit.current + 1);
+    lastLocalEdit.current = stamp;
+    const edit = { response: val, editedAt: stamp, writer, baseRevision: previous ? previous.baseRevision : revisions.current[qid] ?? null };
+    edits.current.set(qid, edit);
+    if (persistEdit(attempt.id, qid, edit)) {
+      memoryOnly.current.delete(qid);
+      if (previous && previous.writer !== writer) removeEdit(attempt.id, qid, previous);
+    } else memoryOnly.current.add(qid);
+    answersRef.current = { ...answersRef.current, [qid]: val };
+    updateQueueState();
+    if (!navigator.onLine) setSaveState("offline");
+    setAnswers(answersRef.current);
   }
+
+  function resolveConflicts(useLocal: boolean) {
+    if (submittingRef.current || saveInFlight.current) return;
+    const next = { ...answersRef.current };
+    for (const [id, receipt] of conflicts.current) {
+      const edit = edits.current.get(id);
+      if (!edit) continue;
+      if (useLocal) {
+        const resolved = { ...edit, writer, baseRevision: receipt.revision };
+        edits.current.set(id, resolved);
+        if (persistEdit(attempt.id, id, resolved)) {
+          memoryOnly.current.delete(id);
+          if (edit.writer !== writer) removeEdit(attempt.id, id, edit);
+        } else memoryOnly.current.add(id);
+      } else {
+        removeEdit(attempt.id, id, edit);
+        edits.current.delete(id);
+        memoryOnly.current.delete(id);
+        next[id] = receipt.response;
+      }
+    }
+    conflicts.current.clear();
+    answersRef.current = next;
+    setAnswers(next);
+    updateQueueState();
+  }
+
   React.useEffect(() => {
-    window.addEventListener('online', flush);
-    const onOffline = () => { if (dirty.current.size) setSaveState("offline"); };
-    window.addEventListener('offline', onOffline);
+    const retry = () => flush(true);
+    window.addEventListener("online", retry);
+    const onOffline = () => { if (edits.current.size) setSaveState("offline"); };
+    window.addEventListener("offline", onOffline);
     const id = window.setInterval(flush, 10000);
-    return () => { window.removeEventListener('online', flush); window.removeEventListener('offline', onOffline); window.clearInterval(id); };
+    return () => {
+      window.removeEventListener("online", retry);
+      window.removeEventListener("offline", onOffline);
+      window.clearInterval(id);
+    };
   }, [flush]);
 
   // Native-feeling tap feedback on answer options and buttons (touch devices only).
@@ -483,8 +592,9 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     : isFullTest && attempt.currentSkill && attempt.sectionDeadlines?.[attempt.currentSkill]
     ? attempt.sectionDeadlines[attempt.currentSkill]
     : attempt.overallDeadlineAt ?? attempt.deadlineAt;
-  const deadline = deadlineTs ? new Date(deadlineTs).getTime() : null;
-  const [serverOffset] = React.useState(() => attempt.serverTime ? Date.parse(attempt.serverTime) - Date.now() : 0);
+  const overallDeadline = attempt.overallDeadlineAt ? Date.parse(attempt.overallDeadlineAt) : Infinity;
+  const deadline = deadlineTs ? Math.min(Date.parse(deadlineTs), overallDeadline) : null;
+  const serverOffset = openingOffset;
   const [remaining, setRemaining] = React.useState<number | null>(
     () => (deadline ? deadline - Date.now() - serverOffset : null),
   );
@@ -525,123 +635,125 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
 
   const doSubmit = React.useCallback(
     async (auto = false, confirmed = false) => {
-      if (submittingRef.current) return;
+      if (submittingRef.current || sessionElsewhereRef.current) return;
       if (total <= 0) {
         toast.error(tr("noQuestionsToSubmit"));
         return;
       }
       if (!auto && !confirmed) {
-        const isMockedConfirm = typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm.toString().includes('[native code]');
-        if (isMockedConfirm) {
-          if (!window.confirm(t("submitConfirm"))) return;
-        } else {
+        const isMockedConfirm = typeof window.confirm === "function" && !window.confirm.toString().includes("[native code]");
+        if (!isMockedConfirm) {
           setShowSubmitConfirm(true);
           return;
         }
+        if (!window.confirm(t("submitConfirm"))) return;
       }
       setShowSubmitConfirm(false);
       submittingRef.current = true;
-      if (versioned) {
-        try {
-          if (hasActiveRecording(attempt.id) || await hasPendingRecordings(attempt.id)) {
-            toast.error('Finish recording and upload saved takes before submitting.');
-            submittingRef.current = false;
+      const payload = { confirm: true, ...(auto ? { requireExpired: true } : {}) };
+      const checkResult = () => api.get<{ status: string }>(`/mock/attempts/${attempt.id}`).catch(() => null);
+      let submitted = false;
+      try {
+        if (submitUnconfirmed || readUnconfirmedSubmit(attempt.id)) {
+          const current = await checkResult();
+          if (isSubmitted(current?.status)) {
+            submitted = true;
             return;
           }
-        } catch {
-          toast.error('Recording recovery could not be checked. Keep this page open and retry.');
-          submittingRef.current = false;
+          if (current?.status !== "in_progress") return;
+        }
+        if (!navigator.onLine) {
+          toast.error(tr("finishOffline"));
           return;
         }
-      }
-      window.dispatchEvent(new Event(STOP_RECORDINGS_EVENT));
-      try {
-        try {
-          await saveInFlight.current;
-        } catch {}
-        const targetSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-        if (isFullTest && !targetSec) throw new Error('Current section could not be loaded. Keep this page open and retry.');
-        const targetGrps = targetSec?.groups || (targetSec as any)?.parts || [];
-        const ids = Object.keys(answersRef.current)
-          .filter((qid) => (!auto || dirty.current.has(qid)) && (!isFullTest || targetGrps.some((g: any) => (g?.questions || []).some((q: any) => q.id === qid))));
-        const all = outgoing(ids, answersRef.current);
-        for (let offset = 0; offset < all.length; offset += 200) {
-          const batch = all.slice(offset, offset + 200);
-          const saved = await bulkMutateAsync(batch);
-          if (saved.saved !== batch.length) {
-            throw new Error("Some answers could not be saved. Keep this page open and retry.");
-          }
-          confirmQueuedAnswers(attempt.id, batch);
-          batch.forEach((item) => { if (editedAt.current.get(item.questionId) === item.editedAt) { dirty.current.delete(item.questionId); editedAt.current.delete(item.questionId); } });
-          adoptServerValues(saved.stale);
+        if (hasActiveRecording(attempt.id) ||
+            ((versioned || attempt.currentSkill === "speaking") && await hasPendingRecordings(attempt.id))) {
+          toast.error(tr("finishPendingRecording"));
+          return;
         }
-        setQueuedCount(dirty.current.size);
+        await saveInFlight.current;
         try {
-          await submitMutateAsync({ confirm: true, confirmed: true, force: true });
+          await savePending();
         } catch (error) {
-          // A gateway error (e.g. 502) or a lost connection does not tell whether the
-          // hand-in happened. Ask the server: submitting again never makes a second attempt.
-          if (error instanceof ApiError && error.status > 0 && error.status < 500) throw error;
-          const current = await api.get<{ status: string }>(`/mock/attempts/${attempt.id}`).catch(() => null);
-          if (!current || current.status === "in_progress") {
+          setSaveState(navigator.onLine ? "error" : "offline");
+          if (!auto || !isExamTimeUp(error)) throw error;
+        }
+        if (!auto && [...edits.current.keys()].some(canSaveQuestion)) {
+          toast.error(tr("finishPendingAnswers"));
+          return;
+        }
+
+        // Persist the uncertain hand-in before the request so reload can reconcile it.
+        rememberUnconfirmedSubmit(attempt.id, true);
+        try {
+          const result = await submitMutateAsync(payload);
+          if (!isSubmitted(result.status)) throw new Error("Missing submission acknowledgment");
+        } catch (error) {
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
+            rememberUnconfirmedSubmit(attempt.id, false);
+            setSubmitUnconfirmed(false);
+            throw error;
+          }
+          const current = await checkResult();
+          if (!isSubmitted(current?.status)) {
             setSubmitUnconfirmed(true);
-            submittingRef.current = false;
             return;
           }
-          // Already handed in: the repeated submit returns the stored state and refreshes the page data.
-          await submitMutateAsync({ confirm: true, confirmed: true, force: true }).catch(() => undefined);
         }
-        setSubmitUnconfirmed(false);
-        clearQueue(attempt.id);
-        if (liveRoomId) {
-          reportProgressMutate({
-            attemptId: attempt.id,
-            status: "submitted",
-          });
+        submitted = true;
+      } catch (error) {
+        if (error instanceof ApiError && error.code === "EXAM_DEADLINE_ACTIVE" && auto) return;
+        if (studentSubmitNeedsReview(error)) setReview("submit");
+        toast.error(isExamTimeUp(error) ? tr("saveExpired") : versioned ? studentSubmitMessage(error) : tr("finishPendingAnswers"));
+      } finally {
+        if (submitted) {
+          rememberUnconfirmedSubmit(attempt.id, false);
+          setSubmitUnconfirmed(false);
+          if (liveRoomId) reportProgressMutate({ attemptId: attempt.id, status: "submitted" });
+          toast.success(t("submitted"));
+          refreshAttempt?.();
+        } else {
+          submittingRef.current = false;
         }
-        toast.success(t("submitted"));
-      } catch (e) {
-        submittingRef.current = false;
-        // A refused incomplete hand-in reopens the review panel so the student
-        // sees exactly which section still owes work.
-        if (studentSubmitNeedsReview(e)) setReview("submit");
-        toast.error(versioned ? studentSubmitMessage(e) : (e instanceof Error ? e.message : tc("unknownError")));
       }
     },
-    [bulkMutateAsync, submitMutateAsync, t, tc, versioned, attempt.id, attempt.sections, attempt.currentSkill, isFullTest, liveRoomId, reportProgressMutate, total, outgoing, adoptServerValues],
+    [attempt.id, attempt.currentSkill, canSaveQuestion, liveRoomId, refreshAttempt, reportProgressMutate, savePending, submitMutateAsync, submitUnconfirmed, t, total, tr, versioned],
   );
 
-  // Full-test: keyingi bo'limga o'tish (flush + advance). Review tugashi ham shu yerga keladi.
   const goNextSection = React.useCallback(async (automatic = false) => {
-    if (submittingRef.current) return;
+    const currentSkill = attempt.currentSkill;
+    if (submittingRef.current || sessionElsewhereRef.current || !currentSkill ||
+        !attempt.sections.some((section) => section.skill === currentSkill)) return;
     submittingRef.current = true;
     try {
       await saveInFlight.current;
-      const curSec = attempt?.sections?.find((s) => s.skill === attempt.currentSkill);
-      if (!curSec) throw new Error('Current section could not be loaded');
-      const curGrps = curSec?.groups || (curSec as any)?.parts || [];
-      const ids = curGrps.flatMap((g: any) => (g?.questions || []).map((q: any) => q.id)) as string[];
-      const answers = outgoing(ids.filter((id) => Object.hasOwn(answersRef.current, id) && (!automatic || dirty.current.has(id))), answersRef.current);
-      for (let offset = 0; offset < answers.length; offset += 200) {
-        const batch = answers.slice(offset, offset + 200);
-        const saved = await bulkMutateAsync(batch);
-        if (saved.saved !== batch.length) throw new Error('Some answers could not be saved');
-        confirmQueuedAnswers(attempt.id, batch);
+      try {
+        await savePending();
+      } catch (error) {
+        setSaveState(navigator.onLine ? "error" : "offline");
+        if (!automatic || !isExamTimeUp(error)) throw error;
       }
-      ids.forEach((id) => { dirty.current.delete(id); editedAt.current.delete(id); });
-      setQueuedCount(dirty.current.size);
-      const currentSkill = attempt.currentSkill;
-      await advanceMutateAsync();
-      const currentIdx = exam?.sections.findIndex((s) => s.skill === currentSkill) ?? -1;
-      const nextSkill = exam?.sections[currentIdx + 1]?.skill;
-      if (currentSkill && nextSkill) {
-        setTransitionModal({ completedSkill: currentSkill, nextSkill });
+      const hasPending = [...edits.current.keys()].some((id) => activeQuestionIds.has(id));
+      if (!automatic && hasPending) {
+        toast.error(tr("finishPendingAnswers"));
+        return;
       }
+      const result = await advanceMutateAsync({ expectedSkill: currentSkill, ...(automatic ? { requireExpired: true } : {}) });
+      if (!result.saved || !result.submittedSections.includes(currentSkill) || !result.currentSkill || result.currentSkill === currentSkill) {
+        throw new Error("Missing section acknowledgment");
+      }
+      setSelectedSection(null);
+      setTransitionModal({ completedSkill: currentSkill, nextSkill: result.currentSkill as MockSkill });
       toast.success(tr("nextSectionDone"));
-    } catch (e) {
-      toast.error(versioned ? "This section could not be completed. Please try again." : (e instanceof Error ? e.message : tc("unknownError")));
-    } finally { submittingRef.current = false; }
-  }, [advanceMutateAsync, tc, tr, versioned, attempt.id, attempt.sections, attempt.currentSkill, bulkMutateAsync, exam, outgoing]);
+      if (hasPending) toast.warning(tr("saveExpired"));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "EXAM_DEADLINE_ACTIVE" && automatic) return;
+      refreshAttempt?.();
+      toast.error(isExamTimeUp(error) ? tr("saveExpired") : tr("advanceUnconfirmed"));
+    } finally {
+      submittingRef.current = false;
+    }
+  }, [activeQuestionIds, advanceMutateAsync, attempt.currentSkill, attempt.sections, refreshAttempt, savePending, tr]);
 
   React.useEffect(() => {
     if (!deadline) return;
@@ -655,13 +767,13 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         nextRetry = Date.now() + 10000;
         // Full test (Multilevel and IELTS): a section's time ends → the next section; only the
         // last timed section (or a single-section attempt) hands in the exam.
-        if (nextSectionOnTimeout(isFullTest, attempt.currentSkill, exam?.sections.map((section) => section.skill) ?? [])) {
+        if (Date.now() + serverOffset < overallDeadline && nextSectionOnTimeout(isFullTest, attempt.currentSkill, exam?.sections.map((section) => section.skill) ?? [])) {
           void goNextSection(true);
         } else void doSubmit(true);
       }
     }, 1000);
     return () => { clearInterval(id); clearInterval(clock); };
-  }, [deadline, doSubmit, serverOffset, isFullTest, attempt.currentSkill, goNextSection, exam]);
+  }, [deadline, doSubmit, serverOffset, overallDeadline, isFullTest, attempt.currentSkill, goNextSection, exam]);
 
   // Listening review tugashi: full_test da keyingi bo'limga, single_skill da
   // bo'lim yagona bo'lgani uchun to'g'ridan-to'g'ri auto-submit (advanceSection
@@ -681,6 +793,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
   }, [exam, flush]);
 
   const answered = exam ? countAnswered(exam, answers, audioSet) : 0;
+  const confirmedCount = exam ? countAnswered(exam, confirmedAnswers, audioSet) : 0;
   const section: MockSection | undefined = exam?.sections[activeSection];
   const firstShownNumber = section?.groups?.[0]?.questions?.[0]?.displayNumber ?? section?.groups?.[0]?.questions?.[0]?.number ?? 1;
   const activeQuestionNumber = activeQuestion.section === (section?.id ?? null) ? activeQuestion.number : firstShownNumber;
@@ -693,7 +806,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
         attemptId: attempt.id,
         currentSkill: section?.skill,
         currentQuestionNumber: activeQuestionNumber,
-        answeredCount: answered,
+        answeredCount: confirmedCount,
         flaggedCount: flaggedQuestions.size,
         status: "in_progress",
       });
@@ -707,7 +820,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     attempt.id,
     section?.skill,
     activeQuestionNumber,
-    answered,
+    confirmedCount,
     flaggedQuestions.size,
     reportProgressMutate,
   ]);
@@ -720,7 +833,7 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
     e.preventDefault();
   }
 
-  if (examQ.isError) {
+  if (examQ.isError && !exam) {
     return (
       <div className="mx-auto max-w-3xl">
         <ErrorState title={tc("error")} />
@@ -825,6 +938,11 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
       <AnswerQueueBanner
         queued={queuedCount}
         failing={saveState === "error" || saveState === "offline"}
+        storageUnavailable={storageUnavailable}
+        conflicts={conflictCount}
+        lockedEdits={[...edits.current.keys()].filter((id) => !canSaveQuestion(id)).length}
+        onKeepLocal={() => resolveConflicts(true)}
+        onUseServer={() => resolveConflicts(false)}
         submitUnconfirmed={submitUnconfirmed}
         onRetrySubmit={() => void doSubmit(false, true)}
       />
@@ -863,12 +981,12 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           </div>
           <span className="hidden lg:inline-flex">
             <StatusChip>
-              {answered} / {total} {t("answered")}
+              {tr("confirmedAnswerCount", { count: confirmedCount, total })}
               {bulk.isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             </StatusChip>
           </span>
-          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveSaved", saving: "saveSaving", saved: "saveSaved", error: "saveError", offline: "saveOffline" }[saveState])} />
-          {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={flush}>{tr("saveRetry")}</button>}
+          <SaveStatusChip state={saveState} compact label={tr({ idle: "saveIdle", queued: "saveQueued", saving: "saveSaving", saved: "saveSaved", retrying: "saveRetrying", error: "saveError", offline: "saveOffline", conflict: "saveConflict" }[saveState])} />
+          {(saveState === "error" || saveState === "offline") && <button type="button" className="hidden min-h-[40px] px-1 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:inline" onClick={() => flush(true)}>{tr("saveRetry")}</button>}
           <RunnerTools
             infoOpen={infoOpen}
             onInfo={() => setInfoOpen((open) => !open)}
@@ -905,14 +1023,14 @@ export function MockRunner({ attempt }: { attempt: MockAttemptDetail }) {
           <section id="runner-info" aria-label={tr("infoTitle")} className="mb-3 space-y-3 rounded-card border border-border bg-surface p-3 text-sm sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
               {showQuestionPosition && <StatusChip>{tr("questionPosition", { number: activeQuestionNumber })}</StatusChip>}
-              <span className="lg:hidden"><StatusChip>{answered} / {total} {t("answered")}</StatusChip></span>
+              <span className="lg:hidden"><StatusChip>{tr("confirmedAnswerCount", { count: confirmedCount, total })}</StatusChip></span>
               {flaggedQuestions.size > 0 && (
                 <StatusChip tone="warning">
                   <Flag className="size-3.5" aria-hidden />
                   {tr("flaggedCount", { count: flaggedQuestions.size })}
                 </StatusChip>
               )}
-              {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={flush}>{tr("saveRetry")}</button>}
+              {(saveState === "error" || saveState === "offline") && <button type="button" className="min-h-[40px] px-2 text-sm font-semibold text-brand underline-offset-2 hover:underline sm:hidden" onClick={() => flush(true)}>{tr("saveRetry")}</button>}
             </div>
             {!isSingleSection && exam.sections.length > 1 && (
               <div className="flex flex-wrap gap-1.5 xl:hidden" role="group" aria-label={tr("sectionsLabel")}>{sectionSwitcher("full")}</div>
@@ -1132,20 +1250,21 @@ export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | 
 }
 
 /** Save state as an icon + text chip; the only live region in the runner header. */
-export function SaveStatusChip({ state, label, compact = false }: { state: "idle" | "saving" | "saved" | "error" | "offline"; label: string; compact?: boolean }) {
-  const failed = state === "error" || state === "offline";
+export function SaveStatusChip({ state, label, compact = false }: { state: SaveState; label: string; compact?: boolean }) {
+  const failed = state === "error" || state === "offline" || state === "conflict";
+  const working = state === "saving" || state === "retrying";
   return (
     <span role="status" aria-live="polite" title={label}>
-      <StatusChip tone={failed ? "danger" : state === "saving" ? "neutral" : "success"}>
-        {state === "saving" ? (
+      <StatusChip tone={failed ? "danger" : state === "saved" ? "success" : "neutral"}>
+        {working ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
         ) : failed ? (
           <AlertTriangle className="size-3.5" aria-hidden />
-        ) : (
+        ) : state === "saved" ? (
           <CheckCircle2 className="size-3.5" aria-hidden />
-        )}
+        ) : null}
         {/* Compact (header): the icon shows the state and the label is read out; a failure is always written out. */}
-        <span className={compact && !failed ? "sr-only" : undefined}>{label}</span>
+        <span className={compact && state === "saved" ? "max-sm:sr-only" : undefined}>{label}</span>
       </StatusChip>
     </span>
   );

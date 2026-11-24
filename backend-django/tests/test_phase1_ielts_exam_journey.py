@@ -274,34 +274,18 @@ class IeltsPhase1ReliabilityTests(SimpleTestCase):
                 attempts.save_answers(self.student, "att-late", [{"questionId": "q-r-1", "response": "TRUE"}], bulk=True)
         self.assertEqual(caught.exception.contract_code, "MOCK_TIME_UP")
 
-    def test_submit_saves_in_flight_answers_in_time_and_drops_late_ones(self):
+    def test_submit_sends_answers_to_the_atomic_service_without_student_force(self):
         from apps.core import mock_attempt_views as views
         client = APIClient()
         client.force_authenticate(SimpleNamespace(id="s-phase1", role="student", is_authenticated=True))
-        body = {"answers": [{"questionId": "q-r-1", "response": "TRUE"}], "force": True, "timeUp": True}
-        # Signature and single-session guards are covered by their own suites.
-        for guard in (patch.object(views.attempt_signature, "verify_request"), patch.object(views.exam_session, "guard")):
-            guard.start()
-            self.addCleanup(guard.stop)
-        # In time: saved without any force flag, then submitted.
-        with patch.object(views.engine, "save_answers") as save, \
+        answers = [{"questionId": "q-r-1", "response": "TRUE"}]
+        with patch.object(views.attempt_signature, "verify_request"), \
+             patch.object(views.exam_session, "guard"), \
              patch("apps.core.mock_submissions.submit", return_value={"status": "completed"}) as submit:
-            response = client.post("/v1/mock/attempts/att-1/submit", body, format="json")
+            response = client.post("/v1/mock/attempts/att-1/submit",
+                                   {"answers": answers, "force": True, "requireExpired": True}, format="json")
         self.assertEqual(response.status_code, 201)
-        save.assert_called_once_with(ANY, "att-1", body["answers"], bulk=True)
-        submit.assert_called_once()
-        # Time up: the late answers are dropped, the attempt is still submitted.
-        with patch.object(views.engine, "save_answers", side_effect=ContractAPIException("MOCK_TIME_UP", "late", 400)), \
-             patch("apps.core.mock_submissions.submit", return_value={"status": "completed"}) as submit:
-            response = client.post("/v1/mock/attempts/att-1/submit", body, format="json")
-        self.assertEqual(response.status_code, 201)
-        submit.assert_called_once()
-        # Any other save error still fails the request.
-        with patch.object(views.engine, "save_answers", side_effect=ContractAPIException("MOCK_ATTEMPT_NOT_FOUND", "x", 404)), \
-             patch("apps.core.mock_submissions.submit") as submit:
-            response = client.post("/v1/mock/attempts/att-1/submit", body, format="json")
-        self.assertEqual(response.status_code, 404)
-        submit.assert_not_called()
+        submit.assert_called_once_with(ANY, "att-1", None, force=False, in_flight_answers=answers, require_expired=True)
 
     def test_grading_views_keep_atomic_inside_the_drf_view(self):
         """`@transaction.atomic` must sit inside `@api_view`: DRF turns a ContractAPIException into a

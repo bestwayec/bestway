@@ -83,6 +83,16 @@ def assert_time(attempt, at=None):
         fail('MOCK_SECTION_TIME_UP', 'Bo‘lim vaqti tugadi — keyingi bo‘limga o‘ting')
 
 
+def assert_expired(attempt):
+    try:
+        assert_time(attempt)
+    except ContractAPIException as error:
+        if error.contract_code in ('MOCK_TIME_UP', 'MOCK_SECTION_TIME_UP'):
+            return
+        raise
+    fail('EXAM_DEADLINE_ACTIVE', 'The exam deadline has not passed', 409)
+
+
 def own(actor, attempt_id, *, lock=False):
     rows = MockAttempt.objects.select_for_update() if lock else MockAttempt.objects
     attempt = rows.filter(id=attempt_id).first()
@@ -411,8 +421,11 @@ def edit_time(item, now):
     value = item.get('editedAt')
     if value is None:
         return None
-    from datetime import datetime, timezone as dt_timezone
-    return min(datetime.fromtimestamp(float(value) / 1000, tz=dt_timezone.utc), now)
+    return datetime.fromtimestamp(min(value / 1000, now.timestamp()), tz=UTC)
+
+
+def answer_revision(row):
+    return iso(row.updated_at) if row is not None else None
 
 
 def save_answers(actor, attempt_id, items, *, bulk=False):
@@ -438,7 +451,7 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
         # Last edit wins, by edit time on the server clock: an edit queued offline (or
         # made in an older tab) does not overwrite a newer saved answer. The newer
         # value is returned so the client can show it.
-        if not any(item.get('editedAt') is not None for item in items):
+        if not any('baseRevision' in item or item.get('editedAt') is not None for item in items):
             # Clients that send no edit time (desktop, older web builds): unchanged behaviour.
             for item in items:
                 upsert_answer(attempt.id, item['questionId'], item['response'])
@@ -452,21 +465,43 @@ def save_answers(actor, attempt_id, items, *, bulk=False):
             if previous is not None and edited is not None and previous[1] is not None and edited < previous[1]:
                 continue
             latest[item['questionId']] = (item, edited)
-        stale = {}
+        stale, receipts = {}, {}
         for question_id, (item, edited) in latest.items():
             row = stored.get(question_id)
-            saved_at = row.updated_at if row is not None else None
-            if saved_at is not None and saved_at.tzinfo is None:
-                # Prisma columns are "timestamp without time zone" holding UTC.
-                from datetime import timezone as dt_timezone
-                saved_at = saved_at.replace(tzinfo=dt_timezone.utc)
-            if edited is not None and saved_at is not None and saved_at > edited:
+            saved_at = aware(row.updated_at) if row is not None else None
+            revision = answer_revision(row)
+            if 'baseRevision' in item:
+                # Compare against the revision the editor saw, under the attempt lock.
+                # A retry after a lost response confirms identical persisted content.
+                response = row.response if row is not None else ''
+                if response == item['response']:
+                    status = 'saved'
+                elif revision != item['baseRevision']:
+                    status = 'conflict'
+                else:
+                    # Prisma stores milliseconds. A second edit in the same tick must
+                    # get a distinct revision, even if the wall clock moves back.
+                    stamp = now.replace(microsecond=now.microsecond // 1000 * 1000)
+                    if saved_at is not None:
+                        stamp = max(stamp, saved_at + timedelta(milliseconds=1))
+                    upsert_answer(attempt.id, question_id, item['response'], stamp)
+                    status, revision = 'saved', iso(stamp)
+            elif edited is not None and saved_at is not None and (
+                saved_at > edited or (saved_at == edited and row.response != item['response'])
+            ):
                 stale[question_id] = row.response
-                continue
-            upsert_answer(attempt.id, question_id, item['response'], edited)
+                status = 'conflict'
+            else:
+                stamp = edited or now
+                stamp = stamp.replace(microsecond=stamp.microsecond // 1000 * 1000)
+                upsert_answer(attempt.id, question_id, item['response'], stamp)
+                status, revision = 'saved', iso(stamp)
+            receipts[question_id] = dict(editedAt=item.get('editedAt'), status=status, revision=revision)
+            if status == 'conflict':
+                receipts[question_id]['response'] = row.response if row is not None else ''
         if not bulk:
             return True
-        result = {'saved': len(items)}
+        result = {'saved': len(items), 'receipts': receipts}
         if stale:
             result['stale'] = stale
         return result
@@ -671,7 +706,7 @@ def switch_section(actor, attempt_id, target_skill):
         return {'saved': True, 'currentSkill': attempt.current_skill, 'sessionSignature': attempt_signature.sign(attempt), 'attemptId': attempt.id}
 
 
-def advance(actor, attempt_id):
+def advance(actor, attempt_id, expected_skill=None, *, require_expired=False):
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         assert_in_progress(attempt)
@@ -682,10 +717,16 @@ def advance(actor, attempt_id):
         order = filtered_order or existing_skills or list(SKILLS)
         if versioned(attempt):
             assert_program(actor, attempt)
+        submitted = list(attempt.submitted_sections or [])
+        if expected_skill and expected_skill != attempt.current_skill:
+            if expected_skill in submitted:
+                return advance_receipt(attempt, submitted)
+            fail('SECTION_CHANGED', 'The active section has changed', 409)
+        if require_expired:
+            assert_expired(attempt)
         index = order.index(attempt.current_skill) if attempt.current_skill in order else -1
         if index < 0 or index == len(order)-1:
             fail('FLOW_COMPLETE', 'Submit the final section' if versioned(attempt) else 'Oxirgi bo‘limdasiz — imtihonni yakunlang')
-        submitted = list(attempt.submitted_sections or [])
         if attempt.current_skill not in submitted:
             submitted.append(attempt.current_skill)
         attempt.current_skill = order[index+1]
@@ -707,11 +748,13 @@ def advance(actor, attempt_id):
             attempt.overall_deadline_at = attempt.deadline_at = None
             fields += ['overall_deadline_at', 'deadline_at']
         attempt.save(update_fields=fields)
-        return dict(saved=True, currentSkill=attempt.current_skill, submittedSections=submitted,
-            serverTime=timezone.now(), sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
-            sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
+        return advance_receipt(attempt, submitted)
 
 
+def advance_receipt(attempt, submitted):
+    return dict(saved=True, currentSkill=attempt.current_skill, submittedSections=submitted,
+        serverTime=timezone.now(), sectionDeadlines=attempt.section_deadlines, overallDeadlineAt=attempt.overall_deadline_at,
+        sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
     from .mock_speaking_duration import POLICY, duration_bounds
     from .mock_speaking_policy import strict, upload_window_closed
@@ -964,7 +1007,7 @@ def detail(actor, attempt_id):
                 a = answers.get(q.id)
                 item = dict(id=q.id, number=q.number, type=q.type, prompt=q.prompt, options=q.options,
                     points=q.points, wordLimit=q.word_limit, answerRule=q.answer_rule,
-                    response=a.response if a else None, hasAudio=bool(a and a.audio_key),
+                    response=a.response if a else None, answerRevision=answer_revision(a), hasAudio=bool(a and a.audio_key),
                     audioUrl=answer_audio_url(attempt_id, q.id) if a and a.audio_key else None,
                     score=a.score if a else None, isCorrect=a.is_correct if a else None,
                     isGraded=a.is_graded if a else False, feedback=a.feedback if a and (staff or a.is_graded) else None,
@@ -974,8 +1017,11 @@ def detail(actor, attempt_id):
                     if keys:
                         item['rubricScores'] = {**a.rubric_scores, 'imageUrls': page_urls(attempt_id, q.id, keys)}
                 verified = (attempt.media_state or {}).get(q.id) or {}
-                if a and a.audio_key and verified.get('durationVerifiedKey') == a.audio_key:
-                    item['audioDurationMs'] = verified.get('audioDurationMs')
+                if a and a.audio_key:
+                    if verified.get('durationVerifiedKey') == a.audio_key:
+                        item['audioDurationMs'] = verified.get('audioDurationMs')
+                    elif verified.get('recordingDurationMs') is not None:
+                        item['audioDurationMs'] = verified['recordingDurationMs']
                 if versioned(attempt):
                     guidance = task_guidance(section.skill, gi, qi, attempt.speaking_profile_version, attempt.specification_version)
                     if guidance is not None:
@@ -1091,9 +1137,11 @@ def schedule_speaking_compression(attempt, key, attempt_id, question_id):
 
 def upload_speaking(actor, attempt_id, question_id, upload):
     from . import mock_speaking_policy as speaking
+    from .mock_audio_probe import inspect_audio
     from .mock_media import (
         delete_created,
         delete_unreferenced,
+        resolve_key,
         store_upload,
         validate_upload,
     )
@@ -1117,8 +1165,10 @@ def upload_speaking(actor, attempt_id, question_id, upload):
                 group__section__skill='speaking').first()
             if q is None:
                 fail('NOT_SPEAKING_QUESTION', 'Bu savol speaking emas yoki imtihonga tegishli emas')
+            if attempt.flow_mode == 'full_test' and attempt.current_skill != 'speaking':
+                fail('SECTION_LOCKED', 'Question outside the active section', 403)
+            validate_audio_container(upload)
             if versioned(attempt):
-                validate_audio_container(upload)
                 assert_program(actor, attempt)
                 if speaking.strict(attempt):
                     speaking.phase_window(attempt, question_id, speaking.expected(attempt, q))
@@ -1130,9 +1180,21 @@ def upload_speaking(actor, attempt_id, question_id, upload):
                         fail('UPLOAD_WINDOW_EXPIRED', 'The recording upload recovery window has expired')
             prior = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
             if prior and prior.audio_key and versioned(attempt) and attempt.mode == 'timed' and not speaking.strict(attempt):
-                return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id))
+                if resolve_key(prior.audio_key).is_file():
+                    return dict(saved=True, audioUrl=answer_audio_url(attempt_id, question_id),
+                        audioDurationMs=(attempt.media_state or {}).get(question_id, {}).get('recordingDurationMs'))
             created_key = store_upload(upload, 'audio', folder='private/speaking_submissions')
-            duration = speaking.verify_stored(attempt, q, created_key) if speaking.strict(attempt) else None
+            if speaking.strict(attempt):
+                duration = speaking.verify_stored(attempt, q, created_key)
+            else:
+                media = inspect_audio(resolve_key(created_key))
+                if not media or not media['decodable'] or media['duration'] <= 0:
+                    fail('INVALID_AUDIO', 'The recording could not be decoded')
+                duration = max(1, round(media['duration'] * 1000))
+                state = dict(attempt.media_state or {})
+                state[question_id] = {**(state.get(question_id) or {}), 'recordingDurationMs': duration}
+                attempt.media_state = state
+                attempt.save(update_fields=['media_state'])
             if prior and prior.audio_key and speaking.strict(attempt) and attempt.mode == 'timed':
                 # Validate even a retry's bytes, but preserve the first accepted
                 # timed recording and its original verification receipt.

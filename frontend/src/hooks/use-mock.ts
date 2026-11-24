@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import type { ExamGate } from "@/lib/listening-audio";
 import { HISTORY_PAGE_SIZE, loadAttemptHistory } from "@/lib/attempt-history";
 import { useStudentProgramScope } from './use-exam-programs';
+import type { AnswerEdit, AnswerSaveResult } from "@/lib/answer-queue";
 import type {
   CreateMockExamInput,
   CreateMockSectionInput,
@@ -206,10 +207,8 @@ export function useSaveMockAnswer(attemptId: string) {
 
 export function useBulkMockAnswers(attemptId: string) {
   return useMutation({
-    // `editedAt`: edit time on the server clock (ms); the server keeps the newer edit and
-    // returns the newer value in `stale` when a sent edit was older.
-    mutationFn: (answers: { questionId: string; response: string; editedAt?: number }[]) =>
-      api.post<{ saved: number; stale?: Record<string, string> }>(`/mock/attempts/${attemptId}/answers`, { answers }),
+    mutationFn: (answers: AnswerEdit[]) =>
+      api.post<AnswerSaveResult>(`/mock/attempts/${attemptId}/answers`, { answers }),
   });
 }
 
@@ -229,7 +228,7 @@ export function useSaveMockAnnotations(attemptId: string) {
 export function useSubmitMock(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[] }) =>
+    mutationFn: (payload?: { confirm?: boolean; confirmed?: boolean; force?: boolean; skills?: string[]; requireExpired?: boolean }) =>
       api.post<{ status: MockAttemptStatus }>(
         `/mock/attempts/${attemptId}/submit`,
         payload ?? { confirm: true },
@@ -245,13 +244,13 @@ export function useSubmitMock(attemptId: string) {
 export function useAdvanceMockSection(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: { expectedSkill: string; requireExpired?: boolean }) =>
       api.post<{
         saved: boolean;
         currentSkill: string | null;
         submittedSections: string[];
         serverTime: string;
-      }>(`/mock/attempts/${attemptId}/advance`),
+      }>(`/mock/attempts/${attemptId}/advance`, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["mock-attempt", attemptId] });
     },
@@ -263,7 +262,7 @@ export function useUploadMockSpeaking(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { questionId: string; form: FormData }) =>
-      api.post<{ saved: boolean; audioUrl: string }>(
+      api.post<{ saved: boolean; audioUrl: string; audioDurationMs?: number }>(
         `/mock/attempts/${attemptId}/speaking/${v.questionId}`,
         v.form,
       ),

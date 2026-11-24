@@ -891,6 +891,7 @@ export interface MockAttemptQuestion {
   answerRule?: ObjectiveAnswerRule | null;
   guidance?: TaskGuidance;
   response: string | null;
+  answerRevision?: string | null;
   hasAudio: boolean;
   audioDurationMs?: number | null;
   audioUrl: string | null;

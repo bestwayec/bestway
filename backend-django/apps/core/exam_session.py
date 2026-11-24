@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import re
 import time
+from functools import wraps
 
 from django.core.cache import cache
+from django.db import transaction
 
 from . import mock_attempts as engine
 
@@ -40,10 +42,22 @@ def _state(value: dict, session_id: str) -> dict:
     return {'active': value['sessionId'] == session_id, 'claimedAt': value.get('claimedAt')}
 
 
+def serialize(view):
+    """Hold the row lock acquired by the session guard until the mutation ends."""
+    @wraps(view)
+    def mutation(request, *args, **kwargs):
+        if request.META.get(HEADER):
+            with transaction.atomic():
+                return view(request, *args, **kwargs)
+        return view(request, *args, **kwargs)
+    return mutation
+
+
+@transaction.atomic
 def claim(actor, attempt_id: str, session_id, takeover: bool = False) -> dict:
     """Hold the attempt for this tab; ``takeover`` moves it here from another tab or device."""
     session_id = _validate(session_id)
-    engine.own(actor, attempt_id)
+    engine.own(actor, attempt_id, lock=True)
     key = _key(attempt_id)
     if takeover:
         value = {'sessionId': session_id, 'claimedAt': int(time.time() * 1000)}
@@ -59,9 +73,10 @@ def claim(actor, attempt_id: str, session_id, takeover: bool = False) -> dict:
     return _state(value, session_id)
 
 
+@transaction.atomic
 def release(actor, attempt_id: str, session_id) -> dict:
     session_id = _validate(session_id)
-    engine.own(actor, attempt_id)
+    engine.own(actor, attempt_id, lock=True)
     value = _holder(attempt_id)
     if value and value['sessionId'] == session_id:
         cache.delete(_key(attempt_id))

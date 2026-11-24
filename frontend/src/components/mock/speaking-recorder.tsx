@@ -10,6 +10,7 @@ import { useUploadMockSpeaking } from '@/hooks/use-mock';
 import { assertMicrophoneAvailable, createAudioRecorder, microphoneProblem, OPTIMAL_AUDIO_CONSTRAINTS, recordedAudioBlob, recordingFileName } from '@/lib/microphone';
 import { ReadPromptButton } from './speaking-visuals';
 import { markActiveRecording, recordingKey, recoverRecording, releaseRecording, retainRecording } from '@/lib/durable-recordings';
+import { AttemptRecordingPlayer } from './attempt-recording-player';
 
 export function SpeakingRecorder({ attemptId, questionId, initialHasAudio, prompt }: {
   attemptId: string; questionId: string; initialHasAudio: boolean;
@@ -58,7 +59,8 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio, promp
     if (alive.current) { setSending(true); setError(null); }
     try {
       const form = new FormData(); form.append('audio', blob, recordingFileName(blob));
-      await uploadRef.current({ questionId, form });
+      const receipt = await uploadRef.current({ questionId, form });
+      if (receipt?.saved !== true) throw new Error('Missing recording acknowledgment');
       await releaseRecording(key); retained.current = null;
       if (alive.current) { setPending(null); setHasAudio(true); setAudioVersion((version) => version + 1); toast.success(tc('saved')); }
       window.dispatchEvent(new CustomEvent('multilevel:recording-uploaded', { detail: { attemptId, questionId } }));
@@ -157,7 +159,7 @@ export function SpeakingRecorder({ attemptId, questionId, initialHasAudio, promp
     {recording ? <Button size="sm" variant="danger" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" onClick={halt}><Square className="fill-current" />{t('stopRecording')}</Button>
       : pending ? <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={sending} onClick={() => void send(pending)}>{tx('recRetrySaved')}</Button>
       : <Button size="sm" variant="outline" className="min-h-[44px] min-w-[44px] px-4 touch-manipulation" loading={starting || sending || upload.isPending} onClick={() => void start()}><Mic />{hasAudio ? t('reRecord') : t('record')}</Button>}
-    {hasAudio && !recording && <audio key={audioVersion} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio`} className="h-11 min-h-[44px]" preload="none"><track kind="captions" /></audio>}
+    {hasAudio && !recording && <AttemptRecordingPlayer key={audioVersion} src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px]" />}
     {recording && <AudioWaveform stream={liveStream} active={recording} />}
     {recording && <span className="flex items-center gap-1.5 text-sm text-danger"><span className="size-2 animate-pulse rounded-full bg-danger" />{t('recording')}</span>}
     {error && <p role="alert" className="w-full text-sm text-danger">{error}</p>}

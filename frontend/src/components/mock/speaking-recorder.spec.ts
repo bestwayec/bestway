@@ -155,6 +155,17 @@ describe('legacy speaking recording lifecycle', () => {
 });
 
 describe('Multilevel microphone preflight and server timing', () => {
+  it('keeps the recording when a successful HTTP response has no upload receipt', async () => {
+    services.upload.mockResolvedValueOnce({ saved: false });
+    await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();
+    expect(services.release).not.toHaveBeenCalled();
+    expect(host.querySelector('audio')).toBeNull();
+    expect(host.textContent).toContain('Retry upload of saved recording');
+    await click('Retry upload');
+    expect(services.release).toHaveBeenCalledOnce();
+    expect(host.querySelector('audio')).not.toBeNull();
+  });
+
   it('keeps a completed take on transport failure and, after a verified duration rejection, permits a fresh take without deleting the old one', async () => {
     services.upload.mockRejectedValueOnce(new Error('offline'));
     await render('multilevel'); await click('Test microphone'); await click('Start response'); await finishResponse();

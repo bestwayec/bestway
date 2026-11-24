@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SPEAKING_AUTOSTART_EVENT, takeSpeakingAutoStart } from '@/lib/speaking-sequence';
 import { uploadFailurePlan } from '@/lib/speaking-upload';
+import { AttemptRecordingPlayer } from './attempt-recording-player';
 import { CountdownRing, InputLevelBars, ReadPromptButton } from './speaking-visuals';
 
 export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
@@ -212,7 +213,24 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     if (uploading.current) return;
     if (retryTimer.current) { clearTimeout(retryTimer.current); retryTimer.current = null; }
     uploading.current = true; stage('uploading'); setError(null);
-    try { const saved = await uploadRef.current(blob); retryCount.current = 0; await releaseRecording(key); retainedRef.current = null; setPending(null); setRecorded(true); const audioDurationMs = saved && typeof saved === 'object' && 'audioDurationMs' in saved && typeof saved.audioDurationMs === 'number' && saved.audioDurationMs > 0 ? saved.audioDurationMs : undefined; if (audioDurationMs != null) setRecordedSeconds(Math.round(audioDurationMs / 100) / 10); setAudioVersion((version) => version + 1); stage('saved'); onUploadedRef.current?.(); window.dispatchEvent(new CustomEvent("multilevel:recording-uploaded", { detail: { attemptId, questionId, ...(audioDurationMs != null ? { audioDurationMs } : {}) } })); }
+    try {
+      const receipt = await uploadRef.current(blob);
+      if (!receipt || typeof receipt !== 'object' || !('saved' in receipt) || receipt.saved !== true) {
+        throw new Error('Missing recording acknowledgment');
+      }
+      retryCount.current = 0;
+      await releaseRecording(key);
+      retainedRef.current = null;
+      setPending(null);
+      setRecorded(true);
+      const duration = 'audioDurationMs' in receipt ? receipt.audioDurationMs : undefined;
+      const audioDurationMs = typeof duration === 'number' && duration > 0 ? duration : undefined;
+      if (audioDurationMs != null) setRecordedSeconds(Math.round(audioDurationMs / 100) / 10);
+      setAudioVersion((version) => version + 1);
+      stage('saved');
+      onUploadedRef.current?.();
+      window.dispatchEvent(new CustomEvent('multilevel:recording-uploaded', { detail: { attemptId, questionId, audioDurationMs } }));
+    }
     catch (failure) {
       // Never discard the take on a failed upload: it stays retained on the device until the server
       // acknowledges it. Transient failures retry by themselves (the server keeps the first accepted
@@ -408,7 +426,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       {status === 'ready' && <>{meterAvailable ? <><meter className="block w-full accent-brand" aria-label={t('inputLevel')} min="0" max="1" value={level} /><p className="text-sm text-fg-muted">{t('meterHint')}</p></> : <p className="text-sm text-fg-muted">{t('meterUnavailable')}</p>}<Button size="sm" type="button" className="min-h-[50px] min-w-[140px] px-6 text-sm font-bold bg-brand text-bg hover:bg-brand-hover shadow-md active:scale-95 touch-manipulation" onClick={() => void start()}><Mic aria-hidden />{t('startResponse')}</Button></>}
     </>}
     {pending && <button className="inline-flex min-h-[44px] items-center justify-center rounded-field border border-border bg-surface px-4 py-2 text-sm font-medium text-fg disabled:opacity-50 touch-manipulation" type="button" disabled={status === 'uploading'} onClick={() => void send(pending)}>{t('retryUpload')}</button>}
-    {uploaded && <div className="space-y-1.5 rounded-field border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><audio key={audioVersion} aria-label={t('playRecording')} controls src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" preload="metadata"><track kind="captions" /></audio></div>}
+    {uploaded && <div className="space-y-1.5 rounded-field border border-success/20 bg-surface p-3"><p className="text-xs font-medium text-success">{t('playRecording')}{recordedSeconds != null ? ` · ${recordedSeconds}s` : ''}</p><AttemptRecordingPlayer key={audioVersion} src={`/api/backend/mock/attempts/${attemptId}/answers/${questionId}/audio?v=${audioVersion}`} className="h-11 min-h-[44px] w-full" /></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}
   </div>;
 }
