@@ -197,10 +197,12 @@ class ExportRoundTripTests(TestCase):
         first = groups[0]
         first['stimulusRef'] = 'shared-source'
         continuation = {**first, 'key': 'reading-continuation', 'title': 'Continuation',
-                        'passageText': '', 'questions': first['questions'][5:]}
-        first['questions'] = first['questions'][:5]
+                        'passageText': '', 'questions': first['questions'][2:]}
+        first['questions'] = first['questions'][:2]
         groups.insert(1, continuation)
-        exam_id = self.commit(package).data['data']['examId']
+        created = self.commit(package)
+        self.assertEqual(created.status_code, 201, created.data)
+        exam_id = created.data['data']['examId']
         exported = self.export(exam_id).data['data']
         imported_id = self.commit(exported).data['data']['examId']
         self.assertEqual(content(exported), content(self.export(imported_id).data['data']))
@@ -212,7 +214,7 @@ class ExportRoundTripTests(TestCase):
     def test_teacher_can_move_a_task_without_changing_question_ids(self):
         exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
         section = MockSection.objects.get(exam_id=exam_id)
-        original = MockQuestionGroup.objects.get(section=section)
+        original = MockQuestionGroup.objects.filter(section=section).order_by("sort_order").first()
         route = f'/v1/mock/sections/{section.id}/groups'
         child = self.client.post(route, {'title': 'New task', 'parentGroupId': original.id}, format='json')
         self.assertEqual(child.status_code, 201, child.data)

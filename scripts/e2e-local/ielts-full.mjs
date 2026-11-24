@@ -231,9 +231,9 @@ async function openBlock(page, n) {
   await page.locator(`[aria-label^="Part ${n}:"], [aria-label^="Passage ${n}:"], [aria-label^="Task ${n}:"], [aria-label^="Part ${n} "], [aria-label^="Passage ${n} "], [aria-label^="Task ${n} "]`).first().click();
   await page.waitForTimeout(600);
 }
-async function answered(page) {
-  const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 86 (?:confirmed|answered)/) || [])[1] ?? -1);
+async function waitConfirmed(page, count) {
+  await page.getByText(`${count} / 86 confirmed`, { exact: true }).locator("visible=true").first()
+    .waitFor({ timeout: 20000 });
 }
 
 /* ── phase: student ──────────────────────────────────────────────────────────────────────────── */
@@ -270,8 +270,7 @@ async function student() {
       if (await play.count() && !(await play.isDisabled())) await play.click();
       for (const q of group.questions) await answerObjective(page, q);
     }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 40, `after Listening: ${await answered(page)}`);
+    await waitConfirmed(page, 40);
     await finishSection(page);
     // Owner decision: IELTS Reading is numbered from 1 like the paper (stored numbers 41–80 are unchanged).
     expect(by.reading.groups[0].questions[0].displayNumber === 1, "reading display numbering");
@@ -281,8 +280,7 @@ async function student() {
     const clock = await page.locator('[aria-label*="Time left"], [aria-label*="time left"], [role="timer"]').first().innerText().catch(() => "");
     expect(/\d{1,2}:\d{2}/.test(clock), `no section timer in the IELTS window (${clock})`);
     for (const [i, group] of by.reading.groups.entries()) { await openBlock(page, i + 1); for (const q of group.questions) await answerObjective(page, q); }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 80, `after Reading: ${await answered(page)}`);
+    await waitConfirmed(page, 80);
     await finishSection(page);
     return "40 + 40 answered; Reading numbered 1–40; section timer shown";
   });
@@ -292,8 +290,7 @@ async function student() {
       await openBlock(page, i + 1);
       await page.getByLabel(`Written response to question ${group.questions[0].displayNumber ?? group.questions[0].number}`).fill(essay(i ? 260 : 160));
     }
-    await page.waitForTimeout(2500);
-    expect((await answered(page)) === 82, `after Writing: ${await answered(page)}`);
+    await waitConfirmed(page, 82);
     await finishSection(page);
     return "Task 1 (160 words) and Task 2 (260 words)";
   });

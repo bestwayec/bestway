@@ -309,7 +309,7 @@ def ielts_preset(exam_id: str, skills=None):
         section = MockSection.objects.create(id=new_id(), exam_id=exam_id, skill=skill, title=skill.title(), sort_order=skill_index, duration_minutes=60 if skill in {"reading", "writing"} else None, instructions=None)
         unit = "Passage" if skill == "reading" else "Task" if skill == "writing" else "Part"
         for index in range(counts[skill]):
-            rows.append(MockQuestionGroup(id=new_id(), section_id=section.id, sort_order=index, title=f"{unit} {index + 1}", instructions=None, passage_text=None, content_html=None, audio_script=None, content_layout=None, options_reusable=None, audio_key=None, image_key=None, max_score=None, stimulus_ref=None, part_number=index + 1 if skill == "listening" else None, audio_play_limit=1, audio_duration_sec=None, created_at=now()))
+            rows.append(MockQuestionGroup(id=new_id(), section_id=section.id, sort_order=index, title=f"{unit} {index + 1}", instructions=None, passage_text=None, content_html=None, audio_script=None, content_layout=None, options_reusable=None, audio_key=None, image_key=None, max_score=None, stimulus_ref=f"passage-{index + 1}" if skill == "reading" else None, part_number=index + 1 if skill == "listening" else None, audio_play_limit=1, audio_duration_sec=None, created_at=now()))
     MockQuestionGroup.objects.bulk_create(rows)
 
 
