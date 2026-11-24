@@ -28,8 +28,10 @@ From `frontend`, run `npm run lint`, `npm test`, and `npm run build`. From `scri
 - All 981 frontend tests passed. The Next.js production build passed. Lint finished with zero errors and 426 warnings.
 - Chromium verified offline editing, a deterministic HTTP 503, local recovery after reload, expired access cookie refresh, and a matching server receipt for IELTS and Multilevel. Both browser runs intercepted the submit response after Django committed and then recovered the result from the server. A direct PostgreSQL check confirmed the IELTS answer, graded state, and one submission handoff after restart.
 - The IELTS browser run uploaded a synthetic recording and fetched it over the authorized range endpoint. Chromium reported a positive duration. The PostgreSQL regression additionally verifies that a rejected corrupt upload preserves the previous take.
+- The session browser check passed 22 assertions across same-browser tabs and separate browser contexts. It verified the Uzbek takeover prompt, refused writes from the previous session, and confirmed the chosen response after resolving a conflict.
 
 Run the same browser check with `BW_EXAM4_EXAM=MOCK-RECORD-01` for Multilevel Reading. Use the synthetic fixtures when running either path.
+For `exam-session.mjs`, start Next with `--hostname localhost` and use the same hostname in `BW_WEB`. This keeps the default-locale rewrite on the local server.
 
 ## Deployment validation
 
