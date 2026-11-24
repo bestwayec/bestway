@@ -992,6 +992,10 @@ def detail(actor, attempt_id):
                 passageText=None if versioned(attempt) and section.skill == 'listening' and not show else group.passage_text,
                 contentHtml=group.content_html, contentLayout=group.content_layout,
                 optionsReusable=group.options_reusable, hasAudio=bool(group.audio_key), questions=[])
+            if section.skill == 'reading':
+                shaped_group['stimulusRef'] = getattr(group, 'stimulus_ref', None)
+            elif section.skill == 'listening':
+                shaped_group['partNumber'] = getattr(group, 'part_number', None)
             # Review only (released result): the Listening audioscript and its recording, so a wrong
             # answer can be read and heard where it is said. Never during the exam.
             review_source = review_evidence.source_text(group, section.skill) if show else ''

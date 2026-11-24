@@ -94,6 +94,7 @@ export function normalizeExamPayload(raw: any): MockExamDetail | null {
             id: String(q.id || `q-${sIdx}-${gIdx}-${qIdx}`),
             number: typeof q.number === "number" ? q.number : q.order ?? (qIdx + 1),
             ...(typeof q.displayNumber === "number" ? { displayNumber: q.displayNumber } : {}),
+            displayNumberEnd: q.displayNumberEnd,
             sortOrder: q.sortOrder ?? q.order ?? qIdx,
             prompt,
             text,
@@ -111,15 +112,19 @@ export function normalizeExamPayload(raw: any): MockExamDetail | null {
           } as MockQuestion;
         });
 
-        const partNum = typeof g.partNumber === "number" ? g.partNumber : g.part_number ?? (gIdx + 1);
+        const partNum = typeof g.partNumber === "number" ? g.partNumber : g.part_number ?? null;
 
         return {
           id: String(g.id || `${s.id || sIdx}-g-${gIdx}`),
           key: g.key || g.id || `grp-${gIdx}`,
-          label: g.label || `Part ${partNum}`,
+          label: g.label || `Part ${partNum ?? gIdx + 1}`,
           partNumber: partNum,
           sortOrder: g.sortOrder ?? g.sort_order ?? gIdx,
-          title: g.title || `Part ${partNum}`,
+          title: g.title ?? null,
+          stimulusRef: g.stimulusRef ?? g.stimulus_ref ?? null,
+          optionsReusable: g.optionsReusable ?? null,
+          startSec: g.startSec,
+          endSec: g.endSec,
           instructions: g.instructions || "",
           passageText: g.passageText ?? g.passage_text ?? "",
           passageHtml: g.passageHtml ?? g.passage_html ?? "",

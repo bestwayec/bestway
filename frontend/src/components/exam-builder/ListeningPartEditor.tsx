@@ -127,6 +127,9 @@ export function ListeningPartEditor({
   const tc = useTranslations("common");
   const section = detail.sections.find((s) => s.id === sectionId);
   const group = section?.groups.find((g) => g.id === groupId);
+  const audioOwner = detail.type !== "multilevel" && group?.partNumber && !group.hasAudio
+    ? section?.groups.find((item) => item.partNumber === group.partNumber && item.hasAudio)
+    : undefined;
 
   const saveContent = useSaveMockGroupContent(examId);
   // Track only IDs this editor has loaded or saved; never delete unseen additions.
@@ -530,7 +533,12 @@ export function ListeningPartEditor({
             <p id="lp-script-hint" className="mt-1 text-xs text-fg-muted">{tr("audioScriptHint")}</p>
           </Field>
 
-          <ListeningAudioCard
+          {audioOwner ? <div className="space-y-2 rounded-field border border-border p-3">
+            <p className="text-sm">{t("sharedUnitAudio")}</p>
+            <Button variant="outline" size="sm" onClick={() => onSelect({ kind: "group", groupId: audioOwner.id })}>
+              {t("openUnitSource")}
+            </Button>
+          </div> : <ListeningAudioCard
             groupId={group.id}
             partLabel={partName}
             hasAudio={group.hasAudio || part.audioPendingFile != null}
@@ -544,7 +552,7 @@ export function ListeningPartEditor({
             onPickFile={pickAudioFile}
             onClearPending={clearPendingAudio}
             onPlayLimitChange={(n) => update((p) => ({ ...p, audioPlayLimit: n }))}
-          />
+          />}
 
           {/* Diagram / image (e.g. map labelling) — optional. */}
           <div className="rounded-field border border-border p-3">

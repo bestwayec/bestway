@@ -1197,6 +1197,9 @@
       }
     },
     "runnerUx": {
+      "partAudioUnavailable": "Bu qism uchun audio mavjud emas.",
+      "matchingOptionBank": "Umumiy javob variantlari",
+      "chooseMatchingOption": "Variantni tanlang",
       "responseProgress": "Javob berish jarayoni",
       "responseProgressHint": "Yozma javoblar qoralama sifatida sanaladi. Speaking yozuvi yuklangandan keyin hisoblanadi.",
       "wordCount": "{count} ta so‘z",
@@ -2320,6 +2323,13 @@
     "backendUnreachable": "Server bilan aloqa yo'q. Backend ishlab turganini tekshiring."
   },
   "examBuilder": {
+    "moveUnitTaskGroup": "{group} guruhini boshqa matn yoki qismga ko‘chirish",
+    "moveUnitTaskGroupShort": "Ko‘chirish…",
+    "sharedUnitSource": "Biriktirilgan matn",
+    "openUnitSource": "Manba guruhini ochish",
+    "sharedUnitAudio": "Audio ushbu qismdagi boshqa guruhga biriktirilgan.",
+    "addUnitTaskGroup": "Savollar guruhini qo‘shish",
+    "newUnitTaskGroup": "Yangi savollar guruhi",
     "stepperLabel": "Imtihon yaratish bosqichlari",
     "stepBack": "Oldingi bosqich",
     "stepNext": "Keyingi bosqich",

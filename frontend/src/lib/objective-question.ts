@@ -4,6 +4,7 @@ import type { MockQuestionType, ObjectiveAnswerRule } from "./types";
 export interface ObjectiveQuestion {
   /** Number shown to the student (IELTS: from 1 in every section). */
   displayNumber?: number;
+  displayNumberEnd?: number;
   id: string;
   number: number;
   type: MockQuestionType | string;
@@ -75,9 +76,27 @@ export function answerRuleHint(q: Pick<ObjectiveQuestion, "answerRule" | "wordLi
 }
 
 export function usedMatchingOptions(questions: ObjectiveQuestion[], answers: Record<string, string>, questionId: string): string[] {
-  return questions.filter((q) => q.id !== questionId && MATCHING_TYPES.has(q.type)).map((q) => answers[q.id]).filter(Boolean);
+  return questions.filter((q) => q.id !== questionId && MATCHING_TYPES.has(q.type))
+    .flatMap((q) => selectedObjectiveOptions(answers[q.id] ?? "", objectiveOptions(q)));
 }
 
 export function studentQuestion(q: ObjectiveQuestion): ObjectiveQuestion {
   return { id: q.id, number: q.number, type: q.type, prompt: q.prompt, options: q.options, wordLimit: q.wordLimit, answerRule: q.answerRule };
+}
+
+/** A shared bank is safe only when every question in the task offers the same ordered options. */
+export function sharedMatchingOptions(questions: readonly ObjectiveQuestion[]): string[] {
+  if (questions.length < 2 || questions.some((q) => !MATCHING_TYPES.has(q.type))) return [];
+  const options = objectiveOptions(questions[0]);
+  if (!options.length) return [];
+  return questions.every((q) => {
+    const own = objectiveOptions(q);
+    return own.length === options.length && own.every((option, index) => option === options[index]);
+  }) ? options : [];
+}
+
+export function objectiveNumberLabel(question: Pick<ObjectiveQuestion, "number" | "displayNumber" | "displayNumberEnd">): string {
+  const start = question.displayNumber ?? question.number;
+  const end = question.displayNumberEnd;
+  return end && end > start ? `${start}–${end}` : String(start);
 }

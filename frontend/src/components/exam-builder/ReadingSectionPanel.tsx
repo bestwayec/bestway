@@ -1,5 +1,6 @@
 "use client";
 
+import { UnitGroupActions } from "./unit-group-actions";
 import * as React from "react";
 import { CheckCircle2, FileText, Plus, Save, Trash2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import {
   useCreateMockGroup,
+  useUpdateMockGroup,
   useDeleteMockSection,
   useUpdateMockSection,
 } from "@/hooks/use-mock";
@@ -54,6 +56,7 @@ export function ReadingSectionPanel({
   const update = useUpdateMockSection(examId);
   const delSection = useDeleteMockSection(examId);
   const createGroup = useCreateMockGroup(examId);
+  const updateGroup = useUpdateMockGroup(examId);
 
   const [title, setTitle] = React.useState(section?.title ?? "");
   const [duration, setDuration] = React.useState(
@@ -129,6 +132,19 @@ export function ReadingSectionPanel({
     );
   }
 
+  const moveTaskGroup = (groupId: string, parentGroupId: string) => updateGroup.mutate(
+    { groupId, input: { parentGroupId } },
+    { onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")) },
+  );
+  const selectGroup = (groupId: string) => onSelect({ kind: "group", groupId });
+  const addTaskGroup = (parentGroupId: string) => createGroup.mutate(
+    { sectionId: section.id, input: { parentGroupId, title: t("newUnitTaskGroup") } },
+    {
+      onSuccess: (g) => selectGroup((g as { id: string }).id),
+      onError: (e) => toast.error(e instanceof ApiError ? e.message : tc("unknownError")),
+    },
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -171,7 +187,7 @@ export function ReadingSectionPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           {passages.map((passage) => {
             const passageNo = passage.ordinal;
-            const firstGroup = passage.groups[0];
+            const firstGroup = passage.groups.find((g) => g.passageText?.trim()) ?? passage.groups[0];
             const issues = passage.groups.reduce(
               (total, group) => total + groupIssueCount(group, "reading"),
               0,
@@ -200,12 +216,12 @@ export function ReadingSectionPanel({
                   : `${issues} ${tx(t, "issues", "issues")}`,
               );
             return (
+              <div key={firstGroup.id} className="min-w-0 rounded-card border border-border">
               <button
-                key={firstGroup.id}
                 type="button"
                 onClick={() => onSelect({ kind: "group", groupId: firstGroup.id })}
                 aria-label={`Passage ${passageNo}${passage.title?.trim() ? ` — ${passage.title.trim()}` : ""} — ${missing.length ? missing.join(", ") : tx(t, "ready", "Ready")}`}
-                className="rounded-card border border-border bg-surface p-4 text-left transition hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-brand"
+                className="w-full rounded-card bg-surface p-4 text-left transition hover:bg-bg-subtle focus-visible:outline-2 focus-visible:outline-brand"
               >
                 <div className="flex items-center gap-2">
                   {missing.length > 0 ? (
@@ -244,6 +260,12 @@ export function ReadingSectionPanel({
                   </span>
                 </p>
               </button>
+              <UnitGroupActions groups={passage.groups} select={selectGroup} add={() => addTaskGroup(firstGroup.id)}
+                move={moveTaskGroup} busy={createGroup.isPending || updateGroup.isPending}
+                targets={passages.filter((other) => other !== passage).map((other) => ({
+                  id: other.groups[0].id, label: other.title ?? `${t("passage")} ${other.ordinal}`,
+                }))} />
+              </div>
             );
           })}
         </div>

@@ -692,6 +692,7 @@ export interface MockQuestion {
   number: number;
   /** Number shown to the student (IELTS: from 1 in every section). `number` stays the stored key. */
   displayNumber?: number;
+  displayNumberEnd?: number;
   sortOrder: number;
   type: MockQuestionType;
   prompt: string;
@@ -883,6 +884,7 @@ export interface MockAttemptQuestion {
   number: number;
   /** Number shown to the student (IELTS: from 1 in every section). `number` stays the stored key. */
   displayNumber?: number;
+  displayNumberEnd?: number;
   type: MockQuestionType;
   prompt: string;
   options: string[] | null;
@@ -1006,6 +1008,7 @@ export interface CreateMockSectionInput {
 }
 
 export interface MockGroupInput {
+  parentGroupId?: string;
   maxScore?: number;
   stimulusRef?: string;
   sortOrder?: number;

@@ -1,5 +1,6 @@
 "use client";
 
+import { examContentUnits } from "@/lib/exam-content-units";
 import * as React from "react";
 import {
   AlertTriangle,
@@ -227,6 +228,10 @@ export function ReadingPassageEditor({
   const tc = useTranslations("common");
   const section = detail.sections.find((s) => s.id === sectionId);
   const group = section?.groups.find((g) => g.id === groupId);
+  const unit = examContentUnits(section?.groups ?? [], "reading").find((candidate) =>
+    candidate.groups.some((member) => member.id === groupId));
+  const source = unit?.source.id !== groupId ? unit?.source : undefined;
+  const sharedSource = source?.passageText?.trim() ? source : undefined;
 
   const saveContent = useSaveMockGroupContent(examId);
   // Track only IDs this editor has loaded or saved; never delete unseen additions.
@@ -369,13 +374,13 @@ export function ReadingPassageEditor({
 
   const ordered = [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder);
   const passageNo = ordered.findIndex((x) => x.id === group.id) + 1;
-  const passageName = `Passage ${passageNo}`;
+  const passageName = `Passage ${unit?.number ?? passageNo}`;
   const displayTitle = part.title.trim() || passageName;
   const numbers = part.questions.map((q) => q.number);
   const nextNumber = Math.max(nextQuestionNumber(detail.sections, { skill: "reading" }) - 1, numbers.reduce((m, n) => Math.max(m, n), 0)) + 1;
   const words = wordCount(part.passageText);
 
-  const passageEmpty = part.passageText.trim() === "";
+  const passageEmpty = !(sharedSource?.passageText ?? part.passageText).trim();
   const rowsWithIssues = part.questions.filter(
     (q) =>
       questionIssues(asCheckable(q), "reading").length > 0 ||
@@ -524,7 +529,13 @@ export function ReadingPassageEditor({
                 placeholder={tx(t, "passageTitleHint", "e.g. The History of Glass")}
               />
             </Field>
-            <div>
+            {sharedSource ? <div className="space-y-2">
+              <p className="text-sm font-medium">{t("sharedUnitSource")}</p>
+              <p className="max-h-80 overflow-y-auto whitespace-pre-line text-sm">{sharedSource.passageText}</p>
+              <Button variant="outline" size="sm" onClick={() => onSelect({ kind: "group", groupId: sharedSource.id })}>
+                {t("openUnitSource")}
+              </Button>
+            </div> : <div>
               <Field
                 label={tx(t, "passageText", "Passage text")}
                 hint={tx(t, "passageTextHint", "The text students read. Every question below belongs to it.")}
@@ -552,7 +563,7 @@ export function ReadingPassageEditor({
               <p className="mt-1 text-right text-[11px] text-fg-subtle tabular-nums">
                 {words} {tx(t, "words", "words")}
               </p>
-            </div>
+            </div>}
             <Field label={tx(t, "instructions", "Instructions")} htmlFor="rp-instr">
               <Textarea
                 id="rp-instr"
@@ -761,7 +772,7 @@ export function ReadingPassageEditor({
             </div>
           )}
 
-          {showPreview && <StudentPreview group={previewGroup(part, group)} skill="reading" />}
+          {showPreview && <StudentPreview group={previewGroup({ ...part, passageText: sharedSource?.passageText ?? part.passageText }, group)} skill="reading" />}
 
           {showImport && (
             <ImportPanel

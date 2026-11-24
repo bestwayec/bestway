@@ -29,6 +29,19 @@ class DisplayNumberTests(SimpleTestCase):
         apply_display_numbers('multilevel', shaped)
         self.assertEqual([q['displayNumber'] for s in shaped for g in s['groups'] for q in g['questions']], [1, 2, 1, 2])
 
+    def test_bundled_response_and_reordered_passage_keep_stored_numbers(self):
+        first = {'id': 'first', 'number': 41, 'type': 'multi_select', 'points': 2}
+        last = {'id': 'continuation', 'number': 50, 'type': 'short_answer', 'points': 1}
+        other = {'id': 'other', 'number': 48, 'type': 'short_answer', 'points': 1}
+        apply_display_numbers('ielts_academic', [dict(skill='reading', groups=[
+            dict(stimulusRef='first', passageText='Source one', questions=[first]),
+            dict(stimulusRef='other', passageText='Source two', questions=[other]),
+            dict(stimulusRef='first', questions=[last]),
+        ])])
+        self.assertEqual((first['displayNumber'], first['displayNumberEnd']), (1, 2))
+        self.assertEqual((last['displayNumber'], other['displayNumber']), (3, 4))
+        self.assertEqual(first['number'], 41)
+
 
 class NumberUniquenessTests(SimpleTestCase):
     def check(self, exam_type, used_in_section):

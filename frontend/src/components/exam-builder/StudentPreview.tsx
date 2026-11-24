@@ -13,6 +13,8 @@ import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-conte
 import { PreviewQuestionInput } from "./preview-question-renderer";
 
 export interface PreviewQuestion {
+  displayNumber?: number;
+  displayNumberEnd?: number;
   id: string;
   number: number;
   type: string;
@@ -24,6 +26,8 @@ export interface PreviewQuestion {
 }
 
 export interface PreviewGroup {
+  stimulusRef?: string | null;
+  partNumber?: number | null;
   id: string;
   title: string | null;
   instructions: string | null;

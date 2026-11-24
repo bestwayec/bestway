@@ -1197,6 +1197,9 @@
       }
     },
     "runnerUx": {
+      "partAudioUnavailable": "Audio is unavailable for this part.",
+      "matchingOptionBank": "Shared answer choices",
+      "chooseMatchingOption": "Choose an option",
       "responseProgress": "Your response progress",
       "responseProgressHint": "Written answers count as drafts. Speaking counts after the recording uploads.",
       "wordCount": "{count, plural, one {# word} other {# words}}",
@@ -2320,6 +2323,13 @@
     "backendUnreachable": "No connection to the server. Check that the backend is running."
   },
   "examBuilder": {
+    "moveUnitTaskGroup": "Move {group} to another passage or part",
+    "moveUnitTaskGroupShort": "Move to…",
+    "sharedUnitSource": "Shared passage text",
+    "openUnitSource": "Open source group",
+    "sharedUnitAudio": "Audio is attached to another group in this part.",
+    "addUnitTaskGroup": "Add question group",
+    "newUnitTaskGroup": "New question group",
     "stepperLabel": "Exam builder steps",
     "stepBack": "Previous step",
     "stepNext": "Next step",

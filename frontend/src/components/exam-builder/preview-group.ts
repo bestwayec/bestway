@@ -4,7 +4,7 @@ export interface PreviewGroupSource extends Partial<Omit<PreviewGroup, "id" | "q
   id: string;
   questions?: Array<
     Pick<PreviewQuestion, "id" | "number" | "type" | "prompt"> &
-    Partial<Pick<PreviewQuestion, "options" | "points" | "wordLimit" | "answerRule">>
+    Partial<Pick<PreviewQuestion, "options" | "points" | "wordLimit" | "answerRule" | "displayNumber" | "displayNumberEnd">>
   >;
 }
 
@@ -12,6 +12,8 @@ export interface PreviewGroupSource extends Partial<Omit<PreviewGroup, "id" | "q
 export function toPreviewGroup(group: PreviewGroupSource): PreviewGroup {
   return {
     id: group.id,
+    stimulusRef: group.stimulusRef ?? null,
+    partNumber: group.partNumber ?? null,
     title: group.title ?? null,
     instructions: group.instructions ?? null,
     passageText: group.passageText ?? null,
@@ -23,6 +25,8 @@ export function toPreviewGroup(group: PreviewGroupSource): PreviewGroup {
     questions: (group.questions ?? []).map((question) => ({
       id: question.id,
       number: question.number,
+      displayNumber: question.displayNumber,
+      displayNumberEnd: question.displayNumberEnd,
       type: question.type,
       prompt: question.prompt,
       options: question.options ?? null,

@@ -379,11 +379,11 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
             skill = a['skill']
             if a['answered'] == 0 and not a['score']:
                 # Nothing answered: band 0 for a full Listening/Reading section, no band otherwise.
-                bands[skill] = 0 if skill in ('listening','reading') and is_full_objective_section('ielts', a['count']) else None
+                bands[skill] = 0 if skill in ('listening','reading') and is_full_objective_section('ielts', a['max']) else None
                 continue
             if skill in ('listening','reading'):
                 bands[skill] = (band_from_raw(skill,exam_type,a['score'],a['max'],tables,a['answered']>0)
-                    if is_full_objective_section('ielts', a['count']) else None)
+                    if is_full_objective_section('ielts', a['max']) else None)
             elif not a['pending']:
                 tasks = a['tasks']; t1 = next((s for t,s in tasks if t=='essay_task1'),None); t2 = next((s for t,s in tasks if t=='essay_task2'),None)
                 if skill == 'writing':
@@ -392,7 +392,7 @@ def calculate(exam_type, sections, answers, *, versioned=False, full_test=False,
                 else:
                     bands[skill] = round_half(sum(s for _,s in tasks)/len(tasks)) if tasks else 0
         valid_bands = [b for b in bands.values() if b is not None]
-        short = any(a['skill'] in ('listening','reading') and a['answered'] and not is_full_objective_section('ielts', a['count']) for a in aggregates)
+        short = any(a['skill'] in ('listening','reading') and a['answered'] and not is_full_objective_section('ielts', a['max']) for a in aggregates)
         if not pending and valid_bands and not short:
             overall = ielts_overall_band(valid_bands, full_test); cefr = cefr_band(overall)
     elif versioned:

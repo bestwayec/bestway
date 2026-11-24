@@ -172,6 +172,7 @@ def shape_exam(exam, answers: bool, include_sections: bool = True):
                 "audioPlayLimit": 2 if specification and section.skill == 'listening' else group.audio_play_limit,
                 "questions": questions,
                 "items": questions,
+                **({"stimulusRef": group.stimulus_ref} if section.skill == "reading" else {}),
                 **({"audioScript": group.audio_script, "maxScore": group.max_score, "stimulusRef": group.stimulus_ref} if answers else {}),
             })
         shaped["parts"] = shaped["groups"]

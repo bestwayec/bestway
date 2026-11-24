@@ -210,7 +210,7 @@ def commit_import(actor, pkg, bindings, checksum, raw_text=None, target_id=None,
                         audio_play_limit=group.get('audioPlayLimit', 1), audio_duration_sec=None,
                         audio_key=audio.storage_key if audio else None, image_key=image.storage_key if image else None,
                         max_score=group.get('maxScore') if section['skill'] in ('writing', 'speaking') else None,
-                        stimulus_ref=group.get('stimulusRef') if section['skill'] == 'writing' else None, created_at=stamp)
+                        stimulus_ref=group.get('stimulusRef') if section['skill'] in ('reading', 'writing') else None, created_at=stamp)
                     maps.append(('group', group['key'], saved_group.id))
                     for qi, question in enumerate(group['questions']):
                         keys = question.get('correctAnswers', [])

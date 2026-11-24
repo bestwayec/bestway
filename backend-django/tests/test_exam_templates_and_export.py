@@ -95,14 +95,15 @@ class TemplateValidationTests(SimpleTestCase):
 
     def test_group_score_fields_are_validated(self):
         package = fixture('reading-passage-1')
-        package['exam']['sections'][0]['groups'][0].update(maxScore=5, stimulusRef='x')
+        package['exam']['sections'][0]['groups'][0].update(maxScore=5, stimulusRef='INVALID REF')
         codes = {i['code'] for i in validate_package(package)['issues']}
         self.assertTrue({'MAX_SCORE', 'STIMULUS_REF'} <= codes)
 
-    def test_three_reading_groups_still_pass_even_with_identical_text(self):
-        # Legacy rule kept: one group per passage passes regardless of clustering.
+    def test_three_distinct_reading_references_pass_even_with_identical_text(self):
         from tests.mock27_fixtures import listening_package, reading_package
         package = reading_package()
+        for i, group in enumerate(package['exam']['sections'][0]['groups'], 1):
+            group['stimulusRef'] = f'passage-{i}'
         package['exam']['sections'] += listening_package()['exam']['sections']
         issues = [i['message'] for i in validate_package(package)['issues'] if i['code'] == 'PROFILE_BLUEPRINT']
         self.assertFalse([m for m in issues if 'reading' in m], issues)
@@ -189,6 +190,46 @@ class ExportRoundTripTests(TestCase):
         copy_id = self.commit(package).data['data']['examId']
         copied = MockQuestion.objects.filter(group__section__exam_id=copy_id).order_by('number').first()
         self.assertEqual((copied.cefr_level, copied.skill_tags, copied.audio_start_sec), ('B2', ['detail', 'numbers'], 12.5))
+
+    def test_reading_source_and_blank_continuation_round_trip(self):
+        package = fixture('reading-passage-1')
+        groups = package['exam']['sections'][0]['groups']
+        first = groups[0]
+        first['stimulusRef'] = 'shared-source'
+        continuation = {**first, 'key': 'reading-continuation', 'title': 'Continuation',
+                        'passageText': '', 'questions': first['questions'][5:]}
+        first['questions'] = first['questions'][:5]
+        groups.insert(1, continuation)
+        exam_id = self.commit(package).data['data']['examId']
+        exported = self.export(exam_id).data['data']
+        imported_id = self.commit(exported).data['data']['examId']
+        self.assertEqual(content(exported), content(self.export(imported_id).data['data']))
+        persisted = list(MockQuestionGroup.objects.filter(section__exam_id=imported_id).order_by('sort_order'))
+        self.assertEqual([group.stimulus_ref for group in persisted[:2]], ['shared-source'] * 2)
+        self.assertTrue(persisted[0].passage_text)
+        self.assertIsNone(persisted[1].passage_text)
+
+    def test_teacher_can_move_a_task_without_changing_question_ids(self):
+        exam_id = self.commit(fixture('reading-passage-1')).data['data']['examId']
+        section = MockSection.objects.get(exam_id=exam_id)
+        original = MockQuestionGroup.objects.get(section=section)
+        route = f'/v1/mock/sections/{section.id}/groups'
+        child = self.client.post(route, {'title': 'New task', 'parentGroupId': original.id}, format='json')
+        self.assertEqual(child.status_code, 201, child.data)
+        task_id = child.data['data']['id']
+        source = self.client.post(route, {'title': 'Another passage', 'passageText': 'A new source.'}, format='json')
+        self.assertEqual(source.status_code, 201, source.data)
+        question = MockQuestion.objects.filter(group=original).first()
+        MockQuestion.objects.filter(id=question.id).update(group_id=task_id)
+        target = {'parentGroupId': source.data['data']['id']}
+        self.client.force_authenticate(OTHER_TEACHER)
+        self.assertEqual(self.client.patch(f'/v1/mock/groups/{task_id}', target, format='json').status_code, 403)
+        self.client.force_authenticate(TEACHER)
+        moved = self.client.patch(f'/v1/mock/groups/{task_id}', target, format='json')
+        self.assertEqual(moved.status_code, 200, moved.data)
+        self.assertEqual(moved.data['data']['stimulusRef'], source.data['data']['stimulusRef'])
+        question.refresh_from_db()
+        self.assertEqual(question.group_id, task_id)
 
     def test_reading_evidence_offset_is_recomputed(self):
         package = fixture('reading-passage-1')

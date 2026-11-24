@@ -157,7 +157,7 @@ def export_package(actor, exam_id: str, skill: str | None = None, *, template: b
                 value['optionsReusable'] = group.options_reusable
             if group.max_score is not None and section.skill in ('writing', 'speaking'):
                 value['maxScore'] = group.max_score
-            if group.stimulus_ref and section.skill == 'writing' and KEY.fullmatch(group.stimulus_ref):
+            if group.stimulus_ref and section.skill in ('reading', 'writing') and KEY.fullmatch(group.stimulus_ref):
                 value['stimulusRef'] = group.stimulus_ref
             if section.skill == 'listening':
                 if group.part_number is not None:

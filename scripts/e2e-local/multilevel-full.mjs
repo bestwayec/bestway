@@ -276,6 +276,11 @@ const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
   if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.number}`, { exact: true }).fill(correct(q));
   else {
+    const select = page.locator(`[id="q-${q.id}"] select`);
+    if (await select.count()) {
+      await select.selectOption(correct(q));
+      return;
+    }
     const radio = page.locator(`input[name="objective-answer-${q.id}"][value="${correct(q).replace(/"/g, '\\"')}"]`);
     // Like a student: scroll the option to the middle of the screen (the question palette sits at the bottom), then click it.
     await radio.evaluate((el) => el.scrollIntoView({ block: "center" }));
@@ -344,7 +349,7 @@ async function student() {
         await playButton.click();
         expect((await granted).status() === 201, "play refused");
         if (i === 0 && play === 1) {
-          await page.reload({ waitUntil: "networkidle" }); await dismissExamNotices(page); await openPart(page, 1);
+          await page.reload({ waitUntil: "domcontentloaded" }); await dismissExamNotices(page); await openPart(page, 1);
           await page.getByRole("region", { name: /listening/i }).first().getByText("Plays 1/2").waitFor({ timeout: 15000 });
           notes.push("reload keeps plays 1/2");
         }

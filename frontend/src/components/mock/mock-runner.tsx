@@ -43,14 +43,14 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ListeningAudio } from "@/components/mock/listening-engine";
-import { GappedContent, hasGappedDocument } from "@/components/mock/gapped-content";
+import { GappedContent, hasGappedDocument, sanitizeGappedContent } from "@/components/mock/gapped-content";
 import { MultilevelListening, MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { SpeakingRecorder } from './speaking-recorder';
 import { recordingFileName } from '@/lib/microphone';
 import { api } from '@/lib/api-client';
 import { hasPendingRecordings, hasActiveRecording } from '@/lib/durable-recordings';
-import { ObjectiveQuestionInput } from './objective-question-input';
-import { usedMatchingOptions } from '@/lib/objective-question';
+import { MatchingOptionBank, ObjectiveQuestionInput } from './objective-question-input';
+import { sharedMatchingOptions, usedMatchingOptions } from '@/lib/objective-question';
 import { MultilevelSectionProgress, MultilevelTaskMeta, MultilevelTaskProgress, multilevelTaskLabels, multilevelTaskName, isExplainedSaveError, studentSaveErrorMessage, studentSubmitMessage, studentSubmitNeedsReview } from './multilevel-student-ui';
 import { MultilevelSubmitReview } from './multilevel-submit-review';
 import { multilevelMissingWork } from '@/lib/multilevel-completeness';
@@ -111,6 +111,8 @@ function isSubmitted(status: unknown): boolean {
 /** Media backend proxy orqali oqadi — token httpOnly cookie'da */
 const media = (path: string) => `/api/backend${path}`;
 
+import { examContentUnits } from "@/lib/exam-content-units";
+import { gapNumbersIn } from "@/components/exam-builder/reading-preview-model";
 import { nextSectionOnTimeout } from "@/lib/section-timeout";
 import { GroupImage } from "./group-image";
 export { GroupImage };
@@ -871,7 +873,8 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 
   const contrastClasses = COLOUR_CLASS[examSettings.colours];
   // Index of the last Listening part that has a recording (all parts share one recording when a single audio is used).
-  const listeningGroups = section?.skill === "listening" ? sectionGroupsOf(section) : [];
+  const listeningGroups = section?.skill === "listening"
+    ? examContentUnits(section.groups ?? [], "listening", exam?.type !== "multilevel").map((unit) => unit.source) : [];
   const sharedListeningAudio = Boolean(audioTimestampsQ.data?.audioUrl);
   const lastListeningAudioPart = sharedListeningAudio
     ? listeningGroups.length - 1
@@ -1115,6 +1118,8 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
             /> : <CbtSectionStepper
               // A new section starts on its first part (its own part and question state).
               key={section.id}
+              attemptId={attempt.id}
+              canonicalListening={exam.type !== "multilevel"}
               skill={section.skill}
               groups={section.groups || (section as any).parts || []}
               answers={answers}
@@ -1129,9 +1134,13 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
                 // stepper a new callback, which reports the question again — an endless render loop.
                 setActiveQuestion((current) => (current.section === sectionId && current.number === number ? current : { section: sectionId, number }));
               }}
-              renderGroupBlock={(g, reviewComplete, partIdx) => (
-                <GroupBlock
-                  key={g.id}
+              renderGroupBlock={(source, reviewComplete, partIdx, taskGroups = [source], partNumber, unitKey) => {
+                const render = (g: MockSection["groups"][number], taskOnly = false, taskContent?: React.ReactNode) => <GroupBlock
+                  key={taskContent ? unitKey : g.id}
+                  taskOnly={taskOnly}
+                  taskContent={taskContent}
+                  taskCount={taskGroups.reduce((count, group) => count + group.questions.length, 0)}
+                  partNumber={partNumber}
                   group={!versioned && exam.type === 'multilevel' ? { ...g, questions: g.questions.map((q) => ({ ...q, guidance: undefined })) } : g}
                   skill={section.skill}
                   strict={strict && section.skill === "listening"}
@@ -1149,7 +1158,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
                   onToggleFlag={toggleQuestionFlag}
                   partIndex={partIdx}
                   audioTimestamps={examAudioTimestamps}
-                  sharedSingleAudioUrl={sharedSingleAudioUrl}
+                  sharedSingleAudioUrl={taskOnly ? null : sharedSingleAudioUrl}
                   // Timed IELTS: each part's start is kept on the server, so a reload resumes the recording.
                   listeningSchedule={attempt.listeningSchedule?.[g.id] ?? null}
                   mediaAlreadyStarted={strict && (attempt.mediaStarted ?? []).includes(g.id)}
@@ -1158,8 +1167,19 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
                     : undefined}
                   serverOffsetMs={openingOffset}
                   practice={practiceHelp ? { script: practiceScripts.get(g.id), revealed: practiceRevealed } : null}
-                />
-              )}
+                />;
+                if (section.skill === "reading") {
+                  return render({ ...source, questions: [], contentHtml: null, instructions: null }, false,
+                    taskGroups.map((group) => render(group.id === source.id ? { ...group, title: null, imageUrl: null } : group, true)));
+                }
+                if (section.skill === "listening" && taskGroups.length > 1) {
+                  return <div key={unitKey} className="space-y-3">
+                    {render({ ...source, title: null, questions: [], contentHtml: null, instructions: null, imageUrl: null })}
+                    {taskGroups.map((group) => <div key={group.id}>{render(group, true)}</div>)}
+                  </div>;
+                }
+                return render(source);
+              }}
               onReviewComplete={section.skill === "listening" ? onListeningReviewComplete : undefined}
               onNextSection={() => {
                 if (multilevelReview && missingWork) setReview("advance");
@@ -1406,6 +1426,10 @@ export function GuidedMultilevelGroups({
 
 function GroupBlock({
   group,
+  taskOnly = false,
+  taskContent,
+  taskCount,
+  partNumber,
   skill,
   strict,
   timed,
@@ -1429,6 +1453,10 @@ function GroupBlock({
   practice = null,
 }: {
   group: MockSection["groups"][number];
+  taskOnly?: boolean;
+  taskContent?: React.ReactNode;
+  taskCount?: number;
+  partNumber?: number;
   skill: MockSkill;
   strict: boolean;
   timed: boolean;
@@ -1455,16 +1483,18 @@ function GroupBlock({
 }) {
   const tg = useTranslations("mock.runnerUx");
   const [readingMobileTab, setReadingMobileTab] = React.useState<"passage" | "questions">("passage");
-  const hasPassage = !!group.passageText && !(skill === "writing" && sharedWritingStimulus);
+  const hasPassage = !taskOnly && !!(group.passageText || (skill === "reading" && group.imageUrl)) && !(skill === "writing" && sharedWritingStimulus);
   const hasGappedContent = hasGappedDocument(group.contentHtml);
+  const matchingBank = sharedMatchingOptions(group.questions);
+  const gapNumbers = React.useMemo(() => new Set(gapNumbersIn(sanitizeGappedContent(group.contentHtml ?? ""))), [group.contentHtml]);
 
   // Resolve single-audio timestamp boundaries for this Listening part
   const stimTs = group.stimulusRef as { startSec?: number; endSec?: number | null } | null | undefined;
-  const matchedTs = audioTimestamps.find((ts) => ts.partNumber === partIndex + 1);
+  const matchedTs = audioTimestamps.find((ts) => ts.partNumber === (partNumber ?? partIndex + 1));
   const startSec = group.startSec ?? stimTs?.startSec ?? matchedTs?.startSec;
   const endSec = group.endSec ?? stimTs?.endSec ?? matchedTs?.endSec ?? null;
 
-  const hasListeningAudio = Boolean(group.hasAudio || (skill === "listening" && sharedSingleAudioUrl));
+  const hasListeningAudio = !taskOnly && Boolean(group.hasAudio || (skill === "listening" && sharedSingleAudioUrl));
   const audioSrc = group.hasAudio
     ? media(`/mock/groups/${group.id}/audio${strict ? `?attemptId=${attemptId}` : ""}`)
     : sharedSingleAudioUrl
@@ -1477,17 +1507,29 @@ function GroupBlock({
   // Writing: the task (picture, instructions, text, prompt) beside the answer. One split only — the passage lives in
   // the task column, so there is never a split inside a split.
   const isWritingSplit = skill === "writing" && !hasGappedContent;
-  const isPassageSplit = hasPassage && !hasGappedContent && !isWritingSplit;
+  const isPassageSplit = hasPassage && !isWritingSplit;
   // Passage / Questions tabs on phones are for Reading; Writing stacks the task above the answer.
-  const tabbed = hasPassage && !hasGappedContent && !isWritingSplit;
+  const tabbed = isPassageSplit && skill === "reading";
   const [readingSplit, setReadingSplit] = useReadingSplit();
   const [writingSplit, setWritingSplit] = useWritingSplit();
   const splitRef = React.useRef<HTMLDivElement>(null);
   const isMapSplit = Boolean(skill === "listening" && group.imageUrl);
+  React.useEffect(() => {
+    const element = splitRef.current;
+    if (!tabbed || !element) return;
+    const show = (event: Event) => {
+      if (readingMobileTab === "passage" && window.matchMedia("(max-width: 1023px)").matches) {
+        event.preventDefault();
+        setReadingMobileTab("questions");
+      }
+    };
+    element.addEventListener("bw-exam-show-question", show);
+    return () => element.removeEventListener("bw-exam-show-question", show);
+  }, [tabbed, readingMobileTab]);
 
   return (
     <Card className="p-3 sm:p-4">
-      {group.title && <h3 className="font-semibold text-fg">{group.title}</h3>}
+      {group.title && !taskContent && <h3 className="font-semibold text-fg">{group.title}</h3>}
       {hasListeningAudio && skill === "listening" ? (
         // The recording is content (not chrome): it stays in view under the header while the questions scroll.
         <div data-layout-content className={cn("z-10 -mx-3 mb-3 border-b border-border bg-surface/95 px-3 py-2 backdrop-blur-xl sm:-mx-4 sm:px-4 [@media(min-height:720px)]:sticky [@media(min-height:720px)]:top-14", group.title ? "mt-2" : "-mt-3 rounded-t-card sm:-mt-4")}>
@@ -1511,7 +1553,7 @@ function GroupBlock({
           />}
         </div>
       ) : (
-        group.hasAudio && (
+        !taskOnly && group.hasAudio && (
           <audio
             controls
             src={audioSrc}
@@ -1522,8 +1564,9 @@ function GroupBlock({
           </audio>
         )
       )}
+      {skill === "listening" && !taskOnly && !hasListeningAudio && <p role="status" className="text-sm text-fg-muted">{tg("partAudioUnavailable")}</p>}
       {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
-      {group.imageUrl && !isMapSplit && !isWritingSplit && (
+      {group.imageUrl && !(skill === "reading" && taskContent) && !isMapSplit && !isWritingSplit && (
         <div className="mt-3">
           <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
         </div>
@@ -1583,7 +1626,7 @@ function GroupBlock({
                 : "text-fg-muted hover:text-fg"
             )}
           >
-            {tg("questionsTab", { count: (group?.questions || []).length })}
+            {tg("questionsTab", { count: taskCount ?? group.questions.length })}
           </button>
         </div>
       )}
@@ -1629,7 +1672,7 @@ function GroupBlock({
             )}
             {hasPassage && (
               <div className="whitespace-pre-line text-base leading-relaxed text-fg sm:text-[17px] sm:leading-[1.75]" {...{ [VOCAB_TEXT_ATTRIBUTE]: "" }}>
-                <CbtAnnotatedText text={group.passageText!} storageKey={`${attemptId}.${group.id}.passage`} />
+                <CbtAnnotatedText text={group.passageText ?? ""} storageKey={`${attemptId}.${group.id}.passage`} />
               </div>
             )}
             {/* Wide screens: the prompt sits with the task (phones keep it with the answer, below). */}
@@ -1643,7 +1686,7 @@ function GroupBlock({
           </div>
         )}
         {isWritingSplit && <ReadingSplitDivider variant="writing" value={writingSplit} onChange={setWritingSplit} containerRef={splitRef} />}
-        {hasPassage && !hasGappedContent && !isWritingSplit && (
+        {isPassageSplit && (
           <div
             className={cn(
               "whitespace-pre-line rounded-card border border-border bg-surface p-5 text-base leading-relaxed text-fg max-w-[70ch] sm:text-[17px] sm:leading-[1.75] lg:max-w-none lg:rounded-none lg:border-0 lg:bg-transparent lg:py-1 lg:pl-1 lg:pr-4",
@@ -1661,9 +1704,10 @@ function GroupBlock({
                 {group.title}
               </h2>
             )}
+            {taskContent && group.imageUrl && <GroupImage groupId={group.id} alt={group.title ?? tg("pictureForPart")} />}
             <div className="font-serif leading-relaxed text-fg/95">
               <CbtAnnotatedText
-                text={group.passageText!}
+                text={group.passageText ?? ""}
                 storageKey={`${attemptId}.${group.id}.passage`}
               />
             </div>
@@ -1681,7 +1725,11 @@ function GroupBlock({
           </div>
         )}
         {isPassageSplit && <ReadingSplitDivider value={readingSplit} onChange={setReadingSplit} containerRef={splitRef} />}
-        {hasGappedContent ? (
+        {taskContent ? <div data-testid="reading-task-groups" className={cn(
+          "min-w-0 space-y-3 lg:sticky lg:top-16 lg:block lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain",
+          tabbed && readingMobileTab === "passage" && "hidden",
+        )}>{taskContent}</div> : <div className="min-w-0 space-y-4">
+        {hasGappedContent && (
           <div className="overflow-x-auto rounded-field border border-border bg-surface p-3 sm:p-4">
             {practice && (skill === "listening" || skill === "reading") && (
               <details className="mb-3 text-sm">
@@ -1701,7 +1749,7 @@ function GroupBlock({
               questions={group.questions}
               renderGap={({ number, question }) =>
                 question ? (
-                  <span className="mx-1 inline-flex max-w-full items-center gap-1 align-middle">
+                  <span id={`q-${question.id}`} className="mx-1 inline-flex max-w-full items-center gap-1 align-middle">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand-subtle text-xs font-semibold text-brand-subtle-fg tabular-nums">
                       {(question as { displayNumber?: number }).displayNumber ?? number}
                     </span>
@@ -1720,7 +1768,7 @@ function GroupBlock({
               }
             />
           </div>
-        ) : (
+        )}
           <div
             className={cn(
               "space-y-4",
@@ -1743,7 +1791,8 @@ function GroupBlock({
                 </button>
               </div>
             )}
-            {(group?.questions || []).map((q) => (
+            <MatchingOptionBank options={matchingBank} />
+            {group.questions.filter((q) => !gapNumbers.has(q.number)).map((q) => (
               <div key={q.id} id={`q-${q.id}`} className="scroll-mt-28" {...(isWritingSplit ? { "data-testid": "writing-answer-panel" } : {})}>
                 <QuestionInput
                   key={q.id}
@@ -1754,6 +1803,7 @@ function GroupBlock({
                   hasAudio={audioSet.has(q.id)}
                   audioDurationMs={audioDurations?.[q.id]}
                   timed={timed}
+                  sharedBank={matchingBank.length > 0}
                   unavailableOptions={group.optionsReusable === false ? usedMatchingOptions(group.questions, answers, q.id) : []}
                   onChange={(v) => onAnswer(q.id, v)}
                   multilevelSkill={skill}
@@ -1767,7 +1817,7 @@ function GroupBlock({
               </div>
             ))}
           </div>
-        )}
+        </div>}
       </div>
     </Card>
   );
@@ -1946,6 +1996,7 @@ function QuestionInput({
   timed,
   onChange,
   unavailableOptions,
+  sharedBank,
   multilevelSkill,
   groupTitle,
   isFlagged,
@@ -1962,6 +2013,7 @@ function QuestionInput({
   timed: boolean;
   onChange: (v: string) => void;
   unavailableOptions?: string[];
+  sharedBank?: boolean;
   multilevelSkill?: MockSkill;
   groupTitle?: string;
   isFlagged?: boolean;
@@ -2033,6 +2085,7 @@ function QuestionInput({
         value={value}
         onChange={onChange}
         unavailableOptions={unavailableOptions}
+        sharedBank={sharedBank}
         headerAction={flagButton}
         // Listening question text can be highlighted and annotated like a Reading passage (kept with the attempt).
         renderPrompt={multilevelSkill === "listening" ? (text) => <CbtAnnotatedText text={text} storageKey={`${attemptId}.${q.id}.prompt`} /> : undefined}

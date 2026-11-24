@@ -9,7 +9,12 @@ import { useRunnerShortcuts } from "./runner-shortcuts";
 import type { ExamSimulatorMode, MockSection, MockSkill } from "@/lib/types";
 import { multilevelQuestionAnswered } from "@/lib/multilevel-completeness";
 
+import { objectiveNumberLabel } from "@/lib/objective-question";
+import { examContentUnits } from "@/lib/exam-content-units";
+
 export interface CbtSectionStepperProps {
+  attemptId?: string;
+  canonicalListening?: boolean;
   skill: MockSkill;
   groups: MockSection["groups"];
   answers: Record<string, string>;
@@ -22,7 +27,10 @@ export interface CbtSectionStepperProps {
   renderGroupBlock: (
     group: MockSection["groups"][number],
     onReviewComplete?: () => void,
-    partIndex?: number
+    partIndex?: number,
+    taskGroups?: MockSection["groups"],
+    partNumber?: number,
+    unitKey?: string,
   ) => React.ReactNode;
   onReviewComplete?: () => void;
   onNextSection?: () => void;
@@ -36,6 +44,8 @@ export interface CbtSectionStepperProps {
 export function CbtSectionStepper({
   skill,
   groups,
+  attemptId,
+  canonicalListening = true,
   answers,
   audioSet,
   simulatorMode = "cdi",
@@ -51,10 +61,16 @@ export function CbtSectionStepper({
   focus = false,
 }: CbtSectionStepperProps) {
   const t = useTranslations("mock.stepper");
-  const safeGroups = groups || [];
-  const [activePartIndex, setActivePartIndex] = React.useState(0);
+  const units = React.useMemo(() => examContentUnits(groups || [], skill, canonicalListening), [groups, skill, canonicalListening]);
+  const positionKey = attemptId ? `bw_exam_position_${attemptId}_${skill}` : null;
+  const [initialQuestion] = React.useState(() => {
+    try { return positionKey ? sessionStorage.getItem(positionKey) : null; }
+    catch { return null; }
+  });
+  const [activePartIndex, setActivePartIndex] = React.useState(() =>
+    Math.max(0, units.findIndex((unit) => unit.groups.some((group) => group.questions?.some((q) => q.id === initialQuestion)))));
   const [internalFlags, setInternalFlags] = React.useState<Set<string>>(new Set());
-  const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(null);
+  const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(initialQuestion);
 
   const flaggedQuestions = externalFlags ?? internalFlags;
 
@@ -63,23 +79,24 @@ export function CbtSectionStepper({
   // position is only a fallback for items without a number.
   const flattenedQuestions = React.useMemo(() => {
     let globalNum = 1;
-    return safeGroups.flatMap((group, groupIdx) =>
-      (group?.questions || []).map((q) => ({
+    return units.flatMap((unit, groupIdx) =>
+      unit.groups.flatMap((group) => (group.questions || []).map((q) => ({
         ...q,
         label: typeof q.displayNumber === "number" && q.displayNumber > 0 ? q.displayNumber : typeof q.number === "number" && q.number > 0 ? q.number : globalNum,
+        displayLabel: objectiveNumberLabel(q),
         globalIndex: globalNum++,
         groupIndex: groupIdx,
         groupTitle:
           group.title ||
           (skill === "reading" ? `Passage ${groupIdx + 1}` : `Part ${groupIdx + 1}`),
-      }))
+      })))
     );
-  }, [safeGroups, skill]);
+  }, [units, skill]);
 
   // A shorter section (or a resumed one) never keeps a part number it does not have.
   React.useEffect(() => {
-    if (activePartIndex > 0 && activePartIndex >= safeGroups.length) setActivePartIndex(0);
-  }, [activePartIndex, safeGroups.length]);
+    if (activePartIndex > 0 && activePartIndex >= units.length) setActivePartIndex(0);
+  }, [activePartIndex, units.length]);
 
   // Set initial active question
   React.useEffect(() => {
@@ -104,12 +121,13 @@ export function CbtSectionStepper({
   }, [activePartIndex, flattenedQuestions, activeQuestionId]);
 
   React.useEffect(() => {
-    if (!onActiveQuestionChange || !activeQuestionId) return;
+    if (!activeQuestionId) return;
     const found = flattenedQuestions.find((q) => q.id === activeQuestionId);
     if (found) {
-      onActiveQuestionChange(found.label);
+      onActiveQuestionChange?.(found.label);
+      try { if (positionKey) sessionStorage.setItem(positionKey, found.id); } catch {}
     }
-  }, [activeQuestionId, flattenedQuestions, onActiveQuestionChange]);
+  }, [activeQuestionId, flattenedQuestions, onActiveQuestionChange, positionKey]);
 
   const toggleFlag = (qid: string) => {
     if (externalToggleFlag) {
@@ -131,23 +149,26 @@ export function CbtSectionStepper({
     setActivePartIndex(q.groupIndex);
     setActiveQuestionId(q.id);
     setTimeout(() => {
-      const el = document.getElementById(`q-${q.id}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Keyboard and screen-reader users land on the question itself, not back on the palette.
-        const target = el.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select, [role=radio], button:not([disabled])");
+      const element = document.getElementById(`q-${q.id}`);
+      if (!element) return;
+      const focusQuestion = () => {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        const target = element.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select, [role=radio], button:not([disabled])");
         if (target) target.focus({ preventScroll: true });
-        else { el.tabIndex = -1; el.focus({ preventScroll: true }); }
-      }
+        else { element.tabIndex = -1; element.focus({ preventScroll: true }); }
+      };
+      const visible = element.dispatchEvent(new Event("bw-exam-show-question", { bubbles: true, cancelable: true }));
+      if (visible) focusQuestion();
+      else requestAnimationFrame(focusQuestion);
     }, 50);
   };
 
-  const activeGroup = safeGroups[activePartIndex] ?? safeGroups[0];
+  const activeUnit = units[activePartIndex] ?? units[0];
 
   // Part stats for tabs
   const partStats = React.useMemo(() => {
-    return safeGroups.map((group, idx) => {
-      const qs = group?.questions || [];
+    return units.map(({ source: group, groups: members, number }, idx) => {
+      const qs = members.flatMap((item) => item.questions || []);
       const answeredCount = qs.filter((q) =>
         multilevelQuestionAnswered(q, answers, audioSet)
       ).length;
@@ -155,7 +176,7 @@ export function CbtSectionStepper({
       const label =
         group?.title ||
         t(skill === "reading" ? "passageN" : "partN", { n: idx + 1 });
-      const partNo = typeof group?.partNumber === "number" ? group.partNumber : idx + 1;
+      const partNo = number;
       return {
         label,
         shortLabel: t(skill === "reading" ? "passageN" : "partN", { n: partNo }),
@@ -164,7 +185,7 @@ export function CbtSectionStepper({
         isComplete,
       };
     });
-  }, [safeGroups, skill, answers, audioSet, t]);
+  }, [units, skill, answers, audioSet, t]);
 
   const currentFlagged = activeQuestionId
     ? flaggedQuestions.has(activeQuestionId)
@@ -219,14 +240,14 @@ export function CbtSectionStepper({
         onFocus={() => setRovingId(q.id)}
         tabIndex={q.id === tabStop ? 0 : -1}
         aria-current={isCurrent ? "true" : undefined}
-        aria-label={`${t("questionLabel", { label: q.label, part: q.groupTitle })}, ${
+        aria-label={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}, ${
           isAns ? t("stateAnswered") : t("stateNotAnswered")
         }${isFlag ? `, ${t("stateFlagged")}` : ""}`}
-        title={`${t("questionLabel", { label: q.label, part: q.groupTitle })}${
+        title={`${t("questionLabel", { label: q.displayLabel, part: q.groupTitle })}${
           isAns ? ` - ${t("stateAnswered")}` : ""
         }${isFlag ? ` - ${t("stateFlagged")}` : ""}`}
         className={cn(
-          "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-field text-sm font-bold tabular-nums transition-colors duration-fast touch-manipulation md:size-9",
+          "relative flex h-11 min-w-11 shrink-0 px-1 items-center justify-center overflow-hidden rounded-field text-sm font-bold tabular-nums transition-colors duration-fast touch-manipulation md:h-9 md:min-w-9",
           isCurrent && "ring-2 ring-fg ring-offset-2 ring-offset-surface",
           isDtm
             ? isFlag
@@ -243,7 +264,7 @@ export function CbtSectionStepper({
           isFlag && !isDtm && "outline outline-2 -outline-offset-2 outline-warning",
         )}
       >
-        {q.label}
+        {q.displayLabel}
         {isFlag && <span className="absolute right-0 top-0 size-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-warning" aria-hidden />}
       </button>
     );
@@ -259,7 +280,7 @@ export function CbtSectionStepper({
     previous: () => { if (currentIndex > 0) goTo(currentIndex - 1); },
     flag: () => { if (activeQuestionId) toggleFlag(activeQuestionId); },
   });
-  const onLastPart = activePartIndex >= safeGroups.length - 1;
+  const onLastPart = activePartIndex >= units.length - 1;
   const legend = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-muted">
       <span className="flex items-center gap-1.5"><span className="size-3 rounded-[3px] bg-brand" />{t("legendAnswered")}</span>
@@ -273,9 +294,12 @@ export function CbtSectionStepper({
     // At least one screen tall, so the bar sits at the bottom even under a short part.
     <div className="flex min-h-[calc(100dvh-4.5rem)] flex-col gap-3">
       {/* The open part */}
-      {activeGroup && (
-        <div className="flex-1 transition-opacity duration-200">
-          {renderGroupBlock(activeGroup, onReviewComplete, activePartIndex)}
+      {activeUnit && (
+        <div className="flex-1 transition-opacity duration-200" onFocusCapture={(event) => {
+          const element = (event.target as HTMLElement).closest<HTMLElement>('[id^="q-"]');
+          if (element) setActiveQuestionId(element.id.slice(2));
+        }}>
+          {renderGroupBlock(activeUnit.source, onReviewComplete, activePartIndex, activeUnit.groups, activeUnit.number, activeUnit.key)}
         </div>
       )}
 
@@ -300,7 +324,7 @@ export function CbtSectionStepper({
             </p>
           )}
 
-          {safeGroups.length > 1 && !focus && (
+          {units.length > 1 && !focus && (
             <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-x-auto md:max-w-[50%]" role="tablist" aria-label={t("partsLabel")}>
               {partStats.map((part, idx) => {
                 const isActive = idx === activePartIndex;

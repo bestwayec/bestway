@@ -125,6 +125,11 @@ const correct = (q) => (q.correctAnswers || [])[0];
 async function answerObjective(page, q) {
   if (q.type === "short_answer") await page.getByLabel(`Answer for question ${q.displayNumber ?? q.number}`, { exact: true }).fill(correct(q));
   else {
+    const select = page.locator(`[id="q-${q.id}"] select`);
+    if (await select.count()) {
+      await select.selectOption(correct(q));
+      return;
+    }
     const radio = page.locator(`input[name="objective-answer-${q.id}"][value="${correct(q).replace(/"/g, '\\"')}"]`);
     // Like a student: scroll the option to the middle of the screen (the question palette sits at the bottom), then click it.
     await radio.evaluate((el) => el.scrollIntoView({ block: "center" }));
@@ -218,12 +223,17 @@ async function build() {
 
 const roundHalf = (x) => { const f = Math.floor(x), r = x - f; return r < 0.25 ? f : r < 0.75 ? f + 0.5 : f + 1; };
 async function openBlock(page, n) {
+  const tabs = page.locator("[data-runner-bottom]").getByRole("tab");
+  if (await tabs.count() >= n) {
+    await tabs.nth(n - 1).click();
+    return;
+  }
   await page.locator(`[aria-label^="Part ${n}:"], [aria-label^="Passage ${n}:"], [aria-label^="Task ${n}:"], [aria-label^="Part ${n} "], [aria-label^="Passage ${n} "], [aria-label^="Task ${n} "]`).first().click();
   await page.waitForTimeout(600);
 }
 async function answered(page) {
   const text = await page.locator("body").innerText();
-  return Number((text.match(/(\d+) \/ 86 answered/) || [])[1] ?? -1);
+  return Number((text.match(/(\d+) \/ 86 (?:confirmed|answered)/) || [])[1] ?? -1);
 }
 
 /* ── phase: student ──────────────────────────────────────────────────────────────────────────── */
@@ -240,7 +250,8 @@ async function student() {
   await step(page, "03-student-starts-on-ielts-track", async () => {
     await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
     const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
-    if (await toIelts.count()) { await toIelts.click(); await page.waitForTimeout(2500); }
+    if (await toIelts.count()) await toIelts.click();
+    else await page.getByText("IELTS", { exact: true }).first().click();
     const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
     await card.getByRole("button").filter({ hasText: /^(Start|Start full exam|Resume)$/ }).first().click();
     const dialog = page.getByRole("dialog"); await dialog.waitFor();

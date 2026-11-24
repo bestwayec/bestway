@@ -441,6 +441,32 @@ def delete_section(actor, section_id: str):
     return {"deleted": True}
 
 
+def _associate_task_group(section, parent_id):
+    values = {}
+    from .mock_content import exam_content_units
+
+    if not isinstance(parent_id, str) or section.skill not in ('reading', 'listening'):
+        raise ContractAPIException('VALIDATION_ERROR', 'Choose a parent passage or Listening part', 400)
+    rows = list(MockQuestionGroup.objects.filter(section_id=section.id).order_by('sort_order', 'id'))
+    groups = [dict(id=row.id, stimulusRef=row.stimulus_ref, passageText=row.passage_text,
+                   partNumber=row.part_number) for row in rows]
+    unit = next((unit for unit in exam_content_units(groups, section.skill)
+                 if any(member['id'] == parent_id for member in unit)), None)
+    if unit is None:
+        raise ContractAPIException('MOCK_GROUP_NOT_FOUND', 'Parent is outside this section', 404)
+    if section.skill == 'reading':
+        ref = unit[0]['stimulusRef'] or 'passage-' + new_id()
+        MockQuestionGroup.objects.filter(id__in=[member['id'] for member in unit]).update(stimulus_ref=ref)
+        values['stimulus_ref'] = ref
+    else:
+        number = unit[0]['partNumber']
+        if not number or section.exam.type == 'multilevel':
+            raise ContractAPIException('VALIDATION_ERROR', 'Choose a numbered IELTS Listening part', 400)
+        values['part_number'] = number
+    values['sort_order'] = max((row.sort_order for row in rows), default=-1) + 1
+    return values
+
+
 def create_group(actor, section_id: str, data: dict):
     try: section = MockSection.objects.select_related("exam").get(id=section_id)
     except MockSection.DoesNotExist: raise ContractAPIException("MOCK_SECTION_NOT_FOUND", "Bo'lim topilmadi", 404)
@@ -448,6 +474,11 @@ def create_group(actor, section_id: str, data: dict):
         raise ContractAPIException("VALIDATION_ERROR", "IELTS listening parts must be 1–4", 400)
     def write(_exam):
         values = _group_payload(data)
+        parent_id = data.get("parentGroupId")
+        if parent_id is not None:
+            values.update(_associate_task_group(section, parent_id))
+        elif section.skill == 'reading' and not values.get('stimulus_ref'):
+            values['stimulus_ref'] = 'passage-' + new_id()
         return MockQuestionGroup.objects.create(id=new_id(), section_id=section_id, sort_order=values.pop("sort_order", MockQuestionGroup.objects.filter(section_id=section_id).count()), title=values.pop("title", None), instructions=values.pop("instructions", None), passage_text=values.pop("passage_text", None), content_html=values.pop("content_html", None), audio_script=values.pop("audio_script", None), content_layout=values.pop("content_layout", None), options_reusable=values.pop("options_reusable", None), audio_key=None, image_key=None, max_score=values.pop("max_score", None), stimulus_ref=values.pop("stimulus_ref", None), part_number=values.pop("part_number", None), audio_play_limit=values.pop("audio_play_limit", 1), audio_duration_sec=values.pop("audio_duration_sec", None), created_at=now())
     group = _locked_mutation(actor, section.exam_id, write)
     audit_event(actor, "mock.group.create", "mockQuestionGroup", group.id, new={"sectionId": section_id})
@@ -461,6 +492,14 @@ def update_group(actor, group_id: str, data: dict):
         raise ContractAPIException("VALIDATION_ERROR", "IELTS listening parts must be 1–4", 400)
     values = _group_payload(data)
     def write(_exam):
+        parent_id = data.get("parentGroupId")
+        if parent_id is not None:
+            group.refresh_from_db(fields=['passage_text', 'audio_key'])
+            if parent_id == group.id or (group.passage_text or '').strip() or group.audio_key:
+                raise ContractAPIException('VALIDATION_ERROR', 'Move a question group without its own passage or audio', 400)
+            if set(data) != {'parentGroupId'}:
+                raise ContractAPIException('VALIDATION_ERROR', 'Save the group content before moving it', 400)
+            values.update(_associate_task_group(group.section, parent_id))
         for key, value in values.items(): setattr(group, key, value)
         if values: group.save(update_fields=list(values))
         return group
@@ -658,7 +697,7 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
             items.append(dict(key=skill + '_section', ok=skill in by_skill, detail='exists' if skill in by_skill else 'missing section'))
     from apps.legacy_schema.models import MockImportReviewIssue
 
-    from .mock_content import assert_gapped_questions, gap_numbers
+    from .mock_content import assert_gapped_questions, exam_content_units, gap_numbers
     from .mock_media import resolve_key
     def item(key, ok, detail):
         items.append(dict(key=key, ok=ok, detail=detail))
@@ -670,23 +709,29 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
             continue
         gs = persisted_groups[section['id']]
         qs = [q for g in gs for q in persisted_questions[g.id]]
-        if skill == 'listening':
-            if is_full and ielts:
-                parts = {g.part_number for g in gs if g.part_number is not None}
-                item('listening_parts', len(gs) == 4 and parts == {1, 2, 3, 4}, f'{len(gs)} groups, parts: {",".join(map(str, sorted(parts))) or "—"}')
-                item('listening_questions', len(qs) == 40, f'{len(qs)}/40 questions')
+        if skill in ('reading', 'listening') and ielts:
+            groups = [dict(stimulusRef=g.stimulus_ref, partNumber=g.part_number, passageText=g.passage_text,
+                           audio=bool(g.audio_key)) for g in gs]
+            units = exam_content_units(groups, skill)
+            if is_full:
+                if skill == 'reading':
+                    item('reading_groups', len(units) == 3, f'{len(units)}/3 passages')
+                else:
+                    parts = {g.part_number for g in gs}
+                    item('listening_parts', len(units) == 4 and parts == {1, 2, 3, 4}, f'{len(units)}/4 parts')
+                positions = sum(q.points for q in qs)
+                item(skill + '_questions', positions == 40, f'{positions}/40 scoring positions')
+            if skill == 'reading':
+                for ordinal, unit in enumerate(units, 1):
+                    texts = {' '.join((g['passageText'] or '').split()) for g in unit} - {''}
+                    item('reading_passage', len(texts) == 1, f'Passage {ordinal} needs one source and an explicit shared reference for continuations')
+            else:
+                for ordinal, unit in enumerate(units, 1):
+                    count = sum(g['audio'] for g in unit)
+                    item('listening_audio', count == 1, f'Part {unit[0]["partNumber"] or ordinal} needs one audio owner')
+        elif skill == 'listening':
             count = sum(bool(g.audio_key) for g in gs)
             item('listening_audio', bool(gs) and count == len(gs), f'{count}/{len(gs)} groups with audio')
-        if skill == 'reading':
-            if is_full and ielts:
-                from .mock_content import reading_passage_count
-                # Legacy rule (one group per passage) still passes unchanged; several task
-                # groups sharing one passage text also count as one passage.
-                passages = 3 if len(gs) == 3 else reading_passage_count(g.passage_text for g in gs)
-                item('reading_groups', passages == 3, f'{passages}/3 passages')
-                item('reading_questions', len(qs) == 40, f'{len(qs)}/40 questions')
-            missing = sum(bool(persisted_questions[g.id]) and not (g.passage_text or '').strip() and not (g.content_html or '').strip() for g in gs)
-            item('reading_passage', missing == 0, 'all passages have text' if missing == 0 else f'{missing} passage(s) without text')
         if skill == 'writing':
             if is_full and ielts:
                 types = list(dict.fromkeys(q.type for q in qs))

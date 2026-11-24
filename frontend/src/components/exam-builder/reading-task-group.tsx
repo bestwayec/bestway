@@ -3,8 +3,9 @@
 import { QTYPE_LABEL } from "@/components/mock/exam-builder/types";
 import { GappedContent } from "@/components/mock/gapped-content";
 import { Input } from "@/components/ui/input";
-import { answerRuleHint } from "@/lib/objective-question";
+import { answerRuleHint, sharedMatchingOptions } from "@/lib/objective-question";
 import { unavailablePreviewOptions, type PreviewTaskBlock } from "./reading-preview-model";
+import { MatchingOptionBank } from "@/components/mock/objective-question-input";
 import { PreviewQuestionInput } from "./preview-question-renderer";
 
 /**
@@ -23,6 +24,7 @@ export function ReadingTaskGroup({
   answers: Record<string, string>;
   onAnswer: (questionId: string, value: string) => void;
 }) {
+  const matchingBank = sharedMatchingOptions(block.questions);
   const typeLabel = (QTYPE_LABEL as Record<string, string>)[block.type];
   return (
     <section aria-label={`${block.heading}${typeLabel ? ` — ${typeLabel}` : ""}`}>
@@ -71,6 +73,7 @@ export function ReadingTaskGroup({
       ))}
       {block.questions.length > 0 && (
         <div className="mt-3 space-y-4">
+          <MatchingOptionBank options={matchingBank} />
           {block.questions.map((q) => (
             <div
               key={q.id}
@@ -79,6 +82,7 @@ export function ReadingTaskGroup({
               className="scroll-mt-20"
             >
               <PreviewQuestionInput
+                sharedBank={matchingBank.length > 0}
                 question={q}
                 value={answers[q.id] ?? ""}
                 onChange={(v) => onAnswer(q.id, v)}
