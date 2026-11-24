@@ -90,14 +90,20 @@ try {
   await page.route(saveUrl, failSave);
   let input = await enterExam(runner);
   const answer = `exam4 recovery ${crypto.randomUUID().slice(0, 8)}`;
+  await context.setOffline(true);
   await input.fill(answer);
   await page.getByTestId("answer-queue-banner").waitFor();
+  assert.equal(firstSave, undefined, "Offline editing did not send a save");
+  const failed = page.waitForResponse((response) => response.url().endsWith(`${attempt}/answers`) && response.status() === 503);
+  await context.setOffline(false);
+  await failed;
   assert(firstSave, "The edit reached the network interceptor");
   assert.notEqual(allQuestions(await api(attempt)).find((q) => q.id === firstSave.questionId).response, answer);
 
   input = await enterExam(runner);
   assert.equal(await input.inputValue(), answer, "The local edit survives reload");
   await page.unroute(saveUrl, failSave);
+  await context.clearCookies({ name: "bw_at" });
   const ack = page.waitForResponse((response) => response.url().endsWith(`${attempt}/answers`) && response.status() === 201);
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   const receipts = (await (await ack).json()).data.receipts;
@@ -105,7 +111,8 @@ try {
   const saved = allQuestions(await api(attempt)).find((q) => q.id === firstSave.questionId);
   assert.equal(saved.response, answer);
   assert.equal(saved.answerRevision, receipts[firstSave.questionId].revision);
-  console.log("PASS failed save, local reload recovery, retry receipt and persisted answer");
+  assert((await context.cookies()).some((cookie) => cookie.name === "bw_at"), "The expired access session was refreshed");
+  console.log("PASS offline edit, failed save, reload recovery, session refresh and persisted receipt");
 
   const second = await context.newPage();
   await second.goto(runner, { waitUntil: "domcontentloaded" });

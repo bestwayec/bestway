@@ -82,7 +82,7 @@ describe("one active exam session per attempt", () => {
     expect(status()).toBe("elsewhere");
     expect(gate?.getAttribute("role")).toBe("alertdialog");
     expect(gate?.textContent).toContain("This exam is open somewhere else");
-    expect(gate?.textContent).toContain("kept on this device");
+    expect(gate?.textContent).toContain("retry unconfirmed edits");
     expect(gate?.textContent).toMatch(/at \d{2}:\d{2}\./);
     expect(document.activeElement?.textContent).toBe("Continue here");
     await act(async () => (document.activeElement as HTMLButtonElement).click());
