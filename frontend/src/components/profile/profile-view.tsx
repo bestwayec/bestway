@@ -36,10 +36,12 @@ export function ProfileView() {
   const tr = useTranslations("roles");
   const format = useFormatter();
   const { data: me, isLoading } = useMe();
-  const attemptsQ = useMyMockAttempts();
+  const attemptsQ = useMyMockAttempts(undefined, true);
   const attempts = React.useMemo(() => attemptsQ.data ?? [], [attemptsQ.data]);
   // Finished = submitted (#133 rule): attempts the server closed without a submission do not count.
   const completedCount = React.useMemo(() => attempts.filter(isFinished).length, [attempts]);
+  const resume = attempts.filter((attempt) => attempt.status === "in_progress" &&
+    (!attempt.deadlineAt || Date.parse(attempt.deadlineAt) > Date.now()));
   const statusQ = useTelegramStatus();
   const linkToken = useTelegramLinkToken();
   const unlink = useUnlinkTelegram();
@@ -125,6 +127,21 @@ export function ProfileView() {
       {me.user.role === 'student' && (
         <>
           <ExamTrackSelector />
+          {resume.length > 0 && (
+            <Card className="space-y-2 p-4">
+              <h2 className="font-semibold">{tRecent("statusInProgress")}</h2>
+              <ul className="space-y-2">
+                {resume.map((attempt) => (
+                  <li key={attempt.id} className="flex items-center justify-between gap-2">
+                    <span className="text-sm">{attempt.examTitle ?? tRecent("untitled")}</span>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/mock/attempt/${attempt.id}`}>{t("continueExam")}</Link>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <ScorePredictionCard attempts={attempts} />
           <ResultsProgressCard attempts={attempts} loading={attemptsQ.isLoading} />
 
@@ -233,11 +250,9 @@ export function ProfileView() {
                           <td className="py-3 pl-3 text-right whitespace-nowrap">
                             <Button asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
                               <Link
-                                href={`/mock/attempt/${a.id}${
-                                  a.status !== "in_progress" ? "#assessment-feedback" : ""
-                                }`}
+                                href={`/mock/attempt/${a.id}${a.status !== "in_progress" ? "#assessment-feedback" : ""}`}
                               >
-                                {a.status === "in_progress" ? t("continueExam") : t("details")}
+                                {a.status === "in_progress" && resume.some((item) => item.id === a.id) ? t("continueExam") : t("details")}
                               </Link>
                             </Button>
                           </td>

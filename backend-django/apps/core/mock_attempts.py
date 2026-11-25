@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 from django.db import connection, transaction
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -358,7 +359,7 @@ def start(actor, exam_id, data):
                 linked = (existing.media_state or {}).get(ASSIGNMENT_KEY)
                 if linked and linked != assignment.id:
                     fail('MOCK_ASSIGNMENT_ATTEMPT_ACTIVE', 'Finish the active assignment attempt before starting another', 409)
-                if existing.started_at < assignment.created_at:
+                if aware(existing.started_at) < aware(assignment.created_at):
                     scope_mismatch = True
             if (exp and aware(exp) <= now) or is_retake or scope_mismatch:
                 from .mock_submissions import submit
@@ -991,6 +992,8 @@ def decode_attempts_cursor(cursor):
 def review_blocked(attempt):
     return MockAttempt.objects.filter(
         student_id=attempt.student_id, exam_id=attempt.exam_id, status='in_progress', mode='timed',
+    ).alias(review_deadline=Coalesce('overall_deadline_at', 'deadline_at')).filter(
+        Q(review_deadline__isnull=True) | Q(review_deadline__gt=timezone.now()),
     ).exists()
 
 

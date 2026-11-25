@@ -22,7 +22,15 @@ Branch `feat/bestway-exam4-cbt-analysis` is stacked on Phase 2 commit `16d0ea90a
 | IELTS Chromium | First run passed all 10 steps with overall 8.0. Final production-build rerun includes persisted teacher explanation. |
 | Phase 2 Chromium | Canonical Reading/Listening, scores, reload, Builder duplication/reordering, preview, and publication passed on the production build. |
 | Multilevel Chromium | Prior run reached Speaking after 35 Listening, 35 Reading and three Writing responses. It stalled after three uploads. A production-build rerun is in progress. |
-| Delivery | Local checkpoint in progress. GitHub GraphQL returned HTTP 403 on PR discovery. |
+| Delivery | Initial implementation checkpoint `c6f604cd00f757762fd1e27787751dc32b32260c`. GitHub GraphQL returned HTTP 403 on PR discovery. |
+
+## Browser follow-up
+
+- Production-build IELTS passed 10 of 10 steps, including the persisted teacher explanation. The result uses band 8.0. PostgreSQL counted 86 distinct answer rows and three recordings, with the fourth speaking answer entered in the live interview.
+- The report browser journey checked assignment participation, private result and audio denial, target persistence, ranking, PDF/XLSX and archive reopening. The latest rerun exercises assignment resume and both-track profile history.
+- Phase 1 passed the reliability and 22 takeover assertions. The Phase 2 browser suite verified canonical continuation review on the release build.
+- A second Multilevel run reached Speaking and rejected one recorded file with `SPEAKING_AUDIO_DURATION_INVALID`. Production-build retest with rejected synthetic clip capture is underway. The server duration thresholds were preserved.
+- Django checks and Prisma manifest matched. Prisma's engine checksum request returned HTTP 403. The additive SQL applied on local PostgreSQL and full tests exercised that schema.
 
 ## Continuation point
 

@@ -151,17 +151,18 @@ export function useStartMock() {
   });
 }
 
-function useMyAttemptHistoryQuery(status?: MockAttemptStatus) {
+function useMyAttemptHistoryQuery(status?: MockAttemptStatus, acrossPrograms = false) {
   const scope = useStudentProgramScope();
+  const program = acrossPrograms ? undefined : scope.program;
   return {
     scope,
     options: {
-      queryKey: ["mock-attempts-mine", scope.owner, scope.program, status ?? "all"],
+      queryKey: ["mock-attempts-mine", scope.owner, acrossPrograms ? "all-programs" : program, status ?? "all"],
       queryFn: () =>
         loadAttemptHistory(async (cursor) =>
           api.getPaged<MockAttemptSummary[]>("/mock/attempts/mine", {
             status,
-            program: scope.program,
+            program,
             limit: HISTORY_PAGE_SIZE,
             cursor,
           }),
@@ -172,8 +173,8 @@ function useMyAttemptHistoryQuery(status?: MockAttemptStatus) {
 }
 
 /** The student's whole authorised exam history (newest first), loaded through the cursor API. */
-export function useMyMockAttempts(status?: MockAttemptStatus) {
-  const { options } = useMyAttemptHistoryQuery(status);
+export function useMyMockAttempts(status?: MockAttemptStatus, acrossPrograms = false) {
+  const { options } = useMyAttemptHistoryQuery(status, acrossPrograms);
   return useQuery({ ...options, select: (history) => history.items });
 }
 

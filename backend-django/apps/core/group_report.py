@@ -73,8 +73,12 @@ def _tables(data):
     history = [["Davr yoki imtihon", "Shkala", "O'rtacha", "Urinishlar"]]
     for key, label in (("weeklyHistory", "week"), ("history", "month"), ("examHistory", "title")):
         history.extend([[row[label], SCALES[row["track"]], row["average"], row["attempts"]] for row in data.get(key, [])])
+    monthly_skills = [["Oy", "Shkala", "Bo'lim", "O'rtacha", "Urinishlar"]]
+    monthly_skills.extend([[row["month"], SCALES[row["track"]], row["skill"], row["average"], row["attempts"]]
+                           for row in data.get("skillHistory", [])])
     tables = {"Hisobot": summary, "O'quvchilar": students, "Reyting": ranks, "Savol turlari": topics,
-              "Bo'limlar": skills, "Savollar": difficulty, "Taqsimot": distribution, "Natijalar tarixi": history}
+              "Bo'limlar": skills, "Savollar": difficulty, "Taqsimot": distribution, "Natijalar tarixi": history,
+              "Bo‘limlar tarixi": monthly_skills}
     return {title: rows for title, rows in tables.items() if len(rows) > 1 or title in ("O'quvchilar", "Reyting", "Savol turlari")}
 
 

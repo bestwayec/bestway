@@ -409,6 +409,27 @@ async function student() {
     if (await mic.count()) { await mic.click(); await page.getByRole("button", { name: /I can hear it/ }).click({ timeout: 20000 }); }
     const uploads = [];
     let rejectedRecording;
+    if (process.env.BW_CAPTURE_SPEAKING) {
+      await page.exposeFunction("saveRejectedSyntheticRecording", (questionId, bytes) => {
+        if (!/^[a-zA-Z0-9-]+$/.test(questionId) || bytes.length > 25 * 1024 * 1024) return;
+        writeFileSync(join(OUT, `ml-speaking-rejected-${questionId}.webm`), Buffer.from(bytes));
+      });
+      await page.evaluate(() => {
+        const fetchImpl = window.fetch.bind(window);
+        window.fetch = async (resource, init) => {
+          const response = await fetchImpl(resource, init);
+          const path = new URL(response.url || String(resource), location.href).pathname;
+          const match = path.match(/\/speaking\/([a-zA-Z0-9-]+)$/);
+          if (response.status === 400 && match && init?.body instanceof FormData) {
+            const recording = init.body.get("audio");
+            if (recording instanceof Blob) {
+              void recording.arrayBuffer().then((bytes) => window.saveRejectedSyntheticRecording(match[1], [...new Uint8Array(bytes)]));
+            }
+          }
+          return response;
+        };
+      });
+    }
     page.on("response", async (r) => {
       if (r.request().method() !== "POST" || !/\/speaking\/[^/]+$/.test(new URL(r.url()).pathname)) return;
       // A rejected upload is reported with its error code (the take must never be lost).

@@ -1,6 +1,6 @@
 """Comparable results and participation for an authorized classroom."""
 from collections import Counter, defaultdict
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from math import isfinite
 from statistics import mean, median
 
@@ -14,6 +14,7 @@ from common.api.exceptions import ContractAPIException
 from .groups import get_group
 from .homework_scoring import ASSIGNMENT_KEY
 from .mock_practice import is_partial, scope
+from .mock_scoring import choice_index
 from .models import ClassroomEnrollment, HomeworkAssignment, HomeworkSubmission
 
 SKILLS = ("listening", "reading", "writing", "speaking")
@@ -29,9 +30,9 @@ def filters(params):
     try:
         end = date.fromisoformat(params["to"]) if params.get("to") else today
         start = date.fromisoformat(params["from"]) if params.get("from") else end - timedelta(days=89)
-    except ValueError:
+    except (ValueError, OverflowError):
         invalid("Use ISO dates for from and to.")
-    if start > end or (end - start).days > 365:
+    if start > end or end == date.max or (end - start).days > 365:
         invalid("Choose a date range of at most 366 days.")
     track = params.get("track") or ""
     skill = params.get("skill") or ""
@@ -118,17 +119,20 @@ def objective_metrics(attempts, skill, include_questions=False):
     ).values_list("attempt_id", "question_id", "is_correct", "response")
     evaluated = {(attempt, question): (correct, response) for attempt, question, correct, response in answers.iterator()}
     definitions = defaultdict(list)
+    wrong_choices = defaultdict(set)
     questions_in_exams = MockQuestion.objects.filter(
         group__section__exam_id__in={a.exam_id for a in taken}, group__section__skill__in=sections,
-    ).values_list("group__section__exam_id", "group__section__skill", "id", "number", "type")
-    for exam_id, section, question_id, number, kind in questions_in_exams.iterator():
-        definitions[exam_id].append((section, question_id, number, kind))
+    ).order_by("group__section__sort_order", "group__sort_order", "sort_order", "id").values_list(
+        "group__section__exam_id", "group__section__skill", "id", "number", "type", "options",
+    )
+    for exam_id, section, question_id, number, kind, options in questions_in_exams.iterator():
+        definitions[exam_id].append((section, question_id, number, kind, options))
     categories, questions = {}, {}
     for attempt in taken:
         track = attempt.exam.type
         scoped = scope(attempt)
         allowed = set(scoped["questionIds"]) if scoped is not None else None
-        for section, question_id, number, kind in definitions[attempt.exam_id]:
+        for section, question_id, number, kind, options in definitions[attempt.exam_id]:
             if section not in (attempt.raw_scores or {}) or (allowed is not None and question_id not in allowed):
                 continue
             correct, response = evaluated.get((attempt.id, question_id), (None, ""))
@@ -141,6 +145,13 @@ def objective_metrics(attempts, skill, include_questions=False):
                 question = questions.setdefault(question_id, dict(questionId=question_id, number=number, skill=section,
                                                                 questionType=kind, correct=0, incorrect=0, unanswered=0))
                 question[state] += 1
+                # Summarize repeated selections of authored options only. A candidate's
+                # free-text response and unique wrong choices stay outside the aggregate.
+                if (state == "incorrect" and kind != "multi_select" and isinstance(options, list)
+                        and options and all(isinstance(option, str) for option in options)):
+                    chosen = choice_index(response, options)
+                    if chosen is not None:
+                        wrong_choices[(question_id, options[chosen])].add(attempt.student_id)
             if state == "incorrect":
                 category["affected"].add(attempt.student_id)
     rows = []
@@ -151,6 +162,9 @@ def objective_metrics(attempts, skill, include_questions=False):
                          groupErrorRate=100 - accuracy if accuracy is not None else None,
                          affectedStudentsCount=len(counts.pop("affected")),
                          gradedResponseCount=attempted, **counts))
+    for (question_id, option), students in wrong_choices.items():
+        if len(students) >= 2:
+            questions[question_id].setdefault("commonIncorrectChoices", []).append(dict(option=option, students=len(students)))
     return rows, list(questions.values())
 
 
@@ -180,7 +194,10 @@ def get_group_analytics(actor, group_id, params=None):
         eligible.update(rows.values_list("student_id", flat=True).distinct())
     elif options["exam_id"]:
         rows = rows.filter(exam_id=options["exam_id"])
-    rows = rows.filter(started_at__date__range=(options["start"], options["end"]))
+    local_tz = timezone.get_current_timezone()
+    start_time = datetime.combine(options["start"], time.min, tzinfo=local_tz)
+    end_time = datetime.combine(options["end"] + timedelta(days=1), time.min, tzinfo=local_tz)
+    rows = rows.filter(started_at__gte=start_time.astimezone(UTC), started_at__lt=end_time.astimezone(UTC))
     if options["track"]:
         rows = rows.filter(exam__type=options["track"])
     if options["status"]:
@@ -217,6 +234,7 @@ def get_group_analytics(actor, group_id, params=None):
     trends = defaultdict(list)
     weekly = defaultdict(list)
     exam_trends = defaultdict(list)
+    skill_trends = defaultdict(list)
     distributions = defaultdict(Counter)
     same_versions = defaultdict(list)
     for attempt in attempts:
@@ -229,11 +247,14 @@ def get_group_analytics(actor, group_id, params=None):
         score = comparable_score(attempt, skill)
         partitions[(track, attempt.exam_id, attempt.specification_version, attempt.score_version)].append((score, attempt))
         stamp = attempt.submitted_at or attempt.started_at
-        day = (timezone.localtime(stamp) if timezone.is_aware(stamp) else stamp).date()
+        day = timezone.localtime(stamp if timezone.is_aware(stamp) else stamp.replace(tzinfo=UTC)).date()
         trends[(track, day.isoformat()[:7])].append(score)
         weekly[(track, (day - timedelta(days=day.weekday())).isoformat())].append(score)
         exam_trends[(track, attempt.exam_id, attempt.specification_version, attempt.score_version)].append(score)
         distributions[track][score] += 1
+        for key in SKILLS:
+            if (section_score := skill_score(attempt, key)) is not None:
+                skill_trends[(track, key, day.isoformat()[:7])].append(section_score)
 
     for student in sorted(eligible | names.keys() if assignment is None else eligible, key=lambda key: (names.get(key, "").casefold(), key)):
         own = by_student.get(student, [])
@@ -304,6 +325,8 @@ def get_group_analytics(actor, group_id, params=None):
                 questionDifficulty=question_rows,
                 scoreDistribution={track: [dict(score=score, count=count) for score, count in sorted(counts.items())]
                                    for track, counts in distributions.items()},
+                skillHistory=[dict(track=track, skill=key, month=month, average=round(mean(values), 2), attempts=len(values))
+                              for (track, key, month), values in sorted(skill_trends.items())],
                 weeklyHistory=[dict(track=track, week=week, average=round(mean(values), 2), attempts=len(values))
                                for (track, week), values in sorted(weekly.items())],
                 examHistory=[dict(track=track, examId=exam, title=assessments[exam], specificationVersion=spec,

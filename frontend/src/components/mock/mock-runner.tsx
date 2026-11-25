@@ -1598,7 +1598,7 @@ function GroupBlock({
       {practice && skill === "listening" && <div className="mt-2"><AudioScriptToggle script={practice.script} /></div>}
       {group.imageUrl && !(skill === "reading" && taskContent) && !isMapSplit && !isWritingSplit && (
         <div className="mt-3">
-          <GroupImage groupId={group.id} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
+          <GroupImage groupId={group.id} compact={skill === "speaking"} alt={group.title ? tg("pictureFor", { title: group.title }) : tg("pictureForPart")} />
         </div>
       )}
       {group.instructions && !isWritingSplit && (

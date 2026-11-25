@@ -139,9 +139,11 @@ try {
   const section = await api(teacher, `/mock/exams/${draft.id}/sections`, "POST", { skill: "reading", title: "Synthetic Reading" });
   const parent = await api(teacher, `/mock/sections/${section.id}/groups`, "POST", { title: "Synthetic source", passageText: "Original draft source text." });
   const child = await api(teacher, `/mock/sections/${section.id}/groups`, "POST", { title: "Synthetic continuation", parentGroupId: parent.id });
-  await api(teacher, `/mock/groups/${child.id}/questions`, "POST", { questions: [
-    { number: 1, type: "short_answer", prompt: "Write alpha.", correctAnswers: ["alpha"] },
+  const { questions: [readingContinuation] } = await api(teacher, `/mock/groups/${child.id}/questions`, "POST", { questions: [
+    { number: 1, type: "short_answer", prompt: "Write alpha.", correctAnswers: ["alpha"],
+      evidenceText: "draft source text", reviewExplanation: "Review the source passage." },
   ] });
+  assert.equal(readingContinuation.evidenceText, "draft source text");
   assert(child.stimulusRef);
   const preview = await api(teacher, `/mock/exams/${draft.id}/preview`);
   assert.equal(preview.sections[0].groups[0].stimulusRef, child.stimulusRef);
@@ -172,13 +174,14 @@ try {
   const draftPath = `/mock/exams/${draft.id}`;
   const listeningSection = await api(teacher, `${draftPath}/sections`, "POST", { skill: "listening", title: "Synthetic Listening" });
   const listeningGroups = `/mock/sections/${listeningSection.id}/groups`;
-  const audioOwner = await api(teacher, listeningGroups, "POST", { title: "Part 1", partNumber: 1 });
+  const audioOwner = await api(teacher, listeningGroups, "POST", { title: "Part 1", partNumber: 1,
+    audioScript: "The second answer is alpha." });
   const audioTask = await api(teacher, listeningGroups, "POST", { title: "Part 1 continuation", parentGroupId: audioOwner.id });
-  const addListeningQuestion = (group, number, prompt) => api(teacher, `/mock/groups/${group.id}/questions`, "POST", { questions: [
-    { number, type: "short_answer", prompt, correctAnswers: ["alpha"] },
+  const addListeningQuestion = (group, number, prompt, review = {}) => api(teacher, `/mock/groups/${group.id}/questions`, "POST", { questions: [
+    { number, type: "short_answer", prompt, correctAnswers: ["alpha"], ...review },
   ] });
   await addListeningQuestion(audioOwner, 1, "Listen and write alpha.");
-  const { questions: [continuationQuestion] } = await addListeningQuestion(audioTask, 2, "Listen for the second word.");
+  const { questions: [continuationQuestion] } = await addListeningQuestion(audioTask, 2, "Listen for the second word.", { evidenceText: "answer is alpha", audioStartSec: 1 });
   const upload = await teacher.request.post(new URL(`/api/backend${draftPath}/audio-timestamps`, web).href, {
     multipart: {
       audio: { name: "synthetic-tone.wav", mimeType: "audio/wav", buffer: await media.body() },
@@ -221,6 +224,16 @@ try {
   await save(page, publishedPath, continuationQuestion.id, "alpha");
   const publishedResult = await api(context, `${publishedPath}/submit`, "POST", { confirm: true });
   assert.equal(publishedResult.rawScores.listening.score, 1);
+  const listeningReview = await api(context, publishedPath);
+  const reviewedGroup = listeningReview.sections[0].groups.find((group) => group.id === audioTask.id);
+  assert.equal(reviewedGroup.questions[0].id, continuationQuestion.id);
+  assert.equal(reviewedGroup.questions[0].evidence.text, "answer is alpha");
+  assert.equal(reviewedGroup.questions[0].audioStartSec, 1);
+  assert(reviewedGroup.reviewAudioUrl.endsWith(audioOwner.id));
+  await page.goto(new URL(`/en/mock/attempt/${publishedAttempt.id}`, web).href, { waitUntil: "domcontentloaded" });
+  await page.locator(`[id="review-${continuationQuestion.id}"]`).click();
+  assert.equal(await page.getByTestId("review-evidence").innerText(), "answer is alpha");
+  console.log("PASS released Listening continuation retains the question ID and inherits review audio and evidence");
   console.log("PASS builder creates, reorders and duplicates linked groups, previews shared sources, publishes, and opens the same part for a student");
 } finally {
   await browser.close();

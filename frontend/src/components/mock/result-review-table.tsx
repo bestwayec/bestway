@@ -93,7 +93,7 @@ export function ResultReviewTable({
             )}
             onClick={canExplain ? () => setOpen(isOpen ? null : q.id) : undefined}
           >
-            <td className="px-3 py-2 font-semibold tabular-nums text-fg">
+            <td className="px-1.5 py-2 font-semibold tabular-nums text-fg sm:px-3">
               <div className="flex items-center gap-1">
                 <span>{q.displayNumberEnd ? `${number}–${q.displayNumberEnd}` : number}</span>
                 {isFlagged && (
@@ -109,7 +109,7 @@ export function ResultReviewTable({
             </td>
             <td
               className={cn(
-                "px-3 py-2 font-medium break-words",
+                "px-1.5 py-2 font-medium break-words sm:px-3",
                 state === "correct" ? "text-brand" : state === "wrong" ? "text-danger" : "text-fg",
               )}
             >
@@ -124,14 +124,14 @@ export function ResultReviewTable({
                 </span>
               )}
             </td>
-            <td className="px-3 py-2 break-words text-brand font-medium">
+            <td className="px-1.5 py-2 break-words text-brand font-medium sm:px-3">
               {q.correctAnswers && q.correctAnswers.length > 0 ? (
                 q.correctAnswers.join(" / ")
               ) : (
                 <span className="text-fg-muted">—</span>
               )}
             </td>
-            <td className="px-3 py-2">
+            <td className="px-1 py-2 sm:px-3">
               <span
                 className={cn(
                   "grid size-6 place-items-center rounded-full text-xs font-bold",
@@ -158,7 +158,7 @@ export function ResultReviewTable({
               {canExplain && (
                 <button
                   type="button"
-                  className="grid size-8 place-items-center rounded-md text-fg-muted hover:bg-surface-hover hover:text-fg"
+                  className="grid size-9 place-items-center rounded-md text-fg-muted hover:bg-surface-hover hover:text-fg"
                   aria-expanded={isOpen}
                   aria-controls={`review-explain-${q.id}`}
                   aria-label={t("whereFor", { number: q.displayNumber ?? q.number })}
@@ -179,6 +179,11 @@ export function ResultReviewTable({
           {isOpen && group && (
             <tr id={`review-explain-${q.id}`} className="border-b border-border/60">
               <td colSpan={6} className="px-3 pb-3">
+                <div className="mb-2 space-y-0.5 text-sm" data-testid="review-original-question">
+                  <p className="font-semibold">{t("question")} {q.displayNumberEnd ? `${number}–${q.displayNumberEnd}` : number}</p>
+                  <p className="whitespace-pre-line">{q.prompt}</p>
+                  <p className="text-xs text-fg-muted">{q.type.replaceAll("_", " ")}</p>
+                </div>
                 <ReviewExplain skill={skill} group={group} question={q} />
               </td>
             </tr>
@@ -240,11 +245,11 @@ export function ResultReviewTable({
                 <table className="w-full table-fixed text-left text-xs sm:text-sm">
                   <thead className="text-xs text-fg-muted">
                     <tr className="border-b border-border">
-                      <th scope="col" className="w-12 px-2 py-2">#</th>
+                      <th scope="col" className="w-8 px-1.5 py-2 sm:w-12 sm:px-2">#</th>
                       <th scope="col" className="hidden px-3 py-2 sm:table-cell">{t("question")}</th>
-                      <th scope="col" className="px-3 py-2">{t("yourAnswer")}</th>
-                      <th scope="col" className="px-3 py-2">{t("key")}</th>
-                      <th scope="col" className="w-12 px-3 py-2"><span className="sr-only">{t("mark")}</span></th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("yourAnswer")}</th>
+                      <th scope="col" className="px-1.5 py-2 sm:px-3">{t("key")}</th>
+                      <th scope="col" className="w-8 px-1 py-2 sm:w-12 sm:px-3"><span className="sr-only">{t("mark")}</span></th>
                       <th scope="col" className="w-12 px-2 py-2"><span className="sr-only">{t("where")}</span></th>
                     </tr>
                   </thead>

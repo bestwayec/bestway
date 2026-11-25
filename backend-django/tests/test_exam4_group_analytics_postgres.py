@@ -161,3 +161,45 @@ def test_assignment_objective_counts_and_export_agree(classroom):
     assert workbook["Savol turlari"]["G2"].value == 50
     pdf = request(owner, "report/pdf", assignmentId=assignment.id)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF"), pdf.content
+
+
+def test_question_difficulty_aggregates_only_repeated_authored_choices(classroom):
+    owner, _, _, _, exam, assignment = classroom
+    question = MockQuestion.objects.get(pk="exam4-p3-question-2")
+    MockQuestion.objects.filter(pk=question.id).update(type="multiple_choice", options=["Alpha", "Beta", "Gamma"])
+    MockAnswer.objects.filter(attempt_id="exam4-p3-assigned", question=question).update(response="B")
+    MockAttempt.objects.filter(pk="exam4-p3-best-retake").update(raw_scores={"reading": {"score": 0, "max": 3}})
+    MockAnswer.objects.create(id="exam4-p3-extra-wrong", question=question, attempt_id="exam4-p3-best-retake",
+                              response="Beta", is_correct=False, is_graded=True, updated_at=timezone.now())
+    exam_data = analysis(owner, examId=exam.id)
+    question_data = next(row for row in exam_data["questionDifficulty"] if row["questionId"] == question.id)
+    assert question_data["commonIncorrectChoices"] == [{"option": "Beta", "students": 2}]
+    assigned_data = analysis(owner, assignmentId=assignment.id)
+    question_data = next(row for row in assigned_data["questionDifficulty"] if row["questionId"] == question.id)
+    assert "commonIncorrectChoices" not in question_data
+
+
+def test_review_is_blocked_only_during_a_live_timed_attempt(classroom):
+    from apps.core.mock_attempts import review_blocked
+
+    historical = MockAttempt.objects.get(pk="exam4-p3-best-retake")
+    active = MockAttempt.objects.get(pk="exam4-p3-latest-zero")
+    MockAttempt.objects.filter(pk=active.id).update(status="in_progress", deadline_at=timezone.now() + timedelta(minutes=5))
+    assert review_blocked(historical)
+    MockAttempt.objects.filter(pk=active.id).update(deadline_at=timezone.now() - timedelta(minutes=5))
+    assert not review_blocked(historical)
+    MockAttempt.objects.filter(pk=active.id).update(mode="practice", deadline_at=None)
+    assert not review_blocked(historical)
+
+
+def test_calendar_day_filter_includes_local_midnight(classroom):
+    from datetime import UTC, datetime
+
+    owner, _, _, _, exam, _ = classroom
+    with timezone.override("Asia/Tashkent"):
+        day = timezone.localdate() - timedelta(days=3)
+        midnight = datetime.combine(day, datetime.min.time(), tzinfo=timezone.get_current_timezone()).astimezone(UTC)
+        MockAttempt.objects.filter(pk="exam4-p3-best-retake").update(started_at=midnight - timedelta(seconds=1))
+        MockAttempt.objects.filter(pk="exam4-p3-latest-zero").update(started_at=midnight)
+        data = analysis(owner, examId=exam.id, **{"from": day.isoformat(), "to": day.isoformat()})
+    assert [row["attemptId"] for row in data["ranking"]] == ["exam4-p3-latest-zero"]

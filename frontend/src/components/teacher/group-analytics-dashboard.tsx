@@ -66,6 +66,7 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
     return a.name.localeCompare(b.name);
   }) ?? [];
   const rank = data?.ranking.filter((student) => matches(student.name)) ?? [];
+  const assessments = new Map([...(base.data?.assessments ?? []), ...(data?.assessments ?? [])].map((exam) => [exam.id, exam.title]));
   const pages = Math.ceil(Math.max(students.length, rank.length) / PAGE_SIZE);
   const currentPage = Math.min(page, Math.max(0, pages - 1));
   const start = currentPage * PAGE_SIZE;
@@ -89,7 +90,7 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
           </select>
           <select aria-label={t("assessment")} className={selectClass} value={filters.examId ?? ""} onChange={(e) => update("examId", e.target.value)}>
             <option value="">{t("allAssessments")}</option>
-            {base.data?.assessments.map((exam) => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
+            {[...assessments].map(([id, title]) => <option key={id} value={id}>{title}</option>)}
           </select>
           <select aria-label={t("assignment")} className={selectClass} value={filters.assignmentId ?? ""} onChange={(e) => update("assignmentId", e.target.value)}>
             <option value="">{t("allAssignments")}</option>
@@ -195,7 +196,10 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
           {data.questionDifficulty.length > 0 && <details>
             <summary className="cursor-pointer font-semibold">{t("difficulty")}</summary>
             <ul className="space-y-1 py-2">{data.questionDifficulty.map((row) => <li className="text-sm" key={row.questionId}>
-              {t(row.skill)} #{row.number} · {row.questionType.replaceAll("_", " ")} · {t("questionScores", row)}
+              {t(row.skill)} #{row.number} · {row.questionType.replaceAll("_", " ")} · {t("questionScores", { correct: row.correct, incorrect: row.incorrect, unanswered: row.unanswered })}
+              {row.commonIncorrectChoices?.length ? <p className="text-fg-muted">
+                {t("commonIncorrect")} {row.commonIncorrectChoices.map((choice) => `${choice.option} (${choice.students})`).join(", ")}
+              </p> : null}
             </li>)}</ul>
           </details>}
           {Object.keys(data.scoreDistribution).length > 0 && <details>
@@ -210,6 +214,7 @@ export function GroupAnalyticsDashboard({ groupId, groupName, className }: {
           {([
             ["weekly", data.weeklyHistory.map((row) => ({ ...row, label: row.week, id: row.week }))],
             ["monthly", data.history.map((row) => ({ ...row, label: row.month, id: row.month }))],
+            ["bySkill", data.skillHistory.map((row) => ({ ...row, label: `${row.month} · ${t(row.skill)}`, id: `${row.month}:${row.skill}` }))],
             ["byExam", data.examHistory.map((row) => ({ ...row, label: [row.title, row.specificationVersion, row.scoreVersion].filter(Boolean).join(" · "), id: `${row.examId}:${row.specificationVersion}:${row.scoreVersion}` }))],
           ] as const).map(([period, rows]) => rows.length > 0 && <details key={period}>
             <summary className="cursor-pointer font-semibold">{t(period)}</summary>

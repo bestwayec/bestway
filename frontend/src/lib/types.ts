@@ -1427,7 +1427,7 @@ export interface GroupAnalyticsResponse {
   }>;
   questionDifficulty: Array<{
     questionId: string; number: number; skill: string; questionType: string;
-    correct: number; incorrect: number; unanswered: number;
+    correct: number; incorrect: number; unanswered: number; commonIncorrectChoices?: Array<{ option: string; students: number }>;
   }>;
   ranking: Array<{
     rank: number; score: number; track: string; examId: string; specificationVersion: string | null;
@@ -1439,6 +1439,7 @@ export interface GroupAnalyticsResponse {
   assessments: Array<{ id: string; title: string }>;
   assignments: Array<{ id: string; title: string; exam_id: string }>;
   history: Array<{ track: string; month: string; average: number; attempts: number }>;
+  skillHistory: Array<{ track: string; skill: string; month: string; average: number; attempts: number }>;
   weeklyHistory: Array<{ track: string; week: string; average: number; attempts: number }>;
   examHistory: Array<{ track: string; examId: string; title: string; specificationVersion: string | null;
     scoreVersion: string | null; average: number; attempts: number }>;
