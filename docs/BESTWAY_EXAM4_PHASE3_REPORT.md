@@ -22,7 +22,7 @@ Branch `feat/bestway-exam4-cbt-analysis` is stacked on Phase 2 commit `16d0ea90a
 | Learner benchmark | Verified on synthetic PostgreSQL data. The learner's own result can show a median with at least five distinct comparable peers whose submission times are at or before the learner's submission. Small samples and incompatible scoring versions suppress the aggregate. |
 | Reports and exports | Verified by Chromium, PostgreSQL API and file readers. PDF and XLSX use the same filters as the report. The generated files agree with the 8.0 IELTS ranking and skill scores. Legacy group CSV/XLSX actions use the same filtered generator. The separate exam-specific report uses the exam's native scale. |
 | PostgreSQL and frontend regression suites | Latest cumulative evidence is tracked below. |
-| Repository delivery and handoff | Phase 3 delivery targets `feat/bestway-exam4-cbt-analysis` with the Phase 2 branch as the stacked PR base. GitHub PR and Actions API discovery returned HTTP 403. The repository workflow targets PRs into `main` and `migration/django-backend`. |
+| Repository delivery and handoff | The Phase 3 branch was pushed and checked against the remote. The stacked draft PR targets `feat/bestway-exam4-builder-reading-listening`. GitHub returned HTTP 403 for PR discovery, draft PR creation and Actions lookup. The current CI workflow targets PRs into `main` and `migration/django-backend`. See the [stacked comparison](https://github.com/bestwayec/bestway/compare/feat/bestway-exam4-builder-reading-listening...feat/bestway-exam4-cbt-analysis?expand=1) for manual PR creation. |
 
 ## Classroom calculation rules
 
