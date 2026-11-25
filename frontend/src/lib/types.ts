@@ -1388,12 +1388,12 @@ export interface GroupAnalyticsStudent {
   name: string;
   phone: string;
   isActive: boolean;
-  attendanceRate: number;
+  attendanceRate: number | null;
   mockAttemptsCount: number;
   essaysCount: number;
-  averageScore: number;
+  averageScore: number | null;
   scoreLabel: string;
-  lastActiveAt: string;
+  lastActiveAt: string | null;
 }
 
 export interface GroupWeakTopic {
@@ -1407,8 +1407,9 @@ export interface GroupAnalyticsResponse {
   groupName: string;
   teacherName: string;
   totalStudents: number;
-  groupAverageScore: number;
-  groupAverageAttendance: number;
+  groupAverageScore: number | null;
+  groupAveragesByScale: Record<string, number>;
+  groupAverageAttendance: number | null;
   totalMockAttempts: number;
   totalEssays: number;
   students: GroupAnalyticsStudent[];

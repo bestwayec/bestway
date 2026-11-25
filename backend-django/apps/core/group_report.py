@@ -109,7 +109,7 @@ def generate_group_monthly_pdf(actor: User, group_id: str, month: str = None) ->
 
         text(str(idx + 1), 55, y, 8, "Helvetica", slate_muted)
         text(st["name"][:26], 80, y, 8, "Helvetica-Bold", slate_dark)
-        text(f"{st['attendanceRate']}%", 250, y, 8, "Helvetica", slate_dark)
+        text(f"{st['attendanceRate']}%" if st['attendanceRate'] is not None else "—", 250, y, 8, "Helvetica", slate_dark)
         text(str(st["mockAttemptsCount"]), 325, y, 8, "Helvetica", slate_muted)
         text(str(st["essaysCount"]), 385, y, 8, "Helvetica", slate_muted)
         text(st["scoreLabel"], 450, y, 8, "Helvetica-Bold", accent)
@@ -172,7 +172,8 @@ def generate_group_monthly_csv(actor: User, group_id: str, month: str = None) ->
     for idx, st in enumerate(data.get("students", [])):
         status = "Faol" if st.get("isActive") else "Nofaol"
         clean_name = st["name"].replace('"', '""')
-        line = f'{idx + 1},"{clean_name}","{st["phone"]}","{st["attendanceRate"]}%",{st["mockAttemptsCount"]},{st["essaysCount"]},"{st["scoreLabel"]}","{status}","{st["lastActiveAt"]}"'
+        attendance = f'{st["attendanceRate"]}%' if st["attendanceRate"] is not None else ""
+        line = f'{idx + 1},"{clean_name}","{st["phone"]}","{attendance}",{st["mockAttemptsCount"]},{st["essaysCount"]},"{st["scoreLabel"]}","{status}","{st["lastActiveAt"] or ""}"'
         lines.append(line)
 
     return "\ufeff" + "\n".join(lines)

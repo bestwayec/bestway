@@ -113,6 +113,7 @@ class TeacherAnalyticsAndReportTests(SimpleTestCase):
 
         attempt_mock = SimpleNamespace(
             student_id="st-1",
+            exam=SimpleNamespace(type="ielts_academic"),
             overall_band=7.0,
             overall_score=None,
             finished_at=datetime(2026, 10, 18, 14, 30),
@@ -126,7 +127,7 @@ class TeacherAnalyticsAndReportTests(SimpleTestCase):
         self.assertEqual(analytics["groupName"], "IELTS Morning")
         self.assertEqual(analytics["totalStudents"], 1)
         self.assertEqual(analytics["students"][0]["averageScore"], 7.0)
-        self.assertTrue(len(analytics["weakTopicsHeatmap"]) >= 3)
+        self.assertEqual(analytics["weakTopicsHeatmap"], [])
 
     @patch("apps.core.group_report.get_group_analytics")
     def test_monthly_pdf_and_csv_generation(self, mock_analytics):

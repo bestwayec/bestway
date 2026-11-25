@@ -65,6 +65,7 @@ export function GroupAnalyticsDashboard({
       const valA: any = a[sortField];
       const valB: any = b[sortField];
 
+      if (valA == null || valB == null) return valA == null ? (valB == null ? 0 : 1) : -1;
       if (typeof valA === "string") {
         return sortOrder === "asc"
           ? valA.localeCompare(valB)
@@ -180,10 +181,13 @@ export function GroupAnalyticsDashboard({
           <div className="rounded-xl border border-border bg-surface p-3">
             <div className="text-[11px] text-fg-muted flex items-center gap-1">
               <Sparkles className="size-3 text-success" />
-              Guruh O&apos;rtacha Bali
+              O&apos;rtacha natija
             </div>
             <div className="text-xl font-bold text-success mt-1 tabular-nums">
-              {analytics?.groupAverageScore ? analytics.groupAverageScore.toFixed(1) : "—"}
+              {Object.entries(analytics?.groupAveragesByScale ?? {}).map(([scale, value]) => (
+                <div key={scale} className="text-sm">{scale.replaceAll("_", " ")} · {value.toFixed(1)}</div>
+              ))}
+              {!Object.keys(analytics?.groupAveragesByScale ?? {}).length && "—"}
             </div>
           </div>
 
@@ -193,7 +197,7 @@ export function GroupAnalyticsDashboard({
               O&apos;rtacha Davomat
             </div>
             <div className="text-xl font-bold text-info mt-1 tabular-nums">
-              {analytics?.groupAverageAttendance ?? 90}%
+              {analytics?.groupAverageAttendance != null ? `${analytics.groupAverageAttendance}%` : "—"}
             </div>
           </div>
 
@@ -363,14 +367,14 @@ export function GroupAnalyticsDashboard({
                         <td className="py-2.5 px-3 font-mono">
                           <span
                             className={cn(
-                              st.attendanceRate >= 85
+                              st.attendanceRate != null && st.attendanceRate >= 85
                                 ? "text-success font-bold"
-                                : st.attendanceRate >= 70
+                                : st.attendanceRate != null && st.attendanceRate >= 70
                                 ? "text-warning"
                                 : "text-danger font-bold"
                             )}
                           >
-                            {st.attendanceRate}%
+                            {st.attendanceRate != null ? `${st.attendanceRate}%` : "—"}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 font-mono text-fg">

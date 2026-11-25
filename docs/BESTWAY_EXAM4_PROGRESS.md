@@ -22,3 +22,7 @@ The resumed workspace verified draft group duplication on PostgreSQL and in Chro
 The Multilevel production-build journey reached a graded result with all eight timed Speaking receipts, including retry after a network drop. PostgreSQL confirmed 81 unique answers and eight stored recordings. The mobile retest at 390 pixels passed after the compact header fix.
 
 The cumulative backend, frontend, and browser checks passed for the canonical Reading and Listening fixture, builder publication, and Phase 1 regression. Builder authoring, preview, and the published partial practice shared the same audio markers and question associations. PostgreSQL and the normal Prisma engine download were checked separately. The engine download still returns HTTP 403.
+
+## Phase 3 checkpoint
+
+Initial analytics corrections remove placeholder group averages, attendance and topic figures, and separate assessment scales. The full Phase 3 scope remains in progress. See [Phase 3 checkpoint](BESTWAY_EXAM4_PHASE3_REPORT.md).

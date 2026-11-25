@@ -317,6 +317,10 @@ def _analyze_weak_modules(attempt_ids: list[str]) -> list[dict]:
         if not q or not getattr(q, "group", None) or not getattr(q.group, "section", None):
             continue
         skill = q.group.section.skill
+        if skill not in ("reading", "listening") or not (ans.response or "").strip():
+            continue
+        if ans.is_correct is None and ans.score is None:
+            continue
         q_type = q.type
         part_num = q.group.part_number or (q.group.sort_order + 1)
         type_label = QUESTION_TYPE_LABELS.get(q_type, q_type.replace("_", " ").title())
