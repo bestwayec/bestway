@@ -786,7 +786,7 @@ def advance_receipt(attempt, submitted):
         sessionSignature=attempt_signature.sign(attempt), attemptId=attempt.id)
 def media_phase(actor, attempt_id, entity_id, kind, play=False):
     from .mock_speaking_duration import POLICY, duration_bounds
-    from .mock_speaking_policy import strict, upload_window_closed
+    from .mock_speaking_policy import capture_deadline, strict, upload_window_closed
     with transaction.atomic():
         attempt = own(actor, attempt_id, lock=True)
         if not versioned(attempt):
@@ -856,7 +856,7 @@ def media_phase(actor, attempt_id, entity_id, kind, play=False):
                     fail('SPEAKING_TIME_INSUFFICIENT', 'There is not enough time for the complete preparation and speaking response')
             phase = dict(startedAt=iso(at), prepEndsAt=iso(at+timedelta(seconds=prep)), expiresAt=iso(at+timedelta(seconds=prep+duration)), plays=0)
             if strict_speaking:
-                phase.update(timingPolicy=POLICY, responseSeconds=duration,
+                phase.update(timingPolicy=POLICY, responseSeconds=duration, captureEndsAt=iso(capture_deadline(end, limits)),
                     minDurationMs=round(duration_bounds(duration)[0]*1000), maxDurationMs=round(duration_bounds(duration)[1]*1000))
         if kind == 'listening' and play:
             if at < parse_datetime(phase['prepEndsAt']) or (phase['plays'] > 0 and at < parse_datetime(phase['expiresAt'])):

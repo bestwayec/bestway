@@ -1435,6 +1435,7 @@
       "recRecoveryUnavailable": "Saved recording recovery is unavailable. Keep this page open and retry the upload.",
       "recFailed": "Recording failed. Check your microphone.",
       "recInterrupted": "Recording was interrupted before its full response window completed. Start a new response.",
+      "recTimedIncomplete": "This recording did not cover the full timed response and was not submitted. Contact your supervisor for a timed retry.",
       "recPersistFailed": "Could not persist the take locally. Keep this page open and retry upload.",
       "recStartFailed": "Speaking response could not be started. Please try again.",
       "recRetrySaved": "Retry upload of saved recording",

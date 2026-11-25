@@ -1435,6 +1435,7 @@
       "recRecoveryUnavailable": "Saqlangan yozuvni tiklab bo'lmadi. Sahifani yopmang va yuklashni qayta urinib ko'ring.",
       "recFailed": "Yozib bo'lmadi. Mikrofoningizni tekshiring.",
       "recInterrupted": "Yozuv javob vaqti tugashidan oldin to'xtab qoldi. Yangi javob yozing.",
+      "recTimedIncomplete": "Yozuv belgilangan javob vaqtini to‘liq qamramadi va yuborilmadi. Qayta urinish uchun nazoratchiga murojaat qiling.",
       "recPersistFailed": "Yozuvni qurilmada saqlab bo'lmadi. Sahifani yopmang va yuklashni qayta urinib ko'ring.",
       "recStartFailed": "Speaking javobini boshlab bo'lmadi. Qayta urinib ko'ring.",
       "recRetrySaved": "Saqlangan yozuvni qayta yuklash",

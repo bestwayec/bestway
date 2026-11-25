@@ -12,7 +12,7 @@ import { uploadFailurePlan } from '@/lib/speaking-upload';
 import { AttemptRecordingPlayer } from './attempt-recording-player';
 import { CountdownRing, InputLevelBars, ReadPromptButton } from './speaking-visuals';
 
-export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
+export interface MediaPhase { startedAt: string; prepEndsAt: string; expiresAt: string; captureEndsAt?: string; plays: number; serverTime: string; playLimit: number; responseSeconds?: number; minDurationMs?: number; maxDurationMs?: number; timingPolicy?: 'FULL_RESPONSE_WINDOW_V1' }
 function seconds(iso: string, offset: number) { return Math.max(0, Math.ceil((Date.parse(iso) - Date.now() - offset)/1000)); }
 function setRecorderHandlers(recorder: MediaRecorder, handlers: { data: (event: BlobEvent) => void; error: () => void; stop: () => void }) {
   recorder.ondataavailable = handlers.data;
@@ -179,8 +179,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
   const busy = useRef(false);
   const aliveRef = useRef(true);
   const captureGeneration = useRef(0);
-  const captureWindow = useRef<{ started: number; stopped: number | null; seconds: number; complete: boolean; interrupted: boolean } | null>(null);
-  const grantedPhase = useRef<MediaPhase | null>(null);
+  const captureWindow = useRef<{ deadline: number; complete: boolean; interrupted: boolean } | null>(null);
   const preparationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearCaptureTimers = useCallback(() => {
@@ -244,7 +243,8 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       } else if (plan.code === 'SPEAKING_AUDIO_DURATION_INVALID') {
         // Not a complete response: let the student record a fresh take. The rejected take stays in
         // device storage (a new take replaces it), it is never deleted here.
-        retryCount.current = 0; retainedRef.current = null; setPending(null); stage('idle'); setError(t('recTooShort'));
+        retryCount.current = 0; retainedRef.current = null; setPending(null); stage('idle');
+        setError(t(timed ? 'recTimedIncomplete' : 'recTooShort'));
       } else {
         retryCount.current = 0;
         setError(t('recUploadFailedRetry'));
@@ -267,7 +267,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     const id = window.setInterval(() => {
       const window = captureWindow.current;
       const remaining = status === 'recording' && window
-        ? Math.max(0, Math.ceil((window.seconds * 1000 - (performance.now() - window.started)) / 1000))
+        ? Math.max(0, Math.ceil((window.deadline - performance.now()) / 1000))
         : seconds(phase.prepEndsAt, offset.current);
       setLeft(remaining);
     }, 200);
@@ -325,55 +325,89 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       }
     }
   }
-  function beginRecording() {
+  function beginRecording(grant: MediaPhase, captureEnds: number) {
     if (!stream.current || recorder.current?.state === 'recording') return;
     try {
-    const next = grantedPhase.current;
-    const duration = next?.responseSeconds ?? responseSeconds ?? (next ? (Date.parse(next.expiresAt) - Date.parse(next.prepEndsAt)) / 1000 : 0);
-    if (!Number.isFinite(duration) || duration <= 0 || duration > 120) throw new Error('Speaking timing is unavailable. Refresh this task and retry.');
-    const mr = recorder.current?.state === 'inactive' ? recorder.current : createAudioRecorder(stream.current); recorder.current = mr;
-    const chunks: Blob[] = [];
-    setRecorderHandlers(mr, {
-      data: (e) => { if (e.data.size) chunks.push(e.data); },
-      error: () => { if (captureWindow.current) captureWindow.current.interrupted = true; stage('finalizing'); setError(t('recFailed')); if (mr.state === 'recording') mr.stop(); },
-      stop: () => {
-      clearCaptureTimers(); stage('finalizing'); closeMicrophone();
-      const captured = captureWindow.current;
-      const elapsed = captured?.stopped != null ? captured.stopped - captured.started : 0;
-      if (!captured?.complete || captured.interrupted || elapsed < captured.seconds * 1000 || elapsed > captured.seconds * 1000 + 250) {
-        stage('idle');
-        if (aliveRef.current) setError(t('recInterrupted'));
-        return;
-      }
-      let blob: Blob;
-      try { blob = recordedAudioBlob(mr, chunks); }
-      catch (e) { stage('idle'); setError(`${micMessage(e)}${timed ? ` ${t('recSupervisorRetry')}` : ''}`); return; }
-      retainedRef.current = blob; setPending(blob); setRecordedSeconds(captured.seconds);
-      void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => { stage('retry'); setError(t('recPersistFailed')); });
-      },
-    });
-    mr.start(1000);
-    captureWindow.current = { started: performance.now(), stopped: null, seconds: duration, complete: false, interrupted: false };
-    setLeft(duration); setResponseTotal(duration); stage('recording');
-    responseTimer.current = setTimeout(() => {
-      const capture = captureWindow.current;
-      if (!capture || mr.state !== 'recording') return;
-      capture.complete = true; capture.stopped = performance.now(); stage('finalizing'); mr.stop();
-    }, duration * 1000);
-    } catch (e) { closeMicrophone(); stage('idle'); setError(micMessage(e)); }
+      const duration = grant.responseSeconds ?? responseSeconds ?? (Date.parse(grant.expiresAt) - Date.parse(grant.prepEndsAt)) / 1000;
+      if (!Number.isFinite(duration) || duration <= 0 || duration > 120) throw new Error(t('recStartFailed'));
+      const durationMs = duration * 1000;
+      const minimum = grant.minDurationMs ?? durationMs;
+      const mr = recorder.current?.state === 'inactive' ? recorder.current : createAudioRecorder(stream.current);
+      recorder.current = mr;
+      const chunks: Blob[] = [];
+      const capture = { deadline: 0, complete: false, interrupted: false };
+      captureWindow.current = capture;
+      const interrupt = () => {
+        capture.interrupted = true;
+        if (mr.state !== 'inactive') mr.stop();
+      };
+      setRecorderHandlers(mr, {
+        data: (e) => { if (e.data.size) chunks.push(e.data); },
+        error: interrupt,
+        stop: () => {
+          clearCaptureTimers(); closeMicrophone(); recorder.current = null;
+          if (!capture.complete || capture.interrupted) {
+            stage('idle');
+            if (aliveRef.current) setError(t(timed ? 'recTimedIncomplete' : 'recInterrupted'));
+            return;
+          }
+          stage('finalizing');
+          let blob: Blob;
+          try { blob = recordedAudioBlob(mr, chunks); }
+          catch (e) { stage('idle'); setError(`${micMessage(e)}${timed ? ` ${t('recSupervisorRetry')}` : ''}`); return; }
+          retainedRef.current = blob; setPending(blob); setRecordedSeconds(duration);
+          // The server validates decoded time. A late JS callback is not grounds
+          // to drop the finalized take before that verification.
+          void retainRecording(key, blob).then(() => sendRef.current(blob)).catch(() => { stage('retry'); setError(t('recPersistFailed')); });
+        },
+      });
+      mr.onstart = () => {
+        if (!aliveRef.current || capture.interrupted || mr.state !== 'recording') return;
+        clearCaptureTimers();
+        const started = performance.now();
+        capture.deadline = Math.min(started + durationMs, captureEnds);
+        const available = capture.deadline - started;
+        if (available < minimum) { interrupt(); return; }
+        setLeft(Math.ceil(available / 1000)); setResponseTotal(duration); stage('recording');
+        responseTimer.current = setTimeout(() => {
+          if (mr.state !== 'recording') return;
+          capture.complete = true; stage('finalizing'); mr.stop();
+        }, available);
+      };
+      // A missing start event must not leave the microphone or the exam busy.
+      // Do not start a take if the server window cannot still fit it.
+      const startupBudget = Math.min(5000, captureEnds - performance.now() - minimum);
+      if (startupBudget < 0) throw new Error(t(timed ? 'recTimedIncomplete' : 'recInterrupted'));
+      stage('starting');
+      responseTimer.current = setTimeout(interrupt, startupBudget);
+      mr.start(1000);
+    } catch (e) { clearCaptureTimers(); closeMicrophone(); stage('idle'); setError(micMessage(e)); }
   }
   async function start() {
     if (busy.current) return;
     stage('starting'); setError(null);
     const current = captureGeneration.current;
+    const requestedAt = performance.now();
     try { const next = await startPhase();
       if (!aliveRef.current || captureGeneration.current !== current) return;
-      offset.current = Date.parse(next.serverTime)-Date.now(); setPhase(next); grantedPhase.current = next;
-      if (seconds(next.expiresAt, offset.current) <= 0) throw new Error('This speaking response has expired.');
-      const preparation = Math.max(0, Date.parse(next.prepEndsAt) - Date.now() - offset.current);
+      const receivedAt = performance.now();
+      const serverTime = Date.parse(next.serverTime);
+      offset.current = serverTime - Date.now(); setPhase(next);
+      if (!Number.isFinite(serverTime) || Date.parse(next.expiresAt) <= serverTime) throw new Error('This speaking response has expired.');
+      // Wait until server preparation has elapsed. Use the request's earliest
+      // possible server time for the upper bound so transit only costs allowance.
+      const captureEnds = next.timingPolicy
+        ? requestedAt + Date.parse(next.captureEndsAt ?? next.expiresAt) - serverTime
+        : Infinity;
+      if (Number.isNaN(captureEnds) || captureEnds <= receivedAt) throw new Error('This speaking response has expired.');
+      const preparation = Math.max(0, Date.parse(next.prepEndsAt) - serverTime);
       setLeft(Math.ceil(preparation / 1000));
-      if (preparation > 0) { stage('preparing'); preparationTimer.current = setTimeout(() => { if (aliveRef.current && captureGeneration.current === current) beginRecording(); }, preparation); }
-      else beginRecording();
+      if (preparation > 0) {
+        stage('preparing');
+        preparationTimer.current = setTimeout(() => {
+          if (aliveRef.current && captureGeneration.current === current) beginRecording(next, captureEnds);
+        }, preparation);
+      } else beginRecording(next, captureEnds);
     } catch { if (aliveRef.current && captureGeneration.current === current) { closeMicrophone(); stage('idle'); setError(t('recStartFailed')); } }
   }
   // Timed exam: the previous answer was uploaded, so this question opens and starts by itself.
