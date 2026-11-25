@@ -112,10 +112,22 @@ try {
   await mobileAnswer.waitFor();
   assert.equal(await mobileAnswer.inputValue(), "alpha");
   await page.setViewportSize({ width: 1920, height: 900 });
+  await tabs(page).first().click();
+  await save(page, readingPath, readId(2), "omega");
   const result = await api(context, `${readingPath}/submit`, "POST", { confirm: true });
   assert.equal(result.rawScores.reading.max, 40);
   assert.equal(result.rawScores.reading.score, 4);
-  console.log(`PASS Reading: three passages, 40 positions, four saved question types, reload and score (${reading.id})`);
+  await page.goto(reading.url, { waitUntil: "domcontentloaded" });
+  const review = page.locator('section[aria-label="Reading"]');
+  for (const [name, state, count] of [["Correct (4)", "correct", 4], ["Wrong (1)", "wrong", 1], ["Unanswered (35)", "unanswered", 35]]) {
+    await review.getByRole("button", { name, exact: true }).click();
+    assert.equal(await review.locator("[data-review-state]").count(), count);
+    assert.equal(await review.locator(`[data-review-state="${state}"]`).count(), count);
+  }
+  await review.getByRole("button", { name: "Pending (0)", exact: true }).click();
+  await review.getByText("No pending positions.", { exact: true }).waitFor();
+  await screenshot(page, "reading-result-categories");
+  console.log(`PASS Reading: three passages, 40 positions, reload, score and exclusive review categories 4/1/35/0 (${reading.id})`);
 
   const listening = await openAttempt("listening");
   const listeningPath = `/mock/attempts/${listening.id}`;

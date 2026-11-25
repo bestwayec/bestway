@@ -122,6 +122,7 @@ try {
   assert.equal(assignmentStats.submittedStudents, 0);
   await request(learner, `${reportPath}/analytics?assignmentId=${assignment.id}`, "GET", undefined, 403);
   await request(learner, `${reportPath}/report/excel?assignmentId=${assignment.id}`, "GET", undefined, 403);
+  await request(learner, `${reportPath}/report/pdf?assignmentId=${assignment.id}`, "GET", undefined, 403);
   const assignedPage = await other.newPage();
   await assignedPage.goto(new URL("/en/profile", web).href);
   await assignedPage.locator(`a[href="/en/mock/attempt/${linked.attemptId}"]`).first().click();
@@ -154,19 +155,22 @@ try {
   console.log("PASS browser ranking, filtered PDF and XLSX downloads");
 
   await api(teacher, `/mock/exams/${examId}/archive`, "POST");
-  const reopened = await api(learner, attemptPath);
+  await learner.close();
+  const returningLearner = await session("+998900000011", { viewport: { width: 390, height: 844 } });
+  const reopened = await api(returningLearner, attemptPath);
   assert.equal(reopened.overallBand, before.overallBand);
   assert.equal(reopened.sections.find((section) => section.skill === "reading").groups[0].questions[0].id,
     before.sections.find((section) => section.skill === "reading").groups[0].questions[0].id);
+  await request(returningLearner, reviewPath);
   await teacherPage.screenshot({ path: join(out.pathname, "group-desktop-en-light.png") });
-  await learner.addInitScript(() => localStorage.setItem("theme", "dark"));
-  await ownerPage.setViewportSize({ width: 390, height: 844 });
-  await ownerPage.goto(new URL(`/uz/mock/attempt/${attemptId}`, web).href);
-  await ownerPage.waitForFunction(() => document.documentElement.classList.contains("dark"));
-  assert.equal(await ownerPage.locator("html").getAttribute("lang"), "uz");
-  await ownerPage.locator("main").getByText("IELTS", { exact: false }).first().waitFor();
-  await ownerPage.screenshot({ path: join(out.pathname, "review-archived-mobile-uz-dark.png") });
-  console.log("PASS archive preserves graded results and question identity, Uzbek dark 390px");
+  await returningLearner.addInitScript(() => localStorage.setItem("theme", "dark"));
+  const historicalPage = await returningLearner.newPage();
+  await historicalPage.goto(new URL(`/uz/mock/attempt/${attemptId}`, web).href);
+  await historicalPage.waitForFunction(() => document.documentElement.classList.contains("dark"));
+  assert.equal(await historicalPage.locator("html").getAttribute("lang"), "uz");
+  await historicalPage.locator("main").getByText("IELTS", { exact: false }).first().waitFor();
+  await historicalPage.screenshot({ path: join(out.pathname, "review-archived-mobile-uz-dark.png") });
+  console.log("PASS fresh login reopens the archived score, question identity and authorized audio, Uzbek dark 390px");
 } finally {
   await browser.close();
 }
