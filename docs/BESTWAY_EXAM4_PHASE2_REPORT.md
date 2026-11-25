@@ -2,7 +2,7 @@
 
 ## Base and scope
 
-Phase 2 is stacked on the verified Phase 1 commit `b0849f552d146991dfd8ae0b09cc56573ca799b0`. The fetched `main` predates that commit. The draft PR base is `fix/bestway-exam4-reliability`. GitHub returned HTTP 403 for the PR lookup, draft creation, and Actions runs lookup.
+Phase 2 is on `feat/bestway-exam4-builder-reading-listening` and is stacked on the verified Phase 1 commit `b0849f552d146991dfd8ae0b09cc56573ca799b0`. The fetched `main` predates that commit. The draft PR base is `fix/bestway-exam4-reliability`. GitHub returned HTTP 403 for the PR lookup, draft creation, and Actions runs lookup. [Create the stacked draft PR manually](https://github.com/bestwayec/bestway/compare/fix/bestway-exam4-reliability...feat/bestway-exam4-builder-reading-listening?expand=1)
 
 ## Findings and implementation
 
@@ -31,7 +31,9 @@ The Phase 1 browser smoke passed for IELTS and Multilevel, including offline rec
 
 The full IELTS browser journey passed all 10 steps on the production build. It covered publication, 40 confirmed answers in each objective section, Writing, three Speaking uploads, manual grading, and evidence review. The partial-practice suite passed all five checks, including preserved paper numbering, raw-only scoring, and Listening controls permitted by the mode.
 
-The full Multilevel journey passed publication, the two-play limit across reload, 35 Listening and 35 Reading confirmations, and offline Writing recovery. An earlier run stalled before the seventh Speaking response had a server window. The resumed recorder starts automatic transitions without waiting for fullscreen or audio meter activation. It saved the seventh response and opened the eighth timed window. The strict duration verifier rejected the eighth recording with `SPEAKING_AUDIO_DURATION_INVALID` in that run. The production-build retest has reached Speaking.
+The full Multilevel production-build journey verified publication, the two-play limit across reload, 35 Listening and 35 Reading confirmations, offline Writing recovery, all eight timed Speaking uploads, a single hand-in, teacher grading, and cross-user access restrictions. PostgreSQL confirmed the completed attempt had 81 distinct answers, eight recordings, and the result used the Multilevel scale. The synthetic result was 68.5/75 (C1).
+
+The recorder starts automatic transitions without waiting for fullscreen or optional audio meter activation. An earlier run stalled before the seventh response. A later run entered the eighth window and returned `SPEAKING_AUDIO_DURATION_INVALID`. The clean production-build run accepted all eight recordings under the existing duration rules, including one retried after a network drop. The 390-pixel check caught the compact save status overlapping the header. The header fix passed the focused mobile rerun with reload and persisted answer.
 
 The normal Prisma deploy command was attempted on a fresh disposable database. The checksum URL at `binaries.prisma.sh` returned HTTP 403. Django and browser tests used the existing local PostgreSQL database prepared from the checked-in Prisma SQL, followed by Django migrations.
 
