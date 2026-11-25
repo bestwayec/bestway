@@ -301,6 +301,7 @@ def telemetry_view(request, attempt_id):
 
 @api_view(['PUT'])
 @permission_classes([AllowAny])
+@exam_session.serialize
 def annotations_view(request, attempt_id):
     student(request)
     exam_session.guard(request, attempt_id)
@@ -601,6 +602,8 @@ def writing_ocr_view(request, attempt_id, question_id=None):
     try:
         with transaction.atomic():
             writable_handwriting(request.user, attempt_id, question_id, lock=True)
+            # OCR may take longer than a lease or overlap an explicit takeover.
+            exam_session.guard(request, attempt_id)
             existing = MockAnswer.objects.filter(attempt_id=attempt_id, question_id=question_id).first()
             rubric = dict(existing.rubric_scores) if existing and isinstance(existing.rubric_scores, dict) else {}
             keys = list(rubric.get('imageKeys') or [])
