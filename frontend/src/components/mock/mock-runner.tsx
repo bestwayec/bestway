@@ -968,7 +968,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
           className="sticky top-0 z-20 -mx-4 mb-2 flex h-14 items-center gap-1.5 border-b border-border bg-surface/95 px-3 backdrop-blur sm:gap-2 sm:px-4 lg:-mx-5 lg:px-5"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="font-black text-brand tracking-wider text-sm sm:text-base mr-0.5 select-none shrink-0">BESTWAY</span>
+            <span className="mr-0.5 hidden shrink-0 select-none text-base font-black tracking-wider text-brand sm:inline">BESTWAY</span>
             {isSingleSection && targetSkill && (
               <span className="hidden shrink-0 whitespace-nowrap rounded-chip border border-brand/30 bg-brand-subtle px-2 py-0.5 text-sm font-semibold text-brand-subtle-fg md:inline">
                 {tr(attempt.mode === "practice" ? "practiceBadge" : "examBadge", { skill: t(`skills.${targetSkill}`) })}
@@ -1257,7 +1257,7 @@ export function MockRunner({ attempt, refreshAttempt }: { attempt: MockAttemptDe
 }
 
 /** Compact header chip (docs/design/DESIGN_SYSTEM.md §5). */
-export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | "warning" | "success" | "danger"; children?: React.ReactNode }) {
+export function StatusChip({ tone = "neutral", children, className }: { tone?: "neutral" | "warning" | "success" | "danger"; children?: React.ReactNode; className?: string }) {
   return (
     <span
       className={cn(
@@ -1266,6 +1266,7 @@ export function StatusChip({ tone = "neutral", children }: { tone?: "neutral" | 
         tone === "warning" && "border-warning-border bg-warning-bg text-warning",
         tone === "success" && "border-success-border bg-success-bg text-success",
         tone === "danger" && "border-danger-border bg-danger-bg text-danger",
+        className,
       )}
     >
       {children}
@@ -1279,16 +1280,15 @@ export function SaveStatusChip({ state, label, compact = false }: { state: SaveS
   const working = state === "saving" || state === "retrying";
   return (
     <span role="status" aria-live="polite" title={label}>
-      <StatusChip tone={failed ? "danger" : state === "saved" ? "success" : "neutral"}>
+      <StatusChip tone={failed ? "danger" : state === "saved" ? "success" : "neutral"} className={compact ? "max-sm:max-w-[25vw]" : undefined}>
         {working ? (
-          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
         ) : failed ? (
-          <AlertTriangle className="size-3.5" aria-hidden />
+          <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
         ) : state === "saved" ? (
-          <CheckCircle2 className="size-3.5" aria-hidden />
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
         ) : null}
-        {/* Compact (header): the icon shows the state and the label is read out; a failure is always written out. */}
-        <span className={compact && state === "saved" ? "max-sm:sr-only" : undefined}>{label}</span>
+        <span className={cn(compact && "min-w-0 truncate", compact && state === "saved" && "max-sm:sr-only")}>{label}</span>
       </StatusChip>
     </span>
   );
