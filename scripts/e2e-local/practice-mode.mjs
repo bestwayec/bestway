@@ -48,7 +48,8 @@ async function closeOpen() {
 async function openSection(skill) {
   await page.goto(`${WEB}/en/mock`, { waitUntil: "networkidle" });
   const toIelts = page.getByTestId("exam-track-card-IELTS").getByRole("button", { name: /Switch to/ });
-  if (await toIelts.count()) { await toIelts.click(); await page.waitForTimeout(2000); }
+  if (await toIelts.count()) await toIelts.click();
+  else await page.getByText("IELTS", { exact: true }).first().click();
   const card = page.locator('[data-testid^="mock-card-"]').filter({ hasText: state.title }).first();
   await card.getByRole("button", { name: `Start ${skill} only` }).click();
   return page.getByRole("dialog");
