@@ -12,6 +12,15 @@ def test_explicit_reading_continuation_and_identical_distinct_sources():
     assert exam_content_units([gaps, second, first], 'reading') == [[gaps, first], [second]]
 
 
+def test_numbered_legacy_passages_keep_distinct_identity_with_identical_text():
+    groups = reading_package()['exam']['sections'][0]['groups']
+    assert exam_content_units(groups, 'reading') == [[group] for group in groups]
+    continuation = dict(title='Questions 5–8', passageText=groups[0]['passageText'])
+    assert exam_content_units([groups[0], continuation, *groups[1:]], 'reading') == [
+        [groups[0], continuation], [groups[1]], [groups[2]],
+    ]
+
+
 def test_reading_blueprint_counts_units_and_scoring_positions():
     package = reading_package()
     groups = package['exam']['sections'][0]['groups']

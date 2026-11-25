@@ -22,19 +22,24 @@ export function examContentUnits<T extends ContentGroup>(
   const units: ContentUnit<T>[] = [];
   const explicit = new Map<string, ContentUnit<T>>();
   let previousText = "";
+  let previousPassage: string | undefined;
   for (const [index, group] of groups.entries()) {
     const ref = skill === "reading" ? group.stimulusRef :
       skill === "listening" && canonicalListening && group.partNumber ? String(group.partNumber) : null;
     const text = skill === "reading" && !ref ? (group.passageText ?? "").trim().replace(/\s+/g, " ") : "";
-    let unit = ref ? explicit.get(ref) : text && text === previousText ? units.at(-1) : undefined;
+    const passage = text ? group.title?.match(/\bpassage\s+([1-9][0-9]*)\b/i)?.[1] : undefined;
+    const samePassage = !passage || !previousPassage || passage === previousPassage;
+    let unit = ref ? explicit.get(ref) : text && text === previousText && samePassage ? units.at(-1) : undefined;
     if (!unit) {
       unit = { key: ref ? `${skill}:${ref}` : group.id ?? String(index), number: units.length + 1, source: group, groups: [] };
       units.push(unit);
+      previousPassage = undefined;
       if (ref) explicit.set(ref, unit);
     }
     unit.groups.push(group);
     if (skill === "reading" && !unit.source.passageText?.trim() && group.passageText?.trim()) unit.source = group;
     if (skill === "listening" && !unit.source.hasAudio && group.hasAudio) unit.source = group;
+    previousPassage = passage ?? previousPassage;
     previousText = text;
   }
   if (skill === "listening" && canonicalListening && units.every((unit) => unit.source.partNumber)) {

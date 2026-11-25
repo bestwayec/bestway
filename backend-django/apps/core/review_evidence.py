@@ -50,7 +50,7 @@ def review_sources(groups, skill, *, canonical_listening=True):
     from .mock_content import exam_content_units
 
     metadata = [
-        dict(group=group, stimulusRef=getattr(group, "stimulus_ref", None),
+        dict(group=group, title=getattr(group, "title", None), stimulusRef=getattr(group, "stimulus_ref", None),
              partNumber=getattr(group, "part_number", None), passageText=getattr(group, "passage_text", None))
         for group in groups
     ]
@@ -78,7 +78,7 @@ def package_sources(groups, skill, exam_type):
         return value if isinstance(value, str) else None
 
     members = [
-        SimpleNamespace(id=id(group), stimulus_ref=group.get("stimulusRef"), part_number=group.get("partNumber"),
+        SimpleNamespace(id=id(group), title=text(group, "title"), stimulus_ref=group.get("stimulusRef"), part_number=group.get("partNumber"),
                         passage_text=text(group, "passageText"), audio_script=text(group, "audioScript"),
                         content_html=text(group, "contentHtml"), audio_key=text(group, "audioRef"))
         for group in groups if isinstance(group, dict)

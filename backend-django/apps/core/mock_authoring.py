@@ -448,7 +448,7 @@ def _ordered_section_groups(section):
 def _section_group_units(section, rows):
     from .mock_content import exam_content_units
 
-    groups = [dict(id=row.id, stimulusRef=row.stimulus_ref, passageText=row.passage_text,
+    groups = [dict(id=row.id, title=row.title, stimulusRef=row.stimulus_ref, passageText=row.passage_text,
                    partNumber=row.part_number) for row in rows]
     return exam_content_units(groups, section.skill)
 
@@ -792,7 +792,7 @@ def readiness(actor, exam_id: str, effective_profile: str | None = None) -> dict
         gs = persisted_groups[section['id']]
         qs = [q for g in gs for q in persisted_questions[g.id]]
         if skill in ('reading', 'listening') and ielts:
-            groups = [dict(stimulusRef=g.stimulus_ref, partNumber=g.part_number, passageText=g.passage_text,
+            groups = [dict(title=g.title, stimulusRef=g.stimulus_ref, partNumber=g.part_number, passageText=g.passage_text,
                            audio=g.audio_key) for g in gs]
             units = exam_content_units(groups, skill)
             if is_full:

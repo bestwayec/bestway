@@ -129,20 +129,28 @@ def reading_passage_count(passage_texts) -> int:
 def exam_content_units(groups, skill):
     """Resolve ordered Reading sources and numbered Listening parts without altering group IDs."""
     units, references = [], {}
-    previous_text = ''
+    previous_text, previous_passage = '', None
     for group in groups:
         ref = group.get('stimulusRef') if skill == 'reading' else group.get('partNumber')
         if type(ref) not in (str, int):
             ref = None
         value = group.get('passageText')
         text = ' '.join(value.split()) if skill == 'reading' and not ref and isinstance(value, str) else ''
-        unit = references.get(ref) if ref else units[-1] if text and text == previous_text else None
+        title = group.get('title')
+        heading = re.search(r'\bpassage\s+([1-9][0-9]*)\b', title, re.IGNORECASE) if text and isinstance(title, str) else None
+        passage = heading[1] if heading else None
+        # Two explicitly numbered legacy passages can contain identical text.
+        # Retain the text fallback for continuation groups without a heading.
+        same_passage = not passage or not previous_passage or passage == previous_passage
+        unit = references.get(ref) if ref else units[-1] if text and text == previous_text and same_passage else None
         if unit is None:
             unit = []
             units.append(unit)
+            previous_passage = None
             if ref:
                 references[ref] = unit
         unit.append(group)
+        previous_passage = passage or previous_passage
         previous_text = text
     return units
 

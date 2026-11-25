@@ -16,6 +16,12 @@ describe("canonical exam content units", () => {
     expect(examContentUnits(groups, "reading").map((unit) => unit.groups.length)).toEqual([2, 1, 1]);
   });
 
+  it("keeps numbered legacy passages distinct even if their text is identical", () => {
+    const groups = ["Passage 1", "Questions 5–8", "Passage 2", "Passage 3"]
+      .map((title) => ({ title, passageText: "Same text" }));
+    expect(examContentUnits(groups, "reading").map((unit) => unit.groups.length)).toEqual([2, 1, 1]);
+  });
+
   it("keeps IELTS task order while selecting the audio owner and preserves legacy Multilevel groups", () => {
     const groups = [{ id: "second", partNumber: 2 }, { id: "task", partNumber: 1 },
       { id: "audio", partNumber: 1, hasAudio: true }];
