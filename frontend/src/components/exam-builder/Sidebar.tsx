@@ -19,7 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCreateMockGroup, useCreateMockSection } from "@/hooks/use-mock";
 import type { MockExamDetail, MockGroup, MockSkill } from "@/lib/types";
-import { groupIssueCount } from "./checks";
+import { examContentUnits } from "@/lib/exam-content-units";
+import { groupIssueCount, groupSourceStatuses, type GroupSourceStatus } from "./checks";
 import { clusterReadingPassages } from "./reading-passage-clusters";
 import { SKILL_META, SKILL_ORDER, tx, type Selection } from "./types";
 
@@ -36,14 +37,14 @@ function rangeLabel(questions: Array<{ number: number }>): string | null {
   return nums.length > 1 ? `Q${nums[0]}–${nums[nums.length - 1]}` : `Q${nums[0]}`;
 }
 
-function groupMeta(g: MockGroup, skill: MockSkill): string {
+function groupMeta(g: MockGroup, skill: MockSkill, source?: GroupSourceStatus): string {
   const n = g.questions.length;
   const base = n === 0 ? "Empty" : `${n} ${n === 1 ? "question" : "questions"}`;
   const range = rangeLabel(g.questions);
   const missing =
-    n > 0 && skill === "listening" && !g.hasAudio
+    n > 0 && skill === "listening" && source?.missingSource
       ? " · no audio"
-      : n > 0 && skill === "reading" && !g.passageText?.trim()
+      : n > 0 && skill === "reading" && source?.missingSource
         ? " · no passage"
         : "";
   return `${base}${range ? ` · ${range}` : ""}${missing}`;
@@ -207,14 +208,16 @@ export function Sidebar({
               );
             }
             const qCount = section.groups.reduce((a, g) => a + g.questions.length, 0);
-            const issues = section.groups.reduce((a, g) => a + groupIssueCount(g, skill), 0);
+            const sources = groupSourceStatuses(section.groups, skill, detail.type !== "multilevel");
+            const issues = section.groups.reduce((a, g) => a + groupIssueCount(g, skill, sources.get(g.id)), 0);
             const readingPassages =
               skill === "reading"
                 ? clusterReadingPassages(
                     [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder),
                   )
                 : [];
-            const unitCount = skill === "reading" ? readingPassages.length : section.groups.length;
+            const unitCount = skill === "reading" ? readingPassages.length
+              : examContentUnits(section.groups, skill, detail.type !== "multilevel").length;
             const sectionMeta =
               section.groups.length === 0
                 ? tx(t, "notConfigured", "Not configured")
@@ -222,6 +225,7 @@ export function Sidebar({
                   ? `${unitCount} ${meta.units.toLowerCase()} · ${tx(t, "noQuestionsYet", "No questions yet")}`
                   : skill === "reading"
                     ? `${unitCount} ${tx(t, "passages", "passages")} · ${qCount} ${tx(t, "questions", "questions")}`
+                    : skill === "listening" ? `${unitCount} ${meta.units.toLowerCase()} · ${qCount} ${tx(t, "questions", "questions")}`
                     : `${qCount} ${tx(t, "questions", "questions")}`;
             return (
               <div key={skill} className="pt-1">
@@ -264,7 +268,7 @@ export function Sidebar({
                     {skill === "reading" ? (
                       readingPassages.map((passage) => {
                         const passageIssues = passage.groups.reduce(
-                          (total, group) => total + groupIssueCount(group, "reading"),
+                          (total, group) => total + groupIssueCount(group, "reading", sources.get(group.id)),
                           0,
                         );
                         const passageActive =
@@ -279,7 +283,7 @@ export function Sidebar({
                             <OutlineButton
                               active={passageActive}
                               onClick={() =>
-                                onSelect({ kind: "group", groupId: passage.groups[0].id })
+                                onSelect({ kind: "group", groupId: (passage.groups.find((group) => group.passageText?.trim()) ?? passage.groups[0]).id })
                               }
                               label={`${passageTitle} — ${passage.groups.length} question sets — ${passage.rangeLabel ? `Questions ${passage.rangeLabel}` : tx(t, "noQuestionsYet", "No questions yet")}`}
                             >
@@ -301,7 +305,7 @@ export function Sidebar({
                             {passage.groups.length > 1 && (
                               <div className="ml-4 space-y-0.5 border-l border-border/70 pl-1.5">
                                 {passage.groups.map((g, taskIndex) => {
-                                  const taskIssues = groupIssueCount(g, "reading");
+                                  const taskIssues = groupIssueCount(g, "reading", sources.get(g.id));
                                   const taskActive =
                                     selection.kind === "group" && selection.groupId === g.id;
                                   const taskRange = rangeLabel(g.questions);
@@ -311,7 +315,7 @@ export function Sidebar({
                                       key={g.id}
                                       active={taskActive}
                                       onClick={() => onSelect({ kind: "group", groupId: g.id })}
-                                      label={`${taskLabel} — ${groupMeta(g, "reading")}`}
+                                      label={`${taskLabel} — ${groupMeta(g, "reading", sources.get(g.id))}`}
                                     >
                                       {taskIssues > 0 ? (
                                         <XCircle className="mt-0.5 size-3 shrink-0 text-danger" aria-hidden />
@@ -333,7 +337,8 @@ export function Sidebar({
                         );
                       })
                     ) : section.groups.map((g, gi) => {
-                      const gi_issues = groupIssueCount(g, skill);
+                      const source = sources.get(g.id);
+                      const gi_issues = groupIssueCount(g, skill, source);
                       const label = g.title?.trim() || `${meta.unit} ${gi + 1}`;
                       const active = selection.kind === "group" && selection.groupId === g.id;
                       const statusWord =
@@ -347,7 +352,7 @@ export function Sidebar({
                           key={g.id}
                           active={active}
                           onClick={() => onSelect({ kind: "group", groupId: g.id })}
-                          label={`${label} — ${groupMeta(g, skill)} — ${statusWord}`}
+                          label={`${label} — ${groupMeta(g, skill, source)} — ${statusWord}`}
                         >
                           {gi_issues > 0 ? (
                             <XCircle className="mt-0.5 size-3.5 shrink-0 text-danger" aria-hidden />
@@ -359,7 +364,7 @@ export function Sidebar({
                           <span className="min-w-0 flex-1">
                             <span className="block truncate">{label}</span>
                             <span className="block truncate text-[11px] font-normal text-fg-subtle">
-                              {groupMeta(g, skill)}
+                              {groupMeta(g, skill, source)}
                             </span>
                           </span>
                           <span className="sr-only">{statusWord}</span>

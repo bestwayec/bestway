@@ -18,7 +18,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
-import { groupIssueCount } from "./checks";
+import { groupIssueCount, groupSourceStatuses } from "./checks";
 import { ListeningAudioGatePanel } from "./ListeningAudioGatePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { partRangeLabel, partTypeSummary } from "./ListeningPartEditor";
@@ -109,6 +109,7 @@ export function ListeningSectionPanel({
   if (!section) return null;
 
   const parts = examContentUnits([...section.groups].sort((a, b) => a.sortOrder - b.sortOrder), "listening", detail.type !== "multilevel");
+  const sources = groupSourceStatuses(section.groups, "listening", detail.type !== "multilevel");
   const questionCount = section.groups.reduce((a, g) => a + g.questions.length, 0);
   const nextPartNo = parts.reduce((m, g) => Math.max(m, g.number), parts.length) + 1;
   const canAddPart = parts.length < 4 && nextPartNo <= 4;
@@ -210,7 +211,7 @@ export function ListeningSectionPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           {parts.map(({ source: g, groups, number: partNo }) => {
             const questions = groups.flatMap((group) => group.questions);
-            const issues = groups.reduce((total, group) => total + groupIssueCount(group, "listening"), 0);
+            const issues = groups.reduce((total, group) => total + groupIssueCount(group, "listening", sources.get(group.id)), 0);
             const n = questions.length;
             const range = partRangeLabel(questions.flatMap((q) => [
               q.displayNumber ?? q.number, q.displayNumberEnd ?? q.displayNumber ?? q.number,

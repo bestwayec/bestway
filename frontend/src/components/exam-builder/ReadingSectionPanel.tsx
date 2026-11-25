@@ -17,7 +17,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { objectivePositionCount } from "@/lib/objective-question";
 import type { MockExamDetail } from "@/lib/types";
-import { groupIssueCount } from "./checks";
+import { groupIssueCount, groupSourceStatuses } from "./checks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { partRangeLabel } from "./ReadingPassageEditor";
 import { QTYPE_LABEL } from "@/components/mock/exam-builder/types";
@@ -115,6 +115,7 @@ export function ReadingSectionPanel({
     [...section.groups].sort((a, b) => a.sortOrder - b.sortOrder),
   );
   const questionCount = section.groups.reduce((a, g) => a + g.questions.length, 0);
+  const sources = groupSourceStatuses(section.groups, "reading");
   const nextNo = passages.length + 1;
 
   function handleAddPassage() {
@@ -201,7 +202,7 @@ export function ReadingSectionPanel({
             const passageNo = passage.ordinal;
             const firstGroup = passage.groups.find((g) => g.passageText?.trim()) ?? passage.groups[0];
             const issues = passage.groups.reduce(
-              (total, group) => total + groupIssueCount(group, "reading"),
+              (total, group) => total + groupIssueCount(group, "reading", sources.get(group.id)),
               0,
             );
             const n = passage.questions.length;

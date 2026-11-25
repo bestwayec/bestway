@@ -44,7 +44,8 @@ import type {
   MockExamImportProvenance,
 } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
-import { examClientChecks, type Check } from "./checks";
+import { examContentUnits } from "@/lib/exam-content-units";
+import { examClientChecks, groupSourceStatuses, type Check } from "./checks";
 import { issueSelection } from "./ImportProvenanceDialog";
 import {
   clusterReadingPassages,
@@ -1202,6 +1203,8 @@ function SkillChecklist({
   const groups = section ? sortedGroups(section) : [];
   const readingPassages =
     skill === "reading" ? clusterReadingPassages(groups) : [];
+  const listeningParts = skill === "listening" ? examContentUnits(groups, skill, detail.type !== "multilevel") : [];
+  const sources = groupSourceStatuses(groups, skill, detail.type !== "multilevel");
   const groupChecks = (groupId: string) => client.filter((c) => c.target.kind === "group" && c.target.groupId === groupId);
   const sectionChecks = section
     ? client.filter((c) => c.target.kind === "section" && c.target.sectionId === section.id)
@@ -1217,11 +1220,11 @@ function SkillChecklist({
 
   let summary = "";
   if (skill === "listening") {
-    if (groups.length === 0) {
+    if (listeningParts.length === 0) {
       summary = "No parts yet";
     } else {
-      const audioReady = groups.filter((g) => g.hasAudio).length;
-      summary = `${groups.length} parts · ${audioReady}/${groups.length} audio ready`;
+      const audioReady = listeningParts.filter((part) => part.source.hasAudio).length;
+      summary = `${listeningParts.length} parts · ${audioReady}/${listeningParts.length} audio ready`;
     }
   } else if (skill === "reading") {
     if (readingPassages.length === 0) {
@@ -1298,6 +1301,7 @@ function SkillChecklist({
                 skill={skill}
                 groups={groups}
                 group={g}
+                audioAvailable={!sources.get(g.id)?.missingSource}
                 checks={groupChecks(g.id)}
                 onFix={onFix}
               />
@@ -1437,12 +1441,14 @@ function GroupCheckRow({
   skill,
   groups,
   group,
+  audioAvailable,
   checks,
   onFix,
 }: {
   skill: MockSkill;
   groups: MockGroup[];
   group: MockGroup;
+  audioAvailable: boolean;
   checks: Check[];
   onFix: (s: Selection) => void;
 }) {
@@ -1452,7 +1458,7 @@ function GroupCheckRow({
 
   let facts = "";
   if (skill === "listening") {
-    facts = `${group.questions.length} questions · ${group.hasAudio ? "audio ready" : "audio missing"}`;
+    facts = `${group.questions.length} questions · ${audioAvailable ? "audio ready" : "audio missing"}`;
   } else if (skill === "reading") {
     facts = `${group.questions.length} questions · ${(group.passageText?.trim() ?? "") !== "" ? "passage ready" : "passage missing"}`;
   } else if (skill === "writing") {

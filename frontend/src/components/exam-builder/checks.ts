@@ -1,6 +1,7 @@
 "use client";
 
 import type { MockGroup, MockQuestion, MockSection, MockSkill } from "@/lib/types";
+import { examContentUnits } from "@/lib/exam-content-units";
 import type { Selection } from "./types";
 
 export interface Check {
@@ -44,12 +45,34 @@ export function questionIssues(q: MockQuestion, skill: MockSkill): string[] {
   return out;
 }
 
-export function groupIssueCount(group: MockGroup, skill: MockSkill): number {
+export interface GroupSourceStatus {
+  missingSource: boolean;
+  sourceOnly: boolean;
+}
+
+export function groupSourceStatuses(groups: MockGroup[], skill: MockSkill, canonicalListening = true) {
+  if (skill !== "reading" && skill !== "listening") return new Map<string, GroupSourceStatus>();
+  const hasSource = (group: MockGroup) => skill === "reading" ? Boolean(group.passageText?.trim()) : group.hasAudio;
+  const ordered = [...groups].sort((a, b) => a.sortOrder - b.sortOrder);
+  return new Map(examContentUnits(ordered, skill, canonicalListening).flatMap((unit) => {
+    const missingSource = !hasSource(unit.source);
+    const populated = unit.groups.some((group) => group.questions.length > 0);
+    return unit.groups.map((group) => {
+      const ref = skill === "reading" ? group.stimulusRef : group.partNumber;
+      return [group.id, {
+        missingSource, sourceOnly: Boolean(ref) && populated && !group.questions.length && hasSource(group),
+      }] as const;
+    });
+  }));
+}
+
+export function groupIssueCount(group: MockGroup, skill: MockSkill, source?: GroupSourceStatus): number {
   let n = 0;
-  if (group.questions.length === 0) n += 1;
+  if (group.questions.length === 0 && !source?.sourceOnly) n += 1;
   for (const q of group.questions) n += questionIssues(q, skill).length;
-  if (skill === "listening" && group.questions.length > 0 && !group.hasAudio) n += 1;
-  if (skill === "reading" && group.questions.length > 0 && !group.passageText?.trim()) n += 1;
+  const missing = source?.missingSource ??
+    ((skill === "listening" && !group.hasAudio) || (skill === "reading" && !group.passageText?.trim()));
+  if (group.questions.length > 0 && missing) n += 1;
   return n;
 }
 
@@ -90,16 +113,18 @@ export function examClientChecks(sections: MockSection[], profile = "practice", 
         target: { kind: "section", sectionId: s.id },
       });
     }
+    const sources = groupSourceStatuses(s.groups, s.skill, type !== "multilevel");
     for (const g of s.groups) {
+      const source = sources.get(g.id);
       const gLabel = g.title?.trim() || `Block ${g.sortOrder + 1}`;
-      if (g.questions.length === 0) {
+      if (g.questions.length === 0 && !source?.sourceOnly) {
         checks.push({
           level: "error",
           label: `${cap(s.skill)} · ${gLabel} has no questions`,
           target: { kind: "group", groupId: g.id },
         });
       }
-      if (s.skill === "listening" && g.questions.length > 0 && !g.hasAudio) {
+      if (s.skill === "listening" && g.questions.length > 0 && source?.missingSource) {
         checks.push({
           level: "error",
           label: `${gLabel} — audio missing`,
@@ -107,7 +132,7 @@ export function examClientChecks(sections: MockSection[], profile = "practice", 
           target: { kind: "group", groupId: g.id },
         });
       }
-      if (s.skill === "reading" && g.questions.length > 0 && !g.passageText?.trim()) {
+      if (s.skill === "reading" && g.questions.length > 0 && source?.missingSource) {
         checks.push({
           level: "error",
           label: `${gLabel} — passage text missing`,

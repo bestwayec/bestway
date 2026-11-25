@@ -3,7 +3,7 @@ import { examContentUnits, type ContentGroup } from "@/lib/exam-content-units";
 export interface ReadingClusterGroup extends ContentGroup {
   title?: string | null;
   passageText?: string | null;
-  questions: Array<{ number: number }>;
+  questions: Array<{ number: number; displayNumber?: number; displayNumberEnd?: number }>;
 }
 
 export interface ReadingPassageCluster<T extends ReadingClusterGroup> {
@@ -22,7 +22,9 @@ export function clusterReadingPassages<T extends ReadingClusterGroup>(
 ): ReadingPassageCluster<T>[] {
   return examContentUnits(groups, "reading").map(({ groups: passageGroups, source, number }) => {
     const questions = passageGroups.flatMap((group) => group.questions);
-    const numbers = questions.map((question) => question.number);
+    const numbers = questions.flatMap((question) => [
+      question.displayNumber ?? question.number, question.displayNumberEnd ?? question.displayNumber ?? question.number,
+    ]);
     const min = numbers.length > 0 ? Math.min(...numbers) : null;
     const max = numbers.length > 0 ? Math.max(...numbers) : null;
 

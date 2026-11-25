@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MockExamDetail } from "@/lib/types";
 import { builderSteps, neighbourStep, stepForSelection, STEP_ORDER } from "./builder-steps";
+import { examClientChecks } from "./checks";
 
 const q = (over: Record<string, unknown> = {}) => ({ id: "q", number: 1, type: "short_answer", prompt: "Where?", options: [], correctAnswers: ["Paris"], points: 1, ...over });
 const group = (id: string, over: Record<string, unknown> = {}) => ({ id, sortOrder: 0, title: id, hasAudio: true, passageText: "text", questions: [q()], ...over });
@@ -45,6 +46,23 @@ describe("builderSteps", () => {
   it("a section without blocks is a structure problem", () => {
     const steps = builderSteps(exam([section("s1", "writing", [])], { questionCount: 0 }), { previewed: false, blockers: 0 });
     expect(by(steps, "track")).toMatchObject({ status: "attention", target: { kind: "select", selection: { kind: "section", sectionId: "s1" } } });
+  });
+
+  it("accepts linked task groups and source-only groups in readiness", () => {
+    const detail = exam([
+      section("r", "reading", [
+        group("passage", { stimulusRef: "source", questions: [] }),
+        group("reading-task", { stimulusRef: "source", passageText: "" }),
+      ]),
+      section("l", "listening", [
+        group("part", { partNumber: 1, questions: [] }),
+        group("listening-task", { partNumber: 1, hasAudio: false }),
+      ]),
+    ]);
+    const steps = builderSteps(detail, { previewed: true, blockers: 0 });
+    expect(by(steps, "material").status).toBe("done");
+    expect(by(steps, "questions").status).toBe("done");
+    expect(examClientChecks(detail.sections).filter((check) => check.level === "error")).toEqual([]);
   });
 
   it("publishing is done only when published and nothing blocks it", () => {

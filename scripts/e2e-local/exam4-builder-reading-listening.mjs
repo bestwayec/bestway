@@ -31,11 +31,11 @@ function tabs(page) {
   return page.locator("[data-runner-bottom]").getByRole("tab");
 }
 
-async function openAttempt(skill) {
-  const start = await api(context, `${exam}/start`, "POST", { mode: "timed", skills: [skill], retake: true });
+async function openAttempt(skill, examPath = exam) {
+  const start = await api(context, `${examPath}/start`, "POST", { mode: "timed", skills: [skill], retake: true });
   const url = new URL(`/en/mock/attempt/${start.attemptId}?skill=${skill}`, web).href;
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await tabs(page).first().waitFor();
+  await page.locator("[data-runner-bottom]").waitFor();
   const notice = page.getByTestId("fullscreen-notice");
   if (await notice.isVisible()) await notice.getByRole("button").click();
   return { id: start.attemptId, url };
@@ -102,8 +102,16 @@ try {
   for (const width of [360, 390, 768, 1024, 1366, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(await tabs(page).count(), 3);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Reading overflows at ${width}px`);
     await screenshot(page, `reading-${width}`);
   }
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.getByRole("button", { name: /All questions/ }).click();
+  await page.getByTestId("question-palette").locator(`button[data-qid="${readId(21)}"]`).press("Enter");
+  const mobileAnswer = page.locator(`[id="q-${readId(21)}"] input`);
+  await mobileAnswer.waitFor();
+  assert.equal(await mobileAnswer.inputValue(), "alpha");
+  await page.setViewportSize({ width: 1920, height: 900 });
   const result = await api(context, `${readingPath}/submit`, "POST", { confirm: true });
   assert.equal(result.rawScores.reading.max, 40);
   assert.equal(result.rawScores.reading.score, 4);
@@ -145,16 +153,75 @@ try {
   await builder.setViewportSize({ width: 700, height: 900 });
   await builder.locator("#builder-outline").selectOption(`section:${section.id}`);
   await builder.setViewportSize({ width: 1366, height: 900 });
+  await builder.getByText("1 passage · 1 question", { exact: true }).waitFor();
+  const reorder = builder.waitForResponse((response) => response.url().endsWith(`/groups/${child.id}`) &&
+    response.request().method() === "PATCH" && response.status() === 200);
+  await builder.getByRole("button", { name: "Move Synthetic continuation up" }).click();
+  await reorder;
   await screenshot(builder, "builder-1366");
   const copied = builder.waitForResponse((response) => response.url().endsWith(`/sections/${section.id}/groups`) && response.status() === 201);
   await builder.getByRole("button", { name: "Duplicate question group Synthetic continuation" }).click();
   const duplicatedGroup = (await (await copied).json()).data;
   const reopened = await api(teacher, `/mock/exams/${draft.id}/preview`);
   const duplicated = reopened.sections[0].groups.find((group) => group.id === duplicatedGroup.id);
+  assert.equal(reopened.sections[0].groups[0].id, child.id);
   assert.equal(duplicated.stimulusRef, child.stimulusRef);
   assert.equal(duplicated.questions[0].number, 2);
   assert(!Object.hasOwn(duplicated.questions[0], "correctAnswers"));
-  console.log("PASS teacher creates and duplicates linked draft groups and reopens the candidate-safe preview model");
+
+  const draftPath = `/mock/exams/${draft.id}`;
+  const listeningSection = await api(teacher, `${draftPath}/sections`, "POST", { skill: "listening", title: "Synthetic Listening" });
+  const listeningGroups = `/mock/sections/${listeningSection.id}/groups`;
+  const audioOwner = await api(teacher, listeningGroups, "POST", { title: "Part 1", partNumber: 1 });
+  const audioTask = await api(teacher, listeningGroups, "POST", { title: "Part 1 continuation", parentGroupId: audioOwner.id });
+  const addListeningQuestion = (group, number, prompt) => api(teacher, `/mock/groups/${group.id}/questions`, "POST", { questions: [
+    { number, type: "short_answer", prompt, correctAnswers: ["alpha"] },
+  ] });
+  await addListeningQuestion(audioOwner, 1, "Listen and write alpha.");
+  const { questions: [continuationQuestion] } = await addListeningQuestion(audioTask, 2, "Listen for the second word.");
+  const upload = await teacher.request.post(new URL(`/api/backend${draftPath}/audio-timestamps`, web).href, {
+    multipart: {
+      audio: { name: "synthetic-tone.wav", mimeType: "audio/wav", buffer: await media.body() },
+      timestamps: JSON.stringify([{ partNumber: 1, groupId: audioOwner.id, startSec: 0.25, endSec: 1.75 }]),
+    },
+  });
+  assert(upload.ok(), `Draft audio upload returned ${upload.status()}`);
+  assert.equal((await upload.json()).data.timestamps[0].groupId, audioOwner.id);
+  await builder.reload({ waitUntil: "domcontentloaded" });
+  await builder.getByRole("button", { name: "Preview", exact: true }).first().click();
+  const previewDialog = builder.getByRole("dialog");
+  await previewDialog.getByRole("tab", { name: "Synthetic Reading", exact: true }).click();
+  await previewDialog.getByText("Original draft source text.").waitFor();
+  await previewDialog.getByRole("tab", { name: "Synthetic Listening", exact: true }).click();
+  await previewDialog.getByText("Listen for the second word.").waitFor();
+  assert.equal(await previewDialog.getByRole("tab", { name: "Part 1", exact: true }).count(), 1);
+  await previewDialog.getByRole("button", { name: "Back to editing" }).click();
+
+  const readiness = await api(teacher, `${draftPath}/readiness`);
+  assert(readiness.ready, JSON.stringify(readiness.items.filter((item) => !item.ok)));
+  await builder.getByRole("button", { name: "Publish", exact: true }).first().click();
+  await builder.getByRole("button", { name: "Publish now" }).click();
+  const publication = builder.waitForResponse((response) => response.url().endsWith(draftPath) &&
+    response.request().method() === "PATCH" && response.status() === 200);
+  await builder.getByRole("dialog").getByRole("button", { name: /publish/i }).last().click();
+  assert((await (await publication).json()).data.isPublished);
+  const publishedAttempt = await openAttempt("listening", draftPath);
+  assert.equal(await tabs(page).count(), 0);
+  await page.getByText("Listen for the second word.").waitFor();
+  const publishedPath = `/mock/attempts/${publishedAttempt.id}`;
+  const sharedStart = await api(context, `${publishedPath}/listening/${audioTask.id}/start`, "POST", {});
+  const ownerStart = await api(context, `${publishedPath}/listening/${audioOwner.id}/start`, "POST", {});
+  assert.equal(sharedStart.startedAt, ownerStart.startedAt);
+  assert.equal(ownerStart.durationSec, 2);
+  assert.deepEqual(Object.keys((await api(context, publishedPath)).listeningSchedule), [audioOwner.id]);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const player = page.getByTestId("listening-scheduled");
+  await player.getByRole("status").waitFor();
+  assert.equal(await player.count(), 1);
+  await save(page, publishedPath, continuationQuestion.id, "alpha");
+  const publishedResult = await api(context, `${publishedPath}/submit`, "POST", { confirm: true });
+  assert.equal(publishedResult.rawScores.listening.score, 1);
+  console.log("PASS builder creates, reorders and duplicates linked groups, previews shared sources, publishes, and opens the same part for a student");
 } finally {
   await browser.close();
 }
