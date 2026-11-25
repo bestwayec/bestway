@@ -32,3 +32,16 @@ The production-build IELTS journey passed all ten steps. The Phase 1 browser tes
 The Phase 3 Multilevel attempt reached teacher grading and an estimated 68.5/75 (C1). PostgreSQL confirmed 81 distinct answers and eight recordings. Seven recordings came from Chromium's MediaRecorder with a synthetic microphone. For the last response, a 120-second WAV verified the authenticated upload after the browser's short recording was correctly rejected. The same last prompt received HTTP 201 with 119.70 seconds in an isolated native Chromium retest. The production-build final submission, pending result, grading, cross-group restrictions, and 390px learner check all passed. The uninterrupted eight-recording run on this host and physical mobile microphone verification remain open.
 
 The Phase 3 branch was pushed and the remote SHA was verified. GitHub returned HTTP 403 for draft PR creation and hosted CI lookup. [Open the stacked comparison](https://github.com/bestwayec/bestway/compare/feat/bestway-exam4-builder-reading-listening...feat/bestway-exam4-cbt-analysis?expand=1)
+
+## Phase 4 · Final integration
+
+The pushed integration branch is `fix/bestway-exam4-final-integration`. The latest implementation commit is `7e535e0482ba7af748281becaf6ebaf45cc21d0a`. The final tested code and test revision is `3d250c2ebd3b56903f7e75e60e35ee9957dc0c9d`. Main stays at `9c37f60c0b23c7e6e0cde254632da7cdd9c281c1`.
+
+The candidate includes recorder readiness and bounded startup, the legacy Reading source fix, session transaction checks, cache outage responses, export pagination and literal text, release metadata timeout, dependency updates and the normal Prisma CI upgrade check.
+
+- [Audit and findings](BESTWAY_EXAM4_FINAL_AUDIT.md)
+- [Tests and measurements](BESTWAY_EXAM4_TEST_REPORT.md)
+- [GitHub and merge gates](BESTWAY_EXAM4_MERGE_REPORT.md)
+- [Release and manual device checklist](BESTWAY_EXAM4_RELEASE_CHECKLIST.md)
+
+IELTS passed 10/10 and Multilevel passed 16/16 on the Next.js 16.4.6 production build. All eight Multilevel recordings came from native MediaRecorder in one Chromium session. Independent decoding matched each server receipt. Physical devices remain pending. The earlier sample-loss failures remain in the audit as separate evidence. GitHub REST and Prisma checksum access are pending.
