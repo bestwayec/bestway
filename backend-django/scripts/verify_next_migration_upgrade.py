@@ -25,6 +25,7 @@ from django.utils import timezone
 
 prisma = backend.parent / "backend" / "prisma"
 baseline = "20260710140141_init"
+exam_review_migration = "20261125000000_question_review_explanation"
 django_baseline = ("core", "0012_vocabulary_homework_and_review")
 teacher_id, student_id, group_id = "upgrade-teacher", "upgrade-student", "upgrade-group"
 
@@ -82,6 +83,37 @@ def seed_django_baseline():
     return assignment.pk, issued
 
 
+def seed_exam_history():
+    # SQL here creates fixture rows only. The schema at this point is the
+    # deployed pre-review schema, which cannot load the new MockQuestion model.
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """INSERT INTO "MockExam" ("id", "type", "title", "updatedAt")
+            VALUES ('upgrade-exam', 'ielts_academic', 'Historical exam', NOW())"""
+        )
+        cursor.execute(
+            """INSERT INTO "MockSection" ("id", "examId", "skill")
+            VALUES ('upgrade-reading', 'upgrade-exam', 'reading')"""
+        )
+        cursor.execute(
+            """INSERT INTO "MockQuestionGroup" ("id", "sectionId")
+            VALUES ('upgrade-passage', 'upgrade-reading')"""
+        )
+        cursor.execute(
+            """INSERT INTO "MockQuestion" ("id", "groupId", "number", "type", "prompt")
+            VALUES ('upgrade-question', 'upgrade-passage', 1, 'short_answer', 'Historical question')"""
+        )
+        cursor.execute(
+            """INSERT INTO "MockAttempt" ("id", "examId", "studentId", "status", "submittedAt", "overallBand")
+            VALUES ('upgrade-attempt', 'upgrade-exam', %s, 'completed', NOW(), 7)""",
+            [student_id],
+        )
+        cursor.execute(
+            """INSERT INTO "MockAnswer" ("id", "attemptId", "questionId", "response", "isCorrect", "score", "isGraded", "updatedAt")
+            VALUES ('upgrade-answer', 'upgrade-attempt', 'upgrade-question', 'historical response', true, 1, true, NOW())"""
+        )
+
+
 def verify():
     with connection.cursor() as cursor:
         cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname = current_schema() LIMIT 1")
@@ -95,8 +127,15 @@ def verify():
         shutil.copy2(prisma / "migrations" / "migration_lock.toml", stage / "migrations")
         shutil.copytree(prisma / "migrations" / baseline, stage / "migrations" / baseline)
         deploy(stage / "schema.prisma")
-    call_command("check_legacy_schema", migration_history_only=True, allow_pending=True)
-    seed_prisma_baseline()
+        call_command("check_legacy_schema", migration_history_only=True, allow_pending=True)
+        seed_prisma_baseline()
+        for migration in sorted((prisma / "migrations").iterdir()):
+            if migration.is_dir() and baseline < migration.name < exam_review_migration:
+                shutil.copytree(migration, stage / "migrations" / migration.name)
+        deploy(stage / "schema.prisma")
+        call_command("check_legacy_schema", migration_history_only=True, allow_pending=True)
+        seed_exam_history()
+    deploy(prisma / "schema.prisma")
     deploy(prisma / "schema.prisma")
     call_command("check_legacy_schema", migration_history_only=True)
     assignment_id, issued = seed_django_baseline()
@@ -105,7 +144,7 @@ def verify():
     call_command("migrate", check=True)
 
     from apps.core.models import HomeworkSubmission, UserWeakWord, VocabularyHomeworkSession
-    from apps.legacy_schema.models import Attendance, Group, StudentProfile
+    from apps.legacy_schema.models import Attendance, Group, MockAnswer, StudentProfile
 
     assert Group.objects.get(pk=group_id).teacher_id == teacher_id
     profile = StudentProfile.objects.get(user_id=student_id)
@@ -118,7 +157,11 @@ def verify():
     assert session.assignment.vocabulary_set.revision == 1
     review = UserWeakWord.objects.get(student_id=student_id)
     assert (review.word.english, review.word.uzbek, review.review_count, review.interval_days) == ("book", "kitob", 7, 14)
-    print("PASS Prisma and Django upgrade preserved classroom, attendance, grade, issued questions and SRS history")
+    answer = MockAnswer.objects.select_related("attempt", "question").get(pk="upgrade-answer")
+    assert (answer.response, answer.is_correct, answer.score, answer.is_graded) == ("historical response", True, 1, True)
+    assert (answer.attempt.status, answer.attempt.overall_band) == ("completed", 7)
+    assert answer.question.prompt == "Historical question" and answer.question.review_explanation is None
+    print("PASS Prisma and Django upgrade preserved classroom, vocabulary, and completed exam history")
 
 
 if __name__ == "__main__":
