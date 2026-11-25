@@ -273,7 +273,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     }, 200);
     return () => clearInterval(id);
   }, [phase, status]);
-  async function preflight() {
+  async function preflight(automatic = false) {
     if (busy.current) return;
     stage('checking'); setError(null); setMeterAvailable(false); setLevel(0);
     const current = ++captureGeneration.current;
@@ -281,7 +281,12 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     try {
       closeMicrophone();
       assertMicrophoneAvailable();
-      input = await requestMicrophoneStream({ audio: OPTIMAL_AUDIO_CONSTRAINTS });
+      // Timed transitions already have microphone permission from the first task.
+      // They happen without a gesture, so leave fullscreen and autoplay state alone.
+      const constraints = { audio: OPTIMAL_AUDIO_CONSTRAINTS };
+      input = automatic
+        ? await navigator.mediaDevices.getUserMedia(constraints)
+        : await requestMicrophoneStream(constraints);
       if (!aliveRef.current || captureGeneration.current !== current) { input.getTracks().forEach((track) => track.stop()); if (aliveRef.current) stage('idle'); return; }
       stream.current = input;
       // Verify capture support before the server starts a timed response.
@@ -293,6 +298,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
       setError(micMessage(e));
       return;
     }
+    if (automatic) return;
     // The input meter is optional; Web Audio failure must not discard an open mic.
     let meterContext: AudioContext | undefined;
     try {
@@ -378,7 +384,7 @@ export function MultilevelRecorder({ attemptId, questionId, timed, initialHasAud
     if (!timed || recorded || pending || busy.current) return;
     // Consumed only here, when this mounted recorder really starts (a remount must not lose it).
     if (!takeSpeakingAutoStart(attemptId, questionId)) return;
-    void (async () => { await preflight(); if (aliveRef.current && stream.current) await start(); })();
+    void (async () => { await preflight(true); if (aliveRef.current && stream.current) await start(); })();
   }; });
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;

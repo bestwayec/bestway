@@ -19,6 +19,7 @@ vi.mock('@/lib/durable-recordings', () => ({
 import { SpeakingRecorder } from './speaking-recorder';
 import { MultilevelRecorder, type MediaPhase } from './multilevel-media';
 import { ApiError } from '@/lib/api-client';
+import { requestSpeakingAutoStart } from '@/lib/speaking-sequence';
 
 class FakeRecorder {
   static instances: FakeRecorder[] = [];
@@ -313,5 +314,29 @@ describe('Multilevel microphone preflight and server timing', () => {
     await act(async () => vi.advanceTimersByTimeAsync(2000)); expect(FakeRecorder.instances[0].state).toBe('recording');
     await act(async () => vi.advanceTimersByTimeAsync(2000)); expect(FakeRecorder.instances[0].state).toBe('inactive');
     expect(services.upload).toHaveBeenCalledTimes(1); expect(host.textContent).toContain('Uploaded');
+  });
+
+  it('starts the next timed response without fullscreen or Web Audio activation', async () => {
+    const createMeter = vi.fn();
+    vi.stubGlobal('AudioContext', class { constructor() { createMeter(); } });
+    const exitFullscreen = vi.fn(() => new Promise<void>(() => {}));
+    Object.defineProperties(document, {
+      fullscreenElement: { configurable: true, value: document.documentElement },
+      exitFullscreen: { configurable: true, value: exitFullscreen },
+    });
+    try {
+      requestSpeakingAutoStart('attempt', 'question');
+      await render('multilevel', true);
+      await finishResponse(0);
+      expect(startPhase).toHaveBeenCalledTimes(1);
+      expect(FakeRecorder.instances[0].state).toBe('recording');
+      expect(exitFullscreen).not.toHaveBeenCalled();
+      expect(createMeter).not.toHaveBeenCalled();
+      await finishResponse();
+      expect(services.upload).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(document, 'fullscreenElement');
+      Reflect.deleteProperty(document, 'exitFullscreen');
+    }
   });
 });
